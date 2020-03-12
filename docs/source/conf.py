@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.abspath(
 
 def setup(app):
     app.add_stylesheet('css/custom.css')
-    app.add_javascript('js/github.js')
+    app.add_javascript('js/gitlab.js')
 
 
 # -- Project information -----------------------------------------------------
@@ -55,7 +55,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
+    #'sphinx.ext.githubpages',
     #'m2r'
 ]
 
@@ -109,15 +109,14 @@ html_theme_options = {
 }
 
 html_context = {
-    'display_github': True,  # Integrate GitHub
+    'display_gitlab': True,  # Integrate GitHub
     'favicon': 'img/favicon.ico',
     'logo': 'img/logo.jpg',
     'theme_logo_only': True,
-    'github_user': '',  # Username
-    'github_repo': '',  # Repo name
-    'github_version': 'master',  # Version
-    #'conf_py_path': '/src/'  # Path in the checkout to the docs root
-    'conf_py_path': ''  # Path in the checkout to the docs root
+    'gitlab_user': 'ska-telescope',  # Username
+    'gitlab_repo': 'lfaa-lmc-prototype',  # Repo name
+    'gitlab_version': 'master',  # Version
+    'conf_py_path': '/docs/source/'  # Path in the checkout to the docs root
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

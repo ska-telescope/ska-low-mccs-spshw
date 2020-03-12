@@ -9,7 +9,7 @@
 name = """skamccs"""
 version = "0.0.1"
 version_info = version.split(".")
-description = """A set of generic base devices for SKA Telescope."""
+description = """A set of Low MCCS device for the SKA Telescope."""
 author = "CSIRO and ..."
 author_email = "malte.marquarding at csiro dot au"
 license = """BSD-3-Clause"""

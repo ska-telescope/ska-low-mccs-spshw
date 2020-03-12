@@ -21,10 +21,10 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
-from SKAMaster import SKAMaster
+#from SKAMaster import SKAMaster
 # Additional import
 # PROTECTED REGION ID(LfaaMaster.additionnal_import) ENABLED START #
-from skabase import SKAMaster
+from skabase.SKAMaster import SKAMaster
 # PROTECTED REGION END #    //  LfaaMaster.additionnal_import
 
 __all__ = ["LfaaMaster",]

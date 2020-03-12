@@ -18,19 +18,9 @@ import sphinx_rtd_theme
 
 # -- Path set up --------------------------------------------------------------
 
-#sys.path.insert(0, os.path.abspath(
-#    os.path.join('..', '..', 'src', 'tango_sdp_subarray', 'SDPSubarray')
-#))
-#sys.path.insert(0, os.path.abspath(
-#    os.path.join('..', '..', 'src', 'tango_sdp_master', 'SDPMaster')
-#))
-#sys.path.insert(0, os.path.abspath(
-#    os.path.join('..', '..', 'src', 'config_db')
-#))
-#sys.path.insert(0, os.path.abspath(
-#    os.path.join('..', '..', 'src', 'logging')
-#))
-
+sys.path.insert(0, os.path.abspath(
+    os.path.join('..', '..')
+))
 
 def setup(app):
     app.add_stylesheet('css/custom.css')
@@ -126,7 +116,8 @@ html_context = {
     'github_user': '',  # Username
     'github_repo': '',  # Repo name
     'github_version': 'master',  # Version
-    'conf_py_path': '/src/'  # Path in the checkout to the docs root
+    #'conf_py_path': '/src/'  # Path in the checkout to the docs root
+    'conf_py_path': ''  # Path in the checkout to the docs root
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

@@ -9,6 +9,16 @@ This project is developing the Local Monitoring and Control (LMC) prototype for 
    :maxdepth: 2
    :caption: Contents:
 
+Package skamccs
+---------------
+
+Module skamcss.LfaaMaster
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: skamccs.LfaaMaster.LfaaMaster
+  :members:
+  :inherited-members:
+  :show-inheritance:
+
 
 Indices and tables
 ------------------

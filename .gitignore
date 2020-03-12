@@ -1,0 +1,48 @@
+*.py[cod]
+
+# Packages
+*.egg
+*.eggs
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+__pycache__
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+.cache
+nosetests.xml
+results.xml
+htmlcov
+coverage.xml
+
+# Developer tools
+*~
+.ropeproject
+.idea
+.vscode
+
+# Ansible
+*.retry
+
+# Metrics
+ci-metrics.json
+code-coverage.xml
+linting.xml
+unit-tests.xml
+
+# Miscellaneous
+.DS_Store

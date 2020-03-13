@@ -35,8 +35,10 @@ setuptools.setup(
         'sphinx',
     ],
     install_requires=[
+        # should be pulled in by lmcbaseclasses but isn't
         "pytango >= 9.3.1",
-        "ska_logging >= 0.2.0",
+        # pulled in by lmcbaseclasses
+        # "ska_logging >= 0.2.1",
         "lmcbaseclasses"
     ],
     tests_require=[

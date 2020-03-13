@@ -10,6 +10,14 @@
 """ Lfaa Subarray
 
 LfaaSubarray is the Tango device class for the Lfaa Subarray prototype.
+
+:todo: This device has device property `skaLevel` with default value 2, as
+       required. It also inherits device property `SkaLevel` with default
+       value 4, which is not correct for this device. The `skaLevel`/
+       `SkaLevel` conflict needs to be resolved.
+:todo: Implement healthState, taking account of health of this device and
+       of the capability invoked on this device
+:todo: All commands return a dummy string
 """
 
 # PyTango imports
@@ -34,6 +42,14 @@ __all__ = ["LfaaSubarray", "main"]
 class LfaaSubarray(SKASubarray):
     """
     LfaaSubarray is the Tango device class for the Lfaa Subarray prototype.
+    
+    :todo: This device has device property `skaLevel` with default value 2, as
+           required. It also inherits device property `SkaLevel` with default
+           value 4, which is not correct for this device. The `skaLevel`/
+           `SkaLevel` conflict needs to be resolved.
+    :todo: Implement healthState, taking account of health of this device and
+           of the capability invoked on this device
+    :todo: All commands return a dummy string
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(LfaaSubarray.class_variable) ENABLED START #
@@ -48,6 +64,10 @@ class LfaaSubarray(SKASubarray):
 
 
 
+
+    skaLevel = device_property(
+        dtype='int16', default_value=2
+    )
 
     # ----------
     # Attributes
@@ -169,6 +189,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION ID(LfaaSubarray.configureScan) ENABLED START #
         """Configure the subarray
 
+        :todo: This method is a stub that does nothing but return a dummy
+               string.
         :param argin: a JSON specification of the subarray scan configuration
         :type argin: DevString
         :return: ASCII String that indicates status, for information purposes
@@ -189,10 +211,15 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION ID(LfaaSubarray.startScan) ENABLED START #
         """Cause the subarray to start sending station beam data to CSP
 
+        :todo: This method is a stub that calls the inherited Scan method,
+               and returns a dummy string. The `startScan`/`Scan` conflict
+               needs to be fixed so that this function overloads rather than
+               calling.
         :return: ASCII String that indicates status, for information purposes
                  only
         :rtype: DevString
         """
+        self.Scan()
         return ("Dummy ASCII string returned from LfaaSubarray.startScan() to "
                 "indicate status, for information purposes only")
         # PROTECTED REGION END #    //  LfaaSubarray.startScan
@@ -211,10 +238,15 @@ class LfaaSubarray(SKASubarray):
         Otherwise, the subarray configuration remains the same, and the command
         startScan() can be used to return to scanning.
 
+        :todo: This method is a stub that calls the inherited EndScan method,
+               and returns a dummy string. The `endScani`/`EndScan` conflict
+               needs to be fixed so that this function overloads rather than
+               calling.
         :return: ASCII String that indicates status, for information purposes
                  only
         :rtype: DevString
         """
+        self.EndScan()
         return ("Dummy ASCII string returned from LfaaSubarray.endScan() to "
                 "indicate status, for information purposes only")
         # PROTECTED REGION END #    //  LfaaSubarray.endScan
@@ -230,6 +262,8 @@ class LfaaSubarray(SKASubarray):
         and transition to idle. The released Stations, Tiles and Station Beams
         are returned to the pool of the unassigned resources.
 
+        :todo: This method is a stub that does nothing but return a dummy
+               string.
         :return: ASCII String that indicates status, for information purposes
                  only
         :rtype: DevString
@@ -251,10 +285,14 @@ class LfaaSubarray(SKASubarray):
         LFAA subarray does not raise alarms if updates for sky coordinates and
         required calibration parameters are not received.
 
+        :todo: This method is a stub that calls the inherited Pause method, and
+               returns a dummy string. The `pauseScan`/`Pause` conflict needs
+               to be fixed so that this function overloads rather than calling.
         :return: ASCII String that indicates status, for information purposes
                  only
         :rtype: DevString
         """
+        self.Pause()
         return ("Dummy ASCII string returned from LfaaSubarray.pauseScan() to "
                 "indicate status, for information purposes only")
         # PROTECTED REGION END #    //  LfaaSubarray.pauseScan
@@ -268,10 +306,14 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION ID(LfaaSubarray.resumeScan) ENABLED START #
         """Cause the subarray to resume scanning after having been paused
 
+        :todo: This method is a stub that calls the inherited Resume method,
+               and returns a dummy string. The `resume`/`Resume` conflict needs
+               to be fixed so that this function overloads rather than calling.
         :return: ASCII String that indicates status, for information purposes
                  only
         :rtype: DevString
         """
+        self.Resume()
         return ("Dummy ASCII string returned from LfaaSubarray.resumeScan() "
                 "to indicate status, for information purposes only")
         # PROTECTED REGION END #    //  LfaaSubarray.resumeScan
@@ -299,6 +341,8 @@ class LfaaSubarray(SKASubarray):
         may need to be supplied to allow SDP to assign data ownership correctly
         (TBD75).
 
+        :todo: This method is a stub that does nothing but return a dummy
+               string.
         :param argin: Specification of the segment of the transient buffer to
                       send
         :type argin: DevVarLongArray
@@ -322,10 +366,14 @@ class LfaaSubarray(SKASubarray):
         to CSP is stopped, pointing/calibration activities are terminated, and
         Tiles are deconfigured.
 
+        :todo: This method is a stub that calls the inherited Abort method, and
+               returns a dummy string. The `abort`/`Abort` conflict needs to be
+               fixed so that this function overloads rather than calling.
         :return: ASCII String that indicates status, for information purposes
                  only
         :rtype: DevString
         """
+        self.Abort()
         return ("Dummy ASCII string returned from LfaaSubarray.abort() to "
                 "indicate status, for information purposes only")
         # PROTECTED REGION END #    //  LfaaSubarray.abort

@@ -21,7 +21,7 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
-#from SKAMaster import SKAMaster
+# from SKAMaster import SKAMaster
 # Additional import
 # PROTECTED REGION ID(LfaaMaster.additionnal_import) ENABLED START #
 from skabase.SKAMaster import SKAMaster
@@ -37,36 +37,36 @@ class LfaaMaster(SKAMaster):
     **Properties:**
 
     - Device Property
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
         lfaaSubarrays
             - The FQDNs of the Lfaa sub-arrays
             - Type:'DevVarStringArray'
-    
-    
-    
+
+
+
         lfaaStations
             - List of LFAA station  TANGO Device names
             - Type:'DevVarStringArray'
-    
+
         lfaaStationBeams
             - List of LFAA station beam TANGO Device names
             - Type:'DevVarStringArray'
-    
+
         lfaaTiles
             - List of LFAA Tile TANGO Device names.
             - Type:'DevVarStringArray'
-    
+
         lfaaAntennas
             - List of LFAA Antenna TANGO Device names
             - Type:'DevVarStringArray'
-    
+
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(LfaaMaster.class_variable) ENABLED START #
@@ -259,7 +259,7 @@ class LfaaMaster(SKAMaster):
     def read_opState(self):
         # PROTECTED REGION ID(LfaaMaster.opState_read) ENABLED START #
         """Return the opState attribute."""
-        return PyTango.DevState.UNKNOWN
+        return tango.DevState.UNKNOWN
         # PROTECTED REGION END #    //  LfaaMaster.opState_read
 
     def read_availableCapabilities(self):
@@ -409,8 +409,8 @@ class LfaaMaster(SKAMaster):
     def allocate(self, argin):
         # PROTECTED REGION ID(LfaaMaster.allocate) ENABLED START #
         """
-        
-            Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array. 
+
+            Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array.
             Note: Station and Tile composition is specified on the LFAA Subarray device .
 
         :param argin: 'DevString'

@@ -9,7 +9,6 @@ RELEASE = {}
 release_filename = os.path.join(setup_dir, 'skamccs', 'release.py')
 exec(open(release_filename).read(), RELEASE)
 
-
 setuptools.setup(
     name=RELEASE["name"],
     description=RELEASE["description"],
@@ -46,6 +45,11 @@ setuptools.setup(
         'pytest-cov',
         'pytest-json-report',
         'pycodestyle',
+        'pytest-pylint',
+        'pytest-json-report',
+        'coverage',
+        'pytest-xdist',
+        'pylint2junit'
     ],
     keywords="lmc mccs tango ska",
     zip_safe=False)

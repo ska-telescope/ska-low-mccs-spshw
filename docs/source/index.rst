@@ -39,6 +39,13 @@ Module skamcss.LfaaMaster
   :inherited-members:
   :show-inheritance:
 
+Module skamcss.LfaaSubarray
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: skamccs.LfaaSubarray.LfaaSubarray
+  :members:
+  :inherited-members:
+  :show-inheritance:
+
 
 Indices and tables
 ------------------

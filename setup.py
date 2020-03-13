@@ -5,21 +5,21 @@ import os
 import setuptools
 
 setup_dir = os.path.dirname(os.path.abspath(__file__))
-RELEASE = {}
+release_module = {}
 release_filename = os.path.join(setup_dir, 'skamccs', 'release.py')
-exec(open(release_filename).read(), RELEASE)
+exec(open(release_filename).read(), release_module)
 
 setuptools.setup(
-    name=RELEASE["name"],
-    description=RELEASE["description"],
-    version=RELEASE["version"],
-    author=RELEASE["author"],
-    author_email=RELEASE["author_email"],
-    license=RELEASE["license"],
+    name=release_module["name"],
+    description=release_module["description"],
+    version=release_module["version"],
+    author=release_module["author"],
+    author_email=release_module["author_email"],
+    license=release_module["license"],
     packages=setuptools.find_packages(),
     include_package_data=True,
     scripts=[],
-    url=RELEASE["url"],
+    url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -32,6 +32,7 @@ setuptools.setup(
     setup_requires=[
         'pytest-runner',
         'sphinx',
+        'sphinx_rtd_theme'
     ],
     install_requires=[
         # should be pulled in by lmcbaseclasses but isn't

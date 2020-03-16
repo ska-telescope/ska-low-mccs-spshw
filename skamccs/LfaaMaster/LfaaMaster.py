@@ -21,13 +21,38 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
-# from SKAMaster import SKAMaster
+import enum
+#from SKAMaster import SKAMaster
 # Additional import
 # PROTECTED REGION ID(LfaaMaster.additionnal_import) ENABLED START #
 from skabase.SKAMaster import SKAMaster
 # PROTECTED REGION END #    //  LfaaMaster.additionnal_import
 
-__all__ = ["LfaaMaster",]
+__all__ = ["LfaaMaster"]
+
+
+class HealthState(enum.IntEnum):
+    """Python enumerated type for HealthState attribute."""
+
+
+class AdminMode(enum.IntEnum):
+    """Python enumerated type for AdminMode attribute."""
+
+
+class ControlMode(enum.IntEnum):
+    """Python enumerated type for ControlMode attribute."""
+
+
+class SimulationMode(enum.IntEnum):
+    """Python enumerated type for SimulationMode attribute."""
+
+
+class TestMode(enum.IntEnum):
+    """Python enumerated type for TestMode attribute."""
+
+
+class LoggingLevel(enum.IntEnum):
+    """Python enumerated type for LoggingLevel attribute."""
 
 
 class LfaaMaster(SKAMaster):
@@ -37,36 +62,21 @@ class LfaaMaster(SKAMaster):
     **Properties:**
 
     - Device Property
-
-
-
-
-
-
-
-
-        lfaaSubarrays
+        LfaaSubarrays
             - The FQDNs of the Lfaa sub-arrays
             - Type:'DevVarStringArray'
-
-
-
-        lfaaStations
+        LfaaStations
             - List of LFAA station  TANGO Device names
             - Type:'DevVarStringArray'
-
-        lfaaStationBeams
+        LfaaStationBeams
             - List of LFAA station beam TANGO Device names
             - Type:'DevVarStringArray'
-
-        lfaaTiles
+        LfaaTiles
             - List of LFAA Tile TANGO Device names.
             - Type:'DevVarStringArray'
-
-        lfaaAntennas
+        LfaaAntennas
             - List of LFAA Antenna TANGO Device names
             - Type:'DevVarStringArray'
-
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(LfaaMaster.class_variable) ENABLED START #
@@ -84,25 +94,25 @@ class LfaaMaster(SKAMaster):
 
 
 
-    lfaaSubarrays = device_property(
+    LfaaSubarrays = device_property(
         dtype='DevVarStringArray',
     )
 
 
 
-    lfaaStations = device_property(
+    LfaaStations = device_property(
         dtype='DevVarStringArray',
     )
 
-    lfaaStationBeams = device_property(
+    LfaaStationBeams = device_property(
         dtype='DevVarStringArray',
     )
 
-    lfaaTiles = device_property(
+    LfaaTiles = device_property(
         dtype='DevVarStringArray',
     )
 
-    lfaaAntennas = device_property(
+    LfaaAntennas = device_property(
         dtype='DevVarStringArray',
     )
 
@@ -121,7 +131,7 @@ class LfaaMaster(SKAMaster):
 
 
     adminMode = attribute(
-        dtype='DevEnum',
+        dtype=AdminMode,
         access=AttrWriteType.READ_WRITE,
         polling_period=1000,
         memorized=True,
@@ -129,11 +139,11 @@ class LfaaMaster(SKAMaster):
     )
 
     controlMode = attribute(
-        dtype='DevEnum',
+        dtype=ControlMode,
         access=AttrWriteType.READ_WRITE,
         polling_period=1000,
         memorized=True,
-        doc="The control mode of the device. REMOTE, LOCAL\nTANGO Device accepts only from a ?local? client and ignores commands and queries received from TM\nor any other ?remote? clients. The Local clients has to release LOCAL control before REMOTE clients\ncan take control again.",
+        doc="The control mode of the device. REMOTE, LOCAL\nTANGO Device accepts only from a �local� client and ignores commands and queries received from TM\nor any other �remote� clients. The Local clients has to release LOCAL control before REMOTE clients\ncan take control again.",
     )
 
 
@@ -153,7 +163,7 @@ class LfaaMaster(SKAMaster):
     commandDelayExpected = attribute(
         dtype='DevUShort',
         unit="s",
-        doc="Amount of time it will take to prepare the requested state/mode transition ? implemented as needed.",
+        doc="Amount of time it will take to prepare the requested state/mode transition � implemented as needed.",
     )
 
     opState = attribute(
@@ -292,7 +302,6 @@ class LfaaMaster(SKAMaster):
         return ('',)
         # PROTECTED REGION END #    //  LfaaMaster.tileFQDNs_read
 
-
     # --------
     # Commands
     # --------
@@ -300,78 +309,101 @@ class LfaaMaster(SKAMaster):
     @command(
     )
     @DebugIt()
-    def off(self):
-        # PROTECTED REGION ID(LfaaMaster.off) ENABLED START #
+    def On(self):
+        # PROTECTED REGION ID(LfaaMaster.On) ENABLED START #
         """
         Power off the LFAA system.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.off
+        # PROTECTED REGION END #    //  LfaaMaster.On
+
+    def is_On_allowed(self):
+        # PROTECTED REGION ID(LfaaMaster.is_On_allowed) ENABLED START #
+        return self.get_state() not in [DevState.ON,DevState.FAULT,DevState.DISABLE]
+        # PROTECTED REGION END #    //  LfaaMaster.is_On_allowed
+
+    @command(
+    )
+    @DebugIt()
+    def Off(self):
+        # PROTECTED REGION ID(LfaaMaster.Off) ENABLED START #
+        """
+        Power off the LFAA system.
+
+        :return:None
+        """
+        pass
+        # PROTECTED REGION END #    //  LfaaMaster.Off
 
     @command(
         dtype_out='DevEnum',
     )
     @DebugIt()
-    def standbyLow(self):
-        # PROTECTED REGION ID(LfaaMaster.standbyLow) ENABLED START #
+    def StandbyLow(self):
+        # PROTECTED REGION ID(LfaaMaster.StandbyLow) ENABLED START #
         """
         Transition the LFAA system to the low-power STANDBY_LOW_POWER operating state.
 
         :return:'DevEnum'
         """
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.standbyLow
+        # PROTECTED REGION END #    //  LfaaMaster.StandbyLow
 
     @command(
         dtype_out='DevEnum',
     )
     @DebugIt()
-    def standbyFull(self):
-        # PROTECTED REGION ID(LfaaMaster.standbyFull) ENABLED START #
+    def StandbyFull(self):
+        # PROTECTED REGION ID(LfaaMaster.StandbyFull) ENABLED START #
         """
         standbyFull	None	N/A	DevEnum	OPERATOR	ON, STANDBY_LOW_POWER	Transition the LFAA system to the STANDBY_FULL_POWER operating state.
 
         :return:'DevEnum'
         """
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.standbyFull
+        # PROTECTED REGION END #    //  LfaaMaster.StandbyFull
 
     @command(
         dtype_out='DevEnum',
     )
     @DebugIt()
-    def operate(self):
-        # PROTECTED REGION ID(LfaaMaster.operate) ENABLED START #
+    def Operate(self):
+        # PROTECTED REGION ID(LfaaMaster.Operate) ENABLED START #
         """
         Transit to the OPERATE operating state, ready for signal processing.
 
         :return:'DevEnum'
         """
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.operate
+        # PROTECTED REGION END #    //  LfaaMaster.Operate
+
+    def is_Operate_allowed(self):
+        # PROTECTED REGION ID(LfaaMaster.is_Operate_allowed) ENABLED START #
+        return self.get_state() not in [DevState.OFF,DevState.FAULT,DevState.INIT,DevState.ALARM,DevState.UNKNOWN,DevState.STANDBY,DevState.DISABLE]
+        # PROTECTED REGION END #    //  LfaaMaster.is_Operate_allowed
 
     @command(
     )
     @DebugIt()
-    def reset(self):
-        # PROTECTED REGION ID(LfaaMaster.reset) ENABLED START #
+    def Reset(self):
+        # PROTECTED REGION ID(LfaaMaster.Reset) ENABLED START #
         """
         The LFAA system as a whole is reinitialised as an attempt to clear an ALARM or FAULT state.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.reset
+        # PROTECTED REGION END #    //  LfaaMaster.Reset
 
     @command(
         dtype_in='DevLong',
         doc_in="Sub-Array ID",
     )
     @DebugIt()
-    def enableSubarray(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.enableSubarray) ENABLED START #
+    def EnableSubarray(self, argin):
+        # PROTECTED REGION ID(LfaaMaster.EnableSubarray) ENABLED START #
         """
         Activate an LFAA Sub-Array
 
@@ -381,15 +413,20 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.enableSubarray
+        # PROTECTED REGION END #    //  LfaaMaster.EnableSubarray
+
+    def is_EnableSubarray_allowed(self):
+        # PROTECTED REGION ID(LfaaMaster.is_EnableSubarray_allowed) ENABLED START #
+        return self.get_state() not in [DevState.FAULT,DevState.UNKNOWN,DevState.DISABLE]
+        # PROTECTED REGION END #    //  LfaaMaster.is_EnableSubarray_allowed
 
     @command(
         dtype_in='DevLong',
         doc_in="Sub-Array ID",
     )
     @DebugIt()
-    def disableSubarray(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.disableSubarray) ENABLED START #
+    def DisableSubarray(self, argin):
+        # PROTECTED REGION ID(LfaaMaster.DisableSubarray) ENABLED START #
         """
         Deactivate an LFAA Sub-Array
 
@@ -399,18 +436,23 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.disableSubarray
+        # PROTECTED REGION END #    //  LfaaMaster.DisableSubarray
+
+    def is_DisableSubarray_allowed(self):
+        # PROTECTED REGION ID(LfaaMaster.is_DisableSubarray_allowed) ENABLED START #
+        return self.get_state() not in [DevState.FAULT,DevState.UNKNOWN,DevState.DISABLE]
+        # PROTECTED REGION END #    //  LfaaMaster.is_DisableSubarray_allowed
 
     @command(
         dtype_in='DevString',
         doc_in="JSON-formatted string",
     )
     @DebugIt()
-    def allocate(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.allocate) ENABLED START #
+    def Allocate(self, argin):
+        # PROTECTED REGION ID(LfaaMaster.Allocate) ENABLED START #
         """
-
-            Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array.
+        
+            Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array. 
             Note: Station and Tile composition is specified on the LFAA Subarray device .
 
         :param argin: 'DevString'
@@ -419,15 +461,20 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.allocate
+        # PROTECTED REGION END #    //  LfaaMaster.Allocate
+
+    def is_Allocate_allowed(self):
+        # PROTECTED REGION ID(LfaaMaster.is_Allocate_allowed) ENABLED START #
+        return self.get_state() not in [DevState.OFF,DevState.FAULT,DevState.INIT,DevState.ALARM,DevState.UNKNOWN,DevState.STANDBY,DevState.DISABLE]
+        # PROTECTED REGION END #    //  LfaaMaster.is_Allocate_allowed
 
     @command(
         dtype_in='DevLong',
         doc_in="Sub-Array ID",
     )
     @DebugIt()
-    def release(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.release) ENABLED START #
+    def Release(self, argin):
+        # PROTECTED REGION ID(LfaaMaster.Release) ENABLED START #
         """
         Release a sub-array?s Capabilities and resources (stations, tiles, antennas), marking the resources and Capabilities as unassigned and idle.
 
@@ -437,20 +484,25 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.release
+        # PROTECTED REGION END #    //  LfaaMaster.Release
+
+    def is_Release_allowed(self):
+        # PROTECTED REGION ID(LfaaMaster.is_Release_allowed) ENABLED START #
+        return self.get_state() not in [DevState.OFF,DevState.FAULT,DevState.INIT,DevState.ALARM,DevState.UNKNOWN,DevState.STANDBY,DevState.DISABLE]
+        # PROTECTED REGION END #    //  LfaaMaster.is_Release_allowed
 
     @command(
     )
     @DebugIt()
-    def maintenance(self):
-        # PROTECTED REGION ID(LfaaMaster.maintenance) ENABLED START #
+    def Maintenance(self):
+        # PROTECTED REGION ID(LfaaMaster.Maintenance) ENABLED START #
         """
         Transition the LFAA to a MAINTENANCE state.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.maintenance
+        # PROTECTED REGION END #    //  LfaaMaster.Maintenance
 
 # ----------
 # Run server
@@ -458,9 +510,11 @@ class LfaaMaster(SKAMaster):
 
 
 def main(args=None, **kwargs):
+    """Main function of the LfaaMaster module."""
     # PROTECTED REGION ID(LfaaMaster.main) ENABLED START #
     return run((LfaaMaster,), args=args, **kwargs)
     # PROTECTED REGION END #    //  LfaaMaster.main
+
 
 if __name__ == '__main__':
     main()

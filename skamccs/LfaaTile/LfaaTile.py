@@ -21,7 +21,8 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
-from SKABaseDevice import SKABaseDevice
+
+# from SKABaseDevice import SKABaseDevice
 
 # Additional import
 # PROTECTED REGION ID(LfaaTile.additionnal_import) ENABLED START #
@@ -683,7 +684,7 @@ class LfaaTile(SKABaseDevice):
         """
         if len(argin) < 7:
             raise ValueError
-        self._forty_g_core_list.add(
+        self._forty_g_core_list.append(
             {
                 "core_id": argin[0],
                 "src_mac": argin[1],
@@ -720,9 +721,9 @@ class LfaaTile(SKABaseDevice):
                     item["src_mac"],
                     item["src_ip"],
                     item["src_port"],
-                    item["dest_mac"],
-                    item["dest_ip"],
-                    item["dest_port"],
+                    item["dst_mac"],
+                    item["dst_ip"],
+                    item["dst_port"],
                 ]
         raise ValueError("Invalid core id specified")
         # PROTECTED REGION END #    //  LfaaTile.Get40GCoreConfiguration

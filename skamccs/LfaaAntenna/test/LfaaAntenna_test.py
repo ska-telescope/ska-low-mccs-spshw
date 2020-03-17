@@ -39,7 +39,7 @@ class LfaaAntennaDeviceTestCase(DeviceTestCase):
     # PROTECTED REGION ID(LfaaAntenna.test_additionnal_import) ENABLED START #
     # PROTECTED REGION END #    //  LfaaAntenna.test_additionnal_import
     device = LfaaAntenna
-    properties = {
+    properties = {'SkaLevel': '4', 'GroupDefinitions': '', 'LoggingLevelDefault': '4', 'LoggingTargetsDefault': '', 
                   }
     empty = None  # Should be []
 
@@ -80,6 +80,18 @@ class LfaaAntennaDeviceTestCase(DeviceTestCase):
         # PROTECTED REGION ID(LfaaAntenna.test_PowerOff) ENABLED START #
         self.device.PowerOff()
         # PROTECTED REGION END #    //  LfaaAntenna.test_PowerOff
+
+    def test_GetVersionInfo(self):
+        """Test for GetVersionInfo"""
+        # PROTECTED REGION ID(LfaaAntenna.test_GetVersionInfo) ENABLED START #
+        self.device.GetVersionInfo()
+        # PROTECTED REGION END #    //  LfaaAntenna.test_GetVersionInfo
+
+    def test_Reset(self):
+        """Test for Reset"""
+        # PROTECTED REGION ID(LfaaAntenna.test_Reset) ENABLED START #
+        self.device.Reset()
+        # PROTECTED REGION END #    //  LfaaAntenna.test_Reset
 
     def test_antennaId(self):
         """Test for antennaId"""
@@ -183,6 +195,60 @@ class LfaaAntennaDeviceTestCase(DeviceTestCase):
         self.device.timestampOfLastSpectrum
         # PROTECTED REGION END #    //  LfaaAntenna.test_timestampOfLastSpectrum
 
+    def test_buildState(self):
+        """Test for buildState"""
+        # PROTECTED REGION ID(LfaaAntenna.test_buildState) ENABLED START #
+        self.device.buildState
+        # PROTECTED REGION END #    //  LfaaAntenna.test_buildState
+
+    def test_versionId(self):
+        """Test for versionId"""
+        # PROTECTED REGION ID(LfaaAntenna.test_versionId) ENABLED START #
+        self.device.versionId
+        # PROTECTED REGION END #    //  LfaaAntenna.test_versionId
+
+    def test_loggingLevel(self):
+        """Test for loggingLevel"""
+        # PROTECTED REGION ID(LfaaAntenna.test_loggingLevel) ENABLED START #
+        self.device.loggingLevel
+        # PROTECTED REGION END #    //  LfaaAntenna.test_loggingLevel
+
+    def test_healthState(self):
+        """Test for healthState"""
+        # PROTECTED REGION ID(LfaaAntenna.test_healthState) ENABLED START #
+        self.device.healthState
+        # PROTECTED REGION END #    //  LfaaAntenna.test_healthState
+
+    def test_adminMode(self):
+        """Test for adminMode"""
+        # PROTECTED REGION ID(LfaaAntenna.test_adminMode) ENABLED START #
+        self.device.adminMode
+        # PROTECTED REGION END #    //  LfaaAntenna.test_adminMode
+
+    def test_controlMode(self):
+        """Test for controlMode"""
+        # PROTECTED REGION ID(LfaaAntenna.test_controlMode) ENABLED START #
+        self.device.controlMode
+        # PROTECTED REGION END #    //  LfaaAntenna.test_controlMode
+
+    def test_simulationMode(self):
+        """Test for simulationMode"""
+        # PROTECTED REGION ID(LfaaAntenna.test_simulationMode) ENABLED START #
+        self.device.simulationMode
+        # PROTECTED REGION END #    //  LfaaAntenna.test_simulationMode
+
+    def test_testMode(self):
+        """Test for testMode"""
+        # PROTECTED REGION ID(LfaaAntenna.test_testMode) ENABLED START #
+        self.device.testMode
+        # PROTECTED REGION END #    //  LfaaAntenna.test_testMode
+
+    def test_logicalAntennaId(self):
+        """Test for logicalAntennaId"""
+        # PROTECTED REGION ID(LfaaAntenna.test_logicalAntennaId) ENABLED START #
+        self.device.logicalAntennaId
+        # PROTECTED REGION END #    //  LfaaAntenna.test_logicalAntennaId
+
     def test_xPolarisationScalingFactor(self):
         """Test for xPolarisationScalingFactor"""
         # PROTECTED REGION ID(LfaaAntenna.test_xPolarisationScalingFactor) ENABLED START #
@@ -224,6 +290,30 @@ class LfaaAntennaDeviceTestCase(DeviceTestCase):
         # PROTECTED REGION ID(LfaaAntenna.test_position) ENABLED START #
         self.device.position
         # PROTECTED REGION END #    //  LfaaAntenna.test_position
+
+    def test_loggingTargets(self):
+        """Test for loggingTargets"""
+        # PROTECTED REGION ID(LfaaAntenna.test_loggingTargets) ENABLED START #
+        self.device.loggingTargets
+        # PROTECTED REGION END #    //  LfaaAntenna.test_loggingTargets
+
+    def test_delays(self):
+        """Test for delays"""
+        # PROTECTED REGION ID(LfaaAntenna.test_delays) ENABLED START #
+        self.device.delays
+        # PROTECTED REGION END #    //  LfaaAntenna.test_delays
+
+    def test_delayRates(self):
+        """Test for delayRates"""
+        # PROTECTED REGION ID(LfaaAntenna.test_delayRates) ENABLED START #
+        self.device.delayRates
+        # PROTECTED REGION END #    //  LfaaAntenna.test_delayRates
+
+    def test_bandpassCoefficient(self):
+        """Test for bandpassCoefficient"""
+        # PROTECTED REGION ID(LfaaAntenna.test_bandpassCoefficient) ENABLED START #
+        self.device.bandpassCoefficient
+        # PROTECTED REGION END #    //  LfaaAntenna.test_bandpassCoefficient
 
 
 # Main execution

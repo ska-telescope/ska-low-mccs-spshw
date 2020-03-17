@@ -18,22 +18,33 @@ from PyTango import DebugIt
 from PyTango.server import run
 from PyTango.server import Device, DeviceMeta
 from PyTango.server import attribute, command
+from PyTango.server import device_property
 from PyTango import AttrQuality, DispLevel, DevState
 from PyTango import AttrWriteType, PipeWriteType
+###from SKABaseDevice import SKABaseDevice
 # Additional import
+from ska.base import SKABaseDevice
 # PROTECTED REGION ID(LfaaAntenna.additionnal_import) ENABLED START #
 # PROTECTED REGION END #    //  LfaaAntenna.additionnal_import
 
 __all__ = ["LfaaAntenna", "main"]
 
 
-class LfaaAntenna(Device):
+class LfaaAntenna(SKABaseDevice):
     """
     An implementation of the Antenna Device Server for the MCCS based upon architecture in SKA-TEL-LFAA-06000052-02.
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(LfaaAntenna.class_variable) ENABLED START #
     # PROTECTED REGION END #    //  LfaaAntenna.class_variable
+
+    # -----------------
+    # Device Properties
+    # -----------------
+
+
+
+
 
     # ----------
     # Attributes
@@ -42,21 +53,25 @@ class LfaaAntenna(Device):
     antennaId = attribute(
         dtype='int',
         label="AntennaID",
+        doc="Global antenna identifier",
     )
 
     logicalTpmAntenna_id = attribute(
         dtype='int',
         label="logicalTpmAntenna_id",
+        doc="Local within Tile identifier for the Antenna TPM\n",
     )
 
     logicalApiuAntenna_id = attribute(
         dtype='double',
         label="logicalApiuAntenna_id",
+        doc="Local within Tile identifier for the Antenna APIU",
     )
 
     tpmId = attribute(
         dtype='double',
         label="tpmId",
+        doc="Global Tile ID to which the atenna is connected",
     )
 
     apiuId = attribute(
@@ -67,11 +82,13 @@ class LfaaAntenna(Device):
     gain = attribute(
         dtype='float',
         label="gain",
+        doc="The gain set for the antenna",
     )
 
     rms = attribute(
         dtype='float',
         label="rms",
+        doc="The measured RMS of the antenna (monitored)",
     )
 
     voltage = attribute(
@@ -99,30 +116,53 @@ class LfaaAntenna(Device):
     fieldNodeLongitude = attribute(
         dtype='float',
         label="fieldNodeLongitude",
+        doc="Longnitude of field node (centre) to which antenna is asociated.",
     )
 
     fieldNodeLatitude = attribute(
         dtype='float',
         label="fieldNodeLatitude",
+        doc="Latitude of the field node (centre) to which antenna is asociated.",
     )
 
     altitude = attribute(
         dtype='float',
         label="altitude",
+        unit="meters",
+        doc="Antenna altitude in meters",
     )
 
     xDisplacement = attribute(
         dtype='float',
         label="xDisplacement",
+        unit="meters",
+        doc="Horizontal displacement in meters from field node centre",
     )
 
     yDisplacement = attribute(
         dtype='float',
+        label="yDisplacement",
+        unit="meters",
+        doc="Vertical displacement in meters from field centre",
     )
 
     timestampOfLastSpectrum = attribute(
         dtype='str',
         label="timestampOfLastSpectrum",
+    )
+
+
+
+
+
+
+
+
+
+    logicalAntennaId = attribute(
+        dtype='int',
+        label="logicalAntennaId",
+        doc="Local (within Tile) antenna identifier",
     )
 
     xPolarisationScalingFactor = attribute(
@@ -141,7 +181,7 @@ class LfaaAntenna(Device):
         dtype=('float',),
         max_dim_x=100,
         label="calibrationCoefficient",
-        doc="This is presented as a vector.",
+        doc="Callibration coefficient to be applied for the next frequency channel in the calibration cycle (archived)\n\nThis is presented as a vector.\n",
     )
 
     pointingCoefficient = attribute(
@@ -168,12 +208,34 @@ class LfaaAntenna(Device):
         label="position",
     )
 
+
+    delays = attribute(
+        dtype=('float',),
+        max_dim_x=100,
+        label="delays",
+        doc="Delay for each beam to be applied during the next pointing update (archived)",
+    )
+
+    delayRates = attribute(
+        dtype=('float',),
+        max_dim_x=100,
+        label="delayRates",
+        doc="Delay rate for each beam to be applied during the next pointing update (archived)",
+    )
+
+    bandpassCoefficient = attribute(
+        dtype=('float',),
+        max_dim_x=100,
+        label="bandpassCoefficient",
+        doc="Bandpass coefficient to apply during next calibration cycle to flatten the antenna's bandpass (archived)",
+    )
+
     # ---------------
     # General methods
     # ---------------
 
     def init_device(self):
-        Device.init_device(self)
+        SKABaseDevice.init_device(self)
         # PROTECTED REGION ID(LfaaAntenna.init_device) ENABLED START #
         # PROTECTED REGION END #    //  LfaaAntenna.init_device
 
@@ -276,6 +338,11 @@ class LfaaAntenna(Device):
         return ''
         # PROTECTED REGION END #    //  LfaaAntenna.timestampOfLastSpectrum_read
 
+    def read_logicalAntennaId(self):
+        # PROTECTED REGION ID(LfaaAntenna.logicalAntennaId_read) ENABLED START #
+        return 0
+        # PROTECTED REGION END #    //  LfaaAntenna.logicalAntennaId_read
+
     def read_xPolarisationScalingFactor(self):
         # PROTECTED REGION ID(LfaaAntenna.xPolarisationScalingFactor_read) ENABLED START #
         return [0]
@@ -310,6 +377,21 @@ class LfaaAntenna(Device):
         # PROTECTED REGION ID(LfaaAntenna.position_read) ENABLED START #
         return [0.0]
         # PROTECTED REGION END #    //  LfaaAntenna.position_read
+
+    def read_delays(self):
+        # PROTECTED REGION ID(LfaaAntenna.delays_read) ENABLED START #
+        return [0.0]
+        # PROTECTED REGION END #    //  LfaaAntenna.delays_read
+
+    def read_delayRates(self):
+        # PROTECTED REGION ID(LfaaAntenna.delayRates_read) ENABLED START #
+        return [0.0]
+        # PROTECTED REGION END #    //  LfaaAntenna.delayRates_read
+
+    def read_bandpassCoefficient(self):
+        # PROTECTED REGION ID(LfaaAntenna.bandpassCoefficient_read) ENABLED START #
+        return [0.0]
+        # PROTECTED REGION END #    //  LfaaAntenna.bandpassCoefficient_read
 
 
     # --------

@@ -4,9 +4,11 @@
 import os
 import setuptools
 
+# pylint: disable=invalid-name
 setup_dir = os.path.dirname(os.path.abspath(__file__))
 release_module = {}
 release_filename = os.path.join(setup_dir, 'skamccs', 'release.py')
+# pylint: disable=exec-used
 exec(open(release_filename).read(), release_module)
 
 setuptools.setup(
@@ -37,9 +39,9 @@ setuptools.setup(
     install_requires=[
         # should be pulled in by lmcbaseclasses but isn't
         "pytango >= 9.3.1",
+        "lmcbaseclasses >= 0.5.0"
         # pulled in by lmcbaseclasses
         # "ska_logging >= 0.2.1",
-        "lmcbaseclasses"
     ],
     tests_require=[
         'pytest',
@@ -50,7 +52,8 @@ setuptools.setup(
         'pytest-json-report',
         'coverage',
         'pytest-xdist',
-        'pylint2junit'
+        'pylint2junit',
+        'mock'
     ],
     keywords="lmc mccs tango ska",
     zip_safe=False)

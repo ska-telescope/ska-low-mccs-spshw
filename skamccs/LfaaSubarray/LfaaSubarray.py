@@ -32,8 +32,8 @@ from PyTango import AttrWriteType, PipeWriteType
 #from SKASubarray import SKASubarray
 # Additional import
 # PROTECTED REGION ID(LfaaSubarray.additionnal_import) ENABLED START #
-### REMEMBER TO COMMENT OUT "from SKASubarray import SKASubarray" ABOVE
-from skabase.SKASubarray import SKASubarray
+# REMEMBER TO COMMENT OUT "from SKASubarray import SKASubarray" ABOVE
+from ska.base import SKASubarray
 # PROTECTED REGION END #    //  LfaaSubarray.additionnal_import
 
 __all__ = ["LfaaSubarray", "main"]
@@ -42,7 +42,7 @@ __all__ = ["LfaaSubarray", "main"]
 class LfaaSubarray(SKASubarray):
     """
     LfaaSubarray is the Tango device class for the Lfaa Subarray prototype.
-    
+
     :todo: This device has device property `skaLevel` with default value 2, as
            required. It also inherits device property `SkaLevel` with default
            value 4, which is not correct for this device. The `skaLevel`/
@@ -59,12 +59,6 @@ class LfaaSubarray(SKASubarray):
     # Device Properties
     # -----------------
 
-
-
-
-
-
-
     skaLevel = device_property(
         dtype='int16', default_value=2
     )
@@ -73,27 +67,11 @@ class LfaaSubarray(SKASubarray):
     # Attributes
     # ----------
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     scanID = attribute(
         dtype='int',
         format="%i",
         doc="The ID of the current scan, set via commands startScan() and endScan(). A scanID of 0 means that the subarray is idle.",
     )
-
-
-
 
     stationFQDNs = attribute(
         dtype=('str',),
@@ -131,7 +109,7 @@ class LfaaSubarray(SKASubarray):
     def always_executed_hook(self):
         # PROTECTED REGION ID(LfaaSubarray.always_executed_hook) ENABLED START #
         """Method always executed before any TANGO command is executed."""
-        #pass
+        # pass
         # PROTECTED REGION END #    //  LfaaSubarray.always_executed_hook
 
     def delete_device(self):
@@ -142,7 +120,7 @@ class LfaaSubarray(SKASubarray):
         init_device method to be released. This method is called by the device
         destructor and by the device Init command.
         """
-        #pass
+        # pass
         # PROTECTED REGION END #    //  LfaaSubarray.delete_device
 
     # ------------------
@@ -173,16 +151,15 @@ class LfaaSubarray(SKASubarray):
         return ['']
         # PROTECTED REGION END #    //  LfaaSubarray.stationBeamFQDNs_read
 
-
     # --------
     # Commands
     # --------
 
     @command(
-    dtype_in='str', 
-    doc_in="a JSON specification of the subarray scan configuration", 
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_in='str',
+        doc_in="a JSON specification of the subarray scan configuration",
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def configureScan(self, argin):
@@ -203,8 +180,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.configureScan
 
     @command(
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def startScan(self):
@@ -225,8 +202,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.startScan
 
     @command(
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def endScan(self):
@@ -252,8 +229,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.endScan
 
     @command(
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def releaseResources(self):
@@ -274,8 +251,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.releaseResources
 
     @command(
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def pauseScan(self):
@@ -298,8 +275,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.pauseScan
 
     @command(
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def resumeScan(self):
@@ -319,10 +296,10 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.resumeScan
 
     @command(
-    dtype_in=('int',), 
-    doc_in="Specification of the segment of the transient buffer to send, comprising:\n1. Start time (timestamp: milliseconds since UNIX epoch)\n2. End time (timestamp: milliseconds since UNIX epoch)\n3. Dispersion measure\nTogether, these parameters narrow the selection of transient buffer data to the period of time and frequencies that are of interest.\n\nAdditional metadata, such as the ID of a triggering Scheduling Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).", 
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_in=('int',),
+        doc_in="Specification of the segment of the transient buffer to send, comprising:\n1. Start time (timestamp: milliseconds since UNIX epoch)\n2. End time (timestamp: milliseconds since UNIX epoch)\n3. Dispersion measure\nTogether, these parameters narrow the selection of transient buffer data to the period of time and frequencies that are of interest.\n\nAdditional metadata, such as the ID of a triggering Scheduling Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).",
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def sendTransientBuffer(self, argin):
@@ -356,8 +333,8 @@ class LfaaSubarray(SKASubarray):
         # PROTECTED REGION END #    //  LfaaSubarray.sendTransientBuffer
 
     @command(
-    dtype_out='str', 
-    doc_out="ASCII string that indicates status, for information purposes only", 
+        dtype_out='str',
+        doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
     def abort(self):
@@ -388,6 +365,7 @@ def main(args=None, **kwargs):
     """mainline for module"""
     return run((LfaaSubarray,), args=args, **kwargs)
     # PROTECTED REGION END #    //  LfaaSubarray.main
+
 
 if __name__ == '__main__':
     main()

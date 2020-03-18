@@ -21,38 +21,15 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
-import enum
 #from SKAMaster import SKAMaster
 # Additional import
 # PROTECTED REGION ID(LfaaMaster.additionnal_import) ENABLED START #
-from skabase.SKAMaster import SKAMaster
+from ska.base import SKAMaster
+from ska.base.control_model import (AdminMode, ControlMode, HealthState,
+                                    SimulationMode, TestMode)
 # PROTECTED REGION END #    //  LfaaMaster.additionnal_import
 
 __all__ = ["LfaaMaster"]
-
-
-class HealthState(enum.IntEnum):
-    """Python enumerated type for HealthState attribute."""
-
-
-class AdminMode(enum.IntEnum):
-    """Python enumerated type for AdminMode attribute."""
-
-
-class ControlMode(enum.IntEnum):
-    """Python enumerated type for ControlMode attribute."""
-
-
-class SimulationMode(enum.IntEnum):
-    """Python enumerated type for SimulationMode attribute."""
-
-
-class TestMode(enum.IntEnum):
-    """Python enumerated type for TestMode attribute."""
-
-
-class LoggingLevel(enum.IntEnum):
-    """Python enumerated type for LoggingLevel attribute."""
 
 
 class LfaaMaster(SKAMaster):
@@ -86,19 +63,9 @@ class LfaaMaster(SKAMaster):
     # Device Properties
     # -----------------
 
-
-
-
-
-
-
-
-
     LfaaSubarrays = device_property(
         dtype='DevVarStringArray',
     )
-
-
 
     LfaaStations = device_property(
         dtype='DevVarStringArray',
@@ -120,16 +87,6 @@ class LfaaMaster(SKAMaster):
     # Attributes
     # ----------
 
-
-
-
-
-
-
-
-
-
-
     adminMode = attribute(
         dtype=AdminMode,
         access=AttrWriteType.READ_WRITE,
@@ -146,8 +103,6 @@ class LfaaMaster(SKAMaster):
         doc="The control mode of the device. REMOTE, LOCAL\nTANGO Device accepts only from a �local� client and ignores commands and queries received from TM\nor any other �remote� clients. The Local clients has to release LOCAL control before REMOTE clients\ncan take control again.",
     )
 
-
-
     commandProgress = attribute(
         dtype='DevUShort',
         label="Command progress percentage",
@@ -159,7 +114,6 @@ class LfaaMaster(SKAMaster):
         doc="Percentage progress implemented for commands that  result in state/mode transitions for a large \nnumber of components and/or are executed in stages (e.g power up, power down)",
     )
 
-
     commandDelayExpected = attribute(
         dtype='DevUShort',
         unit="s",
@@ -169,7 +123,6 @@ class LfaaMaster(SKAMaster):
     opState = attribute(
         dtype='DevState',
     )
-
 
     availableCapabilities = attribute(
         dtype=('DevString',),
@@ -182,7 +135,6 @@ class LfaaMaster(SKAMaster):
         max_dim_x=16,
         doc="Array of FQDNs for the instances of the Subarray TANGO devices running with the LFAA LMC",
     )
-
 
     stationBeamFQDNs = attribute(
         dtype=('DevString',),
@@ -321,7 +273,7 @@ class LfaaMaster(SKAMaster):
 
     def is_On_allowed(self):
         # PROTECTED REGION ID(LfaaMaster.is_On_allowed) ENABLED START #
-        return self.get_state() not in [DevState.ON,DevState.FAULT,DevState.DISABLE]
+        return self.get_state() not in [DevState.ON, DevState.FAULT, DevState.DISABLE]
         # PROTECTED REGION END #    //  LfaaMaster.is_On_allowed
 
     @command(
@@ -381,7 +333,7 @@ class LfaaMaster(SKAMaster):
 
     def is_Operate_allowed(self):
         # PROTECTED REGION ID(LfaaMaster.is_Operate_allowed) ENABLED START #
-        return self.get_state() not in [DevState.OFF,DevState.FAULT,DevState.INIT,DevState.ALARM,DevState.UNKNOWN,DevState.STANDBY,DevState.DISABLE]
+        return self.get_state() not in [DevState.OFF, DevState.FAULT, DevState.INIT, DevState.ALARM, DevState.UNKNOWN, DevState.STANDBY, DevState.DISABLE]
         # PROTECTED REGION END #    //  LfaaMaster.is_Operate_allowed
 
     @command(
@@ -417,7 +369,7 @@ class LfaaMaster(SKAMaster):
 
     def is_EnableSubarray_allowed(self):
         # PROTECTED REGION ID(LfaaMaster.is_EnableSubarray_allowed) ENABLED START #
-        return self.get_state() not in [DevState.FAULT,DevState.UNKNOWN,DevState.DISABLE]
+        return self.get_state() not in [DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE]
         # PROTECTED REGION END #    //  LfaaMaster.is_EnableSubarray_allowed
 
     @command(
@@ -440,7 +392,7 @@ class LfaaMaster(SKAMaster):
 
     def is_DisableSubarray_allowed(self):
         # PROTECTED REGION ID(LfaaMaster.is_DisableSubarray_allowed) ENABLED START #
-        return self.get_state() not in [DevState.FAULT,DevState.UNKNOWN,DevState.DISABLE]
+        return self.get_state() not in [DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE]
         # PROTECTED REGION END #    //  LfaaMaster.is_DisableSubarray_allowed
 
     @command(
@@ -451,7 +403,7 @@ class LfaaMaster(SKAMaster):
     def Allocate(self, argin):
         # PROTECTED REGION ID(LfaaMaster.Allocate) ENABLED START #
         """
-        
+
             Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array. 
             Note: Station and Tile composition is specified on the LFAA Subarray device .
 
@@ -465,7 +417,7 @@ class LfaaMaster(SKAMaster):
 
     def is_Allocate_allowed(self):
         # PROTECTED REGION ID(LfaaMaster.is_Allocate_allowed) ENABLED START #
-        return self.get_state() not in [DevState.OFF,DevState.FAULT,DevState.INIT,DevState.ALARM,DevState.UNKNOWN,DevState.STANDBY,DevState.DISABLE]
+        return self.get_state() not in [DevState.OFF, DevState.FAULT, DevState.INIT, DevState.ALARM, DevState.UNKNOWN, DevState.STANDBY, DevState.DISABLE]
         # PROTECTED REGION END #    //  LfaaMaster.is_Allocate_allowed
 
     @command(
@@ -488,7 +440,7 @@ class LfaaMaster(SKAMaster):
 
     def is_Release_allowed(self):
         # PROTECTED REGION ID(LfaaMaster.is_Release_allowed) ENABLED START #
-        return self.get_state() not in [DevState.OFF,DevState.FAULT,DevState.INIT,DevState.ALARM,DevState.UNKNOWN,DevState.STANDBY,DevState.DISABLE]
+        return self.get_state() not in [DevState.OFF, DevState.FAULT, DevState.INIT, DevState.ALARM, DevState.UNKNOWN, DevState.STANDBY, DevState.DISABLE]
         # PROTECTED REGION END #    //  LfaaMaster.is_Release_allowed
 
     @command(

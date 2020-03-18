@@ -6,7 +6,7 @@
 #
 """Release information for SKA MCCS Python Package"""
 
-name = """skamccs"""
+name = """ska.mccs"""
 version = "0.0.1"
 version_info = version.split(".")
 description = """A set of Low MCCS tango devices for the SKA Telescope."""

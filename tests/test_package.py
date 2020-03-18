@@ -1,4 +1,4 @@
-from skamccs import release
+from ska.mccs import release
 
 
 def test_release():

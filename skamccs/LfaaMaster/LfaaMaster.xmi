@@ -3,8 +3,8 @@
   <classes name="LfaaMaster" pogoRevision="9.6">
     <description description="LfaaMaster TANGO device class for the LfaaMaster prototype" title="LfaaMaster Tango device prototype" sourcePath="C:\Users\mar637\PycharmProjects\lfaa-lmc-prototype\skamccs\LfaaMaster" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
-      <inheritances classname="SKABaseDevice" sourcePath="../../../lmc-base-classes/skabase/SKABaseDevice"/>
-      <inheritances classname="SKAMaster" sourcePath="../../../lmc-base-classes/skabase/SKAMaster"/>
+      <inheritances classname="SKABaseDevice" sourcePath="../../../lmc-base-classes/pogo"/>
+      <inheritances classname="SKAMaster" sourcePath="../../../lmc-base-classes/pogo"/>
       <identification contact="at csiro.au - malte.marquarding" author="malte.marquarding" emailDomain="csiro.au" classFamily="SkaLfaa" siteSpecific="" platform="Unix Like" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="SkaLevel" description="Indication of importance of the device in the SKA hierarchy &#xA;to support drill-down navigation: 1..6, with 1 highest.&#xA;Default is 4, making provision for &#xA;EltMaster, EltAlarms, EltTelState = 1&#xA;SubEltMaster = 2&#xA;Subarray, Capability = 2/3&#xA;Others = 4 (or 5 or 6)">
@@ -452,7 +452,7 @@
     <states name="DISABLE" description="The device cannot be switched ON for an external reason. E.g. the power supply has its door open, the safety conditions are not satisfactory to allow the device to operate.">
       <status abstract="false" inherited="true" concrete="true"/>
     </states>
-    <preferences docHome="./doc_html" makefileHome="$(TANGO_HOME)"/>
+    <preferences docHome="./doc_html" makefileHome="/usr/local/share/pogo/preferences"/>
     <overlodedPollPeriodObject name="availableCapabilities" type="attribute" pollPeriod="0"/>
   </classes>
 </pogoDsl:PogoSystem>

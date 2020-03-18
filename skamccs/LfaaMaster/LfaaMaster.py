@@ -21,7 +21,6 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
-#from SKAMaster import SKAMaster
 # Additional import
 # PROTECTED REGION ID(LfaaMaster.additionnal_import) ENABLED START #
 from ska.base import SKAMaster
@@ -100,7 +99,7 @@ class LfaaMaster(SKAMaster):
         access=AttrWriteType.READ_WRITE,
         polling_period=1000,
         memorized=True,
-        doc="The control mode of the device. REMOTE, LOCAL\nTANGO Device accepts only from a �local� client and ignores commands and queries received from TM\nor any other �remote� clients. The Local clients has to release LOCAL control before REMOTE clients\ncan take control again.",
+        doc="The control mode of the device. REMOTE, LOCAL\nTANGO Device accepts only from a ?local? client and ignores commands and queries received from TM\nor any other ?remote? clients. The Local clients has to release LOCAL control before REMOTE clients\ncan take control again.",
     )
 
     commandProgress = attribute(
@@ -117,7 +116,7 @@ class LfaaMaster(SKAMaster):
     commandDelayExpected = attribute(
         dtype='DevUShort',
         unit="s",
-        doc="Amount of time it will take to prepare the requested state/mode transition � implemented as needed.",
+        doc="Amount of time it will take to prepare the requested state/mode transition ? implemented as needed.",
     )
 
     opState = attribute(

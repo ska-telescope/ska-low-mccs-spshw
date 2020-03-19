@@ -40,7 +40,7 @@ setuptools.setup(
     install_requires=[
         # should be pulled in by lmcbaseclasses but isn't
         "pytango >= 9.3.1",
-        "lmcbaseclasses >= 0.5.0"
+        "lmcbaseclasses >= 0.5.1"
         # pulled in by lmcbaseclasses
         # "ska_logging >= 0.2.1",
     ],

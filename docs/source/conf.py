@@ -19,7 +19,13 @@ import sphinx_rtd_theme
 # -- Path set up --------------------------------------------------------------
 
 sys.path.insert(0, os.path.abspath(
-    os.path.join('..', '..')
+    os.path.join('..', '..', '..', 'ska-logging')
+))
+sys.path.insert(0, os.path.abspath(
+    os.path.join('..', '..', '..', 'lmc-base-classes', 'src')
+))
+sys.path.insert(0, os.path.abspath(
+    os.path.join('..', '..', 'src')
 ))
 
 def setup(app):

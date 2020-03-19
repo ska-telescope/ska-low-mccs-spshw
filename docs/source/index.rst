@@ -39,8 +39,8 @@ Getting started
 API
 ===
 
-Package skamccs
----------------
+Package ska.mccs
+----------------
 
 Module ska.mcss.LfaaMaster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -56,9 +56,17 @@ Module ska.mcss.MccsSubarray
   :inherited-members:
   :show-inheritance:
 
+Module ska.mcss.MccsStation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: ska.mccs.MccsStation
+  :members:
+  :inherited-members:
+  :show-inheritance:
+
 
 Indices and tables
 ------------------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+

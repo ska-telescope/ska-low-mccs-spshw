@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the LfaaMaster project
+# This file is part of the MccsMaster project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" LfaaMaster Tango device prototype
+""" MccsMaster Tango device prototype
 
-LfaaMaster TANGO device class for the LfaaMaster prototype
+MccsMaster TANGO device class for the MccsMaster prototype
 """
 
 # PyTango imports
@@ -22,63 +22,63 @@ from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
 # Additional import
-# PROTECTED REGION ID(LfaaMaster.additionnal_import) ENABLED START #
+# PROTECTED REGION ID(MccsMaster.additionnal_import) ENABLED START #
 from ska.base import SKAMaster
 from ska.base.control_model import (AdminMode, ControlMode, HealthState,
                                     SimulationMode, TestMode)
-# PROTECTED REGION END #    //  LfaaMaster.additionnal_import
+# PROTECTED REGION END #    //  MccsMaster.additionnal_import
 
-__all__ = ["LfaaMaster"]
+__all__ = ["MccsMaster"]
 
 
-class LfaaMaster(SKAMaster):
+class MccsMaster(SKAMaster):
     """
-    LfaaMaster TANGO device class for the LfaaMaster prototype
+    MccsMaster TANGO device class for the MccsMaster prototype
 
     **Properties:**
 
     - Device Property
-        LfaaSubarrays
-            - The FQDNs of the Lfaa sub-arrays
+        MccsSubarrays
+            - The FQDNs of the Mccs sub-arrays
             - Type:'DevVarStringArray'
-        LfaaStations
-            - List of LFAA station  TANGO Device names
+        MccsStations
+            - List of MCCS station  TANGO Device names
             - Type:'DevVarStringArray'
-        LfaaStationBeams
-            - List of LFAA station beam TANGO Device names
+        MccsStationBeams
+            - List of MCCS station beam TANGO Device names
             - Type:'DevVarStringArray'
-        LfaaTiles
-            - List of LFAA Tile TANGO Device names.
+        MccsTiles
+            - List of MCCS Tile TANGO Device names.
             - Type:'DevVarStringArray'
-        LfaaAntennas
-            - List of LFAA Antenna TANGO Device names
+        MccsAntennas
+            - List of MCCS Antenna TANGO Device names
             - Type:'DevVarStringArray'
     """
     __metaclass__ = DeviceMeta
-    # PROTECTED REGION ID(LfaaMaster.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  LfaaMaster.class_variable
+    # PROTECTED REGION ID(MccsMaster.class_variable) ENABLED START #
+    # PROTECTED REGION END #    //  MccsMaster.class_variable
 
     # -----------------
     # Device Properties
     # -----------------
 
-    LfaaSubarrays = device_property(
+    MccsSubarrays = device_property(
         dtype='DevVarStringArray',
     )
 
-    LfaaStations = device_property(
+    MccsStations = device_property(
         dtype='DevVarStringArray',
     )
 
-    LfaaStationBeams = device_property(
+    MccsStationBeams = device_property(
         dtype='DevVarStringArray',
     )
 
-    LfaaTiles = device_property(
+    MccsTiles = device_property(
         dtype='DevVarStringArray',
     )
 
-    LfaaAntennas = device_property(
+    MccsAntennas = device_property(
         dtype='DevVarStringArray',
     )
 
@@ -132,25 +132,25 @@ class LfaaMaster(SKAMaster):
     subarrayFQDNs = attribute(
         dtype=('DevString',),
         max_dim_x=16,
-        doc="Array of FQDNs for the instances of the Subarray TANGO devices running with the LFAA LMC",
+        doc="Array of FQDNs for the instances of the Subarray TANGO devices running with the MCCS LMC",
     )
 
     stationBeamFQDNs = attribute(
         dtype=('DevString',),
         max_dim_x=16,
-        doc="Array of FQDNs for the instances of the station beam TANGO devices running with the LFAA LMC",
+        doc="Array of FQDNs for the instances of the station beam TANGO devices running with the MCCS LMC",
     )
 
     stationFQDNs = attribute(
         dtype=('DevString',),
         max_dim_x=16,
-        doc="Array of FQDNs for the instances of the station TANGO devices running with the LFAA LMC",
+        doc="Array of FQDNs for the instances of the station TANGO devices running with the MCCS LMC",
     )
 
     tileFQDNs = attribute(
         dtype=('DevString',),
         max_dim_x=16,
-        doc="Array of FQDNs for the instances of the tile TANGO devices running with the LFAA LMC",
+        doc="Array of FQDNs for the instances of the tile TANGO devices running with the MCCS LMC",
     )
 
     # ---------------
@@ -158,15 +158,15 @@ class LfaaMaster(SKAMaster):
     # ---------------
 
     def init_device(self):
-        """Initialises the attributes and properties of the LfaaMaster."""
+        """Initialises the attributes and properties of the MccsMaster."""
         SKAMaster.init_device(self)
-        # PROTECTED REGION ID(LfaaMaster.init_device) ENABLED START #
-        # PROTECTED REGION END #    //  LfaaMaster.init_device
+        # PROTECTED REGION ID(MccsMaster.init_device) ENABLED START #
+        # PROTECTED REGION END #    //  MccsMaster.init_device
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        # PROTECTED REGION ID(LfaaMaster.always_executed_hook) ENABLED START #
-        # PROTECTED REGION END #    //  LfaaMaster.always_executed_hook
+        # PROTECTED REGION ID(MccsMaster.always_executed_hook) ENABLED START #
+        # PROTECTED REGION END #    //  MccsMaster.always_executed_hook
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -175,83 +175,83 @@ class LfaaMaster(SKAMaster):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        # PROTECTED REGION ID(LfaaMaster.delete_device) ENABLED START #
-        # PROTECTED REGION END #    //  LfaaMaster.delete_device
+        # PROTECTED REGION ID(MccsMaster.delete_device) ENABLED START #
+        # PROTECTED REGION END #    //  MccsMaster.delete_device
     # ------------------
     # Attributes methods
     # ------------------
 
     def read_adminMode(self):
-        # PROTECTED REGION ID(LfaaMaster.adminMode_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.adminMode_read) ENABLED START #
         """Return the adminMode attribute."""
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.adminMode_read
+        # PROTECTED REGION END #    //  MccsMaster.adminMode_read
 
     def write_adminMode(self, value):
-        # PROTECTED REGION ID(LfaaMaster.adminMode_write) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.adminMode_write) ENABLED START #
         """Set the adminMode attribute."""
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.adminMode_write
+        # PROTECTED REGION END #    //  MccsMaster.adminMode_write
 
     def read_controlMode(self):
-        # PROTECTED REGION ID(LfaaMaster.controlMode_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.controlMode_read) ENABLED START #
         """Return the controlMode attribute."""
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.controlMode_read
+        # PROTECTED REGION END #    //  MccsMaster.controlMode_read
 
     def write_controlMode(self, value):
-        # PROTECTED REGION ID(LfaaMaster.controlMode_write) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.controlMode_write) ENABLED START #
         """Set the controlMode attribute."""
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.controlMode_write
+        # PROTECTED REGION END #    //  MccsMaster.controlMode_write
 
     def read_commandProgress(self):
-        # PROTECTED REGION ID(LfaaMaster.commandProgress_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.commandProgress_read) ENABLED START #
         """Return the commandProgress attribute."""
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.commandProgress_read
+        # PROTECTED REGION END #    //  MccsMaster.commandProgress_read
 
     def read_commandDelayExpected(self):
-        # PROTECTED REGION ID(LfaaMaster.commandDelayExpected_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.commandDelayExpected_read) ENABLED START #
         """Return the commandDelayExpected attribute."""
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.commandDelayExpected_read
+        # PROTECTED REGION END #    //  MccsMaster.commandDelayExpected_read
 
     def read_opState(self):
-        # PROTECTED REGION ID(LfaaMaster.opState_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.opState_read) ENABLED START #
         """Return the opState attribute."""
         return tango.DevState.UNKNOWN
-        # PROTECTED REGION END #    //  LfaaMaster.opState_read
+        # PROTECTED REGION END #    //  MccsMaster.opState_read
 
     def read_availableCapabilities(self):
-        # PROTECTED REGION ID(LfaaMaster.availableCapabilities_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.availableCapabilities_read) ENABLED START #
         """Return the availableCapabilities attribute."""
         return ('',)
-        # PROTECTED REGION END #    //  LfaaMaster.availableCapabilities_read
+        # PROTECTED REGION END #    //  MccsMaster.availableCapabilities_read
 
     def read_subarrayFQDNs(self):
-        # PROTECTED REGION ID(LfaaMaster.subarrayFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.subarrayFQDNs_read) ENABLED START #
         """Return the subarrayFQDNs attribute."""
         return ('',)
-        # PROTECTED REGION END #    //  LfaaMaster.subarrayFQDNs_read
+        # PROTECTED REGION END #    //  MccsMaster.subarrayFQDNs_read
 
     def read_stationBeamFQDNs(self):
-        # PROTECTED REGION ID(LfaaMaster.stationBeamFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.stationBeamFQDNs_read) ENABLED START #
         """Return the stationBeamFQDNs attribute."""
         return ('',)
-        # PROTECTED REGION END #    //  LfaaMaster.stationBeamFQDNs_read
+        # PROTECTED REGION END #    //  MccsMaster.stationBeamFQDNs_read
 
     def read_stationFQDNs(self):
-        # PROTECTED REGION ID(LfaaMaster.stationFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.stationFQDNs_read) ENABLED START #
         """Return the stationFQDNs attribute."""
         return ('',)
-        # PROTECTED REGION END #    //  LfaaMaster.stationFQDNs_read
+        # PROTECTED REGION END #    //  MccsMaster.stationFQDNs_read
 
     def read_tileFQDNs(self):
-        # PROTECTED REGION ID(LfaaMaster.tileFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.tileFQDNs_read) ENABLED START #
         """Return the tileFQDNs attribute."""
         return ('',)
-        # PROTECTED REGION END #    //  LfaaMaster.tileFQDNs_read
+        # PROTECTED REGION END #    //  MccsMaster.tileFQDNs_read
 
     # --------
     # Commands
@@ -261,92 +261,92 @@ class LfaaMaster(SKAMaster):
     )
     @DebugIt()
     def On(self):
-        # PROTECTED REGION ID(LfaaMaster.On) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.On) ENABLED START #
         """
-        Power off the LFAA system.
+        Power off the MCCS system.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.On
+        # PROTECTED REGION END #    //  MccsMaster.On
 
     def is_On_allowed(self):
-        # PROTECTED REGION ID(LfaaMaster.is_On_allowed) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.is_On_allowed) ENABLED START #
         return self.get_state() not in [DevState.ON, DevState.FAULT, DevState.DISABLE]
-        # PROTECTED REGION END #    //  LfaaMaster.is_On_allowed
+        # PROTECTED REGION END #    //  MccsMaster.is_On_allowed
 
     @command(
     )
     @DebugIt()
     def Off(self):
-        # PROTECTED REGION ID(LfaaMaster.Off) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.Off) ENABLED START #
         """
-        Power off the LFAA system.
+        Power off the MCCS system.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.Off
+        # PROTECTED REGION END #    //  MccsMaster.Off
 
     @command(
         dtype_out='DevEnum',
     )
     @DebugIt()
     def StandbyLow(self):
-        # PROTECTED REGION ID(LfaaMaster.StandbyLow) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.StandbyLow) ENABLED START #
         """
-        Transition the LFAA system to the low-power STANDBY_LOW_POWER operating state.
+        Transition the MCCS system to the low-power STANDBY_LOW_POWER operating state.
 
         :return:'DevEnum'
         """
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.StandbyLow
+        # PROTECTED REGION END #    //  MccsMaster.StandbyLow
 
     @command(
         dtype_out='DevEnum',
     )
     @DebugIt()
     def StandbyFull(self):
-        # PROTECTED REGION ID(LfaaMaster.StandbyFull) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.StandbyFull) ENABLED START #
         """
-        standbyFull	None	N/A	DevEnum	OPERATOR	ON, STANDBY_LOW_POWER	Transition the LFAA system to the STANDBY_FULL_POWER operating state.
+        standbyFull	None	N/A	DevEnum	OPERATOR	ON, STANDBY_LOW_POWER	Transition the MCCS system to the STANDBY_FULL_POWER operating state.
 
         :return:'DevEnum'
         """
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.StandbyFull
+        # PROTECTED REGION END #    //  MccsMaster.StandbyFull
 
     @command(
         dtype_out='DevEnum',
     )
     @DebugIt()
     def Operate(self):
-        # PROTECTED REGION ID(LfaaMaster.Operate) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.Operate) ENABLED START #
         """
         Transit to the OPERATE operating state, ready for signal processing.
 
         :return:'DevEnum'
         """
         return 0
-        # PROTECTED REGION END #    //  LfaaMaster.Operate
+        # PROTECTED REGION END #    //  MccsMaster.Operate
 
     def is_Operate_allowed(self):
-        # PROTECTED REGION ID(LfaaMaster.is_Operate_allowed) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.is_Operate_allowed) ENABLED START #
         return self.get_state() not in [DevState.OFF, DevState.FAULT, DevState.INIT, DevState.ALARM, DevState.UNKNOWN, DevState.STANDBY, DevState.DISABLE]
-        # PROTECTED REGION END #    //  LfaaMaster.is_Operate_allowed
+        # PROTECTED REGION END #    //  MccsMaster.is_Operate_allowed
 
     @command(
     )
     @DebugIt()
     def Reset(self):
-        # PROTECTED REGION ID(LfaaMaster.Reset) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.Reset) ENABLED START #
         """
-        The LFAA system as a whole is reinitialised as an attempt to clear an ALARM or FAULT state.
+        The MCCS system as a whole is reinitialised as an attempt to clear an ALARM or FAULT state.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.Reset
+        # PROTECTED REGION END #    //  MccsMaster.Reset
 
     @command(
         dtype_in='DevLong',
@@ -354,9 +354,9 @@ class LfaaMaster(SKAMaster):
     )
     @DebugIt()
     def EnableSubarray(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.EnableSubarray) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.EnableSubarray) ENABLED START #
         """
-        Activate an LFAA Sub-Array
+        Activate an MCCS Sub-Array
 
         :param argin: 'DevLong'
         Sub-Array ID
@@ -364,12 +364,12 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.EnableSubarray
+        # PROTECTED REGION END #    //  MccsMaster.EnableSubarray
 
     def is_EnableSubarray_allowed(self):
-        # PROTECTED REGION ID(LfaaMaster.is_EnableSubarray_allowed) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.is_EnableSubarray_allowed) ENABLED START #
         return self.get_state() not in [DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE]
-        # PROTECTED REGION END #    //  LfaaMaster.is_EnableSubarray_allowed
+        # PROTECTED REGION END #    //  MccsMaster.is_EnableSubarray_allowed
 
     @command(
         dtype_in='DevLong',
@@ -377,9 +377,9 @@ class LfaaMaster(SKAMaster):
     )
     @DebugIt()
     def DisableSubarray(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.DisableSubarray) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.DisableSubarray) ENABLED START #
         """
-        Deactivate an LFAA Sub-Array
+        Deactivate an MCCS Sub-Array
 
         :param argin: 'DevLong'
         Sub-Array ID
@@ -387,12 +387,12 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.DisableSubarray
+        # PROTECTED REGION END #    //  MccsMaster.DisableSubarray
 
     def is_DisableSubarray_allowed(self):
-        # PROTECTED REGION ID(LfaaMaster.is_DisableSubarray_allowed) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.is_DisableSubarray_allowed) ENABLED START #
         return self.get_state() not in [DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE]
-        # PROTECTED REGION END #    //  LfaaMaster.is_DisableSubarray_allowed
+        # PROTECTED REGION END #    //  MccsMaster.is_DisableSubarray_allowed
 
     @command(
         dtype_in='DevString',
@@ -400,11 +400,11 @@ class LfaaMaster(SKAMaster):
     )
     @DebugIt()
     def Allocate(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.Allocate) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.Allocate) ENABLED START #
         """
 
-            Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array. 
-            Note: Station and Tile composition is specified on the LFAA Subarray device .
+            Allocate a set of unallocated MCCS resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array.
+            Note: Station and Tile composition is specified on the MCCS Subarray device .
 
         :param argin: 'DevString'
         JSON-formatted string
@@ -412,12 +412,12 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.Allocate
+        # PROTECTED REGION END #    //  MccsMaster.Allocate
 
     def is_Allocate_allowed(self):
-        # PROTECTED REGION ID(LfaaMaster.is_Allocate_allowed) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.is_Allocate_allowed) ENABLED START #
         return self.get_state() not in [DevState.OFF, DevState.FAULT, DevState.INIT, DevState.ALARM, DevState.UNKNOWN, DevState.STANDBY, DevState.DISABLE]
-        # PROTECTED REGION END #    //  LfaaMaster.is_Allocate_allowed
+        # PROTECTED REGION END #    //  MccsMaster.is_Allocate_allowed
 
     @command(
         dtype_in='DevLong',
@@ -425,7 +425,7 @@ class LfaaMaster(SKAMaster):
     )
     @DebugIt()
     def Release(self, argin):
-        # PROTECTED REGION ID(LfaaMaster.Release) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.Release) ENABLED START #
         """
         Release a sub-array?s Capabilities and resources (stations, tiles, antennas), marking the resources and Capabilities as unassigned and idle.
 
@@ -435,25 +435,25 @@ class LfaaMaster(SKAMaster):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.Release
+        # PROTECTED REGION END #    //  MccsMaster.Release
 
     def is_Release_allowed(self):
-        # PROTECTED REGION ID(LfaaMaster.is_Release_allowed) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.is_Release_allowed) ENABLED START #
         return self.get_state() not in [DevState.OFF, DevState.FAULT, DevState.INIT, DevState.ALARM, DevState.UNKNOWN, DevState.STANDBY, DevState.DISABLE]
-        # PROTECTED REGION END #    //  LfaaMaster.is_Release_allowed
+        # PROTECTED REGION END #    //  MccsMaster.is_Release_allowed
 
     @command(
     )
     @DebugIt()
     def Maintenance(self):
-        # PROTECTED REGION ID(LfaaMaster.Maintenance) ENABLED START #
+        # PROTECTED REGION ID(MccsMaster.Maintenance) ENABLED START #
         """
-        Transition the LFAA to a MAINTENANCE state.
+        Transition the MCCS to a MAINTENANCE state.
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  LfaaMaster.Maintenance
+        # PROTECTED REGION END #    //  MccsMaster.Maintenance
 
 # ----------
 # Run server
@@ -461,10 +461,10 @@ class LfaaMaster(SKAMaster):
 
 
 def main(args=None, **kwargs):
-    """Main function of the LfaaMaster module."""
-    # PROTECTED REGION ID(LfaaMaster.main) ENABLED START #
-    return run((LfaaMaster,), args=args, **kwargs)
-    # PROTECTED REGION END #    //  LfaaMaster.main
+    """Main function of the MccsMaster module."""
+    # PROTECTED REGION ID(MccsMaster.main) ENABLED START #
+    return run((MccsMaster,), args=args, **kwargs)
+    # PROTECTED REGION END #    //  MccsMaster.main
 
 
 if __name__ == '__main__':

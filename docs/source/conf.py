@@ -34,7 +34,7 @@ def setup(app):
 
 
 # -- Project information -----------------------------------------------------
-project = 'LFAA LMC Prototype'
+project = 'MCCS LMC Prototype'
 copyright = '2020, SKA MCCS Team'
 author = 'SKA MCCS Team'
 
@@ -120,7 +120,7 @@ html_context = {
     'logo': 'img/logo.jpg',
     'theme_logo_only': True,
     'gitlab_user': 'ska-telescope',  # Username
-    'gitlab_repo': 'lfaa-lmc-prototype',  # Repo name
+    'gitlab_repo': 'mccs-lmc-prototype',  # Repo name
     'gitlab_version': 'master',  # Version
     'conf_py_path': '/docs/source/'  # Path in the checkout to the docs root
 }

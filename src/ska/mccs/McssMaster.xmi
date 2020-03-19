@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
-  <classes name="LfaaMaster" pogoRevision="9.6">
-    <description description="LfaaMaster TANGO device class for the LfaaMaster prototype" title="LfaaMaster Tango device prototype" sourcePath="C:\Users\mar637\PycharmProjects\lfaa-lmc-prototype\skamccs\LfaaMaster" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
+  <classes name="MccsMaster" pogoRevision="9.6">
+    <description description="MccsMaster TANGO device class for the MccsMaster prototype" title="MccsMaster Tango device prototype" sourcePath="C:\Users\mar637\PycharmProjects\mccs-lmc-prototype\skamccs\MccsMaster" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKABaseDevice" sourcePath="../../../lmc-base-classes/pogo"/>
       <inheritances classname="SKAMaster" sourcePath="../../../lmc-base-classes/pogo"/>
-      <identification contact="at csiro.au - malte.marquarding" author="malte.marquarding" emailDomain="csiro.au" classFamily="SkaLfaa" siteSpecific="" platform="Unix Like" bus="Not Applicable" manufacturer="none" reference=""/>
+      <identification contact="at csiro.au - malte.marquarding" author="malte.marquarding" emailDomain="csiro.au" classFamily="SkaMccs" siteSpecific="" platform="Unix Like" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="SkaLevel" description="Indication of importance of the device in the SKA hierarchy &#xA;to support drill-down navigation: 1..6, with 1 highest.&#xA;Default is 4, making provision for &#xA;EltMaster, EltAlarms, EltTelState = 1&#xA;SubEltMaster = 2&#xA;Subarray, Capability = 2/3&#xA;Others = 4 (or 5 or 6)">
       <type xsi:type="pogoDsl:ShortType"/>
@@ -42,7 +42,7 @@
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="true" concrete="true"/>
     </deviceProperties>
-    <deviceProperties name="LfaaSubarrays" description="The FQDNs of the Lfaa sub-arrays">
+    <deviceProperties name="MccsSubarrays" description="The FQDNs of the Mccs sub-arrays">
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
@@ -55,19 +55,19 @@
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="true" concrete="true"/>
     </deviceProperties>
-    <deviceProperties name="LfaaStations" description="List of LFAA station  TANGO Device names">
+    <deviceProperties name="MccsStations" description="List of MCCS station  TANGO Device names">
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
-    <deviceProperties name="LfaaStationBeams" description="List of LFAA station beam TANGO Device names">
+    <deviceProperties name="MccsStationBeams" description="List of MCCS station beam TANGO Device names">
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
-    <deviceProperties name="LfaaTiles" description="List of LFAA Tile TANGO Device names.">
+    <deviceProperties name="MccsTiles" description="List of MCCS Tile TANGO Device names.">
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
-    <deviceProperties name="LfaaAntennas" description="List of LFAA Antenna TANGO Device names">
+    <deviceProperties name="MccsAntennas" description="List of MCCS Antenna TANGO Device names">
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
@@ -116,7 +116,7 @@
       </argout>
       <status abstract="false" inherited="true" concrete="true"/>
     </commands>
-    <commands name="On" description="Power off the LFAA system." execMethod="on" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="On" description="Power off the MCCS system." execMethod="on" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="none">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -128,7 +128,7 @@
       <excludedStates>FAULT</excludedStates>
       <excludedStates>DISABLE</excludedStates>
     </commands>
-    <commands name="Off" description="Power off the LFAA system." execMethod="off" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="Off" description="Power off the MCCS system." execMethod="off" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="none">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -137,7 +137,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="StandbyLow" description="Transition the LFAA system to the low-power STANDBY_LOW_POWER operating state." execMethod="standby_low" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="StandbyLow" description="Transition the MCCS system to the low-power STANDBY_LOW_POWER operating state." execMethod="standby_low" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -146,7 +146,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="StandbyFull" description="standbyFull&#x9;None&#x9;N/A&#x9;DevEnum&#x9;OPERATOR&#x9;ON, STANDBY_LOW_POWER&#x9;Transition the LFAA system to the STANDBY_FULL_POWER operating state." execMethod="standby_full" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="StandbyFull" description="standbyFull&#x9;None&#x9;N/A&#x9;DevEnum&#x9;OPERATOR&#x9;ON, STANDBY_LOW_POWER&#x9;Transition the MCCS system to the STANDBY_FULL_POWER operating state." execMethod="standby_full" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -171,7 +171,7 @@
       <excludedStates>STANDBY</excludedStates>
       <excludedStates>DISABLE</excludedStates>
     </commands>
-    <commands name="Reset" description="The LFAA system as a whole is reinitialised as an attempt to clear an ALARM or FAULT state." execMethod="reset" displayLevel="OPERATOR" polledPeriod="0">
+    <commands name="Reset" description="The MCCS system as a whole is reinitialised as an attempt to clear an ALARM or FAULT state." execMethod="reset" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -180,7 +180,7 @@
       </argout>
       <status abstract="false" inherited="true" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="EnableSubarray" description="Activate an LFAA Sub-Array" execMethod="enable_subarray" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="EnableSubarray" description="Activate an MCCS Sub-Array" execMethod="enable_subarray" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="Sub-Array ID">
         <type xsi:type="pogoDsl:IntType"/>
       </argin>
@@ -192,7 +192,7 @@
       <excludedStates>UNKNOWN</excludedStates>
       <excludedStates>DISABLE</excludedStates>
     </commands>
-    <commands name="DisableSubarray" description="Deactivate an LFAA Sub-Array" execMethod="disable_subarray" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="DisableSubarray" description="Deactivate an MCCS Sub-Array" execMethod="disable_subarray" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="Sub-Array ID">
         <type xsi:type="pogoDsl:IntType"/>
       </argin>
@@ -204,7 +204,7 @@
       <excludedStates>UNKNOWN</excludedStates>
       <excludedStates>DISABLE</excludedStates>
     </commands>
-    <commands name="Allocate" description="Allocate a set of unallocated LFAA resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array. &#xA;Note: Station and Tile composition is specified on the LFAA Subarray device ." execMethod="allocate" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="Allocate" description="Allocate a set of unallocated MCCS resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array. &#xA;Note: Station and Tile composition is specified on the MCCS Subarray device ." execMethod="allocate" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="JSON-formatted string">
         <type xsi:type="pogoDsl:StringType"/>
       </argin>
@@ -236,7 +236,7 @@
       <excludedStates>STANDBY</excludedStates>
       <excludedStates>DISABLE</excludedStates>
     </commands>
-    <commands name="Maintenance" description="Transition the LFAA to a MAINTENANCE state." execMethod="maintenance" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="Maintenance" description="Transition the MCCS to a MAINTENANCE state." execMethod="maintenance" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -395,7 +395,7 @@
       <archiveEvent fire="false" libCheckCriteria="false"/>
       <dataReadyEvent fire="false" libCheckCriteria="true"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <properties description="Array of FQDNs for the instances of the Subarray TANGO devices running with the LFAA LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+      <properties description="Array of FQDNs for the instances of the Subarray TANGO devices running with the MCCS LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
     <attributes name="loggingTargets" attType="Spectrum" rwType="READ_WRITE" displayLevel="OPERATOR" polledPeriod="0" maxX="3" maxY="" allocReadMember="true">
       <dataType xsi:type="pogoDsl:StringType"/>
@@ -410,7 +410,7 @@
       <archiveEvent fire="false" libCheckCriteria="false"/>
       <dataReadyEvent fire="false" libCheckCriteria="true"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <properties description="Array of FQDNs for the instances of the station beam TANGO devices running with the LFAA LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+      <properties description="Array of FQDNs for the instances of the station beam TANGO devices running with the MCCS LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
     <attributes name="stationFQDNs" attType="Spectrum" rwType="READ" displayLevel="OPERATOR" polledPeriod="0" maxX="16" maxY="" allocReadMember="true" isDynamic="false">
       <dataType xsi:type="pogoDsl:StringType"/>
@@ -418,7 +418,7 @@
       <archiveEvent fire="false" libCheckCriteria="false"/>
       <dataReadyEvent fire="false" libCheckCriteria="true"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <properties description="Array of FQDNs for the instances of the station TANGO devices running with the LFAA LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+      <properties description="Array of FQDNs for the instances of the station TANGO devices running with the MCCS LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
     <attributes name="tileFQDNs" attType="Spectrum" rwType="READ" displayLevel="OPERATOR" polledPeriod="0" maxX="16" maxY="" allocReadMember="true" isDynamic="false">
       <dataType xsi:type="pogoDsl:StringType"/>
@@ -426,7 +426,7 @@
       <archiveEvent fire="false" libCheckCriteria="false"/>
       <dataReadyEvent fire="false" libCheckCriteria="true"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <properties description="Array of FQDNs for the instances of the tile TANGO devices running with the LFAA LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+      <properties description="Array of FQDNs for the instances of the tile TANGO devices running with the MCCS LMC" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
     <states name="ON" description="This state could have been called OK or OPERATIONAL. It means that the device is in its operational state. (E.g. the power supply is giving its nominal current, th motor is ON and ready to move, the instrument is operating). This state is modified by the Attribute alarm checking of the DeviceImpl:dev_state method. i.e. if the State is ON and one attribute has its quality factor to ATTR_WARNING or ATTR_ALARM, then the State is modified to ALARM.">
       <status abstract="false" inherited="true" concrete="true"/>

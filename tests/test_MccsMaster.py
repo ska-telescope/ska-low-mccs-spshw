@@ -1,14 +1,14 @@
 #########################################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the LfaaMaster project
+# This file is part of the MccsMaster project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################################
-"""Contais the tests for the LfaaMaster Tango device prototype."""
+"""Contais the tests for the MccsMaster Tango device prototype."""
 
 # from mock import MagicMock
 import pytest
@@ -17,7 +17,7 @@ from ska.base.control_model import AdminMode, ControlMode, HealthState, Simulati
 
 # pylint: disable=invalid-name,too-many-public-methods
 @pytest.mark.usefixtures("tango_context", "initialize_device")
-class TestLfaaMaster:
+class TestMccsMaster:
     """Test case for packet generation."""
 
     properties = {
@@ -29,20 +29,20 @@ class TestLfaaMaster:
         'NrSubarrays': '16',
         'CapabilityTypes': '',
         'MaxCapabilities': '',
-        'LfaaSubarrays': '',
+        'MccsSubarrays': '',
         'LoggingLevelDefault': '4',
         'LoggingTargetsDefault': '',
-        'LfaaStations': '',
-        'LfaaStationBeams': '',
-        'LfaaTiles': '',
-        'LfaaAntennas': '',
+        'MccsStations': '',
+        'MccsStationBeams': '',
+        'MccsTiles': '',
+        'MccsAntennas': '',
     }
 
     @classmethod
     def mocking(cls):
         """Mock external libraries."""
         # Example : Mock numpy
-        # cls.numpy = LfaaMaster.numpy = MagicMock()
+        # cls.numpy = MccsMaster.numpy = MagicMock()
 
     def test_properties(self, tango_context):
         """ Test the properties """

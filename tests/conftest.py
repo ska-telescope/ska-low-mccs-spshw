@@ -17,7 +17,7 @@ def tango_context(request):
         A request object gives access to the requesting test context.
     """
     test_properties = {
-        'LfaaMaster': {
+        'MccsMaster': {
             'SkaLevel': '4',
             'LoggingTargetsDefault': '',
             'GroupDefinitions': '',

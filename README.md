@@ -5,7 +5,7 @@ Documentation
 
 The documentation for this project, including how to get started with it, can be found in the `docs` folder, and can be better browsed in the SKA development portal:
 
- * [LFAA LMC Prototype documentation](https://developer.skatelescope.org/projects/mccs/en/latest/index.html "SKA Developer Portal: LFAA LMC Prototype documentation")
+ * [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/mccs/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")
 
 How to use
 ----------

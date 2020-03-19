@@ -43,37 +43,37 @@ from ska.base.control_model import (HealthState, AdminMode, ObsState,
 __all__ = ["MccsSubarray", "main"]
 
 
-class AdminMode(enum.IntEnum):
-    """Python enumerated type for AdminMode attribute."""
-
-
-class ControlMode(enum.IntEnum):
-    """Python enumerated type for ControlMode attribute."""
-
-
-class HealthState(enum.IntEnum):
-    """Python enumerated type for HealthState attribute."""
-
-
-class LoggingLevel(enum.IntEnum):
-    """Python enumerated type for LoggingLevel attribute."""
-
-
-class ObsMode(enum.IntEnum):
-    """Python enumerated type for ObsMode attribute."""
-
-
-class ObsState(enum.IntEnum):
-    """Python enumerated type for ObsState attribute."""
-
-
-class SimulationMode(enum.IntEnum):
-    """Python enumerated type for SimulationMode attribute."""
-
-
-class TestMode(enum.IntEnum):
-    """Python enumerated type for TestMode attribute."""
-
+#class AdminMode(enum.IntEnum):
+#    """Python enumerated type for AdminMode attribute."""
+#
+#
+#class ControlMode(enum.IntEnum):
+#    """Python enumerated type for ControlMode attribute."""
+#
+#
+#class HealthState(enum.IntEnum):
+#    """Python enumerated type for HealthState attribute."""
+#
+#
+#class LoggingLevel(enum.IntEnum):
+#    """Python enumerated type for LoggingLevel attribute."""
+#
+#
+#class ObsMode(enum.IntEnum):
+#    """Python enumerated type for ObsMode attribute."""
+#
+#
+#class ObsState(enum.IntEnum):
+#    """Python enumerated type for ObsState attribute."""
+#
+#
+#class SimulationMode(enum.IntEnum):
+#    """Python enumerated type for SimulationMode attribute."""
+#
+#
+#class TestMode(enum.IntEnum):
+#    """Python enumerated type for TestMode attribute."""
+#
 
 class MccsSubarray(SKASubarray):
     """

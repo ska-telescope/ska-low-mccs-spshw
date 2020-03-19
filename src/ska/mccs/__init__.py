@@ -1,5 +1,5 @@
-""" Lfaa device module """
+""" Mccs device module """
 from .LfaaMaster import LfaaMaster
-from .LfaaSubarray import LfaaSubarray
+from .MccsSubarray import MccsSubarray
 
-__all__ = ["LfaaMaster", "LfaaSubarray"]
+__all__ = ["LfaaMaster", "MccsSubarray"]

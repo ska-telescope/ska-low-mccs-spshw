@@ -17,13 +17,16 @@ Getting started
 
     $ cd /usr/src/ska-docker/docker-compose
     $ make start itango #not needed if it already shows in "make status"
-    $ docker exec -it -e PYTHONPATH=/hosthome itango python3 \
-      /hosthome/lfaa-lmc-prototype/skamccs/LfaaMaster/LfaaMaster.py -?
-    usage :  LfaaMaster instance_name [-v[trace level]] [-nodb [-dlist <device name list>]]
-    Instance name defined in database for server LfaaMaster :
-    $ docker exec -it -e PYTHONPATH=/hosthome itango tango_admin --add-server LfaaMaster/01 LfaaMaster lfaa/master/01
-    $ docker exec -it -e PYTHONPATH=/hosthome itango python3 \
-      /hosthome/lfaa-lmc-prototype/skamccs/LfaaMaster/LfaaMaster.py 01
+    $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
+      itango python3 \
+      /hosthome/lfaa-lmc-prototype/src/ska/mccs/MccsMaster.py -?
+    usage :  MccsMaster instance_name [-v[trace level]] [-nodb [-dlist <device name list>]]
+    Instance name defined in database for server MccsMaster :
+    $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
+      itango tango_admin --add-server MccsMaster/01 MccsMaster lfaa/master/01
+    $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
+      itango python3 \
+      /hosthome/lfaa-lmc-prototype/src/ska/mccs/MccsMaster.py 01
     1|2020-03-13T05:27:15.844Z|INFO|MainThread|write_loggingLevel|SKABaseDevice.py#490|tango-device:lfaa/master/01|Logging level set to LoggingLevel.INFO on Python and Tango loggers
     1|2020-03-13T05:27:15.845Z|INFO|MainThread|update_logging_handlers|SKABaseDevice.py#169|tango-device:lfaa/master/01|Logging targets set to []
     1|2020-03-13T05:27:15.846Z|INFO|MainThread|init_device|SKABaseDevice.py#399|tango-device:lfaa/master/01|No Groups loaded for device: lfaa/master/01
@@ -36,19 +39,26 @@ Getting started
 API
 ===
 
-Package skamccs
----------------
+Package ska.mccs
+----------------
 
-Module skamcss.LfaaMaster
-^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: skamccs.LfaaMaster.LfaaMaster
+Module ska.mcss.LfaaMaster
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: ska.mccs.LfaaMaster
   :members:
   :inherited-members:
   :show-inheritance:
 
-Module skamcss.LfaaSubarray
+Module ska.mcss.MccsSubarray
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: ska.mccs.MccsSubarray
+  :members:
+  :inherited-members:
+  :show-inheritance:
+
+Module ska.mcss.MccsStation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: skamccs.LfaaSubarray.LfaaSubarray
+.. automodule:: ska.mccs.MccsStation
   :members:
   :inherited-members:
   :show-inheritance:
@@ -59,3 +69,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+

@@ -22,8 +22,8 @@ def tango_context(request):
             'LoggingTargetsDefault': '',
             'GroupDefinitions': '',
             'NrSubarrays': '16',
-            'CapabilityTypes': '',
-            'MaxCapabilities': []
+            # 'CapabilityTypes': '',
+            # 'MaxCapabilities': []
         },
     }
 
@@ -34,11 +34,10 @@ def tango_context(request):
     # first "test_" to get the module name
     test_class_name = request.cls.__name__
     class_name = test_class_name.split('Test', 1)[-1]
-    module = importlib.import_module("skamccs", class_name)
+    module = importlib.import_module("ska.mccs", class_name)
     class_type = getattr(module, class_name)
-
     tango_context = DeviceTestContext(
-        class_type, properties=test_properties.get(class_name))
+        class_type, properties=test_properties.get(class_name, {}))
     tango_context.start()
     yield tango_context
     tango_context.stop()

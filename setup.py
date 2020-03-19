@@ -4,24 +4,25 @@
 import os
 import setuptools
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-NAME
 setup_dir = os.path.dirname(os.path.abspath(__file__))
 release_module = {}
-release_filename = os.path.join(setup_dir, 'skamccs', 'release.py')
+release_filename = os.path.join(setup_dir, 'src', 'ska', 'mccs', 'release.py')
 # pylint: disable=exec-used
 exec(open(release_filename).read(), release_module)
 
 setuptools.setup(
-    name=release_module["name"],
-    description=release_module["description"],
-    version=release_module["version"],
-    author=release_module["author"],
-    author_email=release_module["author_email"],
-    license=release_module["license"],
-    packages=setuptools.find_packages(),
+    name=release_module["NAME"],
+    description=release_module["DESCRIPTION"],
+    version=release_module["VERSION"],
+    author=release_module["AUTHOR"],
+    author_email=release_module["AUTHOR_EMAIL"],
+    license=release_module["LICENSE"],
+    package_dir={"": "src"},
+    packages=setuptools.find_namespace_packages(where="src"),
     include_package_data=True,
     scripts=[],
-    url=release_module["url"],
+    url=release_module["URL"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -39,7 +40,7 @@ setuptools.setup(
     install_requires=[
         # should be pulled in by lmcbaseclasses but isn't
         "pytango >= 9.3.1",
-        "lmcbaseclasses >= 0.5.0"
+        "lmcbaseclasses >= 0.5.1"
         # pulled in by lmcbaseclasses
         # "ska_logging >= 0.2.1",
     ],

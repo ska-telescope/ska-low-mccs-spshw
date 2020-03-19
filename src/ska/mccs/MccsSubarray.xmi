@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
-  <classes name="LfaaSubarray" pogoRevision="9.6">
-    <description description="LfaaSubarray is the Tango device class for the Lfaa Subarray prototype.&#xA;&#xA;:todo: This device has device property `skaLevel` with default value 2, as&#xA;       required. It also inherits device property `SkaLevel` with default&#xA;       value 4, which is not correct for this device. The `skaLevel`/&#xA;       `SkaLevel` conflict needs to be resolved.&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="Lfaa Subarray" sourcePath="C:\Users\mar637\PycharmProjects\lfaa-lmc-prototype\skamccs\LfaaSubarray" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
+  <classes name="MccsSubarray" pogoRevision="9.6">
+    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: This device has device property `skaLevel` with default value 2, as&#xA;       required. It also inherits device property `SkaLevel` with default&#xA;       value 4, which is not correct for this device. The `skaLevel`/&#xA;       `SkaLevel` conflict needs to be resolved.&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/drew/lfaa-lmc-prototype/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
-      <inheritances classname="SKAObsDevice" sourcePath="../../../lmc-base-classes/pogo"/>
-      <inheritances classname="SKASubarray" sourcePath="../../../lmc-base-classes/pogo"/>
+      <inheritances classname="SKAObsDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
+      <inheritances classname="SKASubarray" sourcePath="../../../../lmc-base-classes/pogo"/>
       <identification contact="at csiro.au - drew.devereux" author="drew.devereux" emailDomain="csiro.au" classFamily="OtherInstruments" siteSpecific="" platform="All Platforms" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="CapabilityTypes" description="List of Capability types e.g. capCorr, capPss,&#xA;capPstBf, capVlbi, this will be used to dynamically&#xA;define groups for subarray.">
@@ -209,7 +209,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="endScan" description="Cause the subarray to stop transmission of output products. LFAA points and calibration jobs are left configured so that subsequent scans requiring the same parameters do not need to be reconfigured. Otherwise, the subarray configuration remains the same, and the command startScan() can be used to return to scanning." execMethod="end_scan" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="endScan" description="Cause the subarray to stop transmission of output products. Pointing and calibration jobs are left configured so that subsequent scans requiring the same parameters do not need to be reconfigured. Otherwise, the subarray configuration remains the same, and the command startScan() can be used to return to scanning." execMethod="end_scan" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -227,7 +227,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="pauseScan" description="Cause the sub-array to stop transmitting output products (other sub-arrays may continue normal operation). While a scan is paused, the LFAA subarray does not raise alarms if updates for sky coordinates and required calibration parameters are not received." execMethod="pause_scan" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="pauseScan" description="Cause the sub-array to stop transmitting output products (other sub-arrays may continue normal operation). While a scan is paused, the subarray does not raise alarms if updates for sky coordinates and required calibration parameters are not received." execMethod="pause_scan" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -245,7 +245,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="sendTransientBuffer" description="Cause the LFAA to send the requested segment of the transient buffer to SDP." execMethod="send_transient_buffer" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="sendTransientBuffer" description="Cause the subarray to send the requested segment of the transient buffer to SDP." execMethod="send_transient_buffer" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="Specification of the segment of the transient buffer to send, comprising:&#xA;1. Start time (timestamp: milliseconds since UNIX epoch)&#xA;2. End time (timestamp: milliseconds since UNIX epoch)&#xA;3. Dispersion measure&#xA;Together, these parameters narrow the selection of transient buffer data to the period of time and frequencies that are of interest.&#xA;&#xA;Additional metadata, such as the ID of a triggering Scheduling Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).">
         <type xsi:type="pogoDsl:IntArrayType"/>
       </argin>
@@ -254,7 +254,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="abort" description="Cause LFAA to abort the current observation on this subarray. Output to CSP is stopped, pointing/calibration activities are terminated, and Tiles are deconfigured." execMethod="abort" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="abort" description="Abort the current observation on this subarray. Output to CSP is stopped, pointing/calibration activities are terminated, and Tiles are deconfigured." execMethod="abort" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -409,7 +409,7 @@
     <states name="DISABLE" description="The device cannot be switched ON for an external reason. E.g. the power supply has its door open, the safety conditions are not satisfactory to allow the device to operate.">
       <status abstract="false" inherited="true" concrete="true"/>
     </states>
-    <preferences docHome="./doc_html" makefileHome="/usr/local/share/pogo/preferences"/>
+    <preferences docHome="./doc_html" makefileHome="$(TANGO_HOME)"/>
     <overlodedPollPeriodObject name="adminMode" type="attribute" pollPeriod="0"/>
     <overlodedPollPeriodObject name="configurationDelayExpected" type="attribute" pollPeriod="0"/>
     <overlodedPollPeriodObject name="configurationProgress" type="attribute" pollPeriod="0"/>

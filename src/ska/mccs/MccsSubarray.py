@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the LfaaSubarray project
+# This file is part of the MccsSubarray project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" Lfaa Subarray
+""" MCCS Subarray
 
-LfaaSubarray is the Tango device class for the Lfaa Subarray prototype.
+MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 
 :todo: This device has device property `skaLevel` with default value 2, as
        required. It also inherits device property `SkaLevel` with default
@@ -29,20 +29,55 @@ from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
+import enum
+#from SKASubarray import SKASubarray
 # Additional import
-# PROTECTED REGION ID(LfaaSubarray.additionnal_import) ENABLED START #
-# REMEMBER TO COMMENT OUT "from SKASubarray import SKASubarray" ABOVE
+# PROTECTED REGION ID(MccsSubarray.additionnal_import) ENABLED START #
+#REMEMBER TO COMMENT OUT "from SKASubarray import SKASubarray" above
 from ska.base import SKASubarray
-from ska.base.control_model import (AdminMode, ControlMode, HealthState,
-                                    SimulationMode, TestMode)
-# PROTECTED REGION END #    //  LfaaSubarray.additionnal_import
+from ska.base.control_model import (HealthState, AdminMode, ObsState,
+                                    ObsMode, ControlMode, SimulationMode,
+                                    TestMode, LoggingLevel)
+# PROTECTED REGION END #    //  MccsSubarray.additionnal_import
 
-__all__ = ["LfaaSubarray"]
+__all__ = ["MccsSubarray", "main"]
 
 
-class LfaaSubarray(SKASubarray):
+#class AdminMode(enum.IntEnum):
+#    """Python enumerated type for AdminMode attribute."""
+#
+#
+#class ControlMode(enum.IntEnum):
+#    """Python enumerated type for ControlMode attribute."""
+#
+#
+#class HealthState(enum.IntEnum):
+#    """Python enumerated type for HealthState attribute."""
+#
+#
+#class LoggingLevel(enum.IntEnum):
+#    """Python enumerated type for LoggingLevel attribute."""
+#
+#
+#class ObsMode(enum.IntEnum):
+#    """Python enumerated type for ObsMode attribute."""
+#
+#
+#class ObsState(enum.IntEnum):
+#    """Python enumerated type for ObsState attribute."""
+#
+#
+#class SimulationMode(enum.IntEnum):
+#    """Python enumerated type for SimulationMode attribute."""
+#
+#
+#class TestMode(enum.IntEnum):
+#    """Python enumerated type for TestMode attribute."""
+#
+
+class MccsSubarray(SKASubarray):
     """
-    LfaaSubarray is the Tango device class for the Lfaa Subarray prototype.
+    MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 
     :todo: This device has device property `skaLevel` with default value 2, as
            required. It also inherits device property `SkaLevel` with default
@@ -56,16 +91,23 @@ class LfaaSubarray(SKASubarray):
 
     - Device Property
         skaLevel
-            - Indication of importance of the device in the SKA hierarchy \nto support drill-down navigation
+            - Indication of importance of the device in the SKA hierarchy
+              to support drill-down navigation
             - Type:'DevShort'
     """
     __metaclass__ = DeviceMeta
-    # PROTECTED REGION ID(LfaaSubarray.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  LfaaSubarray.class_variable
+    # PROTECTED REGION ID(MccsSubarray.class_variable) ENABLED START #
+    # PROTECTED REGION END #    //  MccsSubarray.class_variable
 
     # -----------------
     # Device Properties
     # -----------------
+
+
+
+
+
+
 
     skaLevel = device_property(
         dtype='DevShort', default_value=2
@@ -75,12 +117,28 @@ class LfaaSubarray(SKASubarray):
     # Attributes
     # ----------
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     scanID = attribute(
         dtype='DevLong',
         format="%i",
         polling_period=1000,
         doc="The ID of the current scan, set via commands startScan() and endScan(). A scanID of 0 means that the subarray is idle.",
     )
+
+
+
 
     stationFQDNs = attribute(
         dtype=('DevString',),
@@ -111,18 +169,17 @@ class LfaaSubarray(SKASubarray):
     # ---------------
 
     def init_device(self):
-        """Initialises the attributes and properties of the LfaaSubarray."""
+        """Initialises the attributes and properties of the MccsSubarray."""
         SKASubarray.init_device(self)
         self.set_change_event("stationFQDNs", True, True)
         self.set_archive_event("stationFQDNs", True, True)
-        # PROTECTED REGION ID(LfaaSubarray.init_device) ENABLED START #
-        # PROTECTED REGION END #    //  LfaaSubarray.init_device
+        # PROTECTED REGION ID(MccsSubarray.init_device) ENABLED START #
+        # PROTECTED REGION END #    //  MccsSubarray.init_device
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        # PROTECTED REGION ID(LfaaSubarray.always_executed_hook) ENABLED START #
-        # pass
-        # PROTECTED REGION END #    //  LfaaSubarray.always_executed_hook
+        # PROTECTED REGION ID(MccsSubarray.always_executed_hook) ENABLED START #
+        # PROTECTED REGION END #    //  MccsSubarray.always_executed_hook
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -131,36 +188,35 @@ class LfaaSubarray(SKASubarray):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        # PROTECTED REGION ID(LfaaSubarray.delete_device) ENABLED START #
-        # PROTECTED REGION END #    //  LfaaSubarray.delete_device
-
+        # PROTECTED REGION ID(MccsSubarray.delete_device) ENABLED START #
+        # PROTECTED REGION END #    //  MccsSubarray.delete_device
     # ------------------
     # Attributes methods
     # ------------------
 
     def read_scanID(self):
-        # PROTECTED REGION ID(LfaaSubarray.scanID_read) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.scanID_read) ENABLED START #
         """Return the scanID attribute."""
         return 0
-        # PROTECTED REGION END #    //  LfaaSubarray.scanID_read
+        # PROTECTED REGION END #    //  MccsSubarray.scanID_read
 
     def read_stationFQDNs(self):
-        # PROTECTED REGION ID(LfaaSubarray.stationFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.stationFQDNs_read) ENABLED START #
         """Return the stationFQDNs attribute."""
-        return ['']
-        # PROTECTED REGION END #    //  LfaaSubarray.stationFQDNs_read
+        return ('',)
+        # PROTECTED REGION END #    //  MccsSubarray.stationFQDNs_read
 
     def read_tileFQDNs(self):
-        # PROTECTED REGION ID(LfaaSubarray.tileFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.tileFQDNs_read) ENABLED START #
         """Return the tileFQDNs attribute."""
-        return ['']
-        # PROTECTED REGION END #    //  LfaaSubarray.tileFQDNs_read
+        return ('',)
+        # PROTECTED REGION END #    //  MccsSubarray.tileFQDNs_read
 
     def read_stationBeamFQDNs(self):
-        # PROTECTED REGION ID(LfaaSubarray.stationBeamFQDNs_read) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.stationBeamFQDNs_read) ENABLED START #
         """Return the stationBeamFQDNs attribute."""
-        return ['']
-        # PROTECTED REGION END #    //  LfaaSubarray.stationBeamFQDNs_read
+        return ('',)
+        # PROTECTED REGION END #    //  MccsSubarray.stationBeamFQDNs_read
 
     # --------
     # Commands
@@ -174,7 +230,7 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def configureScan(self, argin):
-        # PROTECTED REGION ID(LfaaSubarray.configureScan) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.configureScan) ENABLED START #
         """Configure the subarray
 
         :todo: This method is a stub that does nothing but return a dummy
@@ -186,9 +242,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         return ("Dummy ASCII string returned from "
-                "LfaaSubarray.configureScan() to indicate status, for "
+                "MccsSubarray.configureScan() to indicate status, for "
                 "information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.configureScan
+        # PROTECTED REGION END #    //  MccsSubarray.configureScan
 
     @command(
         dtype_out='DevString',
@@ -196,7 +252,7 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def startScan(self):
-        # PROTECTED REGION ID(LfaaSubarray.startScan) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.startScan) ENABLED START #
         """Cause the subarray to start sending station beam data to CSP
 
         :todo: This method is a stub that calls the inherited Scan method,
@@ -208,9 +264,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         self.Scan()
-        return ("Dummy ASCII string returned from LfaaSubarray.startScan() to "
+        return ("Dummy ASCII string returned from MccsSubarray.startScan() to "
                 "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.startScan
+        # PROTECTED REGION END #    //  MccsSubarray.startScan
 
     @command(
         dtype_out='DevString',
@@ -218,9 +274,9 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def endScan(self):
-        # PROTECTED REGION ID(LfaaSubarray.endScan) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.endScan) ENABLED START #
         """Cause the subarray to stop transmission of output products.
-        LFAA pointing and calibration jobs are left configured so that
+        Pointing and calibration jobs are left configured so that
         subsequent scans requiring the same parameters do not need to be
         reconfigured.
         Otherwise, the subarray configuration remains the same, and the command
@@ -235,9 +291,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         self.EndScan()
-        return ("Dummy ASCII string returned from LfaaSubarray.endScan() to "
+        return ("Dummy ASCII string returned from MccsSubarray.endScan() to "
                 "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.endScan
+        # PROTECTED REGION END #    //  MccsSubarray.endScan
 
     @command(
         dtype_out='DevString',
@@ -245,7 +301,7 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def releaseResources(self):
-        # PROTECTED REGION ID(LfaaSubarray.releaseResources) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.releaseResources) ENABLED START #
         """Cause the subarray to release all Stations, Tiles and Station Beams,
         and transition to idle. The released Stations, Tiles and Station Beams
         are returned to the pool of the unassigned resources.
@@ -257,9 +313,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         return ("Dummy ASCII string returned from "
-                "LfaaSubarray.releaseResources() to indicate status, for "
+                "MccsSubarray.releaseResources() to indicate status, for "
                 "information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.releaseResources
+        # PROTECTED REGION END #    //  MccsSubarray.releaseResources
 
     @command(
         dtype_out='DevString',
@@ -267,10 +323,10 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def pauseScan(self):
-        # PROTECTED REGION ID(LfaaSubarray.pauseScan) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.pauseScan) ENABLED START #
         """Cause the sub-array to stop transmitting output products (other
         sub-arrays may continue normal operation). While a scan is paused, the
-        LFAA subarray does not raise alarms if updates for sky coordinates and
+        subarray does not raise alarms if updates for sky coordinates and
         required calibration parameters are not received.
 
         :todo: This method is a stub that calls the inherited Pause method, and
@@ -281,9 +337,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         self.Pause()
-        return ("Dummy ASCII string returned from LfaaSubarray.pauseScan() to "
+        return ("Dummy ASCII string returned from MccsSubarray.pauseScan() to "
                 "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.pauseScan
+        # PROTECTED REGION END #    //  MccsSubarray.pauseScan
 
     @command(
         dtype_out='DevString',
@@ -291,7 +347,7 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def resumeScan(self):
-        # PROTECTED REGION ID(LfaaSubarray.resumeScan) ENABLED START #
+        # PROTECTED REGION ID(MccsSubarray.resumeScan) ENABLED START #
         """Cause the subarray to resume scanning after having been paused
 
         :todo: This method is a stub that calls the inherited Resume method,
@@ -302,9 +358,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         self.Resume()
-        return ("Dummy ASCII string returned from LfaaSubarray.resumeScan() "
+        return ("Dummy ASCII string returned from MccsSubarray.resumeScan() "
                 "to indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.resumeScan
+        # PROTECTED REGION END #    //  MccsSubarray.resumeScan
 
     @command(
         dtype_in='DevVarLongArray',
@@ -320,8 +376,8 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def sendTransientBuffer(self, argin):
-        # PROTECTED REGION ID(LfaaSubarray.sendTransientBuffer) ENABLED START #
-        """Cause the LFAA to send the requested segment of the transient buffer
+        # PROTECTED REGION ID(MccsSubarray.sendTransientBuffer) ENABLED START #
+        """Cause the subarray to send the requested segment of the transient buffer
         to SDP. The requested segment is specified by:
 
         1. Start time (timestamp: milliseconds since UNIX epoch)
@@ -345,9 +401,9 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         return ("Dummy ASCII string returned from "
-                "LfaaSubarray.sendTransientBuffer() to indicate status, for "
+                "MccsSubarray.sendTransientBuffer() to indicate status, for "
                 "information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.sendTransientBuffer
+        # PROTECTED REGION END #    //  MccsSubarray.sendTransientBuffer
 
     @command(
         dtype_out='DevString',
@@ -355,8 +411,8 @@ class LfaaSubarray(SKASubarray):
     )
     @DebugIt()
     def abort(self):
-        # PROTECTED REGION ID(LfaaSubarray.abort) ENABLED START #
-        """Cause LFAA to abort the current observation on this subarray. Output
+        # PROTECTED REGION ID(MccsSubarray.abort) ENABLED START #
+        """Cause the array to abort the current observation on this subarray. Output
         to CSP is stopped, pointing/calibration activities are terminated, and
         Tiles are deconfigured.
 
@@ -368,22 +424,22 @@ class LfaaSubarray(SKASubarray):
         :rtype: DevString
         """
         self.Abort()
-        return ("Dummy ASCII string returned from LfaaSubarray.abort() to "
+        return ("Dummy ASCII string returned from MccsSubarray.abort() to "
                 "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  LfaaSubarray.abort
+        # PROTECTED REGION END #    //  MccsSubarray.abort
 
 # ----------
 # Run server
 # ----------
 
-
 def main(args=None, **kwargs):
-    """Main function of the LfaaSubarray module."""
-    # PROTECTED REGION ID(LfaaSubarray.main) ENABLED START #
+    """Main function of the MccsSubarray module."""
+    # PROTECTED REGION ID(MccsSubarray.main) ENABLED START #
     """mainline for module"""
-    return run((LfaaSubarray,), args=args, **kwargs)
-    # PROTECTED REGION END #    //  LfaaSubarray.main
+    return run((MccsSubarray,), args=args, **kwargs)
+    # PROTECTED REGION END #    //  MccsSubarray.main
 
 
 if __name__ == '__main__':
     main()
+

@@ -74,9 +74,6 @@ class MccsStation(SKAObsDevice):
     **Properties:**
 
     - Device Property
-        skaLevel
-            - Indication of the importance of the device in the SKA hierarchy, to support drill-down navigation
-            - Type:'DevShort'
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(MccsStation.class_variable) ENABLED START #
@@ -91,10 +88,6 @@ class MccsStation(SKAObsDevice):
 
 
 
-
-    skaLevel = device_property(
-        dtype='DevShort', default_value=3
-    )
 
     # ----------
     # Attributes
@@ -352,9 +345,7 @@ class MccsStation(SKAObsDevice):
 
 
 def main(args=None, **kwargs):
-    """
-    Main function of the MccsStation module.
-    """
+    """Main function of the MccsStation module."""
     # PROTECTED REGION ID(MccsStation.main) ENABLED START #
     return run((MccsStation,), args=args, **kwargs)
     # PROTECTED REGION END #    //  MccsStation.main
@@ -362,4 +353,3 @@ def main(args=None, **kwargs):
 
 if __name__ == '__main__':
     main()
-

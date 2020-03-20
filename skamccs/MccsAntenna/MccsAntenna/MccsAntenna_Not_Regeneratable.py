@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the LfaaAntenna project
+# This file is part of the MccsAntenna project
 #
 #
 #
@@ -24,19 +24,19 @@ from PyTango import AttrWriteType, PipeWriteType
 ###from SKABaseDevice import SKABaseDevice
 # Additional import
 from ska.base import SKABaseDevice
-# PROTECTED REGION ID(LfaaAntenna.additionnal_import) ENABLED START #
-# PROTECTED REGION END #    //  LfaaAntenna.additionnal_import
+# PROTECTED REGION ID(MccsAntenna.additionnal_import) ENABLED START #
+# PROTECTED REGION END #    //  MccsAntenna.additionnal_import
 
-__all__ = ["LfaaAntenna", "main"]
+__all__ = ["MccsAntenna", "main"]
 
 
-class LfaaAntenna(SKABaseDevice):
+class MccsAntenna(SKABaseDevice):
     """
     An implementation of the Antenna Device Server for the MCCS based upon architecture in SKA-TEL-LFAA-06000052-02.
     """
     __metaclass__ = DeviceMeta
-    # PROTECTED REGION ID(LfaaAntenna.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  LfaaAntenna.class_variable
+    # PROTECTED REGION ID(MccsAntenna.class_variable) ENABLED START #
+    # PROTECTED REGION END #    //  MccsAntenna.class_variable
 
     # -----------------
     # Device Properties
@@ -56,7 +56,7 @@ class LfaaAntenna(SKABaseDevice):
 
     def init_device(self):
         SKABaseDevice.init_device(self)
-        # PROTECTED REGION ID(LfaaAntenna.init_device) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.init_device) ENABLED START #
         self._antennaId = 0
         self._logicalTpmAntenna_id = 0
         self._logicalApiuAntenna_id = 0.0
@@ -87,17 +87,17 @@ class LfaaAntenna(SKABaseDevice):
         self._bandpassCoefficient = [0.0]
 
 
-        # PROTECTED REGION END #    //  LfaaAntenna.init_device
+        # PROTECTED REGION END #    //  MccsAntenna.init_device
 
     def always_executed_hook(self):
-        # PROTECTED REGION ID(LfaaAntenna.always_executed_hook) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.always_executed_hook) ENABLED START #
         pass
-        # PROTECTED REGION END #    //  LfaaAntenna.always_executed_hook
+        # PROTECTED REGION END #    //  MccsAntenna.always_executed_hook
 
     def delete_device(self):
-        # PROTECTED REGION ID(LfaaAntenna.delete_device) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.delete_device) ENABLED START #
         pass
-        # PROTECTED REGION END #    //  LfaaAntenna.delete_device
+        # PROTECTED REGION END #    //  MccsAntenna.delete_device
 
     # ------------------
     # Attributes methods
@@ -108,9 +108,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Global antenna identifier",
     )
     def antennaId(self):
-        # PROTECTED REGION ID(LfaaAntenna.antennaId) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.antennaId) ENABLED START #
         return self._antennaId
-        # PROTECTED REGION END #    //  LfaaAntenna.antennaId
+        # PROTECTED REGION END #    //  MccsAntenna.antennaId
 
     @attribute(
         dtype='int',
@@ -118,9 +118,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Local within Tile identifier for the Antenna TPM\n",
     )
     def logicalTpmAntenna_id(self):
-        # PROTECTED REGION ID(LfaaAntenna.logicalTpmAntenna_id) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.logicalTpmAntenna_id) ENABLED START #
         return self._logicalTpmAntenna_id
-        # PROTECTED REGION END #    //  LfaaAntenna.logicalTpmAntenna_id
+        # PROTECTED REGION END #    //  MccsAntenna.logicalTpmAntenna_id
 
     @attribute(
         dtype='double',
@@ -128,9 +128,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Local within Tile identifier for the Antenna APIU",
     )
     def logicalApiuAntenna_id(self):
-        # PROTECTED REGION ID(LfaaAntenna.logicalApiuAntenna_id) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.logicalApiuAntenna_id) ENABLED START #
         return self._logicalApiuAntenna_id
-        # PROTECTED REGION END #    //  LfaaAntenna.logicalApiuAntenna_id
+        # PROTECTED REGION END #    //  MccsAntenna.logicalApiuAntenna_id
 
     @attribute(
         dtype='double',
@@ -138,18 +138,18 @@ class LfaaAntenna(SKABaseDevice):
         doc="Global Tile ID to which the atenna is connected",
     )
     def tpmId(self):
-        # PROTECTED REGION ID(LfaaAntenna.tpmId) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.tpmId) ENABLED START #
         return self._tpmId
-        # PROTECTED REGION END #    //  LfaaAntenna.tpmId
+        # PROTECTED REGION END #    //  MccsAntenna.tpmId
 
     @attribute(
         dtype='double',
         label="apiuId",
     )
     def apiuId(self):
-        # PROTECTED REGION ID(LfaaAntenna.apiuId) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.apiuId) ENABLED START #
         return self._apiuId
-        # PROTECTED REGION END #    //  LfaaAntenna.apiuId
+        # PROTECTED REGION END #    //  MccsAntenna.apiuId
 
     @attribute(
         dtype='float',
@@ -157,9 +157,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="The gain set for the antenna",
     )
     def gain(self):
-        # PROTECTED REGION ID(LfaaAntenna.gain) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.gain) ENABLED START #
         return self._gain
-        # PROTECTED REGION END #    //  LfaaAntenna.gain
+        # PROTECTED REGION END #    //  MccsAntenna.gain
 
     @attribute(
         dtype='float',
@@ -167,9 +167,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="The measured RMS of the antenna (monitored)",
     )
     def rms(self):
-        # PROTECTED REGION ID(LfaaAntenna.rms) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.rms) ENABLED START #
         return self._rms
-        # PROTECTED REGION END #    //  LfaaAntenna.rms
+        # PROTECTED REGION END #    //  MccsAntenna.rms
 
     @attribute(
         dtype='float',
@@ -177,9 +177,9 @@ class LfaaAntenna(SKABaseDevice):
         unit="volts",
     )
     def voltage(self):
-        # PROTECTED REGION ID(LfaaAntenna.voltage) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.voltage) ENABLED START #
         return self._voltage
-        # PROTECTED REGION END #    //  LfaaAntenna.voltage
+        # PROTECTED REGION END #    //  MccsAntenna.voltage
 
     @attribute(
         dtype='float',
@@ -187,27 +187,27 @@ class LfaaAntenna(SKABaseDevice):
         unit="DegC",
     )
     def temperature(self):
-        # PROTECTED REGION ID(LfaaAntenna.temperature) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.temperature) ENABLED START #
         return self._temperature
-        # PROTECTED REGION END #    //  LfaaAntenna.temperature
+        # PROTECTED REGION END #    //  MccsAntenna.temperature
 
     @attribute(
         dtype='bool',
         label="xPolarisationFaulty",
     )
     def xPolarisationFaulty(self):
-        # PROTECTED REGION ID(LfaaAntenna.xPolarisationFaulty) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.xPolarisationFaulty) ENABLED START #
         return self._xPolarisationFaulty
-        # PROTECTED REGION END #    //  LfaaAntenna.xPolarisationFaulty
+        # PROTECTED REGION END #    //  MccsAntenna.xPolarisationFaulty
 
     @attribute(
         dtype='bool',
         label="yPolarisationFaulty",
     )
     def yPolarisationFaulty(self):
-        # PROTECTED REGION ID(LfaaAntenna.yPolarisationFaulty) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.yPolarisationFaulty) ENABLED START #
         return self._yPolarisationFaulty
-        # PROTECTED REGION END #    //  LfaaAntenna.yPolarisationFaulty
+        # PROTECTED REGION END #    //  MccsAntenna.yPolarisationFaulty
 
     @attribute(
         dtype='float',
@@ -215,9 +215,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Longnitude of field node (centre) to which antenna is asociated.",
     )
     def fieldNodeLongitude(self):
-        # PROTECTED REGION ID(LfaaAntenna.fieldNodeLongitude) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.fieldNodeLongitude) ENABLED START #
         return self._fieldNodeLongitude
-        # PROTECTED REGION END #    //  LfaaAntenna.fieldNodeLongitude
+        # PROTECTED REGION END #    //  MccsAntenna.fieldNodeLongitude
 
     @attribute(
         dtype='float',
@@ -225,9 +225,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Latitude of the field node (centre) to which antenna is asociated.",
     )
     def fieldNodeLatitude(self):
-        # PROTECTED REGION ID(LfaaAntenna.fieldNodeLatitude) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.fieldNodeLatitude) ENABLED START #
         return self._fieldNodeLatitude
-        # PROTECTED REGION END #    //  LfaaAntenna.fieldNodeLatitude
+        # PROTECTED REGION END #    //  MccsAntenna.fieldNodeLatitude
 
     @attribute(
         dtype='float',
@@ -236,9 +236,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Antenna altitude in meters",
     )
     def altitude(self):
-        # PROTECTED REGION ID(LfaaAntenna.altitude) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.altitude) ENABLED START #
         return self._altitude
-        # PROTECTED REGION END #    //  LfaaAntenna.altitude
+        # PROTECTED REGION END #    //  MccsAntenna.altitude
 
     @attribute(
         dtype='float',
@@ -247,9 +247,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Horizontal displacement in meters from field node centre",
     )
     def xDisplacement(self):
-        # PROTECTED REGION ID(LfaaAntenna.xDisplacement) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.xDisplacement) ENABLED START #
         return self._xDisplacement
-        # PROTECTED REGION END #    //  LfaaAntenna.xDisplacement
+        # PROTECTED REGION END #    //  MccsAntenna.xDisplacement
 
     @attribute(
         dtype='float',
@@ -258,18 +258,18 @@ class LfaaAntenna(SKABaseDevice):
         doc="Vertical displacement in meters from field centre",
     )
     def yDisplacement(self):
-        # PROTECTED REGION ID(LfaaAntenna.yDisplacement) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.yDisplacement) ENABLED START #
         return self._yDisplacement
-        # PROTECTED REGION END #    //  LfaaAntenna.yDisplacement
+        # PROTECTED REGION END #    //  MccsAntenna.yDisplacement
 
     @attribute(
         dtype='str',
         label="timestampOfLastSpectrum",
     )
     def timestampOfLastSpectrum(self):
-        # PROTECTED REGION ID(LfaaAntenna.timestampOfLastSpectrum) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.timestampOfLastSpectrum) ENABLED START #
         return self._timestampOfLastSpectrum
-        # PROTECTED REGION END #    //  LfaaAntenna.timestampOfLastSpectrum
+        # PROTECTED REGION END #    //  MccsAntenna.timestampOfLastSpectrum
 
     @attribute(
         dtype='int',
@@ -277,9 +277,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Local (within Tile) antenna identifier",
     )
     def logicalAntennaId(self):
-        # PROTECTED REGION ID(LfaaAntenna.logicalAntennaId) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.logicalAntennaId) ENABLED START #
         return self._logicalAntennaId
-        # PROTECTED REGION END #    //  LfaaAntenna.logicalAntennaId
+        # PROTECTED REGION END #    //  MccsAntenna.logicalAntennaId
 
     @attribute(
         dtype=('int',),
@@ -287,9 +287,9 @@ class LfaaAntenna(SKABaseDevice):
         label="xPolarisationScalingFactor",
     )
     def xPolarisationScalingFactor(self):
-        # PROTECTED REGION ID(LfaaAntenna.xPolarisationScalingFactor) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.xPolarisationScalingFactor) ENABLED START #
         return self._xPolarisationScalingFactor
-        # PROTECTED REGION END #    //  LfaaAntenna.xPolarisationScalingFactor
+        # PROTECTED REGION END #    //  MccsAntenna.xPolarisationScalingFactor
 
     @attribute(
         dtype=('int',),
@@ -297,9 +297,9 @@ class LfaaAntenna(SKABaseDevice):
         label="yPolarisationScalingFactor",
     )
     def yPolarisationScalingFactor(self):
-        # PROTECTED REGION ID(LfaaAntenna.yPolarisationScalingFactor) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.yPolarisationScalingFactor) ENABLED START #
         return self._yPolarisationScalingFactor
-        # PROTECTED REGION END #    //  LfaaAntenna.yPolarisationScalingFactor
+        # PROTECTED REGION END #    //  MccsAntenna.yPolarisationScalingFactor
 
     @attribute(
         dtype=('float',),
@@ -308,9 +308,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Callibration coefficient to be applied for the next frequency channel in the calibration cycle (archived)\n\nThis is presented as a vector.\n",
     )
     def calibrationCoefficient(self):
-        # PROTECTED REGION ID(LfaaAntenna.calibrationCoefficient) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.calibrationCoefficient) ENABLED START #
         return self._calibrationCoefficient
-        # PROTECTED REGION END #    //  LfaaAntenna.calibrationCoefficient
+        # PROTECTED REGION END #    //  MccsAntenna.calibrationCoefficient
 
     @attribute(
         dtype=('float',),
@@ -318,9 +318,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="This is presented as a vector.",
     )
     def pointingCoefficient(self):
-        # PROTECTED REGION ID(LfaaAntenna.pointingCoefficient) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.pointingCoefficient) ENABLED START #
         return self._pointingCoefficient
-        # PROTECTED REGION END #    //  LfaaAntenna.pointingCoefficient
+        # PROTECTED REGION END #    //  MccsAntenna.pointingCoefficient
 
     @attribute(
         dtype=('float',),
@@ -328,9 +328,9 @@ class LfaaAntenna(SKABaseDevice):
         label="spectrumX",
     )
     def spectrumX(self):
-        # PROTECTED REGION ID(LfaaAntenna.spectrumX) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.spectrumX) ENABLED START #
         return self._spectrumX
-        # PROTECTED REGION END #    //  LfaaAntenna.spectrumX
+        # PROTECTED REGION END #    //  MccsAntenna.spectrumX
 
     @attribute(
         dtype=('float',),
@@ -338,9 +338,9 @@ class LfaaAntenna(SKABaseDevice):
         label="spectrumY",
     )
     def spectrumY(self):
-        # PROTECTED REGION ID(LfaaAntenna.spectrumY) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.spectrumY) ENABLED START #
         return self._spectrumY
-        # PROTECTED REGION END #    //  LfaaAntenna.spectrumY
+        # PROTECTED REGION END #    //  MccsAntenna.spectrumY
 
     @attribute(
         dtype=('float',),
@@ -348,9 +348,9 @@ class LfaaAntenna(SKABaseDevice):
         label="position",
     )
     def position(self):
-        # PROTECTED REGION ID(LfaaAntenna.position) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.position) ENABLED START #
         return self._position
-        # PROTECTED REGION END #    //  LfaaAntenna.position
+        # PROTECTED REGION END #    //  MccsAntenna.position
     @attribute(
         dtype=('float',),
         max_dim_x=100,
@@ -358,9 +358,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Delay for each beam to be applied during the next pointing update (archived)",
     )
     def delays(self):
-        # PROTECTED REGION ID(LfaaAntenna.delays) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.delays) ENABLED START #
         return self._delays
-        # PROTECTED REGION END #    //  LfaaAntenna.delays
+        # PROTECTED REGION END #    //  MccsAntenna.delays
     @attribute(
         dtype=('float',),
         max_dim_x=100,
@@ -368,9 +368,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Delay rate for each beam to be applied during the next pointing update (archived)",
     )
     def delayRates(self):
-        # PROTECTED REGION ID(LfaaAntenna.delayRates) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.delayRates) ENABLED START #
         return self._delayRates
-        # PROTECTED REGION END #    //  LfaaAntenna.delayRates
+        # PROTECTED REGION END #    //  MccsAntenna.delayRates
 
     @attribute(
         dtype=('float',),
@@ -379,9 +379,9 @@ class LfaaAntenna(SKABaseDevice):
         doc="Bandpass coefficient to apply during next calibration cycle to flatten the antenna's bandpass (archived)",
     )
     def bandpassCoefficient(self):
-        # PROTECTED REGION ID(LfaaAntenna.bandpassCoefficient_read) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.bandpassCoefficient_read) ENABLED START #
         return self._bandpassCoefficient
-        # PROTECTED REGION END #    //  LfaaAntenna.bandpassCoefficient_read
+        # PROTECTED REGION END #    //  MccsAntenna.bandpassCoefficient_read
 
 
     # --------
@@ -392,17 +392,17 @@ class LfaaAntenna(SKABaseDevice):
     )
     @DebugIt()
     def PowerOn(self, argin):
-        # PROTECTED REGION ID(LfaaAntenna.PowerOn) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.PowerOn) ENABLED START #
         return ""
-        # PROTECTED REGION END #    //  LfaaAntenna.PowerOn
+        # PROTECTED REGION END #    //  MccsAntenna.PowerOn
 
     @command(
     )
     @DebugIt()
     def PowerOff(self, argin):
-        # PROTECTED REGION ID(LfaaAntenna.PowerOff) ENABLED START #
+        # PROTECTED REGION ID(MccsAntenna.PowerOff) ENABLED START #
         return ""
-        # PROTECTED REGION END #    //  LfaaAntenna.PowerOff
+        # PROTECTED REGION END #    //  MccsAntenna.PowerOff
 
 # ----------
 # Run server
@@ -410,9 +410,9 @@ class LfaaAntenna(SKABaseDevice):
 
 
 def main(args=None, **kwargs):
-    # PROTECTED REGION ID(LfaaAntenna.main) ENABLED START #
-    return run((LfaaAntenna,), args=args, **kwargs)
-    # PROTECTED REGION END #    //  LfaaAntenna.main
+    # PROTECTED REGION ID(MccsAntenna.main) ENABLED START #
+    return run((MccsAntenna,), args=args, **kwargs)
+    # PROTECTED REGION END #    //  MccsAntenna.main
 
 if __name__ == '__main__':
     main()

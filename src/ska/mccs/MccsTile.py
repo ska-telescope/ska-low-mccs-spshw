@@ -558,7 +558,7 @@ class MccsTile(SKABaseDevice):
         # PROTECTED REGION ID(Mccs.ProgramCPLD) ENABLED START #
         """
         If the TPM has a CPLD (or other management chip which need firmware),
-        this function program it with the provided bitfile. 
+        this function program it with the provided bitfile.
         bitfile is the path to a file containing the required CPLD firmware
 
         :param argin: 'DevString'
@@ -782,8 +782,8 @@ class MccsTile(SKABaseDevice):
     def ConfigureStationBeamformer(self, argin):
         # PROTECTED REGION ID(Mccs.ConfigureStationBeamformer) ENABLED START #
         """
-        Initialise and start the station beamformer. 
-        nof_tiles is the number of tiles in the station, 
+        Initialise and start the station beamformer.
+        nof_tiles is the number of tiles in the station,
         first_tile specifies whether the tile is the first one in the station,and start,
         when True, starts the beamformer
 
@@ -808,7 +808,7 @@ class MccsTile(SKABaseDevice):
             0: X polarization direct element
             1: X->Y polarization cross element
             2: Y->X polarization cross element
-            3: Y polarization direct element 
+            3: Y polarization direct element
         The calibration coefficients may include any rotation matrix (e.g. the parallactic angle),
         but do not include the geometric delay
 

@@ -18,12 +18,9 @@ import sphinx_rtd_theme
 
 # -- Path set up --------------------------------------------------------------
 
-sys.path.insert(0, os.path.abspath(
-    os.path.join('..', '..', '..', 'ska-logging')
-))
-sys.path.insert(0, os.path.abspath(
-    os.path.join('..', '..', '..', 'lmc-base-classes', 'src')
-))
+autodoc_mock_imports = ['tango',
+                        'ska_logging', 'ska.base']
+
 sys.path.insert(0, os.path.abspath(
     os.path.join('..', '..', 'src')
 ))

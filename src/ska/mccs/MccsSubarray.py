@@ -11,10 +11,6 @@
 
 MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 
-:todo: This device has device property `skaLevel` with default value 2, as
-       required. It also inherits device property `SkaLevel` with default
-       value 4, which is not correct for this device. The `skaLevel`/
-       `SkaLevel` conflict needs to be resolved.
 :todo: Implement healthState, taking account of health of this device and
        of the capability invoked on this device
 :todo: All commands return a dummy string
@@ -78,11 +74,7 @@ __all__ = ["MccsSubarray", "main"]
 class MccsSubarray(SKASubarray):
     """
     MccsSubarray is the Tango device class for the MCCS Subarray prototype.
-
-    :todo: This device has device property `skaLevel` with default value 2, as
-           required. It also inherits device property `SkaLevel` with default
-           value 4, which is not correct for this device. The `skaLevel`/
-           `SkaLevel` conflict needs to be resolved.
+    
     :todo: Implement healthState, taking account of health of this device and
            of the capability invoked on this device
     :todo: All commands return a dummy string
@@ -90,10 +82,6 @@ class MccsSubarray(SKASubarray):
     **Properties:**
 
     - Device Property
-        skaLevel
-            - Indication of importance of the device in the SKA hierarchy
-              to support drill-down navigation
-            - Type:'DevShort'
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(MccsSubarray.class_variable) ENABLED START #
@@ -108,10 +96,6 @@ class MccsSubarray(SKASubarray):
 
 
 
-
-    skaLevel = device_property(
-        dtype='DevShort', default_value=2
-    )
 
     # ----------
     # Attributes
@@ -251,55 +235,6 @@ class MccsSubarray(SKASubarray):
         doc_out="ASCII string that indicates status, for information purposes only",
     )
     @DebugIt()
-    def startScan(self):
-        # PROTECTED REGION ID(MccsSubarray.startScan) ENABLED START #
-        """Cause the subarray to start sending station beam data to CSP
-
-        :todo: This method is a stub that calls the inherited Scan method,
-               and returns a dummy string. The `startScan`/`Scan` conflict
-               needs to be fixed so that this function overloads rather than
-               calling.
-        :return: ASCII String that indicates status, for information purposes
-                 only
-        :rtype: DevString
-        """
-        self.Scan()
-        return ("Dummy ASCII string returned from MccsSubarray.startScan() to "
-                "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  MccsSubarray.startScan
-
-    @command(
-        dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes only",
-    )
-    @DebugIt()
-    def endScan(self):
-        # PROTECTED REGION ID(MccsSubarray.endScan) ENABLED START #
-        """Cause the subarray to stop transmission of output products.
-        Pointing and calibration jobs are left configured so that
-        subsequent scans requiring the same parameters do not need to be
-        reconfigured.
-        Otherwise, the subarray configuration remains the same, and the command
-        startScan() can be used to return to scanning.
-
-        :todo: This method is a stub that calls the inherited EndScan method,
-               and returns a dummy string. The `endScani`/`EndScan` conflict
-               needs to be fixed so that this function overloads rather than
-               calling.
-        :return: ASCII String that indicates status, for information purposes
-                 only
-        :rtype: DevString
-        """
-        self.EndScan()
-        return ("Dummy ASCII string returned from MccsSubarray.endScan() to "
-                "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  MccsSubarray.endScan
-
-    @command(
-        dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes only",
-    )
-    @DebugIt()
     def releaseResources(self):
         # PROTECTED REGION ID(MccsSubarray.releaseResources) ENABLED START #
         """Cause the subarray to release all Stations, Tiles and Station Beams,
@@ -316,51 +251,6 @@ class MccsSubarray(SKASubarray):
                 "MccsSubarray.releaseResources() to indicate status, for "
                 "information purposes only")
         # PROTECTED REGION END #    //  MccsSubarray.releaseResources
-
-    @command(
-        dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes only",
-    )
-    @DebugIt()
-    def pauseScan(self):
-        # PROTECTED REGION ID(MccsSubarray.pauseScan) ENABLED START #
-        """Cause the sub-array to stop transmitting output products (other
-        sub-arrays may continue normal operation). While a scan is paused, the
-        subarray does not raise alarms if updates for sky coordinates and
-        required calibration parameters are not received.
-
-        :todo: This method is a stub that calls the inherited Pause method, and
-               returns a dummy string. The `pauseScan`/`Pause` conflict needs
-               to be fixed so that this function overloads rather than calling.
-        :return: ASCII String that indicates status, for information purposes
-                 only
-        :rtype: DevString
-        """
-        self.Pause()
-        return ("Dummy ASCII string returned from MccsSubarray.pauseScan() to "
-                "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  MccsSubarray.pauseScan
-
-    @command(
-        dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes only",
-    )
-    @DebugIt()
-    def resumeScan(self):
-        # PROTECTED REGION ID(MccsSubarray.resumeScan) ENABLED START #
-        """Cause the subarray to resume scanning after having been paused
-
-        :todo: This method is a stub that calls the inherited Resume method,
-               and returns a dummy string. The `resume`/`Resume` conflict needs
-               to be fixed so that this function overloads rather than calling.
-        :return: ASCII String that indicates status, for information purposes
-                 only
-        :rtype: DevString
-        """
-        self.Resume()
-        return ("Dummy ASCII string returned from MccsSubarray.resumeScan() "
-                "to indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  MccsSubarray.resumeScan
 
     @command(
         dtype_in='DevVarLongArray',
@@ -405,32 +295,10 @@ class MccsSubarray(SKASubarray):
                 "information purposes only")
         # PROTECTED REGION END #    //  MccsSubarray.sendTransientBuffer
 
-    @command(
-        dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes only",
-    )
-    @DebugIt()
-    def abort(self):
-        # PROTECTED REGION ID(MccsSubarray.abort) ENABLED START #
-        """Cause the array to abort the current observation on this subarray. Output
-        to CSP is stopped, pointing/calibration activities are terminated, and
-        Tiles are deconfigured.
-
-        :todo: This method is a stub that calls the inherited Abort method, and
-               returns a dummy string. The `abort`/`Abort` conflict needs to be
-               fixed so that this function overloads rather than calling.
-        :return: ASCII String that indicates status, for information purposes
-                 only
-        :rtype: DevString
-        """
-        self.Abort()
-        return ("Dummy ASCII string returned from MccsSubarray.abort() to "
-                "indicate status, for information purposes only")
-        # PROTECTED REGION END #    //  MccsSubarray.abort
-
 # ----------
 # Run server
 # ----------
+
 
 def main(args=None, **kwargs):
     """Main function of the MccsSubarray module."""
@@ -442,4 +310,3 @@ def main(args=None, **kwargs):
 
 if __name__ == '__main__':
     main()
-

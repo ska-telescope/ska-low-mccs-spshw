@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsStation" pogoRevision="9.6">
-    <description description="MccsStation is the Tango device class for the MCCS Station prototype." title="MCCS Station" sourcePath="/home/drew/lfaa-lmc-prototype/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="MccsStation is the Tango device class for the MCCS Station prototype." title="MCCS Station" sourcePath="/home/drew/lfaa-lmc-prototype/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKAObsDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
       <identification contact="at csiro.au - drew.devereux" author="drew.devereux" emailDomain="csiro.au" classFamily="OtherInstruments" siteSpecific="" platform="All Platforms" bus="Not Applicable" manufacturer="none" reference=""/>
@@ -26,16 +26,11 @@
     <deviceProperties name="SkaLevel" description="Indication of importance of the device in the SKA hierarchy &#xA;to support drill-down navigation: 1..6, with 1 highest.&#xA;Default is 4, making provision for &#xA;EltMaster, EltAlarms, EltTelState = 1&#xA;SubEltMaster = 2&#xA;Subarray, Capability = 2/3&#xA;Others = 4 (or 5 or 6)">
       <type xsi:type="pogoDsl:ShortType"/>
       <status abstract="false" inherited="true" concrete="true"/>
-      <DefaultPropValue>4</DefaultPropValue>
+      <DefaultPropValue>3</DefaultPropValue>
     </deviceProperties>
     <deviceProperties name="SubID" description="Unique identifier of the subarray device.">
       <type xsi:type="pogoDsl:StringType"/>
       <status abstract="false" inherited="true" concrete="true"/>
-    </deviceProperties>
-    <deviceProperties name="skaLevel" description="Indication of the importance of the device in the SKA hierarchy, to support drill-down navigation">
-      <type xsi:type="pogoDsl:ShortType"/>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <DefaultPropValue>3</DefaultPropValue>
     </deviceProperties>
     <commands name="Abort" description="Change obsState to ABORTED." execMethod="abort" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">

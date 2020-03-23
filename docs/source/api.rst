@@ -5,7 +5,7 @@ API
    :maxdepth: 2
    :caption: Contents:
 
-   LfaaMaster
+   MccsMaster
    MccsSubarray
    MccsStation
 

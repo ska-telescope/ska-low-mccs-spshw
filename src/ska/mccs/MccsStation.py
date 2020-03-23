@@ -74,9 +74,6 @@ class MccsStation(SKAObsDevice):
     **Properties:**
 
     - Device Property
-        skaLevel
-            - Indication of the importance of the device in the SKA hierarchy, to support drill-down navigation
-            - Type:'DevShort'
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(MccsStation.class_variable) ENABLED START #
@@ -91,10 +88,6 @@ class MccsStation(SKAObsDevice):
 
 
 
-
-    skaLevel = device_property(
-        dtype='DevShort', default_value=3
-    )
 
     # ----------
     # Attributes
@@ -206,7 +199,9 @@ class MccsStation(SKAObsDevice):
     # ---------------
 
     def init_device(self):
-        """Initialises the attributes and properties of the MccsStation."""
+        """
+        Initialises the attributes and properties of the MccsStation.
+        """
         SKAObsDevice.init_device(self)
         self.set_change_event("subarrayId", True, True)
         self.set_archive_event("subarrayId", True, True)
@@ -224,12 +219,15 @@ class MccsStation(SKAObsDevice):
         # PROTECTED REGION END #    //  MccsStation.init_device
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
         # PROTECTED REGION ID(MccsStation.always_executed_hook) ENABLED START #
         # PROTECTED REGION END #    //  MccsStation.always_executed_hook
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in init_device.
 
         This method allows for any memory or other resources allocated in the
         init_device method to be released.  This method is called by the device
@@ -243,73 +241,97 @@ class MccsStation(SKAObsDevice):
 
     def read_subarrayId(self):
         # PROTECTED REGION ID(MccsStation.subarrayId_read) ENABLED START #
-        """Return the subarrayId attribute."""
+        """
+        Return the subarrayId attribute.
+        """
         return 0
         # PROTECTED REGION END #    //  MccsStation.subarrayId_read
 
     def read_transientBufferFQDN(self):
         # PROTECTED REGION ID(MccsStation.transientBufferFQDN_read) ENABLED START #
-        """Return the transientBufferFQDN attribute."""
+        """
+        Return the transientBufferFQDN attribute.
+        """
         return ''
         # PROTECTED REGION END #    //  MccsStation.transientBufferFQDN_read
 
     def read_isCalibrated(self):
         # PROTECTED REGION ID(MccsStation.isCalibrated_read) ENABLED START #
-        """Return the isCalibrated attribute."""
+        """
+        Return the isCalibrated attribute.
+        """
         return False
         # PROTECTED REGION END #    //  MccsStation.isCalibrated_read
 
     def read_isConfigured(self):
         # PROTECTED REGION ID(MccsStation.isConfigured_read) ENABLED START #
-        """Return the isConfigured attribute."""
+        """
+        Return the isConfigured attribute.
+        """
         return False
         # PROTECTED REGION END #    //  MccsStation.isConfigured_read
 
     def read_calibrationJobId(self):
         # PROTECTED REGION ID(MccsStation.calibrationJobId_read) ENABLED START #
-        """Return the calibrationJobId attribute."""
+        """
+        Return the calibrationJobId attribute.
+        """
         return 0
         # PROTECTED REGION END #    //  MccsStation.calibrationJobId_read
 
     def read_daqJobId(self):
         # PROTECTED REGION ID(MccsStation.daqJobId_read) ENABLED START #
-        """Return the daqJobId attribute."""
+        """
+        Return the daqJobId attribute.
+        """
         return 0
         # PROTECTED REGION END #    //  MccsStation.daqJobId_read
 
     def read_dataDirectory(self):
         # PROTECTED REGION ID(MccsStation.dataDirectory_read) ENABLED START #
-        """Return the dataDirectory attribute."""
+        """
+        Return the dataDirectory attribute.
+        """
         return ''
         # PROTECTED REGION END #    //  MccsStation.dataDirectory_read
 
     def read_tileFQDNs(self):
         # PROTECTED REGION ID(MccsStation.tileFQDNs_read) ENABLED START #
-        """Return the tileFQDNs attribute."""
+        """
+        Return the tileFQDNs attribute.
+        """
         return ('',)
         # PROTECTED REGION END #    //  MccsStation.tileFQDNs_read
 
     def read_beamFQDNs(self):
         # PROTECTED REGION ID(MccsStation.beamFQDNs_read) ENABLED START #
-        """Return the beamFQDNs attribute."""
+        """
+        Return the beamFQDNs attribute.
+        """
         return ('',)
         # PROTECTED REGION END #    //  MccsStation.beamFQDNs_read
 
     def read_delayCentre(self):
         # PROTECTED REGION ID(MccsStation.delayCentre_read) ENABLED START #
-        """Return the delayCentre attribute."""
+        """
+        Return the delayCentre attribute.
+        """
         return (0.0,)
         # PROTECTED REGION END #    //  MccsStation.delayCentre_read
 
     def write_delayCentre(self, value):
         # PROTECTED REGION ID(MccsStation.delayCentre_write) ENABLED START #
-        """Set the delayCentre attribute."""
+        """
+        Set the delayCentre attribute.
+        """
         pass
         # PROTECTED REGION END #    //  MccsStation.delayCentre_write
 
     def read_calibrationCoefficients(self):
         # PROTECTED REGION ID(MccsStation.calibrationCoefficients_read) ENABLED START #
-        """Return the calibrationCoefficients attribute."""
+        """
+        Return the calibrationCoefficients attribute.
+        """
         return (0.0,)
         # PROTECTED REGION END #    //  MccsStation.calibrationCoefficients_read
 
@@ -331,4 +353,3 @@ def main(args=None, **kwargs):
 
 if __name__ == '__main__':
     main()
-

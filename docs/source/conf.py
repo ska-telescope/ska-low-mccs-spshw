@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 
+import sphinx_rtd_theme
+import sys
+import os
 autodoc_mock_imports = [
     'PyTango',
     'tango',
@@ -10,10 +13,6 @@ autodoc_mock_imports = [
     'jsonschema',
     'kubernetes'
 ]
-
-import os
-import sys
-import sphinx_rtd_theme
 
 
 # -- Path set up --------------------------------------------------------------
@@ -25,13 +24,14 @@ sys.path.insert(0, os.path.abspath(
     os.path.join('..', '..', 'src')
 ))
 
+
 def setup(app):
     app.add_stylesheet('css/custom.css')
     app.add_javascript('js/gitlab.js')
 
 
 # -- Project information -----------------------------------------------------
-project = 'LFAA LMC Prototype'
+project = 'MCCS LMC Prototype'
 copyright = '2020, SKA MCCS Team'
 author = 'SKA MCCS Team'
 
@@ -58,8 +58,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    #'sphinx.ext.githubpages',
-    #'m2r'
+    # 'sphinx.ext.githubpages',
+    # 'm2r'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -132,7 +132,7 @@ html_static_path = ['_static']
 #
 # This is required for the alabaster theme
 # refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
-#html_sidebars = {
+# html_sidebars = {
 #    '**': [
 #        'about.html',
 #        'navigation.html',
@@ -140,7 +140,7 @@ html_static_path = ['_static']
 #        'searchbox.html',
 #        'donate.html',
 #    ]
-#}
+# }
 
 
 # -- Options for HTMLHelp output ------------------------------------------
@@ -234,4 +234,3 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-

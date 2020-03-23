@@ -1,4 +1,4 @@
-LFAA LMC Prototype documentation
+MCCS LMC Prototype documentation
 ================================
 
 This project is developing the Local Monitoring and Control (LMC) prototype for the `Square Kilometre Array`_.

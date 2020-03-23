@@ -1,6 +1,6 @@
 """ Mccs device module """
-from .LfaaMaster import LfaaMaster
+from .MccsMaster import MccsMaster
 from .MccsSubarray import MccsSubarray
 from .MccsStation import MccsStation
 
-__all__ = ["LfaaMaster", "MccsSubarray", "MccsStation"]
+__all__ = ["MccsMaster", "MccsSubarray", "MccsStation"]

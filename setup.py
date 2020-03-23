@@ -53,6 +53,7 @@ setuptools.setup(
         'pytest-json-report',
         'coverage',
         'pytest-xdist',
+        'pytest-forked',
         'pylint2junit',
         'mock'
     ],

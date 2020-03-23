@@ -8,7 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################################
-"""Contais the tests for the MccsMaster Tango device prototype."""
+"""Contains the tests for the MccsMaster Tango device prototype."""
 
 # from mock import MagicMock
 import pytest
@@ -16,7 +16,7 @@ import tango
 from ska.base.control_model import AdminMode, ControlMode, HealthState, SimulationMode, TestMode
 from ska.mccs import release
 
-# pylint: disable=invalid-name,too-many-public-methods
+# pylint: disable=invalid-name
 @pytest.mark.usefixtures("tango_context", "initialize_device")
 class TestMccsMaster:
     """Test case for packet generation."""

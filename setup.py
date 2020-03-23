@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+""" Standard setup.py script """
 import os
 import setuptools
 
-# pylint: disable=invalid-NAME
+# pylint: disable=invalid-name
 setup_dir = os.path.dirname(os.path.abspath(__file__))
 release_module = {}
 release_filename = os.path.join(setup_dir, 'src', 'ska', 'mccs', 'release.py')
@@ -55,7 +55,14 @@ setuptools.setup(
         'pytest-xdist',
         'pytest-forked',
         'pylint2junit',
-        'mock'
+        # 'mock'
     ],
     keywords="lmc mccs tango ska",
+    entry_points={
+        "console_scripts": [
+            "MccsMaster=ska.mccs.MccsMaster:main",
+            "MccsSubarray=ska.mccs.MccsSubarray:main",
+            "MccsStation=ska.mccs.MccsStation:main",
+        ]
+    },
     zip_safe=False)

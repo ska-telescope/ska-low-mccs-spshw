@@ -23,9 +23,10 @@ from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
 # Additional import
 # PROTECTED REGION ID(MccsMaster.additionnal_import) ENABLED START #
+from tango import DevEnum
 from ska.base import SKAMaster
-from ska.base.control_model import (AdminMode, ControlMode, HealthState,
-                                    SimulationMode, TestMode)
+# from ska.base.control_model import (AdminMode, ControlMode, HealthState,
+#                                    SimulationMode, TestMode)
 from . import release
 # PROTECTED REGION END #    //  MccsMaster.additionnal_import
 
@@ -41,19 +42,19 @@ class MccsMaster(SKAMaster):
     - Device Property
         MccsSubarrays
             - The FQDNs of the Mccs sub-arrays
-            - Type:'DevVarStringArray'
+            - Type: :class:`~tango.DevVarStringArray`
         MccsStations
             - List of MCCS station  TANGO Device names
-            - Type:'DevVarStringArray'
+            - Type: :class:`~tango.DevVarStringArray`
         MccsStationBeams
             - List of MCCS station beam TANGO Device names
-            - Type:'DevVarStringArray'
+            - Type: :class:`~tango.DevVarStringArray`
         MccsTiles
             - List of MCCS Tile TANGO Device names.
-            - Type:'DevVarStringArray'
+            - Type: :class:`~tango.DevVarStringArray`
         MccsAntennas
             - List of MCCS Antenna TANGO Device names
-            - Type:'DevVarStringArray'
+            - Type: :class:`~tango.DevVarStringArray`
     """
     __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(MccsMaster.class_variable) ENABLED START #
@@ -170,13 +171,14 @@ class MccsMaster(SKAMaster):
         """
         Power off the MCCS system.
 
-        :return:None
+        :return: `None`
         """
         pass
         # PROTECTED REGION END #    //  MccsMaster.On
 
     def is_On_allowed(self):
         # PROTECTED REGION ID(MccsMaster.is_On_allowed) ENABLED START #
+        """ Is the :meth:`On` command alllowed """
         return self.get_state() not in [DevState.ON, DevState.FAULT, DevState.DISABLE]
         # PROTECTED REGION END #    //  MccsMaster.is_On_allowed
 
@@ -188,7 +190,7 @@ class MccsMaster(SKAMaster):
         """
         Power off the MCCS system.
 
-        :return:None
+        :return: None
         """
         pass
         # PROTECTED REGION END #    //  MccsMaster.Off
@@ -202,7 +204,7 @@ class MccsMaster(SKAMaster):
         """
         Transition the MCCS system to the low-power STANDBY_LOW_POWER operating state.
 
-        :return:'DevEnum'
+        :return:  DevEnum
         """
         return 0
         # PROTECTED REGION END #    //  MccsMaster.StandbyLow
@@ -216,7 +218,7 @@ class MccsMaster(SKAMaster):
         """
         standbyFull	None	N/A	DevEnum	OPERATOR	ON, STANDBY_LOW_POWER	Transition the MCCS system to the STANDBY_FULL_POWER operating state.
 
-        :return:'DevEnum'
+        :return:  DevEnum
         """
         return 0
         # PROTECTED REGION END #    //  MccsMaster.StandbyFull
@@ -230,7 +232,7 @@ class MccsMaster(SKAMaster):
         """
         Transit to the OPERATE operating state, ready for signal processing.
 
-        :return:'DevEnum'
+        :return:  DevEnum
         """
         return 0
         # PROTECTED REGION END #    //  MccsMaster.Operate
@@ -248,9 +250,8 @@ class MccsMaster(SKAMaster):
         """
         The MCCS system as a whole is reinitialised as an attempt to clear an ALARM or FAULT state.
 
-        :return:None
+        :return: None
         """
-        pass
         # PROTECTED REGION END #    //  MccsMaster.Reset
 
     @command(
@@ -263,11 +264,11 @@ class MccsMaster(SKAMaster):
         """
         Activate an MCCS Sub-Array
 
-        :param argin: 'DevLong' Sub-Array ID
+        :param argin: Sub-Array ID
+        :type argin: :class:`~tango.DevLong`
 
-        :return:None
+        :return: None
         """
-        pass
         # PROTECTED REGION END #    //  MccsMaster.EnableSubarray
 
     def is_EnableSubarray_allowed(self):
@@ -285,11 +286,11 @@ class MccsMaster(SKAMaster):
         """
         Deactivate an MCCS Sub-Array
 
-        :param argin: 'DevLong' Sub-Array ID
+        :param argin: Sub-Array ID
+        :type argin: :class:`~tango.DevLong`
 
-        :return:None
+        :return: None
         """
-        pass
         # PROTECTED REGION END #    //  MccsMaster.DisableSubarray
 
     def is_DisableSubarray_allowed(self):
@@ -310,11 +311,11 @@ class MccsMaster(SKAMaster):
 
         Note: Station and Tile composition is specified on the MCCS Subarray device .
 
-        :param argin: 'DevString' JSON-formatted string
+        :param argin: JSON-formatted string
+        :type argin: :class:`~tango.DevLong`
 
-        :return:None
+        :return: None
         """
-        pass
         # PROTECTED REGION END #    //  MccsMaster.Allocate
 
     def is_Allocate_allowed(self):
@@ -332,11 +333,11 @@ class MccsMaster(SKAMaster):
         """
         Release a sub-array?s Capabilities and resources (stations, tiles, antennas), marking the resources and Capabilities as unassigned and idle.
 
-        :param argin: 'DevLong' Sub-Array ID
+        :param argin: Sub-Array ID
+        :type argin: :class:`~tango.DevLong`
 
-        :return:None
+        :return: None
         """
-        pass
         # PROTECTED REGION END #    //  MccsMaster.Release
 
     def is_Release_allowed(self):
@@ -352,9 +353,8 @@ class MccsMaster(SKAMaster):
         """
         Transition the MCCS to a MAINTENANCE state.
 
-        :return:None
+        :return: None
         """
-        pass
         # PROTECTED REGION END #    //  MccsMaster.Maintenance
 
 # ----------

@@ -16,13 +16,12 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 import tango
 from tango import DebugIt
 from tango.server import run
-from tango.server import Device, DeviceMeta
+from tango.server import Device
 from tango.server import attribute, command
 from tango.server import device_property
 from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
 
-# from SKABaseDevice import SKABaseDevice
 
 # Additional import
 # PROTECTED REGION ID(Mccs.additionnal_import) ENABLED START #
@@ -42,7 +41,6 @@ class MccsTile(SKABaseDevice):
     - Device Property
     """
 
-    __metaclass__ = DeviceMeta
     # PROTECTED REGION ID(Mccs.class_variable) ENABLED START #
     # PROTECTED REGION END #    //  Mccs.class_variable
 
@@ -200,6 +198,7 @@ class MccsTile(SKABaseDevice):
         self._csp_destination_mac = ""
         self._csp_destination_port = None
         self._forty_g_core_list = []
+        self.set_state(DevState.ON)
         print("init_device complete")
         # PROTECTED REGION END #    //  Mccs.init_device
 

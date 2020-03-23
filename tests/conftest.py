@@ -1,5 +1,5 @@
 """
-A module defining a list of fixtures that are shared across all ska.base tests.
+A module defining a list of fixtures that are shared across all ska.mccs tests.
 """
 import importlib
 import pytest
@@ -24,20 +24,21 @@ def tango_context(request):
             'NrSubarrays': '16',
             # 'CapabilityTypes': '',
             # 'MaxCapabilities': []
-        },
+        }
     }
 
-    # This fixture is used to decorate classes like "TestSKABaseDevice" or
-    # "TestSKALogger". We drop the first "Test" from the string to get the
+    # This fixture is used to decorate classes like "TestMccsMaster" or
+    # "TestMccsStation". We drop the first "Test" from the string to get the
     # class name of the device under test.
-    # Similarly, the test module is like "test_base_device.py".  We drop the
+    # Similarly, the test module is like "test_MccsTile.py".  We drop the
     # first "test_" to get the module name
     test_class_name = request.cls.__name__
-    class_name = test_class_name.split('Test', 1)[-1]
+    class_name = test_class_name.split("Test", 1)[-1]
     module = importlib.import_module("ska.mccs", class_name)
     class_type = getattr(module, class_name)
     tango_context = DeviceTestContext(
-        class_type, properties=test_properties.get(class_name, {}))
+        class_type, properties=test_properties.get(class_name, {})
+    )
     tango_context.start()
     yield tango_context
     tango_context.stop()

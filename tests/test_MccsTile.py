@@ -35,32 +35,53 @@ from ska.base.control_model import (
 # Device test case
 @pytest.mark.usefixtures("tango_context", "initialize_device")
 class TestMccsTile(object):
-    """Test case for packet generation."""
+    """Test case for MCCS tile."""
 
-    #     properties = {
-    #         'SkaLevel': '4',
-    #         'GroupDefinitions': '',
-    #         'LoggingLevelDefault': '4',
-    #         'LoggingTargetsDefault': '',
-    #         }
+    properties = {
+        "SkaLevel": "4",
+        "GroupDefinitions": "",
+        "LoggingLevelDefault": "4",
+        "LoggingTargetsDefault": "",
+    }
 
-    def test_State(self, tango_context):
-        """Test for State"""
-        with tango_context as proxy:
-            assert proxy.state() == DevState.ON
-            assert proxy.adminMode == AdminMode.ONLINE
-            assert proxy.healthState == HealthState.OK
-            assert proxy.controlMode == ControlMode.REMOTE
+    def test_properties(self, tango_context):
+        """ Test the properties """
+        assert tango_context.device.loggingLevel == 4
+        assert tango_context.device.SKALevel == 4
 
-    def test_Status(self, tango_context):
-        """Test for Status"""
-        with tango_context as proxy:
-            assert proxy.status() == "The device is in ON state."
+    def test_InitialState(self, tango_context):
+        """Test for Initial State"""
+        assert tango_context.device.state() == DevState.ON
+        assert tango_context.device.adminMode == AdminMode.ONLINE
+        assert tango_context.device.healthState == HealthState.OK
+        assert tango_context.device.controlMode == ControlMode.REMOTE
+        assert tango_context.device.status() == "The device is in ON state."
+        assert tango_context.device.simulationMode == False
+        assert tango_context.device.testMode == None
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        assert tango_context.device.GetVersionInfo() == [""]
+        info = [
+            ", ".join(("MccsTile", release.NAME, release.VERSION, release.DESCRIPTION))
+        ]
+        assert tango_context.device.GetVersionInfo() == info
 
+    def test_buildState(self, tango_context):
+        """Test for buildState"""
+        info = ", ".join((release.NAME, release.VERSION, release.DESCRIPTION))
+        assert tango_context.device.buildState == info
+
+    def test_versionId(self, tango_context):
+        """Test for versionId"""
+        assert tango_context.device.versionId == release.VERSION
+
+    def test_isProgrammed(self, tango_context):
+        """Test for isProgrammed"""
+        assert tango_context.device.isProgrammed == False
+
+    #
+    # The following are POGO generated tests and presented as is
+    #
     def test_Reset(self, tango_context):
         """Test for Reset"""
         assert tango_context.device.Reset() == None
@@ -205,38 +226,6 @@ class TestMccsTile(object):
         """Test for subarrayId"""
         assert tango_context.device.subarrayId == 0
 
-    def test_buildState(self, tango_context):
-        """Test for buildState"""
-        assert tango_context.device.buildState == ""
-
-    def test_versionId(self, tango_context):
-        """Test for versionId"""
-        assert tango_context.device.versionId == ""
-
-    def test_loggingLevel(self, tango_context):
-        """Test for loggingLevel"""
-        assert tango_context.device.loggingLevel == 0
-
-    def test_healthState(self, tango_context):
-        """Test for healthState"""
-        assert tango_context.device.healthState == 0
-
-    def test_adminMode(self, tango_context):
-        """Test for adminMode"""
-        assert tango_context.device.adminMode == 0
-
-    def test_controlMode(self, tango_context):
-        """Test for controlMode"""
-        assert tango_context.device.controlMode == 0
-
-    def test_simulationMode(self, tango_context):
-        """Test for simulationMode"""
-        assert tango_context.device.simulationMode == 0
-
-    def test_testMode(self, tango_context):
-        """Test for testMode"""
-        assert tango_context.device.testMode == 0
-
     def test_ipAddress(self, tango_context):
         """Test for ipAddress"""
         assert tango_context.device.ipAddress == ""
@@ -276,11 +265,6 @@ class TestMccsTile(object):
     def test_current(self, tango_context):
         """Test for current"""
         assert tango_context.device.current == 0.0
-
-    def test_isProgrammed(self, tango_context):
-        """Test for isProgrammed"""
-        with tango_context as proxy:
-            assert proxy.isProgrammed == False
 
     def test_board_temperature(self, tango_context):
         """Test for board_temperature"""

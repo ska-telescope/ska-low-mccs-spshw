@@ -36,6 +36,10 @@ coverage.xml
 .idea
 .vscode
 
+**/.project
+**/.pydevproject
+**/.settings
+
 # Ansible
 *.retry
 

@@ -55,14 +55,14 @@ setuptools.setup(
         'pytest-xdist',
         'pytest-forked',
         'pylint2junit',
-        'mock'
+        # 'mock'
     ],
     keywords="lmc mccs tango ska",
     entry_points={
         "console_scripts": [
-            "MccsMaster=ska.mcss.MccsMaster:main",
-            "MccsSubarray=ska.mcss.MccsSubarray:main",
-            "MccsStation=ska.mcss.MccsStation:main",
+            "MccsMaster=ska.mccs.MccsMaster:main",
+            "MccsSubarray=ska.mccs.MccsSubarray:main",
+            "MccsStation=ska.mccs.MccsStation:main",
         ]
     },
     zip_safe=False)

@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-
-import sphinx_rtd_theme
+""" Standard sphinx config file """
 import sys
 import os
-autodoc_mock_imports = [
-    'PyTango',
-    'tango',
-    'skabase',
-    'etcd3',
-    'jsonschema',
-    'kubernetes'
-]
 
+import sphinx_rtd_theme
 
 # -- Path set up --------------------------------------------------------------
-
+# pylint: disable=invalid-name
 autodoc_mock_imports = ['tango',
                         'ska_logging', 'ska.base']
 
@@ -26,12 +18,14 @@ sys.path.insert(0, os.path.abspath(
 
 
 def setup(app):
+    """ initialise app """
     app.add_stylesheet('css/custom.css')
     app.add_javascript('js/gitlab.js')
 
 
 # -- Project information -----------------------------------------------------
 project = 'MCCS LMC Prototype'
+# pylint: disable=redefined-builtin
 copyright = '2020, SKA MCCS Team'
 author = 'SKA MCCS Team'
 

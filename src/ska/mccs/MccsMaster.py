@@ -263,8 +263,7 @@ class MccsMaster(SKAMaster):
         """
         Activate an MCCS Sub-Array
 
-        :param argin: 'DevLong'
-        Sub-Array ID
+        :param argin: 'DevLong' Sub-Array ID
 
         :return:None
         """
@@ -286,8 +285,7 @@ class MccsMaster(SKAMaster):
         """
         Deactivate an MCCS Sub-Array
 
-        :param argin: 'DevLong'
-        Sub-Array ID
+        :param argin: 'DevLong' Sub-Array ID
 
         :return:None
         """
@@ -308,11 +306,11 @@ class MccsMaster(SKAMaster):
         # PROTECTED REGION ID(MccsMaster.Allocate) ENABLED START #
         """
 
-            Allocate a set of unallocated MCCS resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array.
-            Note: Station and Tile composition is specified on the MCCS Subarray device .
+        Allocate a set of unallocated MCCS resources to a sub-array. The JSON argument specifies the overall sub-array composition in terms of which stations, tiles, and antennas should be allocated to the specified Sub-Array.
 
-        :param argin: 'DevString'
-        JSON-formatted string
+        Note: Station and Tile composition is specified on the MCCS Subarray device .
+
+        :param argin: 'DevString' JSON-formatted string
 
         :return:None
         """
@@ -334,8 +332,7 @@ class MccsMaster(SKAMaster):
         """
         Release a sub-array?s Capabilities and resources (stations, tiles, antennas), marking the resources and Capabilities as unassigned and idle.
 
-        :param argin: 'DevLong'
-        Sub-Array ID
+        :param argin: 'DevLong' Sub-Array ID
 
         :return:None
         """

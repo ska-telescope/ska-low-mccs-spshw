@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# This file is part of the LfaaAntenna project
+# This file is part of the MccsAntenna project
 #
 #
 #
@@ -21,10 +21,10 @@ readme_filename = os.path.join(setup_dir, 'README.rst')
 with open(readme_filename) as file:
     long_description = file.read()
 
-release_filename = os.path.join(setup_dir, 'LfaaAntenna', 'release.py')
+release_filename = os.path.join(setup_dir, 'MccsAntenna', 'release.py')
 exec(open(release_filename).read())
 
-pack = ['LfaaAntenna']
+pack = ['MccsAntenna']
 
 setup(name=name,
       version=version,
@@ -32,7 +32,7 @@ setup(name=name,
       packages=pack,
       include_package_data=True,
       test_suite="test",
-      entry_points={'console_scripts':['LfaaAntenna = LfaaAntenna:main']},
+      entry_points={'console_scripts':['MccsAntenna = MccsAntenna:main']},
       author='ralph.braddock',
       author_email='ralph.braddock at manchester.ac.uk',
       license='GPL',

@@ -1,9 +1,9 @@
-LFAA Master
+MCCS Master
 ===========
 
 .. toctree::
    :maxdepth: 2
 
-.. autoclass:: ska.mccs.LfaaMaster
+.. autoclass:: ska.mccs.MccsMaster
    :members:
 

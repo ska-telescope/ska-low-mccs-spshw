@@ -26,9 +26,10 @@ from tango import AttrWriteType, PipeWriteType
 from ska.base import SKAMaster
 from ska.base.control_model import (AdminMode, ControlMode, HealthState,
                                     SimulationMode, TestMode)
+from . import release
 # PROTECTED REGION END #    //  MccsMaster.additionnal_import
 
-__all__ = ["MccsMaster"]
+__all__ = ["MccsMaster", "main"]
 
 
 class MccsMaster(SKAMaster):
@@ -86,22 +87,6 @@ class MccsMaster(SKAMaster):
     # Attributes
     # ----------
 
-    adminMode = attribute(
-        dtype=AdminMode,
-        access=AttrWriteType.READ_WRITE,
-        polling_period=1000,
-        memorized=True,
-        doc="The admin mode reported for this device. It may interpret the current device condition \nand condition of all managed devices to set this. Most possibly an aggregate attribute.",
-    )
-
-    controlMode = attribute(
-        dtype=ControlMode,
-        access=AttrWriteType.READ_WRITE,
-        polling_period=1000,
-        memorized=True,
-        doc="The control mode of the device. REMOTE, LOCAL\nTANGO Device accepts only from a ?local? client and ignores commands and queries received from TM\nor any other ?remote? clients. The Local clients has to release LOCAL control before REMOTE clients\ncan take control again.",
-    )
-
     commandProgress = attribute(
         dtype='DevUShort',
         label="Command progress percentage",
@@ -123,36 +108,6 @@ class MccsMaster(SKAMaster):
         dtype='DevState',
     )
 
-    availableCapabilities = attribute(
-        dtype=('DevString',),
-        max_dim_x=20,
-        doc="A list of available number of instances of each capability type, e.g. `CORRELATOR:512`, `PSS-BEAMS:4`.",
-    )
-
-    subarrayFQDNs = attribute(
-        dtype=('DevString',),
-        max_dim_x=16,
-        doc="Array of FQDNs for the instances of the Subarray TANGO devices running with the MCCS LMC",
-    )
-
-    stationBeamFQDNs = attribute(
-        dtype=('DevString',),
-        max_dim_x=16,
-        doc="Array of FQDNs for the instances of the station beam TANGO devices running with the MCCS LMC",
-    )
-
-    stationFQDNs = attribute(
-        dtype=('DevString',),
-        max_dim_x=16,
-        doc="Array of FQDNs for the instances of the station TANGO devices running with the MCCS LMC",
-    )
-
-    tileFQDNs = attribute(
-        dtype=('DevString',),
-        max_dim_x=16,
-        doc="Array of FQDNs for the instances of the tile TANGO devices running with the MCCS LMC",
-    )
-
     # ---------------
     # General methods
     # ---------------
@@ -161,6 +116,10 @@ class MccsMaster(SKAMaster):
         """Initialises the attributes and properties of the MccsMaster."""
         SKAMaster.init_device(self)
         # PROTECTED REGION ID(MccsMaster.init_device) ENABLED START #
+        self.set_state(DevState.ON)
+        self._build_state = ", ".join(
+            (release.NAME, release.VERSION, release.DESCRIPTION))
+        self._version_id = release.VERSION
         # PROTECTED REGION END #    //  MccsMaster.init_device
 
     def always_executed_hook(self):
@@ -181,30 +140,6 @@ class MccsMaster(SKAMaster):
     # Attributes methods
     # ------------------
 
-    def read_adminMode(self):
-        # PROTECTED REGION ID(MccsMaster.adminMode_read) ENABLED START #
-        """Return the adminMode attribute."""
-        return 0
-        # PROTECTED REGION END #    //  MccsMaster.adminMode_read
-
-    def write_adminMode(self, value):
-        # PROTECTED REGION ID(MccsMaster.adminMode_write) ENABLED START #
-        """Set the adminMode attribute."""
-        pass
-        # PROTECTED REGION END #    //  MccsMaster.adminMode_write
-
-    def read_controlMode(self):
-        # PROTECTED REGION ID(MccsMaster.controlMode_read) ENABLED START #
-        """Return the controlMode attribute."""
-        return 0
-        # PROTECTED REGION END #    //  MccsMaster.controlMode_read
-
-    def write_controlMode(self, value):
-        # PROTECTED REGION ID(MccsMaster.controlMode_write) ENABLED START #
-        """Set the controlMode attribute."""
-        pass
-        # PROTECTED REGION END #    //  MccsMaster.controlMode_write
-
     def read_commandProgress(self):
         # PROTECTED REGION ID(MccsMaster.commandProgress_read) ENABLED START #
         """Return the commandProgress attribute."""
@@ -222,36 +157,6 @@ class MccsMaster(SKAMaster):
         """Return the opState attribute."""
         return tango.DevState.UNKNOWN
         # PROTECTED REGION END #    //  MccsMaster.opState_read
-
-    def read_availableCapabilities(self):
-        # PROTECTED REGION ID(MccsMaster.availableCapabilities_read) ENABLED START #
-        """Return the availableCapabilities attribute."""
-        return ('',)
-        # PROTECTED REGION END #    //  MccsMaster.availableCapabilities_read
-
-    def read_subarrayFQDNs(self):
-        # PROTECTED REGION ID(MccsMaster.subarrayFQDNs_read) ENABLED START #
-        """Return the subarrayFQDNs attribute."""
-        return ('',)
-        # PROTECTED REGION END #    //  MccsMaster.subarrayFQDNs_read
-
-    def read_stationBeamFQDNs(self):
-        # PROTECTED REGION ID(MccsMaster.stationBeamFQDNs_read) ENABLED START #
-        """Return the stationBeamFQDNs attribute."""
-        return ('',)
-        # PROTECTED REGION END #    //  MccsMaster.stationBeamFQDNs_read
-
-    def read_stationFQDNs(self):
-        # PROTECTED REGION ID(MccsMaster.stationFQDNs_read) ENABLED START #
-        """Return the stationFQDNs attribute."""
-        return ('',)
-        # PROTECTED REGION END #    //  MccsMaster.stationFQDNs_read
-
-    def read_tileFQDNs(self):
-        # PROTECTED REGION ID(MccsMaster.tileFQDNs_read) ENABLED START #
-        """Return the tileFQDNs attribute."""
-        return ('',)
-        # PROTECTED REGION END #    //  MccsMaster.tileFQDNs_read
 
     # --------
     # Commands

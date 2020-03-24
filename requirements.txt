@@ -1,0 +1,2 @@
+pytango >= 9.3.1
+lmcbaseclasses >= 0.5.1

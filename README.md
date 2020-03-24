@@ -35,6 +35,15 @@ $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes
 Ready to accept request
 ```
 
+Test and build docs
+-------------------
+
+This project uses ``tox`` to set up the various build stages. To execute in 
+the development environment, simply run::
+
+    tox 
+
+
 License
 -------
 

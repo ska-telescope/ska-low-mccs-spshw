@@ -12,6 +12,8 @@
 The Tile Device represents the TANGO interface to a Tile (TPM) unit
 """
 
+__all__ = ["MccsTile", "main"]
+
 # PyTango imports
 import tango
 from tango import DebugIt
@@ -25,14 +27,12 @@ from tango import AttrWriteType, PipeWriteType
 
 # Additional import
 # PROTECTED REGION ID(Mccs.additionnal_import) ENABLED START #
-from ska.base import SKABaseDevice
+import MccsGroupDevice
 
 # PROTECTED REGION END #    //  Mccs.additionnal_import
 
-__all__ = ["MccsTile", "main"]
 
-
-class MccsTile(SKABaseDevice):
+class MccsTile(MccsGroupDevice):
     """
     The Tile Device represents the TANGO interface to a Tile (TPM) unit
 
@@ -183,7 +183,7 @@ class MccsTile(SKABaseDevice):
 
     def init_device(self):
         """Initialises the attributes and properties of the Mccs."""
-        SKABaseDevice.init_device(self)
+        MccsGroupDevice.init_device(self)
         # PROTECTED REGION ID(Mccs.init_device) ENABLED START #
         self.set_state(DevState.INIT)
         self._programmed = False
@@ -1001,7 +1001,7 @@ class MccsTile(SKABaseDevice):
 def main(args=None, **kwargs):
     """Main function of the MccsTile module."""
     # PROTECTED REGION ID(Mccs.main) ENABLED START #
-    return run((MccsTile,), args=args, **kwargs)
+    return MccsTile.run(args=args, **kwargs)
     # PROTECTED REGION END #    //  Mccs.main
 
 

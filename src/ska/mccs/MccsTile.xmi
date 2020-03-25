@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsTile" pogoRevision="9.6">
-    <description description="The Tile Device represents the TANGO interface to a Tile (TPM) unit" title="SKA MCCS Tile Device Server" sourcePath="/home/grm84/software/lfaa-lmc-prototype/skamccs/MccsTile" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="The Tile Device represents the TANGO interface to a Tile (TPM) unit" title="SKA MCCS Tile Device Server" sourcePath="/home/grm84/software/lfaa-lmc-prototype/src/ska/mccs/MccsTile" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
-      <inheritances classname="SKABaseDevice" sourcePath="../../../lmc-base-classes/pogo"/>
+      <inheritances classname="SKABaseDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
+      <inheritances classname="MccsDevice" sourcePath="."/>
+      <inheritances classname="MccsGroupDevice" sourcePath="."/>
       <identification contact="at stfc.ac.uk - geoffrey.mant" author="geoffrey.mant" emailDomain="stfc.ac.uk" classFamily="SoftwareSystem" siteSpecific="" platform="All Platforms" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="SkaLevel" description="Indication of importance of the device in the SKA hierarchy &#xA;to support drill-down navigation: 1..6, with 1 highest.&#xA;Default is 4, making provision for &#xA;EltMaster, EltAlarms, EltTelState = 1&#xA;SubEltMaster = 2&#xA;Subarray, Capability = 2/3&#xA;Others = 4 (or 5 or 6)">

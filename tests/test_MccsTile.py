@@ -62,18 +62,18 @@ class TestMccsTile(object):
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
         info = [
-            ", ".join(("MccsTile", release.NAME, release.VERSION, release.DESCRIPTION))
+            ", ".join(("MccsTile", release.name, release.version, release.description))
         ]
         assert tango_context.device.GetVersionInfo() == info
 
     def test_buildState(self, tango_context):
         """Test for buildState"""
-        info = ", ".join((release.NAME, release.VERSION, release.DESCRIPTION))
+        info = ", ".join((release.name, release.version, release.description))
         assert tango_context.device.buildState == info
 
     def test_versionId(self, tango_context):
         """Test for versionId"""
-        assert tango_context.device.versionId == release.VERSION
+        assert tango_context.device.versionId == release.version
 
     def test_isProgrammed(self, tango_context):
         """Test for isProgrammed"""

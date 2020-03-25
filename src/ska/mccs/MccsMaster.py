@@ -119,8 +119,8 @@ class MccsMaster(SKAMaster):
         # PROTECTED REGION ID(MccsMaster.init_device) ENABLED START #
         self.set_state(DevState.ON)
         self._build_state = ", ".join(
-            (release.NAME, release.VERSION, release.DESCRIPTION))
-        self._version_id = release.VERSION
+            (release.name, release.version, release.description))
+        self._version_id = release.version
         # PROTECTED REGION END #    //  MccsMaster.init_device
 
     def always_executed_hook(self):

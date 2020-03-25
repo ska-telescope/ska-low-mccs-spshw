@@ -34,6 +34,7 @@ from ska.base import SKASubarray
 from ska.base.control_model import (HealthState, AdminMode, ObsState,
                                     ObsMode, ControlMode, SimulationMode,
                                     TestMode, LoggingLevel)
+from . import release
 # PROTECTED REGION END #    //  MccsSubarray.additionnal_import
 
 __all__ = ["MccsSubarray", "main"]
@@ -155,9 +156,21 @@ class MccsSubarray(SKASubarray):
     def init_device(self):
         """Initialises the attributes and properties of the MccsSubarray."""
         SKASubarray.init_device(self)
+
         self.set_change_event("stationFQDNs", True, True)
         self.set_archive_event("stationFQDNs", True, True)
         # PROTECTED REGION ID(MccsSubarray.init_device) ENABLED START #
+        self.set_state(DevState.INIT)
+
+        self._build_state = '{}, {}, {}'.format(release.name, release.version,
+                                                release.description)
+        self._version_id = release.version
+
+        # Any other initialisation code goes here,
+        # after setting state to INIT,
+        # but before setting state to OFF
+
+        self.set_state(DevState.OFF) # subarray is empty
         # PROTECTED REGION END #    //  MccsSubarray.init_device
 
     def always_executed_hook(self):

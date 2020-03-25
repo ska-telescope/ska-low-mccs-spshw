@@ -24,10 +24,7 @@ from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
 
 # Additional import
-# PROTECTED REGION ID(MccsGroupDevice.additionnal_import) ENABLED START #
-import MccsDevice
-
-# PROTECTED REGION END #    //  MccsGroupDevice.additionnal_import
+from ska.mccs.MccsDevice import MccsDevice
 
 
 class MccsGroupDevice(MccsDevice):
@@ -38,28 +35,9 @@ class MccsGroupDevice(MccsDevice):
     - Device Property
     """
 
-    # PROTECTED REGION ID(MccsGroupDevice.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  MccsGroupDevice.class_variable
-
     # -----------------
     # Device Properties
     # -----------------
-
-    # ----------
-    # Attributes
-    # ----------
-
-    memberStates = attribute(
-        dtype=("DevState",),
-        max_dim_x=256,
-        doc="An aggregated list of Tango states for each member in the group",
-    )
-
-    memberList = attribute(
-        dtype=("DevString",),
-        max_dim_x=256,
-        doc="A list of Tango addresses to devices comprising this group",
-    )
 
     # ---------------
     # General methods
@@ -68,13 +46,11 @@ class MccsGroupDevice(MccsDevice):
     def init_device(self):
         """Initialises the attributes and properties of the MccsGroupDevice."""
         MccsDevice.init_device(self)
-        # PROTECTED REGION ID(MccsGroupDevice.init_device) ENABLED START #
-        # PROTECTED REGION END #    //  MccsGroupDevice.init_device
+        self._member_states = (DevState.UNKNOWN,)
+        self._member_list = ("",)
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        # PROTECTED REGION ID(MccsGroupDevice.always_executed_hook) ENABLED START #
-        # PROTECTED REGION END #    //  MccsGroupDevice.always_executed_hook
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -83,24 +59,28 @@ class MccsGroupDevice(MccsDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        # PROTECTED REGION ID(MccsGroupDevice.delete_device) ENABLED START #
-        # PROTECTED REGION END #    //  MccsGroupDevice.delete_device
 
-    # ------------------
-    # Attributes methods
-    # ------------------
+    # ----------
+    # Attributes
+    # ----------
 
-    def read_memberStates(self):
-        # PROTECTED REGION ID(MccsGroupDevice.memberStates_read) ENABLED START #
+    @attribute(
+        dtype=("DevState",),
+        max_dim_x=256,
+        doc="An aggregated list of Tango states for each member in the group",
+    )
+    def memberStates(self):
         """Return the memberStates attribute."""
-        return (PyTango.DevState.UNKNOWN,)
-        # PROTECTED REGION END #    //  MccsGroupDevice.memberStates_read
+        return self._member_states
 
-    def read_memberList(self):
-        # PROTECTED REGION ID(MccsGroupDevice.memberList_read) ENABLED START #
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=256,
+        doc="A list of Tango addresses to devices comprising this group",
+    )
+    def memberList(self):
         """Return the memberList attribute."""
-        return ("",)
-        # PROTECTED REGION END #    //  MccsGroupDevice.memberList_read
+        return self._member_list
 
     # --------
     # Commands
@@ -111,7 +91,6 @@ class MccsGroupDevice(MccsDevice):
     )
     @DebugIt()
     def AddMember(self, argin):
-        # PROTECTED REGION ID(MccsGroupDevice.AddMember) ENABLED START #
         """
         Registers this device as a member of this composite group
 
@@ -121,12 +100,10 @@ class MccsGroupDevice(MccsDevice):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsGroupDevice.AddMember
 
     @command(dtype_in="DevString", doc_in="The name of the device to de-register")
     @DebugIt()
     def RemoveMember(self, argin):
-        # PROTECTED REGION ID(MccsGroupDevice.RemoveMember) ENABLED START #
         """
         De-registers a device as a memnber of this composite group
 
@@ -136,12 +113,10 @@ class MccsGroupDevice(MccsDevice):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsGroupDevice.RemoveMember
 
     @command(dtype_in="DevString", doc_in="The command to run")
     @DebugIt()
     def RunCommand(self, argin):
-        # PROTECTED REGION ID(MccsGroupDevice.RunCommand) ENABLED START #
         """
         A wrapper around running commands on a group proxy for this group of devices
 
@@ -151,7 +126,6 @@ class MccsGroupDevice(MccsDevice):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsGroupDevice.RunCommand
 
 
 # ----------
@@ -161,9 +135,7 @@ class MccsGroupDevice(MccsDevice):
 
 def main(args=None, **kwargs):
     """Main function of the MccsGroupDevice module."""
-    # PROTECTED REGION ID(MccsGroupDevice.main) ENABLED START #
-    return MccsGroupDevice.run(args=args, **kwargs)
-    # PROTECTED REGION END #    //  MccsGroupDevice.main
+    return MccsGroupDevice.run_server(args=args, **kwargs)
 
 
 if __name__ == "__main__":

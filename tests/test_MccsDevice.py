@@ -21,7 +21,16 @@ sys.path.insert(0, os.path.abspath(path))
 import pytest
 from mock import MagicMock
 
-from PyTango import DevState
+from tango import DevState
+from ska.mccs import release
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    LoggingLevel,
+    SimulationMode,
+    TestMode,
+)
 
 
 # Device test case
@@ -54,9 +63,20 @@ class TestMccsDevice(object):
         """Test for Status"""
         assert tango_context.device.Status() == "The device is in UNKNOWN state."
 
+    #     def test_buildState(self, tango_context):
+    #         """Test for buildState"""
+    #         info = ", ".join((release.name, release.version, release.description))
+    #         assert tango_context.device.buildState == info
+    #
+    #     def test_versionId(self, tango_context):
+    #         """Test for versionId"""
+    #         assert tango_context.device.versionId == release.version
+
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        assert tango_context.device.GetVersionInfo() == [""]
+        assert tango_context.device.GetVersionInfo() == [
+            "MccsDevice, lmcbaseclasses, 0.5.1, A set of generic base devices for SKA Telescope."
+        ]
 
     def test_Reset(self, tango_context):
         """Test for Reset"""
@@ -90,17 +110,14 @@ class TestMccsDevice(object):
         """Test for ConstructDeviceProxyAddress"""
         assert tango_context.device.ConstructDeviceProxyAddress("") == None
 
-    def test_buildState(self, tango_context):
-        """Test for buildState"""
-        assert tango_context.device.buildState == ""
-
-    def test_versionId(self, tango_context):
-        """Test for versionId"""
-        assert tango_context.device.versionId == ""
+    #     def test_buildState(self, tango_context):
+    #         """Test for buildState"""
+    #         print(tango_context.device.buildState)
+    #         assert tango_context.device.buildState ==  (", ".join((release.name, release.version, release.description)))
 
     def test_loggingLevel(self, tango_context):
         """Test for loggingLevel"""
-        assert tango_context.device.loggingLevel == 0
+        assert tango_context.device.loggingLevel == LoggingLevel.INFO
 
     def test_healthState(self, tango_context):
         """Test for healthState"""
@@ -158,9 +175,9 @@ class TestMccsDevice(object):
         """Test for invalidAsynId"""
         assert tango_context.device.invalidAsynId == False
 
-    def test_calledInexistentCalback(self, tango_context):
+    def test_calledInexistentCallback(self, tango_context):
         """Test for calledInexistentCalback"""
-        assert tango_context.device.calledInexistentCalback == False
+        assert tango_context.device.calledInexistentCallback == False
 
     def test_requestIdMismatch(self, tango_context):
         """Test for requestIdMismatch"""
@@ -180,4 +197,4 @@ class TestMccsDevice(object):
 
     def test_loggingTargets(self, tango_context):
         """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ("",)
+        assert tango_context.device.loggingTargets == ()

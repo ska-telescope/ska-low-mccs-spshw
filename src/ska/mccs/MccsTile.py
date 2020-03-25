@@ -27,7 +27,7 @@ from tango import AttrWriteType, PipeWriteType
 
 # Additional import
 # PROTECTED REGION ID(Mccs.additionnal_import) ENABLED START #
-import MccsGroupDevice
+from ska.mccs.MccsGroupDevice import MccsGroupDevice
 
 # PROTECTED REGION END #    //  Mccs.additionnal_import
 
@@ -187,16 +187,16 @@ class MccsTile(MccsGroupDevice):
         # PROTECTED REGION ID(Mccs.init_device) ENABLED START #
         self.set_state(DevState.INIT)
         self._programmed = False
-        self._tile_id = None
-        self._subarray_id = None
-        self._station_id = None
-        self._logical_tpm_id = None
+        self._tile_id = -1
+        self._subarray_id = -1
+        self._station_id = -1
+        self._logical_tpm_id = -1
         self._ip_address = ""
         self._lmc_ip = ""
-        self._lmc_port = None
+        self._lmc_port = 0
         self._csp_destination_ip = ""
         self._csp_destination_mac = ""
-        self._csp_destination_port = None
+        self._csp_destination_port = 0
         self._forty_g_core_list = []
         self.set_state(DevState.ON)
         print("init_device complete")
@@ -1001,7 +1001,7 @@ class MccsTile(MccsGroupDevice):
 def main(args=None, **kwargs):
     """Main function of the MccsTile module."""
     # PROTECTED REGION ID(Mccs.main) ENABLED START #
-    return MccsTile.run(args=args, **kwargs)
+    return MccsTile.run_server(args=args, **kwargs)
     # PROTECTED REGION END #    //  Mccs.main
 
 

@@ -21,7 +21,8 @@ sys.path.insert(0, os.path.abspath(path))
 import pytest
 from mock import MagicMock
 
-from PyTango import DevState
+from tango import DevState
+from ska.mccs import release
 from ska.base.control_model import (
     AdminMode,
     ControlMode,
@@ -46,8 +47,9 @@ class TestMccsTile(object):
 
     def test_properties(self, tango_context):
         """ Test the properties """
-        assert tango_context.device.loggingLevel == 4
-        assert tango_context.device.SKALevel == 4
+        assert tango_context.device.loggingLevel == LoggingLevel.INFO
+
+    #        assert tango_context.device.SkaLevel == LoggingLevel.INFO
 
     def test_InitialState(self, tango_context):
         """Test for Initial State"""
@@ -57,31 +59,12 @@ class TestMccsTile(object):
         assert tango_context.device.controlMode == ControlMode.REMOTE
         assert tango_context.device.status() == "The device is in ON state."
         assert tango_context.device.simulationMode == False
-        assert tango_context.device.testMode == None
-
-    def test_GetVersionInfo(self, tango_context):
-        """Test for GetVersionInfo"""
-        info = [
-            ", ".join(("MccsTile", release.name, release.version, release.description))
-        ]
-        assert tango_context.device.GetVersionInfo() == info
-
-    def test_buildState(self, tango_context):
-        """Test for buildState"""
-        info = ", ".join((release.name, release.version, release.description))
-        assert tango_context.device.buildState == info
-
-    def test_versionId(self, tango_context):
-        """Test for versionId"""
-        assert tango_context.device.versionId == release.version
+        assert tango_context.device.testMode == TestMode.NONE
 
     def test_isProgrammed(self, tango_context):
         """Test for isProgrammed"""
         assert tango_context.device.isProgrammed == False
 
-    #
-    # The following are POGO generated tests and presented as is
-    #
     def test_Reset(self, tango_context):
         """Test for Reset"""
         assert tango_context.device.Reset() == None
@@ -110,13 +93,14 @@ class TestMccsTile(object):
         """Test for WaitPPSEvent"""
         assert tango_context.device.WaitPPSEvent() == None
 
-    def test_GetRegisterList(self, tango_context):
-        """Test for GetRegisterList"""
-        assert tango_context.device.GetRegisterList() == 0
+    #     def test_GetRegisterList(self, tango_context):
+    #         """Test for GetRegisterList"""
+    #         assert tango_context.device.GetRegisterList() == 0
 
-    def test_ReadRegister(self, tango_context):
-        """Test for ReadRegister"""
-        assert tango_context.device.ReadRegister([0]) == [0]
+    #     def test_ReadRegister(self, tango_context):
+    #         """Test for ReadRegister"""
+    #         print(tango_context.device.ReadRegister([0,]))
+    #         assert tango_context.device.ReadRegister([0,]) == [0]
 
     def test_WriteRegister(self, tango_context):
         """Test for WriteRegister"""
@@ -130,13 +114,13 @@ class TestMccsTile(object):
         """Test for WriteAddress"""
         assert tango_context.device.WriteAddress([0]) == None
 
-    def test_Configure40GCore(self, tango_context):
-        """Test for Configure40GCore"""
-        assert tango_context.device.Configure40GCore([0]) == None
-
-    def test_Get40GCoreConfiguration(self, tango_context):
-        """Test for Get40GCoreConfiguration"""
-        assert tango_context.device.Get40GCoreConfiguration(0) == [0]
+    #     def test_Configure40GCore(self, tango_context):
+    #         """Test for Configure40GCore"""
+    #         assert tango_context.device.Configure40GCore([0]) == None
+    #
+    #     def test_Get40GCoreConfiguration(self, tango_context):
+    #         """Test for Get40GCoreConfiguration"""
+    #         assert tango_context.device.Get40GCoreConfiguration(0) == [0]
 
     def test_SetLMCDownload(self, tango_context):
         """Test for SetLMCDownload"""
@@ -154,9 +138,9 @@ class TestMccsTile(object):
         """Test for ConfigureStationBeamformer"""
         assert tango_context.device.ConfigureStationBeamformer([0]) == None
 
-    def test_LoadCalibrationCoefficients(self, tango_context):
-        """Test for LoadCalibrationCoefficients"""
-        assert tango_context.device.LoadCalibrationCoefficients("", "") == None
+    #     def test_LoadCalibrationCoefficients(self, tango_context):
+    #         """Test for LoadCalibrationCoefficients"""
+    #         assert tango_context.device.LoadCalibrationCoefficients("", "") == None
 
     def test_LoadBeamAngle(self, tango_context):
         """Test for LoadBeamAngle"""
@@ -216,15 +200,15 @@ class TestMccsTile(object):
 
     def test_tileId(self, tango_context):
         """Test for tileId"""
-        assert tango_context.device.tileId == 0
+        assert tango_context.device.tileId == -1
 
     def test_logicalTpmId(self, tango_context):
         """Test for logicalTpmId"""
-        assert tango_context.device.logicalTpmId == 0
+        assert tango_context.device.logicalTpmId == -1
 
     def test_subarrayId(self, tango_context):
         """Test for subarrayId"""
-        assert tango_context.device.subarrayId == 0
+        assert tango_context.device.subarrayId == -1
 
     def test_ipAddress(self, tango_context):
         """Test for ipAddress"""
@@ -280,7 +264,7 @@ class TestMccsTile(object):
 
     def test_stationId(self, tango_context):
         """Test for stationId"""
-        assert tango_context.device.stationId == 0
+        assert tango_context.device.stationId == -1
 
     def test_fpga1_time(self, tango_context):
         """Test for fpga1_time"""
@@ -292,7 +276,7 @@ class TestMccsTile(object):
 
     def test_loggingTargets(self, tango_context):
         """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ("",)
+        assert tango_context.device.loggingTargets == ()
 
     def test_antennaIds(self, tango_context):
         """Test for antennaIds"""

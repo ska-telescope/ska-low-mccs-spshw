@@ -25,10 +25,7 @@ from tango import AttrQuality, DispLevel, DevState
 from tango import AttrWriteType, PipeWriteType
 
 # Additional import
-# PROTECTED REGION ID(MccsDevice.additionnal_import) ENABLED START #
 from ska.base import SKABaseDevice
-
-# PROTECTED REGION END #    //  MccsDevice.additionnal_import
 
 
 class MccsDevice(SKABaseDevice):
@@ -40,43 +37,9 @@ class MccsDevice(SKABaseDevice):
     - Device Property
     """
 
-    # PROTECTED REGION ID(MccsDevice.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  MccsDevice.class_variable
-
     # -----------------
     # Device Properties
     # -----------------
-
-    # Attributes
-    # ----------
-
-    isHardwareDevice = attribute(dtype="DevBoolean")
-
-    diagMode = attribute(dtype="DevBoolean")
-
-    calledUndefinedDevice = attribute(dtype="DevBoolean")
-
-    calledDeadServer = attribute(dtype="DevBoolean")
-
-    detectedDeadServer = attribute(dtype="DevBoolean")
-
-    calledNonRunningDevice = attribute(dtype="DevBoolean")
-
-    callTimeout = attribute(dtype="DevBoolean")
-
-    callCommFailed = attribute(dtype="DevBoolean")
-
-    invalidAsynId = attribute(dtype="DevBoolean")
-
-    calledInexistentCalback = attribute(dtype="DevBoolean")
-
-    requestIdMismatch = attribute(dtype="DevBoolean")
-
-    expectedReplyNotReady = attribute(dtype="DevBoolean")
-
-    experiencedSubscriptionFailure = attribute(dtype="DevBoolean")
-
-    invalidEventId = attribute(dtype="DevBoolean")
 
     # ---------------
     # General methods
@@ -85,13 +48,23 @@ class MccsDevice(SKABaseDevice):
     def init_device(self):
         """Initialises the attributes and properties of the MccsDevice."""
         SKABaseDevice.init_device(self)
-        # PROTECTED REGION ID(MccsDevice.init_device) ENABLED START #
-        # PROTECTED REGION END #    //  MccsDevice.init_device
+        self._is_hardware_device = False
+        self._diag_mode = False
+        self._called_undefined_device = False
+        self._called_dead_server = False
+        self._detected_dead_server = False
+        self._called_non_running_device = False
+        self._call_timeout = False
+        self._call_comm_failed = False
+        self._invalid_asyn_id = False
+        self._called_inexistent_callback = False
+        self._request_id_mismatch = False
+        self._expected_reply_not_ready = False
+        self._experienced_subscription_failure = False
+        self._invalid_event_id = False
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        # PROTECTED REGION ID(MccsDevice.always_executed_hook) ENABLED START #
-        # PROTECTED REGION END #    //  MccsDevice.always_executed_hook
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -100,96 +73,89 @@ class MccsDevice(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        # PROTECTED REGION ID(MccsDevice.delete_device) ENABLED START #
-        # PROTECTED REGION END #    //  MccsDevice.delete_device
 
-    # ------------------
-    # Attributes methods
-    # ------------------
+    # ----------
+    # Attributes
+    # ----------
+    @attribute(dtype="DevString")
+    def versionId(self):
+        return release.version
 
-    def read_isHardwareDevice(self):
-        # PROTECTED REGION ID(MccsDevice.isHardwareDevice_read) ENABLED START #
+    @attribute(dtype="DevString")
+    def buildState(self):
+        build = ", ".join((release.name, release.version, release.description))
+        print(build)
+        return build
+
+    @attribute(dtype="DevBoolean")
+    def isHardwareDevice(self):
         """Return the isHardwareDevice attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.isHardwareDevice_read
+        return self._is_hardware_device
 
-    def read_diagMode(self):
-        # PROTECTED REGION ID(MccsDevice.diagMode_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def diagMode(self):
         """Return the diagMode attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.diagMode_read
+        return self._diag_mode
 
-    def read_calledUndefinedDevice(self):
-        # PROTECTED REGION ID(MccsDevice.calledUndefinedDevice_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def calledUndefinedDevice(self):
         """Return the calledUndefinedDevice attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.calledUndefinedDevice_read
+        return self._called_undefined_device
 
-    def read_calledDeadServer(self):
-        # PROTECTED REGION ID(MccsDevice.calledDeadServer_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def calledDeadServer(self):
         """Return the calledDeadServer attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.calledDeadServer_read
+        return self._called_dead_server
 
-    def read_detectedDeadServer(self):
-        # PROTECTED REGION ID(MccsDevice.detectedDeadServer_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def detectedDeadServer(self):
         """Return the detectedDeadServer attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.detectedDeadServer_read
+        return self._detected_dead_server
 
-    def read_calledNonRunningDevice(self):
-        # PROTECTED REGION ID(MccsDevice.calledNonRunningDevice_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def calledNonRunningDevice(self):
         """Return the calledNonRunningDevice attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.calledNonRunningDevice_read
+        return self._called_non_running_device
 
-    def read_callTimeout(self):
-        # PROTECTED REGION ID(MccsDevice.callTimeout_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def callTimeout(self):
         """Return the callTimeout attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.callTimeout_read
+        return self._call_timeout
 
-    def read_callCommFailed(self):
-        # PROTECTED REGION ID(MccsDevice.callCommFailed_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def callCommFailed(self):
         """Return the callCommFailed attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.callCommFailed_read
+        return self._call_comm_failed
 
-    def read_invalidAsynId(self):
-        # PROTECTED REGION ID(MccsDevice.invalidAsynId_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def invalidAsynId(self):
         """Return the invalidAsynId attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.invalidAsynId_read
+        return self._invalid_asyn_id
 
-    def read_calledInexistentCalback(self):
-        # PROTECTED REGION ID(MccsDevice.calledInexistentCalback_read) ENABLED START #
-        """Return the calledInexistentCalback attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.calledInexistentCalback_read
+    @attribute(dtype="DevBoolean")
+    def calledInexistentCallback(self):
+        """Return the calledInexistentCallback attribute."""
+        return self._called_inexistent_callback
 
-    def read_requestIdMismatch(self):
-        # PROTECTED REGION ID(MccsDevice.requestIdMismatch_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def requestIdMismatch(self):
         """Return the requestIdMismatch attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.requestIdMismatch_read
+        return self._request_id_mismatch
 
-    def read_expectedReplyNotReady(self):
-        # PROTECTED REGION ID(MccsDevice.expectedReplyNotReady_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def expectedReplyNotReady(self):
         """Return the expectedReplyNotReady attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.expectedReplyNotReady_read
+        return self._expected_reply_not_ready
 
-    def read_experiencedSubscriptionFailure(self):
-        # PROTECTED REGION ID(MccsDevice.experiencedSubscriptionFailure_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def experiencedSubscriptionFailure(self):
         """Return the experiencedSubscriptionFailure attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.experiencedSubscriptionFailure_read
+        return self._experienced_subscription_failure
 
-    def read_invalidEventId(self):
-        # PROTECTED REGION ID(MccsDevice.invalidEventId_read) ENABLED START #
+    @attribute(dtype="DevBoolean")
+    def invalidEventId(self):
         """Return the invalidEventId attribute."""
-        return False
-        # PROTECTED REGION END #    //  MccsDevice.invalidEventId_read
+        return self._invalid_event_id
 
     # --------
     # Commands
@@ -198,73 +164,60 @@ class MccsDevice(SKABaseDevice):
     @command()
     @DebugIt()
     def ExceptionCallback(self):
-        # PROTECTED REGION ID(MccsDevice.ExceptionCallback) ENABLED START #
         """
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsDevice.ExceptionCallback
 
     @command()
     @DebugIt()
     def DefaultAlarmOnCallback(self):
-        # PROTECTED REGION ID(MccsDevice.DefaultAlarmOnCallback) ENABLED START #
         """
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsDevice.DefaultAlarmOnCallback
 
     @command()
     @DebugIt()
     def DefaultAlarmOffCallback(self):
-        # PROTECTED REGION ID(MccsDevice.DefaultAlarmOffCallback) ENABLED START #
         """
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsDevice.DefaultAlarmOffCallback
 
     @command()
     @DebugIt()
     def GetFullReport(self):
-        # PROTECTED REGION ID(MccsDevice.GetFullReport) ENABLED START #
         """
 
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsDevice.GetFullReport
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetCommandReport(self):
-        # PROTECTED REGION ID(MccsDevice.GetCommandReport) ENABLED START #
         """
 
         :return:'DevVarStringArray'
         """
         return [""]
-        # PROTECTED REGION END #    //  MccsDevice.GetCommandReport
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetAttributeReport(self):
-        # PROTECTED REGION ID(MccsDevice.GetAttributeReport) ENABLED START #
         """
 
         :return:'DevVarStringArray'
         """
         return [""]
-        # PROTECTED REGION END #    //  MccsDevice.GetAttributeReport
 
     @command(dtype_in="DevString")
     @DebugIt()
     def ConstructDeviceProxyAddress(self, argin):
-        # PROTECTED REGION ID(MccsDevice.ConstructDeviceProxyAddress) ENABLED START #
         """
 
         :param argin: 'DevString'
@@ -272,7 +225,6 @@ class MccsDevice(SKABaseDevice):
         :return:None
         """
         pass
-        # PROTECTED REGION END #    //  MccsDevice.ConstructDeviceProxyAddress
 
 
 # ----------
@@ -282,9 +234,7 @@ class MccsDevice(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """Main function of the MccsDevice module."""
-    # PROTECTED REGION ID(MccsDevice.main) ENABLED START #
-    return run((MccsDevice,), args=args, **kwargs)
-    # PROTECTED REGION END #    //  MccsDevice.main
+    return MccsDevice.run_server(args=args, **kwargs)
 
 
 if __name__ == "__main__":

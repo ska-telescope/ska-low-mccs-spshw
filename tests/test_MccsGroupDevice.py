@@ -21,7 +21,15 @@ sys.path.insert(0, os.path.abspath(path))
 import pytest
 from mock import MagicMock
 
-from PyTango import DevState
+from tango import DevState
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    LoggingLevel,
+    SimulationMode,
+    TestMode,
+)
 
 
 # Device test case
@@ -56,7 +64,9 @@ class TestMccsGroupDevice(object):
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        assert tango_context.device.GetVersionInfo() == [""]
+        assert tango_context.device.GetVersionInfo() == [
+            "MccsGroupDevice, lmcbaseclasses, 0.5.1, A set of generic base devices for SKA Telescope."
+        ]
 
     def test_Reset(self, tango_context):
         """Test for Reset"""
@@ -73,18 +83,6 @@ class TestMccsGroupDevice(object):
     def test_RunCommand(self, tango_context):
         """Test for RunCommand"""
         assert tango_context.device.RunCommand("") == None
-
-    def test_buildState(self, tango_context):
-        """Test for buildState"""
-        assert tango_context.device.buildState == ""
-
-    def test_versionId(self, tango_context):
-        """Test for versionId"""
-        assert tango_context.device.versionId == ""
-
-    def test_loggingLevel(self, tango_context):
-        """Test for loggingLevel"""
-        assert tango_context.device.loggingLevel == 0
 
     def test_healthState(self, tango_context):
         """Test for healthState"""
@@ -108,11 +106,11 @@ class TestMccsGroupDevice(object):
 
     def test_loggingTargets(self, tango_context):
         """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ("",)
+        assert tango_context.device.loggingTargets == ()
 
     def test_memberStates(self, tango_context):
         """Test for memberStates"""
-        assert tango_context.device.memberStates == (PyTango.DevState.UNKNOWN,)
+        assert tango_context.device.memberStates == (DevState.UNKNOWN,)
 
     def test_memberList(self, tango_context):
         """Test for memberList"""

@@ -12,17 +12,17 @@ release_filename = os.path.join(setup_dir, 'src', 'ska', 'mccs', 'release.py')
 exec(open(release_filename).read(), release_module)
 
 setuptools.setup(
-    name=release_module["NAME"],
-    description=release_module["DESCRIPTION"],
-    version=release_module["VERSION"],
-    author=release_module["AUTHOR"],
-    author_email=release_module["AUTHOR_EMAIL"],
-    license=release_module["LICENSE"],
+    name=release_module["name"],
+    description=release_module["description"],
+    version=release_module["version"],
+    author=release_module["author"],
+    author_email=release_module["author_email"],
+    license=release_module["license"],
     package_dir={"": "src"},
     packages=setuptools.find_namespace_packages(where="src"),
     include_package_data=True,
     scripts=[],
-    url=release_module["URL"],
+    url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

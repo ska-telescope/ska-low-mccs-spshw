@@ -58,8 +58,8 @@ class TestMccsMaster:
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        vinfo = [", ".join(("MccsMaster", release.NAME,
-                            release.VERSION, release.DESCRIPTION))]
+        vinfo = [", ".join(("MccsMaster", release.name,
+                            release.version, release.description))]
         assert tango_context.device.GetVersionInfo() == vinfo
 
     def test_isCapabilityAchievable(self, tango_context):
@@ -114,12 +114,12 @@ class TestMccsMaster:
 
     def test_buildState(self, tango_context):
         """Test for buildState"""
-        binfo = ", ".join((release.NAME, release.VERSION, release.DESCRIPTION))
+        binfo = ", ".join((release.name, release.version, release.description))
         assert tango_context.device.buildState == binfo
 
     def test_versionId(self, tango_context):
         """Test for versionId"""
-        assert tango_context.device.versionId == release.VERSION
+        assert tango_context.device.versionId == release.version
 
     def test_healthState(self, tango_context):
         """Test for healthState"""

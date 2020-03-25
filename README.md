@@ -41,8 +41,11 @@ Test and build docs
 This project uses ``tox`` to set up the various build stages. To execute in 
 the development environment, simply run::
 
+    python -m pip install tox
     tox 
 
+Two target environments are run ``py37`` tests and ``docs``. These can be 
+selected using the `-e` option.
 
 License
 -------

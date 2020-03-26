@@ -1,4 +1,4 @@
-#########################################################################################
+###############################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the MccsGroupDevice project
@@ -7,21 +7,13 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-#########################################################################################
+###############################################################################
 """Contain the tests for the Grouping of MCCS devices."""
-
-# Path
-import sys
-import os
-
-path = os.path.join(os.path.dirname(__file__), os.pardir)
-sys.path.insert(0, os.path.abspath(path))
 
 # Imports
 import pytest
-from mock import MagicMock
 
-from PyTango import DevState
+from tango import DevState
 
 
 # Device test case
@@ -52,39 +44,31 @@ class TestMccsGroupDevice(object):
 
     def test_Status(self, tango_context):
         """Test for Status"""
-        assert tango_context.device.Status() == "The device is in UNKNOWN state."
+        status = "The device is in UNKNOWN state."
+        assert tango_context.device.Status() == status
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        assert tango_context.device.GetVersionInfo() == [""]
+        assert tango_context.device.GetVersionInfo() == [
+            "MccsGroupDevice, lmcbaseclasses, 0.5.1, A set of generic base "
+            "devices for SKA Telescope."
+        ]
 
     def test_Reset(self, tango_context):
         """Test for Reset"""
-        assert tango_context.device.Reset() == None
+        assert tango_context.device.Reset() is None
 
     def test_AddMember(self, tango_context):
         """Test for AddMember"""
-        assert tango_context.device.AddMember("") == None
+        assert tango_context.device.AddMember("") is None
 
     def test_RemoveMember(self, tango_context):
         """Test for RemoveMember"""
-        assert tango_context.device.RemoveMember("") == None
+        assert tango_context.device.RemoveMember("") is None
 
     def test_RunCommand(self, tango_context):
         """Test for RunCommand"""
-        assert tango_context.device.RunCommand("") == None
-
-    def test_buildState(self, tango_context):
-        """Test for buildState"""
-        assert tango_context.device.buildState == ""
-
-    def test_versionId(self, tango_context):
-        """Test for versionId"""
-        assert tango_context.device.versionId == ""
-
-    def test_loggingLevel(self, tango_context):
-        """Test for loggingLevel"""
-        assert tango_context.device.loggingLevel == 0
+        assert tango_context.device.RunCommand("") is None
 
     def test_healthState(self, tango_context):
         """Test for healthState"""
@@ -108,11 +92,11 @@ class TestMccsGroupDevice(object):
 
     def test_loggingTargets(self, tango_context):
         """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ("",)
+        assert tango_context.device.loggingTargets == ()
 
     def test_memberStates(self, tango_context):
         """Test for memberStates"""
-        assert tango_context.device.memberStates == (PyTango.DevState.UNKNOWN,)
+        assert tango_context.device.memberStates == (DevState.UNKNOWN,)
 
     def test_memberList(self, tango_context):
         """Test for memberList"""

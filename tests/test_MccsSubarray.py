@@ -39,23 +39,26 @@ class TestMccsSubarray:
         assert tango_context.device.adminMode == AdminMode.ONLINE
         assert tango_context.device.healthState == HealthState.OK
         assert tango_context.device.controlMode == ControlMode.REMOTE
-        assert tango_context.device.simulationMode == False
-        assert tango_context.device.testMode == TestMode.None
-
-        print(tango_context.device.assignedResources)
-        assert False
+        assert not tango_context.device.simulationMode
+        assert tango_context.device.testMode == TestMode.NONE
+        assert tango_context.device.assignedResources is None
+        # The following reads might not be allowed in this state once properly implemented
+        assert tango_context.device.scanId == -1
+        assert tango_context.device.configuredCapabilities is None
+        assert tango_context.device.stationFQDNs is None
+        assert tango_context.device.tileFQDNs is None
+        assert tango_context.device.stationBeamFQDNs is None
+        assert tango_context.device.activationTime == 0
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        info = [
-            ", ".join(("MccsSubarray", release.name, release.version, release.description))
-        ]
-        assert tango_context.device.GetVersionInfo() == info
+        version_info = release.get_release_info(tango_context.class_name)
+        assert tango_context.device.GetVersionInfo() == [version_info]
 
     def test_buildState(self, tango_context):
         """Test for buildState"""
-        info = ", ".join((release.name, release.version, release.description))
-        assert tango_context.device.buildState == info
+        build_info = release.get_release_info()
+        assert tango_context.device.buildState == build_info
 
     def test_versionId(self, tango_context):
         """Test for versionId"""
@@ -66,4 +69,3 @@ class TestMccsSubarray:
 
     def test_sendTransientBuffer(self, tango_context):
         """ Test for sendTransientBuffer """
-

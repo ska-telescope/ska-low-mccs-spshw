@@ -92,20 +92,26 @@ class MccsSubarray(SKASubarray):
         """Initialises the attributes and properties of the MccsSubarray."""
         SKASubarray.init_device(self)
 
-        self.set_change_event("stationFQDNs", True, True)
-        self.set_archive_event("stationFQDNs", True, True)
-
         self.set_state(DevState.INIT)
 
-        self._build_state = "{}, {}, {}".format(
-            release.name, release.version, release.description
-        )
+        self._scan_id =-1 
+        self._station_FQDNs = []
+        self.set_change_event("stationFQDNs", True, True)
+        self.set_archive_event("stationFQDNs", True, True)
+        self._tile_FQDNs = []
+        self._station_beam_FQDNs = []
+
+        self._build_state = release.get_release_info()
         self._version_id = release.version
 
         # Any other initialisation code goes here,
         # after setting state to INIT,
         # but before setting state to OFF
 
+        # Alarm goes off when SKASubarray is fixed
+        #assert self.state() == DevState.DISABLE, (
+        #    "Apparent error in ska.base.SKASubarray has been fixed. Time to "
+        #    "remove override.")
         self.set_state(DevState.OFF)  # subarray is empty
 
     def always_executed_hook(self):
@@ -126,22 +132,22 @@ class MccsSubarray(SKASubarray):
     def read_scanID(self):
 
         """Return the scanID attribute."""
-        return 0
+        return self._scan_id
 
     def read_stationFQDNs(self):
 
         """Return the stationFQDNs attribute."""
-        return ("",)
+        return self._station_FQDNs
 
     def read_tileFQDNs(self):
 
         """Return the tileFQDNs attribute."""
-        return ("",)
+        return self._tile_FQDNs
 
     def read_stationBeamFQDNs(self):
 
         """Return the stationBeamFQDNs attribute."""
-        return ("",)
+        return self._station_beam_FQDNs
 
     # --------
     # Commands
@@ -151,7 +157,8 @@ class MccsSubarray(SKASubarray):
         dtype_in="DevString",
         doc_in="a JSON specification of the subarray scan configuration",
         dtype_out="DevString",
-        doc_out="ASCII string that indicates status, for information purposes only",  # noqa: E501
+        doc_out="ASCII string that indicates status, for information purposes "
+                "only",  # noqa: E501
     )
     @DebugIt()
     def configureScan(self, argin):
@@ -174,21 +181,27 @@ class MccsSubarray(SKASubarray):
 
     @command(
         dtype_in='DevVarLongArray',
-        doc_in="Specification of the segment of the transient buffer to send, comprising:"
+        doc_in="Specification of the segment of the transient buffer to send,"
+               "comprising:"
                "1. Start time (timestamp: milliseconds since UNIX epoch)"
                "2. End time (timestamp: milliseconds since UNIX epoch)"
                "3. Dispersion measure"
-               "Together, these parameters narrow the selection of transient buffer data to the period of time and frequencies that are of interest."
+               "Together, these parameters narrow the selection of transient"
+               "buffer data to the period of time and frequencies that are of"
+               "interest."
                ""
-               "Additional metadata, such as the ID of a triggering Scheduling Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).",
+               "Additional metadata, such as the ID of a triggering Scheduling"
+               "Block, may need to be supplied to allow SDP to assign data"
+               "ownership correctly (TBD75).",
         dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes only",
+        doc_out="ASCII string that indicates status, for information purposes"
+                "only",
     )
     @DebugIt()
     def sendTransientBuffer(self, argin):
 
-        """Cause the subarray to send the requested segment of the transient buffer
-        to SDP. The requested segment is specified by:
+        """Cause the subarray to send the requested segment of the transient
+        buffer to SDP. The requested segment is specified by:
 
         1. Start time (timestamp: milliseconds since UNIX epoch)
         2. End time (timestamp: milliseconds since UNIX epoch)

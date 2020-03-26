@@ -64,16 +64,7 @@ class TestMccsMaster:
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        vinfo = [
-            ", ".join(
-                (
-                    "MccsMaster",
-                    release.name,
-                    release.version,
-                    release.description,
-                )  # force wrap
-            )
-        ]
+        vinfo = release.get_release_info("MccsMaster")
         assert tango_context.device.GetVersionInfo() == vinfo
 
     @pytest.mark.skip(reason="have to work out how this works")

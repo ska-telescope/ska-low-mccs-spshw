@@ -17,6 +17,7 @@ from tango import DevState
 
 # from ska.mccs import release
 from ska.base.control_model import LoggingLevel
+from ska.mccs import release
 
 
 # Device test case
@@ -52,19 +53,10 @@ class TestMccsDevice(object):
 
     #     def test_buildState(self, tango_context):
     #         """Test for buildState"""
-    #         info = ", ".join((release.name, release.version, release.description)) # noqa: E501
-    #         assert tango_context.device.buildState == info
-    #
-    #     def test_versionId(self, tango_context):
-    #         """Test for versionId"""
-    #         assert tango_context.device.versionId == release.version
-
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        assert tango_context.device.GetVersionInfo() == [
-            "MccsDevice, lmcbaseclasses, 0.5.1, A set of generic base devices "
-            "for SKA Telescope."
-        ]
+        info = release.get_release_info("MccsDevice")
+        assert tango_context.device.GetVersionInfo() == [info]
 
     def test_Reset(self, tango_context):
         """Test for Reset"""

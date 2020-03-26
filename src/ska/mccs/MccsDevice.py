@@ -79,9 +79,7 @@ class MccsDevice(SKABaseDevice):
 
     @attribute(dtype="DevString")
     def buildState(self):
-        build = ", ".join((release.name, release.version, release.description))
-        print(build)
-        return build
+        return release.get_release_info()
 
     @attribute(dtype="DevBoolean")
     def isHardwareDevice(self):

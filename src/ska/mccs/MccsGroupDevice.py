@@ -10,21 +10,15 @@
 """ Grouping of MCCS devices
 
 """
-
 __all__ = ["MccsGroupDevice", "main"]
 
 # PyTango imports
-import tango
 from tango import DebugIt
-from tango.server import run
-from tango.server import Device, DeviceMeta
 from tango.server import attribute, command
-from tango.server import device_property
-from tango import AttrQuality, DispLevel, DevState
-from tango import AttrWriteType, PipeWriteType
+from tango import DevState
 
 # Additional import
-from ska.mccs.MccsDevice import MccsDevice
+from .MccsDevice import MccsDevice
 
 
 class MccsGroupDevice(MccsDevice):
@@ -87,7 +81,8 @@ class MccsGroupDevice(MccsDevice):
     # --------
 
     @command(
-        dtype_in="DevString", doc_in="The device name to register eg. sys/tg_test/1"
+        dtype_in="DevString",
+        doc_in="The device name to register eg. sys/tg_test/1",  # force wrap
     )
     @DebugIt()
     def AddMember(self, argin):
@@ -101,7 +96,9 @@ class MccsGroupDevice(MccsDevice):
         """
         pass
 
-    @command(dtype_in="DevString", doc_in="The name of the device to de-register")
+    @command(
+        dtype_in="DevString", doc_in="The name of the device to de-register"
+    )  # force wrap
     @DebugIt()
     def RemoveMember(self, argin):
         """
@@ -118,7 +115,8 @@ class MccsGroupDevice(MccsDevice):
     @DebugIt()
     def RunCommand(self, argin):
         """
-        A wrapper around running commands on a group proxy for this group of devices
+        A wrapper around running commands on a group proxy for this group of
+        devices
 
         :param argin: 'DevString'
         The command to run

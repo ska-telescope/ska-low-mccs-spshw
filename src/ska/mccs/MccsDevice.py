@@ -11,21 +11,17 @@
 
 A base class for all Mccs Devices
 """
-
 __all__ = ["MccsDevice", "main"]
 
 # PyTango imports
-import tango
 from tango import DebugIt
-from tango.server import run
-from tango.server import Device, DeviceMeta
 from tango.server import attribute, command
-from tango.server import device_property
-from tango import AttrQuality, DispLevel, DevState
-from tango import AttrWriteType, PipeWriteType
 
 # Additional import
 from ska.base import SKABaseDevice
+
+# local imports
+from . import release
 
 
 class MccsDevice(SKABaseDevice):

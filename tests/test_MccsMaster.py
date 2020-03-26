@@ -1,4 +1,4 @@
-#########################################################################################
+###############################################################################
 # -*- coding: utf-8 -*-
 #
 # This file is part of the MccsMaster project
@@ -7,13 +7,19 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-#########################################################################################
+###############################################################################
 """Contains the tests for the MccsMaster Tango device prototype."""
 
 # from mock import MagicMock
 import pytest
 import tango
-from ska.base.control_model import AdminMode, ControlMode, HealthState, SimulationMode, TestMode
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
 from ska.mccs import release
 
 # pylint: disable=invalid-name
@@ -22,21 +28,21 @@ class TestMccsMaster:
     """Test case for packet generation."""
 
     properties = {
-        'SkaLevel': '4',
-        'CentralLoggingTarget': '',
-        'ElementLoggingTarget': '',
-        'StorageLoggingTarget': 'localhost',
-        'GroupDefinitions': '',
-        'NrSubarrays': '16',
-        'CapabilityTypes': '',
-        'MaxCapabilities': '',
-        'MccsSubarrays': '',
-        'LoggingLevelDefault': '4',
-        'LoggingTargetsDefault': '',
-        'MccsStations': '',
-        'MccsStationBeams': '',
-        'MccsTiles': '',
-        'MccsAntennas': '',
+        "SkaLevel": "4",
+        "CentralLoggingTarget": "",
+        "ElementLoggingTarget": "",
+        "StorageLoggingTarget": "localhost",
+        "GroupDefinitions": "",
+        "NrSubarrays": "16",
+        "CapabilityTypes": "",
+        "MaxCapabilities": "",
+        "MccsSubarrays": "",
+        "LoggingLevelDefault": "4",
+        "LoggingTargetsDefault": "",
+        "MccsStations": "",
+        "MccsStationBeams": "",
+        "MccsTiles": "",
+        "MccsAntennas": "",
     }
 
     @classmethod
@@ -58,14 +64,25 @@ class TestMccsMaster:
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        vinfo = [", ".join(("MccsMaster", release.name,
-                            release.version, release.description))]
+        vinfo = [
+            ", ".join(
+                (
+                    "MccsMaster",
+                    release.name,
+                    release.version,
+                    release.description,
+                )  # force wrap
+            )
+        ]
         assert tango_context.device.GetVersionInfo() == vinfo
 
+    @pytest.mark.skip(reason="have to work out how this works")
     def test_isCapabilityAchievable(self, tango_context):
         """Test for isCapabilityAchievable"""
-        assert tango_context.device.isCapabilityAchievable(
-            [[0], [""]]) is not False
+        assert (
+            tango_context.device.isCapabilityAchievable([[0], [""]])
+            is not False  # force wrap
+        )  # force wrap
 
     def test_Reset(self, tango_context):
         """Test for Reset"""

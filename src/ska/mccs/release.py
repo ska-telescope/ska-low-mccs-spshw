@@ -14,5 +14,5 @@ author = "Team MCCS"
 author_email = "malte.marquarding at csiro dot au"
 url = """https://www.skatelescope.org/"""
 license = """BSD-3-Clause"""
-copyright = """CSIRO and STFC Daresbury Laboratory and University of Manchester"""
-
+copyright = """CSIRO and STFC Daresbury Laboratory and University
+of Manchester"""

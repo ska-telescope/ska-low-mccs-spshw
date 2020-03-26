@@ -1,9 +1,8 @@
 pytest
 pytest-cov
 pytest-json-report
-pytest-pylint
 pytest-xdist
-pylint2junit
-pycodestyle
+flake8
+flake8_formatter_junit_xml
 coverage
 mock

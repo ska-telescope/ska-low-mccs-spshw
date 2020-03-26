@@ -27,7 +27,7 @@ def get_release_info(clsname=None):
     :return: string
     """
     rmod = sys.modules[__name__]
-    info = ", ".join((rmod.name, rmod.version, rmod.descrition))
+    info = ", ".join((rmod.name, rmod.version, rmod.description))
     if clsname is None:
         return info
     return ", ".join((clsname, info))

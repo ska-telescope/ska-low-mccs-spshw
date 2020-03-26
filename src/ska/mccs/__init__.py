@@ -7,8 +7,8 @@ __all__ = [
     "MccsAntenna",
 ]  # force wrap
 
-# from .MccsDevice import MccsDevice
-# from .MccsGroupDevice import MccsGroupDevice
+from .MccsDevice import MccsDevice  # noqa: F401
+from .MccsGroupDevice import MccsGroupDevice  # noqa: F401
 from .MccsMaster import MccsMaster
 from .MccsSubarray import MccsSubarray
 from .MccsStation import MccsStation

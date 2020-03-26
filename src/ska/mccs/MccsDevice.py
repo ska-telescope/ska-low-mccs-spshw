@@ -58,6 +58,8 @@ class MccsDevice(SKABaseDevice):
         self._expected_reply_not_ready = False
         self._experienced_subscription_failure = False
         self._invalid_event_id = False
+        self._version_id = release.version
+        self._build_state = release.get_release_info()
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""

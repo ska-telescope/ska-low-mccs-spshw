@@ -19,6 +19,7 @@ from tango import DevState
 
 # Additional import
 from .MccsDevice import MccsDevice
+from . import release
 
 
 class MccsGroupDevice(MccsDevice):
@@ -42,6 +43,8 @@ class MccsGroupDevice(MccsDevice):
         MccsDevice.init_device(self)
         self._member_states = (DevState.UNKNOWN,)
         self._member_list = ("",)
+        self._version_id = release.version
+        self._build_state = release.get_release_info()
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""

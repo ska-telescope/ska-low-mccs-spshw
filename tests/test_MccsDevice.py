@@ -55,7 +55,7 @@ class TestMccsDevice(object):
     #         """Test for buildState"""
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        info = release.get_release_info("MccsDevice")
+        info = release.get_release_info(tango_context.class_name)
         assert tango_context.device.GetVersionInfo() == [info]
 
     def test_Reset(self, tango_context):

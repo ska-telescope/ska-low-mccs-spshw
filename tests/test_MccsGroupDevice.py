@@ -14,6 +14,7 @@
 import pytest
 
 from tango import DevState
+from ska.mccs import release
 
 
 # Device test case
@@ -49,10 +50,8 @@ class TestMccsGroupDevice(object):
 
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
-        assert tango_context.device.GetVersionInfo() == [
-            "MccsGroupDevice, lmcbaseclasses, 0.5.1, A set of generic base "
-            "devices for SKA Telescope."
-        ]
+        info = release.get_release_info(tango_context.class_name)
+        assert tango_context.device.GetVersionInfo() == [info]
 
     def test_Reset(self, tango_context):
         """Test for Reset"""

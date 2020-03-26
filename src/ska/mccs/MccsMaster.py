@@ -102,9 +102,7 @@ class MccsMaster(SKAMaster):
         SKAMaster.init_device(self)
 
         self.set_state(DevState.ON)
-        self._build_state = ", ".join(
-            (release.name, release.version, release.description)
-        )
+        self._build_state = release.get_release_info()
         self._version_id = release.version
 
     def always_executed_hook(self):

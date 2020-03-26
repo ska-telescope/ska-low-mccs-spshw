@@ -17,11 +17,11 @@ def tango_context(request):
         A request object gives access to the requesting test context.
     """
     test_properties = {
-        'MccsMaster': {
-            'SkaLevel': '4',
-            'LoggingTargetsDefault': '',
-            'GroupDefinitions': '',
-            'NrSubarrays': '16',
+        "MccsMaster": {
+            "SkaLevel": "4",
+            "LoggingTargetsDefault": "",
+            "GroupDefinitions": "",
+            "NrSubarrays": "16",
             # 'CapabilityTypes': '',
             # 'MaxCapabilities': []
         }
@@ -39,6 +39,7 @@ def tango_context(request):
     tango_context = DeviceTestContext(
         class_type, properties=test_properties.get(class_name, {})
     )
+    tango_context.class_name = class_name
     tango_context.start()
     yield tango_context
     tango_context.stop()

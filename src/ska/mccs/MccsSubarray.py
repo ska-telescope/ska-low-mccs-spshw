@@ -49,12 +49,12 @@ class MccsSubarray(SKASubarray):
     # Attributes
     # ----------
 
-    scanID = attribute(
+    scanId = attribute(
         dtype="DevLong",
         format="%i",
         polling_period=1000,
         doc="The ID of the current scan, set via commands startScan() and "
-        "endScan(). A scanID of 0 means that the subarray is idle.",
+        "endScan(). A scanId of 0 means that the subarray is idle.",
     )
 
     stationFQDNs = attribute(
@@ -129,9 +129,9 @@ class MccsSubarray(SKASubarray):
     # Attributes methods
     # ------------------
 
-    def read_scanID(self):
+    def read_scanId(self):
 
-        """Return the scanID attribute."""
+        """Return the scanId attribute."""
         return self._scan_id
 
     def read_stationFQDNs(self):

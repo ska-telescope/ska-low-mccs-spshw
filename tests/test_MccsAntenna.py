@@ -1,5 +1,5 @@
 #########################################################################
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of the MccsAntenna project
@@ -15,9 +15,6 @@
 import sys
 import os
 
-path = os.path.join(os.path.dirname(__file__), os.pardir)
-sys.path.insert(0, os.path.abspath(path))
-
 # Imports
 import pytest
 
@@ -27,9 +24,10 @@ from ska.base.control_model import (
     ControlMode,
     HealthState,
     LoggingLevel,
-    SimulationMode,
-    TestMode,
 )
+
+path = os.path.join(os.path.dirname(__file__), os.pardir)
+sys.path.insert(0, os.path.abspath(path))
 
 # Device test case
 @pytest.mark.usefixtures("tango_context", "initialize_device")
@@ -57,15 +55,15 @@ class TestMccsAntenna(object):
 
     def test_PowerOn(self, tango_context):
         """Test for PowerOn"""
-        assert tango_context.device.PowerOn() == None
+        assert tango_context.device.PowerOn() is None
 
     def test_PowerOff(self, tango_context):
         """Test for PowerOff"""
-        assert tango_context.device.PowerOff() == None
+        assert tango_context.device.PowerOff() is None
 
     def test_Reset(self, tango_context):
         """Test for Reset"""
-        assert tango_context.device.Reset() == None
+        assert tango_context.device.Reset() is None
 
     def test_antennaId(self, tango_context):
         """Test for antennaId"""
@@ -105,11 +103,11 @@ class TestMccsAntenna(object):
 
     def test_xPolarisationFaulty(self, tango_context):
         """Test for xPolarisationFaulty"""
-        assert tango_context.device.xPolarisationFaulty == False
+        assert tango_context.device.xPolarisationFaulty is False
 
     def test_yPolarisationFaulty(self, tango_context):
         """Test for yPolarisationFaulty"""
-        assert tango_context.device.yPolarisationFaulty == False
+        assert tango_context.device.yPolarisationFaulty is False
 
     def test_fieldNodeLongitude(self, tango_context):
         """Test for fieldNodeLongitude"""
@@ -153,7 +151,7 @@ class TestMccsAntenna(object):
 
     def test_simulationMode(self, tango_context):
         """Test for simulationMode"""
-        assert tango_context.device.simulationMode == False
+        assert tango_context.device.SimulationMode == 0  # Equates to False
 
     def test_logicalAntennaId(self, tango_context):
         """Test for logicalAntennaId"""
@@ -202,4 +200,3 @@ class TestMccsAntenna(object):
     def test_bandpassCoefficient(self, tango_context):
         """Test for bandpassCoefficient"""
         assert tango_context.device.bandpassCoefficient == [0.0]
-

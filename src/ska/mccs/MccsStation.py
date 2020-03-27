@@ -14,13 +14,14 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 __all__ = ["MccsStation", "main"]
 
 # PyTango imports
+from tango import DebugIt
 from tango.server import attribute
+from tango import AttrWriteType
+from tango import DevState
 
 # additional imports
-
 from ska.base import SKAObsDevice
-from tango import AttrWriteType
-
+from . import release
 
 class MccsStation(SKAObsDevice):
     """
@@ -51,27 +52,22 @@ class MccsStation(SKAObsDevice):
         dtype="DevString",
         format="%s",
         polling_period=1000,
-        doc="The fully-qualified device name of the 'transient buffer' TANGO "
-        "device created by the Station",
+        doc="The fully-qualified device name of the 'transient buffer' " + 
+            "TANGO device created by the Station"
     )
 
     isCalibrated = attribute(
         dtype="DevBoolean",
         polling_period=1000,
-        max_value=1,
-        min_value=0,
-        max_alarm=1,
-        doc="Defined whether the calibration cycle was successful "
-        "(converged, good phase centres)",
+        doc="Defined whether the calibration cycle was successful " +
+            "(converged, good phase centres)",
     )
 
     isConfigured = attribute(
         dtype="DevBoolean",
         polling_period=1000,
-        max_value=1,
-        min_value=0,
-        doc="True when the Station is configured, False when the Station "
-        "is unconfigured or in the process of reconfiguring.",
+        doc="True when the Station is configured, False when the Station " + 
+            "is unconfigured or in the process of reconfiguring.",
     )
 
     calibrationJobId = attribute(
@@ -100,8 +96,8 @@ class MccsStation(SKAObsDevice):
         max_dim_x=16,
         format="%s",
         polling_period=1000,
-        doc="Array of fully-qualified device names of the Tile devices that "
-        "are associated with the Station",
+        doc="Array of fully-qualified device names of the Tile devices that " +
+            "are associated with the Station",
     )
 
     beamFQDNs = attribute(
@@ -109,8 +105,8 @@ class MccsStation(SKAObsDevice):
         max_dim_x=8,
         format="%s",
         polling_period=1000,
-        doc="Array of full-qualified device names for the Station Beams "
-        "associated with this Station",
+        doc="Array of full-qualified device names for the Station Beams " +
+            "associated with this Station",
     )
 
     delayCentre = attribute(
@@ -128,11 +124,12 @@ class MccsStation(SKAObsDevice):
         dtype=("DevFloat",),
         max_dim_x=512,
         polling_period=1000,
-        doc="""Latest calibration coefficients for the station (split per channel/antenna)
-        todo: How big should this array be? Gain and offset per antenna per
-        channel.
-        This station can have up to 16 tiles of up to 16 antennas, so that is
-        2 x 16 x 16 = 512 coefficients per channel. But how many channels?""",
+        doc="""Latest calibration coefficients for the station (split per
+        channel/antenna)
+        :todo: How big should this array be? Gain and offset per antenna per
+        channel. This station can have up to 16 tiles of up to 16 antennas, so
+        that is 2 x 16 x 16 = 512 coefficients per channel. But how many
+        channels?""",
     )
 
     # ---------------
@@ -144,6 +141,24 @@ class MccsStation(SKAObsDevice):
         Initialises the attributes and properties of the MccsStation.
         """
         SKAObsDevice.init_device(self)
+
+        self.set_state(DevState.INIT)
+
+        self._subarray_id = 0
+        self._tile_FQDNs = []
+        self._beam_FQDNs = []
+        self._transient_buffer_FQDN = ""
+        self._delay_centre = []
+        self._calibration_coefficients = []
+        self._is_calibrated = False
+        self._is_configured = False
+        self._calibration_job_id = 0
+        self._daq_job_id = 0
+        self._data_directory = ""
+
+        self._build_state = release.get_release_info()
+        self._version_id = release.version
+
         self.set_change_event("subarrayId", True, True)
         self.set_archive_event("subarrayId", True, True)
         self.set_change_event("transientBufferFQDN", True, False)
@@ -156,6 +171,8 @@ class MccsStation(SKAObsDevice):
         self.set_archive_event("tileFQDNs", True, True)
         self.set_change_event("beamFQDNs", True, True)
         self.set_archive_event("beamFQDNs", True, True)
+
+        self.set_state(DevState.OFF)
 
     def always_executed_hook(self):
         """
@@ -180,84 +197,84 @@ class MccsStation(SKAObsDevice):
         """
         Return the subarrayId attribute.
         """
-        return 0
+        return self._subarray_id
 
     def read_transientBufferFQDN(self):
 
         """
         Return the transientBufferFQDN attribute.
         """
-        return ""
+        return self._transient_buffer_FQDN
 
     def read_isCalibrated(self):
 
         """
         Return the isCalibrated attribute.
         """
-        return False
+        return self._is_calibrated
 
     def read_isConfigured(self):
 
         """
         Return the isConfigured attribute.
         """
-        return False
+        return self._is_configured
 
     def read_calibrationJobId(self):
 
         """
         Return the calibrationJobId attribute.
         """
-        return 0
+        return self._calibration_job_id
 
     def read_daqJobId(self):
 
         """
         Return the daqJobId attribute.
         """
-        return 0
+        return self._daq_job_id
 
     def read_dataDirectory(self):
 
         """
         Return the dataDirectory attribute.
         """
-        return ""
+        return self._data_directory
 
     def read_tileFQDNs(self):
 
         """
         Return the tileFQDNs attribute.
         """
-        return ("",)
+        return self._tile_FQDNs
 
     def read_beamFQDNs(self):
 
         """
         Return the beamFQDNs attribute.
         """
-        return ("",)
+        return self._beam_FQDNs
 
     def read_delayCentre(self):
 
         """
         Return the delayCentre attribute.
         """
-        return (0.0,)
+        return self._delay_centre
 
     def write_delayCentre(self, value):
 
         """
         Set the delayCentre attribute.
         """
-        pass
+        self._delay_centre = value
 
     def read_calibrationCoefficients(self):
 
         """
         Return the calibrationCoefficients attribute.
         """
-        return (0.0,)
+        return self._calibration_coefficients
 
     # --------
     # Commands

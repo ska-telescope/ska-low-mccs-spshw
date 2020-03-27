@@ -108,10 +108,6 @@ class MccsSubarray(SKASubarray):
         # after setting state to INIT,
         # but before setting state to OFF
 
-        # Alarm goes off when SKASubarray is fixed
-        #assert self.state() == DevState.DISABLE, (
-        #    "Apparent error in ska.base.SKASubarray has been fixed. Time to "
-        #    "remove override.")
         self.set_state(DevState.OFF)  # subarray is empty
 
     def always_executed_hook(self):

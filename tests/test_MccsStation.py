@@ -1,0 +1,158 @@
+###############################################################################
+# -*- coding: utf-8 -*-
+#
+# This file is part of the MccsStation project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+###############################################################################
+"""contains the tests for the MccsSubarray"""
+import time
+import pytest
+import tango
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
+from ska.mccs import release
+
+# pylint: disable=invalid-name
+@pytest.mark.usefixtures("tango_context", "initialize_device")
+class TestMccsStation:
+    """
+    Test cases for MccsStation
+    """
+
+    properties = {
+        # SKABaseDevice properties
+        "SkaLevel": "2",
+        "GroupDefinitions": [],
+        "LoggingLevelDefault": 4,
+        "LoggingTargetsDefault": [],
+    }
+
+    def test_properties(self, tango_context):
+        """ Test the properties """
+
+    # general methods
+    def test_InitDevice(self, tango_context):
+        """
+        Test for Initial state.
+        A freshly initialised station device has no assigned resources
+        and is therefore in OFF state.
+        """
+        assert tango_context.device.state() == tango.DevState.OFF
+        assert tango_context.device.status() == "The device is in OFF state."
+        assert tango_context.device.adminMode == AdminMode.ONLINE
+        assert tango_context.device.healthState == HealthState.OK
+        assert tango_context.device.controlMode == ControlMode.REMOTE
+        assert not tango_context.device.simulationMode
+        assert tango_context.device.testMode == TestMode.NONE
+
+        # The following reads might not be allowed in this state once properly
+        # implemented
+        assert tango_context.device.subarrayId == 0
+        assert tango_context.device.transientBufferFQDN == ""
+        assert not tango_context.device.isCalibrated
+        assert not tango_context.device.isConfigured
+        assert tango_context.device.calibrationJobId == 0
+        assert tango_context.device.daqJobId == 0
+        assert tango_context.device.dataDirectory == ""
+        assert tango_context.device.tileFQDNs is None
+        assert tango_context.device.beamFQDNs is None
+        assert tango_context.device.delayCentre is ()
+        assert tango_context.device.calibrationCoefficients is None
+
+    # overridden base class commands
+    def test_GetVersionInfo(self, tango_context):
+        """Test for GetVersionInfo"""
+        version_info = release.get_release_info(tango_context.class_name)
+        assert tango_context.device.GetVersionInfo() == [version_info]
+
+    # overridden base class attributes
+    def test_buildState(self, tango_context):
+        """Test for buildState"""
+        build_info = release.get_release_info()
+        assert tango_context.device.buildState == build_info
+
+    def test_versionId(self, tango_context):
+        """Test for versionId"""
+        assert tango_context.device.versionId == release.version
+
+    # MccsStation attributes
+    def test_subarrayId(self, tango_context):
+        """Test for subarrayId attribute"""
+        assert tango_context.device.subarrayId == 0
+
+    def test_tileFQDNs(self, tango_context):
+        """Test for tileFQDNs attribute"""
+        assert tango_context.device.tileFQDNs is None
+
+    def test_beamFQDNs(self, tango_context):
+        """Test for beamFQDNs attribute"""
+        assert tango_context.device.beamFQDNs is None
+
+    def test_transientBufferFQDN(self, tango_context):
+        """Test for transientBufferFQDN attribute"""
+        assert tango_context.device.transientBufferFQDN == ""
+
+    def test_delayCentre(self, tango_context):
+        """
+        Test for delayCentre attribute. This is a messy test because:
+        (a) it is a READWRITE attribute, so we want to test that we can write
+        to it AND read the value back;
+        (b) delayCentre is a polled attribute, so you have to wait a poll
+        period in order to read back what you've written; else you just read
+        back the cached value
+        (c) there is some loss of floating-point precision during transfer, so
+        you have to check approximate equality when reading back what you've
+        written.
+
+        """
+        assert tango_context.device.delayCentre is ()
+
+        # SETUP
+        dummy_location = (-30.72113, 21.411128)
+        float_format = "{:3.4f}"
+        dummy_location_str = [float_format.format(x) for x in dummy_location]
+        sleep_seconds = tango_context.device.get_attribute_poll_period(
+            "delayCentre"
+        ) / 1000.0 * 1.2
+
+        # RUN
+        tango_context.device.delayCentre = dummy_location
+        time.sleep(sleep_seconds)
+        delay_centre = tango_context.device.delayCentre
+
+        # CHECK
+        delay_centre_str = [float_format.format(x) for x in delay_centre]
+        assert delay_centre_str == dummy_location_str
+
+    def test_calibrationCoefficients(self, tango_context):
+        """Test for calibrationCoefficients attribute"""
+        assert tango_context.device.calibrationCoefficients is None
+
+    def test_isCalibrated(self, tango_context):
+        """Test for isCalibrated attribute"""
+        assert not tango_context.device.isCalibrated
+
+    def test_isConfigured(self, tango_context):
+        """Test for isConfigured attribute"""
+        assert not tango_context.device.isConfigured
+
+    def test_calibrationJobId(self, tango_context):
+        """Teset for calibrationJobId attribute"""
+        assert tango_context.device.calibrationJobId == 0
+
+    def test_daqJobId(self, tango_context):
+        """Test for daqJobId attributes"""
+        assert tango_context.device.daqJobId == 0
+
+    def test_dataDirectory(self, tango_context):
+        """Test for dataDirectory attribute"""
+        assert tango_context.device.dataDirectory == ""

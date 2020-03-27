@@ -72,9 +72,9 @@ class MccsDevice(SKABaseDevice):
         destructor and by the device Init command.
         """
 
-    # ----------
-    # Attributes
-    # ----------
+    # --------------------------------
+    # Attributes overriding base class
+    # --------------------------------
     @attribute(dtype="DevString")
     def versionId(self):
         return release.version
@@ -83,6 +83,9 @@ class MccsDevice(SKABaseDevice):
     def buildState(self):
         return release.get_release_info()
 
+    # ----------
+    # Attributes
+    # ----------
     @attribute(dtype="DevBoolean")
     def isHardwareDevice(self):
         """Return the isHardwareDevice attribute."""

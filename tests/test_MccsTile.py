@@ -12,8 +12,8 @@
 
 # Imports
 import pytest
-
-from tango import DevState
+import numpy as np
+from tango import DevState, DevFailed
 
 # from ska.mccs import release
 from ska.base.control_model import (
@@ -42,8 +42,6 @@ class TestMccsTile(object):
         """ Test the properties """
         assert tango_context.device.loggingLevel == LoggingLevel.INFO
 
-    #        assert tango_context.device.SkaLevel == LoggingLevel.INFO
-
     def test_InitialState(self, tango_context):
         """Test for Initial State"""
         assert tango_context.device.state() == DevState.ON
@@ -57,10 +55,6 @@ class TestMccsTile(object):
     def test_isProgrammed(self, tango_context):
         """Test for isProgrammed"""
         assert tango_context.device.isProgrammed is False
-
-    def test_Reset(self, tango_context):
-        """Test for Reset"""
-        assert tango_context.device.Reset() is None
 
     def test_Initialise(self, tango_context):
         """Test for Initialise"""
@@ -86,14 +80,14 @@ class TestMccsTile(object):
         """Test for WaitPPSEvent"""
         assert tango_context.device.WaitPPSEvent() is None
 
-    #     def test_GetRegisterList(self, tango_context):
-    #         """Test for GetRegisterList"""
-    #         assert tango_context.device.GetRegisterList() == 0
+    def test_GetRegisterList(self, tango_context):
+        """Test for GetRegisterList"""
+        assert tango_context.device.GetRegisterList() == []
 
-    #     def test_ReadRegister(self, tango_context):
-    #         """Test for ReadRegister"""
-    #         print(tango_context.device.ReadRegister([0,]))
-    #         assert tango_context.device.ReadRegister([0,]) == [0]
+    def test_ReadRegister(self, tango_context):
+        """Test for ReadRegister"""
+        with pytest.raises(DevFailed):
+            tango_context.device.ReadRegister([1, 2, 3])
 
     def test_WriteRegister(self, tango_context):
         """Test for WriteRegister"""
@@ -107,13 +101,23 @@ class TestMccsTile(object):
         """Test for WriteAddress"""
         assert tango_context.device.WriteAddress([0]) is None
 
-    #     def test_Configure40GCore(self, tango_context):
-    #         """Test for Configure40GCore"""
-    #         assert tango_context.device.Configure40GCore([0]) is None
-    #
-    #     def test_Get40GCoreConfiguration(self, tango_context):
-    #         """Test for Get40GCoreConfiguration"""
-    #         assert tango_context.device.Get40GCoreConfiguration(0) == [0]
+    def test_Configure40GCore(self, tango_context):
+        """Test for Configure40GCore
+        1. Check for insufficient values
+        2. Check correct number of values entered
+        3. Check retrieving the values
+        4. Check for invalid core id
+        """
+        good_values = [10, 20, 30, 40, 50, 60, 70]
+        bad_values = [10, 20, 30, 40, 50, 60]
+        expected = np.array([20, 30, 40, 50, 60, 70], dtype=np.uint32)
+        with pytest.raises(DevFailed):
+            tango_context.device.Configure40GCore(bad_values)
+        assert tango_context.device.Configure40GCore(good_values) is None
+        result = tango_context.device.Get40GCoreConfiguration(10)
+        assert (result == expected).all()
+        with pytest.raises(DevFailed):
+            tango_context.device.Get40GCoreConfiguration(1)
 
     def test_SetLMCDownload(self, tango_context):
         """Test for SetLMCDownload"""
@@ -131,9 +135,9 @@ class TestMccsTile(object):
         """Test for ConfigureStationBeamformer"""
         assert tango_context.device.ConfigureStationBeamformer([0]) is None
 
-    #     def test_LoadCalibrationCoefficients(self, tango_context):
-    #         """Test for LoadCalibrationCoefficients"""
-    #         assert tango_context.device.LoadCalibrationCoefficients("", "") is None # noqa: E501
+    def test_LoadCalibrationCoefficients(self, tango_context):
+        """Test for LoadCalibrationCoefficients"""
+        assert tango_context.device.LoadCalibrationCoefficients([0.0]) is None
 
     def test_LoadBeamAngle(self, tango_context):
         """Test for LoadBeamAngle"""
@@ -267,26 +271,22 @@ class TestMccsTile(object):
         """Test for fpga2_time"""
         assert tango_context.device.fpga2_time == 0.0
 
-    def test_loggingTargets(self, tango_context):
-        """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ()
-
     def test_antennaIds(self, tango_context):
         """Test for antennaIds"""
-        assert tango_context.device.antennaIds == (0,)
+        assert tango_context.device.antennaIds is None
 
     def test_fortyGbDestinationIps(self, tango_context):
         """Test for fortyGbDestinationIps"""
-        assert tango_context.device.fortyGbDestinationIps == ("",)
+        assert tango_context.device.fortyGbDestinationIps is None
 
     def test_fortyGbDestinationMacs(self, tango_context):
         """Test for fortyGbDestinationMacs"""
-        assert tango_context.device.fortyGbDestinationMacs == ("",)
+        assert tango_context.device.fortyGbDestinationMacs is None
 
     def test_fortyGbDestinationPorts(self, tango_context):
         """Test for fortyGbDestinationPorts"""
-        assert tango_context.device.fortyGbDestinationPorts == (0,)
+        assert tango_context.device.fortyGbDestinationPorts is None
 
     def test_adcPower(self, tango_context):
         """Test for adcPower"""
-        assert tango_context.device.adcPower == (0.0,)
+        assert tango_context.device.adcPower is None

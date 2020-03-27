@@ -17,6 +17,7 @@ __all__ = ["MccsAntenna", "main"]
 # tango imports
 from tango import DebugIt
 from tango.server import attribute, command
+from tango import DevState
 
 # Additional import
 from ska.base import SKABaseDevice
@@ -179,6 +180,7 @@ class MccsAntenna(SKABaseDevice):
 
     def init_device(self):
         SKABaseDevice.init_device(self)
+        self.set_state(DevState.ON)
 
     def always_executed_hook(self):
 

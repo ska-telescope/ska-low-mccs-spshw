@@ -7,7 +7,7 @@ import os
 
 
 # Do we need this
-import sphinx_rtd_theme
+# import sphinx_rtd_theme
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name

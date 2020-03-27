@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsSubarray" pogoRevision="9.6">
-    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/drew/lfaa-lmc-prototype/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/osboxes/lfaa-lmc-prototype/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="SKAObsDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
       <inheritances classname="SKASubarray" sourcePath="../../../../lmc-base-classes/pogo"/>
@@ -195,17 +195,8 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="releaseResources" description="Cause the subarray to release all Stations, Tiles and Station Beams, and transition to idle. The released Stations, Tiles and Station Beams are returned to the pool of the unassigned resources." execMethod="release_resources" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
-      <argin description="">
-        <type xsi:type="pogoDsl:VoidType"/>
-      </argin>
-      <argout description="ASCII string that indicates status, for information purposes only">
-        <type xsi:type="pogoDsl:StringType"/>
-      </argout>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-    </commands>
-    <commands name="sendTransientBuffer" description="Cause the subarray to send the requested segment of the transient buffer to SDP." execMethod="send_transient_buffer" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
-      <argin description="Specification of the segment of the transient buffer to send, comprising:&#xA;1. Start time (timestamp: milliseconds since UNIX epoch)&#xA;2. End time (timestamp: milliseconds since UNIX epoch)&#xA;3. Dispersion measure&#xA;Together, these parameters narrow the selection of transient buffer data to the period of time and frequencies that are of interest.&#xA;&#xA;Additional metadata, such as the ID of a triggering Scheduling Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).">
+    <commands name="sendTransientBuffer" description="Cause the subarray to send the requested segment of the transient buffer&#xA;to SDP. The requested segment is specified by:&#xA;&#xA;1. Start time (timestamp: milliseconds since UNIX epoch)&#xA;2. End time (timestamp: milliseconds since UNIX epoch)&#xA;3. Dispersion measure&#xA;&#xA;Together, these parameters narrow the selection of transient buffer&#xA;data to the period of time and frequencies that are of interest.&#xA;&#xA;Additional metadata, such as the ID of a triggering Scheduling Block,&#xA;may need to be supplied to allow SDP to assign data ownership correctly&#xA;(TBD75).&#xA;&#xA;:todo: This method is a stub that does nothing but return a dummy string." execMethod="send_transient_buffer" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+      <argin description="Specification of the segment of the transient buffer to sendng Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).">
         <type xsi:type="pogoDsl:IntArrayType"/>
       </argin>
       <argout description="ASCII string that indicates status, for information purposes only">

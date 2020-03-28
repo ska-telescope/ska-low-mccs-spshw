@@ -457,10 +457,7 @@ class MccsTile(MccsGroupDevice):
             raise ValueError
         return []
 
-    @command(
-        dtype_in="DevVarLongArray",
-        doc_in="register_name, values, offset, device",  # force wrap
-    )
+    @command(dtype_in="DevVarLongArray", doc_in="register_name, values, offset, device")
     @DebugIt()
     def WriteRegister(self, argin):
 
@@ -569,10 +566,7 @@ class MccsTile(MccsGroupDevice):
                 ]
         raise ValueError("Invalid core id specified")
 
-    @command(
-        dtype_in="DevVarLongArray",
-        doc_in="mode, payload_length, src_ip, lmc_mac",  # force wrap
-    )  # force wrap
+    @command(dtype_in="DevVarLongArray", doc_in="mode, payload_length, src_ip, lmc_mac")
     @DebugIt()
     def SetLMCDownload(self, argin):
 
@@ -620,8 +614,7 @@ class MccsTile(MccsGroupDevice):
         pass
 
     @command(
-        dtype_in="DevVarLongArray",
-        doc_in="n_of_tiles, first_tile=False, start=False",  # force wrap
+        dtype_in="DevVarLongArray", doc_in="n_of_tiles, first_tile=False, start=False"
     )
     @DebugIt()
     def ConfigureStationBeamformer(self, argin):

@@ -84,8 +84,7 @@ class MccsGroupDevice(MccsDevice):
     # --------
 
     @command(
-        dtype_in="DevString",
-        doc_in="The device name to register eg. sys/tg_test/1",  # force wrap
+        dtype_in="DevString", doc_in="The device name to register eg. sys/tg_test/1"
     )
     @DebugIt()
     def AddMember(self, argin):
@@ -99,9 +98,7 @@ class MccsGroupDevice(MccsDevice):
         """
         pass
 
-    @command(
-        dtype_in="DevString", doc_in="The name of the device to de-register"
-    )  # force wrap
+    @command(dtype_in="DevString", doc_in="The name of the device to de-register")
     @DebugIt()
     def RemoveMember(self, argin):
         """

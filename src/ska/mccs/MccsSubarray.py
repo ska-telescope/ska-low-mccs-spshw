@@ -94,7 +94,7 @@ class MccsSubarray(SKASubarray):
 
         self.set_state(DevState.INIT)
 
-        self._scan_id =-1 
+        self._scan_id = -1
         self._station_FQDNs = []
         self.set_change_event("stationFQDNs", True, True)
         self.set_archive_event("stationFQDNs", True, True)
@@ -109,7 +109,7 @@ class MccsSubarray(SKASubarray):
         # but before setting state to OFF
 
         # Alarm goes off when SKASubarray is fixed
-        #assert self.state() == DevState.DISABLE, (
+        # assert self.state() == DevState.DISABLE, (
         #    "Apparent error in ska.base.SKASubarray has been fixed. Time to "
         #    "remove override.")
         self.set_state(DevState.OFF)  # subarray is empty
@@ -158,7 +158,7 @@ class MccsSubarray(SKASubarray):
         doc_in="a JSON specification of the subarray scan configuration",
         dtype_out="DevString",
         doc_out="ASCII string that indicates status, for information purposes "
-                "only",  # noqa: E501
+        "only",  # noqa: E501
     )
     @DebugIt()
     def configureScan(self, argin):
@@ -180,22 +180,21 @@ class MccsSubarray(SKASubarray):
         )
 
     @command(
-        dtype_in='DevVarLongArray',
+        dtype_in="DevVarLongArray",
         doc_in="Specification of the segment of the transient buffer to send,"
-               "comprising:"
-               "1. Start time (timestamp: milliseconds since UNIX epoch)"
-               "2. End time (timestamp: milliseconds since UNIX epoch)"
-               "3. Dispersion measure"
-               "Together, these parameters narrow the selection of transient"
-               "buffer data to the period of time and frequencies that are of"
-               "interest."
-               ""
-               "Additional metadata, such as the ID of a triggering Scheduling"
-               "Block, may need to be supplied to allow SDP to assign data"
-               "ownership correctly (TBD75).",
-        dtype_out='DevString',
-        doc_out="ASCII string that indicates status, for information purposes"
-                "only",
+        "comprising:"
+        "1. Start time (timestamp: milliseconds since UNIX epoch)"
+        "2. End time (timestamp: milliseconds since UNIX epoch)"
+        "3. Dispersion measure"
+        "Together, these parameters narrow the selection of transient"
+        "buffer data to the period of time and frequencies that are of"
+        "interest."
+        ""
+        "Additional metadata, such as the ID of a triggering Scheduling"
+        "Block, may need to be supplied to allow SDP to assign data"
+        "ownership correctly (TBD75).",
+        dtype_out="DevString",
+        doc_out="ASCII string that indicates status, for information purposes" "only",
     )
     @DebugIt()
     def sendTransientBuffer(self, argin):

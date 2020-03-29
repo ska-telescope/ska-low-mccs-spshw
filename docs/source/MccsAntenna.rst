@@ -1,5 +1,5 @@
-MCCS Subarray
-=============
+MCCS Antenna
+============
 
 .. toctree::
    :maxdepth: 2

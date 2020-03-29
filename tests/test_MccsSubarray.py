@@ -11,13 +11,7 @@
 """contains the tests for the MccsSubarray"""
 import pytest
 import tango
-from ska.base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
+from ska.base.control_model import AdminMode, ControlMode, HealthState, TestMode
 from ska.mccs import release
 
 # pylint: disable=invalid-name
@@ -81,6 +75,7 @@ class TestMccsSubarray:
             "MccsSubarray.configureScan() to indicate status, for "
             "information purposes only"
         )
+
     def test_sendTransientBuffer(self, tango_context):
         """ Test for sendTransientBuffer """
         segment_spec = []
@@ -117,4 +112,3 @@ class TestMccsSubarray:
     def test_stationBeamFQDNs(self, tango_context):
         """Test for stationBeamFQDNs attribute"""
         assert tango_context.device.stationBeamFQDNs is None
-

@@ -15,7 +15,6 @@ import pytest
 
 from tango import DevState
 
-# from ska.mccs import release
 from ska.base.control_model import LoggingLevel
 from ska.mccs import release
 
@@ -51,8 +50,6 @@ class TestMccsDevice(object):
         status = "The device is in UNKNOWN state."
         assert tango_context.device.Status() == status
 
-    #     def test_buildState(self, tango_context):
-    #         """Test for buildState"""
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
         info = release.get_release_info(tango_context.class_name)
@@ -90,10 +87,12 @@ class TestMccsDevice(object):
         """Test for ConstructDeviceProxyAddress"""
         assert tango_context.device.ConstructDeviceProxyAddress("") is None
 
-    #     def test_buildState(self, tango_context):
-    #         """Test for buildState"""
-    #         print(tango_context.device.buildState)
-    #         assert tango_context.device.buildState ==  (", ".join((release.name, release.version, release.description))) # noqa: E501
+    def test_buildState(self, tango_context):
+        """Test for buildState"""
+        print(tango_context.device.buildState)
+        assert tango_context.device.buildState == (
+            ", ".join((release.name, release.version, release.description))
+        )  # noqa: E501
 
     def test_loggingLevel(self, tango_context):
         """Test for loggingLevel"""

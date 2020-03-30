@@ -51,7 +51,7 @@ class TestMccsStation:
         assert tango_context.device.adminMode == AdminMode.ONLINE
         assert tango_context.device.healthState == HealthState.OK
         assert tango_context.device.controlMode == ControlMode.REMOTE
-        assert not tango_context.device.simulationMode
+        assert tango_context.device.simulationMode == SimulationMode.FALSE
         assert tango_context.device.testMode == TestMode.NONE
 
         # The following reads might not be allowed in this state once properly
@@ -65,7 +65,7 @@ class TestMccsStation:
         assert tango_context.device.dataDirectory == ""
         assert tango_context.device.tileFQDNs is None
         assert tango_context.device.beamFQDNs is None
-        assert tango_context.device.delayCentre == ()
+        assert list(tango_context.device.delayCentre) == [] 
         assert tango_context.device.calibrationCoefficients is None
 
     # overridden base class commands
@@ -114,7 +114,7 @@ class TestMccsStation:
         written.
 
         """
-        assert tango_context.device.delayCentre == ()
+        assert list(tango_context.device.delayCentre) == []
 
         # SETUP
         dummy_location = (-30.72113, 21.411128)

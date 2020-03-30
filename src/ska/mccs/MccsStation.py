@@ -14,7 +14,7 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 __all__ = ["MccsStation", "main"]
 
 # PyTango imports
-from tango import DebugIt
+# from tango import DebugIt # unused because no commands
 from tango.server import attribute
 from tango import AttrWriteType
 from tango import DevState
@@ -52,22 +52,22 @@ class MccsStation(SKAObsDevice):
         dtype="DevString",
         format="%s",
         polling_period=1000,
-        doc="The fully-qualified device name of the 'transient buffer' " + 
-            "TANGO device created by the Station"
+        doc="The fully-qualified device name of the 'transient buffer' "
+        "TANGO device created by the Station"
     )
 
     isCalibrated = attribute(
         dtype="DevBoolean",
         polling_period=1000,
-        doc="Defined whether the calibration cycle was successful " +
-            "(converged, good phase centres)",
+        doc="Defined whether the calibration cycle was successful "
+        "(converged, good phase centres)",
     )
 
     isConfigured = attribute(
         dtype="DevBoolean",
         polling_period=1000,
-        doc="True when the Station is configured, False when the Station " + 
-            "is unconfigured or in the process of reconfiguring.",
+        doc="True when the Station is configured, False when the Station "
+        "is unconfigured or in the process of reconfiguring.",
     )
 
     calibrationJobId = attribute(
@@ -96,8 +96,8 @@ class MccsStation(SKAObsDevice):
         max_dim_x=16,
         format="%s",
         polling_period=1000,
-        doc="Array of fully-qualified device names of the Tile devices that " +
-            "are associated with the Station",
+        doc="Array of fully-qualified device names of the Tile devices that "
+        "are associated with the Station",
     )
 
     beamFQDNs = attribute(
@@ -105,8 +105,8 @@ class MccsStation(SKAObsDevice):
         max_dim_x=8,
         format="%s",
         polling_period=1000,
-        doc="Array of full-qualified device names for the Station Beams " +
-            "associated with this Station",
+        doc="Array of full-qualified device names for the Station Beams "
+        "associated with this Station",
     )
 
     delayCentre = attribute(
@@ -115,7 +115,7 @@ class MccsStation(SKAObsDevice):
         max_dim_x=2,
         polling_period=1000,
         doc="""WGS84 position of the delay centre of the Station.
-        todo: WGS84is a datum. What is the coordinate system?: Latitude and
+        :todo: WGS84is a datum. What is the coordinate system?: Latitude and
         longitude? Or is it SUTM50 eastings and northings? Either way, do we
         need to allow for elevation too?""",
     )

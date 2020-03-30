@@ -8,4 +8,5 @@ API
    MccsMaster
    MccsSubarray
    MccsStation
+   MccsTile
    MccsAntenna

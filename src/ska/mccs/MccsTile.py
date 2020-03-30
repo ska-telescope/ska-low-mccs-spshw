@@ -17,7 +17,6 @@ __all__ = ["MccsTile", "main"]
 from tango import DebugIt
 from tango.server import attribute, command
 from tango import DevState
-from tango import AttrWriteType
 
 # Additional import
 
@@ -36,145 +35,6 @@ class MccsTile(MccsGroupDevice):
     # -----------------
     # Device Properties
     # -----------------
-
-    # ----------
-    # Attributes
-    # ----------
-
-    tileId = attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        doc="The global tile identifier",
-    )
-
-    logicalTpmId = attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        doc="Logical tile identifier within a station",
-    )
-
-    subarrayId = attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        doc="The identifier of the associated subarray.",
-    )
-
-    ipAddress = attribute(
-        dtype="DevString",
-        access=AttrWriteType.READ_WRITE,
-        doc="LMC address (and global identifier) of Tile",
-    )
-
-    lmcIp = attribute(
-        dtype="DevString",
-        access=AttrWriteType.READ_WRITE,
-        doc="LMC IP address to (and from) which LMC data will flow",
-    )
-
-    lmcPort = attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        doc="LMC port to (and from) which LMC data will flow",
-    )
-
-    cspDestinationIp = attribute(
-        dtype="DevString",
-        access=AttrWriteType.READ_WRITE,
-        doc="""CSP ingest node IP address for station beam (use if Tile is
-        last one in the beamforming chain)""",
-    )
-
-    cspDestinationMac = attribute(
-        dtype="DevString",
-        access=AttrWriteType.READ_WRITE,
-        doc="""CSP ingest node MAC address for station beam (use if Tile is
-        last one in the beamforming chain)""",
-    )
-
-    cspDestinationPort = attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        doc="""CSP ingest node port address for station beam (use if Tile is
-        last one in the beamforming chain)""",
-    )
-
-    firmwareName = attribute(
-        dtype="DevString",
-        access=AttrWriteType.READ_WRITE,
-        doc="Name and identifier of currently running firmware",
-    )
-
-    firmwareVersion = attribute(
-        dtype="DevString",
-        access=AttrWriteType.READ_WRITE,
-        doc="Version of currently running firmware",
-    )
-
-    voltage = attribute(dtype="DevDouble", access=AttrWriteType.READ_WRITE)
-
-    current = attribute(dtype="DevDouble", access=AttrWriteType.READ_WRITE)
-
-    isProgrammed = attribute(
-        dtype="DevBoolean",
-        doc="Return True if the all FPGAs are programmed, False otherwise",
-    )
-
-    board_temperature = attribute(
-        dtype="DevDouble", doc="The board temperature"
-    )  # force warp
-
-    fpga1_temperature = attribute(dtype="DevDouble")
-
-    fpga2_temperature = attribute(dtype="DevDouble")
-
-    stationId = attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        doc="The identifier of the associated station.",
-    )
-
-    fpga1_time = attribute(dtype="DevDouble", access=AttrWriteType.READ_WRITE)
-
-    fpga2_time = attribute(dtype="DevDouble", access=AttrWriteType.READ_WRITE)
-
-    antennaIds = attribute(
-        dtype=("DevLong",),
-        access=AttrWriteType.READ_WRITE,
-        max_dim_x=8,
-        label="Antenna ID's",
-        doc="Array holding the logical ID`s of the antenna associated with "
-        "the Tile device",
-    )
-
-    fortyGbDestinationIps = attribute(
-        dtype=("DevString",),
-        max_dim_x=256,
-        doc="""40Gb destination IP for all 40Gb ports on the Tile (source
-        automatically set during initialization)""",
-    )
-
-    fortyGbDestinationMacs = attribute(
-        dtype=("DevString",),
-        max_dim_x=256,
-        doc="""40Gb destination MACs for all 40Gb ports on the Tile (source
-        automatically set during initialization)""",
-    )
-
-    fortyGbDestinationPorts = attribute(
-        dtype=("DevLong",),
-        access=AttrWriteType.READ_WRITE,
-        max_dim_x=256,
-        doc="""40Gb destination ports for all 40Gb ports on the Tile (source
-        automatically set during initialization"")""",
-    )
-
-    adcPower = attribute(
-        dtype=("DevDouble",),
-        access=AttrWriteType.READ_WRITE,
-        max_dim_x=32,
-        doc="Return the RMS power of every ADC signal (so a TPM processes "
-        "16 antennas, this should return 32 RMS values)",
-    )
 
     # ---------------
     # General methods
@@ -196,7 +56,21 @@ class MccsTile(MccsGroupDevice):
         self._csp_destination_ip = ""
         self._csp_destination_mac = ""
         self._csp_destination_port = 0
-        self._forty_g_core_list = []
+        self._firmware_name = ""
+        self._firmware_version = ""
+        self._voltage = 0.0
+        self._current = 0.0
+        self._board_temperature = 0.0
+        self._fpga1_temperature = 0.0
+        self._fpga2_temperature = 0.0
+        self._fpga1_time = 0.0
+        self._fpga2_time = 0.0
+        self._antenna_ids = []
+        self._forty_gb_destination_ips = []
+        self._forty_gb_destination_macs = []
+        self._forty_gb_destination_ports = []
+        self._forty_gb_core_list = []
+        self._adc_power = []
         self.set_state(DevState.ON)
         print("init_device complete")
 
@@ -211,229 +85,249 @@ class MccsTile(MccsGroupDevice):
         destructor and by the device Init command.
         """
 
-    # ------------------
-    # Attributes methods
-    # ------------------
+    # ----------
+    # Attributes
+    # ----------
 
-    def read_tileId(self):
-
+    @attribute(dtype="DevLong", doc="The global tile identifier")
+    def tileId(self):
         """Return the tileId attribute."""
         return self._tile_id
 
-    def write_tileId(self, value):
-
+    @tileId.write
+    def tileId(self, value):
         """Set the tileId attribute."""
         self._tile_id = value
 
-    def read_logicalTpmId(self):
-
+    @attribute(dtype="DevLong", doc="Logical tile identifier within a station")
+    def logicalTpmId(self):
         """Return the logicalTpmId attribute."""
         return self._logical_tpm_id
 
-    def write_logicalTpmId(self, value):
-
+    @logicalTpmId.write
+    def logicalTpmId(self, value):
         """Set the logicalTpmId attribute."""
         self._logical_tpm_id = value
 
-    def read_subarrayId(self):
-
+    @attribute(dtype="DevLong", doc="The identifier of the associated subarray.")
+    def subarrayId(self):
         """Return the subarrayId attribute."""
         return self._subarray_id
 
-    def write_subarrayId(self, value):
-
+    @subarrayId.write
+    def subarrayId(self, value):
         """Set the subarrayId attribute."""
         self._subarray_id = value
 
-    def read_ipAddress(self):
-
+    @attribute(dtype="DevString", doc="LMC address (and global identifier) of Tile")
+    def ipAddress(self):
         """Return the ipAddress attribute."""
         return self._ip_address
 
-    def write_ipAddress(self, value):
-
+    @ipAddress.write
+    def ipAddress(self, value):
         """Set the ipAddress attribute."""
         self._ip_address = value
 
-    def read_lmcIp(self):
-
+    @attribute(
+        dtype="DevString", doc="LMC IP address to (and from) which LMC data will flow"
+    )
+    def lmcIp(self):
         """Return the lmcIp attribute."""
         return self._lmc_ip
 
-    def write_lmcIp(self, value):
-
+    @lmcIp.write
+    def lmcIp(self, value):
         """Set the lmcIp attribute."""
         self._lmc_ip = value
 
-    def read_lmcPort(self):
-
+    @attribute(dtype="DevLong", doc="LMC port to (and from) which LMC data will flow")
+    def lmcPort(self):
         """Return the lmcPort attribute."""
         return self._lmc_port
 
-    def write_lmcPort(self, value):
-
+    @lmcPort.write
+    def lmcPort(self, value):
         """Set the lmcPort attribute."""
         self._lmc_port = value
 
-    def read_cspDestinationIp(self):
-
+    @attribute(
+        dtype="DevString",
+        doc="""CSP ingest node IP address for station beam (use if Tile is
+        last one in the beamforming chain)""",
+    )
+    def cspDestinationIp(self):
         """Return the cspDestinationIp attribute."""
         return self._csp_destination_ip
 
-    def write_cspDestinationIp(self, value):
-
+    @cspDestinationIp.write
+    def cspDestinationIp(self, value):
         """Set the cspDestinationIp attribute."""
         self._csp_destination_ip = value
 
-    def read_cspDestinationMac(self):
-
+    @attribute(
+        dtype="DevString",
+        doc="""CSP ingest node MAC address for station beam (use if Tile is
+        last one in the beamforming chain)""",
+    )
+    def cspDestinationMac(self):
         """Return the cspDestinationMac attribute."""
         return self._csp_destination_mac
 
-    def write_cspDestinationMac(self, value):
-
+    @cspDestinationMac.write
+    def cspDestinationMac(self, value):
         """Set the cspDestinationMac attribute."""
         self._csp_destination_mac = value
 
-    def read_cspDestinationPort(self):
-
+    @attribute(
+        dtype="DevLong",
+        doc="""CSP ingest node port address for station beam (use if Tile is
+        last one in the beamforming chain)""",
+    )
+    def cspDestinationPort(self):
         """Return the cspDestinationPort attribute."""
         return self._csp_destination_port
 
-    def write_cspDestinationPort(self, value):
-
+    @cspDestinationPort.write
+    def cspDestinationPort(self, value):
         """Set the cspDestinationPort attribute."""
         self._csp_destination_port = value
 
-    def read_firmwareName(self):
-
+    @attribute(
+        dtype="DevString", doc="Name and identifier of currently running firmware"
+    )
+    def firmwareName(self):
         """Return the firmwareName attribute."""
-        return ""
+        return self._firmware_name
 
-    def write_firmwareName(self, value):
-
+    @firmwareName.write
+    def firmwareName(self, value):
         """Set the firmwareName attribute."""
-        pass
+        self._firmware_name = value
 
-    def read_firmwareVersion(self):
-
+    @attribute(dtype="DevString", doc="Version of currently running firmware")
+    def firmwareVersion(self):
         """Return the firmwareVersion attribute."""
-        return ""
+        return self._firmware_version
 
-    def write_firmwareVersion(self, value):
-
+    @firmwareVersion.write
+    def firmwareVersion(self, value):
         """Set the firmwareVersion attribute."""
-        pass
+        self._firmware_version = value
 
-    def read_voltage(self):
-
+    @attribute(dtype="DevDouble")
+    def voltage(self):
         """Return the voltage attribute."""
-        return 0.0
+        return self._voltage
 
-    def write_voltage(self, value):
-
-        """Set the voltage attribute."""
-        pass
-
-    def read_current(self):
-
+    @attribute(dtype="DevDouble")
+    def current(self):
         """Return the current attribute."""
-        return 0.0
+        return self._current
 
-    def write_current(self, value):
-
-        """Set the current attribute."""
-        pass
-
-    def read_isProgrammed(self):
-
+    @attribute(
+        dtype="DevBoolean",
+        doc="Return True if the all FPGAs are programmed, False otherwise",
+    )
+    def isProgrammed(self):
         """Return the isProgrammed attribute."""
         return self._programmed
 
-    def read_board_temperature(self):
-
+    @attribute(dtype="DevDouble", doc="The board temperature")  # force warp
+    def board_temperature(self):
         """Return the board_temperature attribute."""
-        return 0.0
+        return self._board_temperature
 
-    def read_fpga1_temperature(self):
-
+    @attribute(dtype="DevDouble")
+    def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        return 0.0
+        return self._fpga1_temperature
 
-    def read_fpga2_temperature(self):
-
+    @attribute(dtype="DevDouble")
+    def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        return 0.0
+        return self._fpga2_temperature
 
-    def read_stationId(self):
-
+    @attribute(dtype="DevLong", doc="The identifier of the associated station.")
+    def stationId(self):
         """Return the stationId attribute."""
         return self._station_id
 
-    def write_stationId(self, value):
-
+    @stationId.write
+    def stationId(self, value):
         """Set the stationId attribute."""
         self._station_id = value
 
-    def read_fpga1_time(self):
-
+    @attribute(dtype="DevDouble")
+    def fpga1_time(self):
         """Return the fpga1_time attribute."""
-        return 0.0
+        return self._fpga1_time
 
-    def write_fpga1_time(self, value):
-
+    @fpga1_time.write
+    def fpga1_time(self, value):
         """Set the fpga1_time attribute."""
-        pass
+        self._fpga1_time = value
 
-    def read_fpga2_time(self):
-
+    @attribute(dtype="DevDouble")
+    def fpga2_time(self):
         """Return the fpga2_time attribute."""
-        return 0.0
+        return self._fpga2_time
 
-    def write_fpga2_time(self, value):
-
+    @fpga2_time.write
+    def fpga2_time(self, value):
         """Set the fpga2_time attribute."""
-        pass
+        self._fpga2_time = value
 
-    def read_antennaIds(self):
-
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=8,
+        label="Antenna ID's",
+        doc="Array holding the logical ID`s of the antenna associated with "
+        "the Tile device",
+    )
+    def antennaIds(self):
         """Return the antennaIds attribute."""
-        return (0,)
+        return self._antenna_ids
 
-    def write_antennaIds(self, value):
-
-        """Set the antennaIds attribute."""
-        pass
-
-    def read_fortyGbDestinationIps(self):
-
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=256,
+        doc="""40Gb destination IP for all 40Gb ports on the Tile (source
+        automatically set during initialization)""",
+    )
+    def fortyGbDestinationIps(self):
         """Return the fortyGbDestinationIps attribute."""
-        return ("",)
+        return self._forty_gb_destination_ips
 
-    def read_fortyGbDestinationMacs(self):
-
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=256,
+        doc="""40Gb destination MACs for all 40Gb ports on the Tile (source
+        automatically set during initialization)""",
+    )
+    def fortyGbDestinationMacs(self):
         """Return the fortyGbDestinationMacs attribute."""
-        return ("",)
+        return self._forty_gb_destination_macs
 
-    def read_fortyGbDestinationPorts(self):
-
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=256,
+        doc="""40Gb destination ports for all 40Gb ports on the Tile (source
+        automatically set during initialization"")""",
+    )
+    def fortyGbDestinationPorts(self):
         """Return the fortyGbDestinationPorts attribute."""
-        return (0,)
+        return self._forty_gb_destination_ports
 
-    def write_fortyGbDestinationPorts(self, value):
-
-        """Set the fortyGbDestinationPorts attribute."""
-        pass
-
-    def read_adcPower(self):
-
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=32,
+        doc="Return the RMS power of every ADC signal (so a TPM processes "
+        "16 antennas, this should return 32 RMS values)",
+    )
+    def adcPower(self):
         """Return the adcPower attribute."""
-        return (0.0,)
-
-    def write_adcPower(self, value):
-
-        """Set the adcPower attribute."""
-        pass
+        return self._adc_power
 
     # --------
     # Commands
@@ -523,7 +417,7 @@ class MccsTile(MccsGroupDevice):
         """
         pass
 
-    @command(dtype_out="DevEnum")
+    @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetRegisterList(self):
 
@@ -533,11 +427,11 @@ class MccsTile(MccsGroupDevice):
 
         :return:None
         """
-        pass
+        return []
 
     @command(
         dtype_in="DevVarLongArray",
-        doc_in="register_name, n, offset, devic",
+        doc_in="register_name, n, offset, device",
         dtype_out="DevVarLongArray",
         doc_out="values",
     )
@@ -551,15 +445,19 @@ class MccsTile(MccsGroupDevice):
         device is the FPGA to read from (from Device enumeration).
         Returns a list of values (unsigned 32-bit
 
+        :param argin: [0] = register
+                      [1] = nb_read
+                      [2] = offset
+                      [3] = fpga device (0,1)
+
         :return: a list of register values
         :rtype: DevVarUlongArray
         """
-        pass
+        if len(argin) < 4:
+            raise ValueError
+        return []
 
-    @command(
-        dtype_in="DevVarLongArray",
-        doc_in="register_name, values, offset, device",  # force wrap
-    )
+    @command(dtype_in="DevVarLongArray", doc_in="register_name, values, offset, device")
     @DebugIt()
     def WriteRegister(self, argin):
 
@@ -627,14 +525,14 @@ class MccsTile(MccsGroupDevice):
         """
         if len(argin) < 7:
             raise ValueError
-        self._forty_g_core_list.append(
+        self._forty_gb_core_list.append(
             {
                 "core_id": argin[0],
                 "src_mac": argin[1],
                 "src_ip": argin[2],
-                "dst_mac": argin[3],
-                "dst_ip": argin[4],
-                "src_port": argin[5],
+                "src_port": argin[3],
+                "dst_mac": argin[4],
+                "dst_ip": argin[5],
                 "dst_port": argin[6],
             }
         )
@@ -656,7 +554,7 @@ class MccsTile(MccsGroupDevice):
                  src_mac, src_ip, src_port, dest_mac, dest_ip, dest_port
         :rtype: DevVarUlongArray
         """
-        for item in self._forty_g_core_list:
+        for item in self._forty_gb_core_list:
             if argin == item["core_id"]:
                 return [
                     item["src_mac"],
@@ -668,10 +566,7 @@ class MccsTile(MccsGroupDevice):
                 ]
         raise ValueError("Invalid core id specified")
 
-    @command(
-        dtype_in="DevVarLongArray",
-        doc_in="mode, payload_length, src_ip, lmc_mac",  # force wrap
-    )  # force wrap
+    @command(dtype_in="DevVarLongArray", doc_in="mode, payload_length, src_ip, lmc_mac")
     @DebugIt()
     def SetLMCDownload(self, argin):
 
@@ -719,8 +614,7 @@ class MccsTile(MccsGroupDevice):
         pass
 
     @command(
-        dtype_in="DevVarLongArray",
-        doc_in="n_of_tiles, first_tile=False, start=False",  # force wrap
+        dtype_in="DevVarLongArray", doc_in="n_of_tiles, first_tile=False, start=False"
     )
     @DebugIt()
     def ConfigureStationBeamformer(self, argin):
@@ -735,7 +629,7 @@ class MccsTile(MccsGroupDevice):
         """
         pass
 
-    @command(dtype_in="DevEncoded", doc_in="antenna, calibration_coefficients")
+    @command(dtype_in="DevVarDoubleArray", doc_in="antenna, calibration_coefficients")
     @DebugIt()
     def LoadCalibrationCoefficients(self, argin):
 

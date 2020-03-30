@@ -17,6 +17,7 @@ __all__ = ["MccsAntenna", "main"]
 # tango imports
 from tango import DebugIt
 from tango.server import attribute, command
+from tango import DevState
 
 # Additional import
 from ska.base import SKABaseDevice
@@ -37,7 +38,7 @@ class MccsAntenna(SKABaseDevice):
     # ----------
 
     antennaId = attribute(
-        dtype="int", label="AntennaID", doc="Global antenna identifier",
+        dtype="int", label="AntennaID", doc="Global antenna identifier"
     )
 
     logicalTpmAntenna_id = attribute(
@@ -58,25 +59,21 @@ class MccsAntenna(SKABaseDevice):
         doc="Global Tile ID to which the atenna is connected",
     )
 
-    apiuId = attribute(dtype="double", label="apiuId",)
+    apiuId = attribute(dtype="double", label="apiuId")
 
-    gain = attribute(
-        dtype="float", label="gain", doc="The gain set for the antenna",
-    )  # force wrap
+    gain = attribute(dtype="float", label="gain", doc="The gain set for the antenna")
 
     rms = attribute(
-        dtype="float",
-        label="rms",
-        doc="The measured RMS of the antenna (monitored)",  # force wrap
+        dtype="float", label="rms", doc="The measured RMS of the antenna (monitored)"
     )
 
-    voltage = attribute(dtype="float", label="voltage", unit="volts",)
+    voltage = attribute(dtype="float", label="voltage", unit="volts")
 
-    temperature = attribute(dtype="float", label="temperature", unit="DegC",)
+    temperature = attribute(dtype="float", label="temperature", unit="DegC")
 
-    xPolarisationFaulty = attribute(dtype="bool", label="xPolarisationFaulty",)
+    xPolarisationFaulty = attribute(dtype="bool", label="xPolarisationFaulty")
 
-    yPolarisationFaulty = attribute(dtype="bool", label="yPolarisationFaulty",)
+    yPolarisationFaulty = attribute(dtype="bool", label="yPolarisationFaulty")
 
     fieldNodeLongitude = attribute(
         dtype="float",
@@ -92,10 +89,7 @@ class MccsAntenna(SKABaseDevice):
     )
 
     altitude = attribute(
-        dtype="float",
-        label="altitude",
-        unit="meters",
-        doc="Antenna altitude in meters",
+        dtype="float", label="altitude", unit="meters", doc="Antenna altitude in meters"
     )
 
     xDisplacement = attribute(
@@ -112,9 +106,7 @@ class MccsAntenna(SKABaseDevice):
         doc="Vertical displacement in meters from field centre",
     )
 
-    timestampOfLastSpectrum = attribute(
-        dtype="str", label="timestampOfLastSpectrum",
-    )  # force wrap
+    timestampOfLastSpectrum = attribute(dtype="str", label="timestampOfLastSpectrum")
 
     logicalAntennaId = attribute(
         dtype="int",
@@ -123,11 +115,11 @@ class MccsAntenna(SKABaseDevice):
     )
 
     xPolarisationScalingFactor = attribute(
-        dtype=("int",), max_dim_x=100, label="xPolarisationScalingFactor",
+        dtype=("int",), max_dim_x=100, label="xPolarisationScalingFactor"
     )
 
     yPolarisationScalingFactor = attribute(
-        dtype=("int",), max_dim_x=100, label="yPolarisationScalingFactor",
+        dtype=("int",), max_dim_x=100, label="yPolarisationScalingFactor"
     )
 
     calibrationCoefficient = attribute(
@@ -140,14 +132,14 @@ class MccsAntenna(SKABaseDevice):
     )
 
     pointingCoefficient = attribute(
-        dtype=("float",), max_dim_x=100, doc="This is presented as a vector.",
+        dtype=("float",), max_dim_x=100, doc="This is presented as a vector."
     )
 
-    spectrumX = attribute(dtype=("float",), max_dim_x=100, label="spectrumX",)
+    spectrumX = attribute(dtype=("float",), max_dim_x=100, label="spectrumX")
 
-    spectrumY = attribute(dtype=("float",), max_dim_x=100, label="spectrumY",)
+    spectrumY = attribute(dtype=("float",), max_dim_x=100, label="spectrumY")
 
-    position = attribute(dtype=("float",), max_dim_x=100, label="position",)
+    position = attribute(dtype=("float",), max_dim_x=100, label="position")
 
     delays = attribute(
         dtype=("float",),
@@ -179,6 +171,7 @@ class MccsAntenna(SKABaseDevice):
 
     def init_device(self):
         SKABaseDevice.init_device(self)
+        self.set_state(DevState.ON)
 
     def always_executed_hook(self):
 

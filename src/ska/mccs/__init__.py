@@ -1,11 +1,5 @@
 """ Mccs device module """
-__all__ = [
-    "MccsMaster",
-    "MccsSubarray",
-    "MccsStation",
-    "MccsTile",
-    "MccsAntenna",
-]  # force wrap
+__all__ = ["MccsMaster", "MccsSubarray", "MccsStation", "MccsTile", "MccsAntenna"]
 
 from .MccsDevice import MccsDevice  # noqa: F401
 from .MccsGroupDevice import MccsGroupDevice  # noqa: F401

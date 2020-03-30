@@ -70,10 +70,7 @@ class TestMccsMaster:
     @pytest.mark.skip(reason="have to work out how this works")
     def test_isCapabilityAchievable(self, tango_context):
         """Test for isCapabilityAchievable"""
-        assert (
-            tango_context.device.isCapabilityAchievable([[0], [""]])
-            is not False  # force wrap
-        )  # force wrap
+        assert tango_context.device.isCapabilityAchievable([[0], [""]]) is not False
 
     def test_Reset(self, tango_context):
         """Test for Reset"""

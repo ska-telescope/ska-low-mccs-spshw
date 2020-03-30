@@ -7,17 +7,11 @@ import os
 
 
 # Do we need this
-import sphinx_rtd_theme
+# import sphinx_rtd_theme
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
-autodoc_mock_imports = [
-    "tango",
-    "ska_logging",
-    "ska.base",
-    "PyTango",
-    "PyTango.server",
-]  # force wrap
+autodoc_mock_imports = ["tango", "ska_logging", "ska.base", "PyTango", "PyTango.server"]
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "src")))
 

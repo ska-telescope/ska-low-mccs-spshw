@@ -65,7 +65,7 @@ class TestMccsStation:
         assert tango_context.device.dataDirectory == ""
         assert tango_context.device.tileFQDNs is None
         assert tango_context.device.beamFQDNs is None
-        assert list(tango_context.device.delayCentre) == [] 
+        assert list(tango_context.device.delayCentre) == []
         assert tango_context.device.calibrationCoefficients is None
 
     # overridden base class commands

@@ -23,6 +23,7 @@ from tango import DevState
 from ska.base import SKAObsDevice
 from . import release
 
+
 class MccsStation(SKAObsDevice):
     """
     MccsStation is the Tango device class for the MCCS Station prototype.

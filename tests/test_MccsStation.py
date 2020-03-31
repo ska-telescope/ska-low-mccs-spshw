@@ -8,7 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""contains the tests for the MccsSubarray"""
+"""contains the tests for the MccsStation"""
 import time
 import pytest
 import tango

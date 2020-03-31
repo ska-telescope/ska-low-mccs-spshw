@@ -33,6 +33,7 @@ class MccsStation(SKAObsDevice):
     - Device Property
     """
 
+    # -----------------
     # Device Properties
     # -----------------
 

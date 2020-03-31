@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #
 """ Standard sphinx config file """
-import sys
-import os
+# required for decorator property resolution, don't modify sys.path
+import ska.mccs  # noqa =F401
 
 
 # Do we need this
@@ -12,8 +12,6 @@ import os
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
 autodoc_mock_imports = ["tango", "ska_logging", "ska.base", "PyTango", "PyTango.server"]
-
-sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "src")))
 
 
 def setup(app):

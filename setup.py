@@ -38,6 +38,7 @@ setuptools.setup(
             "MccsMaster=ska.mccs.MccsMaster:main",
             "MccsSubarray=ska.mccs.MccsSubarray:main",
             "MccsStation=ska.mccs.MccsStation:main",
+            "MccsStationBeam=ska.mccs.MccsStationBeam:main",
         ]
     },
     zip_safe=False)

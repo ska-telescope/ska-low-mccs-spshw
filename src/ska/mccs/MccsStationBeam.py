@@ -28,7 +28,7 @@ from tango import AttrWriteType
 
 # Additional imports
 from ska.base import SKAObsDevice
-from . import release
+import ska.mccs.release as release
 
 
 class MccsStationBeam(SKAObsDevice):

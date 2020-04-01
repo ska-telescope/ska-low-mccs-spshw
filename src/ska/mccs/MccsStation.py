@@ -21,7 +21,7 @@ from tango import DevState
 
 # additional imports
 from ska.base import SKAObsDevice
-from . import release
+import ska.mccs.release as release
 
 
 class MccsStation(SKAObsDevice):

@@ -24,8 +24,8 @@ from tango import DevState
 
 # Additional import
 from ska.base import SKASubarray
-
-from . import release
+ 
+import ska.mccs.release as release
 
 
 class MccsSubarray(SKASubarray):

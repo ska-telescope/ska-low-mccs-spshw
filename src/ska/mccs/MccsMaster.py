@@ -26,7 +26,7 @@ from ska.base import SKAMaster
 
 # from ska.base.control_model import (AdminMode, ControlMode, HealthState,
 #                                    SimulationMode, TestMode)
-from . import release
+import ska.mccs.release as release
 
 
 class MccsMaster(SKAMaster):

@@ -21,7 +21,7 @@ from tango.server import attribute, command
 from ska.base import SKABaseDevice
 
 # local imports
-from . import release
+import ska.mccs.release as release
 
 
 class MccsDevice(SKABaseDevice):

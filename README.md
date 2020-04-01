@@ -13,8 +13,13 @@ How to use
 Full details of how to deploy this prototype can be found in the documentation. Briefly:
 
 1. To set up your environment, follow the instructions on the [Tango Development Environment set up](https://developer.skatelescope.org/en/latest/tools/tango-devenv-setup.html "Tango Development Environment set up") page.
-2. Clone this repo
-3. Verify your setup::
+2. Set up your itango docker container to mount your host working directory. This will allow you to launch locally hosted code within the itango container. To do this, edit `/usr/src/ska-docker/docker-compose/itango.yml` and add the following lines under the itango service definition:
+```yaml
+    volumes:
+      - ${HOME}:/hosthome:rw
+```
+3. Clone this repo
+4. Verify your setup::
 ```bash
 $ cd /usr/src/ska-docker/docker-compose
 $ make start itango #not needed if it already shows in "make status"

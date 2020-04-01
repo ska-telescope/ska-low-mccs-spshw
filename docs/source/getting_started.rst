@@ -1,8 +1,17 @@
 Getting started
 ===============
 1. To set up your environment, follow the instructions on the `Tango Development Environment set up`_ page.
-2. Clone our `GitLab repo`_.
-3. Verify your setup::
+2. Set up your itango docker container to mount your host working directory. This will allow you to launch locally hosted code within the itango container. To do this, edit ``/usr/src/ska-docker/docker-compose/itango.yml`` and add the following lines under the itango service definition:
+
+.. code-block:: yaml
+
+    volumes:
+      - ${HOME}:/hosthome:rw
+
+3. Clone our `GitLab repo`_.
+4. Verify your setup::
+
+.. code-block:: shell-session
 
     $ cd /usr/src/ska-docker/docker-compose
     $ make start itango #not needed if it already shows in "make status"

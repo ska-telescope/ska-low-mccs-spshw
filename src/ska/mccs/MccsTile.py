@@ -42,7 +42,7 @@ class MccsTile(MccsGroupDevice):
 
     def init_device(self):
         """Initialises the attributes and properties of the Mccs."""
-        MccsGroupDevice.init_device(self)
+        super().init_device()
 
         self.set_state(DevState.INIT)
         self._programmed = False
@@ -72,7 +72,7 @@ class MccsTile(MccsGroupDevice):
         self._forty_gb_core_list = []
         self._adc_power = []
         self.set_state(DevState.ON)
-        print("init_device complete")
+        print("MccsTile init_device complete")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -343,7 +343,7 @@ class MccsTile(MccsGroupDevice):
         to start configuring the signal processing functions of the firmware,
         such as channelisation and beamforming)
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -358,7 +358,7 @@ class MccsTile(MccsGroupDevice):
         :param argin: Initialise True = initialise immediately after connection
         :type argin: DevBoolean
 
-        :return:None
+        :return: None
         """
         if argin and self._programmed:
             self.Initialise()
@@ -370,24 +370,23 @@ class MccsTile(MccsGroupDevice):
         """
         Disconnects from the board, the internal state needs to be reset
 
-        :return:None
+        :return: None
         """
         pass
 
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
     def DownloadFirmware(self, argin):
-
         """
         Downloads the firmware contained in bitfile to all FPGAs on the board.
         This should also updatethe internal register mapping, such that
         registers become available for use. bitfile can either be the ?design?
         name returned from get_firmware_list(), or a path to a file
 
-        :param argin: 'DevString'
-        bitfile location
+        :param argin: bitfile location
+        :type argin: 'DevString'
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -402,7 +401,7 @@ class MccsTile(MccsGroupDevice):
 
         :param argin: 'DevString'
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -413,7 +412,7 @@ class MccsTile(MccsGroupDevice):
         """
         Block until a PPS edge is detected, then return from function
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -425,7 +424,7 @@ class MccsTile(MccsGroupDevice):
         Return a list containing description of the exposed firmware (and CPLD)
         registers
 
-        :return:None
+        :return: None
         """
         return []
 
@@ -468,7 +467,7 @@ class MccsTile(MccsGroupDevice):
         to write to and device is the FPGA to write to (from Device
         enumeration).
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -497,7 +496,7 @@ class MccsTile(MccsGroupDevice):
 
         :param argin: 'DevVarULongArray'
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -521,7 +520,7 @@ class MccsTile(MccsGroupDevice):
                       [6] = dst_port
         :type argin: DevVarULongArray
 
-        :return:None
+        :return: None
         """
         if len(argin) < 7:
             raise ValueError
@@ -578,7 +577,7 @@ class MccsTile(MccsGroupDevice):
         Set 40g lane source IP (required only for 40G mode)
         lmc_mac: Set destination MAC for 40G lane (required only for 40G mode)
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -591,7 +590,7 @@ class MccsTile(MccsGroupDevice):
         truncation is a N x M array, where N is the number of input channels
         and M is the number of frequency channel
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -609,7 +608,7 @@ class MccsTile(MccsGroupDevice):
         beam_index: beam used for this region with range [0:8) Total number of
         channels must be <= 384
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -625,7 +624,7 @@ class MccsTile(MccsGroupDevice):
         first_tile specifies whether the tile is the first one in the station,
         and start, when True, starts the beamformer
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -644,14 +643,14 @@ class MccsTile(MccsGroupDevice):
         specifying the channels at the beamformer output, i.e. considering only
         those channels actually processed and beam assignments. The
         polarization index ranges from 0 to 3.
-            0: X polarization direct element
-            1: X->Y polarization cross element
-            2: Y->X polarization cross element
-            3: Y polarization direct element
+        0: X polarization direct element
+        1: X->Y polarization cross element
+        2: Y->X polarization cross element
+        3: Y polarization direct element
         The calibration coefficients may include any rotation matrix (e.g. the
         parallactic angle), but do not include the geometric delay
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -667,7 +666,7 @@ class MccsTile(MccsGroupDevice):
         X polarization to the Y polarization. The rotation is applied after
         regular calibration.
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -679,7 +678,7 @@ class MccsTile(MccsGroupDevice):
         tapering_coeffs is a vector contains a value for each antenna the TPM
         processes. Default is 1.
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -690,7 +689,7 @@ class MccsTile(MccsGroupDevice):
         """
         Load the calibration coefficients at the specified time delay
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -703,7 +702,7 @@ class MccsTile(MccsGroupDevice):
         The delay_array specifies the delay and delay rate for each antenna.
         beam_index specifies which beam is desired (range 0-7)
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -714,7 +713,7 @@ class MccsTile(MccsGroupDevice):
         """
         Loads the pointing delays at the specified time delay
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -725,7 +724,7 @@ class MccsTile(MccsGroupDevice):
         """
         Start the beamformer at the specified time delay
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -736,7 +735,7 @@ class MccsTile(MccsGroupDevice):
         """
         Stop the beamformer
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -748,7 +747,7 @@ class MccsTile(MccsGroupDevice):
         Configure the transmission of integrated channel data with the
         provided integration time
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -760,7 +759,7 @@ class MccsTile(MccsGroupDevice):
         Configure the transmission of integrated beam data with the provided
         integration time
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -771,7 +770,7 @@ class MccsTile(MccsGroupDevice):
         """
         Transmit a snapshot containing raw antenna data
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -783,7 +782,7 @@ class MccsTile(MccsGroupDevice):
         Transmit a snapshot containing channelized data totalling
         number_of_samples spectra.
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -797,7 +796,7 @@ class MccsTile(MccsGroupDevice):
         :param argin: Channel from which data will be sent
         :type argin: DevLong
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -808,7 +807,7 @@ class MccsTile(MccsGroupDevice):
         """
         Transmit a snapshot containing beamformed data
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -819,7 +818,7 @@ class MccsTile(MccsGroupDevice):
         """
         Stop data transmission from board
 
-        :return:None
+        :return: None
         """
         pass
 

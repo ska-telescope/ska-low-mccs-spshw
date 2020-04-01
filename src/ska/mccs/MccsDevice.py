@@ -43,7 +43,7 @@ class MccsDevice(SKABaseDevice):
 
     def init_device(self):
         """Initialises the attributes and properties of the MccsDevice."""
-        SKABaseDevice.init_device(self)
+        super().init_device()
         self._is_hardware_device = False
         self._diag_mode = False
         self._called_undefined_device = False
@@ -165,7 +165,7 @@ class MccsDevice(SKABaseDevice):
     def ExceptionCallback(self):
         """
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -174,7 +174,7 @@ class MccsDevice(SKABaseDevice):
     def DefaultAlarmOnCallback(self):
         """
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -183,7 +183,7 @@ class MccsDevice(SKABaseDevice):
     def DefaultAlarmOffCallback(self):
         """
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -192,7 +192,7 @@ class MccsDevice(SKABaseDevice):
     def GetFullReport(self):
         """
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -201,7 +201,7 @@ class MccsDevice(SKABaseDevice):
     def GetCommandReport(self):
         """
 
-        :return:'DevVarStringArray'
+        :return: 'DevVarStringArray'
         """
         return [""]
 
@@ -210,7 +210,7 @@ class MccsDevice(SKABaseDevice):
     def GetAttributeReport(self):
         """
 
-        :return:'DevVarStringArray'
+        :return: 'DevVarStringArray'
         """
         return [""]
 
@@ -221,7 +221,7 @@ class MccsDevice(SKABaseDevice):
 
         :param argin: 'DevString'
 
-        :return:None
+        :return: None
         """
         pass
 

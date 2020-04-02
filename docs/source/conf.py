@@ -2,12 +2,31 @@
 # -*- coding: utf-8 -*-
 #
 """ Standard sphinx config file """
-# required for decorator property resolution, don't modify sys.path
-import ska.mccs  # noqa =F401
-
 
 # Do we need this
 # import sphinx_rtd_theme
+
+
+# This is an eloborate hack to insert write property into _all_
+# mock decorators. It is needed for getting @attribute to build
+# in mocked out tango.server
+# see https://github.com/sphinx-doc/sphinx/issues/6709
+from sphinx.ext.autodoc.mock import _MockObject
+
+
+def call_mock(self, *args, **kw):
+    from types import FunctionType, MethodType
+
+    if args and type(args[0]) in [type, FunctionType, MethodType]:
+        # Appears to be a decorator, pass through unchanged
+        args[0].write = lambda x: x
+        return args[0]
+    return self
+
+
+_MockObject.__call__ = call_mock
+# hack end
+
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name

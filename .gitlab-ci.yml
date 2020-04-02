@@ -70,8 +70,7 @@ docs:
     - docker-executor
   stage: docs
   before_script:
-    - python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple -r requirements.txt
-    - python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt -e .
+    - python3 -m pip install -r requirements-dev.txt .
     - python3 -m pip install anybadge
     - echo "error" > .docs_status
   script:

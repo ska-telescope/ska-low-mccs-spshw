@@ -3,6 +3,8 @@ This project is developing the Local Monitoring and Control (LMC) prototype for 
 Documentation
 -------------
 
+[![Documentation Status](https://readthedocs.org/projects/lfaa-lmc-prototype/badge/?version=latest)](https://developer.skatelescope.org/projects/lfaa-lmc-prototype/en/latest/?badge=latest)
+
 The documentation for this project, including how to get started with it, can be found in the `docs` folder, and can be better browsed in the SKA development portal:
 
  * [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/lfaa-lmc-prototype/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")

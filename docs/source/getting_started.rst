@@ -9,7 +9,7 @@ Getting started
       - ${HOME}:/hosthome:rw
 
 3. Clone our `GitLab repo`_.
-4. Verify your setup::
+4. Verify your setup:
 
 .. code-block:: shell-session
 

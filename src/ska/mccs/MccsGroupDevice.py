@@ -40,7 +40,7 @@ class MccsGroupDevice(MccsDevice):
 
     def init_device(self):
         """Initialises the attributes and properties of the MccsGroupDevice."""
-        MccsDevice.init_device(self)
+        super().init_device()
         self._member_states = (DevState.UNKNOWN,)
         self._member_list = ("",)
         self._version_id = release.version
@@ -91,10 +91,10 @@ class MccsGroupDevice(MccsDevice):
         """
         Registers this device as a member of this composite group
 
-        :param argin: 'DevString'
-        The device name to register eg. sys/tg_test/1
-
-        :return:None
+        :param argin: The device name to register eg. sys/tg_test/1
+        :type argin: 'DevString'
+        
+        :return: None
         """
         pass
 
@@ -104,10 +104,10 @@ class MccsGroupDevice(MccsDevice):
         """
         De-registers a device as a memnber of this composite group
 
-        :param argin: 'DevString'
-        The name of the device to de-register
+        :param argin: The name of the device to de-register
+        :type argin: 'DevString'
 
-        :return:None
+        :return: None
         """
         pass
 
@@ -118,10 +118,10 @@ class MccsGroupDevice(MccsDevice):
         A wrapper around running commands on a group proxy for this group of
         devices
 
-        :param argin: 'DevString'
-        The command to run
+        :param argin: The command to run
+        :type argin: 'DevString'
 
-        :return:None
+        :return: None
         """
         pass
 

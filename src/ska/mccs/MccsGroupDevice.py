@@ -93,7 +93,7 @@ class MccsGroupDevice(MccsDevice):
 
         :param argin: The device name to register eg. sys/tg_test/1
         :type argin: 'DevString'
-        
+
         :return: None
         """
         pass

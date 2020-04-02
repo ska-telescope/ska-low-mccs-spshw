@@ -3,6 +3,8 @@
 #
 """ Standard sphinx config file """
 
+import sys
+import os
 # Do we need this
 # import sphinx_rtd_theme
 
@@ -26,6 +28,11 @@ def call_mock(self, *args, **kw):
 
 _MockObject.__call__ = call_mock
 # hack end
+
+# If extensions (or modules to document with autodoc) are in another directory,
+# add these directories to sys.path here. If the directory is relative to the
+# documentation root, use os.path.abspath to make it absolute, like shown here.
+sys.path.insert(0, os.path.abspath('../../src'))
 
 
 # -- Path set up --------------------------------------------------------------

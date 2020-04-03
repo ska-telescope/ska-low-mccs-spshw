@@ -217,36 +217,79 @@ class MccsTileSimulator(MccsGroupDevice):
 
     @attribute(dtype="DevDouble")
     def voltage(self):
-        """Return the voltage attribute."""
-        return self._voltage
+    #    """Return the voltage attribute."""
+    #    return self._voltage
+    #def get_voltage(self):
+        """Get Voltage
+           Voltage can only be accessible when running"""
+
+        voltage = random.uniform(config.voltage['low'], config.voltage['high'])
+
+        return round(voltage, 2)
 
     @attribute(dtype="DevDouble")
     def current(self):
-        """Return the current attribute."""
-        return self._current
+    #    """Return the current attribute."""
+    #    return self._current
+    #def get_current(self):
+        """Get Current
+           Current can only be accessible when programme"""
+
+        current = random.uniform(config.current['low'], config.current['high'])
+        return round(current, 2)
 
     @attribute(
         dtype="DevBoolean",
         doc="Return True if the all FPGAs are programmed, False otherwise",
     )
     def isProgrammed(self):
-        """Return the isProgrammed attribute."""
-        return self._programmed
+    #   """Return the isProgrammed attribute."""
+    #    return self._programmed
+        """ Function that returns true if board is programmed"""
+        return self.programmed
 
     @attribute(dtype="DevDouble", doc="The board temperature")  # force warp
     def board_temperature(self):
-        """Return the board_temperature attribute."""
-        return self._board_temperature
+    #    """Return the board_temperature attribute."""
+    #    return self._board_temperature
+    #def get_temperature(self):
+        """Get temperature of device
+           Device temperature can only be accessible if board is programmed"""
+        temperature = self.cpld_device.get_temperature(self.time_start, self.time_disconnected)
+
+        if temperature > config.devices[self.cpld_device.index][self.cpld_device.key]['Temperature']['max'] + 0.1:
+            raise MaxTempExceededException(temperature)
+
+        return round(temperature, 4)
+
 
     @attribute(dtype="DevDouble")
     def fpga1_temperature(self):
-        """Return the fpga1_temperature attribute."""
-        return self._fpga1_temperature
+    #    """Return the fpga1_temperature attribute."""
+    #   return self._fpga1_temperature
+    #def get_fpga0_temperature(self):
+        """Get temperature of device
+           Device temperature can only be accessible if board is programmed"""
+        temperature = self.fpga0_device.get_temperature(self.time_start, self.time_disconnected)
+
+        if temperature > config.devices[self.fpga0_device.index][self.fpga0_device.key]['Temperature']['max'] + 0.1:
+            raise MaxTempExceededException(temperature)
+
+        return temperature
 
     @attribute(dtype="DevDouble")
     def fpga2_temperature(self):
-        """Return the fpga2_temperature attribute."""
-        return self._fpga2_temperature
+    #    """Return the fpga2_temperature attribute."""
+    #   return self._fpga2_temperature
+    #def get_fpga1_temperature(self):
+        """Get temperature of device
+           Device temperature can only be accessible if board is programmed"""
+        temperature = self.fpga1_device.get_temperature(self.time_start, self.time_disconnected)
+
+        if temperature > config.devices[self.fpga1_device.index][self.fpga1_device.key]['Temperature']['max'] + 0.1:
+            raise MaxTempExceededException(temperature)
+
+        return temperature
 
     @attribute(dtype="DevLong", doc="The identifier of the associated station.")
     def stationId(self):
@@ -260,24 +303,87 @@ class MccsTileSimulator(MccsGroupDevice):
 
     @attribute(dtype="DevDouble")
     def fpga1_time(self):
-        """Return the fpga1_time attribute."""
-        return self._fpga1_time
+    #
+    #    """Return the fpga1_time attribute."""
+    #
+    #     return self._fpga1_time
+    #def get_fpga_time(self, device):
+        """ Return time from FPGA
+            :param device: FPGA to get time from """
+
+        return int(time.time())
+        try:
+            if device.value == Device.FPGA_1:
+                return int(self.fpga0_device.time_value)
+            elif device.value == Device.FPGA_2:
+                return int(self.fpga1_device.time_value)
+            else:
+                return 0
+                # raise BoardException("Invalid device specified")
+
+        except BoardException as e:
+            logging.error(e.message)
+            return 0
+
+
 
     @fpga1_time.write
     def fpga1_time(self, value):
-        """Set the fpga1_time attribute."""
-        self._fpga1_time = value
+    #    """Set the fpga1_time attribute."""
+    #    self._fpga1_time = value
+    #def set_fpga_time(self, device, device_time):
 
+        try:
+            if device.value == Device.FPGA_1:
+                self.fpga0_device.set_time(device_time)
+            elif device.value == Device.FPGA_2:
+                self.fpga1_device.set_time(device_time)
+            else:
+                raise BoardException("Invalid device specified")
+
+        except BoardException as e:
+            logging.error(e.message)
+####
     @attribute(dtype="DevDouble")
     def fpga2_time(self):
         """Return the fpga2_time attribute."""
         return self._fpga2_time
+    #def get_fpga_time(self, device):
+        """ Return time from FPGA
+            :param device: FPGA to get time from """
+
+        return int(time.time())
+        try:
+            if device.value == Device.FPGA_1:
+                return int(self.fpga0_device.time_value)
+            elif device.value == Device.FPGA_2:
+                return int(self.fpga1_device.time_value)
+            else:
+                return 0
+                # raise BoardException("Invalid device specified")
+
+        except BoardException as e:
+            logging.error(e.message)
+            return 0
 
     @fpga2_time.write
     def fpga2_time(self, value):
         """Set the fpga2_time attribute."""
         self._fpga2_time = value
+    # def set_fpga_time(self, device, device_time):
 
+    try:
+        if device.value == Device.FPGA_1:
+            self.fpga0_device.set_time(device_time)
+        elif device.value == Device.FPGA_2:
+            self.fpga1_device.set_time(device_time)
+        else:
+            raise BoardException("Invalid device specified")
+
+    except BoardException as e:
+        logging.error(e.message)
+
+####
     @attribute(
         dtype=("DevLong",),
         max_dim_x=8,
@@ -326,8 +432,21 @@ class MccsTileSimulator(MccsGroupDevice):
         "16 antennas, this should return 32 RMS values)",
     )
     def adcPower(self):
-        """Return the adcPower attribute."""
-        return self._adc_power
+    #    """Return the adcPower attribute."""
+    #    return self._adc_power
+    #def get_adc_rms(self):
+
+        adc_power_dict = {}
+
+        for i in range(16):
+            x = random.uniform(10, 35)
+            y = random.uniform(x-5, x+5)
+
+            power_dict = {'x': x, 'y': y}
+            adc_power_dict.update({i: power_dict})
+
+        return adc_power_dict
+
 
     # --------
     # Commands
@@ -350,7 +469,7 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevBoolean", doc_in="Initialise")
     @DebugIt()
     def Connect(self, argin):
-
+    # def connect(self, initialise=False, simulation='', enable_ada=''):
         """
         Creates connection to board. When True the initialise function is
         called immediately after connection (board must be programmed)
@@ -360,11 +479,40 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        if argin and self._programmed:
-            self.Initialise()
+        """ Start connection
+            :param initialise: If true, proceed to initialise() if already programmed"""
+
+        if self.t_disc > 0:
+            self.time_disconnected = time.time() - self.t_disc
+
+        if not utility.validate_ip(self.ip) or not utility.validate_ip(self.lmc_ip):
+            raise InvalidIpException
+
+        logging.info("Connecting...")
+
+        # Initial connection i.e. change from off to on
+        if self.state == State.OFF:
+            self.state = State.ON
+            time.sleep(1 * config.time_speed)
+            self.time_start = time.time()
+
+            if self.programmed:
+                self.state = State.PROGRAMMED
+                self.timer = Timer(1.0, self.update_time)
+                self.timer.start()
+
+        if initialise and self.state == State.PROGRAMMED:
+            self.initialise()
+
+        logging.info("Connect Successful")
+        return True
+
+    @throws_exceptions(BoardException, DisconnectFailedException)
+    @accepts(bool, State.ON, State.PROGRAMMED, State.INITIALISED)
 
     @command()
     @DebugIt()
+
     def Disconnect(self):
 
         """
@@ -372,10 +520,36 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        pass
+        """ Disconnect board"""
+
+        # Store temperatures of all devices
+        for i in range(0, len(self.device_list)):
+            self.device_list[i].temp_disconnect = self.device_list[i].get_temperature(self.time_start,
+                                                                                      self.time_disconnected)
+        if self.timer is not None:
+            self.timer.cancel()
+
+        if self.data_timer is not None:
+            self.data_timer.cancel()
+
+        # Store time of disconnect
+        self.t_disc = time.time()
+
+        # Change state
+        self.state = State.OFF
+
+        logging.info("Disconnected")
+
+        return True
+
+
+    @throws_exceptions(BoardException)
+    @accepts(bool, State.ON, State.PROGRAMMED, State.INITIALISED)
 
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
+
+
     def DownloadFirmware(self, argin):
         """
         Downloads the firmware contained in bitfile to all FPGAs on the board.

@@ -20,7 +20,7 @@ from tango import DevState
 
 # Additional import
 
-import ska.mccs.MccsGroupDevice as MccsGroupDevice
+from ska.mccs import MccsGroupDevice
 
 
 class MccsTile(MccsGroupDevice):

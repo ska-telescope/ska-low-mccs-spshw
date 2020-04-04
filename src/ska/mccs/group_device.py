@@ -18,7 +18,7 @@ from tango.server import attribute, command
 from tango import DevState
 
 # Additional import
-from .MccsDevice import MccsDevice
+from .device import MccsDevice
 import ska.mccs.release as release
 
 

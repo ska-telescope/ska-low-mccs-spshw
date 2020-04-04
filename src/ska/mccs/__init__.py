@@ -2,11 +2,11 @@
 __all__ = ["MccsMaster", "MccsSubarray", "MccsStation", "MccsStationBeam",
            "MccsTile", "MccsAntenna"]
 
-from .MccsDevice import MccsDevice  # noqa: F401
-from .MccsGroupDevice import MccsGroupDevice  # noqa: F401
-from .MccsMaster import MccsMaster
-from .MccsSubarray import MccsSubarray
-from .MccsStation import MccsStation
-from .MccsStationBeam import MccsStationBeam
-from .MccsTile import MccsTile
-from .MccsAntenna import MccsAntenna
+from .device import MccsDevice  # noqa: F401
+from .group_device import MccsGroupDevice  # noqa: F401
+from .master import MccsMaster
+from .subarray import MccsSubarray
+from .station import MccsStation
+from .station_beam import MccsStationBeam
+from .tile import MccsTile
+from .antenna import MccsAntenna

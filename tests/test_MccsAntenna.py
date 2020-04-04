@@ -159,31 +159,31 @@ class TestMccsAntenna(object):
 
     def test_xPolarisationScalingFactor(self, tango_context):
         """Test for xPolarisationScalingFactor"""
-        assert tango_context.device.xPolarisationScalingFactor == [0]
+        assert list(tango_context.device.xPolarisationScalingFactor) == [0]
 
     def test_yPolarisationScalingFactor(self, tango_context):
         """Test for yPolarisationScalingFactor"""
-        assert tango_context.device.yPolarisationScalingFactor == [0]
+        assert list(tango_context.device.yPolarisationScalingFactor) == [0]
 
     def test_calibrationCoefficient(self, tango_context):
         """Test for calibrationCoefficient"""
-        assert tango_context.device.calibrationCoefficient == [0.0]
+        assert list(tango_context.device.calibrationCoefficient) == [0.0]
 
     def test_pointingCoefficient(self, tango_context):
         """Test for pointingCoefficient"""
-        assert tango_context.device.pointingCoefficient == [0.0]
+        assert list(tango_context.device.pointingCoefficient) == [0.0]
 
     def test_spectrumX(self, tango_context):
         """Test for spectrumX"""
-        assert tango_context.device.spectrumX == [0.0]
+        assert list(tango_context.device.spectrumX) == [0.0]
 
     def test_spectrumY(self, tango_context):
         """Test for spectrumY"""
-        assert tango_context.device.spectrumY == [0.0]
+        assert list(tango_context.device.spectrumY) == [0.0]
 
     def test_position(self, tango_context):
         """Test for position"""
-        assert tango_context.device.position == [0.0]
+        assert list(tango_context.device.position) == [0.0]
 
     def test_loggingTargets(self, tango_context):
         """Test for loggingTargets"""
@@ -191,12 +191,12 @@ class TestMccsAntenna(object):
 
     def test_delays(self, tango_context):
         """Test for delays"""
-        assert tango_context.device.delays == [0.0]
+        assert list(tango_context.device.delays) == [0.0]
 
     def test_delayRates(self, tango_context):
         """Test for delayRates"""
-        assert tango_context.device.delayRates == [0.0]
+        assert list(tango_context.device.delayRates) == [0.0]
 
     def test_bandpassCoefficient(self, tango_context):
         """Test for bandpassCoefficient"""
-        assert tango_context.device.bandpassCoefficient == [0.0]
+        assert list(tango_context.device.bandpassCoefficient) == [0.0]

@@ -13,14 +13,19 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 """
 __all__ = ["MccsTileSimulator", "main"]
 
+import os
+
 # PyTango imports
 from tango import DebugIt
-from tango.server import attribute, command
 from tango import DevState
+from tango.server import attribute, command
+from tango.server import device_property
 
 # Additional import
 
-import ska.mccs.MccsGroupDevice as MccsGroupDevice
+from ska.mccs.MccsGroupDevice import MccsGroupDevice
+from ska.mccs.TpmSimulator import TpmSimulator
+from ska.base.control_model import SimulationMode, TestMode
 
 
 class MccsTileSimulator(MccsGroupDevice):
@@ -35,6 +40,10 @@ class MccsTileSimulator(MccsGroupDevice):
     # -----------------
     # Device Properties
     # -----------------
+    TileIP = device_property(dtype=str, default_value="0.0.0.0")
+    TpmCpldPort = device_property(dtype=int, default_value=20000)
+    LmcIp = device_property(dtype=str, default_value="0.0.0.0")
+    DstPort = device_property(dtype=int, default_value=30000)
 
     # ---------------
     # General methods
@@ -45,14 +54,16 @@ class MccsTileSimulator(MccsGroupDevice):
         super().init_device()
 
         self.set_state(DevState.INIT)
+        self._ip = self.TileIP
+        self._port = self.TpmCpldPort
+        self._lmc_ip = self.LmcIp
+        self._lmc_port = self.DstPort
+
         self._programmed = False
         self._tile_id = -1
         self._subarray_id = -1
         self._station_id = -1
         self._logical_tpm_id = -1
-        self._ip_address = ""
-        self._lmc_ip = ""
-        self._lmc_port = 0
         self._csp_destination_ip = ""
         self._csp_destination_mac = ""
         self._csp_destination_port = 0
@@ -71,8 +82,11 @@ class MccsTileSimulator(MccsGroupDevice):
         self._forty_gb_destination_ports = []
         self._forty_gb_core_list = []
         self._adc_power = []
+        self._sampling_rate = 0.0
+        self._tpm = None
+        self.simulationMode = SimulationMode.TRUE
         self.set_state(DevState.ON)
-        print("MccsTileSimulator init_device complete")
+        self.logger.info("MccsTileSimulator init_device complete")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -88,6 +102,11 @@ class MccsTileSimulator(MccsGroupDevice):
     # ----------
     # Attributes
     # ----------
+    def is_connected(self, attr_req_type):
+        """
+        Helper to disallow certain function calls on unconnected tiles
+        """
+        return self._tpm is not None and self._is_connected
 
     @attribute(dtype="DevLong", doc="The global tile identifier")
     def tileId(self):
@@ -118,6 +137,16 @@ class MccsTileSimulator(MccsGroupDevice):
     def subarrayId(self, value):
         """Set the subarrayId attribute."""
         self._subarray_id = value
+
+    @attribute(dtype="DevLong", doc="The identifier of the associated station.")
+    def stationId(self):
+        """Return the stationId attribute."""
+        return self._station_id
+
+    @stationId.write
+    def stationId(self, value):
+        """Set the stationId attribute."""
+        self._station_id = value
 
     @attribute(dtype="DevString", doc="LMC address (and global identifier) of Tile")
     def ipAddress(self):
@@ -215,175 +244,67 @@ class MccsTileSimulator(MccsGroupDevice):
         """Set the firmwareVersion attribute."""
         self._firmware_version = value
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def voltage(self):
-    #    """Return the voltage attribute."""
-    #    return self._voltage
-    #def get_voltage(self):
-        """Get Voltage
-           Voltage can only be accessible when running"""
+        """Return the voltage attribute."""
+        return self._tpm.voltage()
 
-        voltage = random.uniform(config.voltage['low'], config.voltage['high'])
-
-        return round(voltage, 2)
-
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def current(self):
-    #    """Return the current attribute."""
-    #    return self._current
-    #def get_current(self):
-        """Get Current
-           Current can only be accessible when programme"""
-
-        current = random.uniform(config.current['low'], config.current['high'])
-        return round(current, 2)
+        """Return the current attribute."""
+        return self._tpm_current()
 
     @attribute(
         dtype="DevBoolean",
         doc="Return True if the all FPGAs are programmed, False otherwise",
     )
     def isProgrammed(self):
-    #   """Return the isProgrammed attribute."""
-    #    return self._programmed
         """ Function that returns true if board is programmed"""
-        return self.programmed
+        return self._tpm.is_programmed()
 
-    @attribute(dtype="DevDouble", doc="The board temperature")  # force warp
+    @attribute(dtype="DevDouble", doc="The board temperature", fisallowed=is_connected)
     def board_temperature(self):
-    #    """Return the board_temperature attribute."""
-    #    return self._board_temperature
-    #def get_temperature(self):
-        """Get temperature of device
-           Device temperature can only be accessible if board is programmed"""
-        temperature = self.cpld_device.get_temperature(self.time_start, self.time_disconnected)
+        """Return the board_temperature attribute."""
+        return self._tpm.temperature()
 
-        if temperature > config.devices[self.cpld_device.index][self.cpld_device.key]['Temperature']['max'] + 0.1:
-            raise MaxTempExceededException(temperature)
-
-        return round(temperature, 4)
-
-
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga1_temperature(self):
-    #    """Return the fpga1_temperature attribute."""
-    #   return self._fpga1_temperature
-    #def get_fpga0_temperature(self):
-        """Get temperature of device
-           Device temperature can only be accessible if board is programmed"""
-        temperature = self.fpga0_device.get_temperature(self.time_start, self.time_disconnected)
+        """Return the fpga1_temperature attribute."""
+        if self.is_programmed():
+            return self._tpm.get_fpga1_temperature()
+        else:
+            return 0
 
-        if temperature > config.devices[self.fpga0_device.index][self.fpga0_device.key]['Temperature']['max'] + 0.1:
-            raise MaxTempExceededException(temperature)
-
-        return temperature
-
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga2_temperature(self):
-    #    """Return the fpga2_temperature attribute."""
-    #   return self._fpga2_temperature
-    #def get_fpga1_temperature(self):
-        """Get temperature of device
-           Device temperature can only be accessible if board is programmed"""
-        temperature = self.fpga1_device.get_temperature(self.time_start, self.time_disconnected)
-
-        if temperature > config.devices[self.fpga1_device.index][self.fpga1_device.key]['Temperature']['max'] + 0.1:
-            raise MaxTempExceededException(temperature)
-
-        return temperature
-
-    @attribute(dtype="DevLong", doc="The identifier of the associated station.")
-    def stationId(self):
-        """Return the stationId attribute."""
-        return self._station_id
-
-    @stationId.write
-    def stationId(self, value):
-        """Set the stationId attribute."""
-        self._station_id = value
+        """Return the fpga2_temperature attribute."""
+        if self.is_programmed():
+            return self._tpm.get_fpga2_temperature()
+        else:
+            return 0
 
     @attribute(dtype="DevDouble")
     def fpga1_time(self):
-    #
-    #    """Return the fpga1_time attribute."""
-    #
-    #     return self._fpga1_time
-    #def get_fpga_time(self, device):
-        """ Return time from FPGA
-            :param device: FPGA to get time from """
 
-        return int(time.time())
-        try:
-            if device.value == Device.FPGA_1:
-                return int(self.fpga0_device.time_value)
-            elif device.value == Device.FPGA_2:
-                return int(self.fpga1_device.time_value)
-            else:
-                return 0
-                # raise BoardException("Invalid device specified")
+        """Return the fpga1_time attribute."""
 
-        except BoardException as e:
-            logging.error(e.message)
-            return 0
-
-
+        return self._fpga1_time
 
     @fpga1_time.write
     def fpga1_time(self, value):
-    #    """Set the fpga1_time attribute."""
-    #    self._fpga1_time = value
-    #def set_fpga_time(self, device, device_time):
+        """Set the fpga1_time attribute."""
+        self._fpga1_time = value
 
-        try:
-            if device.value == Device.FPGA_1:
-                self.fpga0_device.set_time(device_time)
-            elif device.value == Device.FPGA_2:
-                self.fpga1_device.set_time(device_time)
-            else:
-                raise BoardException("Invalid device specified")
-
-        except BoardException as e:
-            logging.error(e.message)
-####
     @attribute(dtype="DevDouble")
     def fpga2_time(self):
         """Return the fpga2_time attribute."""
         return self._fpga2_time
-    #def get_fpga_time(self, device):
-        """ Return time from FPGA
-            :param device: FPGA to get time from """
-
-        return int(time.time())
-        try:
-            if device.value == Device.FPGA_1:
-                return int(self.fpga0_device.time_value)
-            elif device.value == Device.FPGA_2:
-                return int(self.fpga1_device.time_value)
-            else:
-                return 0
-                # raise BoardException("Invalid device specified")
-
-        except BoardException as e:
-            logging.error(e.message)
-            return 0
 
     @fpga2_time.write
     def fpga2_time(self, value):
         """Set the fpga2_time attribute."""
         self._fpga2_time = value
-    # def set_fpga_time(self, device, device_time):
 
-    try:
-        if device.value == Device.FPGA_1:
-            self.fpga0_device.set_time(device_time)
-        elif device.value == Device.FPGA_2:
-            self.fpga1_device.set_time(device_time)
-        else:
-            raise BoardException("Invalid device specified")
-
-    except BoardException as e:
-        logging.error(e.message)
-
-####
     @attribute(
         dtype=("DevLong",),
         max_dim_x=8,
@@ -430,23 +351,15 @@ class MccsTileSimulator(MccsGroupDevice):
         max_dim_x=32,
         doc="Return the RMS power of every ADC signal (so a TPM processes "
         "16 antennas, this should return 32 RMS values)",
+        fisallowed=is_connected,
     )
     def adcPower(self):
-    #    """Return the adcPower attribute."""
-    #    return self._adc_power
-    #def get_adc_rms(self):
+        # If board is not programmed, return None
+        if not self.tpm.is_programmed():
+            return None
 
-        adc_power_dict = {}
-
-        for i in range(16):
-            x = random.uniform(10, 35)
-            y = random.uniform(x-5, x+5)
-
-            power_dict = {'x': x, 'y': y}
-            adc_power_dict.update({i: power_dict})
-
-        return adc_power_dict
-
+        # Get RMS values from board
+        return self.tpm.get_adc_rms()
 
     # --------
     # Commands
@@ -464,55 +377,135 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        pass
+
+        # Before initialising, check if TPM is programmed
+        if not self._tpm.is_programmed():
+            self.logger.error("Cannot initialise board which is not programmed")
+            return
+
+        # Initialise firmware plugin
+        self._tpm.initialise_firmware()
+
+        # Set LMC IP
+        self._tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
+
+        # Enable C2C streaming
+        # self._tpm["board.regfile.c2c_stream_enable"] = 0x1
+        # self.set_c2c_burst()
+
+        #         # Switch off both PREADUs
+        #         self._tpm.preadu[0].switch_off()
+        #         self._tpm.preadu[1].switch_off()
+        #
+        #         # Switch on preadu
+        #         for preadu in self._tpm.preadu:
+        #             preadu.switch_on()
+        #             time.sleep(1)
+        #             preadu.select_low_passband()
+        #             preadu.read_configuration()
+
+        # Synchronise FPGAs
+        # self.sync_fpgas()
+
+        # Initialize f2f link
+        self._tpm.initialise_f2f_link()
+
+        # Reset test pattern generator
+        self._tpm.reset_test_generator()
+
+        # Use test_generator plugin instead!
+        if self.testMode:
+            # Test pattern. Tones on channels 72 & 75 + pseudo-random noise
+            self.logger.info("Enabling test pattern")
+            self._tpm.enable_test_pattern()
+
+        # Set destination and source IP/MAC/ports for 10G cores
+        # This will create a loopback between the two FPGAs
+        ip_octets = self._ip.split(".")
+        for n in range(8):
+            src_ip = "10.{}.{}.{}".format(n + 1, ip_octets[2], ip_octets[3])
+            dst_ip = "10.{}.{}.{}".format(
+                (1 + n) + (4 if n < 4 else -4), ip_octets[2], ip_octets[3]
+            )
+        #             self.Configure40GCore(n,
+        #                                     src_mac=0x620000000000, ###+ ip2long(src_ip),
+        #                                     src_ip=src_ip,
+        #                                     src_port=0xF0D0,
+        #                                     dst_mac=0x620000000000, ###+ ip2long(dst_ip),
+        #                                     dst_ip=dst_ip,
+        #                                     dst_port=4660)
+
+        # wait UDP link up
+        self.logger.info("Waiting for 10G link...")
+        try:
+            times = 0
+            while True:
+                linkup = 1
+                for n in [0, 1, 2, 4, 5, 6]:
+                    core_status = self._tpm.get_arp_table_status(n)
+                    if core_status & 0x4 == 0:
+                        linkup = 0
+                if linkup == 1:
+                    self.logger.info("40G Link established! ARP table populated!")
+                    break
+                else:
+                    times += 1
+                    time.sleep(0.5)
+                    if times == 20:
+                        self.logger.warning(
+                            "40G Links not established after 10 seconds! ARP table not populated!"
+                        )
+                        break
+        except:
+            time.sleep(4)
+            # self.mii_exec_test(10, False)
+            # self['fpga1.regfile.eth10g_ctrl'] = 0x0
+            # self['fpga2.regfile.eth10g_ctrl'] = 0x0
+
+        self._tpm.check_ddr_initialisation()
 
     @command(dtype_in="DevBoolean", doc_in="Initialise")
     @DebugIt()
-    def Connect(self, argin):
-    # def connect(self, initialise=False, simulation='', enable_ada=''):
+    def Connect(self, initialise):
         """
         Creates connection to board. When True the initialise function is
         called immediately after connection (board must be programmed)
 
-        :param argin: Initialise True = initialise immediately after connection
-        :type argin: DevBoolean
+        :param initialise: When True initialise immediately after connection
+        :type initialise: DevBoolean
 
         :return: None
         """
-        """ Start connection
-            :param initialise: If true, proceed to initialise() if already programmed"""
+        # Try to connect to board, if it fails then set tpm to None
+        if self.simulationMode:
+            self._tpm = TpmSimulator(self.logger)
+        else:
+            self._tpm = TPM()
 
-        if self.t_disc > 0:
-            self.time_disconnected = time.time() - self.t_disc
+        # Add plugin directory (load module locally)
+        # tf = __import__("pyaavs.tpm_test_firmware", fromlist=[None])
+        # self._tpm.add_plugin_directory(os.path.dirname(tf.__file__))
 
-        if not utility.validate_ip(self.ip) or not utility.validate_ip(self.lmc_ip):
-            raise InvalidIpException
+        self._tpm.connect(
+            ip=self._ip,
+            port=self._port,
+            initialise=initialise,
+            simulator=self.simulationMode,
+            enable_ada=self.testMode,
+            fsample=self._sampling_rate,
+        )
 
-        logging.info("Connecting...")
+        # Load tpm test firmware for both FPGAs (no need to load in simulation)
+        if not self.simulationMode and self._tpm.is_programmed():
+            self._tpm.load_plugin("TpmTestFirmware", fsample=self._sampling_rate)
+        elif not self._tpm.is_programmed():
+            self.logger.warning("TPM is not programmed! No plugins loaded")
 
-        # Initial connection i.e. change from off to on
-        if self.state == State.OFF:
-            self.state = State.ON
-            time.sleep(1 * config.time_speed)
-            self.time_start = time.time()
-
-            if self.programmed:
-                self.state = State.PROGRAMMED
-                self.timer = Timer(1.0, self.update_time)
-                self.timer.start()
-
-        if initialise and self.state == State.PROGRAMMED:
-            self.initialise()
-
-        logging.info("Connect Successful")
-        return True
-
-    @throws_exceptions(BoardException, DisconnectFailedException)
-    @accepts(bool, State.ON, State.PROGRAMMED, State.INITIALISED)
+        if initialise:
+            self.Initialise()
 
     @command()
     @DebugIt()
-
     def Disconnect(self):
 
         """
@@ -520,64 +513,45 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        """ Disconnect board"""
 
-        # Store temperatures of all devices
-        for i in range(0, len(self.device_list)):
-            self.device_list[i].temp_disconnect = self.device_list[i].get_temperature(self.time_start,
-                                                                                      self.time_disconnected)
-        if self.timer is not None:
-            self.timer.cancel()
-
-        if self.data_timer is not None:
-            self.data_timer.cancel()
-
-        # Store time of disconnect
-        self.t_disc = time.time()
-
-        # Change state
-        self.state = State.OFF
-
-        logging.info("Disconnected")
-
-        return True
-
-
-    @throws_exceptions(BoardException)
-    @accepts(bool, State.ON, State.PROGRAMMED, State.INITIALISED)
-
-    @command(dtype_in="DevString", doc_in="bitfile location")
-    @DebugIt()
-
-
-    def DownloadFirmware(self, argin):
-        """
-        Downloads the firmware contained in bitfile to all FPGAs on the board.
-        This should also updatethe internal register mapping, such that
-        registers become available for use. bitfile can either be the ?design?
-        name returned from get_firmware_list(), or a path to a file
-
-        :param argin: bitfile location
-        :type argin: 'DevString'
-
-        :return: None
-        """
         pass
 
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
-    def ProgramCPLD(self, argin):
+    def DownloadFirmware(self, bitfile):
+        """
+        Downloads the firmware contained in bitfile to all FPGAs on the board.
+        This should also update the internal register mapping, such that
+        registers become available for use.
+
+        :param bitfile: can either be the design name returned from get_firmware_list(),
+                        or a path to a file
+        :type bitfile: 'DevString'
+
+        :return: None
+        """
+        self.connect(simulation=True)
+        if self._tpm is not None:
+            self.logger.info("Downloading bitfile to board")
+            self._tpm.download_firmware(bitfile)
+
+    @command(dtype_in="DevString", doc_in="bitfile location")
+    @DebugIt()
+    def ProgramCPLD(self, bitfile):
 
         """
         If the TPM has a CPLD (or other management chip which need firmware),
         this function program it with the provided bitfile.
-        bitfile is the path to a file containing the required CPLD firmware
 
-        :param argin: 'DevString'
+        :param bitfile: is the path to a file containing the required CPLD firmware
+        :type: 'DevString'
 
         :return: None
         """
-        pass
+        self.connect(simulation=True)
+        if self._tpm is not None:
+            self.logger.info("Downloading bitstream to CPLD FLASH")
+            self._tpm.cpld_flash_write(bitfile)
 
     @command()
     @DebugIt()

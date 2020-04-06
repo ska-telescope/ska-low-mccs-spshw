@@ -85,7 +85,8 @@ class MccsTileSimulator(MccsGroupDevice):
         self._sampling_rate = 0.0
         self._tpm = None
         self.simulationMode = SimulationMode.TRUE
-        self.set_state(DevState.ON)
+        self._tapering_coeffs = [1.0] * 16
+        self.set_state(DevState.OFF)
         self.logger.info("MccsTileSimulator init_device complete")
 
     def always_executed_hook(self):
@@ -283,26 +284,32 @@ class MccsTileSimulator(MccsGroupDevice):
         else:
             return 0
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga1_time(self):
 
         """Return the fpga1_time attribute."""
 
+        # return self["fpga1.pps_manager.curr_time_read_val"]
         return self._fpga1_time
 
     @fpga1_time.write
     def fpga1_time(self, value):
         """Set the fpga1_time attribute."""
+        # self["fpga1.pps_manager.curr_time_write_val"] = value
+        # self["fpga1.pps_manager.curr_time_cmd.wr_req"] = 0x1
         self._fpga1_time = value
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga2_time(self):
         """Return the fpga2_time attribute."""
+        # return self["fpga2.pps_manager.curr_time_read_val"]
         return self._fpga2_time
 
     @fpga2_time.write
     def fpga2_time(self, value):
         """Set the fpga2_time attribute."""
+        # self["fpga2.pps_manager.curr_time_write_val"] = value
+        # self["fpga2.pps_manager.curr_time_cmd.wr_req"] = 0x1
         self._fpga2_time = value
 
     @attribute(
@@ -377,6 +384,9 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
+        if self._tpm is None:
+            self.logger.error("Not connected")
+            return
 
         # Before initialising, check if TPM is programmed
         if not self._tpm.is_programmed():
@@ -504,6 +514,8 @@ class MccsTileSimulator(MccsGroupDevice):
         if initialise:
             self.Initialise()
 
+        self.set_state(DevState.ON)
+
     @command()
     @DebugIt()
     def Disconnect(self):
@@ -530,7 +542,6 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        self.connect(simulation=True)
         if self._tpm is not None:
             self.logger.info("Downloading bitfile to board")
             self._tpm.download_firmware(bitfile)
@@ -548,7 +559,6 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        self.connect(simulation=True)
         if self._tpm is not None:
             self.logger.info("Downloading bitstream to CPLD FLASH")
             self._tpm.cpld_flash_write(bitfile)
@@ -562,7 +572,10 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        pass
+        if self._tpm is not None:
+            t0 = self.fpga1_time()
+            while t0 == self.fpga1_time():
+                pass
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
@@ -749,16 +762,40 @@ class MccsTileSimulator(MccsGroupDevice):
         """
         Set the frequency regions which are going to be beamformed into a
         single beam.
-        region_arrayis defined as a 2D array, for a maximum of 16 regions.
+        region_array is defined as a 2D array, for a maximum of 16 regions.
         Each element in the array defines a region, with:
         start_channel: region starting channel
         nof_channels: size of the region, must be a multiple of 8
-        beam_index: beam used for this region with range [0:8) Total number of
-        channels must be <= 384
+        beam_index: beam used for this region with range 0 to 7
+        Total number of channels must be <= 384
 
         :return: None
         """
-        pass
+        if len(argin) < 3:
+            self.logger.error("Insufficient parameters")
+            return
+        if len(argin) > 48:
+            self.logger.error("Too many regions specified")
+            return
+        region_array = []
+        total_chan = 0
+        for i in range(len(argin) / 3):
+            start_channel = argin[i * 3]
+            nchannels = argin[i * 3 + 1]
+            if nchannels % 8 != 0:
+                self.logger.error("Nos. of channels in region must be multiple of 8")
+                return
+            beam_index = argin[i * 3 + 2]
+            if beam_index < 0 or beam_index > 7:
+                self.logger.error("Beam_index is out side of range 0-7")
+                return
+            total_chan += nchannels
+            i += 3
+        if total_chan > 384:
+            self.logger.error("Too many channels specified > 384")
+            return
+        region_array.append([start_channel, nchannnels, beam_index])
+        self._tpm.set_regions(region_array)
 
     @command(
         dtype_in="DevVarLongArray", doc_in="n_of_tiles, first_tile=False, start=False"
@@ -824,11 +861,18 @@ class MccsTileSimulator(MccsGroupDevice):
 
         """
         tapering_coeffs is a vector contains a value for each antenna the TPM
-        processes. Default is 1.
+        processes. Default is 1.0
 
         :return: None
         """
-        pass
+        if len(argin) < 16:
+            self.logger.error(
+                "Insufficient tapering coefficients should be 16, loading default"
+            )
+
+        for i in range(16):
+            self._tapering_coeffs[i] = argin[i]
+        self._tpm.load_antenna_tapering(self._tapering_coeffs)
 
     @command(dtype_in="DevDouble", doc_in="switch time")
     @DebugIt()
@@ -852,18 +896,34 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        pass
+        if len(argin) != 33:
+            self.logger.error("Insufficient parameters")
+            return
+        beam_index = argin[32]
+        if beam_index < 0 or beam_index > 7:
+            self.logger.error("Invalid beam index")
+            return
+        delay_array = []
+        for i in range(16):
+            delay_array.append([argin[i * 2], argin[i * 2 + 1]])
+        self._tpm.set_pointing_delay(delay_array, beam_index)
 
-    @command(dtype_in="DevDouble", doc_in="load_time")
+    @command(dtype_in="DevLong", doc_in="load_time")
     @DebugIt()
-    def LoadPointingDelay(self, argin):
+    def LoadPointingDelay(self, load_time):
 
         """
         Loads the pointing delays at the specified time delay
 
+        :param load_time: time delay
+        :type load_time: DevLong
+
         :return: None
         """
-        pass
+        # if load_time == 0:
+        #    load_time = self.current_tile_beamformer_frame() + 64
+
+        self._tpm.load_pointing_delay(load_time)
 
     @command(dtype_in="DevDouble", doc_in="start_time")
     @DebugIt()

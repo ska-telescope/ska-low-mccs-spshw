@@ -112,3 +112,25 @@ class TpmSimulator:
         self.logger.info("TpmSimulator: get_fpga2_temperature")
         # return tpm_sysmon[1].get_fpga_temperature()
         return 37.5
+
+    def set_regions(self, region_array):
+        self.logger.info("TpmSimulator: set_regions")
+        # beamf_fd[0].set_regions(region_array)
+        # beamf_fd[1].set_regions(region_array)
+        # station_beamf[0].defineChannelTable(region_array)
+        # station_beamf[1].defineChannelTable(region_array)
+
+    def set_pointing_delay(self, delay_array, beam_index):
+        self.logger.info("TpmSimulator: set_pointing_delay")
+        # beamf_fd[0].set_delay(delay_array[0:8], beam_index)
+        # beamf_fd[1].set_delay(delay_array[8:], beam_index)
+
+    def load_pointing_delay(self, load_time):
+        self.logger.info("TpmSimulator: load_pointing_delay")
+        # beamf_fd[0].load_delay(load_time)
+        # beamf_fd[1].load_delay(load_time)
+
+    def load_antenna_tapering(self, tapering_coefs):
+        self.logger.info("TpmSimulator: load_pointing_delay")
+        # beamf_fd[0].load_antenna_tapering(tapering_coefs[0:8])
+        # beamf_fd[1].load_antenna_tapering(tapering_coefs[8:])

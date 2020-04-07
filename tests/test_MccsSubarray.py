@@ -9,9 +9,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """contains the tests for the MccsSubarray"""
-import time
 import pytest
-import tango
+from tango import DevSource, DevState
 from ska.base.control_model import (AdminMode, ControlMode, HealthState,
                                     ObsState, TestMode)
 from ska.mccs import release
@@ -23,21 +22,21 @@ class TestMccsSubarray:
     Test cases for MccsSubarray
     """
 
-    properties = {
-        # SKASubarray properties
-        "CapabilityTypes": [],
-        "SubID": "",
-        # SKABaseDevice properties
-        "SkaLevel": "2",
-        "GroupDefinitions": [],
-        "LoggingLevelDefault": 4,
-        "LoggingTargetsDefault": [],
-    }
+    # properties = {
+    #     # SKASubarray properties
+    #     "CapabilityTypes": [],
+    #     "SubID": "",
+    #     # SKABaseDevice properties
+    #     "SkaLevel": "2",
+    #     "GroupDefinitions": [],
+    #     "LoggingLevelDefault": 4,
+    #     "LoggingTargetsDefault": [],
+    # }
 
-    def test_properties(self, tango_context):
-        """ Test the properties """
+    # def test_properties(self, tango_context):
+    #     """ Test the properties """
 
-    # general methods
+    # tests of general methods
     def test_InitDevice(self, tango_context):
         """
         Test for Initial state.
@@ -47,11 +46,13 @@ class TestMccsSubarray:
         until TM puts it online, and which time it transitions to OFF until
         assigned resources.
         """
-        assert tango_context.device.state() == tango.DevState.DISABLE
-        assert tango_context.device.status() == "The device is in DISABLE state."
-        assert tango_context.device.adminMode == AdminMode.OFFLINE
-        assert tango_context.device.obsState == ObsState.IDLE
+        state = tango_context.device.state()
+        admin_mode = tango_context.device.adminMode
+        admin_mode_is_disabled = (admin_mode in [AdminMode.OFFLINE,
+                                                 AdminMode.NOT_FITTED])
+        assert admin_mode_is_disabled == (state == DevState.DISABLE)
 
+        assert tango_context.device.obsState == ObsState.IDLE
         assert tango_context.device.healthState == HealthState.OK
         assert tango_context.device.controlMode == ControlMode.REMOTE
         assert not tango_context.device.simulationMode
@@ -66,22 +67,54 @@ class TestMccsSubarray:
         assert tango_context.device.stationBeamFQDNs is None
         assert tango_context.device.activationTime == 0
 
-    # overridden base class commands
+    # tests of overridden base class commands
     def test_GetVersionInfo(self, tango_context):
         """Test for GetVersionInfo"""
         version_info = release.get_release_info(tango_context.class_name)
         assert tango_context.device.GetVersionInfo() == [version_info]
 
-    # MccsSubarray commands
+    def test_ReleaseAllResources(self, tango_context):
+        """Test for ReleaseAllResources"""
+        # SETUP
+        tango_context.device.adminMode = AdminMode.ONLINE
+        tango_context.device.AssignResources("foo")
+        assert tango_context.device.state() == DevState.ON
+
+        # TEST
+        tango_context.device.ReleaseAllResources()
+        assert tango_context.device.state() == DevState.OFF
+
+    def test_Scan(self, tango_context):
+        """Test for ReleaseAllResources"""
+        # bypass cache for this test because we are testing for a change in the
+        # polled attribute obsState
+        tango_context.device.set_source(DevSource.DEV)  # bypass cache
+
+        # SETUP
+        tango_context.device.adminMode = AdminMode.ONLINE
+        tango_context.device.AssignResources("foo")
+
+        # CHECK INITIAL STATE
+        assert tango_context.device.state() == DevState.ON
+        assert tango_context.device.obsState == ObsState.IDLE
+
+        # TEST
+        tango_context.device.Scan([""])
+        assert tango_context.device.state() == DevState.ON
+        assert tango_context.device.obsState == ObsState.SCANNING
+
+    # tests of MccsSubarray commands
     def test_configureScan(self, tango_context):
         """ Test for configureScan """
         json_spec = "Dummy string"
+        before_state = tango_context.device.state()
         status_str = tango_context.device.configureScan(json_spec)
         assert status_str == (
             "Dummy ASCII string returned from "
             "MccsSubarray.configureScan() to indicate status, for "
             "information purposes only"
         )
+        assert before_state == tango_context.device.state()
 
     def test_sendTransientBuffer(self, tango_context):
         """ Test for sendTransientBuffer """
@@ -93,7 +126,7 @@ class TestMccsSubarray:
             "information purposes only"
         )
 
-    # overridden base class attributes
+    # tests of overridden base class attributes
     def test_buildState(self, tango_context):
         """Test for buildState"""
         build_info = release.get_release_info()
@@ -102,71 +135,6 @@ class TestMccsSubarray:
     def test_versionId(self, tango_context):
         """Test for versionId"""
         assert tango_context.device.versionId == release.version
-
-    def test_adminMode(self, tango_context):
-        """
-        Test for adminMode. This test executes the following sequence of
-        mode transitions, checking after each transition that the subarray is
-        in the expected state. Thus all twelve possible mode transitions are
-        tested:
-
-        OFFLINE -> ONLINE -> OFFLINE -> MAINTENANCE -> ONLINE -> NOT_FITTED
-        -> MAINTENANCE -> OFFLINE -> NOT_FITTED -> ONLINE -> MAINTENANCE
-        -> NOT_FITTED -> OFFLINE
-
-        :todo: test taking offline after resources have been allocated
-        :todo: test taking offline while scan is configuring
-        :todo: test taking offline while scan is ready
-        :todo: test taking offline while scannning
-        """
-        # SETUP
-        sleep_seconds = tango_context.device.get_attribute_poll_period(
-            "adminMode"
-        ) / 1000.0 * 1.2
-
-        checks = {
-            AdminMode.OFFLINE: {
-                "permitted_states": [tango.DevState.DISABLE],
-                "permitted_obs_states": [ObsState.IDLE]
-            },
-            AdminMode.ONLINE: {
-                "permitted_states": [tango.DevState.OFF],
-                "permitted_obs_states": [ObsState.IDLE]
-            },
-            AdminMode.MAINTENANCE: {
-                "permitted_states": [tango.DevState.OFF],
-                "permitted_obs_states": [ObsState.IDLE]
-            },
-            AdminMode.NOT_FITTED: {
-                "permitted_states": [tango.DevState.DISABLE, tango.DevState.OFF],
-                "permitted_obs_states": [ObsState.IDLE]
-            }
-        }
-
-        def check_state(tango_context, adminMode):
-            assert tango_context.device.adminMode == adminMode
-            if "permitted_states" in checks[adminMode]:
-                state = tango_context.device.state()
-                assert state in checks[adminMode]["permitted_states"]
-            if "permitted_obs_states" in checks[adminMode]:
-                obs_state = tango_context.device.obsState
-                assert obs_state in checks[adminMode]["permitted_obs_states"]
-
-        mode_sequence = [AdminMode.ONLINE, AdminMode.OFFLINE,
-                         AdminMode.MAINTENANCE, AdminMode.ONLINE,
-                         AdminMode.NOT_FITTED, AdminMode.MAINTENANCE,
-                         AdminMode.OFFLINE, AdminMode.NOT_FITTED,
-                         AdminMode.ONLINE, AdminMode.MAINTENANCE,
-                         AdminMode.NOT_FITTED, AdminMode.OFFLINE]
-
-        # CHECK INITIAL CONDITIONS
-        check_state(tango_context, AdminMode.OFFLINE)
-
-        # Test
-        for mode in mode_sequence:
-            tango_context.device.adminMode = mode
-            time.sleep(sleep_seconds)
-            check_state(tango_context, mode)
 
     # MccsSubarray attributes
 
@@ -187,3 +155,166 @@ class TestMccsSubarray:
     def test_stationBeamFQDNs(self, tango_context):
         """Test for stationBeamFQDNs attribute"""
         assert tango_context.device.stationBeamFQDNs is None
+
+    # General device behaviour tests
+
+    def test_state_machine(self, tango_context):
+        """
+        Test the subarray state machine.
+
+        This test executes sequences of actions and checks that the required
+        state transition occur.
+
+        :todo: add tests for illegal actions
+        """
+
+        state_check = {
+            "NOTFITTED":
+                lambda d: (d.adminMode == AdminMode.NOT_FITTED
+                           and d.state() == DevState.DISABLE
+                           and d.obsState == ObsState.IDLE),
+            "OFFLINE":
+                lambda d: (d.adminMode == AdminMode.OFFLINE
+                           and d.state() == DevState.DISABLE
+                           and d.obsState == ObsState.IDLE),
+            "OFF (ONLINE)":
+                lambda d: (d.adminMode == AdminMode.ONLINE
+                           and d.state() == DevState.OFF
+                           and d.obsState == ObsState.IDLE),
+            "OFF (MAINTENANCE)":
+                lambda d: (d.adminMode == AdminMode.MAINTENANCE
+                           and d.state() == DevState.OFF
+                           and d.obsState == ObsState.IDLE),
+            "READY (ONLINE)":
+                lambda d: (d.adminMode == AdminMode.ONLINE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.IDLE),
+            "READY (MAINTENANCE)":
+                lambda d: (d.adminMode == AdminMode.MAINTENANCE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.IDLE),
+            "SCANNING (ONLINE)":
+                lambda d: (d.adminMode == AdminMode.ONLINE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.SCANNING),
+            "SCANNING (MAINTENANCE)":
+                lambda d: (d.adminMode == AdminMode.MAINTENANCE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.SCANNING),
+            "ABORTED (ONLINE)":
+                lambda d: (d.adminMode == AdminMode.ONLINE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.ABORTED),
+            "ABORTED (MAINTENANCE)":
+                lambda d: (d.adminMode == AdminMode.MAINTENANCE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.ABORTED),
+        }
+
+        def write_admin(d, mode):
+            d.adminMode = mode
+
+        actions = {
+            "online": lambda d: write_admin(d, AdminMode.ONLINE),
+            "offline": lambda d: write_admin(d, AdminMode.OFFLINE),
+            "maintenance": lambda d: write_admin(d, AdminMode.MAINTENANCE),
+            "notfitted": lambda d: write_admin(d, AdminMode.NOT_FITTED),
+            "assign": lambda d: d.AssignResources("foo"),
+            "release": lambda d: d.ReleaseAllResources(),
+            "configure": lambda d: d.configureScan("foo"),
+            "scan": lambda d: d.Scan(["foo"]),
+            "endscan": lambda d: d.EndScan(),
+            "abort": lambda d: d.Abort(),
+            "reset": lambda d: d.Reset()
+        }
+        transitions = {
+            ("NOTFITTED", "offline"): "OFFLINE",
+            ("NOTFITTED", "online"): "OFF (ONLINE)",
+            ("NOTFITTED", "maintenance"): "OFF (MAINTENANCE)",
+            ("OFFLINE", "online"): "OFF (ONLINE)",
+            ("OFFLINE", "maintenance"): "OFF (MAINTENANCE)",
+            ("OFFLINE", "notfitted"): "NOTFITTED",
+            ("OFF (ONLINE)", "offline"): "OFFLINE",
+            ("OFF (ONLINE)", "maintenance"): "OFF (MAINTENANCE)",
+            ("OFF (ONLINE)", "notfitted"): "NOTFITTED",
+            ("OFF (ONLINE)", "assign"): "READY (ONLINE)",
+            ("OFF (MAINTENANCE)", "offline"): "OFFLINE",
+            ("OFF (MAINTENANCE)", "online"): "OFF (ONLINE)",
+            ("OFF (MAINTENANCE)", "notfitted"): "NOTFITTED",
+            ("OFF (MAINTENANCE)", "assign"): "READY (MAINTENANCE)",
+            ("READY (ONLINE)", "offline"): "OFFLINE",
+            ("READY (ONLINE)", "maintenance"): "READY (MAINTENANCE)",
+            ("READY (ONLINE)", "notfitted"): "NOTFITTED",
+            ("READY (ONLINE)", "release"): "OFF (ONLINE)",
+            ("READY (ONLINE)", "configure"): "READY (ONLINE)",
+            ("READY (ONLINE)", "scan"): "SCANNING (ONLINE)",
+            ("READY (MAINTENANCE)", "offline"): "OFFLINE",
+            ("READY (MAINTENANCE)", "online"): "READY (ONLINE)",
+            ("READY (MAINTENANCE)", "notfitted"): "NOTFITTED",
+            ("READY (MAINTENANCE)", "release"): "OFF (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "scan"): "SCANNING (MAINTENANCE)",
+            ("SCANNING (ONLINE)", "offline"): "OFFLINE",
+            ("SCANNING (ONLINE)", "maintenance"): "SCANNING (MAINTENANCE)",
+            ("SCANNING (ONLINE)", "notfitted"): "NOTFITTED",
+            ("SCANNING (ONLINE)", "endscan"): "READY (ONLINE)",
+            ("SCANNING (ONLINE)", "configure"): "SCANNING (ONLINE)",
+            ("SCANNING (ONLINE)", "abort"): "ABORTED (ONLINE)",
+            ("SCANNING (MAINTENANCE)", "offline"): "OFFLINE",
+            ("SCANNING (MAINTENANCE)", "online"): "SCANNING (ONLINE)",
+            ("SCANNING (MAINTENANCE)", "notfitted"): "NOTFITTED",
+            ("SCANNING (MAINTENANCE)", "endscan"): "READY (MAINTENANCE)",
+            ("SCANNING (MAINTENANCE)", "configure"): "SCANNING (MAINTENANCE)",
+            ("SCANNING (MAINTENANCE)", "abort"): "ABORTED (MAINTENANCE)",
+            ("ABORTED (ONLINE)", "offline"): "OFFLINE",
+            ("ABORTED (ONLINE)", "maintenance"): "ABORTED (MAINTENANCE)",
+            ("ABORTED (ONLINE)", "notfitted"): "NOTFITTED",
+            ("ABORTED (ONLINE)", "reset"): "OFF (ONLINE)",
+            ("ABORTED (MAINTENANCE)", "offline"): "OFFLINE",
+            ("ABORTED (MAINTENANCE)", "online"): "ABORTED (ONLINE)",
+            ("ABORTED (MAINTENANCE)", "notfitted"): "NOTFITTED",
+            ("ABORTED (MAINTENANCE)", "reset"): "OFF (MAINTENANCE)",
+        }
+
+        def perform_action(tango_context, action):
+            actions[action](tango_context.device)
+
+        def check_state(tango_context, state):
+            assert state_check[state](tango_context.device)
+
+        action_sequence = [
+            # Test all transitions between disabled and off states
+            "notfitted", "offline", "maintenance", "online", "offline",
+            "notfitted", "online", "maintenance", "notfitted", "maintenance",
+            "offline", "online",
+            # Extend to ready states
+            "assign", "maintenance", "release", "assign", "online", "release",
+            "assign", "notfitted", "online", "assign", "offline", "maintenance",
+            "assign", "notfitted", "maintenance", "assign", "offline", "online",
+            # Extend to scanning states
+            "assign", "scan", "maintenance", "endscan", "scan", "online",
+            "endscan", "scan", "notfitted", "online", "assign", "scan",
+            "offline", "maintenance", "assign", "scan", "notfitted",
+            "maintenance", "assign", "scan", "offline", "online",
+            # Extend to abort states
+            "assign", "scan", "abort", "notfitted", "maintenance",
+            "assign", "scan", "abort", "notfitted", "online",
+            "assign", "scan", "abort", "offline", "maintenance",
+            "assign", "scan", "abort", "offline", "online",
+            "assign", "scan", "abort", "maintenance", "reset",
+            "assign", "scan", "abort", "online", "reset",
+        ]
+
+        # bypass cache for this test because we are testing for a change in the
+        # polled attribute obsState
+        tango_context.device.set_source(DevSource.DEV)  # bypass cache
+
+        # CHECK INITIAL STATE
+        state = "OFF (ONLINE)"
+        check_state(tango_context, state)
+
+        # TEST ACTION SEQUENCE
+        for action in action_sequence:
+            perform_action(tango_context, action)
+            check_state(tango_context, transitions[(state, action)])
+            state = transitions[(state, action)]

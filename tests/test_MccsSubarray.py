@@ -9,9 +9,11 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """contains the tests for the MccsSubarray"""
+import time
 import pytest
 import tango
-from ska.base.control_model import AdminMode, ControlMode, HealthState, TestMode
+from ska.base.control_model import (AdminMode, ControlMode, HealthState,
+                                    ObsState, TestMode)
 from ska.mccs import release
 
 # pylint: disable=invalid-name
@@ -39,12 +41,17 @@ class TestMccsSubarray:
     def test_InitDevice(self, tango_context):
         """
         Test for Initial state.
-        A freshly initialised subarray device has no assigned resources
-        and is therefore in OFF state.
+
+        Per https://confluence.skatelescope.org/display/SE/Subarray+State+Model,
+        a freshly initialised subarray device is DISABLED, offline and idle,
+        until TM puts it online, and which time it transitions to OFF until
+        assigned resources.
         """
-        assert tango_context.device.state() == tango.DevState.OFF
-        assert tango_context.device.status() == "The device is in OFF state."
-        assert tango_context.device.adminMode == AdminMode.ONLINE
+        assert tango_context.device.state() == tango.DevState.DISABLE
+        assert tango_context.device.status() == "The device is in DISABLE state."
+        assert tango_context.device.adminMode == AdminMode.OFFLINE
+        assert tango_context.device.obsState == ObsState.IDLE
+
         assert tango_context.device.healthState == HealthState.OK
         assert tango_context.device.controlMode == ControlMode.REMOTE
         assert not tango_context.device.simulationMode
@@ -96,13 +103,81 @@ class TestMccsSubarray:
         """Test for versionId"""
         assert tango_context.device.versionId == release.version
 
+    def test_adminMode(self, tango_context):
+        """
+        Test for adminMode. This test executes the following sequence of
+        mode transitions, checking after each transition that the subarray is
+        in the expected state. Thus all twelve possible mode transitions are
+        tested:
+
+        OFFLINE -> ONLINE -> OFFLINE -> MAINTENANCE -> ONLINE -> NOT_FITTED
+        -> MAINTENANCE -> OFFLINE -> NOT_FITTED -> ONLINE -> MAINTENANCE
+        -> NOT_FITTED -> OFFLINE
+
+        :todo: test taking offline after resources have been allocated
+        :todo: test taking offline while scan is configuring
+        :todo: test taking offline while scan is ready
+        :todo: test taking offline while scannning
+        """
+        # SETUP
+        sleep_seconds = tango_context.device.get_attribute_poll_period(
+            "adminMode"
+        ) / 1000.0 * 1.2
+
+        checks = {
+            AdminMode.OFFLINE: {
+                "permitted_states": [tango.DevState.DISABLE],
+                "permitted_obs_states": [ObsState.IDLE]
+            },
+            AdminMode.ONLINE: {
+                "permitted_states": [tango.DevState.OFF],
+                "permitted_obs_states": [ObsState.IDLE]
+            },
+            AdminMode.MAINTENANCE: {
+                "permitted_states": [tango.DevState.OFF],
+                "permitted_obs_states": [ObsState.IDLE]
+            },
+            AdminMode.NOT_FITTED: {
+                "permitted_states": [tango.DevState.DISABLE, tango.DevState.OFF],
+                "permitted_obs_states": [ObsState.IDLE]
+            }
+        }
+
+        def check_state(tango_context, adminMode):
+            assert tango_context.device.adminMode == adminMode
+            if "permitted_states" in checks[adminMode]:
+                state = tango_context.device.state()
+                assert state in checks[adminMode]["permitted_states"]
+            if "permitted_obs_states" in checks[adminMode]:
+                obs_state = tango_context.device.obsState
+                assert obs_state in checks[adminMode]["permitted_obs_states"]
+
+        mode_sequence = [AdminMode.ONLINE, AdminMode.OFFLINE,
+                         AdminMode.MAINTENANCE, AdminMode.ONLINE,
+                         AdminMode.NOT_FITTED, AdminMode.MAINTENANCE,
+                         AdminMode.OFFLINE, AdminMode.NOT_FITTED,
+                         AdminMode.ONLINE, AdminMode.MAINTENANCE,
+                         AdminMode.NOT_FITTED, AdminMode.OFFLINE]
+
+        # CHECK INITIAL CONDITIONS
+        check_state(tango_context, AdminMode.OFFLINE)
+
+        # Test
+        for mode in mode_sequence:
+            tango_context.device.adminMode = mode
+            time.sleep(sleep_seconds)
+            check_state(tango_context, mode)
+
     # MccsSubarray attributes
+
     def test_scanId(self, tango_context):
         """Test for scanID attribute"""
         assert tango_context.device.scanId == -1
 
     def test_stationFQDNs(self, tango_context):
-        """Test for stationFQDNs attribute"""
+        """
+        Test for stationFQDNs attribute
+        """
         assert tango_context.device.stationFQDNs is None
 
     def test_tileFQDNs(self, tango_context):

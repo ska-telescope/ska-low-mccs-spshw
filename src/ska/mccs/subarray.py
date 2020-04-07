@@ -17,14 +17,18 @@ MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 """
 __all__ = ["MccsSubarray", "main"]
 
+# base imports
+from threading import Lock
+
 # PyTango imports
 from tango import DebugIt
+from tango import AttrWriteType
 from tango.server import attribute, command
 from tango import DevState
 
 # Additional import
 from ska.base import SKASubarray
-
+from ska.base.control_model import AdminMode, ObsState
 import ska.mccs.release as release
 
 
@@ -32,6 +36,9 @@ class MccsSubarray(SKASubarray):
     """
     MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 
+    :todo: Some writes/attributes cause multiple state/mode changes. This should
+           be atomic. Does we need to use a thread lock to ensure thread safety,
+           or does Tango handle this for us?
     :todo: Implement healthState, taking account of health of this device and
            of the capability invoked on this device
     :todo: All commands return a dummy string
@@ -84,31 +91,58 @@ class MccsSubarray(SKASubarray):
         "Beams allocated to this Subarray",
     )
 
+    # --------------------
+    # Inherited attributes
+    # --------------------
+    adminMode = attribute(
+        dtype=AdminMode,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        doc="The admin mode reported for this device. It may interpret the current "
+            "device condition and condition of all managed devices to set this. "
+            "Most possibly an aggregate attribute.",
+    )
+
     # ---------------
     # General methods
     # ---------------
 
     def init_device(self):
-        """Initialises the attributes and properties of the MccsSubarray."""
-        SKASubarray.init_device(self)
+        """
+        Initialises the attributes and properties of the MccsSubarray.i
+        """
+        self._state_lock = Lock()  # to atomically change multiple states/modes
 
-        self.set_state(DevState.INIT)
+        with self._state_lock:
+            self.set_state(DevState.INIT)
+            SKASubarray.init_device(self)
+            # push back to DevState.INIT again because we are still
+            # initialising, and SKASubarray.init_device() prematurely pushes to
+            #  DevState.DISABLE
+            self.set_state(DevState.INIT)
 
-        self._scan_id = -1
-        self._station_FQDNs = []
-        self.set_change_event("stationFQDNs", True, True)
-        self.set_archive_event("stationFQDNs", True, True)
-        self._tile_FQDNs = []
-        self._station_beam_FQDNs = []
+            self._scan_id = -1
+            self._station_FQDNs = []
+            self.set_change_event("stationFQDNs", True, True)
+            self.set_archive_event("stationFQDNs", True, True)
+            self._tile_FQDNs = []
+            self._station_beam_FQDNs = []
 
-        self._build_state = release.get_release_info()
-        self._version_id = release.version
+            self._build_state = release.get_release_info()
+            self._version_id = release.version
 
-        # Any other initialisation code goes here,
-        # after setting state to INIT,
-        # but before setting state to OFF
+            # Any other initialisation code goes here,
+            # after setting state to INIT,
+            # but before setting state to DISABLE
 
-        self.set_state(DevState.OFF)  # subarray is empty
+            # These should really be done in the base classes, but aren't
+            # https://confluence.skatelescope.org/display/SE/Subarray+State+Model
+            self._admin_mode = AdminMode.OFFLINE
+            # self._obs_state = ObsState.IDLE
+
+            self.set_state(DevState.DISABLE)
+
+        self.logger.info("MCCS Subarray device initialised.")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -131,8 +165,9 @@ class MccsSubarray(SKASubarray):
         return self._scan_id
 
     def read_stationFQDNs(self):
-
-        """Return the stationFQDNs attribute."""
+        """
+        Return the stationFQDNs attribute.
+        """
         return self._station_FQDNs
 
     def read_tileFQDNs(self):
@@ -144,6 +179,84 @@ class MccsSubarray(SKASubarray):
 
         """Return the stationBeamFQDNs attribute."""
         return self._station_beam_FQDNs
+
+    # ---------------------------
+    # Attributes method overrides
+    # ---------------------------
+    def write_adminMode(self, value):
+        r"""
+        Write the new adminMode value. Used by TM to put the subarray online
+        and to take it offline. This action may trigger additional actions and
+        state changes as follows:
+
+        +-------------+------------+-------------+---------+-------------+------------+
+        | From \ To   | ONLINE     | MAINTENANCE | OFFLINE               | NOT_FITTED |
+        +-------------+------------+-------------+-----------------------+------------+
+        | ONLINE      | N/A        | no          | Abort()               | no         |
+        |             |            | further     | Reset()               | further    |
+        |             |            | action      | ReleaseAllResources() | action     |
+        |             |            |             | [OFF|ON] -> DISABLE   |            |
+        +-------------+------------+-------------+-----------------------+------------+
+        | MAINTENANCE | no         | N/A         | Abort()               | no         |
+        |             | further    |             | Reset()               | further    |
+        |             | action     |             | ReleaseAllResources() | action     |
+        |             |            |             | [OFF|ON] -> DISABLE   |            |
+        +-------------+------------+-------------+-----------------------+------------+
+        | OFFLINE     | DISABLE    | DISABLE     | N/A                   | no         |
+        |             |     -> OFF |      -> OFF |                       | further    |
+        |             |            |             |                       | action     |
+        +-------------+------------+-------------+-----------------------+------------+
+        | NOT_FITTED  | DISABLE -> | DISABLE ->  | Abort()               | N/A        |
+        |             |        OFF |         OFF | Reset()               |            |
+        |             |            |             | ReleaseAllResources() |            |
+        |             |            |             | [OFF|ON] -> DISABLE   |            |
+        +-------------+------------+-------------+-----------------------+------------+
+
+        Notes:
+        1. The subarray can be placed into NOT_FITTED admin mode from any other
+        admin mode, with no further action taken. e.g. if a scan was running,
+        it continues to run.
+        2. When the subarray is placed into ONLINE or MAINTENANCE mode from
+        OFFLINE mode, the subarray is being put online, so the device statei
+        changes from DISABLE to OFF. If coming from the NOT_FITTED mode, we
+        transition to OFF state iff the previous state was DISABLE. This covers
+        the case of a transition from offline to online via NOT_FITTED mode.
+        3. When the subarray is placed into OFFLINE mode from ONLINE or
+        MAINTENANCE modes, then te subarray is being taken offline. Thus any
+        configuring, configured or running scan is aborted, the configuration
+        is reset, and any assigned resources are released. The device state is
+        then set to DISABLE. These steps are also followed when comine from the
+        NOT_FITTED admin mode, to cover off on a transition fromm offline to
+        online via NOT_FITTED
+
+        :param value: the new admin mode
+        :type value: AdminMode enum value
+        """
+        state = self.get_state()
+        new_state = None
+        if value != self._admin_mode:  # we're changing mode
+            if value == AdminMode.NOT_FITTED:
+                pass  # nothing special to do here
+            elif value in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
+                if state == DevState.DISABLE:
+                    new_state = DevState.OFF
+            elif value == AdminMode.OFFLINE:
+                if state == DevState.DISABLE:
+                    # we must be coming from NOT_FITTED mode
+                    pass  # nothing special to do here
+                else:  # much the more usual case
+                    if self._obs_state in [ObsState.CONFIGURING,
+                                           ObsState.READY,
+                                           ObsState.SCANNING]:
+                        self.Abort()
+                        self.Reset()
+                    self.ReleaseAllResources()
+                    new_state = DevState.DISABLE
+
+        with self._state_lock:
+            if new_state:
+                self.set_state(new_state)
+            super().write_adminMode(value)
 
     # --------
     # Commands
@@ -169,6 +282,7 @@ class MccsSubarray(SKASubarray):
                  only
         :rtype: DevString
         """
+        self.logger.debug("MccsSubarray.configureScan() command called")
         return (
             "Dummy ASCII string returned from "
             "MccsSubarray.configureScan() to indicate status, for "
@@ -218,6 +332,7 @@ class MccsSubarray(SKASubarray):
                  only
         :rtype: DevString
         """
+        self.logger.debug("MccsSubarray.sendTransientBuffer command called")
         return (
             "Dummy ASCII string returned from "
             "MccsSubarray.sendTransientBuffer() to indicate status, for "

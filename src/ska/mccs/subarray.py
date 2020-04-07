@@ -60,7 +60,7 @@ class MccsSubarray(SKASubarray):
         dtype="DevLong",
         format="%i",
         polling_period=1000,
-        doc="The ID of the current scan, set via commands startScan() and "
+        doc="The ID of the current scan, set via commands Scan() and "
         "endScan(). A scanId of 0 means that the subarray is idle.",
     )
 
@@ -135,12 +135,13 @@ class MccsSubarray(SKASubarray):
             # after setting state to INIT,
             # but before setting state to DISABLE
 
-            # These should really be done in the base classes, but aren't
-            # https://confluence.skatelescope.org/display/SE/Subarray+State+Model
-            self._admin_mode = AdminMode.OFFLINE
-            # self._obs_state = ObsState.IDLE
-
-            self.set_state(DevState.DISABLE)
+            # We need to initialise admin mode from the memorized value, but I
+            # don't know how to do that, and the base classes are incorrectly
+            # initialising it to ONLINE anyhow, so we'll go with that for now.
+            if self._admin_mode in [AdminMode.OFFLINE, AdminMode.NOT_FITTED]:
+                self.set_state(DevState.DISABLE)
+            else:
+                self.set_state(DevState.OFF)
 
         self.logger.info("MCCS Subarray device initialised.")
 
@@ -156,7 +157,7 @@ class MccsSubarray(SKASubarray):
         """
 
     # ------------------
-    # Attributes methods
+    # Attribute methods
     # ------------------
 
     def read_scanId(self):
@@ -180,9 +181,9 @@ class MccsSubarray(SKASubarray):
         """Return the stationBeamFQDNs attribute."""
         return self._station_beam_FQDNs
 
-    # ---------------------------
-    # Attributes method overrides
-    # ---------------------------
+    # --------------------------------------
+    # Base classs attribute method overrides
+    # --------------------------------------
     def write_adminMode(self, value):
         r"""
         Write the new adminMode value. Used by TM to put the subarray online
@@ -233,30 +234,84 @@ class MccsSubarray(SKASubarray):
         :type value: AdminMode enum value
         """
         state = self.get_state()
-        new_state = None
         if value != self._admin_mode:  # we're changing mode
-            if value == AdminMode.NOT_FITTED:
-                pass  # nothing special to do here
-            elif value in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
-                if state == DevState.DISABLE:
-                    new_state = DevState.OFF
-            elif value == AdminMode.OFFLINE:
-                if state == DevState.DISABLE:
-                    # we must be coming from NOT_FITTED mode
-                    pass  # nothing special to do here
-                else:  # much the more usual case
-                    if self._obs_state in [ObsState.CONFIGURING,
-                                           ObsState.READY,
-                                           ObsState.SCANNING]:
-                        self.Abort()
+            with self._state_lock:
+                super().write_adminMode(value)
+                if value in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
+                    if state == DevState.DISABLE:
+                        self.set_state(DevState.OFF)
+                elif value in [AdminMode.OFFLINE, AdminMode.NOT_FITTED]:
+                    if state != DevState.DISABLE:
                         self.Reset()
-                    self.ReleaseAllResources()
-                    new_state = DevState.DISABLE
+                        self.set_state(DevState.DISABLE)
 
-        with self._state_lock:
-            if new_state:
-                self.set_state(new_state)
-            super().write_adminMode(value)
+    # ----------------------------
+    # Base class command overrides
+    # ----------------------------
+    @command(
+        dtype_out=('str',),
+        doc_out="List of resources removed from the subarray.",
+    )
+    @DebugIt()
+    def ReleaseAllResources(self):
+        """
+        Remove all resources to tear down to an empty subarray.
+        Overriding in order to set state back to OFF
+        """
+        released_resources = super().ReleaseAllResources()
+        self.set_state(DevState.OFF)
+        return released_resources
+
+    @command(
+        dtype_in=('str',),
+    )
+    @DebugIt()
+    def Scan(self, argin):
+        """
+        Starts the scan.
+        Overriding in order to set obsState to SCANNING.
+        """
+        super().Scan(argin)
+        self._obs_state = ObsState.SCANNING
+
+    @command(
+    )
+    @DebugIt()
+    def EndScan(self):
+        """
+        Ends the scan.
+        Overriding in order to set obsState to IDLE.
+        """
+        super().EndScan()
+        self._obs_state = ObsState.IDLE
+
+    @command(
+    )
+    @DebugIt()
+    def Abort(self):
+        """
+        Abort the scan.
+        Overriding in order to set obsState to ABORTED.
+        """
+        super().Abort()
+        self._obs_state = ObsState.ABORTED
+
+    @command(
+    )
+    @DebugIt()
+    def Reset(self):
+        """
+        Reset the scan
+        Overriding in order to conform to state machine
+        """
+
+        # if DISABLED, we don't want to do anything
+        # if OFF, there's nothing to do
+        # Maybe calls from DISABLED and OFF state should be rejected rather than
+        # ignored?
+        if self.get_state() == DevState.ON:
+            self._obs_state = ObsState.IDLE
+            self.ReleaseAllResources()  # this will set the state to OFF too
 
     # --------
     # Commands
@@ -282,7 +337,6 @@ class MccsSubarray(SKASubarray):
                  only
         :rtype: DevString
         """
-        self.logger.debug("MccsSubarray.configureScan() command called")
         return (
             "Dummy ASCII string returned from "
             "MccsSubarray.configureScan() to indicate status, for "
@@ -332,7 +386,6 @@ class MccsSubarray(SKASubarray):
                  only
         :rtype: DevString
         """
-        self.logger.debug("MccsSubarray.sendTransientBuffer command called")
         return (
             "Dummy ASCII string returned from "
             "MccsSubarray.sendTransientBuffer() to indicate status, for "

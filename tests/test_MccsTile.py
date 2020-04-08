@@ -68,6 +68,10 @@ class TestMccsTile(object):
         """Test for Disconnect"""
         assert tango_context.device.Disconnect() is None
 
+    def test_GetFirmwareList(self, tango_context):
+        """Test for GetFirmwareList"""
+        assert tango_context.device.GetFirmwareList() == []
+
     def test_DownloadFirmware(self, tango_context):
         """Test for DownloadFirmware"""
         assert tango_context.device.DownloadFirmware("") is None

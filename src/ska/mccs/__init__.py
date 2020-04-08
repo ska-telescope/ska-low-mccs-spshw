@@ -1,6 +1,6 @@
 """ Mccs device module """
 __all__ = ["MccsMaster", "MccsSubarray", "MccsStation", "MccsStationBeam",
-           "MccsTile", "MccsAntenna"]
+           "MccsTile", "MccsAntenna", "MccsTileSimulator"]
 
 from .device import MccsDevice  # noqa: F401
 from .group_device import MccsGroupDevice  # noqa: F401
@@ -10,3 +10,4 @@ from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .tile import MccsTile
 from .antenna import MccsAntenna
+from .tile_simulator import MccsTileSimulator

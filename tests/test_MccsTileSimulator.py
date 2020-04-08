@@ -13,35 +13,28 @@
 #__all__ = ["tile_simulator", "main"]
 # Imports
 import pytest
+import numpy as np
 import sys
 import os
 
 # PyTango imports
-from tango import DebugIt
+from tango import DevFailed
 from tango import DevState
-from tango.server import attribute, command
-from tango.server import device_property
+# from tango.server import attribute, command, Device, DeviceMeta
+# from tango.server import device_property
 
 # Additional import
-
-from ska.mccs.group_device import MccsGroupDevice
-from ska.mccs.tpm_simulator import TpmSimulator
-from ska.base.control_model import (
-    SimulationMode,
-    TestMode,
-    AdminMode,
-    ControlMode,
-    HealthState,
-    LoggingLevel,
-)
+# from ska.mccs.tile_simulator import MccsTileSimulator
+# from ska.mccs.group_device import MccsGroupDevice
+# from ska.mccs.tpm_simulator import TpmSimulator
+from ska.base.control_model import LoggingLevel
 
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.insert(0, os.path.abspath(path))
 
 # Device test case
 @pytest.mark.usefixtures("tango_context", "initialize_device")
-class Testtile_simulator(object):
-#class TestMccsTileSimulator(object):
+class TestMccsTileSimulator(object):
     """
     The Tile Device represents the TANGO interface to a Tile (TPM) unit.
     Tests conducted herein aim to exercise the currently defined MCCS Tile
@@ -51,10 +44,10 @@ class Testtile_simulator(object):
     # -----------------
     # Device Properties
     # -----------------
-    TileIP = device_property(dtype=str, default_value="0.0.0.0")
-    TpmCpldPort = device_property(dtype=int, default_value=20000)
-    LmcIp = device_property(dtype=str, default_value="0.0.0.0")
-    DstPort = device_property(dtype=int, default_value=30000)
+#    TileIP = device_property(dtype=str, default_value="0.0.0.0")
+#    TpmCpldPort = device_property(dtype=int, default_value=20000)
+#    LmcIp = device_property(dtype=str, default_value="0.0.0.0")
+#    DstPort = device_property(dtype=int, default_value=30000)
 
     # ---------------
     # General methods
@@ -105,7 +98,7 @@ class Testtile_simulator(object):
         """
         assert tango_context.device.is_connected is True
 
-    def test_test_tileId(self, tango_context):
+    def test_tileId(self, tango_context):
         """Test for the tileId attribute."""
         assert tango_context.device.tileID == -1
 
@@ -201,7 +194,7 @@ class Testtile_simulator(object):
         """Test for the fortyGbDestinationPorts attribute."""
         assert tango_context.device.forty_gb_destination_ports == [0]
 
-    def adcPower(self):
+    def test_adcPower(self, tango_context):
         # Test if board is not programmed, return None
         assert tango_context.device.adcPower is None
 

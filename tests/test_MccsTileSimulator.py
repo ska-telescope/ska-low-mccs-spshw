@@ -19,12 +19,11 @@ import os
 
 # PyTango imports
 from tango import DevFailed
-from tango import DevState
+from tango import DevState, DevString
 # from tango.server import attribute, command, Device, DeviceMeta
 # from tango.server import device_property
 
 # Additional import
-# from ska.mccs.tile_simulator import MccsTileSimulator
 # from ska.mccs.group_device import MccsGroupDevice
 # from ska.mccs.tpm_simulator import TpmSimulator
 from ska.base.control_model import LoggingLevel
@@ -70,19 +69,12 @@ class TestMccsTileSimulator(object):
 
     def test_State(self, tango_context):
         """Test for State"""
-        assert tango_context.device.state() == DevState.ON
+        assert tango_context.device.state() == DevState.OFF
 
     #    def test_Status(self, tango_context):
     #        """Test for Status"""
     #        assert tango_context.device.status() == "This device is On"
 
-    def test_PowerOn(self, tango_context):
-        """Test for PowerOn"""
-        assert tango_context.device.PowerOn() is None
-
-    def test_PowerOff(self, tango_context):
-        """Test for PowerOff"""
-        assert tango_context.device.PowerOff() is None
 
     def test_Reset(self, tango_context):
         """Test for Reset"""
@@ -91,12 +83,12 @@ class TestMccsTileSimulator(object):
 
 
 
-    def test_is_connected(self, tango_context):
-        """
-        Test for Helper to disallow certain function
-        calls on unconnected tiles
-        """
-        assert tango_context.device.is_connected is True
+#    def test_is_connected(self, tango_context):
+#        """
+#        Test for Helper to disallow certain function
+#        calls on unconnected tiles
+#        """
+#        assert tango_context.device.is_connected is None
 
     def test_tileId(self, tango_context):
         """Test for the tileId attribute."""
@@ -117,7 +109,6 @@ class TestMccsTileSimulator(object):
     def test_ipAddress(self, tango_context):
         """Test for the ipAddress attribute."""
         assert tango_context.device.ipAddress == ""
-
     def test_lmcIp(self, tango_context):
         """Test for the lmcIp attribute"""
         assert tango_context.device.lmcIp == ""
@@ -155,7 +146,7 @@ class TestMccsTileSimulator(object):
         assert tango_context.device.current == 0.0
 
     def test_isProgrammed(self, tango_context):
-        """ Test that returns false to mimic that the board is not programmed"""
+        """Test for isProgrammed"""
         assert tango_context.device.isProgrammed is False
 
     def test_board_temperature(self, tango_context):

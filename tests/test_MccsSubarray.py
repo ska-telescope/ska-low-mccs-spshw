@@ -232,7 +232,7 @@ class TestMccsSubarray:
             "configure": lambda d: d.configureScan("foo"),
             "scan": lambda d: d.Scan(["foo"]),
             "endscan": lambda d: d.EndScan(),
-            "endSB": lambda d: d.EndSB(),
+            "endsb": lambda d: d.EndSB(),
             "abort": lambda d: d.Abort(),
             "reset": lambda d: d.Reset()
         }
@@ -266,7 +266,7 @@ class TestMccsSubarray:
             ("READY (ONLINE)", "offline"): "OFFLINE",
             ("READY (ONLINE)", "maintenance"): "READY (MAINTENANCE)",
             ("READY (ONLINE)", "notfitted"): "NOTFITTED",
-            ("READY (ONLINE)", "endSB"): "ON (ONLINE)",
+            ("READY (ONLINE)", "endsb"): "ON (ONLINE)",
             ("READY (ONLINE)", "reset"): "ON (ONLINE)",
             ("READY (ONLINE)", "configure"): "READY (ONLINE)",
             ("READY (ONLINE)", "scan"): "SCANNING (ONLINE)",
@@ -274,7 +274,7 @@ class TestMccsSubarray:
             ("READY (MAINTENANCE)", "offline"): "OFFLINE",
             ("READY (MAINTENANCE)", "online"): "READY (ONLINE)",
             ("READY (MAINTENANCE)", "notfitted"): "NOTFITTED",
-            ("READY (MAINTENANCE)", "endSB"): "ON (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "endsb"): "ON (MAINTENANCE)",
             ("READY (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
             ("READY (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
             ("READY (MAINTENANCE)", "scan"): "SCANNING (MAINTENANCE)",
@@ -324,8 +324,8 @@ class TestMccsSubarray:
             "assign", "configure", "notfitted", "online",
             "assign", "configure", "offline", "online",
             "assign", "configure", "notfitted", "online",
-            "assign", "configure", "reset", "configure", "endSB", "maintenance",
-            "configure", "reset", "configure", "online", "maintenance", "endSB",
+            "assign", "configure", "reset", "configure", "endsb", "maintenance",
+            "configure", "reset", "configure", "online", "maintenance", "endsb",
             # Extend to scanning states
             "configure", "scan", "offline", "maintenance",
             "assign", "configure", "scan", "notfitted", "online",

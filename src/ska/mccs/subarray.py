@@ -266,8 +266,7 @@ class MccsSubarray(SKASubarray):
         super().Scan(argin)
         self._obs_state = ObsState.SCANNING
 
-    @command(
-    )
+    @command()
     @DebugIt()
     def EndScan(self):
         """
@@ -277,8 +276,7 @@ class MccsSubarray(SKASubarray):
         super().EndScan()
         self._obs_state = ObsState.READY
 
-    @command(
-    )
+    @command()
     @DebugIt()
     def EndSB(self):
         """
@@ -288,8 +286,7 @@ class MccsSubarray(SKASubarray):
         super().EndSB()
         self._obs_state = ObsState.IDLE
 
-    @command(
-    )
+    @command()
     @DebugIt()
     def Abort(self):
         """
@@ -299,8 +296,7 @@ class MccsSubarray(SKASubarray):
         super().Abort()
         self._obs_state = ObsState.ABORTED
 
-    @command(
-    )
+    @command()
     @DebugIt()
     def Reset(self):
         """

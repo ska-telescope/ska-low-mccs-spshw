@@ -185,14 +185,22 @@ class TestMccsSubarray:
                 lambda d: (d.adminMode == AdminMode.MAINTENANCE
                            and d.state() == DevState.OFF
                            and d.obsState == ObsState.IDLE),
-            "READY (ONLINE)":
+            "ON (ONLINE)":
                 lambda d: (d.adminMode == AdminMode.ONLINE
                            and d.state() == DevState.ON
                            and d.obsState == ObsState.IDLE),
-            "READY (MAINTENANCE)":
+            "ON (MAINTENANCE)":
                 lambda d: (d.adminMode == AdminMode.MAINTENANCE
                            and d.state() == DevState.ON
                            and d.obsState == ObsState.IDLE),
+            "READY (ONLINE)":
+                lambda d: (d.adminMode == AdminMode.ONLINE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.READY),
+            "READY (MAINTENANCE)":
+                lambda d: (d.adminMode == AdminMode.MAINTENANCE
+                           and d.state() == DevState.ON
+                           and d.obsState == ObsState.READY),
             "SCANNING (ONLINE)":
                 lambda d: (d.adminMode == AdminMode.ONLINE
                            and d.state() == DevState.ON
@@ -224,6 +232,7 @@ class TestMccsSubarray:
             "configure": lambda d: d.configureScan("foo"),
             "scan": lambda d: d.Scan(["foo"]),
             "endscan": lambda d: d.EndScan(),
+            "endSB": lambda d: d.EndSB(),
             "abort": lambda d: d.Abort(),
             "reset": lambda d: d.Reset()
         }
@@ -237,43 +246,59 @@ class TestMccsSubarray:
             ("OFF (ONLINE)", "offline"): "OFFLINE",
             ("OFF (ONLINE)", "maintenance"): "OFF (MAINTENANCE)",
             ("OFF (ONLINE)", "notfitted"): "NOTFITTED",
-            ("OFF (ONLINE)", "assign"): "READY (ONLINE)",
+            ("OFF (ONLINE)", "assign"): "ON (ONLINE)",
             ("OFF (MAINTENANCE)", "offline"): "OFFLINE",
             ("OFF (MAINTENANCE)", "online"): "OFF (ONLINE)",
             ("OFF (MAINTENANCE)", "notfitted"): "NOTFITTED",
-            ("OFF (MAINTENANCE)", "assign"): "READY (MAINTENANCE)",
+            ("OFF (MAINTENANCE)", "assign"): "ON (MAINTENANCE)",
+            ("ON (ONLINE)", "offline"): "OFFLINE",
+            ("ON (ONLINE)", "maintenance"): "ON (MAINTENANCE)",
+            ("ON (ONLINE)", "notfitted"): "NOTFITTED",
+            ("ON (ONLINE)", "assign"): "ON (ONLINE)",
+            ("ON (ONLINE)", "release"): "OFF (ONLINE)",
+            ("ON (ONLINE)", "configure"): "READY (ONLINE)",
+            ("ON (MAINTENANCE)", "offline"): "OFFLINE",
+            ("ON (MAINTENANCE)", "online"): "ON (ONLINE)",
+            ("ON (MAINTENANCE)", "notfitted"): "NOTFITTED",
+            ("ON (MAINTENANCE)", "assign"): "ON (MAINTENANCE)",
+            ("ON (MAINTENANCE)", "release"): "OFF (MAINTENANCE)",
+            ("ON (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
             ("READY (ONLINE)", "offline"): "OFFLINE",
             ("READY (ONLINE)", "maintenance"): "READY (MAINTENANCE)",
             ("READY (ONLINE)", "notfitted"): "NOTFITTED",
-            ("READY (ONLINE)", "release"): "OFF (ONLINE)",
+            ("READY (ONLINE)", "endSB"): "ON (ONLINE)",
+            ("READY (ONLINE)", "reset"): "ON (ONLINE)",
             ("READY (ONLINE)", "configure"): "READY (ONLINE)",
             ("READY (ONLINE)", "scan"): "SCANNING (ONLINE)",
+            ("READY (ONLINE)", "abort"): "ABORTED (ONLINE)",
             ("READY (MAINTENANCE)", "offline"): "OFFLINE",
             ("READY (MAINTENANCE)", "online"): "READY (ONLINE)",
             ("READY (MAINTENANCE)", "notfitted"): "NOTFITTED",
-            ("READY (MAINTENANCE)", "release"): "OFF (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "endSB"): "ON (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
             ("READY (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
             ("READY (MAINTENANCE)", "scan"): "SCANNING (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "abort"): "ABORTED (MAINTENANCE)",
             ("SCANNING (ONLINE)", "offline"): "OFFLINE",
             ("SCANNING (ONLINE)", "maintenance"): "SCANNING (MAINTENANCE)",
             ("SCANNING (ONLINE)", "notfitted"): "NOTFITTED",
             ("SCANNING (ONLINE)", "endscan"): "READY (ONLINE)",
-            ("SCANNING (ONLINE)", "configure"): "SCANNING (ONLINE)",
             ("SCANNING (ONLINE)", "abort"): "ABORTED (ONLINE)",
+            ("SCANNING (ONLINE)", "reset"): "ON (ONLINE)",
             ("SCANNING (MAINTENANCE)", "offline"): "OFFLINE",
             ("SCANNING (MAINTENANCE)", "online"): "SCANNING (ONLINE)",
             ("SCANNING (MAINTENANCE)", "notfitted"): "NOTFITTED",
             ("SCANNING (MAINTENANCE)", "endscan"): "READY (MAINTENANCE)",
-            ("SCANNING (MAINTENANCE)", "configure"): "SCANNING (MAINTENANCE)",
             ("SCANNING (MAINTENANCE)", "abort"): "ABORTED (MAINTENANCE)",
+            ("SCANNING (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
             ("ABORTED (ONLINE)", "offline"): "OFFLINE",
             ("ABORTED (ONLINE)", "maintenance"): "ABORTED (MAINTENANCE)",
             ("ABORTED (ONLINE)", "notfitted"): "NOTFITTED",
-            ("ABORTED (ONLINE)", "reset"): "OFF (ONLINE)",
+            ("ABORTED (ONLINE)", "reset"): "ON (ONLINE)",
             ("ABORTED (MAINTENANCE)", "offline"): "OFFLINE",
             ("ABORTED (MAINTENANCE)", "online"): "ABORTED (ONLINE)",
             ("ABORTED (MAINTENANCE)", "notfitted"): "NOTFITTED",
-            ("ABORTED (MAINTENANCE)", "reset"): "OFF (MAINTENANCE)",
+            ("ABORTED (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
         }
 
         def perform_action(tango_context, action):
@@ -287,22 +312,38 @@ class TestMccsSubarray:
             "notfitted", "offline", "maintenance", "online", "offline",
             "notfitted", "online", "maintenance", "notfitted", "maintenance",
             "offline", "online",
-            # Extend to ready states
-            "assign", "maintenance", "release", "assign", "online", "release",
-            "assign", "notfitted", "online", "assign", "offline", "maintenance",
-            "assign", "notfitted", "maintenance", "assign", "offline", "online",
+            # Extend to on states
+            "assign", "offline", "online",
+            "assign", "notfitted", "maintenance",
+            "assign", "offline", "maintenance",
+            "assign", "notfitted", "online",
+            "assign", "assign", "release", "maintenance",
+            "assign", "assign", "online", "maintenance", "release",
+            # Extend to ready statesA
+            "assign", "configure", "offline", "maintenance",
+            "assign", "configure", "notfitted", "online",
+            "assign", "configure", "offline", "online",
+            "assign", "configure", "notfitted", "online",
+            "assign", "configure", "reset", "configure", "endSB", "maintenance",
+            "configure", "reset", "configure", "online", "maintenance", "endSB",
             # Extend to scanning states
-            "assign", "scan", "maintenance", "endscan", "scan", "online",
-            "endscan", "scan", "notfitted", "online", "assign", "scan",
-            "offline", "maintenance", "assign", "scan", "notfitted",
-            "maintenance", "assign", "scan", "offline", "online",
+            "configure", "scan", "offline", "maintenance",
+            "assign", "configure", "scan", "notfitted", "online",
+            "assign", "configure", "scan", "offline", "online",
+            "assign", "configure", "scan", "notfitted", "online",
+            "assign", "configure", "scan", "maintenance", "online", "endscan",
+            "maintenance", "scan", "endscan",
+            "online", "scan", "reset",
+            "maintenance", "configure", "scan", "reset",
             # Extend to abort states
-            "assign", "scan", "abort", "notfitted", "maintenance",
-            "assign", "scan", "abort", "notfitted", "online",
-            "assign", "scan", "abort", "offline", "maintenance",
-            "assign", "scan", "abort", "offline", "online",
-            "assign", "scan", "abort", "maintenance", "reset",
-            "assign", "scan", "abort", "online", "reset",
+            "configure", "abort", "offline", "maintenance",
+            "assign", "configure", "abort", "notfitted", "online",
+            "assign", "configure", "abort", "offline", "online",
+            "assign", "configure", "abort", "notfitted", "online",
+            "assign", "configure", "abort", "reset", "maintenance",
+            "configure", "abort", "reset", "online",
+            "configure", "scan", "abort", "reset", "maintenance",
+            "configure", "scan", "abort", "reset", "online",
         ]
 
         # bypass cache for this test because we are testing for a change in the

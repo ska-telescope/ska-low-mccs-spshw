@@ -181,54 +181,44 @@ class MccsSubarray(SKASubarray):
         """Return the stationBeamFQDNs attribute."""
         return self._station_beam_FQDNs
 
-    # --------------------------------------
-    # Base classs attribute method overrides
-    # --------------------------------------
+    # -------------------------------------
+    # Base class attribute method overrides
+    # -------------------------------------
     def write_adminMode(self, value):
         r"""
         Write the new adminMode value. Used by TM to put the subarray online
         and to take it offline. This action may trigger additional actions and
         state changes as follows:
 
-        +-------------+------------+-------------+---------+-------------+------------+
-        | From \ To   | ONLINE     | MAINTENANCE | OFFLINE               | NOT_FITTED |
-        +-------------+------------+-------------+-----------------------+------------+
-        | ONLINE      | N/A        | no          | Abort()               | no         |
-        |             |            | further     | Reset()               | further    |
-        |             |            | action      | ReleaseAllResources() | action     |
-        |             |            |             | [OFF|ON] -> DISABLE   |            |
-        +-------------+------------+-------------+-----------------------+------------+
-        | MAINTENANCE | no         | N/A         | Abort()               | no         |
-        |             | further    |             | Reset()               | further    |
-        |             | action     |             | ReleaseAllResources() | action     |
-        |             |            |             | [OFF|ON] -> DISABLE   |            |
-        +-------------+------------+-------------+-----------------------+------------+
-        | OFFLINE     | DISABLE    | DISABLE     | N/A                   | no         |
-        |             |     -> OFF |      -> OFF |                       | further    |
-        |             |            |             |                       | action     |
-        +-------------+------------+-------------+-----------------------+------------+
-        | NOT_FITTED  | DISABLE -> | DISABLE ->  | Abort()               | N/A        |
-        |             |        OFF |         OFF | Reset()               |            |
-        |             |            |             | ReleaseAllResources() |            |
-        |             |            |             | [OFF|ON] -> DISABLE   |            |
-        +-------------+------------+-------------+-----------------------+------------+
+        +-----------+-------+-------+--------+------------+--------------------+
+        |         To|ONLINE |MAINT- |OFFLINE              |NOT_FITTED          |
+        |From       |       |ENANCE |                     |                    |
+        +-----------+-------+-------+---------------------+--------------------+
+        |ONLINE     |N/A    |no     |Reset()              |Reset()             |
+        |           |       |further|ReleaseAllResources()|ReleaseAllResource()|
+        |           |       |action |[OFF|ON] -> DISABLE  |[OFF|ON] -> DISABLE |
+        +-----------+-------+-------+---------------------+--------------------+
+        |MAINTENANCE|no     |N/A    |Reset()              |Reset()             |
+        |           |further|       |ReleaseAllResources()|ReleaseAllResource()|
+        |           |action |       |[OFF|ON] -> DISABLE  |[OFF|ON] -> DISABLE |
+        +-----------+-------+-------+---------------------+--------------------+
+        |OFFLINE    |DISABLE|DISABLE|N/A                  |no                  |
+        |           | -> OFF| -> OFF|                     |further             |
+        |           |       |       |                     |action              |
+        +-----------+-------+-------+---------------------+--------------------+
+        |NOT_FITTED |DISABLE|DISABLE|no further action    |N/A                 |
+        |           |->  OFF| -> OFF|                     |                    |
+        +-----------+-------+-------+---------------------+--------------------+
 
         Notes:
-        1. The subarray can be placed into NOT_FITTED admin mode from any other
-        admin mode, with no further action taken. e.g. if a scan was running,
-        it continues to run.
-        2. When the subarray is placed into ONLINE or MAINTENANCE mode from
-        OFFLINE mode, the subarray is being put online, so the device statei
-        changes from DISABLE to OFF. If coming from the NOT_FITTED mode, we
-        transition to OFF state iff the previous state was DISABLE. This covers
-        the case of a transition from offline to online via NOT_FITTED mode.
-        3. When the subarray is placed into OFFLINE mode from ONLINE or
-        MAINTENANCE modes, then te subarray is being taken offline. Thus any
-        configuring, configured or running scan is aborted, the configuration
-        is reset, and any assigned resources are released. The device state is
-        then set to DISABLE. These steps are also followed when comine from the
-        NOT_FITTED admin mode, to cover off on a transition fromm offline to
-        online via NOT_FITTED
+        1. The subarray can change between ONLINE and MAINTENANCE at any time,
+        with no further change to the state machine.
+        2. The subarray can be taken OFFLINE or put into NOT_FITTED mode at any
+        time, in which case it aborts whatever it was doing, deconfigures,
+        releases its resources, and changes State to DISABLED.
+        3. When the subarray is placed into ONLINE or MAINTENANCE mode from
+        OFFLINE or NOT_FITTED mode, the subarray is being put online, so the
+        state changes from DISABLE to OFF.
 
         :param value: the new admin mode
         :type value: AdminMode enum value
@@ -236,14 +226,16 @@ class MccsSubarray(SKASubarray):
         state = self.get_state()
         if value != self._admin_mode:  # we're changing mode
             with self._state_lock:
-                super().write_adminMode(value)
                 if value in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
                     if state == DevState.DISABLE:
                         self.set_state(DevState.OFF)
                 elif value in [AdminMode.OFFLINE, AdminMode.NOT_FITTED]:
                     if state != DevState.DISABLE:
-                        self.Reset()
+                        if state == DevState.ON:
+                            self.Reset()
+                            self.ReleaseAllResources()
                         self.set_state(DevState.DISABLE)
+                super().write_adminMode(value)
 
     # ----------------------------
     # Base class command overrides
@@ -280,9 +272,20 @@ class MccsSubarray(SKASubarray):
     def EndScan(self):
         """
         Ends the scan.
-        Overriding in order to set obsState to IDLE.
+        Overriding in order to set obsState to READY.
         """
         super().EndScan()
+        self._obs_state = ObsState.READY
+
+    @command(
+    )
+    @DebugIt()
+    def EndSB(self):
+        """
+        Signals the end of the scanblock.
+        Change obsState to IDLE
+        """
+        super().EndSB()
         self._obs_state = ObsState.IDLE
 
     @command(
@@ -310,8 +313,9 @@ class MccsSubarray(SKASubarray):
         # Maybe calls from DISABLED and OFF state should be rejected rather than
         # ignored?
         if self.get_state() == DevState.ON:
+            # abort any configuring or running scan
+            # deconfigure
             self._obs_state = ObsState.IDLE
-            self.ReleaseAllResources()  # this will set the state to OFF too
 
     # --------
     # Commands
@@ -337,6 +341,9 @@ class MccsSubarray(SKASubarray):
                  only
         :rtype: DevString
         """
+        self._obs_state = ObsState.CONFIGURING
+        # do stuff
+        self._obs_state = ObsState.READY
         return (
             "Dummy ASCII string returned from "
             "MccsSubarray.configureScan() to indicate status, for "

@@ -14,16 +14,17 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 __all__ = ["MccsTileSimulator", "main"]
 
 import os
+import json
 
 # PyTango imports
 from tango import DebugIt
 from tango import DevState
 from tango.server import attribute, command
-from tango.server import device_property
+from tango.server import device_property, Device
 
 # Additional import
 
-from ska.mccs.group_device import MccsGroupDevice
+from ska.mccs import MccsGroupDevice
 from ska.mccs.tpm_simulator import TpmSimulator
 from ska.base.control_model import SimulationMode, TestMode
 
@@ -44,6 +45,7 @@ class MccsTileSimulator(MccsGroupDevice):
     TpmCpldPort = device_property(dtype=int, default_value=20000)
     LmcIp = device_property(dtype=str, default_value="0.0.0.0")
     DstPort = device_property(dtype=int, default_value=30000)
+    AntennasPerTile = device_property(dtype=int, default_value=16)
 
     # ---------------
     # General methods
@@ -85,7 +87,7 @@ class MccsTileSimulator(MccsGroupDevice):
         self._sampling_rate = 0.0
         self._tpm = None
         self.simulationMode = SimulationMode.TRUE
-        self._tapering_coeffs = [1.0] * 16
+        self._tapering_coeffs = [1.0] * self.AntennasPerTile
         self.set_state(DevState.OFF)
         self.logger.info("MccsTileSimulator init_device complete")
 
@@ -103,6 +105,7 @@ class MccsTileSimulator(MccsGroupDevice):
     # ----------
     # Attributes
     # ----------
+
     def is_connected(self, attr_req_type):
         """
         Helper to disallow certain function calls on unconnected tiles
@@ -362,11 +365,11 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     def adcPower(self):
         # If board is not programmed, return None
-        if not self.tpm.is_programmed():
+        if not self._tpm.is_programmed():
             return None
 
         # Get RMS values from board
-        return self.tpm.get_adc_rms()
+        return self._tpm.get_adc_rms()
 
     # --------
     # Commands
@@ -486,15 +489,10 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        # Try to connect to board, if it fails then set tpm to None
         if self.simulationMode:
             self._tpm = TpmSimulator(self.logger)
         else:
             self._tpm = TPM()
-
-        # Add plugin directory (load module locally)
-        # tf = __import__("pyaavs.tpm_test_firmware", fromlist=[None])
-        # self._tpm.add_plugin_directory(os.path.dirname(tf.__file__))
 
         self._tpm.connect(
             ip=self._ip,
@@ -526,7 +524,19 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
         """
 
-        pass
+    pass
+
+    @command(dtype_out="DevVarStringArray", doc_out="list of firmware")
+    @DebugIt()
+    def GetFirmwareList(self):
+        """Return a list containing the following information for each
+        firmware stored on the board (such as in Flash memory).
+        For each firmware, a dictionary containing the following keys with
+        their respective values should be provided: ‘design’, which is a textual
+        name for the firmware, ‘major’, which is the major version number, and
+        ‘minor’.
+        """
+        return []
 
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
@@ -542,7 +552,7 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        if self._tpm is not None:
+        if not self.simulationMode and self._tpm is not None:
             self.logger.info("Downloading bitfile to board")
             self._tpm.download_firmware(bitfile)
 
@@ -559,7 +569,7 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        if self._tpm is not None:
+        if not self.simulationMode and self._tpm is not None:
             self.logger.info("Downloading bitstream to CPLD FLASH")
             self._tpm.cpld_flash_write(bitfile)
 
@@ -733,14 +743,30 @@ class MccsTileSimulator(MccsGroupDevice):
         """
         Specify whether control data will be transmitted over 1G or 40G
         networks
-        mode: ?1G? or ?40G? payload_length:
-        Size in bytes in UDP packet src_ip:
-        Set 40g lane source IP (required only for 40G mode)
-        lmc_mac: Set destination MAC for 40G lane (required only for 40G mode)
+
+        :param argin[0]: mode, 1g or 10g
+        :param argin[1]: payload_length, SPEAD payload length in bytes
+        :param argin[2]: dst_ip, Destination IP
+        :param argin[3]: src_port, Source port for integrated data streams
+        :param argin[4]: dst_port, Destination port for integrated data streams
+        :param argin[5]: lmc_mac, LMC Mac address is required for 10G lane configuration
 
         :return: None
         """
-        pass
+        payload_length = 1024
+        dst_ip = None
+        src_port = 0xF0D0
+        dst_port = 4660
+        lmc_mac = None
+
+        self._tpm.set_lmc_download(
+            mode,
+            payload_length=1024,
+            dst_ip=None,
+            src_port=0xF0D0,
+            dst_port=4660,
+            lmc_mac=None,
+        )
 
     @command(dtype_in="DevVarLongArray", doc_in="truncation array")
     @DebugIt()
@@ -795,7 +821,7 @@ class MccsTileSimulator(MccsGroupDevice):
             self.logger.error("Too many channels specified > 384")
             return
         region_array.append([start_channel, nchannnels, beam_index])
-        self._tpm.set_regions(region_array)
+        self._tpm.set_beamfomer_regions(region_array)
 
     @command(
         dtype_in="DevVarLongArray", doc_in="n_of_tiles, first_tile=False, start=False"
@@ -811,7 +837,14 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        pass
+        if len(argin) < 4:
+            self.logger.error("Insufficient parameters supplied")
+            return
+        start_channel = argin[0]
+        nof_channels = argin[1]
+        is_first = argin[2]
+        is_last = argin[3]
+        self._tpm.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
 
     @command(dtype_in="DevVarDoubleArray", doc_in="antenna, calibration_coefficients")
     @DebugIt()
@@ -853,7 +886,10 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        pass
+        angle_coeffs = []
+        for i in range(len(argin)):
+            angle_coeffs.append(argin[i])
+        self._tpm.load_beam_angle(self, angle_coeffs)
 
     @command(dtype_in="DevVarDoubleArray", doc_in="tapering coefficients")
     @DebugIt()
@@ -861,31 +897,48 @@ class MccsTileSimulator(MccsGroupDevice):
 
         """
         tapering_coeffs is a vector contains a value for each antenna the TPM
-        processes. Default is 1.0
+        processes. Default at initialisation is 1.0
+
+        :param argin: list of tapering coefficients for each antenna
+        :type argin: DevVarDoubleArray
 
         :return: None
+
+        :example:
+
+        >>> tapering_coeffs = [3.4] * 16
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadAntennaTapering", tapering_coeffs)
         """
-        if len(argin) < 16:
-            self.logger.error(
-                "Insufficient tapering coefficients should be 16, loading default"
+        if len(argin) < self.AntennasPerTile:
+            self.logger.warning(
+                f"Insufficient tapering coefficients should be {self.AntennasPerTile}, loading default"
             )
 
-        for i in range(16):
+        for i in range(self.AntennasPerTile):
             self._tapering_coeffs[i] = argin[i]
         self._tpm.load_antenna_tapering(self._tapering_coeffs)
 
-    @command(dtype_in="DevDouble", doc_in="switch time")
+    @command(dtype_in="DevLong", doc_in="switch time")
     @DebugIt()
-    def SwitchCalibrationBank(self, argin):
+    def SwitchCalibrationBank(self, switch_time):
 
         """
         Load the calibration coefficients at the specified time delay
 
-        :return: None
-        """
-        pass
+        :param switch_time: time
+        :type switch_time: DevLong
 
-    @command(dtype_in="DevVarLongArray", doc_in="delay_array, beam_index")
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("SwitchCalibrationBank", 10)
+        """
+        self._tpm.switch_calibration_bank(switch_time)
+
+    @command(dtype_in="DevVarDoubleArray", doc_in="delay_array, beam_index")
     @DebugIt()
     def SetPointingDelay(self, argin):
 
@@ -896,16 +949,16 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        if len(argin) != 33:
+        if len(argin) != self.AntennasPerTile * 2 + 1:
             self.logger.error("Insufficient parameters")
             return
-        beam_index = argin[32]
+        beam_index = int(argin[0])
         if beam_index < 0 or beam_index > 7:
             self.logger.error("Invalid beam index")
             return
         delay_array = []
-        for i in range(16):
-            delay_array.append([argin[i * 2], argin[i * 2 + 1]])
+        for i in range(self.AntennasPerTile):
+            delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
         self._tpm.set_pointing_delay(delay_array, beam_index)
 
     @command(dtype_in="DevLong", doc_in="load_time")
@@ -915,26 +968,47 @@ class MccsTileSimulator(MccsGroupDevice):
         """
         Loads the pointing delays at the specified time delay
 
-        :param load_time: time delay
+        :param load_time: time delay (default = 0)
         :type load_time: DevLong
 
         :return: None
-        """
-        # if load_time == 0:
-        #    load_time = self.current_tile_beamformer_frame() + 64
 
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadPointingDelay", 10)
+        """
         self._tpm.load_pointing_delay(load_time)
 
-    @command(dtype_in="DevDouble", doc_in="start_time")
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n" "StartTime, Duration",
+    )
     @DebugIt()
     def StartBeamformer(self, argin):
 
         """
         Start the beamformer at the specified time delay
 
+        :param argin: json dictionary with optional keywords:
+
+        * StartTime - (int) start time
+        * Duration - (int) if > 0 is a duration in frames * 256 (276.48 us)
+                           if == -1 run forever
+
         :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"StartTime":10, "Duration":20}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StartBeamformer", jstr)
         """
-        pass
+        params = json.loads(argin)
+        start_time = params.get("StartTime", 0)
+        duration = params.get("Duration", -1)
+        self._tpm.start_beamformer(start_time, duration)
 
     @command()
     @DebugIt()
@@ -944,45 +1018,100 @@ class MccsTileSimulator(MccsGroupDevice):
         Stop the beamformer
 
         :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopBeamformer")
         """
-        pass
+        self._tpm.stop_beamformer()
 
     @command(dtype_in="DevDouble", doc_in="Integration time")
     @DebugIt()
-    def ConfigureIntegratedChannelData(self, argin):
+    def ConfigureIntegratedChannelData(self, integration_time):
 
         """
         Configure the transmission of integrated channel data with the
         provided integration time
 
+        :param integration_time: time in seconds (default = 0.5)
+        :type integration_time: DevDouble
+
         :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284)
         """
-        pass
+        if integration_time <= 0:
+            integration_time = 0.5
+        self._tpm.configure_integrated_channel_data(integration_time)
 
     @command(dtype_in="DevDouble", doc_in="Integration time")
     @DebugIt()
-    def ConfigureIntegratedBeamData(self, argin):
+    def ConfigureIntegratedBeamData(self, integration_time):
 
         """
         Configure the transmission of integrated beam data with the provided
         integration time
 
-        :return: None
-        """
-        pass
+        :param integration_time: time in seconds (default = 0.5)
+        :type integration_time: DevDouble
 
-    @command()
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142)
+        """
+        if integration_time <= 0:
+            integration_time = 0.5
+        self._tpm.configure_integrated_beam_data(integration_time)
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "Sync,Period,Timeout,Timestamp,Seconds",
+    )
     @DebugIt()
-    def SendRawData(self):
+    def SendRawData(self, argin):
 
         """
         Transmit a snapshot containing raw antenna data
 
-        :return: None
-        """
-        pass
+        :param argin: json dictionary with optional keywords:
 
-    @command(dtype_in="DevLong", doc_in="number of samples")
+        * Sync - (bool) synchronised flag
+        * Period - (int) in seconds to send data
+        * Timeout - (int) When to stop
+        * Timestamp - (int??) When to start
+        * Seconds - (float) When to synchronise
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"Sync":True, "Period": 200, "Seconds": 0.5}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendRawData", jstr)
+        """
+        params = json.loads(argin)
+        sync = params.get("Sync", False)
+        period = params.get("Period", 0)
+        timeout = params.get("Timeout", 0)
+        timestamp = params.get("Timestamp", None)
+        seconds = params.get("Seconds", 0.2)
+        self._tpm.send_raw_data(sync, period, timeout, timestamp, seconds)
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "Nsamples,FirstChannel,LastChannel,Period,"
+        "Timeout,Timestamp,Seconds",
+    )
     @DebugIt()
     def SendChannelisedData(self, argin):
 
@@ -990,34 +1119,123 @@ class MccsTileSimulator(MccsGroupDevice):
         Transmit a snapshot containing channelized data totalling
         number_of_samples spectra.
 
-        :return: None
-        """
-        pass
+        :param argin: json dictionary with optional keywords:
 
-    @command(dtype_in="DevLong", doc_in="Channel")
+        * Nsamples - (int) number of spectra to send
+        * FirstChannel - (int) first channel to send
+        * LastChannel - (int) last channel to send
+        * Period - (int) in seconds to send data
+        * Timeout - (int) When to stop
+        * Timestamp - (int??) When to start
+        * Seconds - (float) When to synchronise
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"FirstChannel":10, "LastChannel": 200, "Seconds": 0.5}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendChannelisedData", jstr)
+        """
+        params = json.loads(argin)
+        number_of_samples = params.get("NSamples", 1024)
+        first_channel = params.get("FirstChannel", 0)
+        last_channel = params.get("LastChannel", 511)
+        period = params.get("Period", 0)
+        timeout = params.get("Timeout", 0)
+        timestamp = params.get("Timestamp", None)
+        seconds = params.get("Seconds", 0.2)
+        self._tpm.send_channelised_data(
+            number_of_samples,
+            first_channel,
+            last_channel,
+            period,
+            timeout,
+            timestamp,
+            seconds,
+        )
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "ChannelID,Nsamples,WaitSeconds,Timeout,"
+        "Timestamp,Seconds",
+    )
     @DebugIt()
     def SendChannelisedDataContinuous(self, argin):
 
         """
         Send data from channel channel continuously (until stopped)
 
-        :param argin: Channel from which data will be sent
-        :type argin: DevLong
+        :param argin: json dictionary with 1 mandatory and optional keywords:
+
+        * ChannelID - (int) channel_id (Mandatory)
+        * Nsamples -  (int) number of spectra to send
+        * WaitSeconds - (int) Wait time before sending data
+        * Timeout - (int) When to stop
+        * Timestamp - (int??) When to start
+        * Seconds - (float) When to synchronise
+
+        :type argin: DevString
 
         :return: None
-        """
-        pass
 
-    @command()
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"ChannelID":2, "NSamples":256, "Period": 10, "Seconds": 0.5}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendChannelisedDataContinuous", jstr)
+        """
+        params = json.loads(argin)
+        channel_id = params.get("ChannelID")
+        if channel_id is None:
+            self.logger.error("ChannelID is a mandatory parameter")
+            return
+        number_of_samples = params.get("NSamples", 128)
+        wait_seconds = params.get("WaitSeconds", 0)
+        timeout = params.get("Timeout", 0)
+        timestamp = params.get("Timestamp", None)
+        seconds = params.get("Seconds", 0.2)
+        self._tpm.send_channelised_data_continuous(
+            channel_id, number_of_samples, wait_seconds, timeout, timestamp, seconds
+        )
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n" "Period,Timeout,Timestamp,Seconds",
+    )
     @DebugIt()
-    def SendBeamData(self):
+    def SendBeamData(self, argin):
 
         """
         Transmit a snapshot containing beamformed data
 
+        :param argin: json dictionary with optional keywords:
+
+        * Period - (int) in seconds to send data
+        * Timeout - (int) When to stop
+        * Timestamp - (int??) When to send
+        * Seconds - (float) When to synchronise
+
+        :type argin: DevString
+
         :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"Period": 10, "Timeout":4, "Seconds": 0.5}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendBeamData", jstr)
         """
-        pass
+        params = json.loads(argin)
+        period = params.get("Period", 0)
+        timeout = params.get("Timeout", 0)
+        timestamp = params.get("Timestamp", None)
+        seconds = params.get("Seconds", 0.2)
+        self._tpm.send_beam_data(period, timeout, timestamp, seconds)
 
     @command()
     @DebugIt()
@@ -1027,8 +1245,13 @@ class MccsTileSimulator(MccsGroupDevice):
         Stop data transmission from board
 
         :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopDataTransmission")
         """
-        pass
+        self._tpm.stop_data_transmission()
 
 
 # ----------

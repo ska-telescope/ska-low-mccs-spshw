@@ -61,7 +61,7 @@ class TestMccsSubarray:
         # The following reads might not be allowed in this state once properly
         # implemented
         assert tango_context.device.scanId == -1
-        assert tango_context.device.configuredCapabilities is None
+        assert list(tango_context.device.configuredCapabilities) == ["BAND1:0"]
         assert tango_context.device.stationFQDNs is None
         assert tango_context.device.tileFQDNs is None
         assert tango_context.device.stationBeamFQDNs is None
@@ -77,7 +77,7 @@ class TestMccsSubarray:
         """Test for ReleaseAllResources"""
         # SETUP
         tango_context.device.adminMode = AdminMode.ONLINE
-        tango_context.device.AssignResources("foo")
+        tango_context.device.AssignResources(["Dummy resource"])
         assert tango_context.device.state() == DevState.ON
 
         # TEST
@@ -92,7 +92,7 @@ class TestMccsSubarray:
 
         # SETUP
         tango_context.device.adminMode = AdminMode.ONLINE
-        tango_context.device.AssignResources("foo")
+        tango_context.device.AssignResources(["Dummy resource"])
 
         # CHECK INITIAL STATE
         assert tango_context.device.state() == DevState.ON
@@ -104,18 +104,6 @@ class TestMccsSubarray:
         assert tango_context.device.obsState == ObsState.SCANNING
 
     # tests of MccsSubarray commands
-    def test_configureScan(self, tango_context):
-        """ Test for configureScan """
-        json_spec = "Dummy string"
-        before_state = tango_context.device.state()
-        status_str = tango_context.device.configureScan(json_spec)
-        assert status_str == (
-            "Dummy ASCII string returned from "
-            "MccsSubarray.configureScan() to indicate status, for "
-            "information purposes only"
-        )
-        assert before_state == tango_context.device.state()
-
     def test_sendTransientBuffer(self, tango_context):
         """ Test for sendTransientBuffer """
         segment_spec = []
@@ -227,10 +215,10 @@ class TestMccsSubarray:
             "offline": lambda d: write_admin(d, AdminMode.OFFLINE),
             "maintenance": lambda d: write_admin(d, AdminMode.MAINTENANCE),
             "notfitted": lambda d: write_admin(d, AdminMode.NOT_FITTED),
-            "assign": lambda d: d.AssignResources("foo"),
+            "assign": lambda d: d.AssignResources(["Dummy resource"]),
             "release": lambda d: d.ReleaseAllResources(),
-            "configure": lambda d: d.configureScan("foo"),
-            "scan": lambda d: d.Scan(["foo"]),
+            "configure": lambda d: d.ConfigureCapability([[2], ["BAND1"]]),
+            "scan": lambda d: d.Scan(["Dummy scan id"]),
             "endscan": lambda d: d.EndScan(),
             "endsb": lambda d: d.EndSB(),
             "abort": lambda d: d.Abort(),
@@ -319,7 +307,7 @@ class TestMccsSubarray:
             "assign", "notfitted", "online",
             "assign", "assign", "release", "maintenance",
             "assign", "assign", "online", "maintenance", "release",
-            # Extend to ready statesA
+            # Extend to ready states
             "assign", "configure", "offline", "maintenance",
             "assign", "configure", "notfitted", "online",
             "assign", "configure", "offline", "online",

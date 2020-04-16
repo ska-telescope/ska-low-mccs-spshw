@@ -24,7 +24,10 @@ def tango_context(request):
             "NrSubarrays": "16",
             # 'CapabilityTypes': '',
             # 'MaxCapabilities': []
-        }
+        },
+        "MccsSubarray": {
+            "CapabilityTypes": "BAND1",
+        },
     }
 
     # This fixture is used to decorate classes like "TestMccsMaster" or

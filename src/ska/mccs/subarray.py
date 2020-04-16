@@ -133,7 +133,7 @@ class MccsSubarray(SKASubarray):
 
             # Any other initialisation code goes here,
             # after setting state to INIT,
-            # but before setting state to DISABLE
+            # but before setting state to its initial value.
 
             # We need to initialise admin mode from the memorized value, but I
             # don't know how to do that, and the base classes are incorrectly
@@ -159,7 +159,6 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-
     def read_scanId(self):
 
         """Return the scanId attribute."""
@@ -236,6 +235,44 @@ class MccsSubarray(SKASubarray):
                             self.ReleaseAllResources()
                         self.set_state(DevState.DISABLE)
                 super().write_adminMode(value)
+
+    # ---------------------------------------
+    # Base class command gatekeeper overrides
+    # ---------------------------------------
+    def _in_state(self, states, adminModes, obsStates):
+        """
+        Helper method that checks whether the device is currently in one of a
+        defined set of states.
+
+        :param states: a collection of states
+        :type states: list/set of DevState
+        :param adminModes: a collection of adminModes
+        :type adminModes: list/set of AdminMode
+        :param obsStates: a collection of obsStates
+        :type obsStates: list/set of ObsState
+        :return True iff the current state, admin mode and observation state are
+        in, respectively, the provided lists of states, adminModes and obsStates.
+        :rtype: boolean
+        """
+        if self.get_state() not in states:
+            return False
+        if self._admin_mode not in adminModes:
+            return False
+        if self._obs_state not in obsStates:
+            return False
+        return True
+
+    def is_ConfigureCapability_allowed(self):
+        """
+        Overriding because base class requires device to be in adminMode ONLINE,
+        whereas it should also be possible to configure capabilities while in
+        adminMode=MAINTENANCE.
+
+
+        """
+        return self._in_state([DevState.ON],
+                              [AdminMode.ONLINE, AdminMode.MAINTENANCE],
+                              [ObsState.IDLE, ObsState.READY])
 
     # ----------------------------
     # Base class command overrides
@@ -316,35 +353,6 @@ class MccsSubarray(SKASubarray):
     # --------
     # Commands
     # --------
-
-    @command(
-        dtype_in="DevString",
-        doc_in="a JSON specification of the subarray scan configuration",
-        dtype_out="DevString",
-        doc_out="ASCII string that indicates status, for information purposes "
-        "only",  # noqa: E501
-    )
-    @DebugIt()
-    def configureScan(self, argin):
-
-        """Configure the subarray
-
-        :todo: This method is a stub that does nothing but return a dummy
-               string.
-        :param argin: a JSON specification of the subarray scan configuration
-        :type argin: DevString
-        :return: ASCII String that indicates status, for information purposes
-                 only
-        :rtype: DevString
-        """
-        self._obs_state = ObsState.CONFIGURING
-        # do stuff
-        self._obs_state = ObsState.READY
-        return (
-            "Dummy ASCII string returned from "
-            "MccsSubarray.configureScan() to indicate status, for "
-            "information purposes only"
-        )
 
     @command(
         dtype_in="DevVarLongArray",

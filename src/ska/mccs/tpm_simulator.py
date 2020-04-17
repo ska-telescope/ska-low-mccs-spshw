@@ -222,8 +222,64 @@ class TpmSimulator:
         print(json.dumps(dict))
 
     def stop_data_transmission(self):
-        self.logger.info("TpmSimulator: Stop data transmission")
+        self.logger.info("TpmSimulator: stop_data_transmission")
         print("TpmSimulator: stop_data_transmission")
+
+    def compute_calibration_coefficients(self):
+        self.logger.info("TpmSimulator: compute_calibration_coefficients")
+        print("TpmSimulator: compute_calibration_coefficients")
+
+    def start_acquisition(self, start_time=None, delay=2):
+        self.logger.info("TpmSimulator:Start acquisition")
+        dict = {"StartTime": start_time, "Delay": delay}
+        print(json.dumps(dict))
+
+    def set_time_delays(self, delays):
+        self.logger.info("TpmSimulator: set_time_delays")
+        print(delays)
+
+    def set_csp_rounding(self, rounding):
+        self.logger.info("TpmSimulator: set_csp_rounding")
+        print(rounding)
+
+    def set_lmc_integrated_download(
+        self,
+        mode,
+        channel_payload_length,
+        beam_payload_length,
+        dst_ip=None,
+        src_port=0xF0D0,
+        dst_port=4660,
+        lmc_mac=None,
+    ):
+        self.logger.info("TpmSimulator: set_lmc_integrated_download")
+        dict = {
+            "Mode": mode,
+            "ChannelPayloadLength": channel_payload_length,
+            "BeamPayloadLength": beam_payload_length,
+            "DstIP": dst_ip,
+            "SrcPort": src_port,
+            "DstPort": dst_port,
+            "LmcMac": lmc_mac,
+        }
+        print(json.dumps(dict))
+
+    def send_raw_data_synchronised(
+        self, period=0, timeout=0, timestamp=None, seconds=0.2
+    ):
+        self.logger.info("TpmSimulator: send_raw_data_synchronised")
+        dict = {
+            "Period": period,
+            "Timeout": timeout,
+            "Timestamp": timestamp,
+            "Seconds": seconds,
+        }
+        print(json.dumps(dict))
+
+    def current_station_beamformer_frame(self):
+        # Currently this is required, not sure if it will remain so
+        self.logger.info("TpmSimulator: current_station_beamformer_frame")
+        return 23
 
 
 #######################
@@ -233,19 +289,13 @@ class TpmSimulator:
 #     def mii_exec_test(self, pkt_num, wait_result=True):
 #     def mii_test(self, pkt_num, board, wait_result=True):
 #     def mii_show_result(self):
-#     def set_lmc_integrated_download(self, mode, channel_payload_length, beam_payload_length,
-#                                     dst_ip=None, src_port=0xF0D0, dst_port=4660, lmc_mac=None,):
 #     def get_fpga_timestamp(self, device=Device.FPGA_1):
 #     def tweak_transceivers(self):
 #     def get_phase_terminal_count(self):
 #     def set_phase_terminal_count(self, value):
 #     def get_pps_delay(self):
 #     def check_pending_data_requests(self):
-#     def set_time_delays(self, delays):
-#     def compute_calibration_coefficients(self):
 #     def set_beamformer_epoch(self, epoch):
-#     def set_csp_rounding(self, rounding):
-#     def current_station_beamformer_frame(self):
 #     def current_tile_beamformer_frame(self):
 #     def set_first_last_tile(self, is_first, is_last):
 #     def define_spead_header(self, station_id, subarray_id, nof_antennas, ref_epoch=-1, start_time=0):
@@ -260,8 +310,6 @@ class TpmSimulator:
 #     def stop_integrated_beam_data(self):
 #     def stop_integrated_channel_data(self):
 #     def stop_integrated_data(self):
-#     def start_acquisition(self, start_time=None, delay=2):
-#     def send_raw_data_synchronised(self, period=0, timeout=0, timestamp=None, seconds=0.2):
 #     def stop_raw_data(self):
 #     def stop_channelised_data(self):
 #     def stop_beam_data(self):

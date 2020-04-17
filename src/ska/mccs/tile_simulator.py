@@ -88,6 +88,7 @@ class MccsTileSimulator(MccsGroupDevice):
         self._tpm = None
         self.simulationMode = SimulationMode.TRUE
         self._tapering_coeffs = [1.0] * self.AntennasPerTile
+        self._is_connected = False
         self.set_state(DevState.OFF)
         self.logger.info("MccsTileSimulator init_device complete")
 
@@ -256,7 +257,7 @@ class MccsTileSimulator(MccsGroupDevice):
     @attribute(dtype="DevDouble", fisallowed=is_connected)
     def current(self):
         """Return the current attribute."""
-        return self._tpm_current()
+        return self._tpm.current()
 
     @attribute(
         dtype="DevBoolean",
@@ -274,7 +275,7 @@ class MccsTileSimulator(MccsGroupDevice):
     @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        if self.is_programmed():
+        if self.isProgrammed:
             return self._tpm.get_fpga1_temperature()
         else:
             return 0
@@ -282,7 +283,7 @@ class MccsTileSimulator(MccsGroupDevice):
     @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        if self.is_programmed():
+        if self.isProgrammed:
             return self._tpm.get_fpga2_temperature()
         else:
             return 0
@@ -370,6 +371,15 @@ class MccsTileSimulator(MccsGroupDevice):
 
         # Get RMS values from board
         return self._tpm.get_adc_rms()
+
+    @attribute(
+        dtype="DevLong",
+        doc="Return current frame, in units of 256 ADC frames (276,48 us)",
+        fisallowed=is_connected,
+    )
+    def currentTileBeamformerFrame(self):
+        # Currently this is required, not sure if it will remain so
+        self._tpm.current_tile_beamformer_frame()
 
     # --------
     # Commands
@@ -512,6 +522,7 @@ class MccsTileSimulator(MccsGroupDevice):
         if initialise:
             self.Initialise()
 
+        self._is_connected = True
         self.set_state(DevState.ON)
 
     @command()
@@ -1216,7 +1227,7 @@ class MccsTileSimulator(MccsGroupDevice):
 
         * Period - (int) in seconds to send data
         * Timeout - (int) When to stop
-        * Timestamp - (int??) When to send
+        * Timestamp - (string??) When to send
         * Seconds - (float) When to synchronise
 
         :type argin: DevString
@@ -1252,6 +1263,171 @@ class MccsTileSimulator(MccsGroupDevice):
         >>> dp.command_inout("StopDataTransmission")
         """
         self._tpm.stop_data_transmission()
+
+    @command()
+    @DebugIt()
+    def ComputeCalibrationCoefficients(self):
+        """Compute the calibration coefficients and load
+           them in the hardware.
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ComputeCalibrationCoefficients")
+        """
+        self._tpm.compute_calibration_coefficients()
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n" "StartTime, Delay",
+    )
+    @DebugIt()
+    def StartAcquisition(self, argin):
+        """ Start data acquisition
+
+        :param argin: json dictionary with optional keywords:
+
+        * StartTime - (int) start time
+        * Delay - (int) delay start
+
+        :type argin: DevString
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"StartTime":10, "Delay":20}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StartAcquisition", jstr)
+        """
+        params = json.loads(argin)
+        start_time = params.get("StartTime", None)
+        delay = params.get("Delay", 2)
+        self._tpm.start_acquisition(start_time, delay)
+
+    @command(dtype_in="DevVarDoubleArray", doc_in="time delays")
+    @DebugIt()
+    def SetTimeDelays(self, delays):
+        """ Set coarse zenith delay for input ADC streams
+            Delay specified in nanoseconds, nominal is 0.
+
+        :param delays: the delay in samples, positive delay adds delay to the signal stream
+        :type argin: DevVarDoubleArray
+
+        :return: None
+
+        :example:
+
+        >>> delays = [3.4] * n (How many & int or float : Alessio?)
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("SetTimedelays", delays)
+        """
+        self._tpm.set_time_delays(delays)
+
+    @command(dtype_in="DevDouble", doc_in="csp rounding")
+    @DebugIt()
+    def SetCspRounding(self, rounding):
+        """ Set output rounding for CSP
+ 
+        :param rounding: the rounding
+        :type rounding: DevDouble
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("SetCspRounding", 3.142)
+        """
+        self._tpm.set_csp_rounding(rounding)
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "Mode,ChannelPayloadLength,BeamPayloadLength|n"
+        "DstIP,SrcPort,DstPort, LmcMac",
+    )
+    @DebugIt()
+    def SetLmcIntegratedDownload(self, argin):
+        """ Configure link and size of control data
+
+        :param argin: json dictionary with optional keywords:
+
+        * Mode - (string) '1g' or '10g' (Mandatory)
+        * ChannelPayloadLength - (int) SPEAD payload length for integrated channel data
+        * BeamPayloadLength - (int) SPEAD payload length for integrated beam data
+        * DstIP - (string) Destination IP
+        * SrcPort - (int) Source port for integrated data streams
+        * DstPort - (int) Destination port for integrated data streams
+        * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
+
+        :type argin: DevString
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"Mode": "1G", "ChannelPayloadLength":4,
+                    "BeamPayloadLength": 6, DstIP="10.0.1.23"}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
+        """
+        params = json.loads(argin)
+        mode = params.get("Mode", None)
+        if mode is None:
+            self.logger.error("Mode is a mandatory parameter")
+            return
+        channel_payload_length = params.get("ChannelPayloadLength", 2)
+        beam_payload_length = params.get("BeamPayloadLength", 2)
+        dst_ip = params.get("DstIP", None)
+        src_port = params.get("SrcPort", 0xf0d0)
+        dst_port = params.get("DstPort", 4660)
+        lmc_mac = params.get("LmcMac", None)
+        self._tpm.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip,
+            src_port,
+            dst_port,
+            lmc_mac,
+        )
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n" "Period,Timeout,Timestamp,Seconds",
+    )
+    def SendRawDataSynchronised(self, argin):
+        """  Send synchronised raw data
+
+        :param argin: json dictionary with optional keywords:
+
+        * Period - (int) in seconds to send data
+        * Timeout - (int) When to stop
+        * Timestamp - (string??) When to send
+        * Seconds - (float) When to synchronise
+
+        :type argin: DevString
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"Period": 10, "Timeout":4, "Seconds": 0.5}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendRawDataSynchronised", jstr)
+        """
+        params = json.loads(argin)
+        period = params.get("Period", 0)
+        timeout = params.get("Timeout", 0)
+        timestamp = params.get("Timestamp", None)
+        seconds = params.get("Seconds", 0.2)
+        self._tpm.send_raw_data_synchronised(period, timeout, timestamp, seconds)
 
 
 # ----------

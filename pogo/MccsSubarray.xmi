@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="MccsSubarray" pogoRevision="9.6">
-    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/osboxes/lfaa-lmc-prototype/src/ska/mccs" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions,Sphinx" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
+    <description description="MccsSubarray is the Tango device class for the MCCS Subarray prototype.&#xA;&#xA;:todo: Implement healthState, taking account of health of this device and&#xA;       of the capability invoked on this device&#xA;:todo: All commands return a dummy string" title="MCCS Subarray" sourcePath="/home/osboxes/lfaa-lmc-prototype/pogo" language="PythonHL" filestogenerate="XMI   file" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
-      <inheritances classname="SKAObsDevice" sourcePath="../../../../lmc-base-classes/pogo"/>
-      <inheritances classname="SKASubarray" sourcePath="../../../../lmc-base-classes/pogo"/>
+      <inheritances classname="SKAObsDevice" sourcePath="../../lmc-base-classes/pogo"/>
+      <inheritances classname="SKASubarray" sourcePath="../../lmc-base-classes/pogo"/>
       <identification contact="at csiro.au - drew.devereux" author="drew.devereux" emailDomain="csiro.au" classFamily="OtherInstruments" siteSpecific="" platform="All Platforms" bus="Not Applicable" manufacturer="none" reference=""/>
     </description>
     <deviceProperties name="CapabilityTypes" description="List of Capability types e.g. capCorr, capPss,&#xA;capPstBf, capVlbi, this will be used to dynamically&#xA;define groups for subarray.">
@@ -185,15 +185,6 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="true" concrete="true"/>
-    </commands>
-    <commands name="configureScan" description="Configure the subarray" execMethod="configure_scan" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
-      <argin description="a JSON specification of the subarray scan configuration">
-        <type xsi:type="pogoDsl:StringType"/>
-      </argin>
-      <argout description="ASCII string that indicates status, for information purposes only">
-        <type xsi:type="pogoDsl:StringType"/>
-      </argout>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
     <commands name="sendTransientBuffer" description="Cause the subarray to send the requested segment of the transient buffer&#xA;to SDP. The requested segment is specified by:&#xA;&#xA;1. Start time (timestamp: milliseconds since UNIX epoch)&#xA;2. End time (timestamp: milliseconds since UNIX epoch)&#xA;3. Dispersion measure&#xA;&#xA;Together, these parameters narrow the selection of transient buffer&#xA;data to the period of time and frequencies that are of interest.&#xA;&#xA;Additional metadata, such as the ID of a triggering Scheduling Block,&#xA;may need to be supplied to allow SDP to assign data ownership correctly&#xA;(TBD75).&#xA;&#xA;:todo: This method is a stub that does nothing but return a dummy string." execMethod="send_transient_buffer" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="Specification of the segment of the transient buffer to sendng Block, may need to be supplied to allow SDP to assign data ownership correctly (TBD75).">

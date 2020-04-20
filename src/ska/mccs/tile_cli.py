@@ -1,14 +1,4 @@
 import fire
-"""
-"Test to make sure fire is installed correctly
-def hello(name):
-    return 'Can you hear me {name}?' .format(name=name)
-
-if __name__ == '__main__':
-    fire.Fire()
-"""
-
-import fire
 import json
 import tango
 
@@ -24,36 +14,36 @@ class MccsTileSimulatorCli():
         jstr = json.dumps(dict)
         self._dp.command_inout("SendBeamData", jstr)
 
-    def SendChannelisedDataContinuous(self, channelID=2, nSamples=256, period=10, seconds=0.5):
+    def SendChannelisedDataContinuous(self, channelID=None, nSamples=128, period=0, seconds=0.2):
         dict = {"ChannelID": channelID, "NSamples": nSamples, "Period": period, "Seconds": seconds}
         jstr = json.dumps(dict)
         self._dp.command_inout("SendChannelisedDataContinuous", jstr)
 
-    def SendChannelisedData(self, firstChannel=10, lastChannel=200, seconds=0.5):
+    def SendChannelisedData(self, firstChannel=0, lastChannel=511, seconds=0.2):
         dict = {"FirstChannel": firstChannel, "LastChannel": lastChannel, "Seconds": seconds}
         jstr = json.dumps(dict)
         self._dp.command_inout("SendChannelisedData", jstr)
 
-    def SendRawData(self, sync=True, period=200, seconds=0.5):
+    def SendRawData(self, sync=False, period=0, seconds=0.2):
         dict = {"Sync":sync, "Period": period, "Seconds": seconds}
         jstr = json.dumps(dict)
         self._dp.command_inout("SendRawData", jstr)
 
-    def ConfigureIntegratedBeamData(self, integration_time=3.142):
+    def ConfigureIntegratedBeamData(self, integration_time=0.5):
         dict = {"IntegrationTime": integration_time}
         jstr = json.dumps(dict)
-        self._dp.command_inout("ConfigureIntegratedBeamData", jstr)
+        self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
-    def ConfigureIntegratedChannelData(self, integration_time):
-        self._dp.command_inout("ConfigureIntegratedChannelData", 6.284)
+    def ConfigureIntegratedChannelData(self, integration_time=0.5):
+        self._dp.command_inout("ConfigureIntegratedChannelData", integration_time)
 
-    def StartBeamformer(self, startTime=10, duration=20):
+    def StartBeamformer(self, startTime=0, duration=-1):
         dict = {"StartTime":startTime, "Duration":duration}
         jstr = json.dumps(dict)
         self._dp.command_inout("StartBeamformer", jstr)
 
-    def LoadPointingDelay(self, load_time):
-        self._tpm.load_pointing_delay(load_time)
+    def LoadPointingDelay(self, load_time=0):
+        self._dp.command_inout("LoadPointingDelay", load_time)
 
 if __name__ == "__main__":
     fire.Fire(MccsTileSimulatorCli)

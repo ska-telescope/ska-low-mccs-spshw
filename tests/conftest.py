@@ -26,7 +26,7 @@ def tango_context(request):
             # 'MaxCapabilities': []
         },
         "MccsSubarray": {
-            "CapabilityTypes": "BAND1",
+            "CapabilityTypes": ["BAND1", "BAND2"]
         },
     }
 

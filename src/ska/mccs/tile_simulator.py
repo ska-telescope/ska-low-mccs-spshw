@@ -26,7 +26,7 @@ from tango.server import device_property, Device
 
 from ska.mccs import MccsGroupDevice
 from ska.mccs.tpm_simulator import TpmSimulator
-from ska.base.control_model import SimulationMode, TestMode
+from ska.base.control_model import SimulationMode, TestMode, LoggingLevel
 
 
 class MccsTileSimulator(MccsGroupDevice):
@@ -55,11 +55,13 @@ class MccsTileSimulator(MccsGroupDevice):
         """Initialises the attributes and properties of the Mccs."""
         super().init_device()
 
+        self.logger.LoggingLevel = LoggingLevel.ERROR
         self.set_state(DevState.INIT)
-        self._ip = self.TileIP
+        self._ip_address = self.TileIP
         self._port = self.TpmCpldPort
         self._lmc_ip = self.LmcIp
         self._lmc_port = self.DstPort
+        self._antennas_per_tile = self.AntennasPerTile
 
         self._programmed = False
         self._tile_id = -1
@@ -87,7 +89,7 @@ class MccsTileSimulator(MccsGroupDevice):
         self._sampling_rate = 0.0
         self._tpm = None
         self.simulationMode = SimulationMode.TRUE
-        self._tapering_coeffs = [1.0] * self.AntennasPerTile
+        self._default_tapering_coeffs = [float(1) for i in range(self.AntennasPerTile)]
         self._is_connected = False
         self.set_state(DevState.OFF)
         self.logger.info("MccsTileSimulator init_device complete")
@@ -379,7 +381,27 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     def currentTileBeamformerFrame(self):
         # Currently this is required, not sure if it will remain so
-        self._tpm.current_tile_beamformer_frame()
+        return self._tpm.current_tile_beamformer_frame()
+
+    @attribute(dtype="DevBoolean", fisallowed=is_connected)
+    def checkPendingDataRequests(self):
+        return self._tpm.check_pending_data_requests()
+
+    @attribute(dtype="DevBoolean", fisallowed=is_connected)
+    def isBeamformerRunning(self):
+        return self._tpm.beamformer_is_running()
+
+    @attribute(dtype="DevLong", fisallowed=is_connected)
+    def phaseTerminalCount(self):
+        return self._tpm.get_phase_terminal_count()
+
+    @phaseTerminalCount.write
+    def phaseTerminalCount(self, value):
+        self._tpm.set_phase_terminal_count(value)
+
+    @attribute(dtype="DevLong", fisallowed=is_connected)
+    def ppsDelay(self):
+        self._tpm.get_pps_delay()
 
     # --------
     # Commands
@@ -397,95 +419,97 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :return: None
         """
-        if self._tpm is None:
-            self.logger.error("Not connected")
-            return
+        self._tpm.initialise()
 
-        # Before initialising, check if TPM is programmed
-        if not self._tpm.is_programmed():
-            self.logger.error("Cannot initialise board which is not programmed")
-            return
-
-        # Initialise firmware plugin
-        self._tpm.initialise_firmware()
-
-        # Set LMC IP
-        self._tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
-
-        # Enable C2C streaming
-        # self._tpm["board.regfile.c2c_stream_enable"] = 0x1
-        # self.set_c2c_burst()
-
-        #         # Switch off both PREADUs
-        #         self._tpm.preadu[0].switch_off()
-        #         self._tpm.preadu[1].switch_off()
-        #
-        #         # Switch on preadu
-        #         for preadu in self._tpm.preadu:
-        #             preadu.switch_on()
-        #             time.sleep(1)
-        #             preadu.select_low_passband()
-        #             preadu.read_configuration()
-
-        # Synchronise FPGAs
-        # self.sync_fpgas()
-
-        # Initialize f2f link
-        self._tpm.initialise_f2f_link()
-
-        # Reset test pattern generator
-        self._tpm.reset_test_generator()
-
-        # Use test_generator plugin instead!
-        if self.testMode:
-            # Test pattern. Tones on channels 72 & 75 + pseudo-random noise
-            self.logger.info("Enabling test pattern")
-            self._tpm.enable_test_pattern()
-
-        # Set destination and source IP/MAC/ports for 10G cores
-        # This will create a loopback between the two FPGAs
-        ip_octets = self._ip.split(".")
-        for n in range(8):
-            src_ip = "10.{}.{}.{}".format(n + 1, ip_octets[2], ip_octets[3])
-            dst_ip = "10.{}.{}.{}".format(
-                (1 + n) + (4 if n < 4 else -4), ip_octets[2], ip_octets[3]
-            )
-        #             self.Configure40GCore(n,
-        #                                     src_mac=0x620000000000, ###+ ip2long(src_ip),
-        #                                     src_ip=src_ip,
-        #                                     src_port=0xF0D0,
-        #                                     dst_mac=0x620000000000, ###+ ip2long(dst_ip),
-        #                                     dst_ip=dst_ip,
-        #                                     dst_port=4660)
-
-        # wait UDP link up
-        self.logger.info("Waiting for 10G link...")
-        try:
-            times = 0
-            while True:
-                linkup = 1
-                for n in [0, 1, 2, 4, 5, 6]:
-                    core_status = self._tpm.get_arp_table_status(n)
-                    if core_status & 0x4 == 0:
-                        linkup = 0
-                if linkup == 1:
-                    self.logger.info("40G Link established! ARP table populated!")
-                    break
-                else:
-                    times += 1
-                    time.sleep(0.5)
-                    if times == 20:
-                        self.logger.warning(
-                            "40G Links not established after 10 seconds! ARP table not populated!"
-                        )
-                        break
-        except:
-            time.sleep(4)
-            # self.mii_exec_test(10, False)
-            # self['fpga1.regfile.eth10g_ctrl'] = 0x0
-            # self['fpga2.regfile.eth10g_ctrl'] = 0x0
-
-        self._tpm.check_ddr_initialisation()
+    #         if self._tpm is None:
+    #             self.logger.error("Not connected")
+    #             return
+    #
+    #         # Before initialising, check if TPM is programmed
+    #         if not self._tpm.is_programmed():
+    #             self.logger.error("Cannot initialise board which is not programmed")
+    #             return
+    #
+    #         # Initialise firmware plugin
+    #         self._tpm.initialise_firmware()
+    #
+    #         # Set LMC IP
+    #         self._tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
+    #
+    #         # Enable C2C streaming
+    #         # self._tpm["board.regfile.c2c_stream_enable"] = 0x1
+    #         # self.set_c2c_burst()
+    #
+    #         #         # Switch off both PREADUs
+    #         #         self._tpm.preadu[0].switch_off()
+    #         #         self._tpm.preadu[1].switch_off()
+    #         #
+    #         #         # Switch on preadu
+    #         #         for preadu in self._tpm.preadu:
+    #         #             preadu.switch_on()
+    #         #             time.sleep(1)
+    #         #             preadu.select_low_passband()
+    #         #             preadu.read_configuration()
+    #
+    #         # Synchronise FPGAs
+    #         # self.sync_fpgas()
+    #
+    #         # Initialize f2f link
+    #         self._tpm.initialise_f2f_link()
+    #
+    #         # Reset test pattern generator
+    #         self._tpm.reset_test_generator()
+    #
+    #         # Use test_generator plugin instead!
+    #         if self.testMode:
+    #             # Test pattern. Tones on channels 72 & 75 + pseudo-random noise
+    #             self.logger.info("Enabling test pattern")
+    #             self._tpm.enable_test_pattern()
+    #
+    #         # Set destination and source IP/MAC/ports for 10G cores
+    #         # This will create a loopback between the two FPGAs
+    #         ip_octets = self._ip.split(".")
+    #         for n in range(8):
+    #             src_ip = "10.{}.{}.{}".format(n + 1, ip_octets[2], ip_octets[3])
+    #             dst_ip = "10.{}.{}.{}".format(
+    #                 (1 + n) + (4 if n < 4 else -4), ip_octets[2], ip_octets[3]
+    #             )
+    #         #             self.Configure40GCore(n,
+    #         #                                     src_mac=0x620000000000, ###+ ip2long(src_ip),
+    #         #                                     src_ip=src_ip,
+    #         #                                     src_port=0xF0D0,
+    #         #                                     dst_mac=0x620000000000, ###+ ip2long(dst_ip),
+    #         #                                     dst_ip=dst_ip,
+    #         #                                     dst_port=4660)
+    #
+    #         # wait UDP link up
+    #         self.logger.info("Waiting for 10G link...")
+    #         try:
+    #             times = 0
+    #             while True:
+    #                 linkup = 1
+    #                 for n in [0, 1, 2, 4, 5, 6]:
+    #                     core_status = self._tpm.get_arp_table_status(n)
+    #                     if core_status & 0x4 == 0:
+    #                         linkup = 0
+    #                 if linkup == 1:
+    #                     self.logger.info("40G Link established! ARP table populated!")
+    #                     break
+    #                 else:
+    #                     times += 1
+    #                     time.sleep(0.5)
+    #                     if times == 20:
+    #                         self.logger.warning(
+    #                             "40G Links not established after 10 seconds! ARP table not populated!"
+    #                         )
+    #                         break
+    #         except:
+    #             time.sleep(4)
+    #             # self.mii_exec_test(10, False)
+    #             # self['fpga1.regfile.eth10g_ctrl'] = 0x0
+    #             # self['fpga2.regfile.eth10g_ctrl'] = 0x0
+    #
+    #         self._tpm.check_ddr_initialisation()
 
     @command(dtype_in="DevBoolean", doc_in="Initialise")
     @DebugIt()
@@ -502,15 +526,21 @@ class MccsTileSimulator(MccsGroupDevice):
         if self.simulationMode:
             self._tpm = TpmSimulator(self.logger)
         else:
-            self._tpm = TPM()
+            self._tpm = Tpm(
+                self._ip_address,
+                self._port,
+                self._lmc_ip,
+                self._lmc_port,
+                self._sampling_rate,
+            )
 
         self._tpm.connect(
-            ip=self._ip,
-            port=self._port,
+            #            ip=self._ip_address,
+            #            port=self._port,
             initialise=initialise,
-            simulator=self.simulationMode,
+            simulation=self.simulationMode,
             enable_ada=self.testMode,
-            fsample=self._sampling_rate,
+            #            fsample=self._sampling_rate,
         )
 
         # Load tpm test firmware for both FPGAs (no need to load in simulation)
@@ -747,36 +777,50 @@ class MccsTileSimulator(MccsGroupDevice):
                 ]
         raise ValueError("Invalid core id specified")
 
-    @command(dtype_in="DevVarLongArray", doc_in="mode, payload_length, src_ip, lmc_mac")
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "Mode,PayloadLength,DstIP,SrcPort,DstPort, LmcMac",
+    )
     @DebugIt()
-    def SetLMCDownload(self, argin):
+    def SetLmcDownload(self, argin):
 
         """
         Specify whether control data will be transmitted over 1G or 40G
         networks
 
-        :param argin[0]: mode, 1g or 10g
-        :param argin[1]: payload_length, SPEAD payload length in bytes
-        :param argin[2]: dst_ip, Destination IP
-        :param argin[3]: src_port, Source port for integrated data streams
-        :param argin[4]: dst_port, Destination port for integrated data streams
-        :param argin[5]: lmc_mac, LMC Mac address is required for 10G lane configuration
+        :param argin: json dictionary with optional keywords:
+
+        * Mode - (string) '1g' or '10g' (Mandatory)
+        * PayloadLength - (int) SPEAD payload length for integrated channel data
+        * DstIP - (string) Destination IP
+        * SrcPort - (int) Source port for integrated data streams
+        * DstPort - (int) Destination port for integrated data streams
+        * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
+
+        :type argin: DevString
 
         :return: None
-        """
-        payload_length = 1024
-        dst_ip = None
-        src_port = 0xF0D0
-        dst_port = 4660
-        lmc_mac = None
 
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"Mode": "1G", "PayloadLength":4,DstIP="10.0.1.23"}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SetLmcDownload", jstr)
+        """
+        params = json.loads(argin)
+        mode = params.get("Mode", None)
+        if mode is None:
+            self.logger.error("Mode is a mandatory parameter")
+            raise ValueError("Mode is a mandatory parameter")
+        payload_length = params.get("PayloadLength", 1024)
+        dst_ip = params.get("DstIP", None)
+        src_port = params.get("SrcPort", 0xf0d0)
+        dst_port = params.get("DstPort", 4660)
+        lmc_mac = params.get("LmcMac", None)
         self._tpm.set_lmc_download(
-            mode,
-            payload_length=1024,
-            dst_ip=None,
-            src_port=0xF0D0,
-            dst_port=4660,
-            lmc_mac=None,
+            mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
         )
 
     @command(dtype_in="DevVarLongArray", doc_in="truncation array")
@@ -895,12 +939,18 @@ class MccsTileSimulator(MccsGroupDevice):
         X polarization to the Y polarization. The rotation is applied after
         regular calibration.
 
+        :param argin: list of angle coefficients for each beam
+        :type argin: DevVarDoubleArray
+
         :return: None
+
+        :example:
+
+        >>> angle_coeffs = [3.4] * 16
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadBeamAngle", angle_coeffs)
         """
-        angle_coeffs = []
-        for i in range(len(argin)):
-            angle_coeffs.append(argin[i])
-        self._tpm.load_beam_angle(self, angle_coeffs)
+        self._tpm.load_beam_angle(argin)
 
     @command(dtype_in="DevVarDoubleArray", doc_in="tapering coefficients")
     @DebugIt()
@@ -922,13 +972,13 @@ class MccsTileSimulator(MccsGroupDevice):
         >>> dp.command_inout("LoadAntennaTapering", tapering_coeffs)
         """
         if len(argin) < self.AntennasPerTile:
-            self.logger.warning(
-                f"Insufficient tapering coefficients should be {self.AntennasPerTile}, loading default"
+            self.logger.error(
+                f"Insufficient tapering coefficients should be {self.AntennasPerTile}"
             )
-
-        for i in range(self.AntennasPerTile):
-            self._tapering_coeffs[i] = argin[i]
-        self._tpm.load_antenna_tapering(self._tapering_coeffs)
+            raise ValueError(
+                f"Insufficient tapering coefficients should be {self.AntennasPerTile}"
+            )
+        self._tpm.load_antenna_tapering(argin)
 
     @command(dtype_in="DevLong", doc_in="switch time")
     @DebugIt()
@@ -962,11 +1012,11 @@ class MccsTileSimulator(MccsGroupDevice):
         """
         if len(argin) != self.AntennasPerTile * 2 + 1:
             self.logger.error("Insufficient parameters")
-            return
+            raise ValueError("Insufficient parameters")
         beam_index = int(argin[0])
         if beam_index < 0 or beam_index > 7:
             self.logger.error("Invalid beam index")
-            return
+            raise ValueError("Invalid beam index")
         delay_array = []
         for i in range(self.AntennasPerTile):
             delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
@@ -1120,7 +1170,7 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(
         dtype_in="DevString",
         doc_in="json dictionary with keywords:\n"
-        "Nsamples,FirstChannel,LastChannel,Period,"
+        "NSamples,FirstChannel,LastChannel,Period,"
         "Timeout,Timestamp,Seconds",
     )
     @DebugIt()
@@ -1132,7 +1182,7 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * Nsamples - (int) number of spectra to send
+        * NSamples - (int) number of spectra to send
         * FirstChannel - (int) first channel to send
         * LastChannel - (int) last channel to send
         * Period - (int) in seconds to send data
@@ -1170,7 +1220,7 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(
         dtype_in="DevString",
         doc_in="json dictionary with keywords:\n"
-        "ChannelID,Nsamples,WaitSeconds,Timeout,"
+        "ChannelID,NSamples,WaitSeconds,Timeout,"
         "Timestamp,Seconds",
     )
     @DebugIt()
@@ -1182,7 +1232,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :param argin: json dictionary with 1 mandatory and optional keywords:
 
         * ChannelID - (int) channel_id (Mandatory)
-        * Nsamples -  (int) number of spectra to send
+        * NSamples -  (int) number of spectra to send
         * WaitSeconds - (int) Wait time before sending data
         * Timeout - (int) When to stop
         * Timestamp - (int??) When to start
@@ -1203,7 +1253,7 @@ class MccsTileSimulator(MccsGroupDevice):
         channel_id = params.get("ChannelID")
         if channel_id is None:
             self.logger.error("ChannelID is a mandatory parameter")
-            return
+            raise ValueError("ChannelID is a mandatory parameter")
         number_of_samples = params.get("NSamples", 128)
         wait_seconds = params.get("WaitSeconds", 0)
         timeout = params.get("Timeout", 0)
@@ -1380,7 +1430,7 @@ class MccsTileSimulator(MccsGroupDevice):
         mode = params.get("Mode", None)
         if mode is None:
             self.logger.error("Mode is a mandatory parameter")
-            return
+            raise ValueError("Mode is a mandatory parameter")
         channel_payload_length = params.get("ChannelPayloadLength", 2)
         beam_payload_length = params.get("BeamPayloadLength", 2)
         dst_ip = params.get("DstIP", None)
@@ -1428,6 +1478,156 @@ class MccsTileSimulator(MccsGroupDevice):
         timestamp = params.get("Timestamp", None)
         seconds = params.get("Seconds", 0.2)
         self._tpm.send_raw_data_synchronised(period, timeout, timestamp, seconds)
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "Frequency,RoundBits,NSamples,WaitSeconds,Timeout,Timestamp,Seconds",
+    )
+    @DebugIt()
+    def SendChannelisedDataNarrowband(self, argin):
+        """
+        Continuously send channelised data from a single channelend data from channel channel continuously (until stopped)
+
+        This is a special mode used for UAV campaigns and not really
+        part of the standard signal processing chain. I don’t know if
+        this mode will be kept or not. 
+
+        :param argin: json dictionary with 2 mandatory and optional keywords:
+
+        * Frequency - (int) Sky frequency to transmit
+        * RoundBits - (int)  Specify which bits to round
+        * NSamples -  (int) number of spectra to send
+        * WaitSeconds - (int) Wait time before sending data
+        * Timeout - (int) When to stop
+        * Timestamp - (string??) When to start
+        * Seconds - (float) When to synchronise
+
+        :type argin: DevString
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"Frequency":2000, "RoundBits":256, "NSamples":256,
+                    "WaitSeconds": 10, "Seconds": 0.5}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendChannelisedDataNarrowband", jstr)
+        """
+        params = json.loads(argin)
+        frequency = params.get("Frequency", None)
+        if frequency is None:
+            self.logger.error("Frequency is a mandatory parameter")
+            raise ValueError("Frequency is a mandatory parameter")
+        round_bits = params.get("RoundBits", None)
+        if round_bits is None:
+            self.logger.error("RoundBits is a mandatory parameter")
+            raise ValueError("RoundBits is a mandatory parameter")
+        number_of_samples = params.get("NSamples", 128)
+        wait_seconds = params.get("WaitSeconds", 0)
+        timeout = params.get("Timeout", 0)
+        timestamp = params.get("Timestamp", None)
+        seconds = params.get("Seconds", 0.2)
+        self._tpm.send_channelised_data_narrowband(
+            frequency,
+            round_bits,
+            number_of_samples,
+            wait_seconds,
+            timeout,
+            timestamp,
+            seconds,
+        )
+
+    @command()
+    @DebugIt()
+    def TweakTransceivers(self):
+        """
+        Tweak the transceivers
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("tweak_transceivers")
+        """
+        self._tpm.tweak_transceivers()
+
+    @command()
+    @DebugIt()
+    def PostSynchronisation(self):
+        """
+        Post tile configuration synchronization
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("post_synchronisation")
+        """
+        self._tpm.post_synchronisation()
+
+    @command()
+    @DebugIt()
+    def SyncFpgas(self):
+        """
+        Synchronise the FPGAs
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("SyncFpgas")
+        """
+        self._tpm.sync_fpgas()
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n" "CurrentDelay,CurrentTC,RefLo,RefHi",
+    )
+    @DebugIt()
+    def CalculateDelay(self, argin):
+        """ Calculate delay
+
+        :param argin: json dictionary with 4 mandatory keywords:
+
+        * CurrentDelay - (float??) Current delay
+        * CurrentTC - (float??) Current phase register terminal count
+        * RefLo - (float??) Low reference
+        * RefHi -(float??) High reference
+
+        :type argin: DevString
+
+        :return: None
+
+        :example:
+    
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"CurrentDelay":0.4, "CurrentTC":56.2, "RefLo":3.0, "RefHi":78.9}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("CalculateDelay", jstr)
+        """
+        params = json.loads(argin)
+        current_delay = params.get("CurrentDelay", None)
+        if current_delay is None:
+            self.logger.error("CurrentDelay is a mandatory parameter")
+            raise ValueError("CurrentDelay is a mandatory parameter")
+        current_tc = params.get("CurrentTC", None)
+        if current_tc is None:
+            self.logger.error("CurrentTC is a mandatory parameter")
+            raise ValueError("CurrentTC is a mandatory parameter")
+        ref_lo = params.get("RefLo", None)
+        if ref_lo is None:
+            self.logger.error("RefLo is a mandatory parameter")
+            raise ValueError("RefLo is a mandatory parameter")
+        ref_hi = params.get("RefHi", None)
+        if ref_hi is None:
+            self.logger.error("RefHi is a mandatory parameter")
+            raise ValueError("RefHi is a mandatory parameter")
+        TpmSimulator.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
 
 
 # ----------

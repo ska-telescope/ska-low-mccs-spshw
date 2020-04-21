@@ -14,24 +14,27 @@ class MccsTileSimulatorCli():
         jstr = json.dumps(dict)
         self._dp.command_inout("SendBeamData", jstr)
 
-    def SendChannelisedDataContinuous(self, channelID=None, nSamples=128, period=0, seconds=0.2):
-        dict = {"ChannelID": channelID, "NSamples": nSamples, "Period": period, "Seconds": seconds}
-        jstr = json.dumps(dict)
-        self._dp.command_inout("SendChannelisedDataContinuous", jstr)
+    def SendChannelisedDataContinuous(self, channelID=0, nSamples=128, waitSeconds=0, timeout=0, timestamp=None, seconds=0.2):
+#        try:
+#            self.SendChannelisedDataContinuous(channelID=None)
+#        except tango.DevFailed as df:
+#            print("Mandatory Arguement...cannot be a NULL value")
+#        else:
+            dict = {"ChannelID": channelID, "NSamples": nSamples, "WaitSeconds": waitSeconds, "Timeout": timeout, "Timestamp": timestamp, "Seconds": seconds}
+            jstr = json.dumps(dict)
+            self._dp.command_inout("SendChannelisedDataContinuous", jstr)
 
-    def SendChannelisedData(self, firstChannel=0, lastChannel=511, seconds=0.2):
-        dict = {"FirstChannel": firstChannel, "LastChannel": lastChannel, "Seconds": seconds}
+    def SendChannelisedData(self, nSamples=128, firstChannel=0, lastChannel=511, period=0, timeout=0, timestamp=None, seconds=0.2):
+        dict = {"NSamples": nSamples, "FirstChannel": firstChannel, "LastChannel": lastChannel, "Period": period, "Timeout": timeout, "Timestamp": timestamp, "Seconds": seconds,}
         jstr = json.dumps(dict)
         self._dp.command_inout("SendChannelisedData", jstr)
 
-    def SendRawData(self, sync=False, period=0, seconds=0.2):
-        dict = {"Sync":sync, "Period": period, "Seconds": seconds}
+    def SendRawData(self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2):
+        dict = {"Sync":sync, "Period": period, "Timeout": timeout, "Timestamp": timestamp, "Seconds": seconds}
         jstr = json.dumps(dict)
         self._dp.command_inout("SendRawData", jstr)
 
     def ConfigureIntegratedBeamData(self, integration_time=0.5):
-        dict = {"IntegrationTime": integration_time}
-        jstr = json.dumps(dict)
         self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
     def ConfigureIntegratedChannelData(self, integration_time=0.5):

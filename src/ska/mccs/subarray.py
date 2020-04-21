@@ -396,7 +396,7 @@ class MccsSubarray(SKASubarray):
         """
         super().DeconfigureCapability(argin)
         if not any(self._configured_capabilities.values()):
-            self.set_state(DevState.OFF)
+            self._obs_state = ObsState.IDLE
 
     def is_DeconfigureAllCapabilities_allowed(self):
         """
@@ -430,7 +430,7 @@ class MccsSubarray(SKASubarray):
         """
         super().DeconfigureAllCapabilities(argin)
         if not any(self._configured_capabilities.values()):
-            self.set_state(DevState.OFF)
+            self._obs_state = ObsState.IDLE
 
     def is_ReleaseResources_allowed(self):
         """

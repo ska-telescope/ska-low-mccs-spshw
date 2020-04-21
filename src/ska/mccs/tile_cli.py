@@ -14,15 +14,14 @@ class MccsTileSimulatorCli():
         jstr = json.dumps(dict)
         self._dp.command_inout("SendBeamData", jstr)
 
-    def SendChannelisedDataContinuous(self, channelID=0, nSamples=128, waitSeconds=0, timeout=0, timestamp=None, seconds=0.2):
-#        try:
-#            self.SendChannelisedDataContinuous(channelID=None)
-#        except tango.DevFailed as df:
-#            print("Mandatory Arguement...cannot be a NULL value")
-#        else:
-            dict = {"ChannelID": channelID, "NSamples": nSamples, "WaitSeconds": waitSeconds, "Timeout": timeout, "Timestamp": timestamp, "Seconds": seconds}
+    def SendChannelisedDataContinuous(self, channelID=None, nSamples=128, waitSeconds=0, timeout=0, timestamp=None, seconds=0.2):
+        try:
+            dict = {"ChannelID": channelID, "NSamples": nSamples, "WaitSeconds": waitSeconds, "Timeout": timeout,
+                    "Timestamp": timestamp, "Seconds": seconds}
             jstr = json.dumps(dict)
             self._dp.command_inout("SendChannelisedDataContinuous", jstr)
+        except tango.DevFailed as df:
+            print("ChannelID Mandatory Arguement...cannot be a NULL value")
 
     def SendChannelisedData(self, nSamples=128, firstChannel=0, lastChannel=511, period=0, timeout=0, timestamp=None, seconds=0.2):
         dict = {"NSamples": nSamples, "FirstChannel": firstChannel, "LastChannel": lastChannel, "Period": period, "Timeout": timeout, "Timestamp": timestamp, "Seconds": seconds,}

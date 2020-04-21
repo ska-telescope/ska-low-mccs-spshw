@@ -198,7 +198,8 @@ class MccsSubarray(SKASubarray):
 
         +-----------+-------+-------+--------+------------+--------------------+
         |         To|ONLINE |MAINT- |OFFLINE              |NOT_FITTED          |
-        |From       |       |ENANCE |                     |                    |
+        |           |       |ENANCE |                     |                    |
+        |From       |       |       |                     |                    |
         +-----------+-------+-------+---------------------+--------------------+
         |ONLINE     |N/A    |no     |Reset()              |Reset()             |
         |           |       |further|ReleaseAllResources()|ReleaseAllResource()|
@@ -217,14 +218,17 @@ class MccsSubarray(SKASubarray):
         +-----------+-------+-------+---------------------+--------------------+
 
         Notes:
-        1. The subarray can change between ONLINE and MAINTENANCE at any time,
-        with no further change to the state machine.
-        2. The subarray can be taken OFFLINE or put into NOT_FITTED mode at any
-        time, in which case it aborts whatever it was doing, deconfigures,
-        releases its resources, and changes State to DISABLED.
-        3. When the subarray is placed into ONLINE or MAINTENANCE mode from
-        OFFLINE or NOT_FITTED mode, the subarray is being put online, so the
-        state changes from DISABLE to OFF.
+
+        #. The subarray can change between ONLINE and MAINTENANCE at any time,
+           with no further change to the state machine.
+
+        #. The subarray can be taken OFFLINE or put into NOT_FITTED mode at any
+           time, in which case it aborts whatever it was doing, deconfigures,
+           releases its resources, and changes State to DISABLED.
+
+        #. When the subarray is placed into ONLINE or MAINTENANCE mode from
+           OFFLINE or NOT_FITTED mode, the subarray is being put online, so the
+           state changes from DISABLE to OFF.
 
         :param value: the new admin mode
         :type value: AdminMode enum value
@@ -389,14 +393,15 @@ class MccsSubarray(SKASubarray):
         Overriding to ensure device ends up in the right state.
 
         :todo: The control model assumes that configuring may take some time,
-        and allows for a transient CONFIGURING state. We implement it as if it
-        will probably require asynchronous implementation. But what about
-        deconfiguring? Here we assume it is fast as will not require an
-        asynchronous implementation, nor use of the transient CONFIGURING state.
+            and allows for a transient CONFIGURING state. We implement it as if
+            it will eventually require asynchronous implementation. But what
+            about deconfiguring? Here we assume it is fast and will not require
+            an asynchronous implementation, nor use of the transient CONFIGURING
+            state.
         """
         super().DeconfigureCapability(argin)
         if not any(self._configured_capabilities.values()):
-            self.set_state(DevState.OFF)
+            self._obs_state = ObsState.IDLE
 
     def is_DeconfigureAllCapabilities_allowed(self):
         """
@@ -423,14 +428,15 @@ class MccsSubarray(SKASubarray):
         Overriding to ensure device ends up in the right state.
 
         :todo: The control model assumes that configuring may take some time,
-        and allows for a transient CONFIGURING state. We implement it as if it
-        will probably require asynchronous implementation. But what about
-        deconfiguring? Here we assume it is fast as will not require an
-        asynchronous implementation, nor use of the transient CONFIGURING state.
+            and allows for a transient CONFIGURING state. We implement it as if
+            it will eventually require asynchronous implementation. But what
+            about deconfiguring? Here we assume it is fast and will not require
+            an asynchronous implementation, nor use of the transient CONFIGURING
+            state.
         """
         super().DeconfigureAllCapabilities(argin)
         if not any(self._configured_capabilities.values()):
-            self.set_state(DevState.OFF)
+            self._obs_state = ObsState.IDLE
 
     def is_ReleaseResources_allowed(self):
         """

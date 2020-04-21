@@ -168,9 +168,9 @@ class TestMccsSubarray:
         }
 
         def assert_state(state):
-            states[state] = (tango_context.device.adminMode,
-                             tango_context.device.state(),
-                             tango_context.device.obsState)
+            assert states[state] == (tango_context.device.adminMode,
+                                     tango_context.device.state(),
+                                     tango_context.device.obsState)
 
         actions = {
             "notfitted": lambda d: d.write_attribute("adminMode", AdminMode.NOT_FITTED),
@@ -251,9 +251,9 @@ class TestMccsSubarray:
             ("READY (ONLINE)", "reset"): "ON (ONLINE)",
             ("READY (ONLINE)", "configure"): "READY (ONLINE)",
             ("READY (ONLINE)", "deconfigure"): "READY (ONLINE)",
-            ("READY (ONLINE)", "deconfigure (all)"): "OFF (ONLINE)",
+            ("READY (ONLINE)", "deconfigure (all)"): "ON (ONLINE)",
             ("READY (ONLINE)", "deconfigureall"): "READY (ONLINE)",
-            ("READY (ONLINE)", "deconfigureall (all)"): "OFF (ONLINE)",
+            ("READY (ONLINE)", "deconfigureall (all)"): "ON (ONLINE)",
             ("READY (ONLINE)", "scan"): "SCANNING (ONLINE)",
             ("READY (ONLINE)", "abort"): "ABORTED (ONLINE)",
             ("READY (MAINTENANCE)", "notfitted"): "DISABLED (NOTFITTED)",
@@ -264,9 +264,9 @@ class TestMccsSubarray:
             ("READY (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
             ("READY (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
             ("READY (MAINTENANCE)", "deconfigure"): "READY (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "deconfigure (all)"): "OFF (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "deconfigure (all)"): "ON (MAINTENANCE)",
             ("READY (MAINTENANCE)", "deconfigureall"): "READY (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "deconfigureall (all)"): "OFF (MAINTENANCE)",
+            ("READY (MAINTENANCE)", "deconfigureall (all)"): "ON (MAINTENANCE)",
             ("READY (MAINTENANCE)", "scan"): "SCANNING (MAINTENANCE)",
             ("READY (MAINTENANCE)", "abort"): "ABORTED (MAINTENANCE)",
             ("SCANNING (ONLINE)", "notfitted"): "DISABLED (NOTFITTED)",

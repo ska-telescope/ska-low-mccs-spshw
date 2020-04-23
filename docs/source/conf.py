@@ -42,8 +42,8 @@ autodoc_mock_imports = ["tango", "ska.base", "PyTango", "PyTango.server"]
 
 def setup(app):
     """ initialise app """
-    app.add_stylesheet("css/custom.css")
-    app.add_javascript("js/gitlab.js")
+    app.add_css_file("css/custom.css")
+    app.add_js_file("js/gitlab.js")
 
 
 # -- Project information -----------------------------------------------------
@@ -237,4 +237,4 @@ epub_exclude_files = ["search.html"]
 # -- Extension configuration -------------------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"https://docs.python.org/": None}
+intersphinx_mapping = {"https://docs.python.org/3/": None}

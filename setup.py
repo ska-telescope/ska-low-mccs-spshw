@@ -41,4 +41,6 @@ setuptools.setup(
             "MccsStationBeam=ska.mccs.MccsStationBeam:main",
         ]
     },
+    install_requires=["lmcbaseclasses >= 0.5.1",
+                      "pytango >= 9.3.1"],
     zip_safe=False)

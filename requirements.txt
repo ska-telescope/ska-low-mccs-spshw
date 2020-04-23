@@ -1,4 +1,6 @@
-numpy >= 1.15.3
+# We are using the pytango image which provides numpy
+# use that explict version instead of numpy >= 1.15.3
+numpy == 1.17.2
 pytango >= 9.3.1
 ska_logging == 0.2.1
 lmcbaseclasses >= 0.5.1

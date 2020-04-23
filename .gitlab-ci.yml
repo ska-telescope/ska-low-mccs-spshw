@@ -71,9 +71,9 @@ docs:
     - docker-executor
   stage: docs
   before_script:
-    - python3 -m pip install -r requirements-dev.txt .
-    - python3 -m pip install anybadge
     - echo "error" > .docs_status
+    - python3 -m pip install -r requirements-dev.txt
+    - python3 -m pip install anybadge
   script:
     - tox -e docs
     - echo "pass" > .docs_status
@@ -83,6 +83,7 @@ docs:
   artifacts:
     paths:
       - ./build
+      - ./docs/build/html
     when: always
     expire_in: 7 days
 

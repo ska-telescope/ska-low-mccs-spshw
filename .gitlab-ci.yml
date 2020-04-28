@@ -19,6 +19,7 @@ stages:
   - deploy
   - docs
   - publish
+  - release
 
 # The YAML file defines a set of jobs with constraints stating when they should be run. 
 # You can specify an unlimited number of jobs which are defined as top-level elements with an arbitrary name and always
@@ -103,7 +104,7 @@ pages:
       - public
     expire_in: 30 days
 
-publish to nexus:
+publish package to nexus:
   stage: publish
   tags:
     - docker-executor
@@ -125,6 +126,21 @@ publish to nexus:
       - $CI_COMMIT_MESSAGE =~ /^.+$/
       # Confirm semantic versioning of tag
       - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
+
+release docker image to nexus:
+stage: release
+    image: nexus.engageska-portugal.pt/ska-docker/tango-builder:latest
+    before_script:
+    - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
+    tags:
+      - docker-executor
+    script:
+      - make build
+      - make push
+    when: manual
+    only:
+      refs:
+        - master
 
 create ci metrics:
   stage: .post

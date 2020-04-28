@@ -35,10 +35,10 @@ setuptools.setup(
     keywords="lmc mccs tango ska",
     entry_points={
         "console_scripts": [
-            "MccsMaster=ska.mccs.MccsMaster:main",
-            "MccsSubarray=ska.mccs.MccsSubarray:main",
-            "MccsStation=ska.mccs.MccsStation:main",
-            "MccsStationBeam=ska.mccs.MccsStationBeam:main",
+            "MccsMaster=ska.mccs.master:main",
+            "MccsSubarray=ska.mccs.subarray:main",
+            "MccsStation=ska.mccs.station:main",
+            "MccsStationBeam=ska.mccs.station_beam:main",
         ]
     },
     install_requires=["lmcbaseclasses >= 0.5.1",

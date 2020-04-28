@@ -128,7 +128,7 @@ publish package to nexus:
       - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
 
 release docker image to nexus:
-stage: release
+    stage: release
     image: nexus.engageska-portugal.pt/ska-docker/tango-builder:latest
     before_script:
     - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST

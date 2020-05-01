@@ -1,63 +1,65 @@
 # -*- coding: utf-8 -*-
 import json
+import time
+import itertools
 
 
 class TpmSimulator:
     def __init__(self, logger):
-        self.programmed = True
-        # Its a simulator so programmed is True
         self.logger = logger
+        self._programmed = False
         self._beamformer_running = False
+        self._phase_terminal_count = 0
+        self._fpga1_time = 0
+        self._fpga2_time = 0
+        self._address_map = {}
+        self._forty_gb_core_list = []
+        self._register0_map = {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        }
+        self._register1_map = {
+            "test-reg1": {},
+            "test-reg2": {},
+            "test-reg3": {},
+            "test-reg4": {},
+        }
+        self._use_clock = False
 
-    def connect(
-        self,
-        #        ip=None,
-        #        port=None,
-        initialise=None,
-        simulation=True,
-        enable_ada=None,
-        #        fsample=None,
-    ):
+    def connect(self, initialise=None, simulation=True, enable_ada=None):
         self.logger.info("TpmSimulator: connect")
+        print("TpmSimulator: connect")
 
     def disconnect(self):
-        pass
+        self.logger.info("TpmSimulator: connect")
+        print("TpmSimulator: disconnect")
+
+    def get_firmware_list(self):
+        self.logger.info("TpmSimulator: get_firmware_list")
+        return {
+            "firmware1": {"design": "model1", "major": 2, "minor": 3},
+            "firmware2": {"design": "model2", "major": 3, "minor": 7},
+            "firmware3": {"design": "model3", "major": 2, "minor": 6},
+        }
 
     def is_programmed(self):
-        self.logger.info(f"TpmSimulator: is_programmed {self.programmed}")
-        return self.programmed
+        self.logger.info(f"TpmSimulator: is_programmed {self._programmed}")
+        return self._programmed
 
     def download_firmware(self, bitfile):
         self.logger.info("TpmSimulator: download_firmware")
+        self._programmed = True
+        print(f"{bitfile}")
+
+    def cpld_flash_write(self, bitfile):
+        self.logger.info("TpmSimulator: program_cpld")
+        print(f"{bitfile}")
 
     def initialise(self):
         self.logger.info("TpmSimulator: initialise")
-
-    #     def cpld_flash_write(self, bitfile):
-    #         self.logger.info("TpmSimulator: cpld_flash_write")
-    #
-    #     def initialise_f2f_link(self):
-    #         self.logger.info("TpmSimulator: initialise_f2f_link")
-    #
-    #     def reset_test_generator(self):
-    #         self.logger.info("TpmSimulator: reset_test_generator")
-    #
-    #     def initialise_firmware(self):
-    #         self.logger.info("TpmSimulator: initialise_firmware")
-    #         pass
-    #
-    #     def set_lmc_ip(self, lmc_ip, lmc_port):
-    #         self.logger.info("TpmSimulator: set_lmc_ip")
-    #
-    #     def check_ddr_initialisation(self):
-    #         self.logger.info("TpmSimulator: initialise_f2f_link")
-    #
-    #     def enable_test_pattern(self):
-    #         self.logger.info("TpmSimulator: enable_test_pattern")
-    #
-    #     def get_arp_table_status(self, n):
-    #         self.logger.info("TpmSimulator: get_arp_table_status")
-    #         return 0x4
+        print("TpmSimulator: initialise")
 
     def temperature(self):
         self.logger.info("TpmSimulator: temperature")
@@ -74,9 +76,9 @@ class TpmSimulator:
     def get_adc_rms(self):
         self.logger.info("TpmSimulator: get_adc_rms")
         rms = []
-        for i in range(16):
-            x = random.uniform(10, 35)
-            y = random.uniform(x - 5, x + 5)
+        for i in range(0, 32, 2):
+            x = float(i)
+            y = float(i + 1)
             rms.append(x)
             rms.append(y)
 
@@ -90,13 +92,86 @@ class TpmSimulator:
         self.logger.info("TpmSimulator: get_fpga2_temperature")
         return 37.5
 
-    #     def GetRegisterList(self):
-    #     def ReadRegister(self, argin):
-    #     def WriteRegister(self, argin):
-    #     def ReadAddress(self, argin):
-    #     def WriteAddress(self, argin):
-    #     def Configure40GCore(self, argin):
-    #     def Get40GCoreConfiguration(self, argin):
+    def get_fpga1_time(self):
+        self.logger.info("TpmSimulator: get_fpga1_time")
+        if self._use_clock:
+            self._fpga1_time = int(time.time())
+        return self._fpga1_time
+
+    def set_fpga1_time(self, value):
+        self.logger.info("TpmSimulator: set_fpga1_time")
+        self._fpga1_time = value
+        if not self._use_clock:
+            self._use_clock = True
+
+    def get_fpga2_time(self):
+        self.logger.info("TpmSimulator: get_fpga2_time")
+        return self._fpga2_time
+
+    def set_fpga2_time(self, value):
+        self.logger.info("TpmSimulator: set_fpga2_time")
+        self._fpga2_time = value
+
+    def get_register_list(self):
+        return list(self._register0_map.keys())
+
+    def read_register(self, register_name, nb_read, offset, device):
+        values = []
+        if device == 0:
+            address_map = self._register0_map.get(register_name, None)
+        else:
+            address_map = self._register1_map.get(register_name, None)
+        if address_map is not None:
+            for i in range(nb_read):
+                key = str(offset + i)
+                values.append(address_map.get(key, 0))
+        else:
+            values = []
+        return values
+
+    def write_register(self, register_name, values, offset, device):
+        if device == 0:
+            address_map = self._register0_map.get(register_name, None)
+        else:
+            address_map = self._register1_map.get(register_name, None)
+        if address_map is not None:
+            for i, value in enumerate(values):
+                key = str(offset + i)
+                address_map.update({key: value})
+
+    def read_address(self, address, nvalues):
+        values = []
+        for i in range(nvalues):
+            key = str(address + i)
+            values.append(self._address_map.get(key, 0))
+        return values
+
+    def write_address(self, address, values):
+        for i, value in enumerate(values):
+            key = str(address + i)
+            self._address_map.update({key: value})
+
+    def configure_40G_core(
+        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+    ):
+        dict = {
+            "CoreID": core_id,
+            "SrcMac": src_mac,
+            "SrcIP": src_ip,
+            "SrcPort": src_port,
+            "DstMac": dst_mac,
+            "DstIP": dst_ip,
+            "DstPort": dst_port,
+        }
+        self._forty_gb_core_list.append(dict)
+
+    def get_40G_configuration(self, core_id=-1):
+        if core_id == -1:
+            return self._forty_gb_core_list
+        for item in self._forty_gb_core_list:
+            if item.get("CoreID") == core_id:
+                return item
+        return None
 
     def set_lmc_download(
         self,
@@ -118,17 +193,32 @@ class TpmSimulator:
         }
         print(json.dumps(dict))
 
-    def set_channeliser_truncation(self, argin):
+    def set_channeliser_truncation(self, array):
         self.logger.info("TpmSimulator: set_channeliser_truncation")
+        print(array.ravel())
 
-    def set_beamformer_regions(self, region_array):
+    def set_beamformer_regions(self, regions):
         self.logger.info("TpmSimulator: set_beamformer_regions")
+        result = list(itertools.chain.from_iterable(regions))
+        print(result)
 
-    def initialise_beamformer(start_channel, nof_channels, is_first, is_last):
+    def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         self.logger.info("TpmSimulator: initialise_beamformer")
+        dict = {
+            "StartChannel": start_channel,
+            "NumTiles": nof_channels,
+            "IsFirst": is_first,
+            "IsLast": is_last,
+        }
+        print(json.dumps(dict))
 
-    def load_calibration_coefficients(self, antenna, calibration_coefs):
+    def load_calibration_coefficients(self, antenna, calibration_coeffs):
         self.logger.info("TpmSimulator: load_calibration_coefficients")
+        inp = list(itertools.chain.from_iterable(calibration_coeffs))
+        out = [[v.real, v.imag] for v in inp]
+        coeffs = list(itertools.chain.from_iterable(out))
+        coeffs.insert(0, float(antenna))
+        print(coeffs)
 
     def load_beam_angle(self, angle_coeffs):
         self.logger.info("TpmSimulator: load_beam_angle")
@@ -307,6 +397,7 @@ class TpmSimulator:
 
     def check_pending_data_requests(self):
         self.logger.info("TpmSimulator: check_pending_data_requests")
+        return False
 
     def send_channelised_data_narrowband(
         self,
@@ -342,12 +433,15 @@ class TpmSimulator:
 
     def get_phase_terminal_count(self):
         self.logger.info("TpmSimulator: get_phase_terminal_count")
+        return self._phase_terminal_count
 
-    def set_phase_terminal_count(self):
+    def set_phase_terminal_count(self, value):
         self.logger.info("TpmSimulator: set_phase_terminal_count")
+        self._phase_terminal_count = value
 
     def get_pps_delay(self):
         self.logger.info("TpmSimulator: get_pps_delay")
+        return 12
 
     def post_synchronisation(self):
         self.logger.info("TpmSimulator: post_synchronisation")

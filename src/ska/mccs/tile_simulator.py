@@ -13,20 +13,20 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 """
 __all__ = ["MccsTileSimulator", "main"]
 
-import os
 import json
+import numpy as np
 
 # PyTango imports
 from tango import DebugIt
 from tango import DevState
 from tango.server import attribute, command
-from tango.server import device_property, Device
+from tango.server import device_property
 
 # Additional import
 
 from ska.mccs import MccsGroupDevice
 from ska.mccs.tpm_simulator import TpmSimulator
-from ska.base.control_model import SimulationMode, TestMode, LoggingLevel
+from ska.base.control_model import SimulationMode, LoggingLevel
 
 
 class MccsTileSimulator(MccsGroupDevice):
@@ -75,16 +75,11 @@ class MccsTileSimulator(MccsGroupDevice):
         self._firmware_version = ""
         self._voltage = 0.0
         self._current = 0.0
-        self._board_temperature = 0.0
-        self._fpga1_temperature = 0.0
-        self._fpga2_temperature = 0.0
-        self._fpga1_time = 0.0
-        self._fpga2_time = 0.0
         self._antenna_ids = []
         self._forty_gb_destination_ips = []
         self._forty_gb_destination_macs = []
         self._forty_gb_destination_ports = []
-        self._forty_gb_core_list = []
+        #        self._forty_gb_core_list = []
         self._adc_power = []
         self._sampling_rate = 0.0
         self._tpm = None
@@ -277,46 +272,32 @@ class MccsTileSimulator(MccsGroupDevice):
     @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        if self.isProgrammed:
-            return self._tpm.get_fpga1_temperature()
-        else:
-            return 0
+        return self._tpm.get_fpga1_temperature()
 
     @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        if self.isProgrammed:
-            return self._tpm.get_fpga2_temperature()
-        else:
-            return 0
+        return self._tpm.get_fpga2_temperature()
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(dtype="DevLong", fisallowed=is_connected)
     def fpga1_time(self):
-
         """Return the fpga1_time attribute."""
-
-        # return self["fpga1.pps_manager.curr_time_read_val"]
-        return self._fpga1_time
+        return self._tpm.get_fpga1_time()
 
     @fpga1_time.write
     def fpga1_time(self, value):
         """Set the fpga1_time attribute."""
-        # self["fpga1.pps_manager.curr_time_write_val"] = value
-        # self["fpga1.pps_manager.curr_time_cmd.wr_req"] = 0x1
-        self._fpga1_time = value
+        self._tpm.set_fpga1_time(value)
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(dtype="DevLong", fisallowed=is_connected)
     def fpga2_time(self):
         """Return the fpga2_time attribute."""
-        # return self["fpga2.pps_manager.curr_time_read_val"]
-        return self._fpga2_time
+        return self._tpm.get_fpga2_time()
 
     @fpga2_time.write
     def fpga2_time(self, value):
         """Set the fpga2_time attribute."""
-        # self["fpga2.pps_manager.curr_time_write_val"] = value
-        # self["fpga2.pps_manager.curr_time_cmd.wr_req"] = 0x1
-        self._fpga2_time = value
+        self._tpm.set_fpga2_time(value)
 
     @attribute(
         dtype=("DevLong",),
@@ -329,6 +310,11 @@ class MccsTileSimulator(MccsGroupDevice):
         """Return the antennaIds attribute."""
         return self._antenna_ids
 
+    @antennaIds.write
+    def antennaIds(self, ids):
+        """Setthe antennaIds attribute."""
+        self._antenna_ids = ids
+
     @attribute(
         dtype=("DevString",),
         max_dim_x=256,
@@ -337,7 +323,10 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     def fortyGbDestinationIps(self):
         """Return the fortyGbDestinationIps attribute."""
-        return self._forty_gb_destination_ips
+        dst_ips = []
+        for item in self._tpm.get_40G_configuration():
+            dst_ips.append(item.get("DstIP"))
+        return dst_ips
 
     @attribute(
         dtype=("DevString",),
@@ -347,7 +336,10 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     def fortyGbDestinationMacs(self):
         """Return the fortyGbDestinationMacs attribute."""
-        return self._forty_gb_destination_macs
+        dst_macs = []
+        for item in self._tpm.get_40G_configuration():
+            dst_macs.append(item.get("DstMac"))
+        return dst_macs
 
     @attribute(
         dtype=("DevLong",),
@@ -357,7 +349,10 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     def fortyGbDestinationPorts(self):
         """Return the fortyGbDestinationPorts attribute."""
-        return self._forty_gb_destination_ports
+        dst_ports = []
+        for item in self._tpm.get_40G_configuration():
+            dst_ports.append(item.get("DstPort"))
+        return dst_ports
 
     @attribute(
         dtype=("DevDouble",),
@@ -367,10 +362,6 @@ class MccsTileSimulator(MccsGroupDevice):
         fisallowed=is_connected,
     )
     def adcPower(self):
-        # If board is not programmed, return None
-        if not self._tpm.is_programmed():
-            return None
-
         # Get RMS values from board
         return self._tpm.get_adc_rms()
 
@@ -401,7 +392,7 @@ class MccsTileSimulator(MccsGroupDevice):
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def ppsDelay(self):
-        self._tpm.get_pps_delay()
+        return self._tpm.get_pps_delay()
 
     # --------
     # Commands
@@ -410,7 +401,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command()
     @DebugIt()
     def Initialise(self):
-
         """
         Performs all required initialisation (switches on on-board devices,
         locks PLL, performs synchronisation and other operations required
@@ -418,98 +408,14 @@ class MccsTileSimulator(MccsGroupDevice):
         such as channelisation and beamforming)
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("Connect", False)
+        >>> dp.command_inout("Initialise")
         """
         self._tpm.initialise()
-
-    #         if self._tpm is None:
-    #             self.logger.error("Not connected")
-    #             return
-    #
-    #         # Before initialising, check if TPM is programmed
-    #         if not self._tpm.is_programmed():
-    #             self.logger.error("Cannot initialise board which is not programmed")
-    #             return
-    #
-    #         # Initialise firmware plugin
-    #         self._tpm.initialise_firmware()
-    #
-    #         # Set LMC IP
-    #         self._tpm.set_lmc_ip(self._lmc_ip, self._lmc_port)
-    #
-    #         # Enable C2C streaming
-    #         # self._tpm["board.regfile.c2c_stream_enable"] = 0x1
-    #         # self.set_c2c_burst()
-    #
-    #         #         # Switch off both PREADUs
-    #         #         self._tpm.preadu[0].switch_off()
-    #         #         self._tpm.preadu[1].switch_off()
-    #         #
-    #         #         # Switch on preadu
-    #         #         for preadu in self._tpm.preadu:
-    #         #             preadu.switch_on()
-    #         #             time.sleep(1)
-    #         #             preadu.select_low_passband()
-    #         #             preadu.read_configuration()
-    #
-    #         # Synchronise FPGAs
-    #         # self.sync_fpgas()
-    #
-    #         # Initialize f2f link
-    #         self._tpm.initialise_f2f_link()
-    #
-    #         # Reset test pattern generator
-    #         self._tpm.reset_test_generator()
-    #
-    #         # Use test_generator plugin instead!
-    #         if self.testMode:
-    #             # Test pattern. Tones on channels 72 & 75 + pseudo-random noise
-    #             self.logger.info("Enabling test pattern")
-    #             self._tpm.enable_test_pattern()
-    #
-    #         # Set destination and source IP/MAC/ports for 10G cores
-    #         # This will create a loopback between the two FPGAs
-    #         ip_octets = self._ip.split(".")
-    #         for n in range(8):
-    #             src_ip = "10.{}.{}.{}".format(n + 1, ip_octets[2], ip_octets[3])
-    #             dst_ip = "10.{}.{}.{}".format(
-    #                 (1 + n) + (4 if n < 4 else -4), ip_octets[2], ip_octets[3]
-    #             )
-    #         #             self.Configure40GCore(n,
-    #         #                                     src_mac=0x620000000000, ###+ ip2long(src_ip),
-    #         #                                     src_ip=src_ip,
-    #         #                                     src_port=0xF0D0,
-    #         #                                     dst_mac=0x620000000000, ###+ ip2long(dst_ip),
-    #         #                                     dst_ip=dst_ip,
-    #         #                                     dst_port=4660)
-    #
-    #         # wait UDP link up
-    #         self.logger.info("Waiting for 10G link...")
-    #         try:
-    #             times = 0
-    #             while True:
-    #                 linkup = 1
-    #                 for n in [0, 1, 2, 4, 5, 6]:
-    #                     core_status = self._tpm.get_arp_table_status(n)
-    #                     if core_status & 0x4 == 0:
-    #                         linkup = 0
-    #                 if linkup == 1:
-    #                     self.logger.info("40G Link established! ARP table populated!")
-    #                     break
-    #                 else:
-    #                     times += 1
-    #                     time.sleep(0.5)
-    #                     if times == 20:
-    #                         self.logger.warning(
-    #                             "40G Links not established after 10 seconds! ARP table not populated!"
-    #                         )
-    #                         break
-    #         except:
-    #             time.sleep(4)
-    #             # self.mii_exec_test(10, False)
-    #             # self['fpga1.regfile.eth10g_ctrl'] = 0x0
-    #             # self['fpga2.regfile.eth10g_ctrl'] = 0x0
-    #
-    #         self._tpm.check_ddr_initialisation()
 
     @command(dtype_in="DevBoolean", doc_in="Initialise")
     @DebugIt()
@@ -522,6 +428,8 @@ class MccsTileSimulator(MccsGroupDevice):
         :type initialise: DevBoolean
 
         :return: None
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("Connect", True)
         """
         if self.simulationMode:
             self._tpm = TpmSimulator(self.logger)
@@ -535,17 +443,14 @@ class MccsTileSimulator(MccsGroupDevice):
             )
 
         self._tpm.connect(
-            #            ip=self._ip_address,
-            #            port=self._port,
             initialise=initialise,
             simulation=self.simulationMode,
             enable_ada=self.testMode,
-            #            fsample=self._sampling_rate,
         )
 
-        # Load tpm test firmware for both FPGAs (no need to load in simulation)
-        if not self.simulationMode and self._tpm.is_programmed():
-            self._tpm.load_plugin("TpmTestFirmware", fsample=self._sampling_rate)
+        # Load tpm test firmware for both FPGAs
+        if not self._tpm.is_programmed() and initialise:
+            self._tpm.download_firmware("TpmTestFirmware")
         elif not self._tpm.is_programmed():
             self.logger.warning("TPM is not programmed! No plugins loaded")
 
@@ -558,26 +463,47 @@ class MccsTileSimulator(MccsGroupDevice):
     @command()
     @DebugIt()
     def Disconnect(self):
-
         """
         Disconnects from the board, the internal state needs to be reset
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("Disconnect")
         """
+        self._tpm.disconnect()
 
-    pass
-
-    @command(dtype_out="DevVarStringArray", doc_out="list of firmware")
+    @command(dtype_out="DevString", doc_out="list of firmware")
     @DebugIt()
     def GetFirmwareList(self):
-        """Return a list containing the following information for each
+        """Return a dictionary containing the following information for each
         firmware stored on the board (such as in Flash memory).
         For each firmware, a dictionary containing the following keys with
         their respective values should be provided: ‘design’, which is a textual
         name for the firmware, ‘major’, which is the major version number, and
         ‘minor’.
+        
+        :return: a dictionary of firmware details
+        
+        * key - (string) the firmware name
+        * value - (dict) dictionary of firmware  details with keys
+        
+            * Design - (string) a textual name for the firmware
+            * Major - (int) the major firmware version
+            * Minor - (int) the minor firmware verion
+
+        :rtype: DevString
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> jstr = dp.command_inout("GetFirmwareList")
+        >>> dict = json.load(jstr)
         """
-        return []
+        firmware_list = self._tpm.get_firmware_list()
+        return json.dumps(firmware_list)
 
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
@@ -592,15 +518,19 @@ class MccsTileSimulator(MccsGroupDevice):
         :type bitfile: 'DevString'
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("DownloadFirmware", "/tmp/firmware/bitfile")
         """
-        if not self.simulationMode and self._tpm is not None:
+        if self._tpm is not None:
             self.logger.info("Downloading bitfile to board")
             self._tpm.download_firmware(bitfile)
 
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
     def ProgramCPLD(self, bitfile):
-
         """
         If the TPM has a CPLD (or other management chip which need firmware),
         this function program it with the provided bitfile.
@@ -609,79 +539,149 @@ class MccsTileSimulator(MccsGroupDevice):
         :type: 'DevString'
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ProgramCPLD", "/tmp/firmware/bitfile")
         """
-        if not self.simulationMode and self._tpm is not None:
+        if self._tpm is not None:
             self.logger.info("Downloading bitstream to CPLD FLASH")
             self._tpm.cpld_flash_write(bitfile)
 
     @command()
     @DebugIt()
     def WaitPPSEvent(self):
-
         """
         Block until a PPS edge is detected, then return from function
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("WaitPPSEvent")
         """
         if self._tpm is not None:
-            t0 = self.fpga1_time()
-            while t0 == self.fpga1_time():
+            t0 = self._tpm.get_fpga1_time()
+            while t0 == self._tpm.get_fpga1_time():
                 pass
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetRegisterList(self):
-
         """
         Return a list containing description of the exposed firmware (and CPLD)
         registers
 
-        :return: None
+        :return: a list of register names
+        :rtype: DevVarStringArray
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> reglist = dp.command_inout("GetRegisterList")
         """
-        return []
+        return self._tpm.get_register_list()
 
     @command(
-        dtype_in="DevVarLongArray",
-        doc_in="register_name, n, offset, device",
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "RegisterName, NbRead, Offset, Device",
         dtype_out="DevVarLongArray",
-        doc_out="values",
+        doc_out="list of register values",
     )
     @DebugIt()
     def ReadRegister(self, argin):
-
         """
-        Return the value of the specified register. register_name is the string
-        representation of the register, n is the number of 32-bit words to
-        read, offset is the address offset within the register to read from and
-        device is the FPGA to read from (from Device enumeration).
-        Returns a list of values (unsigned 32-bit
+        Return the value(s) of the specified register.
 
-        :param argin: [0] = register
-                      [1] = nb_read
-                      [2] = offset
-                      [3] = fpga device (0,1)
+        :param argin: json dictionary with mandatory keywords:
+
+        * RegisterName - (string) register_name is the string representation of the register
+        * NbRead - (int) is the number of 32-bit values to read
+        * Offset - (int) offset is the address offset within the register to write to 
+        * Device - (int) device is the FPGA to write to (0 or 1)
+
+        :type argin: DevString
 
         :return: a list of register values
         :rtype: DevVarUlongArray
-        """
-        if len(argin) < 4:
-            raise ValueError
-        return []
 
-    @command(dtype_in="DevVarLongArray", doc_in="register_name, values, offset, device")
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read, "Offset": offset, "Device":device}
+        >>> jstr = json.dumps(dict)
+        >>> values = dp.command_inout("ReadRegister", jstr)
+        """
+        params = json.loads(argin)
+        name = params.get("RegisterName", None)
+        if name is None:
+            self.logger.error("RegisterName is a mandatory parameter")
+            raise ValueError("RegisterName is a mandatory parameter")
+        nb_read = params.get("NbRead", None)
+        if nb_read is None:
+            self.logger.error("NbRead is a mandatory parameter")
+            raise ValueError("NbRead is a mandatory parameter")
+        offset = params.get("Offset", None)
+        if offset is None:
+            self.logger.error("Offset is a mandatory parameter")
+            raise ValueError("Offset is a mandatory parameter")
+        device = params.get("Device", None)
+        if device is None:
+            self.logger.error("Device is a mandatory parameter")
+            raise ValueError("Device is a mandatory parameter")
+
+        return self._tpm.read_register(name, nb_read, offset, device)
+
+    @command(
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "RegisterName, Values, Offset, Device",
+    )
     @DebugIt()
     def WriteRegister(self, argin):
-
         """
-        Write values to the specified register. register_name is the string
-        representation of the register, values is a list containing the 32-bit
-        values to write, offset is the address offset within the register
-        to write to and device is the FPGA to write to (from Device
-        enumeration).
+        Write values to the specified register.
+
+        :param argin: json dictionary with mandatory keywords:
+
+        * RegisterName - (string) register_name is the string representation of the register
+        * Values - (list) is a list containing the 32-bit values to write
+        * Offset - (int) offset is the address offset within the register to write to 
+        * Device - (int) device is the FPGA to write to (0 or 1)
+
+        :type argin: DevString
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"RegisterName": "test-reg1", "Values": values, "Offset": offset, "Device":device}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("WriteRegister", jstr)
         """
-        pass
+        params = json.loads(argin)
+        name = params.get("RegisterName", None)
+        if name is None:
+            self.logger.error("RegisterName is a mandatory parameter")
+            raise ValueError("RegisterName is a mandatory parameter")
+        values = params.get("Values", None)
+        if values is None:
+            self.logger.error("Values is a mandatory parameter")
+            raise ValueError("Values is a mandatory parameter")
+        offset = params.get("Offset", None)
+        if offset is None:
+            self.logger.error("Offset is a mandatory parameter")
+            raise ValueError("Offset is a mandatory parameter")
+        device = params.get("Device", None)
+        if device is None:
+            self.logger.error("Device is a mandatory parameter")
+            raise ValueError("Device is a mandatory parameter")
+
+        self._tpm.write_register(name, values, offset, device)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -691,90 +691,145 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def ReadAddress(self, argin):
-
         """
         Read n 32-bit values from address
 
-        :return:'DevVarULongArray'
+        :param argin: [0] = address to read from
+                      [1] = number of values to read
+
+        :return: list of values
+        :rtype: 'DevVarULongArray'
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> reglist = dp.command_inout("ReadAddress", [address, nvalues]])
         """
-        return [0]
+        if len(argin) < 2:
+            self.logger.error("Two parameters are required")
+            raise ValueError("Two parameters are required")
+        address = argin[0]
+        nvalues = argin[1]
+        return self._tpm.read_address(address, nvalues)
 
     @command(dtype_in="DevVarULongArray", doc_in="address, values")
     @DebugIt()
     def WriteAddress(self, argin):
-
         """
-        Write list of values at addres
+        Write list of values at address
 
-        :param argin: 'DevVarULongArray'
+        :param argin: [0] = address to write to
+                      [1..n] = list of values to write
 
         :return: None
+
+        :example:
+
+        >>> values = [.....]
+        >>> address = 0xfff
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("WriteAddress", [address, values])
         """
-        pass
+        if len(argin) < 2:
+            self.logger.error("A minimum of two parameters are required")
+            raise ValueError("A minium of two parameters are required")
+        address = argin[0]
+        self._tpm.write_address(address, argin[1:])
 
     @command(
-        dtype_in="DevVarULongArray",
-        doc_in="core_id, src_mac, src_ip, dst_mac, dst_ip, src_port, dst_port",
+        dtype_in="DevString",
+        doc_in="json dictionary with keywords:\n"
+        "CoreID, SrcMac, SrcIP, SrcPort, DstMac, DstIP, DstPort",
     )
     @DebugIt()
     def Configure40GCore(self, argin):
-
         """
         Configure 40g core_id with specified parameters.
-        All parameters are numeric values
 
-        :param argin: [0] = core_id
-                      [1] = src_mac
-                      [2] = src_ip
-                      [3] = src_port
-                      [4] = dst_mac
-                      [5] = dst_ip
-                      [6] = dst_port
-        :type argin: DevVarULongArray
+        :param argin: json dictionary with optional keywords:
+
+        * CoreID - (int) core id
+        * SrcMac - (string) mac address dot notation
+        * SrcIP - (string) IP dot notation
+        * SrcPort - (int) src port
+        * DstMac - (string) mac address dot notation
+        * DstIP - (string) IP dot notation
+        * DstPort - (int) dest port
+
+        :type argin: DevString
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"CoreID":2, "SrcMac":"10:fe:ed:08:0a:58", "SrcIP":"10.0.99.3",
+                    "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58", "DstIP":"10.0.99.3",
+                    "DstPort":5000}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("Configure40GCore", jstr)
         """
-        if len(argin) < 7:
-            raise ValueError
-        self._forty_gb_core_list.append(
-            {
-                "core_id": argin[0],
-                "src_mac": argin[1],
-                "src_ip": argin[2],
-                "src_port": argin[3],
-                "dst_mac": argin[4],
-                "dst_ip": argin[5],
-                "dst_port": argin[6],
-            }
+        params = json.loads(argin)
+        core_id = params.get("CoreID", None)
+        if core_id is None:
+            self.logger.error("CoreID is a mandatory parameter")
+            raise ValueError("CoreID is a mandatory parameter")
+        src_mac = params.get("SrcMac", None)
+        if src_mac is None:
+            self.logger.error("SrcMac is a mandatory parameter")
+            raise ValueError("SrcMac is a mandatory parameter")
+        src_ip = params.get("SrcIP", None)
+        if src_ip is None:
+            self.logger.error("SrcIP is a mandatory parameter")
+            raise ValueError("SrcIP is a mandatory parameter")
+        src_port = params.get("SrcPort", None)
+        if src_port is None:
+            self.logger.error("SrcPort is a mandatory parameter")
+            raise ValueError("SrcPort is a mandatory parameter")
+        dst_mac = params.get("DstMac", None)
+        if dst_mac is None:
+            self.logger.error("DstMac is a mandatory parameter")
+            raise ValueError("DstMac is a mandatory parameter")
+        dst_ip = params.get("DstIP", None)
+        if dst_ip is None:
+            self.logger.error("DstIP is a mandatory parameter")
+            raise ValueError("DstIP is a mandatory parameter")
+        dst_port = params.get("DstPort", None)
+        if dst_port is None:
+            self.logger.error("DstPort is a mandatory parameter")
+            raise ValueError("DstPort is a mandatory parameter")
+        self._tpm.configure_40G_core(
+            core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
         )
 
     @command(
         dtype_in="DevLong",
         doc_in="coreId",
-        dtype_out="DevVarULongArray",
-        doc_out="configuration",
+        dtype_out="DevString",
+        doc_out="configuration dict as a json string",
     )
     @DebugIt()
     def Get40GCoreConfiguration(self, argin):
-
         """
-        Get 10g core configuration for core_id.
+        Get 40g core configuration for core_id.
         This is required to chain up TPMs to form a station
 
-        :return: the configuration as an array comprising:
+        :return: the configuration is a json string comprising:
                  src_mac, src_ip, src_port, dest_mac, dest_ip, dest_port
-        :rtype: DevVarUlongArray
+
+        :rtype: DevString
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> core_id = 2
+        >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id)
+        >>> params = json.loads(argout)
         """
-        for item in self._forty_gb_core_list:
-            if argin == item["core_id"]:
-                return [
-                    item["src_mac"],
-                    item["src_ip"],
-                    item["src_port"],
-                    item["dst_mac"],
-                    item["dst_ip"],
-                    item["dst_port"],
-                ]
+        core_id = argin
+        item = self._tpm.get_40G_configuration(core_id)
+        if item is not None:
+            return json.dumps(item.pop("CoreID"))
         raise ValueError("Invalid core id specified")
 
     @command(
@@ -784,7 +839,6 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def SetLmcDownload(self, argin):
-
         """
         Specify whether control data will be transmitted over 1G or 40G
         networks
@@ -803,7 +857,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Mode": "1G", "PayloadLength":4,DstIP="10.0.1.23"}
         >>> jstr = json.dumps(dict)
@@ -826,111 +880,203 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevVarLongArray", doc_in="truncation array")
     @DebugIt()
     def SetChanneliserTruncation(self, argin):
-
         """
         Set the coefficients to modify (flatten) the bandpass.
-        truncation is a N x M array, where N is the number of input channels
-        and M is the number of frequency channel
+
+        :param argin: truncation is a N x M array 
+
+        * argin[0] - is N, the number of input channels
+        * argin[1] - is M, the number of frequency channel
+        * argin[2:] - is the data
+
+        :type: DevVarLongArray
 
         :return: None
+
+        :example:
+
+        >>> n=4
+        >>> m=3
+        >>> trunc = [[0, 1, 2], [3, 4, 5],[6, 7, 8], [9, 10, 11],]
+        >>> arr = np.array(trunc).ravel()
+        >>> argin = np.concatenate([np.array((4, 3)), arr])
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("SetChanneliserTruncation", argin)
         """
-        pass
+        if len(argin) < 3:
+            self.logger.error("Insufficient values supplied")
+            raise ValueError("Insufficient values supplied")
+        nb_chan = argin[0]
+        nb_freq = argin[1]
+        arr = np.array(argin[2:])
+        np.reshape(arr, (nb_chan, nb_freq))
+        self._tpm.set_channeliser_truncation(arr)
 
     @command(dtype_in="DevVarLongArray", doc_in="region_array")
     @DebugIt()
     def SetBeamFormerRegions(self, argin):
-
         """
         Set the frequency regions which are going to be beamformed into a
         single beam.
         region_array is defined as a 2D array, for a maximum of 16 regions.
-        Each element in the array defines a region, with:
-        start_channel: region starting channel
-        nof_channels: size of the region, must be a multiple of 8
-        beam_index: beam used for this region with range 0 to 7
         Total number of channels must be <= 384
 
+        :param argin: list of regions. Each region comprises:
+
+        * start_channel - (int) region starting channel
+        * num_channels - (int) size of the region, must be a multiple of 8
+        * beam_index - (int) beam used for this region with range 0 to 7
+
+        :type argin: DevVarLongArray
+
         :return: None
+
+        :example:
+
+        >>> regions = [[5, 20, 1],[25, 40, 2]]
+        >>> input = list(itertools.chain.from_iterable(regions))
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("SetBeamFormerRegions", input)
         """
         if len(argin) < 3:
-            self.logger.error("Insufficient parameters")
-            return
+            self.logger.error("Insufficient parameters specified")
+            raise ValueError("Insufficient parameters specified")
         if len(argin) > 48:
             self.logger.error("Too many regions specified")
-            return
-        region_array = []
+            raise ValueError("Too many regions specified")
+        if len(argin) % 3 != 0:
+            self.logger.error("Incomplete specification of region")
+            raise ValueError("Incomplete specification of region")
+        regions = []
         total_chan = 0
-        for i in range(len(argin) / 3):
-            start_channel = argin[i * 3]
-            nchannels = argin[i * 3 + 1]
+        for i in range(0, len(argin), 3):
+            region = argin[i : i + 3]
+            nchannels = region[1]
             if nchannels % 8 != 0:
                 self.logger.error("Nos. of channels in region must be multiple of 8")
-                return
-            beam_index = argin[i * 3 + 2]
+                raise ValueError("Nos. of channels in region must be multiple of 8")
+            beam_index = region[2]
             if beam_index < 0 or beam_index > 7:
                 self.logger.error("Beam_index is out side of range 0-7")
-                return
+                raise ValueError("Beam_index is out side of range 0-7")
             total_chan += nchannels
-            i += 3
-        if total_chan > 384:
-            self.logger.error("Too many channels specified > 384")
-            return
-        region_array.append([start_channel, nchannnels, beam_index])
-        self._tpm.set_beamfomer_regions(region_array)
+            if total_chan > 384:
+                self.logger.error("Too many channels specified > 384")
+                raise ValueError("Too many channels specified > 384")
+            regions.append(region)
+        self._tpm.set_beamformer_regions(regions)
 
     @command(
-        dtype_in="DevVarLongArray", doc_in="n_of_tiles, first_tile=False, start=False"
+        dtype_in="DevString",
+        doc_in="json dictionary with mandatory keywords:\n"
+        "StartChannel,Numtiles, IsFirst, IsLast",
     )
     @DebugIt()
     def ConfigureStationBeamformer(self, argin):
-
         """
         Initialise and start the station beamformer.
-        nof_tiles is the number of tiles in the station,
-        first_tile specifies whether the tile is the first one in the station,
-        and start, when True, starts the beamformer
+
+        :param argin: json dictionary with mandatory keywords:
+
+        * StartChannel - (int) start channel
+        * NumTiles - (int) is the number of tiles in the station
+        * IsFirst - (bool) specifies whether the tile is the first one in the station
+        * IsLast - (bool) specifies whether the tile is the last one in the station
+
+        :type argin: DevString
 
         :return: None
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"StartChannel":1, "NumTiles":10, "IsTile":True}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("ConfigureStationBeamformer", jstr)
         """
-        if len(argin) < 4:
-            self.logger.error("Insufficient parameters supplied")
-            return
-        start_channel = argin[0]
-        nof_channels = argin[1]
-        is_first = argin[2]
-        is_last = argin[3]
-        self._tpm.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
+        params = json.loads(argin)
+        start_channel = params.get("StartChannel", None)
+        if start_channel is None:
+            self.logger.error("StartChannel is a mandatory parameter")
+            raise ValueError("StartChannel is a mandatory parameter")
+        ntiles = params.get("NumTiles", None)
+        if ntiles is None:
+            self.logger.error("NumTiles is a mandatory parameter")
+            raise ValueError("NumTiles is a mandatory parameter")
+        is_first = params.get("IsFirst", None)
+        if is_first is None:
+            self.logger.error("IsFirst is a mandatory parameter")
+            raise ValueError("IsFirst is a mandatory parameter")
+        is_last = params.get("IsLast", None)
+        if is_last is None:
+            self.logger.error("IsLast is a mandatory parameter")
+            raise ValueError("IsLast is a mandatory parameter")
+        self._tpm.initialise_beamformer(start_channel, ntiles, is_first, is_last)
 
     @command(dtype_in="DevVarDoubleArray", doc_in="antenna, calibration_coefficients")
     @DebugIt()
     def LoadCalibrationCoefficients(self, argin):
-
         """
         Loads calibration coefficients (but does not apply them, this is
-        performed by switch_calibration_bank). antenna is the antenna to which
-        the coefficients will be applied. calibration_coefficients is a
-        bidimensional complex array of the form
-        calibration_coefficients[channel, polarization], with each element
-        representing a normalized coefficient, with (1.0, 0.0) being the
-        normal, expected response for an ideal antenna. channel is the index
-        specifying the channels at the beamformer output, i.e. considering only
-        those channels actually processed and beam assignments. The
-        polarization index ranges from 0 to 3.
-        0: X polarization direct element
-        1: X->Y polarization cross element
-        2: Y->X polarization cross element
-        3: Y polarization direct element
-        The calibration coefficients may include any rotation matrix (e.g. the
-        parallactic angle), but do not include the geometric delay
+        performed by switch_calibration_bank). The calibration coefficients
+        may include any rotation matrix (e.g. the parallactic angle),
+        but do not include the geometric delay
+
+        :param argin: list comprises:
+
+        * antenna - (int) is the antenna to which the coefficients will be applied.
+        * calibration_coefficients - [array] is a bidimensional complex array of the form
+            calibration_coefficients[channel, polarization], with each element
+            representing a normalized coefficient, with (1.0, 0.0) being the
+            normal, expected response for an ideal antenna.
+
+            * channel - (int) channel is the index specifying the channels at the beamformer output, i.e. considering only
+                those channels actually processed and beam assignments.
+            * polarization index ranges from 0 to 3.
+
+                * 0: X polarization direct element
+                * 1: X->Y polarization cross element
+                * 2: Y->X polarization cross element
+                * 3: Y polarization direct element
+
+        :type argin: DevVarDoubleArray
 
         :return: None
+
+        :example:
+
+        >>> antenna = 2
+        >>> complex_coeffs = [[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
+        >>> inp = list(itertools.chain.from_iterable(complex_coeffs))
+        >>> out = [[v.real, v.imag] for v in inp]
+        >>> coeffs = list(itertools.chain.from_iterable(out))
+        >>> coeffs.insert(0, float(antenna))
+        >>> input = list(itertools.chain.from_iterable(coeffs))
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
-        pass
+        if len(argin) < 9:
+            self.logger.error(f"Insufficient calibration coefficients")
+            raise ValueError(f"Insufficient calibration coefficients")
+        if len(argin[1:]) % 8 != 0:
+            self.logger.error("Incomplete specification of coefficient")
+            raise ValueError("Incomplete specification of coefficient")
+        antenna = int(argin[0])
+        calib_coeffs = [
+            [
+                complex(argin[i], argin[i + 1]),
+                complex(argin[i + 2], argin[i + 3]),
+                complex(argin[i + 4], argin[i + 5]),
+                complex(argin[i + 6], argin[i + 7]),
+            ]
+            for i in range(1, len(argin), 8)
+        ]
+        self._tpm.load_calibration_coefficients(antenna, calib_coeffs)
 
     @command(dtype_in="DevVarDoubleArray", doc_in="angle_coefficients")
     @DebugIt()
     def LoadBeamAngle(self, argin):
-
         """
         angle_coefs is an array of one element per beam, specifying a rotation
         angle, in radians, for the specified beam. The rotation is the same
@@ -955,7 +1101,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevVarDoubleArray", doc_in="tapering coefficients")
     @DebugIt()
     def LoadAntennaTapering(self, argin):
-
         """
         tapering_coeffs is a vector contains a value for each antenna the TPM
         processes. Default at initialisation is 1.0
@@ -983,7 +1128,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevLong", doc_in="switch time")
     @DebugIt()
     def SwitchCalibrationBank(self, switch_time):
-
         """
         Load the calibration coefficients at the specified time delay
 
@@ -993,7 +1137,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SwitchCalibrationBank", 10)
         """
@@ -1002,7 +1146,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevVarDoubleArray", doc_in="delay_array, beam_index")
     @DebugIt()
     def SetPointingDelay(self, argin):
-
         """
         Specifies the delay in seconds and the delay rate in seconds/seconds.
         The delay_array specifies the delay and delay rate for each antenna.
@@ -1025,7 +1168,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevLong", doc_in="load_time")
     @DebugIt()
     def LoadPointingDelay(self, load_time):
-
         """
         Loads the pointing delays at the specified time delay
 
@@ -1035,7 +1177,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("LoadPointingDelay", 10)
         """
@@ -1047,7 +1189,6 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def StartBeamformer(self, argin):
-
         """
         Start the beamformer at the specified time delay
 
@@ -1060,7 +1201,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"StartTime":10, "Duration":20}
         >>> jstr = json.dumps(dict)
@@ -1074,14 +1215,13 @@ class MccsTileSimulator(MccsGroupDevice):
     @command()
     @DebugIt()
     def StopBeamformer(self):
-
         """
         Stop the beamformer
 
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopBeamformer")
         """
@@ -1090,7 +1230,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevDouble", doc_in="Integration time")
     @DebugIt()
     def ConfigureIntegratedChannelData(self, integration_time):
-
         """
         Configure the transmission of integrated channel data with the
         provided integration time
@@ -1101,7 +1240,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284)
         """
@@ -1112,7 +1251,6 @@ class MccsTileSimulator(MccsGroupDevice):
     @command(dtype_in="DevDouble", doc_in="Integration time")
     @DebugIt()
     def ConfigureIntegratedBeamData(self, integration_time):
-
         """
         Configure the transmission of integrated beam data with the provided
         integration time
@@ -1123,7 +1261,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142)
         """
@@ -1138,7 +1276,6 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def SendRawData(self, argin):
-
         """
         Transmit a snapshot containing raw antenna data
 
@@ -1153,7 +1290,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Sync":True, "Period": 200, "Seconds": 0.5}
         >>> jstr = json.dumps(dict)
@@ -1175,7 +1312,6 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def SendChannelisedData(self, argin):
-
         """
         Transmit a snapshot containing channelized data totalling
         number_of_samples spectra.
@@ -1193,7 +1329,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"FirstChannel":10, "LastChannel": 200, "Seconds": 0.5}
         >>> jstr = json.dumps(dict)
@@ -1225,7 +1361,6 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def SendChannelisedDataContinuous(self, argin):
-
         """
         Send data from channel channel continuously (until stopped)
 
@@ -1243,7 +1378,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"ChannelID":2, "NSamples":256, "Period": 10, "Seconds": 0.5}
         >>> jstr = json.dumps(dict)
@@ -1269,7 +1404,6 @@ class MccsTileSimulator(MccsGroupDevice):
     )
     @DebugIt()
     def SendBeamData(self, argin):
-
         """
         Transmit a snapshot containing beamformed data
 
@@ -1285,7 +1419,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Period": 10, "Timeout":4, "Seconds": 0.5}
         >>> jstr = json.dumps(dict)
@@ -1301,14 +1435,13 @@ class MccsTileSimulator(MccsGroupDevice):
     @command()
     @DebugIt()
     def StopDataTransmission(self):
-
         """
         Stop data transmission from board
 
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopDataTransmission")
         """
@@ -1323,7 +1456,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ComputeCalibrationCoefficients")
         """
@@ -1347,7 +1480,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"StartTime":10, "Delay":20}
         >>> jstr = json.dumps(dict)
@@ -1381,14 +1514,14 @@ class MccsTileSimulator(MccsGroupDevice):
     @DebugIt()
     def SetCspRounding(self, rounding):
         """ Set output rounding for CSP
- 
+
         :param rounding: the rounding
         :type rounding: DevDouble
 
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SetCspRounding", 3.142)
         """
@@ -1419,7 +1552,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Mode": "1G", "ChannelPayloadLength":4,
                     "BeamPayloadLength": 6, DstIP="10.0.1.23"}
@@ -1466,7 +1599,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Period": 10, "Timeout":4, "Seconds": 0.5}
         >>> jstr = json.dumps(dict)
@@ -1491,7 +1624,7 @@ class MccsTileSimulator(MccsGroupDevice):
 
         This is a special mode used for UAV campaigns and not really
         part of the standard signal processing chain. I don’t know if
-        this mode will be kept or not. 
+        this mode will be kept or not.
 
         :param argin: json dictionary with 2 mandatory and optional keywords:
 
@@ -1508,7 +1641,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"Frequency":2000, "RoundBits":256, "NSamples":256,
                     "WaitSeconds": 10, "Seconds": 0.5}
@@ -1548,7 +1681,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("tweak_transceivers")
         """
@@ -1563,7 +1696,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("post_synchronisation")
         """
@@ -1578,7 +1711,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SyncFpgas")
         """
@@ -1604,7 +1737,7 @@ class MccsTileSimulator(MccsGroupDevice):
         :return: None
 
         :example:
-    
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"CurrentDelay":0.4, "CurrentTC":56.2, "RefLo":3.0, "RefHi":78.9}
         >>> jstr = json.dumps(dict)

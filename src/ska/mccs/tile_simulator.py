@@ -434,7 +434,7 @@ class MccsTileSimulator(MccsGroupDevice):
         if self.simulationMode:
             self._tpm = TpmSimulator(self.logger)
         else:
-            self._tpm = Tpm(
+            self._tpm = Tpm(  # noqa: F821
                 self._ip_address,
                 self._port,
                 self._lmc_ip,
@@ -484,12 +484,12 @@ class MccsTileSimulator(MccsGroupDevice):
         their respective values should be provided: ‘design’, which is a textual
         name for the firmware, ‘major’, which is the major version number, and
         ‘minor’.
-        
+
         :return: a dictionary of firmware details
-        
+
         * key - (string) the firmware name
         * value - (dict) dictionary of firmware  details with keys
-        
+
             * Design - (string) a textual name for the firmware
             * Major - (int) the major firmware version
             * Minor - (int) the minor firmware verion
@@ -598,9 +598,9 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-        * RegisterName - (string) register_name is the string representation of the register
+        * RegisterName - (string) register_name is the registers string representation
         * NbRead - (int) is the number of 32-bit values to read
-        * Offset - (int) offset is the address offset within the register to write to 
+        * Offset - (int) offset is the address offset within the register to write to
         * Device - (int) device is the FPGA to write to (0 or 1)
 
         :type argin: DevString
@@ -611,7 +611,8 @@ class MccsTileSimulator(MccsGroupDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read, "Offset": offset, "Device":device}
+        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
+                    "Offset": offset, "Device":device}
         >>> jstr = json.dumps(dict)
         >>> values = dp.command_inout("ReadRegister", jstr)
         """
@@ -647,9 +648,9 @@ class MccsTileSimulator(MccsGroupDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-        * RegisterName - (string) register_name is the string representation of the register
+        * RegisterName - (string) register_name is the registers string representation
         * Values - (list) is a list containing the 32-bit values to write
-        * Offset - (int) offset is the address offset within the register to write to 
+        * Offset - (int) offset is the address offset within the register to write to
         * Device - (int) device is the FPGA to write to (0 or 1)
 
         :type argin: DevString
@@ -659,7 +660,8 @@ class MccsTileSimulator(MccsGroupDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"RegisterName": "test-reg1", "Values": values, "Offset": offset, "Device":device}
+        >>> dict = {"RegisterName": "test-reg1", "Values": values,
+                    "Offset": offset, "Device":device}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("WriteRegister", jstr)
         """
@@ -883,7 +885,7 @@ class MccsTileSimulator(MccsGroupDevice):
         """
         Set the coefficients to modify (flatten) the bandpass.
 
-        :param argin: truncation is a N x M array 
+        :param argin: truncation is a N x M array
 
         * argin[0] - is N, the number of input channels
         * argin[1] - is M, the number of frequency channel
@@ -950,7 +952,7 @@ class MccsTileSimulator(MccsGroupDevice):
         regions = []
         total_chan = 0
         for i in range(0, len(argin), 3):
-            region = argin[i : i + 3]
+            region = argin[i : i + 3]  # noqa: E203
             nchannels = region[1]
             if nchannels % 8 != 0:
                 self.logger.error("Nos. of channels in region must be multiple of 8")
@@ -1025,13 +1027,14 @@ class MccsTileSimulator(MccsGroupDevice):
         :param argin: list comprises:
 
         * antenna - (int) is the antenna to which the coefficients will be applied.
-        * calibration_coefficients - [array] is a bidimensional complex array of the form
+        * calibration_coefficients - [array] a bidimensional complex array comprising
             calibration_coefficients[channel, polarization], with each element
             representing a normalized coefficient, with (1.0, 0.0) being the
             normal, expected response for an ideal antenna.
 
-            * channel - (int) channel is the index specifying the channels at the beamformer output, i.e. considering only
-                those channels actually processed and beam assignments.
+            * channel - (int) channel is the index specifying the channels at the
+                              beamformer output, i.e. considering only those channels
+                              actually processed and beam assignments.
             * polarization index ranges from 0 to 3.
 
                 * 0: X polarization direct element
@@ -1497,7 +1500,8 @@ class MccsTileSimulator(MccsGroupDevice):
         """ Set coarse zenith delay for input ADC streams
             Delay specified in nanoseconds, nominal is 0.
 
-        :param delays: the delay in samples, positive delay adds delay to the signal stream
+        :param delays: the delay in samples, positive delay adds delay
+                       to the signal stream
         :type argin: DevVarDoubleArray
 
         :return: None
@@ -1620,7 +1624,8 @@ class MccsTileSimulator(MccsGroupDevice):
     @DebugIt()
     def SendChannelisedDataNarrowband(self, argin):
         """
-        Continuously send channelised data from a single channelend data from channel channel continuously (until stopped)
+        Continuously send channelised data from a single channel end data
+         from channel channel continuously (until stopped)
 
         This is a special mode used for UAV campaigns and not really
         part of the standard signal processing chain. I don’t know if

@@ -258,13 +258,13 @@ class TestMccsTileSimulator(object):
 
     def test_checkPendingDataRequests(self, tango_context):
         tango_context.device.Connect(True)
-        assert tango_context.device.CheckPendingDataRequests == False
+        assert tango_context.device.CheckPendingDataRequests is False
 
     def test_isBeamformerRunning(self, tango_context):
         tango_context.device.Connect(True)
-        assert tango_context.device.isBeamformerRunning == False
+        assert tango_context.device.isBeamformerRunning is False
         tango_context.device.StartBeamformer("{}")
-        assert tango_context.device.isBeamformerRunning == True
+        assert tango_context.device.isBeamformerRunning is True
 
     def test_phaseTerminalCount(self, tango_context):
         tango_context.device.Connect(True)

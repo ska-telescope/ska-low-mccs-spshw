@@ -430,7 +430,7 @@ class MccsTile(MccsGroupDevice):
         :return: None
 
         :example:
-        
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("Connect", True)
         """

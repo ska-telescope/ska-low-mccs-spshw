@@ -374,12 +374,24 @@ class MccsTile(MccsGroupDevice):
         """
         pass
 
+    @command(dtype_out="DevVarStringArray", doc_out="list of firmware")
+    @DebugIt()
+    def GetFirmwareList(self):
+        """Return a list containing the following information for each
+        firmware stored on the board (such as in Flash memory).
+        For each firmware, a dictionary containing the following keys with
+        their respective values should be provided: ‘design’, which is a textual
+        name for the firmware, ‘major’, which is the major version number, and
+        ‘minor’.
+        """
+        return []
+
     @command(dtype_in="DevString", doc_in="bitfile location")
     @DebugIt()
     def DownloadFirmware(self, argin):
         """
         Downloads the firmware contained in bitfile to all FPGAs on the board.
-        This should also updatethe internal register mapping, such that
+        This should also update the internal register mapping, such that
         registers become available for use. bitfile can either be the ?design?
         name returned from get_firmware_list(), or a path to a file
 

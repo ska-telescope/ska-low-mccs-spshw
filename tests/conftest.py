@@ -28,6 +28,9 @@ def tango_context(request):
         "MccsSubarray": {
             "CapabilityTypes": ["BAND1", "BAND2"]
         },
+        "MccsTileSimulator": {
+            "AntennasPerTile": "16"
+        },
     }
 
     # This fixture is used to decorate classes like "TestMccsMaster" or

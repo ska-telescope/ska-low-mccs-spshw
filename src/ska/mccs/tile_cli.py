@@ -11,7 +11,7 @@ import json
 import tango
 
 
-class MccsTileSimulatorCli:
+class MccsTileCli:
     def __init__(self):
         # self._dp = tango.DeviceProxy("mccs/tile/01")
         self._dp = tango.DeviceProxy("mccs/tile_simulator/tile1")
@@ -99,4 +99,4 @@ class MccsTileSimulatorCli:
 
 
 if __name__ == "__main__":
-    fire.Fire(MccsTileSimulatorCli)
+    fire.Fire(MccsTileCli)

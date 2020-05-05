@@ -7,7 +7,6 @@ __all__ = [
     "MccsStationBeam",
     "MccsTile",
     "MccsAntenna",
-    "MccsTileSimulator",
 ]
 
 from .device import MccsDevice  # noqa: F401
@@ -18,4 +17,3 @@ from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .tile import MccsTile
 from .antenna import MccsAntenna
-from .tile_simulator import MccsTileSimulator

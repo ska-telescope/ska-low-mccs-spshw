@@ -7,6 +7,8 @@ __all__ = [
     "MccsStationBeam",
     "MccsTile",
     "MccsAntenna",
+    "MccsTileSimulator",
+    "control_model",
 ]
 
 from .device import MccsDevice  # noqa: F401

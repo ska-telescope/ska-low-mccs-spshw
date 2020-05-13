@@ -22,6 +22,7 @@ from ska.base.control_model import (
 )
 from ska.mccs import release
 
+
 # pylint: disable=invalid-name
 @pytest.mark.usefixtures("tango_context", "initialize_device")
 class TestMccsMaster:

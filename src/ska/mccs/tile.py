@@ -1063,8 +1063,8 @@ class MccsTile(MccsGroupDevice):
         >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
         if len(argin) < 9:
-            self.logger.error(f"Insufficient calibration coefficients")
-            raise ValueError(f"Insufficient calibration coefficients")
+            self.logger.error("Insufficient calibration coefficients")
+            raise ValueError("Insufficient calibration coefficients")
         if len(argin[1:]) % 8 != 0:
             self.logger.error("Incomplete specification of coefficient")
             raise ValueError("Incomplete specification of coefficient")

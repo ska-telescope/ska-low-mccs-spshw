@@ -21,6 +21,7 @@ from ska.base.control_model import (
 )
 from ska.mccs import release
 
+
 # pylint: disable=invalid-name
 @pytest.mark.usefixtures("tango_context", "initialize_device")
 class TestMccsStationBeam:
@@ -106,9 +107,9 @@ class TestMccsStationBeam:
     def test_desiredPointing(self, tango_context):
         dummy_sky_coordinate = [1585619550.0, 192.85948, 27.12825, 1.0]
         float_format = "{:3.4f}"
-        self._test_readwrite_double_array(tango_context, "desiredPointing",
-                                          dummy_sky_coordinate,
-                                          float_format)
+        self._test_readwrite_double_array(
+            tango_context, "desiredPointing", dummy_sky_coordinate, float_format
+        )
 
     def test_pointingDelay(self, tango_context):
         assert tango_context.device.pointingDelay is None
@@ -119,11 +120,13 @@ class TestMccsStationBeam:
     def test_antennaWeights(self, tango_context):
         dummy_weights = [0.1, 0.2, 0.3, 0.4, 0.5]
         float_format = "{:3.4f}"
-        self._test_readwrite_double_array(tango_context, "antennaWeights",
-                                          dummy_weights, float_format)
+        self._test_readwrite_double_array(
+            tango_context, "antennaWeights", dummy_weights, float_format
+        )
 
-    def _test_readwrite_double_array(self, tango_context, attribute_name,
-                                     value_to_write, float_format):
+    def _test_readwrite_double_array(
+        self, tango_context, attribute_name, value_to_write, float_format
+    ):
         """
         Test for a READ-WRITE double array attribute. This is a messy test
         because:
@@ -140,9 +143,11 @@ class TestMccsStationBeam:
 
         # SETUP
         write_as_string = [float_format.format(x) for x in value_to_write]
-        sleep_seconds = tango_context.device.get_attribute_poll_period(
-            attribute_name
-        ) / 1000.0 * 1.2
+        sleep_seconds = (
+            tango_context.device.get_attribute_poll_period(attribute_name)
+            / 1000.0
+            * 1.2
+        )
 
         # RUN
         tango_context.device.write_attribute(attribute_name, value_to_write)

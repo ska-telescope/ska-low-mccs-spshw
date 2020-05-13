@@ -21,6 +21,7 @@ from ska.base.control_model import (
 )
 from ska.mccs import release
 
+
 # pylint: disable=invalid-name
 @pytest.mark.usefixtures("tango_context", "initialize_device")
 class TestMccsStation:
@@ -120,9 +121,9 @@ class TestMccsStation:
         dummy_location = (-30.72113, 21.411128)
         float_format = "{:3.4f}"
         dummy_location_str = [float_format.format(x) for x in dummy_location]
-        sleep_seconds = tango_context.device.get_attribute_poll_period(
-            "delayCentre"
-        ) / 1000.0 * 1.2
+        sleep_seconds = (
+            tango_context.device.get_attribute_poll_period("delayCentre") / 1000.0 * 1.2
+        )
 
         # RUN
         tango_context.device.delayCentre = dummy_location

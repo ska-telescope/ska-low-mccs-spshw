@@ -11,23 +11,12 @@
 #########################################################################
 """Contain the tests for the SKA MCCS Antenna Device Server."""
 
-# Path
-import sys
-import os
-
 # Imports
 import pytest
 
 from PyTango import DevState
-from ska.base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    LoggingLevel,
-)
+from ska.base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel
 
-path = os.path.join(os.path.dirname(__file__), os.pardir)
-sys.path.insert(0, os.path.abspath(path))
 
 # Device test case
 @pytest.mark.usefixtures("tango_context", "initialize_device")
@@ -49,9 +38,9 @@ class TestMccsAntenna(object):
         """Test for State"""
         assert tango_context.device.state() == DevState.ON
 
-#    def test_Status(self, tango_context):
-#        """Test for Status"""
-#        assert tango_context.device.status() == "This device is On"
+    #    def test_Status(self, tango_context):
+    #        """Test for Status"""
+    #        assert tango_context.device.status() == "This device is On"
 
     def test_PowerOn(self, tango_context):
         """Test for PowerOn"""

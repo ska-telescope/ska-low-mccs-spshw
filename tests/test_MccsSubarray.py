@@ -10,9 +10,16 @@
 import itertools
 import pytest
 from tango import DevSource, DevState, DevFailed
-from ska.base.control_model import (AdminMode, ControlMode, HealthState,
-                                    ObsState, SimulationMode, TestMode)
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    ObsState,
+    SimulationMode,
+    TestMode,
+)
 from ska.mccs import release
+
 
 # pylint: disable=invalid-name
 @pytest.mark.usefixtures("tango_context", "initialize_device")
@@ -41,8 +48,10 @@ class TestMccsSubarray:
         # The following reads might not be allowed in this state once
         # properly implemented
         assert tango_context.device.scanId == -1
-        assert list(tango_context.device.configuredCapabilities) == ["BAND1:0",
-                                                                     "BAND2:0"]
+        assert list(tango_context.device.configuredCapabilities) == [
+            "BAND1:0",
+            "BAND2:0",
+        ]
         assert tango_context.device.stationFQDNs is None
         assert tango_context.device.tileFQDNs is None
         assert tango_context.device.stationBeamFQDNs is None
@@ -107,22 +116,45 @@ class TestMccsSubarray:
     # General device behaviour tests
 
     @pytest.mark.parametrize(
-        'state_under_test, action_under_test',
+        "state_under_test, action_under_test",
         itertools.product(
-            ["DISABLED (NOTFITTED)", "DISABLED (OFFLINE)", "OFF (ONLINE)",
-             "OFF (MAINTENANCE)", "ON (ONLINE)", "ON (MAINTENANCE)",
-             "READY (ONLINE)", "READY (MAINTENANCE)", "SCANNING (ONLINE)",
-             "SCANNING (MAINTENANCE)", "ABORTED (ONLINE)",
-             "ABORTED (MAINTENANCE)"],
-            ["notfitted", "offline", "online", "maintenance", "assign",
-             "release", "release (all)", "releaseall", "configure",
-             "deconfigure", "deconfigure (all)", "deconfigureall",
-             "deconfigureall (all)", "scan", "endscan", "endsb", "abort",
-             "reset"]
-        )
+            [
+                "DISABLED (NOTFITTED)",
+                "DISABLED (OFFLINE)",
+                "OFF (ONLINE)",
+                "OFF (MAINTENANCE)",
+                "ON (ONLINE)",
+                "ON (MAINTENANCE)",
+                "READY (ONLINE)",
+                "READY (MAINTENANCE)",
+                "SCANNING (ONLINE)",
+                "SCANNING (MAINTENANCE)",
+                "ABORTED (ONLINE)",
+                "ABORTED (MAINTENANCE)",
+            ],
+            [
+                "notfitted",
+                "offline",
+                "online",
+                "maintenance",
+                "assign",
+                "release",
+                "release (all)",
+                "releaseall",
+                "configure",
+                "deconfigure",
+                "deconfigure (all)",
+                "deconfigureall",
+                "deconfigureall (all)",
+                "scan",
+                "endscan",
+                "endsb",
+                "abort",
+                "reset",
+            ],
+        ),
     )
-    def test_state_machine(self, tango_context,
-                           state_under_test, action_under_test):
+    def test_state_machine(self, tango_context, state_under_test, action_under_test):
         """
         Test the subarray state machine: for a given initial state and
         an action, does execution of that action, from that initial
@@ -133,79 +165,69 @@ class TestMccsSubarray:
         """
 
         states = {
-            "DISABLED (NOTFITTED)":
-                (AdminMode.NOT_FITTED, DevState.DISABLE, ObsState.IDLE),
-            "DISABLED (OFFLINE)":
-                (AdminMode.OFFLINE, DevState.DISABLE, ObsState.IDLE),
-            "OFF (ONLINE)":
-                (AdminMode.ONLINE, DevState.OFF, ObsState.IDLE),
-            "OFF (MAINTENANCE)":
-                (AdminMode.MAINTENANCE, DevState.OFF, ObsState.IDLE),
-            "ON (ONLINE)":
-                (AdminMode.ONLINE, DevState.ON, ObsState.IDLE),
-            "ON (MAINTENANCE)":
-                (AdminMode.MAINTENANCE, DevState.ON, ObsState.IDLE),
-            "READY (ONLINE)":
-                (AdminMode.ONLINE, DevState.ON, ObsState.READY),
-            "READY (MAINTENANCE)":
-                (AdminMode.MAINTENANCE, DevState.ON, ObsState.READY),
-            "SCANNING (ONLINE)":
-                (AdminMode.ONLINE, DevState.ON, ObsState.SCANNING),
-            "SCANNING (MAINTENANCE)":
-                (AdminMode.MAINTENANCE, DevState.ON, ObsState.SCANNING),
-            "ABORTED (ONLINE)":
-                (AdminMode.ONLINE, DevState.ON, ObsState.ABORTED),
-            "ABORTED (MAINTENANCE)":
-                (AdminMode.MAINTENANCE, DevState.ON, ObsState.ABORTED),
+            "DISABLED (NOTFITTED)": (
+                AdminMode.NOT_FITTED,
+                DevState.DISABLE,
+                ObsState.IDLE,
+            ),
+            "DISABLED (OFFLINE)": (AdminMode.OFFLINE, DevState.DISABLE, ObsState.IDLE),
+            "OFF (ONLINE)": (AdminMode.ONLINE, DevState.OFF, ObsState.IDLE),
+            "OFF (MAINTENANCE)": (AdminMode.MAINTENANCE, DevState.OFF, ObsState.IDLE),
+            "ON (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.IDLE),
+            "ON (MAINTENANCE)": (AdminMode.MAINTENANCE, DevState.ON, ObsState.IDLE),
+            "READY (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.READY),
+            "READY (MAINTENANCE)": (AdminMode.MAINTENANCE, DevState.ON, ObsState.READY),
+            "SCANNING (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.SCANNING),
+            "SCANNING (MAINTENANCE)": (
+                AdminMode.MAINTENANCE,
+                DevState.ON,
+                ObsState.SCANNING,
+            ),
+            "ABORTED (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.ABORTED),
+            "ABORTED (MAINTENANCE)": (
+                AdminMode.MAINTENANCE,
+                DevState.ON,
+                ObsState.ABORTED,
+            ),
         }
 
         def assert_state(state):
-            assert states[state] == (tango_context.device.adminMode,
-                                     tango_context.device.state(),
-                                     tango_context.device.obsState)
+            assert states[state] == (
+                tango_context.device.adminMode,
+                tango_context.device.state(),
+                tango_context.device.obsState,
+            )
 
         actions = {
-            "notfitted":
-                lambda d: d.write_attribute("adminMode", AdminMode.NOT_FITTED),
-            "offline":
-                lambda d: d.write_attribute("adminMode", AdminMode.OFFLINE),
-            "online":
-                lambda d: d.write_attribute("adminMode", AdminMode.ONLINE),
-            "maintenance":
-                lambda d: d.write_attribute("adminMode", AdminMode.MAINTENANCE),
-            "assign":
-                lambda d: d.AssignResources(
-                    ["Dummy resource 1", "Dummy resource 2"]
-                ),
-            "release":
-                lambda d: d.ReleaseResources(["Dummy resource 2"]),
-            "release (all)":
-                lambda d: d.ReleaseResources(
-                    ["Dummy resource 1", "Dummy resource 2"]
-                ),
-            "releaseall":
-                lambda d: d.ReleaseAllResources(),
-            "configure":
-                lambda d: d.ConfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
-            "deconfigure":
-                lambda d: d.DeconfigureCapability([[1], ["BAND1"]]),
-            "deconfigure (all)":
-                lambda d: d.DeconfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
-            "deconfigureall":
-                lambda d: d.DeconfigureAllCapabilities("BAND1"),
-            "deconfigureall (all)":
-                lambda d: [d.DeconfigureAllCapabilities("BAND1"),
-                           d.DeconfigureAllCapabilities("BAND2")],
-            "scan":
-                lambda d: d.Scan(["Dummy scan id"]),
-            "endscan":
-                lambda d: d.EndScan(),
-            "endsb":
-                lambda d: d.EndSB(),
-            "abort":
-                lambda d: d.Abort(),
-            "reset":
-                lambda d: d.Reset(),
+            "notfitted": lambda d: d.write_attribute("adminMode", AdminMode.NOT_FITTED),
+            "offline": lambda d: d.write_attribute("adminMode", AdminMode.OFFLINE),
+            "online": lambda d: d.write_attribute("adminMode", AdminMode.ONLINE),
+            "maintenance": lambda d: d.write_attribute(
+                "adminMode", AdminMode.MAINTENANCE
+            ),
+            "assign": lambda d: d.AssignResources(
+                ["Dummy resource 1", "Dummy resource 2"]
+            ),
+            "release": lambda d: d.ReleaseResources(["Dummy resource 2"]),
+            "release (all)": lambda d: d.ReleaseResources(
+                ["Dummy resource 1", "Dummy resource 2"]
+            ),
+            "releaseall": lambda d: d.ReleaseAllResources(),
+            "configure": lambda d: d.ConfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
+            "deconfigure": lambda d: d.DeconfigureCapability([[1], ["BAND1"]]),
+            "deconfigure (all)": lambda d: d.DeconfigureCapability(
+                [[2, 2], ["BAND1", "BAND2"]]
+            ),
+            "deconfigureall": lambda d: d.DeconfigureAllCapabilities("BAND1"),
+            "deconfigureall (all)": lambda d: [
+                d.DeconfigureAllCapabilities("BAND1"),
+                d.DeconfigureAllCapabilities("BAND2"),
+            ],
+            "scan": lambda d: d.Scan(["Dummy scan id"]),
+            "endscan": lambda d: d.EndScan(),
+            "endsb": lambda d: d.EndSB(),
+            "abort": lambda d: d.Abort(),
+            "reset": lambda d: d.Reset(),
         }
 
         def perform_action(action):
@@ -301,30 +323,18 @@ class TestMccsSubarray:
         }
 
         setups = {
-            "DISABLED (NOTFITTED)":
-                ['notfitted'],
-            "DISABLED (OFFLINE)":
-                ['offline'],
-            "OFF (ONLINE)":
-                ['online'],
-            "OFF (MAINTENANCE)":
-                ['maintenance'],
-            "ON (ONLINE)":
-                ['online', 'assign'],
-            "ON (MAINTENANCE)":
-                ['maintenance', 'assign'],
-            "READY (ONLINE)":
-                ['online', 'assign', 'configure'],
-            "READY (MAINTENANCE)":
-                ['maintenance', 'assign', 'configure'],
-            "SCANNING (ONLINE)":
-                ['online', 'assign', 'configure', 'scan'],
-            "SCANNING (MAINTENANCE)":
-                ['maintenance', 'assign', 'configure', 'scan'],
-            "ABORTED (ONLINE)":
-                ['online', 'assign', 'configure', 'abort'],
-            "ABORTED (MAINTENANCE)":
-                ['maintenance', 'assign', 'configure', 'abort'],
+            "DISABLED (NOTFITTED)": ["notfitted"],
+            "DISABLED (OFFLINE)": ["offline"],
+            "OFF (ONLINE)": ["online"],
+            "OFF (MAINTENANCE)": ["maintenance"],
+            "ON (ONLINE)": ["online", "assign"],
+            "ON (MAINTENANCE)": ["maintenance", "assign"],
+            "READY (ONLINE)": ["online", "assign", "configure"],
+            "READY (MAINTENANCE)": ["maintenance", "assign", "configure"],
+            "SCANNING (ONLINE)": ["online", "assign", "configure", "scan"],
+            "SCANNING (MAINTENANCE)": ["maintenance", "assign", "configure", "scan"],
+            "ABORTED (ONLINE)": ["online", "assign", "configure", "abort"],
+            "ABORTED (MAINTENANCE)": ["maintenance", "assign", "configure", "abort"],
         }
 
         # bypass cache for this test because we are testing for a change

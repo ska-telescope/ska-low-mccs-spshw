@@ -12,16 +12,12 @@
     },
     // Add the IDs of extensions you want installed when the container is created.
     "extensions": [
-        "ms-python.python",
+        "ms-python.python"
     ],
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
     // Use 'postCreateCommand' to run commands after the container is created.
-    // "postCreateCommand": "pip install -r requirements.txt",
+    "postCreateCommand": "python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt",
     // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
-    "remoteUser": "tango", //"vscode"
-    "runArgs": [
-        "--network",
-        "mccs"
-    ]
+    "remoteUser": "tango"
 }

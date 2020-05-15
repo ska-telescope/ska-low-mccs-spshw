@@ -1,0 +1,65 @@
+{
+    "servers": {
+        "MccsMaster": {
+            "master": {
+                "MccsMaster": {
+                    "low/elt/master": {
+                        "properties": {
+                            "MccsSubarrays": [
+                                "low/elt/subarray_1",
+                                "low/elt/subarray_2"
+                            ],
+                            "MccsStations": [
+                                "low/elt/station_1"
+                            ],
+                            "MccsTiles": [
+                                "low/elt/tile_47"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "MccsSubarray": {
+            "subarray1": {
+                "MccsSubarray": {
+                    "low/elt/subarray_1": {
+                        "properties": {}
+                    }
+                }
+            },
+            "subarray2": {
+                "MccsSubarray": {
+                    "low/elt/subarray_2": {
+                        "properties": {}
+                    }
+                }
+            }
+        },
+        "MccsStation": {
+            "station1": {
+                "MccsStation": {
+                    "low/elt/station_1": {
+                        "properties": {}
+                    }
+                }
+            },
+            "station2": {
+                "MccsStation": {
+                    "low/elt/station_2": {
+                        "properties": {}
+                    }
+                }
+            }
+        },
+        "MccsTile": {
+            "tile47": {
+                "MccsTile": {
+                    "low/elt/tile_47": {
+                        "properties": {}
+                    }
+                }
+            }
+        }
+    }
+}

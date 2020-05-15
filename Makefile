@@ -13,7 +13,7 @@ PROJECT = lfaa-mccs-prototype
 
 # KUBE_NAMESPACE defines the Kubernetes Namespace that will be deployed to
 # using Helm.  If this does not already exist it will be created
-KUBE_NAMESPACE ?= mccs
+KUBE_NAMESPACE ?= integration
 
 # HELM_RELEASE is the release that all Kubernetes resources will be labelled
 # with
@@ -30,9 +30,9 @@ INGRESS_HOST ?= $(HELM_RELEASE).$(HELM_CHART).local
 # Timeout for gitlab-runner when run locally
 TIMEOUT = 86400
 # Helm version
-HELM_VERSION = v2.14.0
+HELM_VERSION = v3.1.2
 # kubectl version
-KUBERNETES_VERSION = v1.14.1
+KUBERNETES_VERSION = v1.18.2
 
 # Docker, K8s and Gitlab CI variables
 # gitlab-runner debug mode - turn on with non-empty value
@@ -51,7 +51,13 @@ KUBE_CONFIG_BASE64 ?=  ## base64 encoded kubectl credentials for KUBECONFIG
 KUBECONFIG ?= /etc/deploy/config ## KUBECONFIG location
 
 XAUTHORITYx ?= ${XAUTHORITY}
-THIS_HOST := $(shell ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -n1)
+
+IF_COMMAND := ifconfig
+ifeq (, $(shell which ifconfig))
+	IF_COMMAND := ip a
+endif
+
+THIS_HOST := $(shell $(IF_COMMAND) | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -n1)
 DISPLAY := $(THIS_HOST):0
 
 # define private overrides for above variables in here

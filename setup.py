@@ -39,6 +39,7 @@ setuptools.setup(
             "MccsSubarray=ska.mccs.subarray:main",
             "MccsStation=ska.mccs.station:main",
             "MccsStationBeam=ska.mccs.station_beam:main",
+            "MccsTile=ska.mccs.tile:main",
         ]
     },
     install_requires=["lmcbaseclasses >= 0.5.1",

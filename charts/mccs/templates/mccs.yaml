@@ -1,0 +1,144 @@
+{{ if .Values.mccs.enabled }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "mccs-configuration-json-{{ template "mccs.name" . }}-{{ .Release.Name }}"
+  namespace: {{ .Release.Namespace }}
+data: 
+  configuration.json: 
+{{ (tpl (.Files.Glob "data/configuration.json").AsConfig . ) | indent 2  }}
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mccs-{{ template "mccs.name" . }}-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mccs-{{ template "mccs.name" . }}-{{ .Release.Name }}
+    chart: {{ template "mccs.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  volumes:
+    - name: configuration
+      configMap:
+        name: "mccs-configuration-json-{{ template "mccs.name" . }}-{{ .Release.Name }}"
+
+  initContainers:
+  - name: dsconfig
+    image: "{{ .Values.dsconfig.image.registry }}/{{ .Values.dsconfig.image.image }}:{{ .Values.dsconfig.image.tag }}"
+    imagePullPolicy: {{ .Values.dsconfig.image.pullPolicy }}
+    command:
+      - /usr/local/bin/wait-for-it.sh
+      - databaseds-tango-base-{{ .Release.Name }}:10000
+      - --timeout=30
+      - --strict
+      - --
+      - json2tango -w -a -u data/configuration.json
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+    volumeMounts:
+      - name: configuration
+        mountPath: data
+        readOnly: true
+  containers:
+  - name: mccsmaster
+
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "MccsMaster master"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: mccssubarray1
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsSubarray subarray1"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: mccssubarray2
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsSubarray subarray2"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: mccsstation1
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsStation station1"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: mccsstation2
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsStation station2"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: mccstile47
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile47"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+{{- with .Values.mccs.env }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+  restartPolicy: Always
+{{- with .Values.nodeSelector }}
+  nodeSelector:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- with .Values.affinity }}
+  affinity:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- with .Values.tolerations }}
+  tolerations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+
+{{ end }}

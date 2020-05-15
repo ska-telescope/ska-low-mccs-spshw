@@ -9,6 +9,9 @@ k8s: ## Which kubernetes are we connected to
 	@echo "Helm version:"
 	@helm version --client
 
+watch:
+	watch kubectl get all,pv,pvc,ingress -n $(KUBE_NAMESPACE)
+
 namespace: ## create the kubernetes namespace
 	kubectl describe namespace $(KUBE_NAMESPACE) || kubectl create namespace $(KUBE_NAMESPACE)
 
@@ -59,7 +62,7 @@ install: namespace mkcerts  ## install the helm chart
 		--set ingress.hostname=$(INGRESS_HOST)
 
 show: mkcerts ## show the helm chart
-	@helm $(HELM_RELEASE) charts/$(HELM_CHART)/ \
+	@helm template $(HELM_RELEASE) charts/$(HELM_CHART)/ \
 		--namespace $(KUBE_NAMESPACE) \
 		--set xauthority="$(XAUTHORITYx)" \
 		--set display="$(DISPLAY)" \
@@ -82,7 +85,7 @@ delete: ## delete the helm chart release (without Tiller)
 		 | kubectl -n $(KUBE_NAMESPACE) delete -f -
 
 helm_delete: ## delete the helm chart release (with Tiller)
-	@helm delete $(HELM_RELEASE) --purge \
+	@helm uninstall $(HELM_RELEASE) --purge \
 
 describe: ## describe Pods executed from Helm chart
 	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -l app.kubernetes.io/instance=$(HELM_RELEASE) -o=name`; \
@@ -95,8 +98,8 @@ describe: ## describe Pods executed from Helm chart
 	echo ""; echo ""; echo ""; \
 	done
 
-logs: ## show Helm chart POD logs
-	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -l app.kubernetes.io/instance=$(HELM_RELEASE) -o=name`; \
+logs_all: ## show all Helm chart POD logs
+	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -o=name`; \
 	do \
 	echo "---------------------------------------------------"; \
 	echo "Logs for $${i}"; \
@@ -119,6 +122,18 @@ logs: ## show Helm chart POD logs
 	echo ""; echo ""; echo ""; \
 	done
 
+logs: ## show Helm chart POD logs
+	@POD=`kubectl -n $(KUBE_NAMESPACE) get pods -o=name |grep '$(HELM_CHART)-$(HELM_RELEASE)'`;\
+	echo "---------------------------------------------------"; \
+	echo "Main Pod logs for $${POD}"; \
+	echo "---------------------------------------------------"; \
+	for j in `kubectl -n $(KUBE_NAMESPACE) get $${POD} -o jsonpath="{.spec.containers[*].name}"`; do \
+	RES=`kubectl -n $(KUBE_NAMESPACE) logs $${POD} -c $${j} 2>/dev/null`; \
+	echo "Container: $${j}"; echo ""; echo "$${RES}"; \
+	echo "---------------------------------------------------";\
+	done;
+
+	
 localip:  ## set local Minikube IP in /etc/hosts file for Ingress $(INGRESS_HOST)
 	@new_ip=`minikube ip` && \
 	existing_ip=`grep $(INGRESS_HOST) /etc/hosts || true` && \
@@ -172,28 +187,6 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 	echo "KUBE_CONFIG_BASE64: $$(echo $${KUBE_CONFIG_BASE64} | cut -c 1-40)..."; \
 	echo "appended to: PrivateRules.mak"; \
 	echo -e "\n\n# base64 encoded from: kubectl config view --flatten\nKUBE_CONFIG_BASE64 = $${KUBE_CONFIG_BASE64}" >> PrivateRules.mak
-
-#
-# defines a function to copy the ./test-harness directory into the K8s TEST_RUNNER
-# and then runs the requested make target in the container.
-# capture the output of the test in a tar file
-# stream the tar file base64 encoded to the Pod logs
-# 
-k8s_test = tar -c test-harness/ | \
-		kubectl run $(TEST_RUNNER) \
-		--namespace $(KUBE_NAMESPACE) -i --wait --restart=Never \
-		--image-pull-policy=IfNotPresent \
-		--image=$(IMAGE_TO_TEST) -- \
-		/bin/bash -c "tar xv --strip-components 1 --warning=all && \
-		make TANGO_HOST=databaseds-tango-base-$(HELM_RELEASE):10000 $1; \
-		mkdir /app/build; \
-		mv /app/setup_py_test.stdout /app/code_analysis.stdout /app/build; \
-		mv /app/coverage.xml /app/build; mv /app/htmlcov /app/build; \
-		cd /app; tar -czvf /tmp/build.tgz build; \
-		echo '~~~~BOUNDARY~~~~'; \
-		cat /tmp/build.tgz | base64; \
-		echo '~~~~BOUNDARY~~~~'" \
-		>/dev/null 2>&1
 
 # run the test function
 # save the status
@@ -261,7 +254,7 @@ rk8s_test:  ## run k8s_test on K8s using gitlab-runner
 
 
 helm_tests:  ## run Helm chart tests 
-	helm test $(HELM_RELEASE) --cleanup
+	helm test --name $(HELM_RELEASE) --cleanup
 
 ingress_check:  ## curl test Tango REST API - https://tango-controls.readthedocs.io/en/latest/development/advanced/rest-api.html#tango-rest-api-implementations
 	@echo "---------------------------------------------------"
@@ -277,7 +270,7 @@ help:  ## show this help.
 	@echo "make targets:"
 	@grep -hE '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ""; echo "make vars (+defaults):"
-	@grep -hE '^[0-9a-zA-Z_-]+ \?=.*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " \?\= "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\#\#/  \#/'
+	@grep -hE '^[0-9a-zA-Z_-]+ \?=.*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " ?= "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\#\#/  \#/'
 
 smoketest: ## check that the number of waiting containers is zero (10 attempts, wait time 30s).
 	@echo "Smoke test START"; \
@@ -302,3 +295,6 @@ smoketest: ## check that the number of waiting containers is zero (10 attempts, 
 		fi; \
 		n=`expr $$n - 1`; \
 	done
+
+itango:
+	kubectl exec -it -n $(KUBE_NAMESPACE) itango-tango-base-$(HELM_RELEASE)  -- itango3

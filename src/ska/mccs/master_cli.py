@@ -55,11 +55,18 @@ class MccsMasterCli:
         jstr = json.dumps(dict)
         self._dp.command_inout("DisableSubarray", jstr)
 
-    def Allocate(self, argin):
+    def Allocate(self, subarray_id=0, station=0, tiles=0):
         """
         config:string
+        need to pass:   subarray_id,
+                        stations,
+                        tiles
         """
-        dict = {}
+        dict = {
+            "SubarrayId": subarray_id,
+            "Station": station,
+            "tiles": tiles,
+        }
         jstr = json.dumps(dict)
         self._dp.command_inout("Allocate", jstr)
 

@@ -1,12 +1,41 @@
 Pre-requisite
 -------------
+Presumably you already have *docker* installed and set up. You also need to install *kubectl*, *minikube* and *helm*. (Many online *minikube* tutorials include a step to install a VM hypervisor such as *virtualbox*: ignore this, we will use *docker* for this.)
 
-Install *minikube* and *helm3* - there are lots of tutorials on this, see also skampi documentation.
+1. Install *kubectl*. There are various ways to do this. On Ubuntu, one way is:
+
+        curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+        chmod +x kubectl
+        sudo mv ./kubectl /usr/local/bin/kubectl
+
+    Don't be alarmed if running `kubectl` results in a config file error. A config file will be build the first time you run *minikube*.
+
+2. Install *minikube*. Again there are various way to do this. On Ubuntu, one way is:
+
+        wget https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        chmod +x minikube-linux-amd64
+        sudo mv minikube-linux-amd64 /usr/local/bin/minikube
+
+    You can test your install with `minikube version`.
+
+3. Tell *minikube* to use docker:
+
+        minikube config set driver docker
+
+4. Start *minikube*:
+
+        minikube start
+
+5. Install *helm*. Make sure it is *helm 3* you are installing, not *2*. One way to do so on Ubuntu is
+
+        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+        chmod +x get_helm.sh 
+        ./get_helm.sh 
 
 How to
 ------
 
-k8s/helm interaction is faciltated through `make`. For example the helm chart can be inspected with `make show`.
+k8s/helm interaction is facilitated through `make`. For example the helm chart can be inspected with `make show`.
 
 To start up the cluster:
 

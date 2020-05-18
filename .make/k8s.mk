@@ -133,7 +133,7 @@ logs: ## show Helm chart POD logs
 	echo "---------------------------------------------------";\
 	done;
 
-	
+
 localip:  ## set local Minikube IP in /etc/hosts file for Ingress $(INGRESS_HOST)
 	@new_ip=`minikube ip` && \
 	existing_ip=`grep $(INGRESS_HOST) /etc/hosts || true` && \
@@ -295,6 +295,9 @@ smoketest: ## check that the number of waiting containers is zero (10 attempts, 
 		fi; \
 		n=`expr $$n - 1`; \
 	done
+
+cli:
+	kubectl exec -it -n integration mccs-$(HELM_CHART)-$(HELM_RELEASE) --container mccs-cli  -- bash
 
 itango:
 	kubectl exec -it -n $(KUBE_NAMESPACE) itango-tango-base-$(HELM_RELEASE)  -- itango3

@@ -21,7 +21,7 @@ Master DS.
 
 class MccsMasterCli:
     def __init__(self):
-        self._dp = tango.DeviceProxy("mccs/master/master1")
+        self._dp = tango.DeviceProxy("low/elt/master")
         # DeviceProxy to match that declared in Jive declaration
 
     def On(self):
@@ -93,5 +93,10 @@ class MccsMasterCli:
         self._dp.command_inout("OpState")
 """
 
-if __name__ == "__main__":
+
+def main():
     fire.Fire(MccsMasterCli)
+
+
+if __name__ == "__main__":
+    main()

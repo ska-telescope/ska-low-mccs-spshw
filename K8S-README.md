@@ -1,7 +1,7 @@
 Pre-requisite
 -------------
 
-Install *minikube* and *helm* - there are lots of tutorials on this, see also skampi documentation.
+Install *minikube* and *helm3* - there are lots of tutorials on this, see also skampi documentation.
 
 How to
 ------

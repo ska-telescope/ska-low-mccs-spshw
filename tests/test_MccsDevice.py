@@ -176,4 +176,4 @@ class TestMccsDevice(object):
 
     def test_loggingTargets(self, tango_context):
         """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ()
+        assert tango_context.device.loggingTargets == ('tango::logger',)

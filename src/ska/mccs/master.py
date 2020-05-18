@@ -292,6 +292,7 @@ class MccsMaster(SKAMaster):
 
         :return: None
         """
+        print("Command Allocate", argin)
 
     def is_Allocate_allowed(self):
 

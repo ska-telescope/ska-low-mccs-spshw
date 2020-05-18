@@ -1,5 +1,6 @@
 # We are using the pytango image which provides numpy
 # use that explict version instead of numpy >= 1.15.3
-numpy == 1.17.2
+numpy >= 1.16.2
 pytango >= 9.3.1
 lmcbaseclasses >= 0.5.2
+fire

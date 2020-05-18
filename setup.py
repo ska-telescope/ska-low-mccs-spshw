@@ -40,6 +40,7 @@ setuptools.setup(
             "MccsStation=ska.mccs.station:main",
             "MccsStationBeam=ska.mccs.station_beam:main",
             "MccsTile=ska.mccs.tile:main",
+            "mccs-master=ska.mccs.master_cli:main",
         ]
     },
     install_requires=["lmcbaseclasses >= 0.5.1",

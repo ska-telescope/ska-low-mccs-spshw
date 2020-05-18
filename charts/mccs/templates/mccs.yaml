@@ -124,6 +124,21 @@ spec:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
 
+  - name: mccs-cli
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - /usr/local/bin/wait-for-it.sh
+      - databaseds-tango-base-{{ .Release.Name }}:10000
+      - --timeout=30
+      - --strict
+      - --
+      - sleep
+      - infinity
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
 {{- with .Values.mccs.env }}
 {{ toYaml . | indent 4 }}
 {{- end }}

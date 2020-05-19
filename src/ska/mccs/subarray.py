@@ -14,13 +14,12 @@ MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 """
 __all__ = ["MccsSubarray", "main"]
 
-# from functools import partial, wraps
-
 # PyTango imports
 from tango import DebugIt, Except, ErrSeverity
 from tango import AttrWriteType
 from tango.server import attribute, command
 from tango import DevState
+from tango import DeviceProxy
 
 # Additional import
 from ska.base import SKASubarray
@@ -39,79 +38,23 @@ class MccsSubarray(SKASubarray):
     :todo: All commands are functionless stubs
     """
 
+    device_check.register("states", lambda device, states: device.get_state() in states)
     device_check.register(
-        "states",
-        lambda device, states: device.get_state() in states
+        "admin_modes", lambda device, adminModes: device._admin_mode in adminModes
     )
     device_check.register(
-        "admin_modes",
-        lambda device, adminModes: device._admin_mode in adminModes
-    )
-    device_check.register(
-        "obs_states",
-        lambda device, obsStates: device._obs_state in obsStates
+        "obs_states", lambda device, obsStates: device._obs_state in obsStates
     )
     device_check.register(
         "is_obs",  # shortcut for most common case
-        lambda device, obsStates:
-            device.get_state() == DevState.ON and
-            device._admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE] and
-            device._obs_state in obsStates
+        lambda device, obsStates: device.get_state() == DevState.ON
+        and device._admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
+        and device._obs_state in obsStates,
     )
 
     # -----------------
     # Device Properties
     # -----------------
-
-    # ----------
-    # Attributes
-    # ----------
-
-    scanId = attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-        doc="The ID of the current scan, set via commands Scan() and "
-        "endScan(). A scanId of 0 means that the subarray is idle.",
-    )
-
-    stationFQDNs = attribute(
-        dtype=("DevString",),
-        max_dim_x=512,
-        format="%s",
-        polling_period=1000,
-        doc="Array holding the fully qualified device names of the "
-        "Stations allocated to this Subarray",
-    )
-
-    tileFQDNs = attribute(
-        dtype=("DevString",),
-        max_dim_x=8192,
-        format="%s",
-        polling_period=1000,
-        doc="Array holding the full qualified device names of the "
-        "Tiles allocated to this Subarray",
-    )
-
-    stationBeamFQDNs = attribute(
-        dtype=("DevString",),
-        max_dim_x=512,
-        format="%s",
-        polling_period=1000,
-        doc="Array holding the fully qualified device names of the "
-        "Station Beams allocated to this Subarray",
-    )
-
-    # --------------------
-    # Inherited attributes
-    # --------------------
-    adminMode = attribute(
-        dtype=AdminMode,
-        access=AttrWriteType.READ_WRITE,
-        doc="The admin mode reported for this device. It may interpret "
-            "the current device condition and condition of all managed "
-            "devices to set this.",
-    )
 
     # ---------------
     # General methods
@@ -122,7 +65,7 @@ class MccsSubarray(SKASubarray):
         Initialises the attributes and properties of the MccsSubarray.
         """
         self.set_state(DevState.INIT)
-        SKASubarray.init_device(self)
+        super().init_device()
         # push back to DevState.INIT again because we are still
         # initialising, and SKASubarray.init_device() prematurely
         # pushes to  DevState.DISABLE
@@ -193,34 +136,91 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    def read_scanId(self):
+    @attribute(
+        dtype="DevLong",
+        format="%i",
+        polling_period=1000,
+        doc="The ID of the current scan, set via commands Scan() and "
+        "endScan(). A scanId of 0 means that the subarray is idle.",
+    )
+    def scanId(self):
         """
         Return the scanId attribute.
         """
         return self._scan_id
 
-    def read_stationFQDNs(self):
+    @scanId.write
+    def scanId(self, id):
+        self._scan_id = id
+
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=512,
+        format="%s",
+        polling_period=1000,
+        doc="Array holding the fully qualified device names of the "
+        "Stations allocated to this Subarray",
+    )
+    def stationFQDNs(self):
         """
         Return the stationFQDNs attribute.
         """
         return self._fqdns["stations"]
 
-    def read_tileFQDNs(self):
+    @stationFQDNs.write
+    def stationFQDNs(self, values):
+        self._station_FQDNs = values
+
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=8192,
+        format="%s",
+        polling_period=1000,
+        doc="Array holding the full qualified device names of the "
+        "Tiles allocated to this Subarray",
+    )
+    def tileFQDNs(self):
         """
         Return the tileFQDNs attribute.
         """
         return self._fqdns["tiles"]
 
-    def read_stationBeamFQDNs(self):
+    @tileFQDNs.write
+    def tileFQDNs(self, values):
+        self._tile_FQDNs = values
+
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=512,
+        format="%s",
+        polling_period=1000,
+        doc="Array holding the fully qualified device names of the "
+        "Station Beams allocated to this Subarray",
+    )
+    def stationBeamFQDNs(self):
         """
         Return the stationBeamFQDNs attribute.
         """
         return self._fqdns["station_beams"]
 
+    @stationBeamFQDNs.write
+    def stationBeamFQDNs(self, values):
+        self._station_beam_FQDNs = values
+
     # -------------------------------------
     # Base class attribute method overrides
     # -------------------------------------
-    def write_adminMode(self, value):
+    @attribute(
+        dtype=AdminMode,
+        doc="The admin mode reported for this device. It may interpret "
+        "the current device condition and condition of all managed "
+        "devices to set this.",
+    )
+    def adminMode(self):
+        return super().read_adminMode()
+
+    @adminMode.write
+    def adminMode(self, value):
         """
         Write the new adminMode value. Used by TM to put the subarray
         online and to take it offline. This action triggers further
@@ -346,6 +346,28 @@ class MccsSubarray(SKASubarray):
             self.set_state(DevState.ON)
         return [ReturnCode.OK.name, "AssignResources command completed"]
 
+#     @command()
+#     def AssignResources(self):  # , jstr):
+#         stations = [
+#             {
+#                 "fqdn": "mccs/station/01",
+#                 "beams": ["mccs/beam/03", "mccs/beam/04"],
+#                 "tiles": ["mccs/tile/04", "mccs/tile/05", "mccs/tile/06"],
+#             },
+#             {
+#                 "fqdn": "mccs/station/02",
+#                 "beams": ["mccs/beam/01", "mccs/beam/02"],
+#                 "tiles": ["mccs/tile/01", "mccs/tile/02", "mccs/tile/03"],
+#             },
+#         ]
+#         #        stations = json.loads(jstr)
+#         for station in stations:
+#             proxy = DeviceProxy(station.get("fqdn"))
+#             proxy.tileFQDNs = station.get("tiles")
+#             proxy.stationBeamFqdns = station.get("beams")
+#             proxy.subarrayId = self._scan_id
+#             proxy.command_inout("CreateStation")
+
     @device_check(is_obs=[ObsState.IDLE])
     def is_ReleaseResources_allowed(self):
         """
@@ -432,10 +454,10 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_in='DevVarLongStringArray',
+        dtype_in="DevVarLongStringArray",
         doc_in="[Number of instances to add][Capability types]",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
     @DebugIt()
     def ConfigureCapability(self, argin):
@@ -490,10 +512,10 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_in='DevVarLongStringArray',
+        dtype_in="DevVarLongStringArray",
         doc_in="[Number of instances to remove][Capability types]",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
     @DebugIt()
     def DeconfigureCapability(self, argin):
@@ -521,10 +543,10 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_in='str',
+        dtype_in="str",
         doc_in="Capability type",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
     @DebugIt()
     def DeconfigureAllCapabilities(self, argin):
@@ -546,9 +568,9 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_in=('str',),
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_in=("str",),
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
     def Scan(self, argin):
         """
@@ -601,8 +623,7 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
     )
     @DebugIt()
     def EndScan(self):
@@ -623,8 +644,7 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
     )
     @DebugIt()
     def EndSB(self):
@@ -637,9 +657,7 @@ class MccsSubarray(SKASubarray):
         self._obs_state = ObsState.IDLE
         return [ReturnCode.OK.name, "EndSB command completed"]
 
-    @device_check(
-        is_obs=[ObsState.CONFIGURING, ObsState.READY, ObsState.SCANNING]
-    )
+    @device_check(is_obs=[ObsState.CONFIGURING, ObsState.READY, ObsState.SCANNING])
     def is_Abort_allowed(self):
         """
         Check device state to confirm that command `Abort()` is allowed.
@@ -647,8 +665,7 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
     )
     @DebugIt()
     def Abort(self):
@@ -662,8 +679,12 @@ class MccsSubarray(SKASubarray):
         return [ReturnCode.OK.name, "Abort command completed"]
 
     @device_check(
-        is_obs=[ObsState.CONFIGURING, ObsState.READY, ObsState.SCANNING,
-                ObsState.ABORTED]
+        is_obs=[
+            ObsState.CONFIGURING,
+            ObsState.READY,
+            ObsState.SCANNING,
+            ObsState.ABORTED,
+        ]
     )
     def is_Reset_allowed(self):
         """
@@ -678,8 +699,7 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
     )
     @DebugIt()
     def Reset(self):
@@ -730,8 +750,8 @@ class MccsSubarray(SKASubarray):
         # dtype_out="DevString",
         # doc_out="ASCII string that indicates status, for information "
         # "purposes only",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
     @DebugIt()
     def sendTransientBuffer(self, argin):

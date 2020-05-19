@@ -41,6 +41,7 @@ class MccsTile(MccsGroupDevice):
     # -----------------
     # Device Properties
     # -----------------
+    TileId = device_property(dtype=int, default_value=0)
     TileIP = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=20000)
     LmcIp = device_property(dtype=str, default_value="0.0.0.0")
@@ -64,10 +65,10 @@ class MccsTile(MccsGroupDevice):
         self._antennas_per_tile = self.AntennasPerTile
 
         self._programmed = False
-        self._tile_id = -1
-        self._subarray_id = -1
-        self._station_id = -1
-        self._logical_tpm_id = -1
+        self._tile_id = self.TileId
+        self._subarray_id = 0
+        self._station_id = 0
+        self._logical_tile_id = 0
         self._csp_destination_ip = ""
         self._csp_destination_mac = ""
         self._csp_destination_port = 0
@@ -121,14 +122,14 @@ class MccsTile(MccsGroupDevice):
         self._tile_id = value
 
     @attribute(dtype="DevLong", doc="Logical tile identifier within a station")
-    def logicalTpmId(self):
-        """Return the logicalTpmId attribute."""
-        return self._logical_tpm_id
+    def logicalTileId(self):
+        """Return the logicalTileId attribute."""
+        return self._logical_tile_id
 
-    @logicalTpmId.write
-    def logicalTpmId(self, value):
-        """Set the logicalTpmId attribute."""
-        self._logical_tpm_id = value
+    @logicalTileId.write
+    def logicalTileId(self, value):
+        """Set the logicalTileId attribute."""
+        self._logical_tile_id = value
 
     @attribute(dtype="DevLong", doc="The identifier of the associated subarray.")
     def subarrayId(self):

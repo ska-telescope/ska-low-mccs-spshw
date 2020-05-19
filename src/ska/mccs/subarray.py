@@ -14,6 +14,8 @@ MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 """
 __all__ = ["MccsSubarray", "main"]
 
+import json
+
 # PyTango imports
 from tango import DebugIt, Except, ErrSeverity
 from tango import AttrWriteType
@@ -107,11 +109,7 @@ class MccsSubarray(SKASubarray):
         :rtype: boolean
         """
         self._scan_id = -1
-        self._fqdns = {
-            "stations": [],
-            "station_beams": [],
-            "tiles": [],
-        }
+        self._fqdns = {"stations": [], "station_beams": [], "tiles": []}
 
         self.set_change_event("stationFQDNs", True, True)
         self.set_archive_event("stationFQDNs", True, True)
@@ -289,7 +287,7 @@ class MccsSubarray(SKASubarray):
     @device_check(
         admin_modes=[AdminMode.ONLINE, AdminMode.MAINTENANCE],
         states=[DevState.OFF, DevState.ON],
-        obs_states=[ObsState.IDLE]
+        obs_states=[ObsState.IDLE],
     )
     def is_AssignResources_allowed(self):
         """
@@ -302,13 +300,14 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_in='str',
+        dtype_in="str",
         doc_in="JSON string describing resources to be added to this subarray",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
-    @json_input()
-    def AssignResources(self, **resources):
+    # @json_input()
+    # def AssignResources(self, **resources):
+    def AssignResources(self, jstr):
         """
         Assign some resources.
 
@@ -321,52 +320,43 @@ class MccsSubarray(SKASubarray):
             * tiles: a list of tile FQDNs
         :type argin: str
         """
-        for resource in resources:
-            current = set(self._fqdns[resource])
-            to_assign = set(resources[resource])
-
-            if not current.isdisjoint(to_assign):
-                Except.throw_exception(
-                    "API_CommandFailed",
-                    "Cannot assign {} already assigned: {}".format(
-                        resource,
-                        ", ".join(to_assign & current)
-                    ),
-                    "MccsSubarray.AssignResources()",
-                    ErrSeverity.ERR
-                )
-
-        for resource in resources:
-            current = set(self._fqdns[resource])
-            to_assign = set(resources[resource])
-
-            self._fqdns[resource] = sorted(current | to_assign)
+        stations = json.loads(jstr)
+        #         for resource in resources:
+        #             current = set(self._fqdns[resource])
+        #             to_assign = set(resources[resource])
+        #
+        #             if not current.isdisjoint(to_assign):
+        #                 Except.throw_exception(
+        #                     "API_CommandFailed",
+        #                     "Cannot assign {} already assigned: {}".format(
+        #                         resource,
+        #                         ", ".join(to_assign & current)
+        #                     ),
+        #                     "MccsSubarray.AssignResources()",
+        #                     ErrSeverity.ERR
+        #                 )
+        #
+        #         for resource in resources:
+        #             current = set(self._fqdns[resource])
+        #             to_assign = set(resources[resource])
+        #
+        #             self._fqdns[resource] = sorted(current | to_assign)
+        print("in subarray")
+        print(stations)
+        for station in stations:
+            print(station.get("station"))
+            proxy = DeviceProxy(station.get("station"))
+            beams = station.get("station_beams")
+            tiles = station.get("tiles")
+            print("tiles", tiles)
+            proxy.tileFQDNs = tiles
+            print("station_beams", beams)
+            proxy.stationBeamFqdns = beams
+            proxy.command_inout("CreateStation")
 
         if any(self._fqdns.values()):
             self.set_state(DevState.ON)
         return [ReturnCode.OK.name, "AssignResources command completed"]
-
-#     @command()
-#     def AssignResources(self):  # , jstr):
-#         stations = [
-#             {
-#                 "fqdn": "mccs/station/01",
-#                 "beams": ["mccs/beam/03", "mccs/beam/04"],
-#                 "tiles": ["mccs/tile/04", "mccs/tile/05", "mccs/tile/06"],
-#             },
-#             {
-#                 "fqdn": "mccs/station/02",
-#                 "beams": ["mccs/beam/01", "mccs/beam/02"],
-#                 "tiles": ["mccs/tile/01", "mccs/tile/02", "mccs/tile/03"],
-#             },
-#         ]
-#         #        stations = json.loads(jstr)
-#         for station in stations:
-#             proxy = DeviceProxy(station.get("fqdn"))
-#             proxy.tileFQDNs = station.get("tiles")
-#             proxy.stationBeamFqdns = station.get("beams")
-#             proxy.subarrayId = self._scan_id
-#             proxy.command_inout("CreateStation")
 
     @device_check(is_obs=[ObsState.IDLE])
     def is_ReleaseResources_allowed(self):
@@ -379,10 +369,10 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_in='str',
+        dtype_in="str",
         doc_in="JSON string describing resources to be removed from subarray.",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]",
     )
     @json_input()
     def ReleaseResources(self, **resources):
@@ -400,11 +390,10 @@ class MccsSubarray(SKASubarray):
                 Except.throw_exception(
                     "API_CommandFailed",
                     "Cannot release {} not assigned: {}".format(
-                        resource,
-                        ", ".join(to_release - current)
+                        resource, ", ".join(to_release - current)
                     ),
                     "MccsSubarray.ReleaseResources()",
-                    ErrSeverity.ERR
+                    ErrSeverity.ERR,
                 )
 
         for resource in resources:
@@ -426,8 +415,7 @@ class MccsSubarray(SKASubarray):
         return True  # but see decorator
 
     @command(
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]"
+        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
     )
     @DebugIt()
     def ReleaseAllResources(self):

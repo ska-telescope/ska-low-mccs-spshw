@@ -90,7 +90,7 @@ class MccsMaster(SKAMaster):
         "transition ? implemented as needed.",
     )
 
-    opState = attribute(dtype="DevState",)
+    opState = attribute(dtype="DevState")
 
     # ---------------
     # General methods
@@ -98,7 +98,7 @@ class MccsMaster(SKAMaster):
 
     def init_device(self):
         """Initialises the attributes and properties of the MccsMaster."""
-        SKAMaster.init_device(self)
+        super().init_device()
 
         self.set_state(DevState.ON)
         self._build_state = release.get_release_info()
@@ -199,7 +199,7 @@ class MccsMaster(SKAMaster):
         """
         pass
 
-    @command(dtype_out="DevEnum",)
+    @command(dtype_out="DevEnum")
     @DebugIt()
     def StandbyLow(self):
 
@@ -211,7 +211,7 @@ class MccsMaster(SKAMaster):
         """
         return 0
 
-    @command(dtype_out="DevEnum",)
+    @command(dtype_out="DevEnum")
     @DebugIt()
     def StandbyFull(self):
 
@@ -223,7 +223,7 @@ class MccsMaster(SKAMaster):
         """
         return 0
 
-    @command(dtype_out="DevEnum",)
+    @command(dtype_out="DevEnum")
     @DebugIt()
     def Operate(self):
 
@@ -257,9 +257,7 @@ class MccsMaster(SKAMaster):
         :return: None
         """
 
-    @command(
-        dtype_in="DevLong", doc_in="Sub-Array ID",
-    )
+    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
     @DebugIt()
     def EnableSubarray(self, subarray_id):
         """
@@ -294,9 +292,7 @@ class MccsMaster(SKAMaster):
             DevState.DISABLE,
         ]
 
-    @command(
-        dtype_in="DevLong", doc_in="Sub-Array ID",
-    )
+    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
     @DebugIt()
     def DisableSubarray(self, subarray_id):
 
@@ -344,9 +340,7 @@ class MccsMaster(SKAMaster):
             DevState.DISABLE,
         ]
 
-    @command(
-        dtype_in="DevString", doc_in="JSON-formatted string",
-    )
+    @command(dtype_in="DevString", doc_in="JSON-formatted string")
     @DebugIt()
     @json_input("schemas/MccsMaster_Allocate_lax.json")
     def Allocate(self, subarray_id, **resources):
@@ -471,9 +465,7 @@ class MccsMaster(SKAMaster):
             DevState.DISABLE,
         ]
 
-    @command(
-        dtype_in="DevLong", doc_in="Sub-Array ID",
-    )
+    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
     @DebugIt()
     def Release(self, subarray_id):
         """

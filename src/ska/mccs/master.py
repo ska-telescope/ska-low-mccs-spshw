@@ -13,9 +13,11 @@ MccsMaster TANGO device class for the MccsMaster prototype
 """
 __all__ = ["MccsMaster", "main"]
 
+import numpy
+
 # PyTango imports
 import tango
-from tango import DebugIt
+from tango import DebugIt, Except, ErrSeverity
 from tango.server import attribute, command
 from tango.server import device_property
 from tango import DevState
@@ -23,9 +25,10 @@ from tango import DevState
 # Additional import
 # from tango import DevEnum
 from ska.base import SKAMaster
-
-# from ska.base.control_model import (AdminMode, ControlMode, HealthState,
+from ska.base.control_model import AdminMode
+# from ska.base.control_model import (ControlMode, HealthState,
 #                                    SimulationMode, TestMode)
+from ska.mccs.utils import call_with_json, json_input
 import ska.mccs.release as release
 
 
@@ -48,7 +51,7 @@ class MccsMaster(SKAMaster):
         MccsTiles
             - List of MCCS Tile TANGO Device names.
             - Type: :class:`~tango.DevVarStringArray`
-        MccsAntennas
+        MccsAntenna
             - List of MCCS Antenna TANGO Device names
             - Type: :class:`~tango.DevVarStringArray`
     """
@@ -58,13 +61,9 @@ class MccsMaster(SKAMaster):
     # -----------------
 
     MccsSubarrays = device_property(dtype="DevVarStringArray",)
-
     MccsStations = device_property(dtype="DevVarStringArray",)
-
     MccsStationBeams = device_property(dtype="DevVarStringArray",)
-
     MccsTiles = device_property(dtype="DevVarStringArray",)
-
     MccsAntennas = device_property(dtype="DevVarStringArray",)
 
     # ----------
@@ -104,6 +103,39 @@ class MccsMaster(SKAMaster):
         self.set_state(DevState.ON)
         self._build_state = release.get_release_info()
         self._version_id = release.version
+
+        self._fqdns = {
+            "subarrays": numpy.array(
+                [] if self.MccsSubarrays is None else self.MccsSubarrays,
+                dtype=str
+            ),
+            "stations": numpy.array(
+                [] if self.MccsStations is None else self.MccsStations,
+                dtype=str
+            ),
+            "station_beams": numpy.array(
+                [] if self.MccsStationBeams is None else self.MccsSStationBeams,
+                dtype=str
+            ),
+            "tiles": numpy.array(
+                [] if self.MccsTiles is None else self.MccsTiles,
+                dtype=str
+            ),
+            "antennas": numpy.array(
+                [] if self.MccsAntennas is None else self.MccsAntennas,
+                dtype=str
+            ),
+        }
+
+        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays),
+                                             dtype=numpy.ubyte)
+
+        self._allocated = {}
+        for resource in ["stations", "station_beams", "tiles", "antennas"]:
+            self._allocated[resource] = numpy.zeros(
+                len(self._fqdns[resource]),
+                dtype=numpy.ubyte
+            )
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -229,16 +261,30 @@ class MccsMaster(SKAMaster):
         dtype_in="DevLong", doc_in="Sub-Array ID",
     )
     @DebugIt()
-    def EnableSubarray(self, argin):
-
+    def EnableSubarray(self, subarray_id):
         """
         Activate an MCCS Sub-Array
 
-        :param argin: Sub-Array ID
-        :type argin: :class:`~tango.DevLong`
+        :param subarray_id: Sub-Array ID
+        :type subarray_id: :class:`~tango.DevLong`
 
         :return: None
         """
+        assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
+
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+
+        if self._subarray_enabled[subarray_id-1]:
+            Except.throw_exception(
+                "API_CommandFailed",
+                "Subarray {} is already enabled".format(subarray_fqdn),
+                "MccsMaster.EnableSubarray()",
+                ErrSeverity.ERR
+            )
+        else:
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
+            subarray_device.adminMode = AdminMode.ONLINE
+            self._subarray_enabled[subarray_id-1] = True
 
     def is_EnableSubarray_allowed(self):
 
@@ -252,16 +298,43 @@ class MccsMaster(SKAMaster):
         dtype_in="DevLong", doc_in="Sub-Array ID",
     )
     @DebugIt()
-    def DisableSubarray(self, argin):
+    def DisableSubarray(self, subarray_id):
 
         """
         Deactivate an MCCS Sub-Array
 
-        :param argin: Sub-Array ID
-        :type argin: :class:`~tango.DevLong`
+        :param subarray_id: Sub-Array ID
+        :type subarray_id: :class:`~tango.DevLong`
 
         :return: None
         """
+        assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
+
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+
+        if not self._subarray_enabled[subarray_id-1]:
+            Except.throw_exception(
+                "API_CommandFailed",
+                "Subarray {} is already disabled".format(subarray_fqdn),
+                "MccsMaster.DisableSubarray()",
+                ErrSeverity.ERR
+            )
+        else:
+            for resource in ["stations", "tiles"]:
+                mask = (self._allocated[resource] == subarray_id)
+                fqdns = list(self._fqdns[resource][mask])
+                for fqdn in fqdns:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = 0
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
+            subarray_device.adminMode = AdminMode.OFFLINE
+            self._subarray_enabled[subarray_id-1] = False
+
+            for resource in self._allocated:
+                mask = (self._allocated[resource] == subarray_id)
+                self._allocated[resource][mask] = 0
+                allocated = self._allocated[resource]
+                allocated[allocated == subarray_id] = 0
 
     def is_DisableSubarray_allowed(self):
 
@@ -275,10 +348,9 @@ class MccsMaster(SKAMaster):
         dtype_in="DevString", doc_in="JSON-formatted string",
     )
     @DebugIt()
-    def Allocate(self, argin):
-
+    @json_input("schemas/MccsMaster_Allocate_lax.json")
+    def Allocate(self, subarray_id, **resources):
         """
-
         Allocate a set of unallocated MCCS resources to a sub-array.
         The JSON argument specifies the overall sub-array composition in
         terms of which stations, tiles, and antennas should be allocated
@@ -287,12 +359,105 @@ class MccsMaster(SKAMaster):
         Note: Station and Tile composition is specified on the MCCS
         Subarray device .
 
-        :param argin: JSON-formatted string
-        :type argin: :class:`~tango.DevLong`
+        :param argin: JSON-formatted string containing an integer
+            subarray_id, and boolean arrays for stations, station_beams,
+            tiles and/or antennas
+        :type argin: str
 
         :return: None
         """
-        print("Command Allocate", argin)
+        assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
+
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+
+        if not self._subarray_enabled[subarray_id-1]:
+            Except.throw_exception(
+                "API_CommandFailed",
+                "Cannot allocate resources to disabled subarray {}".format(
+                    subarray_fqdn
+                ),
+                "MccsMaster.Allocate()",
+                ErrSeverity.ERR
+            )
+
+        for resource in resources:
+            if len(resources[resource]) != len(self._allocated[resource]):
+                Except.throw_exception(
+                    "API_CommandFailed",
+                    "Allocation has length {} but there are {} {}.".format(
+                        len(resources[resource]),
+                        len(self._allocated[resource]),
+                        resource
+                    ),
+                    "MccsMaster.Allocate()",
+                    ErrSeverity.ERR
+                )
+
+            resources[resource] = numpy.array(resources[resource])
+            already_allocated = numpy.logical_and.reduce(
+                (
+                    self._allocated[resource] != 0,
+                    self._allocated[resource] != subarray_id,
+                    resources[resource]
+                )
+            )
+
+            if numpy.any(already_allocated):
+                already_allocated_fqdns = self._fqdns[resource][
+                    numpy.nonzero(already_allocated)
+                ]
+                Except.throw_exception(
+                    "API_CommandFailed",
+                    "Cannot allocate {}s already allocated: {}".format(
+                        resource,
+                        ", ".join(already_allocated_fqdns)
+                    ),
+                    "MccsMaster.Allocate()",
+                    ErrSeverity.ERR
+                )
+
+        to_release = {}
+        to_assign = {}
+        for resource in resources:
+            release_mask = numpy.logical_and(
+                self._allocated[resource] == subarray_id,
+                numpy.logical_not(resources[resource])
+            )
+            to_release[resource] = list(self._fqdns[resource][release_mask])
+
+            assign_mask = numpy.logical_and(
+                self._allocated[resource] == 0,
+                resources[resource]
+            )
+            to_assign[resource] = list(self._fqdns[resource][assign_mask])
+
+        subarray_device = tango.DeviceProxy(subarray_fqdn)
+
+        if any(to_release.values()):
+            call_with_json(
+                subarray_device.ReleaseResources,
+                **to_release
+            )
+            for resource in ["stations", "tiles"]:
+                for fqdn in to_release[resource]:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = 0
+
+        if any(to_assign.values()):
+            call_with_json(
+                subarray_device.AssignResources,
+                **to_assign
+            )
+            for resource in ["stations", "tiles"]:
+                for fqdn in to_assign[resource]:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = subarray_id
+
+        for resource in resources:
+            self._allocated[resource][
+                self._allocated[resource] == subarray_id
+            ] = 0
+            self._allocated[resource][resources[resource]] = subarray_id
 
     def is_Allocate_allowed(self):
 
@@ -310,18 +475,43 @@ class MccsMaster(SKAMaster):
         dtype_in="DevLong", doc_in="Sub-Array ID",
     )
     @DebugIt()
-    def Release(self, argin):
-
+    def Release(self, subarray_id):
         """
-        Release a sub-array?s Capabilities and resources (stations, tiles,
+        Release a sub-array's Capabilities and resources (stations, tiles,
         antennas), marking the resources and Capabilities as unassigned and
         idle.
 
-        :param argin: Sub-Array ID
-        :type argin: :class:`~tango.DevLong`
+        :param subarray_id: Sub-Array ID
+        :type subarray_id: :class:`~tango.DevLong`
 
         :return: None
         """
+        assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
+
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+
+        if not self._subarray_enabled[subarray_id-1]:
+            Except.throw_exception(
+                "API_CommandFailed",
+                "Cannot release resources from disabled subarray {}".format(
+                    subarray_fqdn
+                ),
+                "MccsMaster.Release()",
+                ErrSeverity.ERR
+            )
+
+        subarray_device = tango.DeviceProxy(subarray_fqdn)
+        subarray_device.ReleaseAllResources()
+        for resource in ["stations", "tiles"]:
+            mask = (self._allocated[resource] == subarray_id)
+            fqdns = list(self._fqdns[resource][mask])
+            for fqdn in fqdns:
+                device = tango.DeviceProxy(fqdn)
+                device.subarrayId = 0
+
+        for resource in self._allocated:
+            allocations = self._allocated[resource]
+            allocations[allocations == subarray_id] = 0
 
     def is_Release_allowed(self):
 

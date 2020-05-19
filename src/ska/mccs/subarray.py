@@ -17,11 +17,10 @@ __all__ = ["MccsSubarray", "main"]
 # from functools import partial, wraps
 
 # PyTango imports
-from tango import DebugIt
+from tango import DebugIt, Except, ErrSeverity
 from tango import AttrWriteType
 from tango.server import attribute, command
 from tango import DevState
-# from tango import Except, ErrSeverity
 
 # Additional import
 from ska.base import SKASubarray
@@ -29,6 +28,7 @@ from ska.base.control_model import AdminMode, ObsState
 import ska.mccs.release as release
 from ska.mccs.control_model import ReturnCode
 from ska.mccs.control_model import device_check
+from ska.mccs.utils import json_input
 
 
 class MccsSubarray(SKASubarray):
@@ -164,11 +164,14 @@ class MccsSubarray(SKASubarray):
         :rtype: boolean
         """
         self._scan_id = -1
-        self._station_FQDNs = []
+        self._fqdns = {
+            "stations": [],
+            "station_beams": [],
+            "tiles": [],
+        }
+
         self.set_change_event("stationFQDNs", True, True)
         self.set_archive_event("stationFQDNs", True, True)
-        self._tile_FQDNs = []
-        self._station_beam_FQDNs = []
 
         self._build_state = release.get_release_info()
         self._version_id = release.version
@@ -200,19 +203,19 @@ class MccsSubarray(SKASubarray):
         """
         Return the stationFQDNs attribute.
         """
-        return self._station_FQDNs
+        return self._fqdns["stations"]
 
     def read_tileFQDNs(self):
         """
         Return the tileFQDNs attribute.
         """
-        return self._tile_FQDNs
+        return self._fqdns["tiles"]
 
     def read_stationBeamFQDNs(self):
         """
         Return the stationBeamFQDNs attribute.
         """
-        return self._station_beam_FQDNs
+        return self._fqdns["station_beams"]
 
     # -------------------------------------
     # Base class attribute method overrides
@@ -277,11 +280,144 @@ class MccsSubarray(SKASubarray):
                 self.Reset()
                 self.ReleaseAllResources()
             self.set_state(DevState.DISABLE)
-        super().write_adminMode(value)
+        # super().write_adminMode(value)
+        self._admin_mode = value
 
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
+    @device_check(
+        admin_modes=[AdminMode.ONLINE, AdminMode.MAINTENANCE],
+        states=[DevState.OFF, DevState.ON],
+        obs_states=[ObsState.IDLE]
+    )
+    def is_AssignResources_allowed(self):
+        """
+        Check whether command AssignResources() is permitted in this devic
+        state.
+
+        Probably don't need to override this -- the base class implementation
+        is sound -- but doing so for the sake of completeness.
+        """
+        return True  # but see decorator
+
+    @command(
+        dtype_in='str',
+        doc_in="JSON string describing resources to be added to this subarray",
+        dtype_out='DevVarStringArray',
+        doc_out="[ReturnCode, information-only string]"
+    )
+    @json_input()
+    def AssignResources(self, **resources):
+        """
+        Assign some resources.
+
+        Overriding to reimplement
+
+        :param argin: a string JSON-encoding of a dictionary containing
+            the following optional key-value entries:
+            * stations:  a list of station FQDNs
+            * station_beams:  a list of station beam FQDNs
+            * tiles: a list of tile FQDNs
+        :type argin: str
+        """
+        for resource in resources:
+            current = set(self._fqdns[resource])
+            to_assign = set(resources[resource])
+
+            if not current.isdisjoint(to_assign):
+                Except.throw_exception(
+                    "API_CommandFailed",
+                    "Cannot assign {} already assigned: {}".format(
+                        resource,
+                        ", ".join(to_assign & current)
+                    ),
+                    "MccsSubarray.AssignResources()",
+                    ErrSeverity.ERR
+                )
+
+        for resource in resources:
+            current = set(self._fqdns[resource])
+            to_assign = set(resources[resource])
+
+            self._fqdns[resource] = sorted(current | to_assign)
+
+        if any(self._fqdns.values()):
+            self.set_state(DevState.ON)
+        return [ReturnCode.OK.name, "AssignResources command completed"]
+
+    @device_check(is_obs=[ObsState.IDLE])
+    def is_ReleaseResources_allowed(self):
+        """
+        Check whether command ReleaseResources() is permitted in this device state.
+
+        Overriding because base class allows releasing of resources when the
+        subarray is in OFF state (i.e. it is already empty).
+        """
+        return True  # but see decorator
+
+    @command(
+        dtype_in='str',
+        doc_in="JSON string describing resources to be removed from subarray.",
+        dtype_out='DevVarStringArray',
+        doc_out="[ReturnCode, information-only string]"
+    )
+    @json_input()
+    def ReleaseResources(self, **resources):
+        """
+        Release some resources.
+
+        Overriding in reimplement, and in order to set state back to OFF
+        if array has been emptied.
+        """
+        for resource in resources:
+            current = set(self._fqdns[resource])
+            to_release = set(resources[resource])
+
+            if not current >= to_release:
+                Except.throw_exception(
+                    "API_CommandFailed",
+                    "Cannot release {} not assigned: {}".format(
+                        resource,
+                        ", ".join(to_release - current)
+                    ),
+                    "MccsSubarray.ReleaseResources()",
+                    ErrSeverity.ERR
+                )
+
+        for resource in resources:
+            current = set(self._fqdns[resource])
+            to_release = set(resources[resource])
+            self._fqdns[resource] = sorted(current - to_release)
+
+        if not any(self._fqdns.values()):
+            self.set_state(DevState.OFF)
+
+        return [ReturnCode.OK.name, "ReleaseResources command completed"]
+
+    @device_check(is_obs=[ObsState.IDLE])
+    def is_ReleaseAllResources_allowed(self):
+        """
+        Overriding because base class allows releasing of resources when the
+        subarray is in OFF state (i.e. it is already empty).
+        """
+        return True  # but see decorator
+
+    @command(
+        dtype_out="DevVarStringArray",
+        doc_out="[ReturnCode, information-only string]"
+    )
+    @DebugIt()
+    def ReleaseAllResources(self):
+        """
+        Release all resources.
+
+        Overriding to reimplement, and in order to set state back to OFF
+        """
+        for resource in self._fqdns:
+            self._fqdns[resource].clear()
+        self.set_state(DevState.OFF)
+        return [ReturnCode.OK.name, "ReleaseAllResources command completed."]
 
     @device_check(is_obs=[ObsState.IDLE, ObsState.READY])
     def is_ConfigureCapability_allowed(self):
@@ -400,69 +536,7 @@ class MccsSubarray(SKASubarray):
         super().DeconfigureAllCapabilities(argin)
         if not any(self._configured_capabilities.values()):
             self._obs_state = ObsState.IDLE
-
         return [ReturnCode.OK.name, "DeconfigureAllCapabilities command completed"]
-
-    @device_check(is_obs=[ObsState.IDLE])
-    def is_ReleaseResources_allowed(self):
-        """
-        Check whether command ReleaseResources() is permitted in this
-        device state.
-
-        Overriding because base class allows releasing of resources when
-        the subarray is in OFF state (i.e. it is already empty).
-        """
-        return True  # but see decorator
-
-    @command(
-        dtype_in=('str',),
-        doc_in="List of resources to remove from the subarray.",
-        # dtype_out=('str',),
-        # doc_out="List of resources removed from the subarray.",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def ReleaseResources(self, argin):
-        """
-        Release some resources.
-
-        Overriding in order to set state back to OFF if array has been
-        emptied.
-        """
-        # released_resources = super().ReleaseResources(argin)
-        super().ReleaseResources(argin)
-        if not self._assigned_resources:
-            self.set_state(DevState.OFF)
-        # return released_resources
-        return [ReturnCode.OK.name, "ReleaseResources command completed"]
-
-    @device_check(is_obs=[ObsState.IDLE])
-    def is_ReleaseAllResources_allowed(self):
-        """
-        Overriding because base class allows releasing of resources when
-        the subarray is in OFF state (i.e. it is already empty).
-        """
-        return True  # but see decorotor
-
-    @command(
-        # dtype_out=('str',),
-        # doc_out="List of resources removed from the subarray.",
-        dtype_out='DevVarStringArray',
-        doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def ReleaseAllResources(self):
-        """
-        Release all resources.
-
-        Overriding in order to set state back to OFF
-        """
-        # released_resources = super().ReleaseAllResources()
-        super().ReleaseAllResources()
-        self.set_state(DevState.OFF)
-        # return released_resources
-        return [ReturnCode.OK.name, "ReleaseAllResources command completed"]
 
     @device_check(is_obs=[ObsState.READY])
     def is_Scan_allowed(self):

@@ -133,6 +133,12 @@ logs: ## show Helm chart POD logs
 	echo "---------------------------------------------------";\
 	done;
 
+tail:  ## provide container=name
+	@POD=`kubectl -n $(KUBE_NAMESPACE) get pods -o=name |grep '$(HELM_CHART)-$(HELM_RELEASE)'`;\
+	if [ -z "$$container" ]; \
+	then echo "usage:";echo "  make tail container=<name>"; \
+	echo "names: "`kubectl -n $(KUBE_NAMESPACE) get $${POD} -o jsonpath="{.spec.containers[*].name}"`;exit 0; fi; \
+	kubectl -n $(KUBE_NAMESPACE) logs -f $${POD} -c $${container};
 
 localip:  ## set local Minikube IP in /etc/hosts file for Ingress $(INGRESS_HOST)
 	@new_ip=`minikube ip` && \
@@ -217,9 +223,9 @@ rlint:  ## run lint check on Helm Chart using gitlab-runner
 	--docker-pull-policy always \
 	--timeout $(TIMEOUT) \
 	--env "DOCKER_HOST=$(DOCKER_HOST)" \
-  --env "DOCKER_REGISTRY_USER_LOGIN=$(DOCKER_REGISTRY_USER_LOGIN)" \
-  --env "CI_REGISTRY_PASS_LOGIN=$(CI_REGISTRY_PASS_LOGIN)" \
-  --env "CI_REGISTRY=$(CI_REGISTRY)" \
+	--env "DOCKER_REGISTRY_USER_LOGIN=$(DOCKER_REGISTRY_USER_LOGIN)" \
+	--env "CI_REGISTRY_PASS_LOGIN=$(CI_REGISTRY_PASS_LOGIN)" \
+	--env "CI_REGISTRY=$(CI_REGISTRY)" \
 	lint-check-chart || true
 
 # K8s testing with local gitlab-runner

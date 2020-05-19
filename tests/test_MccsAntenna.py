@@ -18,7 +18,6 @@ from PyTango import DevState
 from ska.base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel
 
 
-# Device test case
 @pytest.mark.usefixtures("tango_context", "initialize_device")
 class TestMccsAntenna(object):
     """Test case for Antenna DS."""

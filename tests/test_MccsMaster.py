@@ -98,22 +98,6 @@ class TestMccsMaster:
         """Test for Operate"""
         assert tango_context.device.Operate() == 0
 
-    def test_EnableSubarray(self, tango_context):
-        """Test for EnableSubarray"""
-        assert tango_context.device.EnableSubarray(0) is None
-
-    def test_DisableSubarray(self, tango_context):
-        """Test for DisableSubarray"""
-        assert tango_context.device.DisableSubarray(0) is None
-
-    def test_Allocate(self, tango_context):
-        """Test for Allocate"""
-        assert tango_context.device.Allocate("") is None
-
-    def test_Release(self, tango_context):
-        """Test for Release"""
-        assert tango_context.device.Release(0) is None
-
     def test_Maintenance(self, tango_context):
         """Test for Maintenance"""
         assert tango_context.device.Maintenance() is None

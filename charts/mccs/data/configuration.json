@@ -10,7 +10,8 @@
                                 "low/elt/subarray_2"
                             ],
                             "MccsStations": [
-                                "low/elt/station_1"
+                                "low/elt/station_1",
+                                "low/elt/station_2"
                             ],
                             "MccsTiles": [
                                 "low/elt/tile_47"

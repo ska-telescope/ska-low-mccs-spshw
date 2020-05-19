@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "$id": "ska.mccs.MccsMaster.Allocate.json",
+    "type": "object",
+    "properties": {
+        "subarray_id": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 16
+        },
+        "stations": {
+            "type": "array",
+            "items": {
+                "type": "boolean"
+            },
+            "minItems": 512,
+            "maxItems": 512
+        },
+        "tiles": {
+            "type": "array",
+            "items": {
+                "type": "boolean"
+            },
+            "minItems": 8192,
+            "maxItems": 8192
+        }
+    },
+    "required": ["subarray_id", "stations", "tiles"],
+    "additionalProperties": false
+}

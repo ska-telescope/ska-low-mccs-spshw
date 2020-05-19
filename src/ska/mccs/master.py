@@ -13,6 +13,7 @@ MccsMaster TANGO device class for the MccsMaster prototype
 """
 __all__ = ["MccsMaster", "main"]
 
+import json
 import numpy
 
 # PyTango imports
@@ -26,6 +27,7 @@ from tango import DevState
 # from tango import DevEnum
 from ska.base import SKAMaster
 from ska.base.control_model import AdminMode
+
 # from ska.base.control_model import (ControlMode, HealthState,
 #                                    SimulationMode, TestMode)
 from ska.mccs.utils import call_with_json, json_input
@@ -60,37 +62,11 @@ class MccsMaster(SKAMaster):
     # Device Properties
     # -----------------
 
-    MccsSubarrays = device_property(dtype="DevVarStringArray",)
-    MccsStations = device_property(dtype="DevVarStringArray",)
-    MccsStationBeams = device_property(dtype="DevVarStringArray",)
-    MccsTiles = device_property(dtype="DevVarStringArray",)
-    MccsAntennas = device_property(dtype="DevVarStringArray",)
-
-    # ----------
-    # Attributes
-    # ----------
-
-    commandProgress = attribute(
-        dtype="DevUShort",
-        label="Command progress percentage",
-        polling_period=3000,
-        rel_change=2,
-        abs_change=5,
-        max_value=100,
-        min_value=0,
-        doc="Percentage progress implemented for commands that result in "
-        "state/mode transitions for a large \nnumber of components and/or "
-        "are executed in stages (e.g power up, power down)",
-    )
-
-    commandDelayExpected = attribute(
-        dtype="DevUShort",
-        unit="s",
-        doc="Amount of time it will take to prepare the requested state/mode "
-        "transition ? implemented as needed.",
-    )
-
-    opState = attribute(dtype="DevState")
+    MccsSubarrays = device_property(dtype="DevVarStringArray")
+    MccsStations = device_property(dtype="DevVarStringArray")
+    MccsStationBeams = device_property(dtype="DevVarStringArray")
+    MccsTiles = device_property(dtype="DevVarStringArray")
+    MccsAntennas = device_property(dtype="DevVarStringArray")
 
     # ---------------
     # General methods
@@ -106,35 +82,29 @@ class MccsMaster(SKAMaster):
 
         self._fqdns = {
             "subarrays": numpy.array(
-                [] if self.MccsSubarrays is None else self.MccsSubarrays,
-                dtype=str
+                [] if self.MccsSubarrays is None else self.MccsSubarrays, dtype=str
             ),
             "stations": numpy.array(
-                [] if self.MccsStations is None else self.MccsStations,
-                dtype=str
+                [] if self.MccsStations is None else self.MccsStations, dtype=str
             ),
             "station_beams": numpy.array(
-                [] if self.MccsStationBeams is None else self.MccsSStationBeams,
-                dtype=str
+                [] if self.MccsStationBeams is None else self.MccsStationBeams,
+                dtype=str,
             ),
             "tiles": numpy.array(
-                [] if self.MccsTiles is None else self.MccsTiles,
-                dtype=str
+                [] if self.MccsTiles is None else self.MccsTiles, dtype=str
             ),
             "antennas": numpy.array(
-                [] if self.MccsAntennas is None else self.MccsAntennas,
-                dtype=str
+                [] if self.MccsAntennas is None else self.MccsAntennas, dtype=str
             ),
         }
 
-        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays),
-                                             dtype=numpy.ubyte)
+        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays), dtype=numpy.ubyte)
 
         self._allocated = {}
         for resource in ["stations", "station_beams", "tiles", "antennas"]:
             self._allocated[resource] = numpy.zeros(
-                len(self._fqdns[resource]),
-                dtype=numpy.ubyte
+                len(self._fqdns[resource]), dtype=numpy.ubyte
             )
 
     def always_executed_hook(self):
@@ -148,21 +118,40 @@ class MccsMaster(SKAMaster):
         destructor and by the device Init command.
         """
 
-    # ------------------
-    # Attributes methods
-    # ------------------
+    # ----------
+    # Attributes
+    # ----------
 
-    def read_commandProgress(self):
+    @attribute(
+        dtype="DevUShort",
+        label="Command progress percentage",
+        polling_period=3000,
+        rel_change=2,
+        abs_change=5,
+        max_value=100,
+        min_value=0,
+        doc="Percentage progress implemented for commands that result in "
+        "state/mode transitions for a large \nnumber of components and/or "
+        "are executed in stages (e.g power up, power down)",
+    )
+    def commandProgress(self):
 
         """Return the commandProgress attribute."""
         return 0
 
-    def read_commandDelayExpected(self):
+    @attribute(
+        dtype="DevUShort",
+        unit="s",
+        doc="Amount of time it will take to prepare the requested state/mode "
+        "transition ? implemented as needed.",
+    )
+    def commandDelayExpected(self):
 
         """Return the commandDelayExpected attribute."""
         return 0
 
-    def read_opState(self):
+    @attribute(dtype="DevState")
+    def opState(self):
 
         """Return the opState attribute."""
         return tango.DevState.UNKNOWN
@@ -270,19 +259,19 @@ class MccsMaster(SKAMaster):
         """
         assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
 
-        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id - 1]
 
-        if self._subarray_enabled[subarray_id-1]:
+        if self._subarray_enabled[subarray_id - 1]:
             Except.throw_exception(
                 "API_CommandFailed",
                 "Subarray {} is already enabled".format(subarray_fqdn),
                 "MccsMaster.EnableSubarray()",
-                ErrSeverity.ERR
+                ErrSeverity.ERR,
             )
         else:
             subarray_device = tango.DeviceProxy(subarray_fqdn)
             subarray_device.adminMode = AdminMode.ONLINE
-            self._subarray_enabled[subarray_id-1] = True
+            self._subarray_enabled[subarray_id - 1] = True
 
     def is_EnableSubarray_allowed(self):
 
@@ -306,28 +295,28 @@ class MccsMaster(SKAMaster):
         """
         assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
 
-        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id - 1]
 
-        if not self._subarray_enabled[subarray_id-1]:
+        if not self._subarray_enabled[subarray_id - 1]:
             Except.throw_exception(
                 "API_CommandFailed",
                 "Subarray {} is already disabled".format(subarray_fqdn),
                 "MccsMaster.DisableSubarray()",
-                ErrSeverity.ERR
+                ErrSeverity.ERR,
             )
         else:
             for resource in ["stations", "tiles"]:
-                mask = (self._allocated[resource] == subarray_id)
+                mask = self._allocated[resource] == subarray_id
                 fqdns = list(self._fqdns[resource][mask])
                 for fqdn in fqdns:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = 0
             subarray_device = tango.DeviceProxy(subarray_fqdn)
             subarray_device.adminMode = AdminMode.OFFLINE
-            self._subarray_enabled[subarray_id-1] = False
+            self._subarray_enabled[subarray_id - 1] = False
 
             for resource in self._allocated:
-                mask = (self._allocated[resource] == subarray_id)
+                mask = self._allocated[resource] == subarray_id
                 self._allocated[resource][mask] = 0
                 allocated = self._allocated[resource]
                 allocated[allocated == subarray_id] = 0
@@ -340,10 +329,11 @@ class MccsMaster(SKAMaster):
             DevState.DISABLE,
         ]
 
-    @command(dtype_in="DevString", doc_in="JSON-formatted string")
+    @command()  # dtype_in="DevString", doc_in="JSON-formatted string")
     @DebugIt()
-    @json_input("schemas/MccsMaster_Allocate_lax.json")
-    def Allocate(self, subarray_id, **resources):
+    #     @json_input("schemas/MccsMaster_Allocate_lax.json")
+    #     def Allocate(self, subarray_id, **resources):
+    def Allocate(self):
         """
         Allocate a set of unallocated MCCS resources to a sub-array.
         The JSON argument specifies the overall sub-array composition in
@@ -360,18 +350,52 @@ class MccsMaster(SKAMaster):
 
         :return: None
         """
+        subarray_id = 1
+        #        resources={"stations":[True, True],"tiles":[True,True,True,True,True,True], "station_beams":[True, True,True,True]}
+        stations = [
+            {
+                "station": "mccs/station/01",
+                "station_beams": ["mccs/beam/03", "mccs/beam/04"],
+                "tiles": ["mccs/tile/04", "mccs/tile/05", "mccs/tile/06"],
+            },
+            {
+                "station": "mccs/station/02",
+                "station_beams": ["mccs/beam/01", "mccs/beam/02"],
+                "tiles": ["mccs/tile/01", "mccs/tile/02", "mccs/tile/03"],
+            },
+        ]
+        resources = {}
+        resources["stations"] = [False] * len(self._fqdns.get("stations"))
+        resources["station_beams"] = [False] * len(self._fqdns.get("station_beams"))
+        resources["tiles"] = [False] * len(self._fqdns.get("tiles"))
+        for station in stations:
+            fqdn = station.get("station")
+            id = int(fqdn.split("/")[2])
+            print("station id", id)
+            resources.get("stations")[id - 1] = True
+            beams = station.get("station_beams")
+            for beam in beams:
+                beam_id = int(beam.split("/")[2])
+                print("beam_id", beam_id)
+                resources.get("station_beams")[beam_id - 1] = True
+            tiles = station.get("tiles")
+            for tile in tiles:
+                tile_id = int(tile.split("/")[2])
+                print("tile_id", tile_id)
+                resources.get("tiles")[tile_id - 1] = True
+
         assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
 
-        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id - 1]
 
-        if not self._subarray_enabled[subarray_id-1]:
+        if not self._subarray_enabled[subarray_id - 1]:
             Except.throw_exception(
                 "API_CommandFailed",
                 "Cannot allocate resources to disabled subarray {}".format(
                     subarray_fqdn
                 ),
                 "MccsMaster.Allocate()",
-                ErrSeverity.ERR
+                ErrSeverity.ERR,
             )
 
         for resource in resources:
@@ -381,10 +405,10 @@ class MccsMaster(SKAMaster):
                     "Allocation has length {} but there are {} {}.".format(
                         len(resources[resource]),
                         len(self._allocated[resource]),
-                        resource
+                        resource,
                     ),
                     "MccsMaster.Allocate()",
-                    ErrSeverity.ERR
+                    ErrSeverity.ERR,
                 )
 
             resources[resource] = numpy.array(resources[resource])
@@ -392,7 +416,7 @@ class MccsMaster(SKAMaster):
                 (
                     self._allocated[resource] != 0,
                     self._allocated[resource] != subarray_id,
-                    resources[resource]
+                    resources[resource],
                 )
             )
 
@@ -403,11 +427,10 @@ class MccsMaster(SKAMaster):
                 Except.throw_exception(
                     "API_CommandFailed",
                     "Cannot allocate {}s already allocated: {}".format(
-                        resource,
-                        ", ".join(already_allocated_fqdns)
+                        resource, ", ".join(already_allocated_fqdns)
                     ),
                     "MccsMaster.Allocate()",
-                    ErrSeverity.ERR
+                    ErrSeverity.ERR,
                 )
 
         to_release = {}
@@ -415,42 +438,41 @@ class MccsMaster(SKAMaster):
         for resource in resources:
             release_mask = numpy.logical_and(
                 self._allocated[resource] == subarray_id,
-                numpy.logical_not(resources[resource])
+                numpy.logical_not(resources[resource]),
             )
             to_release[resource] = list(self._fqdns[resource][release_mask])
 
             assign_mask = numpy.logical_and(
-                self._allocated[resource] == 0,
-                resources[resource]
+                self._allocated[resource] == 0, resources[resource]
             )
             to_assign[resource] = list(self._fqdns[resource][assign_mask])
 
         subarray_device = tango.DeviceProxy(subarray_fqdn)
 
         if any(to_release.values()):
-            call_with_json(
-                subarray_device.ReleaseResources,
-                **to_release
-            )
+            call_with_json(subarray_device.ReleaseResources, **to_release)
             for resource in ["stations", "tiles"]:
                 for fqdn in to_release[resource]:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = 0
 
-        if any(to_assign.values()):
-            call_with_json(
-                subarray_device.AssignResources,
-                **to_assign
-            )
+        print("to assign")
+        print(to_assign)
+        print(stations)
+        if any(to_assign):
+            jstr = json.dumps(stations)
+            subarray_device.AssignResources(jstr)
+            #             call_with_json(
+            #                 subarray_device.AssignResources,
+            #                 **to_assign
+            #             )
             for resource in ["stations", "tiles"]:
                 for fqdn in to_assign[resource]:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
 
         for resource in resources:
-            self._allocated[resource][
-                self._allocated[resource] == subarray_id
-            ] = 0
+            self._allocated[resource][self._allocated[resource] == subarray_id] = 0
             self._allocated[resource][resources[resource]] = subarray_id
 
     def is_Allocate_allowed(self):
@@ -480,22 +502,22 @@ class MccsMaster(SKAMaster):
         """
         assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
 
-        subarray_fqdn = self._fqdns["subarrays"][subarray_id-1]
+        subarray_fqdn = self._fqdns["subarrays"][subarray_id - 1]
 
-        if not self._subarray_enabled[subarray_id-1]:
+        if not self._subarray_enabled[subarray_id - 1]:
             Except.throw_exception(
                 "API_CommandFailed",
                 "Cannot release resources from disabled subarray {}".format(
                     subarray_fqdn
                 ),
                 "MccsMaster.Release()",
-                ErrSeverity.ERR
+                ErrSeverity.ERR,
             )
 
         subarray_device = tango.DeviceProxy(subarray_fqdn)
         subarray_device.ReleaseAllResources()
         for resource in ["stations", "tiles"]:
-            mask = (self._allocated[resource] == subarray_id)
+            mask = self._allocated[resource] == subarray_id
             fqdns = list(self._fqdns[resource][mask])
             for fqdn in fqdns:
                 device = tango.DeviceProxy(fqdn)

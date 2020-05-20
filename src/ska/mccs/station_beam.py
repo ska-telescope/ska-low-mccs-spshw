@@ -14,10 +14,8 @@ Prototype TANGO device server for the MCSS Station Beam
 __all__ = ["MccsStationBeam", "main"]
 
 # PyTango imports
-from tango.server import run
 from tango.server import attribute
 from tango import DevState
-from tango import AttrWriteType
 from tango.server import device_property
 
 # Additional imports
@@ -228,7 +226,6 @@ class MccsStationBeam(SKAObsDevice):
 
     @attribute(
         dtype=("DevDouble",),
-        access=AttrWriteType.READ_WRITE,
         max_dim_x=256,
         polling_period=1000,
         doc="Defines the contribution of each antenna to the station beam to "

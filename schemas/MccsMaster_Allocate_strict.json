@@ -11,20 +11,12 @@
         "stations": {
             "type": "array",
             "items": {
-                "type": "boolean"
+                "type": "string"
             },
             "minItems": 512,
             "maxItems": 512
-        },
-        "tiles": {
-            "type": "array",
-            "items": {
-                "type": "boolean"
-            },
-            "minItems": 8192,
-            "maxItems": 8192
         }
     },
-    "required": ["subarray_id", "stations", "tiles"],
+    "required": ["subarray_id", "stations"],
     "additionalProperties": false
 }

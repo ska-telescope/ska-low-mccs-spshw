@@ -38,6 +38,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # Device Properties
     # -----------------
     StationId = device_property(dtype=int, default_value=0)
+    TileFQDNS = device_property(dtype=(str,))
 
     # ---------------
     # General methods
@@ -215,10 +216,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         """
         return self._tile_fqdns
 
-    @tileFQDNs.write
-    def tileFQDNs(self, fqdns):
-        self._tile_fqdns = fqdns
-
     @attribute(
         dtype=("DevString",),
         max_dim_x=8,
@@ -232,10 +229,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         Return the beamFQDNs attribute.
         """
         return self._beam_fqdns
-
-    @beamFQDNs.write
-    def beamFQDNs(self, fqdns):
-        self._beam_fqdns = fqdns
 
     @attribute(
         dtype=("DevFloat",),
@@ -281,12 +274,13 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # --------
 
     @command()
-    def CreateStation(self):
+    def Configure(self):
         self._tiles = []
-        for id, tile in enumerate(self._tile_fqdns):
+        for id, tile in enumerate(self.TileFQDNS):
             proxy = DeviceProxy(tile)
             self._tiles.append(proxy)
-            proxy.stationId = self.StationId
+            proxy.subarrayId = self._subarray_id
+            proxy.stationId = self._station_id
             proxy.logicalTileId = id + 1
             self.AddMember(tile)
             print(proxy)
@@ -295,15 +289,17 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
             proxy.command_inout("Connect", True)
             print(proxy.adcPower)
             print(proxy.command_inout("GetRegisterList"))
-        self._beams = []
-        for id, beam in enumerate(self._beam_fqdns):
-            proxy = DeviceProxy(beam)
-            self._beam.append(proxy)
-            proxy.stationId = self.StationId
-            proxy.logicalBeamId = id + 1
-            print(proxy)
-            print(f"beamId {proxy.beamId}")
-            print(f"logicalBeamId {proxy.logicalBeamId}")
+
+
+#         self._beams = []
+#         for id, beam in enumerate(self._beam_fqdns):
+#             proxy = DeviceProxy(beam)
+#             self._beam.append(proxy)
+#             proxy.stationId = self.StationId
+#             proxy.logicalBeamId = id + 1
+#             print(proxy)
+#             print(f"beamId {proxy.beamId}")
+#             print(f"logicalBeamId {proxy.logicalBeamId}")
 
 
 # ----------

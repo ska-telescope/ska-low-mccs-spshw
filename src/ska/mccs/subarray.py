@@ -14,11 +14,8 @@ MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 """
 __all__ = ["MccsSubarray", "main"]
 
-import json
-
 # PyTango imports
 from tango import DebugIt, Except, ErrSeverity
-from tango import AttrWriteType
 from tango.server import attribute, command
 from tango import DevState
 from tango import DeviceProxy
@@ -305,9 +302,8 @@ class MccsSubarray(SKASubarray):
         dtype_out="DevVarStringArray",
         doc_out="[ReturnCode, information-only string]",
     )
-    # @json_input()
-    # def AssignResources(self, **resources):
-    def AssignResources(self, jstr):
+    @json_input()
+    def AssignResources(self, **resources):
         """
         Assign some resources.
 
@@ -320,39 +316,31 @@ class MccsSubarray(SKASubarray):
             * tiles: a list of tile FQDNs
         :type argin: str
         """
-        stations = json.loads(jstr)
-        #         for resource in resources:
-        #             current = set(self._fqdns[resource])
-        #             to_assign = set(resources[resource])
-        #
-        #             if not current.isdisjoint(to_assign):
-        #                 Except.throw_exception(
-        #                     "API_CommandFailed",
-        #                     "Cannot assign {} already assigned: {}".format(
-        #                         resource,
-        #                         ", ".join(to_assign & current)
-        #                     ),
-        #                     "MccsSubarray.AssignResources()",
-        #                     ErrSeverity.ERR
-        #                 )
-        #
-        #         for resource in resources:
-        #             current = set(self._fqdns[resource])
-        #             to_assign = set(resources[resource])
-        #
-        #             self._fqdns[resource] = sorted(current | to_assign)
-        print("in subarray")
-        print(stations)
-        for station in stations:
-            print(station.get("station"))
-            proxy = DeviceProxy(station.get("station"))
-            beams = station.get("station_beams")
-            tiles = station.get("tiles")
-            print("tiles", tiles)
-            proxy.tileFQDNs = tiles
-            print("station_beams", beams)
-            proxy.stationBeamFqdns = beams
-            proxy.command_inout("CreateStation")
+        #        stations = json.loads(jstr)
+        for resource in resources:
+            current = set(self._fqdns[resource])
+            to_assign = set(resources[resource])
+
+            if not current.isdisjoint(to_assign):
+                Except.throw_exception(
+                    "API_CommandFailed",
+                    "Cannot assign {} already assigned: {}".format(
+                        resource, ", ".join(to_assign & current)
+                    ),
+                    "MccsSubarray.AssignResources()",
+                    ErrSeverity.ERR,
+                )
+
+        for resource in resources:
+            current = set(self._fqdns[resource])
+            to_assign = set(resources[resource])
+
+            self._fqdns[resource] = sorted(current | to_assign)
+
+        for station_fqdn in resources.get("stations"):
+            print(station_fqdn)
+            proxy = DeviceProxy(station_fqdn)
+            proxy.command_inout("Configure")
 
         if any(self._fqdns.values()):
             self.set_state(DevState.ON)

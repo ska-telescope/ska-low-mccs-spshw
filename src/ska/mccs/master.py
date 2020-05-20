@@ -13,7 +13,6 @@ MccsMaster TANGO device class for the MccsMaster prototype
 """
 __all__ = ["MccsMaster", "main"]
 
-import json
 import numpy
 
 # PyTango imports
@@ -21,6 +20,7 @@ import tango
 from tango import DebugIt, Except, ErrSeverity
 from tango.server import attribute, command
 from tango.server import device_property
+from tango import DeviceProxy
 from tango import DevState
 
 # Additional import
@@ -329,60 +329,36 @@ class MccsMaster(SKAMaster):
             DevState.DISABLE,
         ]
 
-    @command()  # dtype_in="DevString", doc_in="JSON-formatted string")
+    @command(dtype_in="DevString", doc_in="JSON-formatted string")
     @DebugIt()
-    #     @json_input("schemas/MccsMaster_Allocate_lax.json")
-    #     def Allocate(self, subarray_id, **resources):
-    def Allocate(self):
+    @json_input(
+        "/home/grm84/software/lfaa-lmc-prototype/schemas/MccsMaster_Allocate_lax.json"
+    )
+    def Allocate(self, subarray_id, **allocate_stations):
         """
         Allocate a set of unallocated MCCS resources to a sub-array.
         The JSON argument specifies the overall sub-array composition in
-        terms of which stations, tiles, and antennas should be allocated
-        to the specified Sub-Array.
-
-        Note: Station and Tile composition is specified on the MCCS
-        Subarray device .
+        terms of which stations should be allocated to the specified Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
-            subarray_id, and boolean arrays for stations, station_beams,
-            tiles and/or antennas
+            subarray_id, and arrays of station fqdns.
         :type argin: str
 
         :return: None
+
+        :example:
+
+        >>> proxy = tango.DeviceProxy("low/elt/master")
+        >>> proxy.EnableSubarray(1)
+        >>> proxy.Allocate('{"subarray_id":1,
+                             "stations": ["mccs/station/01", "mccs/station/02",]}')
         """
-        subarray_id = 1
-        #        resources={"stations":[True, True],"tiles":[True,True,True,True,True,True], "station_beams":[True, True,True,True]}
-        stations = [
-            {
-                "station": "mccs/station/01",
-                "station_beams": ["mccs/beam/03", "mccs/beam/04"],
-                "tiles": ["mccs/tile/04", "mccs/tile/05", "mccs/tile/06"],
-            },
-            {
-                "station": "mccs/station/02",
-                "station_beams": ["mccs/beam/01", "mccs/beam/02"],
-                "tiles": ["mccs/tile/01", "mccs/tile/02", "mccs/tile/03"],
-            },
-        ]
         resources = {}
         resources["stations"] = [False] * len(self._fqdns.get("stations"))
-        resources["station_beams"] = [False] * len(self._fqdns.get("station_beams"))
-        resources["tiles"] = [False] * len(self._fqdns.get("tiles"))
-        for station in stations:
-            fqdn = station.get("station")
-            id = int(fqdn.split("/")[2])
-            print("station id", id)
+        for station_fqdn in allocate_stations.get("stations"):
+            proxy = DeviceProxy(station_fqdn)
+            id = proxy.stationID
             resources.get("stations")[id - 1] = True
-            beams = station.get("station_beams")
-            for beam in beams:
-                beam_id = int(beam.split("/")[2])
-                print("beam_id", beam_id)
-                resources.get("station_beams")[beam_id - 1] = True
-            tiles = station.get("tiles")
-            for tile in tiles:
-                tile_id = int(tile.split("/")[2])
-                print("tile_id", tile_id)
-                resources.get("tiles")[tile_id - 1] = True
 
         assert 1 <= subarray_id <= len(self._fqdns["subarrays"])
 
@@ -451,22 +427,14 @@ class MccsMaster(SKAMaster):
 
         if any(to_release.values()):
             call_with_json(subarray_device.ReleaseResources, **to_release)
-            for resource in ["stations", "tiles"]:
+            for resource in ["stations"]:
                 for fqdn in to_release[resource]:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = 0
 
-        print("to assign")
-        print(to_assign)
-        print(stations)
         if any(to_assign):
-            jstr = json.dumps(stations)
-            subarray_device.AssignResources(jstr)
-            #             call_with_json(
-            #                 subarray_device.AssignResources,
-            #                 **to_assign
-            #             )
-            for resource in ["stations", "tiles"]:
+            call_with_json(subarray_device.AssignResources, **to_assign)
+            for resource in ["stations"]:
                 for fqdn in to_assign[resource]:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id

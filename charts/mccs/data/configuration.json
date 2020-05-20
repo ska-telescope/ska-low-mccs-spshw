@@ -13,8 +13,19 @@
                                 "low/elt/station_1",
                                 "low/elt/station_2"
                             ],
+                            "MccsStationBeams": [
+                                "low/elt/beam_1",
+                                "low/elt/beam_2",
+                                "low/elt/beam_3",
+                                "low/elt/beam_4"
+                            ],
                             "MccsTiles": [
-                                "low/elt/tile_47"
+                                "low/elt/tile_1",
+                                "low/elt/tile_2",
+                                "low/elt/tile_3",
+                                "low/elt/tile_4",
+                                "low/elt/tile_5",
+                                "low/elt/tile_6"
                             ]
                         }
                     }
@@ -53,10 +64,82 @@
                 }
             }
         },
+        "MccsStationBeam": {
+            "beam1": {
+                "MccsStationBeam": {
+                    "low/elt/beam_1": {
+                        "properties": {}
+                    }
+                }
+            },
+            "beam2": {
+                "MccsStationBeam": {
+                    "low/elt/beam_2": {
+                        "properties": {}
+                    }
+                }
+            },
+            "beam3": {
+                "MccsStationBeam": {
+                    "low/elt/beam_3": {
+                        "properties": {}
+                    }
+                }
+            },
+            "beam4": {
+                "MccsStationBeam": {
+                    "low/elt/beam_4": {
+                        "properties": {}
+                    }
+                }
+            }
+        },
         "MccsTile": {
             "tile47": {
                 "MccsTile": {
                     "low/elt/tile_47": {
+                        "properties": {}
+                    }
+                }
+            },
+            "tile1": {
+                "MccsTile": {
+                    "low/elt/tile_1": {
+                        "properties": {}
+                    }
+                }
+            },
+            "tile2": {
+                "MccsTile": {
+                    "low/elt/tile_2": {
+                        "properties": {}
+                    }
+                }
+            },
+            "tile3": {
+                "MccsTile": {
+                    "low/elt/tile_3": {
+                        "properties": {}
+                    }
+                }
+            },
+            "tile4": {
+                "MccsTile": {
+                    "low/elt/tile_4": {
+                        "properties": {}
+                    }
+                }
+            },
+            "tile5": {
+                "MccsTile": {
+                    "low/elt/tile_5": {
+                        "properties": {}
+                    }
+                }
+            },
+            "tile6": {
+                "MccsTile": {
+                    "low/elt/tile_6": {
                         "properties": {}
                     }
                 }

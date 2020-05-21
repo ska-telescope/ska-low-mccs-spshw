@@ -12,7 +12,7 @@
                             "MccsStations": [
                                 "low/elt/station_1",
                                 "low/elt/station_2"
-                            ],
+                            ]
                         }
                     }
                 }
@@ -39,7 +39,9 @@
                 "MccsStation": {
                     "low/elt/station_1": {
                         "properties": {
-                            "StationID": 1
+                            "StationID": [
+                                "1"
+                            ],
                             "TileFQDNS": [
                                 "low/elt/tile_1",
                                 "low/elt/tile_2",
@@ -53,7 +55,9 @@
                 "MccsStation": {
                     "low/elt/station_2": {
                         "properties": {
-                            "StationID": 2
+                            "StationID": [
+                                "2"
+                            ],
                             "TileFQDNS": [
                                 "low/elt/tile_4",
                                 "low/elt/tile_5",
@@ -69,7 +73,9 @@
                 "MccsStationBeam": {
                     "low/elt/beam_1": {
                         "properties": {
-                            "BeamId":1
+                            "BeamId": [
+                                "1"
+                            ]
                         }
                     }
                 }
@@ -78,7 +84,9 @@
                 "MccsStationBeam": {
                     "low/elt/beam_2": {
                         "properties": {
-                            "BeamId":2
+                            "BeamId": [
+                                "2"
+                            ]
                         }
                     }
                 }
@@ -87,7 +95,9 @@
                 "MccsStationBeam": {
                     "low/elt/beam_3": {
                         "properties": {
-                            "BeamId":3
+                            "BeamId": [
+                                "3"
+                            ]
                         }
                     }
                 }
@@ -96,25 +106,22 @@
                 "MccsStationBeam": {
                     "low/elt/beam_4": {
                         "properties": {
-                            "BeamId":4
+                            "BeamId": [
+                                "4"
+                            ]
                         }
                     }
                 }
             }
         },
         "MccsTile": {
-            "tile47": {
-                "MccsTile": {
-                    "low/elt/tile_47": {
-                        "properties": {}
-                    }
-                }
-            },
             "tile1": {
                 "MccsTile": {
                     "low/elt/tile_1": {
                         "properties": {
-                            "TileId":1
+                            "TileId": [
+                                "1"
+                            ]
                         }
                     }
                 }
@@ -123,7 +130,9 @@
                 "MccsTile": {
                     "low/elt/tile_2": {
                         "properties": {
-                            "TileId":2
+                            "TileId": [
+                                "2"
+                            ]
                         }
                     }
                 }
@@ -131,8 +140,10 @@
             "tile3": {
                 "MccsTile": {
                     "low/elt/tile_3": {
-                        "properties": 
-                            "TileId":3
+                        "properties": {
+                            "TileId": [
+                                "3"
+                            ]
                         }
                     }
                 }
@@ -141,7 +152,9 @@
                 "MccsTile": {
                     "low/elt/tile_4": {
                         "properties": {
-                            "TileId":4
+                            "TileId": [
+                                "4"
+                            ]
                         }
                     }
                 }
@@ -150,7 +163,9 @@
                 "MccsTile": {
                     "low/elt/tile_5": {
                         "properties": {
-                            "TileId":5
+                            "TileId": [
+                                "5"
+                            ]
                         }
                     }
                 }
@@ -159,7 +174,9 @@
                 "MccsTile": {
                     "low/elt/tile_6": {
                         "properties": {
-                            "TileId":6
+                            "TileId": [
+                                "6"
+                            ]
                         }
                     }
                 }

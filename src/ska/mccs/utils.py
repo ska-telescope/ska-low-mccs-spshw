@@ -137,8 +137,11 @@ class json_input:
 
         try:
             jsonschema.validate(json_object, self.schema)
-        except jsonschema.ValidationError:
-            self._throw(origin, "JSON object does not validate")
+        except jsonschema.ValidationError as error:
+            self._throw(
+                origin,
+                "JSON object does not validate: {}".format(error.message)
+            )
 
         return json_object
 

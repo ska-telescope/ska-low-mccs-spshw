@@ -13,20 +13,6 @@
                                 "low/elt/station_1",
                                 "low/elt/station_2"
                             ],
-                            "MccsStationBeams": [
-                                "low/elt/beam_1",
-                                "low/elt/beam_2",
-                                "low/elt/beam_3",
-                                "low/elt/beam_4"
-                            ],
-                            "MccsTiles": [
-                                "low/elt/tile_1",
-                                "low/elt/tile_2",
-                                "low/elt/tile_3",
-                                "low/elt/tile_4",
-                                "low/elt/tile_5",
-                                "low/elt/tile_6"
-                            ]
                         }
                     }
                 }
@@ -66,7 +52,6 @@
             "station2": {
                 "MccsStation": {
                     "low/elt/station_2": {
-                        "properties": {}
                         "properties": {
                             "StationID": 2
                             "TileFQDNS": [
@@ -83,28 +68,36 @@
             "beam1": {
                 "MccsStationBeam": {
                     "low/elt/beam_1": {
-                        "properties": {}
+                        "properties": {
+                            "BeamId":1
+                        }
                     }
                 }
             },
             "beam2": {
                 "MccsStationBeam": {
                     "low/elt/beam_2": {
-                        "properties": {}
+                        "properties": {
+                            "BeamId":2
+                        }
                     }
                 }
             },
             "beam3": {
                 "MccsStationBeam": {
                     "low/elt/beam_3": {
-                        "properties": {}
+                        "properties": {
+                            "BeamId":3
+                        }
                     }
                 }
             },
             "beam4": {
                 "MccsStationBeam": {
                     "low/elt/beam_4": {
-                        "properties": {}
+                        "properties": {
+                            "BeamId":4
+                        }
                     }
                 }
             }

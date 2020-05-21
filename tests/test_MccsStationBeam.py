@@ -58,7 +58,7 @@ class TestMccsStationBeam:
         # The following reads might not be allowed in this state once properly
         # implemented
         assert tango_context.device.stationId == 0
-        assert tango_context.device.logicalId == 0
+        assert tango_context.device.logicalBeamId == 0
         assert tango_context.device.channels is None
         assert list(tango_context.device.desiredPointing) == []
         assert tango_context.device.pointingDelay is None
@@ -88,9 +88,9 @@ class TestMccsStationBeam:
         """Test for stationId attribute"""
         assert tango_context.device.stationId == 0
 
-    def test_logicalId(self, tango_context):
+    def test_logicalBeamId(self, tango_context):
         """Test for logicalId attribute"""
-        assert tango_context.device.logicalId == 0
+        assert tango_context.device.logicalBeamId == 0
 
     def test_updateRate(self, tango_context):
         """Test for updateRate attribute"""

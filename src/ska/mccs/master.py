@@ -24,12 +24,9 @@ from tango import DeviceProxy
 from tango import DevState
 
 # Additional import
-# from tango import DevEnum
 from ska.base import SKAMaster
 from ska.base.control_model import AdminMode
 
-# from ska.base.control_model import (ControlMode, HealthState,
-#                                    SimulationMode, TestMode)
 from ska.mccs.utils import call_with_json, json_input
 import ska.mccs.release as release
 
@@ -64,9 +61,6 @@ class MccsMaster(SKAMaster):
 
     MccsSubarrays = device_property(dtype="DevVarStringArray")
     MccsStations = device_property(dtype="DevVarStringArray")
-    MccsStationBeams = device_property(dtype="DevVarStringArray")
-    MccsTiles = device_property(dtype="DevVarStringArray")
-    MccsAntennas = device_property(dtype="DevVarStringArray")
 
     # ---------------
     # General methods
@@ -87,22 +81,12 @@ class MccsMaster(SKAMaster):
             "stations": numpy.array(
                 [] if self.MccsStations is None else self.MccsStations, dtype=str
             ),
-            "station_beams": numpy.array(
-                [] if self.MccsStationBeams is None else self.MccsStationBeams,
-                dtype=str,
-            ),
-            "tiles": numpy.array(
-                [] if self.MccsTiles is None else self.MccsTiles, dtype=str
-            ),
-            "antennas": numpy.array(
-                [] if self.MccsAntennas is None else self.MccsAntennas, dtype=str
-            ),
         }
 
         self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays), dtype=numpy.ubyte)
 
         self._allocated = {}
-        for resource in ["stations", "station_beams", "tiles", "antennas"]:
+        for resource in ["stations"]:
             self._allocated[resource] = numpy.zeros(
                 len(self._fqdns[resource]), dtype=numpy.ubyte
             )
@@ -305,7 +289,7 @@ class MccsMaster(SKAMaster):
                 ErrSeverity.ERR,
             )
         else:
-            for resource in ["stations", "tiles"]:
+            for resource in ["stations"]:
                 mask = self._allocated[resource] == subarray_id
                 fqdns = list(self._fqdns[resource][mask])
                 for fqdn in fqdns:
@@ -331,7 +315,9 @@ class MccsMaster(SKAMaster):
 
     @command(dtype_in="DevString", doc_in="JSON-formatted string")
     @DebugIt()
-    @json_input("schemas/MccsMaster_Allocate_lax.json")
+    @json_input(
+        "/home/grm84/software/lfaa-lmc-prototype/schemas/MccsMaster_Allocate_lax.json"
+    )
     def Allocate(self, subarray_id, **allocate_stations):
         """
         Allocate a set of unallocated MCCS resources to a sub-array.
@@ -457,8 +443,8 @@ class MccsMaster(SKAMaster):
     @DebugIt()
     def Release(self, subarray_id):
         """
-        Release a sub-array's Capabilities and resources (stations, tiles,
-        antennas), marking the resources and Capabilities as unassigned and
+        Release a sub-array's Capabilities and resources (stations),
+        marking the resources and Capabilities as unassigned and
         idle.
 
         :param subarray_id: Sub-Array ID
@@ -482,7 +468,7 @@ class MccsMaster(SKAMaster):
 
         subarray_device = tango.DeviceProxy(subarray_fqdn)
         subarray_device.ReleaseAllResources()
-        for resource in ["stations", "tiles"]:
+        for resource in ["stations"]:
             mask = self._allocated[resource] == subarray_id
             fqdns = list(self._fqdns[resource][mask])
             for fqdn in fqdns:

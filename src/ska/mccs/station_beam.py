@@ -48,10 +48,9 @@ class MccsStationBeam(SKAObsDevice):
         SKAObsDevice.init_device(self)
 
         self.set_state(DevState.INIT)
-
         self._beam_id = self.BeamId
         self._station_id = 0
-        self._logical_id = 0
+        self._logical_beam_id = 0
         self._channels = []
         self._desired_pointing = []
         self._pointing_delay = []
@@ -65,8 +64,8 @@ class MccsStationBeam(SKAObsDevice):
 
         self.set_change_event("stationId", True, True)
         self.set_archive_event("stationId", True, True)
-        self.set_change_event("logicalId", True, True)
-        self.set_archive_event("logicalId", True, True)
+        self.set_change_event("logicalBeamId", True, True)
+        self.set_archive_event("logicalBeamId", True, True)
         self.set_change_event("updateRate", True, True)
         self.set_archive_event("updateRate", True, True)
         self.set_change_event("isLocked", True, True)

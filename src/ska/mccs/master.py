@@ -315,9 +315,7 @@ class MccsMaster(SKAMaster):
 
     @command(dtype_in="DevString", doc_in="JSON-formatted string")
     @DebugIt()
-    @json_input(
-        "/home/grm84/software/lfaa-lmc-prototype/schemas/MccsMaster_Allocate_lax.json"
-    )
+    @json_input("schemas/MccsMaster_Allocate_lax.json")
     def Allocate(self, subarray_id, **allocate_stations):
         """
         Allocate a set of unallocated MCCS resources to a sub-array.

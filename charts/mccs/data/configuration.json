@@ -12,9 +12,6 @@
                             "MccsStations": [
                                 "low/elt/station_1",
                                 "low/elt/station_2"
-                            ],
-                            "MccsTiles": [
-                                "low/elt/tile_47"
                             ]
                         }
                     }
@@ -41,23 +38,146 @@
             "station1": {
                 "MccsStation": {
                     "low/elt/station_1": {
-                        "properties": {}
+                        "properties": {
+                            "StationID": [
+                                "1"
+                            ],
+                            "TileFQDNS": [
+                                "low/elt/tile_1",
+                                "low/elt/tile_2",
+                                "low/elt/tile_3"
+                            ]
+                        }
                     }
                 }
             },
             "station2": {
                 "MccsStation": {
                     "low/elt/station_2": {
-                        "properties": {}
+                        "properties": {
+                            "StationID": [
+                                "2"
+                            ],
+                            "TileFQDNS": [
+                                "low/elt/tile_4",
+                                "low/elt/tile_5",
+                                "low/elt/tile_6"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "MccsStationBeam": {
+            "beam1": {
+                "MccsStationBeam": {
+                    "low/elt/beam_1": {
+                        "properties": {
+                            "BeamId": [
+                                "1"
+                            ]
+                        }
+                    }
+                }
+            },
+            "beam2": {
+                "MccsStationBeam": {
+                    "low/elt/beam_2": {
+                        "properties": {
+                            "BeamId": [
+                                "2"
+                            ]
+                        }
+                    }
+                }
+            },
+            "beam3": {
+                "MccsStationBeam": {
+                    "low/elt/beam_3": {
+                        "properties": {
+                            "BeamId": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "beam4": {
+                "MccsStationBeam": {
+                    "low/elt/beam_4": {
+                        "properties": {
+                            "BeamId": [
+                                "4"
+                            ]
+                        }
                     }
                 }
             }
         },
         "MccsTile": {
-            "tile47": {
+            "tile1": {
                 "MccsTile": {
-                    "low/elt/tile_47": {
-                        "properties": {}
+                    "low/elt/tile_1": {
+                        "properties": {
+                            "TileId": [
+                                "1"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile2": {
+                "MccsTile": {
+                    "low/elt/tile_2": {
+                        "properties": {
+                            "TileId": [
+                                "2"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile3": {
+                "MccsTile": {
+                    "low/elt/tile_3": {
+                        "properties": {
+                            "TileId": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile4": {
+                "MccsTile": {
+                    "low/elt/tile_4": {
+                        "properties": {
+                            "TileId": [
+                                "4"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile5": {
+                "MccsTile": {
+                    "low/elt/tile_5": {
+                        "properties": {
+                            "TileId": [
+                                "5"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile6": {
+                "MccsTile": {
+                    "low/elt/tile_6": {
+                        "properties": {
+                            "TileId": [
+                                "6"
+                            ]
+                        }
                     }
                 }
             }

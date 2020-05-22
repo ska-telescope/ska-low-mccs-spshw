@@ -23,7 +23,6 @@ def tango_context(request):
             "GroupDefinitions": "",
             "MccsSubarrays": ["low/elt/subarray_1"],
             "MccsStations": ["low/elt/station_1"],
-            "MccsTiles": ["low/elt/tile_1"],
         },
         "MccsSubarray": {"CapabilityTypes": ["BAND1", "BAND2"]},
         "MccsTile": {"AntennasPerTile": "16"},

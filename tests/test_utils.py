@@ -51,15 +51,12 @@ class TestUtils:
         """
         Test for `call_with_json` with posargs provided
         """
-        arg_dict = {
-            "stations": ["station1", "station2"],
-            "tiles": ["tile1", "tile2"]
-        }
+        arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
         returned = call_with_json(
             self.json_input_posargs_tester,
             stations=arg_dict["stations"],
-            tiles=arg_dict["tiles"]
+            tiles=arg_dict["tiles"],
         )
         assert returned == arg_dict
 
@@ -67,8 +64,7 @@ class TestUtils:
         """
         Test for `call_with_json` with kwargs dictionary provided
         """
-        arg_dict = {"stations": ["station1", "station2"],
-                    "tiles": ["tile1", "tile2"]}
+        arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
         returned = call_with_json(self.json_input_posargs_tester, **arg_dict)
         assert returned == arg_dict
@@ -76,9 +72,7 @@ class TestUtils:
     # tests of general methods
     @pytest.mark.parametrize(
         "json_arg_string",
-        [
-            '{"stations":["station1", "station2"],"tiles":["tile1", "tile2"]}'
-        ]
+        ['{"stations":["station1", "station2"],"tiles":["tile1", "tile2"]}'],
     )
     def test_json_input_posargs(self, json_arg_string):
         """
@@ -87,13 +81,7 @@ class TestUtils:
         returned = self.json_input_posargs_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
 
-    @pytest.mark.parametrize(
-        "json_arg_string",
-        [
-            '{}',
-            '{"key": "value"}'
-        ]
-    )
+    @pytest.mark.parametrize("json_arg_string", ["{}", '{"key": "value"}'])
     def test_json_input_kwargs(self, json_arg_string):
         """
         Test for json_input decorator on a method defined with kwargs.
@@ -104,9 +92,9 @@ class TestUtils:
     @pytest.mark.parametrize(
         "json_arg_string",
         [
-            '{"subarray_id":1, "stations":[true, false], "tiles": [true]}',
-            '{"subarray_id":16, "stations":[true, false], "tiles": [true]}'
-        ]
+            '{"subarray_id":1, "stations":["station1", "station2"]}',
+            '{"subarray_id":16, "stations":["station1"]}',
+        ],
     )
     def test_json_input_schema(self, json_arg_string):
         """
@@ -118,11 +106,10 @@ class TestUtils:
     @pytest.mark.parametrize(
         "json_arg_string",
         [
-            '{"subarray_id":0, "stations":[true], "tiles": [true]}',
-            '{"subarray_id":17, "stations":[true], "tiles": [true]}',
-            '{"subarray_id":1, "stations":[], "tiles": [true]}',
-            '{"subarray_id":1, "stations":[true], "tiles": []}',
-        ]
+            '{"subarray_id":0, "stations":["station1"]}',
+            '{"subarray_id":17, "stations":["station1"]}',
+            '{"subarray_id":1, "stations":[]}',
+        ],
     )
     def test_json_input_schema_raises(self, json_arg_string):
         """

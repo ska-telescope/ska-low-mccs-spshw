@@ -46,7 +46,7 @@ spec:
         mountPath: data
         readOnly: true
   containers:
-  - name: mccsmaster
+  - name: master
 
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
@@ -59,7 +59,7 @@ spec:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
 
-  - name: mccssubarray1
+  - name: subarray1
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
     command:
@@ -72,7 +72,7 @@ spec:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
 
-  - name: mccssubarray2
+  - name: subarray2
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
     command:
@@ -85,7 +85,7 @@ spec:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
 
-  - name: mccsstation1
+  - name: station1
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
     command:
@@ -98,7 +98,7 @@ spec:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
 
-  - name: mccsstation2
+  - name: station2
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
     command:
@@ -111,7 +111,7 @@ spec:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
 
-  - name: mccstile47
+  - name: beam1
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
     command:
@@ -119,10 +119,128 @@ spec:
     args:
       - -c
       - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
-            MccsTile tile47"
+            MccsStationBeam beam1"
     env:
     - name: TANGO_HOST
       value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: beam2
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsStationBeam beam2"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: beam3
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsStationBeam beam3"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: beam4
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsStationBeam beam4"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: tile1
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile1"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: tile2
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile2"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: tile3
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile3"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: tile4
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile4"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: tile5
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile5"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
+  - name: tile6
+    image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.image.pullPolicy }}
+    command:
+      - sh
+    args:
+      - -c
+      - "retry --max=10 -- tango_admin --ping-device low/elt/master &&\
+            MccsTile tile6"
+    env:
+    - name: TANGO_HOST
+      value: databaseds-tango-base-{{ .Release.Name }}:10000
+
 
   - name: mccs-cli
     image: "{{ .Values.mccs.image.registry }}/{{ .Values.mccs.image.image }}:{{ .Values.mccs.image.tag }}"

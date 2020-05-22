@@ -41,6 +41,9 @@ class TestMccsMaster:
         "LoggingLevelDefault": "4",
         "LoggingTargetsDefault": "",
         "MccsStations": "",
+        "MccsStationBeams": "",
+        "MccsTiles": "",
+        "MccsAntennas": "",
     }
 
     @classmethod

@@ -40,25 +40,25 @@ class TestMccsTile(object):
 
     def test_tileId(self, tango_context):
         """Test for the tileId attribute."""
-        assert tango_context.device.tileID == 0
+        assert tango_context.device.tileID == -1
         tango_context.device.tileID = 9
         assert tango_context.device.tileID == 9
 
-    def test_logicalTileId(self, tango_context):
+    def test_logicalTpmId(self, tango_context):
         """Test for the logicalTpmId attribute."""
-        assert tango_context.device.logicalTileId == 0
-        tango_context.device.logicalTileId = 7
-        assert tango_context.device.logicalTileId == 7
+        assert tango_context.device.logicalTpmId == -1
+        tango_context.device.logicalTpmId = 7
+        assert tango_context.device.logicalTpmId == 7
 
     def test_subarrayId(self, tango_context):
         """Test for the subarrayId attribute."""
-        assert tango_context.device.subarrayId == 0
+        assert tango_context.device.subarrayId == -1
         tango_context.device.subarrayId = 3
         assert tango_context.device.subarrayId == 3
 
     def test_stationId(self, tango_context):
         """Test for the stationId attribute."""
-        assert tango_context.device.stationId == 0
+        assert tango_context.device.stationId == -1
         tango_context.device.stationId = 5
         assert tango_context.device.stationId == 5
 

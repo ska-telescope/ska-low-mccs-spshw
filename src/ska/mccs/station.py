@@ -14,7 +14,7 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 __all__ = ["MccsStation", "main"]
 
 # PyTango imports
-from tango.server import attribute, command
+from tango.server import attribute
 from tango import DevState
 from tango import DeviceProxy
 from tango.server import device_property
@@ -37,8 +37,16 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # -----------------
     # Device Properties
     # -----------------
-    StationId = device_property(dtype=int, default_value=0)
-    TileFQDNS = device_property(dtype=(str,))
+    TileFQDNS = device_property(dtype=(str,), default_value=[])
+    Id = device_property(dtype=int, default_value=0)
+    Name = device_property(dtype=str, default_value="")
+    NbAntennas = device_property(dtype=int, default_value=256)
+    ChannelTruncation = device_property(dtype=(int,), default_value=[2])
+    BeamIntegrationTime = device_property(dtype=int, default_value=-1)
+    ChannelIntegrationTime = device_property(dtype=int, default_value=2)
+    BeamformerScaling = device_property(dtype=int, default_value=4)
+    Bitfile = device_property(dtype=str, default_value="")
+    EqualizePreadu = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # General methods
@@ -48,14 +56,14 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         """
         Initialises the attributes and properties of the MccsStation.
         """
-        super().init_device()
+        SKAObsDevice.init_device(self)
 
         self.set_state(DevState.INIT)
 
         self._subarray_id = 0
-        self._tile_fqdns = []
-        self._beam_fqdns = []
-        self._transient_buffer_fqdn = ""
+        self._tile_FQDNs = self.TileFQDNS
+        self._beam_FQDNs = []
+        self._transient_buffer_FQDN = ""
         self._delay_centre = []
         self._calibration_coefficients = []
         self._is_calibrated = False
@@ -80,7 +88,17 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         self.set_change_event("beamFQDNs", True, True)
         self.set_archive_event("beamFQDNs", True, True)
 
-        self._station_id = self.StationId
+        self._station_id = self.Id
+        self._tiles = []
+        for tile in self.TileFQDNS:
+            proxy = DeviceProxy(tile)
+            self._tiles.append(proxy)
+            proxy.stationId = self.Id
+            self.AddMember(tile)
+            print(proxy)
+            proxy.command_inout("Connect", True)
+            print(proxy.adcPower)
+            print(proxy.command_inout("GetRegisterList"))
         self.set_state(DevState.OFF)
 
     def always_executed_hook(self):
@@ -103,6 +121,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         format="%i",
+        polling_period=1000,
         max_value=512,
         min_value=0,
         doc="The ID of this Station",
@@ -116,6 +135,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         format="%i",
+        polling_period=1000,
         max_value=16,
         min_value=0,
         doc="The ID of the Subarray to which this Station is allocated",
@@ -141,7 +161,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         """
         Return the transientBufferFQDN attribute.
         """
-        return self._transient_buffer_fqdn
+        return self._transient_buffer_FQDN
 
     @attribute(
         dtype="DevBoolean",
@@ -207,6 +227,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         dtype=("DevString",),
         max_dim_x=16,
         format="%s",
+        polling_period=1000,
         doc="Array of fully-qualified device names of the Tile devices that "
         "are associated with the Station",
     )
@@ -214,7 +235,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         """
         Return the tileFQDNs attribute.
         """
-        return self._tile_fqdns
+        return self._tile_FQDNs
 
     @attribute(
         dtype=("DevString",),
@@ -228,7 +249,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         """
         Return the beamFQDNs attribute.
         """
-        return self._beam_fqdns
+        return self._beam_FQDNs
 
     @attribute(
         dtype=("DevFloat",),
@@ -272,34 +293,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # --------
     # Commands
     # --------
-
-    @command()
-    def Configure(self):
-        self._tiles = []
-        for id, tile in enumerate(self.TileFQDNS):
-            proxy = DeviceProxy(tile)
-            self._tiles.append(proxy)
-            proxy.subarrayId = self._subarray_id
-            proxy.stationId = self._station_id
-            proxy.logicalTileId = id + 1
-            self.AddMember(tile)
-            print(proxy)
-            print(f"tileId {proxy.TileId}")
-            print(f"logicalTpmId {proxy.logicalTileId}")
-            proxy.command_inout("Connect", True)
-            print(proxy.adcPower)
-            print(proxy.command_inout("GetRegisterList"))
-
-
-#         self._beams = []
-#         for id, beam in enumerate(self._beam_fqdns):
-#             proxy = DeviceProxy(beam)
-#             self._beam.append(proxy)
-#             proxy.stationId = self.StationId
-#             proxy.logicalBeamId = id + 1
-#             print(proxy)
-#             print(f"beamId {proxy.beamId}")
-#             print(f"logicalBeamId {proxy.logicalBeamId}")
 
 
 # ----------

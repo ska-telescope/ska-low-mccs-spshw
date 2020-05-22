@@ -53,9 +53,9 @@ class TestMccsSubarray:
             "BAND1:0",
             "BAND2:0",
         ]
-        assert tango_context.device.stationFQDNs == ()
-        #         assert tango_context.device.tileFQDNs is None
-        #         assert tango_context.device.stationBeamFQDNs is None
+        assert tango_context.device.stationFQDNs is None
+        assert tango_context.device.tileFQDNs is None
+        assert tango_context.device.stationBeamFQDNs is None
         assert tango_context.device.activationTime == 0
 
     # tests of overridden base class commands
@@ -74,9 +74,12 @@ class TestMccsSubarray:
         tango_context.device.adminMode = AdminMode.ONLINE
 
         call_with_json(
-            tango_context.device.AssignResources, stations=["low/elt/station_1"]
+            tango_context.device.AssignResources,
+            stations=["low/elt/station_1"],
+            tiles=["low/elt/tile_1"]
         )
         assert list(tango_context.device.stationFQDNs) == ["low/elt/station_1"]
+        assert list(tango_context.device.tileFQDNs) == ["low/elt/tile_1"]
 
     # tests of MccsSubarray commands
     def test_sendTransientBuffer(self, tango_context):
@@ -112,7 +115,19 @@ class TestMccsSubarray:
         """
         Test for stationFQDNs attribute
         """
-        assert tango_context.device.stationFQDNs == ()
+        assert tango_context.device.stationFQDNs is None
+
+    def test_tileFQDNs(self, tango_context):
+        """
+        Test for tileFQDNs attribute
+        """
+        assert tango_context.device.tileFQDNs is None
+
+    def test_stationBeamFQDNs(self, tango_context):
+        """
+        Test for stationBeamFQDNs attribute
+        """
+        assert tango_context.device.stationBeamFQDNs is None
 
     # General device behaviour tests
 
@@ -140,9 +155,9 @@ class TestMccsSubarray:
                 "maintenance",
                 "assign 1",
                 "assign 2",
-                # "release",
-                # "release (all)",
-                # "releaseall",
+                "release",
+                "release (all)",
+                "releaseall",
                 "configure",
                 "deconfigure",
                 "deconfigure (all)",
@@ -207,40 +222,61 @@ class TestMccsSubarray:
             )
 
         actions = {
-            "notfitted": lambda d: d.write_attribute("adminMode", AdminMode.NOT_FITTED),
-            "offline": lambda d: d.write_attribute("adminMode", AdminMode.OFFLINE),
-            "online": lambda d: d.write_attribute("adminMode", AdminMode.ONLINE),
-            "maintenance": lambda d: d.write_attribute(
-                "adminMode", AdminMode.MAINTENANCE
-            ),
-            "assign 1": lambda d: call_with_json(
-                d.AssignResources, stations=["low/elt/station_1"]
-            ),
-            "assign 2": lambda d: call_with_json(
-                d.AssignResources, stations=["low/elt/station_2"]
-            ),
-            # "release (all)":
-            #     lambda d: call_with_json(
-            #         d.ReleaseResources,
-            #         stations=["low/elt/station_1"]
-            #     ),
-            # "releaseall":
-            #     lambda d: d.ReleaseAllResources(),
-            "configure": lambda d: d.ConfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
-            "deconfigure": lambda d: d.DeconfigureCapability([[1], ["BAND1"]]),
-            "deconfigure (all)": lambda d: d.DeconfigureCapability(
-                [[2, 2], ["BAND1", "BAND2"]]
-            ),
-            "deconfigureall": lambda d: d.DeconfigureAllCapabilities("BAND1"),
-            "deconfigureall (all)": lambda d: [
-                d.DeconfigureAllCapabilities("BAND1"),
-                d.DeconfigureAllCapabilities("BAND2"),
-            ],
-            "scan": lambda d: d.Scan(["Dummy scan id"]),
-            "endscan": lambda d: d.EndScan(),
-            "endsb": lambda d: d.EndSB(),
-            "abort": lambda d: d.Abort(),
-            "reset": lambda d: d.Reset(),
+            "notfitted":
+                lambda d: d.write_attribute("adminMode", AdminMode.NOT_FITTED),
+            "offline":
+                lambda d: d.write_attribute("adminMode", AdminMode.OFFLINE),
+            "online":
+                lambda d: d.write_attribute("adminMode", AdminMode.ONLINE),
+            "maintenance":
+                lambda d: d.write_attribute("adminMode", AdminMode.MAINTENANCE),
+            "assign 1":
+                lambda d: call_with_json(
+                    d.AssignResources,
+                    stations=["low/elt/station_1"],
+                    tiles=["low/elt/tile_1"]
+                ),
+            "assign 2":
+                lambda d: call_with_json(
+                    d.AssignResources,
+                    stations=["low/elt/station_2"],
+                    tiles=["low/elt/tile_2"]
+                ),
+            "release":
+                lambda d: call_with_json(
+                    d.ReleaseResources,
+                    stations=["low/elt/station_1"],
+                    tiles=[],
+                ),
+            "release (all)":
+                lambda d: call_with_json(
+                    d.ReleaseResources,
+                    stations=["low/elt/station_1"],
+                    tiles=["low/elt/tile_1"]
+                ),
+            "releaseall":
+                lambda d: d.ReleaseAllResources(),
+            "configure":
+                lambda d: d.ConfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
+            "deconfigure":
+                lambda d: d.DeconfigureCapability([[1], ["BAND1"]]),
+            "deconfigure (all)":
+                lambda d: d.DeconfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
+            "deconfigureall":
+                lambda d: d.DeconfigureAllCapabilities("BAND1"),
+            "deconfigureall (all)":
+                lambda d: [d.DeconfigureAllCapabilities("BAND1"),
+                           d.DeconfigureAllCapabilities("BAND2")],
+            "scan":
+                lambda d: d.Scan(["Dummy scan id"]),
+            "endscan":
+                lambda d: d.EndScan(),
+            "endsb":
+                lambda d: d.EndSB(),
+            "abort":
+                lambda d: d.Abort(),
+            "reset":
+                lambda d: d.Reset(),
         }
 
         def perform_action(action):
@@ -338,18 +374,30 @@ class TestMccsSubarray:
         }
 
         setups = {
-            "DISABLED (NOTFITTED)": ["notfitted"],
-            "DISABLED (OFFLINE)": ["offline"],
-            "OFF (ONLINE)": ["online"],
-            "OFF (MAINTENANCE)": ["maintenance"],
-            "ON (ONLINE)": ["online", "assign 1"],
-            "ON (MAINTENANCE)": ["maintenance", "assign 1"],
-            "READY (ONLINE)": ["online", "assign 1", "configure"],
-            "READY (MAINTENANCE)": ["maintenance", "assign 1", "configure"],
-            "SCANNING (ONLINE)": ["online", "assign 1", "configure", "scan"],
-            "SCANNING (MAINTENANCE)": ["maintenance", "assign 1", "configure", "scan"],
-            "ABORTED (ONLINE)": ["online", "assign 1", "configure", "abort"],
-            "ABORTED (MAINTENANCE)": ["maintenance", "assign 1", "configure", "abort"],
+            "DISABLED (NOTFITTED)":
+                ['notfitted'],
+            "DISABLED (OFFLINE)":
+                ['offline'],
+            "OFF (ONLINE)":
+                ['online'],
+            "OFF (MAINTENANCE)":
+                ['maintenance'],
+            "ON (ONLINE)":
+                ['online', 'assign 1'],
+            "ON (MAINTENANCE)":
+                ['maintenance', 'assign 1'],
+            "READY (ONLINE)":
+                ['online', 'assign 1', 'configure'],
+            "READY (MAINTENANCE)":
+                ['maintenance', 'assign 1', 'configure'],
+            "SCANNING (ONLINE)":
+                ['online', 'assign 1', 'configure', 'scan'],
+            "SCANNING (MAINTENANCE)":
+                ['maintenance', 'assign 1', 'configure', 'scan'],
+            "ABORTED (ONLINE)":
+                ['online', 'assign 1', 'configure', 'abort'],
+            "ABORTED (MAINTENANCE)":
+                ['maintenance', 'assign 1', 'configure', 'abort'],
         }
 
         # bypass cache for this test because we are testing for a change

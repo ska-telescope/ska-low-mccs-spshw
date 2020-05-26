@@ -60,8 +60,7 @@ def initialize_device(tango_device):
     yield tango_device.Init()
 
 
-class MyDeviceProxy(tango.DeviceProxy):
-    # @classmethod
+class _DeviceProxy(tango.DeviceProxy):
     def _get_open_port():
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("", 0))
@@ -71,7 +70,6 @@ class MyDeviceProxy(tango.DeviceProxy):
         return port
 
     HOST = get_host_ip()
-    # PORT = MyDeviceProxy.get_open_port()
     PORT = _get_open_port()
 
     def _get_nodb_fqdn(self, device_name):
@@ -82,11 +80,11 @@ class MyDeviceProxy(tango.DeviceProxy):
         super().__init__(self._get_nodb_fqdn(device_name), *args, **kwargs)
 
 
-tango.DeviceProxy = MyDeviceProxy  # monkey-patch
+tango.DeviceProxy = _DeviceProxy  # monkey-patch
 
 
 @pytest.fixture(scope="class")
-def tango_multidevice_context():
+def tango_context():
     """
     Creates and returns a TANGO MultiDeviceTestContext object.
     """
@@ -155,8 +153,6 @@ def tango_multidevice_context():
     ]
 
     with MultiDeviceTestContext(
-        devices_info,
-        host=MyDeviceProxy.HOST,
-        port=MyDeviceProxy.PORT
+        devices_info, host=_DeviceProxy.HOST, port=_DeviceProxy.PORT
     ) as context:
         yield context

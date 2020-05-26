@@ -54,7 +54,7 @@ def initialize_device(tango_device):
 
     Parameters
     ----------
-    tango_device: tango.test_context.DeviceTestContext.Device
+    tango_device: tango.DeviceProxy
         Context to run a device without a database.
     """
     yield tango_device.Init()

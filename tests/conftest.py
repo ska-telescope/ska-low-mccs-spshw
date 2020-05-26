@@ -60,34 +60,32 @@ def initialize_device(tango_device):
     yield tango_device.Init()
 
 
-class _DeviceProxy(tango.DeviceProxy):
-    def _get_open_port():
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("", 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-        s.close()
-        return port
-
-    HOST = get_host_ip()
-    PORT = _get_open_port()
-
-    def _get_nodb_fqdn(self, device_name):
-        form = 'tango://{0}:{1}/{2}#dbase=no'
-        return form.format(self.HOST, self.PORT, device_name)
-
-    def __init__(self, device_name, *args, **kwargs):
-        super().__init__(self._get_nodb_fqdn(device_name), *args, **kwargs)
-
-
-tango.DeviceProxy = _DeviceProxy  # monkey-patch
-
-
 @pytest.fixture(scope="class")
 def tango_context():
     """
     Creates and returns a TANGO MultiDeviceTestContext object.
     """
+    class _DeviceProxy(tango.DeviceProxy):
+        def _get_open_port():
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(("", 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+            s.close()
+            return port
+
+        HOST = get_host_ip()
+        PORT = _get_open_port()
+
+        def _get_nodb_fqdn(self, device_name):
+            form = 'tango://{0}:{1}/{2}#dbase=no'
+            return form.format(self.HOST, self.PORT, device_name)
+
+        def __init__(self, device_name, *args, **kwargs):
+            super().__init__(self._get_nodb_fqdn(device_name), *args, **kwargs)
+
+    tango.DeviceProxy = _DeviceProxy  # monkey-patch
+
     devices_info = [
         {
             "class": MccsMaster,

@@ -219,10 +219,16 @@ class TestMccsSubarray:
             "assign 2": lambda d: call_with_json(
                 d.AssignResources, stations=["low/elt/station_2"]
             ),
+            # "release":
+            #     lambda d: call_with_json(
+            #         d.ReleaseResources,
+            #         stations=["low/elt/station_1"],
+            #     ),
             # "release (all)":
             #     lambda d: call_with_json(
             #         d.ReleaseResources,
-            #         stations=["low/elt/station_1"]
+            #         stations=["low/elt/station_1",
+            #                   "low/elt/station_2"]
             #     ),
             # "releaseall":
             #     lambda d: d.ReleaseAllResources(),

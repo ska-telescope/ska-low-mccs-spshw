@@ -3,8 +3,13 @@ A module defining a list of fixtures that are shared across all ska.mccs tests.
 """
 import importlib
 import pytest
+import socket
 
-from tango.test_context import DeviceTestContext
+import tango
+from tango.test_context import (DeviceTestContext,
+                                MultiDeviceTestContext,
+                                get_host_ip)
+from ska.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 
 
 @pytest.fixture(scope="class")
@@ -56,3 +61,105 @@ def initialize_device(tango_context):
         Context to run a device without a database.
     """
     yield tango_context.device.Init()
+
+
+class MyDeviceProxy(tango.DeviceProxy):
+    # @classmethod
+    def _get_open_port():
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("", 0))
+        s.listen(1)
+        port = s.getsockname()[1]
+        s.close()
+        return port
+
+    HOST = get_host_ip()
+    # PORT = MyDeviceProxy.get_open_port()
+    PORT = _get_open_port()
+
+    def _get_nodb_fqdn(self, device_name):
+        form = 'tango://{0}:{1}/{2}#dbase=no'
+        return form.format(self.HOST, self.PORT, device_name)
+
+    def __init__(self, device_name):
+        super().__init__(self._get_nodb_fqdn(device_name))
+
+
+tango.DeviceProxy = MyDeviceProxy  # monkey-patch
+
+
+@pytest.fixture(scope="class")
+def tango_multidevice_context():
+    """
+    Creates and returns a TANGO MultiDeviceTestContext object.
+    """
+    devices_info = [
+        {
+            "class": MccsMaster,
+            "devices": (
+                {
+                    "name": "low/elt/master",
+                    "properties": {
+                        "MccsSubarrays": ["low/elt/subarray_1",
+                                          "low/elt/subarray_2"],
+                        "MccsStations": ["low/elt/station_1",
+                                         "low/elt/station_2"],
+                        "MccsTiles": ["low/elt/tile_47",
+                                      "low/elt/tile_129"],
+                    }
+                },
+            )
+        },
+        {
+            "class": MccsSubarray,
+            "devices": [
+                {
+                    "name": "low/elt/subarray_1",
+                    "properties": {
+                    }
+                },
+                {
+                    "name": "low/elt/subarray_2",
+                    "properties": {
+                    }
+                }
+            ]
+        },
+        {
+            "class": MccsStation,
+            "devices": [
+                {
+                    "name": "low/elt/station_1",
+                    "properties": {
+                    }
+                },
+                {
+                    "name": "low/elt/station_2",
+                    "properties": {
+                    }
+                },
+            ]
+        },
+        {
+            "class": MccsTile,
+            "devices": [
+                {
+                    "name": "low/elt/tile_47",
+                    "properties": {
+                    }
+                },
+                {
+                    "name": "low/elt/tile_129",
+                    "properties": {
+                    }
+                },
+            ]
+        },
+    ]
+
+    with MultiDeviceTestContext(
+        devices_info,
+        host=MyDeviceProxy.HOST,
+        port=MyDeviceProxy.PORT
+    ) as context:
+        yield context

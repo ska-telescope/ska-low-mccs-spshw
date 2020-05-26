@@ -15,7 +15,6 @@ Master DS.
 """
 import functools
 import fire
-import json
 import tango
 import PyTango
 from ska.mccs.utils import call_with_json

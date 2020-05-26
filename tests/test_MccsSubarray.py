@@ -23,96 +23,96 @@ from ska.mccs.utils import call_with_json
 
 
 # pylint: disable=invalid-name
-@pytest.mark.usefixtures("tango_context", "initialize_device")
+@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsSubarray:
     """
     Test cases for MccsSubarray
     """
 
     # tests of general methods
-    def test_InitDevice(self, tango_context):
+    def test_InitDevice(self, tango_device):
         """
         Test for Initial state.
 
         :todo: Test for different memorized values of adminMode.
         """
-        assert tango_context.device.adminMode == AdminMode.OFFLINE
-        assert tango_context.device.state() == DevState.DISABLE
+        assert tango_device.adminMode == AdminMode.OFFLINE
+        assert tango_device.state() == DevState.DISABLE
 
-        assert tango_context.device.obsState == ObsState.IDLE
-        assert tango_context.device.healthState == HealthState.OK
-        assert tango_context.device.controlMode == ControlMode.REMOTE
-        assert tango_context.device.simulationMode == SimulationMode.FALSE
-        assert tango_context.device.testMode == TestMode.NONE
-        assert tango_context.device.assignedResources is None
+        assert tango_device.obsState == ObsState.IDLE
+        assert tango_device.healthState == HealthState.OK
+        assert tango_device.controlMode == ControlMode.REMOTE
+        assert tango_device.simulationMode == SimulationMode.FALSE
+        assert tango_device.testMode == TestMode.NONE
+        assert tango_device.assignedResources is None
 
         # The following reads might not be allowed in this state once
         # properly implemented
-        assert tango_context.device.scanId == -1
-        assert list(tango_context.device.configuredCapabilities) == [
+        assert tango_device.scanId == -1
+        assert list(tango_device.configuredCapabilities) == [
             "BAND1:0",
             "BAND2:0",
         ]
-        assert tango_context.device.stationFQDNs == ()
-        #         assert tango_context.device.tileFQDNs is None
-        #         assert tango_context.device.stationBeamFQDNs is None
-        assert tango_context.device.activationTime == 0
+        assert tango_device.stationFQDNs == ()
+        #         assert tango_device.tileFQDNs is None
+        #         assert tango_device.stationBeamFQDNs is None
+        assert tango_device.activationTime == 0
 
     # tests of overridden base class commands
-    def test_GetVersionInfo(self, tango_context):
+    def test_GetVersionInfo(self, tango_device):
         """
         Test for GetVersionInfo
         """
-        version_info = release.get_release_info(tango_context.class_name)
-        assert tango_context.device.GetVersionInfo() == [version_info]
+        version_info = release.get_release_info(tango_device.info().dev_class)
+        assert tango_device.GetVersionInfo() == [version_info]
 
-    def test_AssignResources(self, tango_context):
+    def test_AssignResources(self, tango_device):
         """
         Test for AssignResources
         """
-        tango_context.device.set_source(DevSource.DEV)
-        tango_context.device.adminMode = AdminMode.ONLINE
+        tango_device.set_source(DevSource.DEV)
+        tango_device.adminMode = AdminMode.ONLINE
 
         call_with_json(
-            tango_context.device.AssignResources, stations=["low/elt/station_1"]
+            tango_device.AssignResources, stations=["low/elt/station_1"]
         )
-        assert list(tango_context.device.stationFQDNs) == ["low/elt/station_1"]
+        assert list(tango_device.stationFQDNs) == ["low/elt/station_1"]
 
     # tests of MccsSubarray commands
-    def test_sendTransientBuffer(self, tango_context):
+    def test_sendTransientBuffer(self, tango_device):
         """
         Test for sendTransientBuffer
         """
         segment_spec = []
-        returned = tango_context.device.sendTransientBuffer(segment_spec)
+        returned = tango_device.sendTransientBuffer(segment_spec)
         assert list(returned) == ["OK", "sendTransientBuffer command completed"]
 
     # tests of overridden base class attributes
-    def test_buildState(self, tango_context):
+    def test_buildState(self, tango_device):
         """
         Test for buildState
         """
         build_info = release.get_release_info()
-        assert tango_context.device.buildState == build_info
+        assert tango_device.buildState == build_info
 
-    def test_versionId(self, tango_context):
+    def test_versionId(self, tango_device):
         """
         Test for versionId
         """
-        assert tango_context.device.versionId == release.version
+        assert tango_device.versionId == release.version
 
     # tests of MccsSubarray attributes
-    def test_scanId(self, tango_context):
+    def test_scanId(self, tango_device):
         """
         Test for scanID attribute
         """
-        assert tango_context.device.scanId == -1
+        assert tango_device.scanId == -1
 
-    def test_stationFQDNs(self, tango_context):
+    def test_stationFQDNs(self, tango_device):
         """
         Test for stationFQDNs attribute
         """
-        assert tango_context.device.stationFQDNs == ()
+        assert tango_device.stationFQDNs == ()
 
     # General device behaviour tests
 
@@ -156,7 +156,7 @@ class TestMccsSubarray:
             ],
         ),
     )
-    def test_state_machine(self, tango_context, state_under_test, action_under_test):
+    def test_state_machine(self, tango_device, state_under_test, action_under_test):
         """
         Test the subarray state machine: for a given initial state and
         an action, does execution of that action, from that initial
@@ -201,9 +201,9 @@ class TestMccsSubarray:
 
         def assert_state(state):
             assert states[state] == (
-                tango_context.device.adminMode,
-                tango_context.device.state(),
-                tango_context.device.obsState,
+                tango_device.adminMode,
+                tango_device.state(),
+                tango_device.obsState,
             )
 
         actions = {
@@ -219,10 +219,16 @@ class TestMccsSubarray:
             "assign 2": lambda d: call_with_json(
                 d.AssignResources, stations=["low/elt/station_2"]
             ),
+            # "release":
+            #     lambda d: call_with_json(
+            #         d.ReleaseResources,
+            #         stations=["low/elt/station_1"],
+            #     ),
             # "release (all)":
             #     lambda d: call_with_json(
             #         d.ReleaseResources,
-            #         stations=["low/elt/station_1"]
+            #         stations=["low/elt/station_1",
+            #                   "low/elt/station_2"]
             #     ),
             # "releaseall":
             #     lambda d: d.ReleaseAllResources(),
@@ -244,7 +250,7 @@ class TestMccsSubarray:
         }
 
         def perform_action(action):
-            actions[action](tango_context.device)
+            actions[action](tango_device)
 
         transitions = {
             ("DISABLED (NOTFITTED)", "notfitted"): "DISABLED (NOTFITTED)",
@@ -354,7 +360,7 @@ class TestMccsSubarray:
 
         # bypass cache for this test because we are testing for a change
         # in the polled attribute obsState
-        tango_context.device.set_source(DevSource.DEV)
+        tango_device.set_source(DevSource.DEV)
 
         # Put the device into the state under test
         for action in setups[state_under_test]:

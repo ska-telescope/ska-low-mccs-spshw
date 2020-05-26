@@ -17,7 +17,7 @@ from tango import DevState
 
 
 # Device test case
-@pytest.mark.usefixtures("tango_context", "initialize_device")
+@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsGroupDevice(object):
     """Test case for packet generation."""
 
@@ -27,22 +27,22 @@ class TestMccsGroupDevice(object):
         # Example : Mock numpy
         # cls.numpy = MccsGroupDevice.numpy = MagicMock()
 
-    def test_AddMember(self, tango_context):
+    def test_AddMember(self, tango_device):
         """Test for AddMember"""
-        assert tango_context.device.AddMember("") is None
+        assert tango_device.AddMember("") is None
 
-    def test_RemoveMember(self, tango_context):
+    def test_RemoveMember(self, tango_device):
         """Test for RemoveMember"""
-        assert tango_context.device.RemoveMember("") is None
+        assert tango_device.RemoveMember("") is None
 
-    def test_RunCommand(self, tango_context):
+    def test_RunCommand(self, tango_device):
         """Test for RunCommand"""
-        assert tango_context.device.RunCommand("") is None
+        assert tango_device.RunCommand("") is None
 
-    def test_memberStates(self, tango_context):
+    def test_memberStates(self, tango_device):
         """Test for memberStates"""
-        assert tango_context.device.memberStates == (DevState.UNKNOWN,)
+        assert tango_device.memberStates == (DevState.UNKNOWN,)
 
-    def test_memberList(self, tango_context):
+    def test_memberList(self, tango_device):
         """Test for memberList"""
-        assert tango_context.device.memberList == ("",)
+        assert tango_device.memberList == ("",)

@@ -20,15 +20,13 @@ subarray.adminMode  # subarray is offline
 
 
 # Test master allocating and releasing resources
-master.Allocate('{"subarray_id": 1, "stations": [true, false], "tiles": [true]}')  # error: cannot allocate resources to disabled subarray
+master.Allocate('{"subarray_id": 1, "stations": ["low/elt/station_1", "low/elt.station_2"]}')  # error: cannot allocate resources to disabled subarray
 
 master.EnableSubarray(1)
-master.Allocate('{"subarray_id": 1, "stations": [true, false], "tiles": [true]}')  # error: cannot allocate resources to disabled subarray
-subarray.stationFQDNs  # ('low/elt/station_1',)
-subarray.tileFQDNs  # ('low/elt/tile_47',)
+master.Allocate('{"subarray_id": 1, "stations": ["low/elt/station_1", "low/elt.station_2"]}')  # error: cannot allocate resources to disabled subarray
+subarray.stationFQDNs  # ('low/elt/station_1', 'low/elt/station_2')
 
 master.Release(1)
 subarray.stationFQDNs  # empty
-subarray.tileFQDNs  # empty
 
 master.DisableSubarray(1)

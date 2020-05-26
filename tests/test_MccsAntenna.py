@@ -18,7 +18,7 @@ from PyTango import DevState
 from ska.base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel
 
 
-@pytest.mark.usefixtures("tango_context", "initialize_device")
+@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsAntenna(object):
     """Test case for Antenna DS."""
 
@@ -29,162 +29,162 @@ class TestMccsAntenna(object):
         "LoggingTargetsDefault": "",
     }
 
-    def test_properties(self, tango_context):
+    def test_properties(self, tango_device):
         """Test the properties """
-        assert tango_context.device.loggingLevel == LoggingLevel.INFO
+        assert tango_device.loggingLevel == LoggingLevel.INFO
 
-    def test_State(self, tango_context):
+    def test_State(self, tango_device):
         """Test for State"""
-        assert tango_context.device.state() == DevState.ON
+        assert tango_device.state() == DevState.ON
 
-    #    def test_Status(self, tango_context):
-    #        """Test for Status"""
-    #        assert tango_context.device.status() == "This device is On"
+    def test_Status(self, tango_device):
+        """Test for Status"""
+        assert tango_device.status() == "The device is in ON state."
 
-    def test_PowerOn(self, tango_context):
+    def test_PowerOn(self, tango_device):
         """Test for PowerOn"""
-        assert tango_context.device.PowerOn() is None
+        assert tango_device.PowerOn() is None
 
-    def test_PowerOff(self, tango_context):
+    def test_PowerOff(self, tango_device):
         """Test for PowerOff"""
-        assert tango_context.device.PowerOff() is None
+        assert tango_device.PowerOff() is None
 
-    def test_Reset(self, tango_context):
+    def test_Reset(self, tango_device):
         """Test for Reset"""
-        assert tango_context.device.Reset() is None
+        assert tango_device.Reset() is None
 
-    def test_antennaId(self, tango_context):
+    def test_antennaId(self, tango_device):
         """Test for antennaId"""
-        assert tango_context.device.antennaId == 0
+        assert tango_device.antennaId == 0
 
-    def test_logicalTpmAntenna_id(self, tango_context):
+    def test_logicalTpmAntenna_id(self, tango_device):
         """Test for logicalTpmAntenna_id"""
-        assert tango_context.device.logicalTpmAntenna_id == 0
+        assert tango_device.logicalTpmAntenna_id == 0
 
-    def test_logicalApiuAntenna_id(self, tango_context):
+    def test_logicalApiuAntenna_id(self, tango_device):
         """Test for logicalApiuAntenna_id"""
-        assert tango_context.device.logicalApiuAntenna_id == 0.0
+        assert tango_device.logicalApiuAntenna_id == 0.0
 
-    def test_tpmId(self, tango_context):
+    def test_tpmId(self, tango_device):
         """Test for tpmId"""
-        assert tango_context.device.tpmId == 0.0
+        assert tango_device.tpmId == 0.0
 
-    def test_apiuId(self, tango_context):
+    def test_apiuId(self, tango_device):
         """Test for apiuId"""
-        assert tango_context.device.apiuId == 0.0
+        assert tango_device.apiuId == 0.0
 
-    def test_gain(self, tango_context):
+    def test_gain(self, tango_device):
         """Test for gain"""
-        assert tango_context.device.gain == 0.0
+        assert tango_device.gain == 0.0
 
-    def test_rms(self, tango_context):
+    def test_rms(self, tango_device):
         """Test for rms"""
-        assert tango_context.device.rms == 0.0
+        assert tango_device.rms == 0.0
 
-    def test_voltage(self, tango_context):
+    def test_voltage(self, tango_device):
         """Test for voltage"""
-        assert tango_context.device.voltage == 0.0
+        assert tango_device.voltage == 0.0
 
-    def test_temperature(self, tango_context):
+    def test_temperature(self, tango_device):
         """Test for temperature"""
-        assert tango_context.device.temperature == 0.0
+        assert tango_device.temperature == 0.0
 
-    def test_xPolarisationFaulty(self, tango_context):
+    def test_xPolarisationFaulty(self, tango_device):
         """Test for xPolarisationFaulty"""
-        assert tango_context.device.xPolarisationFaulty is False
+        assert tango_device.xPolarisationFaulty is False
 
-    def test_yPolarisationFaulty(self, tango_context):
+    def test_yPolarisationFaulty(self, tango_device):
         """Test for yPolarisationFaulty"""
-        assert tango_context.device.yPolarisationFaulty is False
+        assert tango_device.yPolarisationFaulty is False
 
-    def test_fieldNodeLongitude(self, tango_context):
+    def test_fieldNodeLongitude(self, tango_device):
         """Test for fieldNodeLongitude"""
-        assert tango_context.device.fieldNodeLongitude == 0.0
+        assert tango_device.fieldNodeLongitude == 0.0
 
-    def test_fieldNodeLatitude(self, tango_context):
+    def test_fieldNodeLatitude(self, tango_device):
         """Test for fieldNodeLatitude"""
-        assert tango_context.device.fieldNodeLatitude == 0.0
+        assert tango_device.fieldNodeLatitude == 0.0
 
-    def test_altitude(self, tango_context):
+    def test_altitude(self, tango_device):
         """Test for altitude"""
-        assert tango_context.device.altitude == 0.0
+        assert tango_device.altitude == 0.0
 
-    def test_xDisplacement(self, tango_context):
+    def test_xDisplacement(self, tango_device):
         """Test for xDisplacement"""
-        assert tango_context.device.xDisplacement == 0.0
+        assert tango_device.xDisplacement == 0.0
 
-    def test_yDisplacement(self, tango_context):
+    def test_yDisplacement(self, tango_device):
         """Test for yDisplacement"""
-        assert tango_context.device.yDisplacement == 0.0
+        assert tango_device.yDisplacement == 0.0
 
-    def test_timestampOfLastSpectrum(self, tango_context):
+    def test_timestampOfLastSpectrum(self, tango_device):
         """Test for timestampOfLastSpectrum"""
-        assert tango_context.device.timestampOfLastSpectrum == ""
+        assert tango_device.timestampOfLastSpectrum == ""
 
-    def test_loggingLevel(self, tango_context):
+    def test_loggingLevel(self, tango_device):
         """Test for loggingLevel"""
-        assert tango_context.device.loggingLevel == 4
+        assert tango_device.loggingLevel == 4
 
-    def test_healthState(self, tango_context):
+    def test_healthState(self, tango_device):
         """Test for healthState"""
-        assert tango_context.device.healthState == HealthState.OK
+        assert tango_device.healthState == HealthState.OK
 
-    def test_adminMode(self, tango_context):
+    def test_adminMode(self, tango_device):
         """Test for adminMode"""
-        assert tango_context.device.adminMode == AdminMode.ONLINE
+        assert tango_device.adminMode == AdminMode.ONLINE
 
-    def test_controlMode(self, tango_context):
+    def test_controlMode(self, tango_device):
         """Test for controlMode"""
-        assert tango_context.device.controlMode == ControlMode.REMOTE
+        assert tango_device.controlMode == ControlMode.REMOTE
 
-    def test_simulationMode(self, tango_context):
+    def test_simulationMode(self, tango_device):
         """Test for simulationMode"""
-        assert tango_context.device.SimulationMode == 0  # Equates to False
+        assert tango_device.SimulationMode == 0  # Equates to False
 
-    def test_logicalAntennaId(self, tango_context):
+    def test_logicalAntennaId(self, tango_device):
         """Test for logicalAntennaId"""
-        assert tango_context.device.logicalAntennaId == 0
+        assert tango_device.logicalAntennaId == 0
 
-    def test_xPolarisationScalingFactor(self, tango_context):
+    def test_xPolarisationScalingFactor(self, tango_device):
         """Test for xPolarisationScalingFactor"""
-        assert list(tango_context.device.xPolarisationScalingFactor) == [0]
+        assert list(tango_device.xPolarisationScalingFactor) == [0]
 
-    def test_yPolarisationScalingFactor(self, tango_context):
+    def test_yPolarisationScalingFactor(self, tango_device):
         """Test for yPolarisationScalingFactor"""
-        assert list(tango_context.device.yPolarisationScalingFactor) == [0]
+        assert list(tango_device.yPolarisationScalingFactor) == [0]
 
-    def test_calibrationCoefficient(self, tango_context):
+    def test_calibrationCoefficient(self, tango_device):
         """Test for calibrationCoefficient"""
-        assert list(tango_context.device.calibrationCoefficient) == [0.0]
+        assert list(tango_device.calibrationCoefficient) == [0.0]
 
-    def test_pointingCoefficient(self, tango_context):
+    def test_pointingCoefficient(self, tango_device):
         """Test for pointingCoefficient"""
-        assert list(tango_context.device.pointingCoefficient) == [0.0]
+        assert list(tango_device.pointingCoefficient) == [0.0]
 
-    def test_spectrumX(self, tango_context):
+    def test_spectrumX(self, tango_device):
         """Test for spectrumX"""
-        assert list(tango_context.device.spectrumX) == [0.0]
+        assert list(tango_device.spectrumX) == [0.0]
 
-    def test_spectrumY(self, tango_context):
+    def test_spectrumY(self, tango_device):
         """Test for spectrumY"""
-        assert list(tango_context.device.spectrumY) == [0.0]
+        assert list(tango_device.spectrumY) == [0.0]
 
-    def test_position(self, tango_context):
+    def test_position(self, tango_device):
         """Test for position"""
-        assert list(tango_context.device.position) == [0.0]
+        assert list(tango_device.position) == [0.0]
 
-    def test_loggingTargets(self, tango_context):
+    def test_loggingTargets(self, tango_device):
         """Test for loggingTargets"""
-        assert tango_context.device.loggingTargets == ('tango::logger',)
+        assert tango_device.loggingTargets == ('tango::logger',)
 
-    def test_delays(self, tango_context):
+    def test_delays(self, tango_device):
         """Test for delays"""
-        assert list(tango_context.device.delays) == [0.0]
+        assert list(tango_device.delays) == [0.0]
 
-    def test_delayRates(self, tango_context):
+    def test_delayRates(self, tango_device):
         """Test for delayRates"""
-        assert list(tango_context.device.delayRates) == [0.0]
+        assert list(tango_device.delayRates) == [0.0]
 
-    def test_bandpassCoefficient(self, tango_context):
+    def test_bandpassCoefficient(self, tango_device):
         """Test for bandpassCoefficient"""
-        assert list(tango_context.device.bandpassCoefficient) == [0.0]
+        assert list(tango_device.bandpassCoefficient) == [0.0]

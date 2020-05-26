@@ -1,5 +1,9 @@
-Pre-requisite
--------------
+K8S setup
+=========
+
+Pre-requisites
+--------------
+
 Presumably you already have *docker* installed and set up. You also need to install *kubectl*, *minikube* and *helm*. (Many online *minikube* tutorials include a step to install a VM hypervisor such as *virtualbox*: ignore this, we will use *docker* for this.)
 
 1. Install *kubectl*. There are various ways to do this. On Ubuntu, one way is:
@@ -39,7 +43,7 @@ k8s/helm interaction is facilitated through `make`. For example the helm chart c
 
 To start up the cluster:
 
-```
+```bash
 make deploy_all # starts up tango-base and mccs
 # see it starting up (CTRL-C to exit)
 make watch # Patience is a virtue in the world of k8s
@@ -47,6 +51,8 @@ make watch # Patience is a virtue in the world of k8s
 make logs
 # interact
 make itango
+# or
+make cli
 # shutdown
 make delete_all # or make delete for just mccs
 ```
@@ -64,13 +70,12 @@ Tango device server configuration
 Device server configuration is located in _charts/mccs/data/configuration.yml_ and device containers get declared in _charts/mccs/templates/mccs.yaml_. To add e.g. a new subarray modify these two files. Make sure that `make delete` is called before modifying these and then start up with `make deploy`.
 At the moment _master_, two _subbarrays_, two _stations_ and one _tile_ are spun up.
 
-
 Development
 -----------
 
 To run and test from a local MCCS docker image run:
 
-```
+```bash
 make delete
 eval $(minikube docker-env)
 docker build -t nexus.engageska-portugal.pt/ska-docker/lfaa-mccs-prototype:latest .
@@ -80,6 +85,7 @@ make deploy
 Example output
 --------------
 
+### Logs
 
 ```
 ska-mccs:lfaa-lmc-prototype$ make logs
@@ -133,6 +139,8 @@ Container: mccstile47
 1|2020-05-15T05:11:50.087Z|INFO|MainThread|init_device|tile.py#90|tango-device:low/elt/tile_47|MccsTile init_device complete
 ```
 
+### itango
+
 itango
 
 ```
@@ -149,8 +157,72 @@ IPython profile: tango
 
 hint: Try typing: mydev = Device("<tab>
 
-In [1]: tile = DeviceProxy("low/elt/tile_47")                                                                                                                            
+In [1]: tile = DeviceProxy("low/elt/tile_47")
 
-In [2]: tile.adminMode                                                                                                                                                   
-Out[2]: <adminMode.ONLINE: 0>
+In [2]: tile.adminMode
+```
+
+### CLI
+
+`make cli`
+
+then
+
+```
+tango@mccs-mccs-test:/app$ mccs-master 
+NAME
+    mccs-master - test
+
+SYNOPSIS
+    mccs-master - COMMAND
+
+DESCRIPTION
+    Command-line tool to access the MCCS master tango device
+
+COMMANDS
+    COMMAND is one of the following:
+
+     adminmode
+       show the admin mode TODO: make writable
+
+     allocate
+
+     controlmode
+       show the control mode TODO: make writable
+
+     disablesubarray
+       Disable given subarray
+
+     enablesubarray
+       Enable given subarray
+
+     healthstate
+       show the health state
+
+     logginglevel
+       Get and/or set the logging level of the device.
+
+     maintenance
+
+     off
+
+     on
+
+     operate
+
+     release
+       Release given subarray
+
+     reset
+
+     simulationmode
+       show the control mode TODO: make writable
+
+     standbyfull
+
+     standbylow
+
+
+tango@mccs-mccs-test:/app$ mccs-master adminmode
+ONLINE
 ```

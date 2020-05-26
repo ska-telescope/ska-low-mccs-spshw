@@ -7,17 +7,18 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-import functools
-import fire
-import json
-import tango
-import PyTango
 
 """
 The command line interface for the MCCS Master device server. Functionality
 to handle passing variables to be added as functionality is added to the
 Master DS.
 """
+import functools
+import fire
+import json
+import tango
+import PyTango
+from ska.mccs.utils import call_with_json
 
 
 def format_exception(method):
@@ -38,13 +39,18 @@ def format_exception(method):
 
 
 class MccsMasterCli:
-    def __init__(self):
-        self._dp = tango.DeviceProxy("low/elt/master")
+    def __init__(self, fqdn="low/elt/master"):
+        """cli
+        Command-line tool to access the MCCS master tango device
+
+        :param fqdn: the FQDN of the master device, defaults to "low/elt/master"
+        :type fqdn: str, optional
+        """
+        self._dp = tango.DeviceProxy(fqdn)
         self._log_levels = [
             lvl for lvl in dir(self._dp.logginglevel.__class__) if lvl.isupper()
         ]
 
-    @property
     def adminmode(self):
         """show the admin mode
         TODO: make writable
@@ -53,7 +59,6 @@ class MccsMasterCli:
         """
         return self._dp.adminmode.name
 
-    @property
     def controlmode(self):
         """show the control mode
         TODO: make writable
@@ -62,7 +67,6 @@ class MccsMasterCli:
         """
         return self._dp.controlmode.name
 
-    @property
     def simulationmode(self):
         """show the control mode
         TODO: make writable
@@ -71,7 +75,6 @@ class MccsMasterCli:
         """
         return self._dp.simulationmode.name
 
-    @property
     def healthstate(self):
         """show the health state
         :return: healtstate
@@ -125,6 +128,7 @@ class MccsMasterCli:
         :type subarray_id: int
         """
         self._dp.command_inout("EnableSubarray", subarray_id)
+        print()
 
     @format_exception
     def disablesubarray(self, subarray_id):
@@ -141,14 +145,22 @@ class MccsMasterCli:
         Args:
             subarray_id (int, optional): [description]. Defaults to 0.
             stations (str, optional): comma separated list of station numbers (not the
-            FQDN). Defaults to "".
+            FQDN). NOTE: single value has to be followed by a ',' .Defaults to "".
         """
-        args = {
-            "subarray_id": subarray_id,
-            "stations": ["low/elt/{}".format(station) for station in stations],
-        }
-        jstr = json.dumps(args)
-        self._dp.command_inout("Allocate", jstr)
+
+        station_fqdns = []
+        station_proxies = []
+        for station in stations:
+            fqdn = "low/elt/{}".format(station)
+            station_fqdns.append(fqdn)
+            station_proxies.append(tango.DeviceProxy(fqdn))
+        call_with_json(
+            self._dp.Allocate, subarray_id=subarray_id, stations=station_fqdns,
+        )
+        for proxy in station_proxies:
+            status = proxy.adminmode.name
+            name = proxy.name()
+            print(f"{name}: {status}")
 
     @format_exception
     def release(self, subarray_id):

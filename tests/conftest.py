@@ -13,7 +13,7 @@ from ska.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 
 
 @pytest.fixture(scope="class")
-def tango_context(request):
+def tango_device(request):
     """Creates and returns a TANGO DeviceTestContext object.
 
     Parameters
@@ -42,25 +42,22 @@ def tango_context(request):
     class_name = test_class_name.split("Test", 1)[-1]
     module = importlib.import_module("ska.mccs", class_name)
     class_type = getattr(module, class_name)
-    tango_context = DeviceTestContext(
+    with DeviceTestContext(
         class_type, properties=test_properties.get(class_name, {})
-    )
-    tango_context.class_name = class_name
-    tango_context.start()
-    yield tango_context
-    tango_context.stop()
+    ) as tango_device:
+        yield tango_device
 
 
 @pytest.fixture(scope="function")
-def initialize_device(tango_context):
+def initialize_device(tango_device):
     """Re-initializes the device.
 
     Parameters
     ----------
-    tango_context: tango.test_context.DeviceTestContext
+    tango_device: tango.test_context.DeviceTestContext.Device
         Context to run a device without a database.
     """
-    yield tango_context.device.Init()
+    yield tango_device.Init()
 
 
 class MyDeviceProxy(tango.DeviceProxy):

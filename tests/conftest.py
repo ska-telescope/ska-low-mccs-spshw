@@ -81,8 +81,8 @@ class MyDeviceProxy(tango.DeviceProxy):
         form = 'tango://{0}:{1}/{2}#dbase=no'
         return form.format(self.HOST, self.PORT, device_name)
 
-    def __init__(self, device_name):
-        super().__init__(self._get_nodb_fqdn(device_name))
+    def __init__(self, device_name, *args, **kwargs):
+        super().__init__(self._get_nodb_fqdn(device_name), *args, **kwargs)
 
 
 tango.DeviceProxy = MyDeviceProxy  # monkey-patch

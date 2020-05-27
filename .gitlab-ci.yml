@@ -11,7 +11,7 @@ cache:
 # This can be an array or a multi-line string.
 before_script:
   - python3 -m pip install -r requirements-dev.txt
-  - python3 -m pip install pipdeptree  
+  - python3 -m pip install pipdeptree
 
 stages:
   - test
@@ -21,7 +21,7 @@ stages:
   - publish
   - release
 
-# The YAML file defines a set of jobs with constraints stating when they should be run. 
+# The YAML file defines a set of jobs with constraints stating when they should be run.
 # You can specify an unlimited number of jobs which are defined as top-level elements with an arbitrary name and always
 #  have to contain at least the script clause.
 # In this case we have only the test job which produces a coverage report and the unittest output (see setup.cfg), and
@@ -32,10 +32,10 @@ test:
   tags:
     - docker-executor
   script:
-    -  tox -e py37
+    - tox -e py37
   artifacts:
     paths:
-    - ./build
+      - ./build
 
 list_dependencies:
   stage: test
@@ -56,7 +56,7 @@ list_dependencies:
       - public
 
 linting:
-#  image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest
+  #  image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest
   tags:
     - docker-executor
   stage: linting
@@ -128,26 +128,27 @@ publish package to nexus:
       - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
 
 release docker image to nexus:
-    stage: release
-    image: nexus.engageska-portugal.pt/ska-docker/tango-builder:latest
-    before_script:
+  stage: release
+  image: nexus.engageska-portugal.pt/ska-docker/tango-builder:latest
+  before_script:
     - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
-    tags:
-      - docker-executor
-    script:
-      - make build
-      - make push
-    when: manual
-    only:
-      refs:
-        - master
+  tags:
+    - docker-executor
+  script:
+    - make build
+    - make push
+  when: manual
+  only:
+    refs:
+      - master
+      - tags
 
 create ci metrics:
   stage: .post
   image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest
   when: always
   tags:
-     - docker-executor
+    - docker-executor
   script:
     # Gitlab CI badges creation: START
     - apt-get -y update

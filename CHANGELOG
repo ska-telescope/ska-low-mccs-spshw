@@ -1,0 +1,10 @@
+# Version History
+
+## 0.1.0
+
+Initial release
+
+* control model hierachy of MCCS LMC Tango device classes
+* cli tools for _master_ and _tile_
+* tox environment
+* k8s helm chart for tango device containers

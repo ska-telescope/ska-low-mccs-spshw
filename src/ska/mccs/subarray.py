@@ -15,7 +15,7 @@ MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 __all__ = ["MccsSubarray", "main"]
 
 # PyTango imports
-from tango import DebugIt, Except, ErrSeverity, DevFailed
+from tango import AttrWriteType, DebugIt, Except, ErrSeverity, DevFailed
 from tango.server import attribute, command
 from tango import DevState
 from tango import DeviceProxy
@@ -171,6 +171,7 @@ class MccsSubarray(SKASubarray):
     # -------------------------------------
     @attribute(
         dtype=AdminMode,
+        access=AttrWriteType.READ_WRITE,
         doc="The admin mode reported for this device. It may interpret "
         "the current device condition and condition of all managed "
         "devices to set this.",
@@ -267,6 +268,7 @@ class MccsSubarray(SKASubarray):
         doc_out="[ReturnCode, information-only string]",
     )
     @json_input()
+    @DebugIt()
     def AssignResources(self, **resources):
         """
         Assign some resources.

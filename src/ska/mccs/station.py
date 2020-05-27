@@ -14,9 +14,9 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 __all__ = ["MccsStation", "main"]
 
 # PyTango imports
+import tango
 from tango.server import attribute, command
-from tango import DevState
-from tango import DeviceProxy
+from tango import AttrWriteType, DebugIt, DevState
 from tango.server import device_property
 
 # additional imports
@@ -38,7 +38,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # Device Properties
     # -----------------
     StationId = device_property(dtype=int, default_value=0)
-    TileFQDNS = device_property(dtype=(str,))
+    TileFQDNs = device_property(dtype=(str,))
 
     # ---------------
     # General methods
@@ -53,7 +53,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         self.set_state(DevState.INIT)
 
         self._subarray_id = 0
-        self._tile_fqdns = []
+        self._tile_fqdns = list(self.TileFQDNs)
         self._beam_fqdns = []
         self._transient_buffer_fqdn = ""
         self._delay_centre = []
@@ -115,6 +115,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @attribute(
         dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
         format="%i",
         max_value=16,
         min_value=0,
@@ -127,8 +128,12 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         return self._subarray_id
 
     @subarrayId.write
+    @DebugIt()
     def subarrayId(self, id):
         self._subarray_id = id
+        for fqdn in self._tile_fqdns:
+            tile = tango.DeviceProxy(fqdn)
+            tile.subarrayId = id
 
     @attribute(
         dtype="DevString",
@@ -232,6 +237,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @attribute(
         dtype=("DevFloat",),
+        access=AttrWriteType.READ_WRITE,
         max_dim_x=2,
         polling_period=1000,
         doc="""WGS84 position of the delay centre of the Station.
@@ -277,7 +283,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     def Configure(self):
         self._tiles = []
         for id, tile in enumerate(self.TileFQDNS):
-            proxy = DeviceProxy(tile)
+            proxy = tango.DeviceProxy(tile)
             self._tiles.append(proxy)
             proxy.subarrayId = self._subarray_id
             proxy.stationId = self._station_id
@@ -293,7 +299,7 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
 #         self._beams = []
 #         for id, beam in enumerate(self._beam_fqdns):
-#             proxy = DeviceProxy(beam)
+#             proxy = tango.DeviceProxy(beam)
 #             self._beam.append(proxy)
 #             proxy.stationId = self.StationId
 #             proxy.logicalBeamId = id + 1

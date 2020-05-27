@@ -30,6 +30,7 @@ def tango_device(request):
             "MccsStations": ["low/elt/station_1"],
         },
         "MccsSubarray": {"CapabilityTypes": ["BAND1", "BAND2"]},
+        "MccsStation": {"TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
         "MccsTile": {"AntennasPerTile": "16"},
     }
 
@@ -97,8 +98,10 @@ def tango_context():
                                           "low/elt/subarray_2"],
                         "MccsStations": ["low/elt/station_1",
                                          "low/elt/station_2"],
-                        "MccsTiles": ["low/elt/tile_47",
-                                      "low/elt/tile_129"],
+                        "MccsTiles": ["low/elt/tile_1",
+                                      "low/elt/tile_2",
+                                      "low/elt/tile_3",
+                                      "low/elt/tile_4"],
                     }
                 },
             )
@@ -124,11 +127,13 @@ def tango_context():
                 {
                     "name": "low/elt/station_1",
                     "properties": {
+                        "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]
                     }
                 },
                 {
                     "name": "low/elt/station_2",
                     "properties": {
+                        "TileFQDNs": ["low/elt/tile_3", "low/elt/tile_4"]
                     }
                 },
             ]
@@ -137,12 +142,22 @@ def tango_context():
             "class": MccsTile,
             "devices": [
                 {
-                    "name": "low/elt/tile_47",
+                    "name": "low/elt/tile_1",
                     "properties": {
                     }
                 },
                 {
-                    "name": "low/elt/tile_129",
+                    "name": "low/elt/tile_2",
+                    "properties": {
+                    }
+                },
+                {
+                    "name": "low/elt/tile_3",
+                    "properties": {
+                    }
+                },
+                {
+                    "name": "low/elt/tile_4",
                     "properties": {
                     }
                 },

@@ -39,5 +39,7 @@ pull:  ## download the application image
 	docker pull $(IMAGE_TO_TEST)
 
 interactive:  ## start an interactive session using the project image (caution: R/W mounts source directory to /app)
-	docker run --rm -it -p 3000:3000 --name=$(CONTAINER_NAME_PREFIX)dev -e TANGO_HOST=$(TANGO_HOST) \
-	  -v $(CURDIR):/app $(IMAGE_TO_TEST) /bin/bash
+	docker run --rm -it --name=$(CONTAINER_NAME_PREFIX)dev  -e TANGO_HOST=$(TANGO_HOST) $(IMAGE_TO_TEST) /bin/bash
+
+devimage:
+	docker build --rm -f "Dockerfile" -t $(IMAGE_TO_TEST) .

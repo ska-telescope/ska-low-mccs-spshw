@@ -6,16 +6,63 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
+import types
+import functools
 import fire
 import json
 import tango
 
 
-class MccsTileCli:
+class CliMeta(type):
+    """Metaclass to catch and disect `tango.DevFailed` and other exceptions for
+    all class methods. They get turned into `fire.core.FireError` exceptions.
+    """
+
+    def __new__(cls, name, bases, attrs):
+        for attr_name, attr_value in attrs.items():
+            if isinstance(attr_value, types.FunctionType):
+                attrs[attr_name] = cls.fire_except(attr_value)
+        return super(CliMeta, cls).__new__(cls, name, bases, attrs)
+
+    @classmethod
+    def fire_except(cls, method):
+        @functools.wraps(method)
+        def wrapper(*args, **kwargs):
+            try:
+                return method(*args, **kwargs)
+            except tango.DevFailed as ptex:
+                raise fire.core.FireError(ptex.args[0].desc)
+            except Exception as ex:
+                raise fire.core.FireError(str(ex))
+
+        return wrapper
+
+
+class MccsTileCli(metaclass=CliMeta):
     def __init__(self):
-        # self._dp = tango.DeviceProxy("mccs/tile/01")
-        self._dp = tango.DeviceProxy("mccs/tile_simulator/tile1")
+        self.tile_number = 1
+        self._dp = tango.DeviceProxy(f"low/elt/tile_{self.tile_number}")
+
+    def connect(self):
+        """Connect to the hardware"""
         self._dp.command_inout("connect", True)
+
+    def subarrayid(self):
+        """return the id of the subarray the tike has been allocated to"""
+        return self._dp.subarrayId
+
+    def logginglevel(self, level=None):
+        """Get and/or set the logging level of the device.
+
+        :param level: the logging level, defaults to None (only print the level)
+        :type level: str, optional
+        :return: logging level value
+        :rtype: str
+        """
+        if level is not None:
+            elevel = self._dp.logginglevel.__class__[level.upper()]
+            self._dp.logginglevel = elevel
+        return self._dp.logginglevel.name
 
     def SendBeamData(self, period=0, timeout=0, timestamp=None, seconds=0.2):
         dict = {
@@ -48,7 +95,7 @@ class MccsTileCli:
             jstr = json.dumps(dict)
             self._dp.command_inout("SendChannelisedDataContinuous", jstr)
         except tango.DevFailed:
-            print("ChannelID Mandatory Arguement...cannot be a NULL value")
+            raise RuntimeError("ChannelID mandatory argument...cannot be a NULL value")
 
     def SendChannelisedData(
         self,
@@ -94,9 +141,16 @@ class MccsTileCli:
         jstr = json.dumps(dict)
         self._dp.command_inout("StartBeamformer", jstr)
 
+    def StopBeamformer(self):
+        self._dp.command_inout("StopBeamformer")
+
     def LoadPointingDelay(self, load_time=0):
         self._dp.command_inout("LoadPointingDelay", load_time)
 
 
-if __name__ == "__main__":
+def main():
     fire.Fire(MccsTileCli)
+
+
+if __name__ == "__main__":
+    main()

@@ -17,7 +17,7 @@ import json
 import numpy as np
 
 # PyTango imports
-from tango import DebugIt
+from tango import AttrWriteType, DebugIt
 from tango import DevState
 from tango.server import attribute, command
 from tango.server import device_property
@@ -111,7 +111,11 @@ class MccsTile(MccsGroupDevice):
         """
         return self._tpm is not None and self._is_connected
 
-    @attribute(dtype="DevLong", doc="The global tile identifier")
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        doc="The global tile identifier"
+    )
     def tileId(self):
         """Return the tileId attribute."""
         return self._tile_id
@@ -121,7 +125,11 @@ class MccsTile(MccsGroupDevice):
         """Set the tileId attribute."""
         self._tile_id = value
 
-    @attribute(dtype="DevLong", doc="Logical tile identifier within a station")
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        doc="Logical tile identifier within a station"
+    )
     def logicalTileId(self):
         """Return the logicalTileId attribute."""
         return self._logical_tile_id
@@ -131,17 +139,25 @@ class MccsTile(MccsGroupDevice):
         """Set the logicalTileId attribute."""
         self._logical_tile_id = value
 
-    @attribute(dtype="DevLong", doc="The identifier of the associated subarray.")
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        doc="The identifier of the associated subarray."
+    )
     def subarrayId(self):
         """Return the subarrayId attribute."""
         return self._subarray_id
 
     @subarrayId.write
+    @DebugIt()
     def subarrayId(self, value):
         """Set the subarrayId attribute."""
         self._subarray_id = value
 
-    @attribute(dtype="DevLong", doc="The identifier of the associated station.")
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        doc="The identifier of the associated station.")
     def stationId(self):
         """Return the stationId attribute."""
         return self._station_id
@@ -151,7 +167,11 @@ class MccsTile(MccsGroupDevice):
         """Set the stationId attribute."""
         self._station_id = value
 
-    @attribute(dtype="DevString", doc="LMC address (and global identifier) of Tile")
+    @attribute(
+        dtype="DevString",
+        access=AttrWriteType.READ_WRITE,
+        doc="LMC address (and global identifier) of Tile"
+    )
     def ipAddress(self):
         """Return the ipAddress attribute."""
         return self._ip_address
@@ -162,7 +182,9 @@ class MccsTile(MccsGroupDevice):
         self._ip_address = value
 
     @attribute(
-        dtype="DevString", doc="LMC IP address to (and from) which LMC data will flow"
+        dtype="DevString",
+        access=AttrWriteType.READ_WRITE,
+        doc="LMC IP address to (and from) which LMC data will flow"
     )
     def lmcIp(self):
         """Return the lmcIp attribute."""
@@ -173,7 +195,11 @@ class MccsTile(MccsGroupDevice):
         """Set the lmcIp attribute."""
         self._lmc_ip = value
 
-    @attribute(dtype="DevLong", doc="LMC port to (and from) which LMC data will flow")
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        doc="LMC port to (and from) which LMC data will flow"
+    )
     def lmcPort(self):
         """Return the lmcPort attribute."""
         return self._lmc_port
@@ -185,6 +211,7 @@ class MccsTile(MccsGroupDevice):
 
     @attribute(
         dtype="DevString",
+        access=AttrWriteType.READ_WRITE,
         doc="""CSP ingest node IP address for station beam (use if Tile is
         last one in the beamforming chain)""",
     )
@@ -199,6 +226,7 @@ class MccsTile(MccsGroupDevice):
 
     @attribute(
         dtype="DevString",
+        access=AttrWriteType.READ_WRITE,
         doc="""CSP ingest node MAC address for station beam (use if Tile is
         last one in the beamforming chain)""",
     )
@@ -213,6 +241,7 @@ class MccsTile(MccsGroupDevice):
 
     @attribute(
         dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
         doc="""CSP ingest node port address for station beam (use if Tile is
         last one in the beamforming chain)""",
     )
@@ -226,7 +255,9 @@ class MccsTile(MccsGroupDevice):
         self._csp_destination_port = value
 
     @attribute(
-        dtype="DevString", doc="Name and identifier of currently running firmware"
+        dtype="DevString",
+        access=AttrWriteType.READ_WRITE,
+        doc="Name and identifier of currently running firmware"
     )
     def firmwareName(self):
         """Return the firmwareName attribute."""
@@ -237,7 +268,11 @@ class MccsTile(MccsGroupDevice):
         """Set the firmwareName attribute."""
         self._firmware_name = value
 
-    @attribute(dtype="DevString", doc="Version of currently running firmware")
+    @attribute(
+        dtype="DevString",
+        access=AttrWriteType.READ_WRITE,
+        doc="Version of currently running firmware"
+    )
     def firmwareVersion(self):
         """Return the firmwareVersion attribute."""
         return self._firmware_version
@@ -280,7 +315,11 @@ class MccsTile(MccsGroupDevice):
         """Return the fpga2_temperature attribute."""
         return self._tpm.get_fpga2_temperature()
 
-    @attribute(dtype="DevLong", fisallowed=is_connected)
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        fisallowed=is_connected
+    )
     def fpga1_time(self):
         """Return the fpga1_time attribute."""
         return self._tpm.get_fpga1_time()
@@ -290,7 +329,11 @@ class MccsTile(MccsGroupDevice):
         """Set the fpga1_time attribute."""
         self._tpm.set_fpga1_time(value)
 
-    @attribute(dtype="DevLong", fisallowed=is_connected)
+    @attribute(
+        dtype="DevLong",
+        access=AttrWriteType.READ_WRITE,
+        fisallowed=is_connected
+    )
     def fpga2_time(self):
         """Return the fpga2_time attribute."""
         return self._tpm.get_fpga2_time()
@@ -302,6 +345,7 @@ class MccsTile(MccsGroupDevice):
 
     @attribute(
         dtype=("DevLong",),
+        access=AttrWriteType.READ_WRITE,
         max_dim_x=8,
         label="Antenna ID's",
         doc="Array holding the logical ID`s of the antenna associated with "

@@ -117,6 +117,10 @@ class TestMccsIntegration:
         subarray_2 = tango_context.get_device("low/elt/subarray_2")
         station_1 = tango_context.get_device("low/elt/station_1")
         station_2 = tango_context.get_device("low/elt/station_2")
+        tile_1 = tango_context.get_device("low/elt/tile_1")
+        tile_2 = tango_context.get_device("low/elt/tile_2")
+        tile_3 = tango_context.get_device("low/elt/tile_3")
+        tile_4 = tango_context.get_device("low/elt/tile_4")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
@@ -126,12 +130,20 @@ class TestMccsIntegration:
         subarray_2.set_source(DevSource.DEV)
         station_1.set_source(DevSource.DEV)
         station_2.set_source(DevSource.DEV)
+        tile_1.set_source(DevSource.DEV)
+        tile_2.set_source(DevSource.DEV)
+        tile_3.set_source(DevSource.DEV)
+        tile_4.set_source(DevSource.DEV)
 
         # check initial state
         assert list(subarray_1.stationFQDNs) == []
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # Can't allocate to an array that hasn't been enabled
         with pytest.raises(DevFailed):
@@ -146,6 +158,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # now enable subarrays
         master.EnableSubarray(1)
@@ -163,6 +179,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
@@ -178,6 +198,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
@@ -194,6 +218,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1
+        assert tile_3.subarrayId == 1
+        assert tile_4.subarrayId == 1
 
         # now disable subarray 1
         master.DisableSubarray(1)
@@ -203,6 +231,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # now that subarray 1 has been disabled, its resources should have
         # been released and it should be possible to allocate them to
@@ -219,6 +251,10 @@ class TestMccsIntegration:
                                                  "low/elt/station_2"]
         assert station_1.subarrayId == 2
         assert station_2.subarrayId == 2
+        assert tile_1.subarrayId == 2
+        assert tile_2.subarrayId == 2
+        assert tile_3.subarrayId == 2
+        assert tile_4.subarrayId == 2
 
         # disable the other subarray
         master.DisableSubarray(2)
@@ -228,6 +264,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
     def test_master_release_subarray(self, tango_context):
         """
@@ -239,6 +279,10 @@ class TestMccsIntegration:
         subarray_2 = tango_context.get_device("low/elt/subarray_2")
         station_1 = tango_context.get_device("low/elt/station_1")
         station_2 = tango_context.get_device("low/elt/station_2")
+        tile_1 = tango_context.get_device("low/elt/tile_1")
+        tile_2 = tango_context.get_device("low/elt/tile_2")
+        tile_3 = tango_context.get_device("low/elt/tile_3")
+        tile_4 = tango_context.get_device("low/elt/tile_4")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
@@ -248,6 +292,10 @@ class TestMccsIntegration:
         subarray_2.set_source(DevSource.DEV)
         station_1.set_source(DevSource.DEV)
         station_2.set_source(DevSource.DEV)
+        tile_1.set_source(DevSource.DEV)
+        tile_2.set_source(DevSource.DEV)
+        tile_3.set_source(DevSource.DEV)
+        tile_4.set_source(DevSource.DEV)
 
         # enable subarrays
         master.EnableSubarray(1)
@@ -272,6 +320,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == ["low/elt/station_2"]
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 2
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1
+        assert tile_3.subarrayId == 2
+        assert tile_4.subarrayId == 2
 
         # release resources of subarray_2
         master.Release(2)
@@ -281,6 +333,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should fail
         with pytest.raises(DevFailed):
@@ -291,6 +347,10 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
 
         # release resources of subarray_1
         master.Release(1)
@@ -300,3 +360,39 @@ class TestMccsIntegration:
         assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+        assert tile_3.subarrayId == 0
+        assert tile_4.subarrayId == 0
+
+    def test_station_tile_subarray_id(self, tango_context):
+        """
+        Test that a write to attribute subarrayId on an MccsStation
+        device also results in an update to attribute subarrayId on its
+        MccsTiles.
+        """
+        station = tango_context.get_device("low/elt/station_1")
+        tile_1 = tango_context.get_device("low/elt/tile_1")
+        tile_2 = tango_context.get_device("low/elt/tile_2")
+
+        # Bypass the cache because stationFQDNs etc are polled attributes,
+        # and having written to them, we don't want to have to wait a
+        # polling period so test that the write has stuck.
+        station.set_source(DevSource.DEV)
+        tile_1.set_source(DevSource.DEV)
+        tile_2.set_source(DevSource.DEV)
+
+        # check initial state
+        assert list(station.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
+        assert station.subarrayId == 0
+        assert tile_1.subarrayId == 0
+        assert tile_2.subarrayId == 0
+
+        # write subarray_id
+        station.subarrayId = 1
+
+        # check state
+        assert list(station.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
+        assert station.subarrayId == 1
+        assert tile_1.subarrayId == 1
+        assert tile_2.subarrayId == 1

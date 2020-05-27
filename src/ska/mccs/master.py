@@ -343,7 +343,6 @@ class MccsMaster(SKAMaster):
         station_allocation = numpy.isin(self._station_fqdns,
                                         stations,
                                         assume_unique=True)
-        print("Station Allocation is: {}".format(station_allocation))
         already_allocated = numpy.logical_and.reduce(
             (
                 self._station_allocated != 0,

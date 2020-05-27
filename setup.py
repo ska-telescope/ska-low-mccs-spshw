@@ -21,7 +21,6 @@ setuptools.setup(
     package_dir={"": "src"},
     packages=setuptools.find_namespace_packages(where="src"),
     include_package_data=True,
-    scripts=[],
     url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -41,8 +40,11 @@ setuptools.setup(
             "MccsStationBeam=ska.mccs.station_beam:main",
             "MccsTile=ska.mccs.tile:main",
             "mccs-master=ska.mccs.master_cli:main",
+            "mccs-tile=ska.mccs.tile_cli:main"
         ]
     },
-    install_requires=["lmcbaseclasses >= 0.5.1",
-                      "pytango >= 9.3.1"],
+    install_requires=["lmcbaseclasses >= 0.5.3",
+                      "pytango >= 9.3.2",
+                      "jsonschema >= 3.2.0",
+                      "fire"],
     zip_safe=False)

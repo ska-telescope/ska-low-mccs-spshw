@@ -29,14 +29,6 @@ class TestMccsStation:
     Test cases for MccsStation
     """
 
-    properties = {
-        # SKABaseDevice properties
-        "SkaLevel": "2",
-        "GroupDefinitions": [],
-        "LoggingLevelDefault": 4,
-        "LoggingTargetsDefault": [],
-    }
-
     def test_properties(self, tango_device):
         """ Test the properties """
 
@@ -64,7 +56,8 @@ class TestMccsStation:
         assert tango_device.calibrationJobId == 0
         assert tango_device.daqJobId == 0
         assert tango_device.dataDirectory == ""
-        assert tango_device.tileFQDNs is None
+        assert list(tango_device.tileFQDNs) == ["low/elt/tile_1",
+                                                "low/elt/tile_2"]
         assert tango_device.beamFQDNs is None
         assert list(tango_device.delayCentre) == []
         assert tango_device.calibrationCoefficients is None
@@ -92,7 +85,8 @@ class TestMccsStation:
 
     def test_tileFQDNs(self, tango_device):
         """Test for tileFQDNs attribute"""
-        assert tango_device.tileFQDNs is None
+        assert list(tango_device.tileFQDNs) == ["low/elt/tile_1",
+                                                "low/elt/tile_2"]
 
     def test_beamFQDNs(self, tango_device):
         """Test for beamFQDNs attribute"""

@@ -10,17 +10,11 @@
 ###############################################################################
 """Contain the tests for the Mccs Base Device."""
 
-# Imports
-import pytest
-
 from tango import DevState
-
 from ska.base.control_model import LoggingLevel
 from ska.mccs import release
 
 
-# Device test case
-@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsDevice(object):
     """Test case for packet generation."""
 

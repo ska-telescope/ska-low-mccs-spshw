@@ -10,7 +10,6 @@
 ###############################################################################
 """contains the tests for the MccsStationBeam"""
 import time
-import pytest
 import tango
 from ska.base.control_model import (
     AdminMode,
@@ -23,7 +22,6 @@ from ska.mccs import release
 
 
 # pylint: disable=invalid-name
-@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsStationBeam:
     """
     Test cases for MccsStationBeam

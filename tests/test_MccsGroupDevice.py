@@ -11,13 +11,10 @@
 """Contain the tests for the Grouping of MCCS devices."""
 
 # Imports
-import pytest
-
 from tango import DevState
 
 
 # Device test case
-@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsGroupDevice(object):
     """Test case for packet generation."""
 

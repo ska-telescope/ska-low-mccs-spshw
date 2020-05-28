@@ -23,8 +23,6 @@ from contextlib import redirect_stdout
 from tango import DevState, DevFailed
 
 
-# Device test case
-@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsTile(object):
     """
     The Tile Device represents the TANGO interface to a Tile (TPM) unit.

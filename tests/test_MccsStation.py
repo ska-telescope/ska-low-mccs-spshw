@@ -10,7 +10,6 @@
 ###############################################################################
 """contains the tests for the MccsStation"""
 import time
-import pytest
 import tango
 from ska.base.control_model import (
     AdminMode,
@@ -23,7 +22,6 @@ from ska.mccs import release
 
 
 # pylint: disable=invalid-name
-@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsStation:
     """
     Test cases for MccsStation
@@ -79,9 +77,31 @@ class TestMccsStation:
         assert tango_device.versionId == release.version
 
     # MccsStation attributes
-    def test_subarrayId(self, tango_device):
-        """Test for subarrayId attribute"""
-        assert tango_device.subarrayId == 0
+    def test_subarrayId(self, tango_device, mock_device_proxy):
+        """
+        Test for subarrayId attribute
+        """
+        station = tango_device  # to make test easier to read
+        mock_tile_1 = tango.DeviceProxy("low/elt/tile_1")
+        mock_tile_2 = tango.DeviceProxy("low/elt/tile_2")
+
+        # These tiles are mock devices so we have to manually set their
+        # initial states
+        mock_tile_1.subarrayId = 0
+        mock_tile_2.subarrayId = 0
+
+        # check initial state
+        assert station.subarrayId == 0
+        assert mock_tile_1.subarrayId == 0
+        assert mock_tile_2.subarrayId == 0
+
+        # action under test
+        station.subarrayId = 1
+
+        # check
+        assert station.subarrayId == 1
+        assert mock_tile_1.subarrayId == 1
+        assert mock_tile_2.subarrayId == 1
 
     def test_tileFQDNs(self, tango_device):
         """Test for tileFQDNs attribute"""

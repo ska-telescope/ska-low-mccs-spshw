@@ -1,10 +1,10 @@
 """
 A module defining a list of fixtures that are shared across all ska.mccs tests.
 """
+from collections import defaultdict
 import importlib
 import pytest
 import socket
-
 import tango
 from tango.test_context import (DeviceTestContext,
                                 MultiDeviceTestContext,
@@ -12,22 +12,22 @@ from tango.test_context import (DeviceTestContext,
 from ska.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def tango_device(request):
-    """Creates and returns a TANGO DeviceTestContext object.
+    """
+    Creates and returns a DeviceProxy under a DeviceTestContext.
 
-    Parameters
-    ----------
-    request: _pytest.fixtures.SubRequest
-        A request object gives access to the requesting test context.
+    :param request: A request object gives access to the requesting test
+        context.
+    :type request: _pytest.fixtures.SubRequest
     """
     test_properties = {
         "MccsMaster": {
             "SkaLevel": "4",
             "LoggingTargetsDefault": "",
             "GroupDefinitions": "",
-            "MccsSubarrays": ["low/elt/subarray_1"],
-            "MccsStations": ["low/elt/station_1"],
+            "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
+            "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
         },
         "MccsSubarray": {"CapabilityTypes": ["BAND1", "BAND2"]},
         "MccsStation": {"TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
@@ -43,6 +43,7 @@ def tango_device(request):
     class_name = test_class_name.split("Test", 1)[-1]
     module = importlib.import_module("ska.mccs", class_name)
     class_type = getattr(module, class_name)
+
     with DeviceTestContext(
         class_type, properties=test_properties.get(class_name, {})
     ) as tango_device:
@@ -61,31 +62,32 @@ def initialize_device(tango_device):
     yield tango_device.Init()
 
 
-@pytest.fixture(scope="class")
-def tango_context():
+@pytest.fixture(scope="function")
+def tango_context(mocker):
     """
-    Creates and returns a TANGO MultiDeviceTestContext object.
+    Creates and returns a TANGO MultiDeviceTestContext object, with a
+    tango.DeviceProxy patched to a work around a name resolving issue.
     """
-    class _DeviceProxy(tango.DeviceProxy):
-        def _get_open_port():
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("", 0))
-            s.listen(1)
-            port = s.getsockname()[1]
-            s.close()
-            return port
+    def _get_open_port():
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("", 0))
+        s.listen(1)
+        port = s.getsockname()[1]
+        s.close()
+        return port
 
-        HOST = get_host_ip()
-        PORT = _get_open_port()
+    HOST = get_host_ip()
+    PORT = _get_open_port()
 
-        def _get_nodb_fqdn(self, device_name):
-            form = 'tango://{0}:{1}/{2}#dbase=no'
-            return form.format(self.HOST, self.PORT, device_name)
-
-        def __init__(self, device_name, *args, **kwargs):
-            super().__init__(self._get_nodb_fqdn(device_name), *args, **kwargs)
-
-    tango.DeviceProxy = _DeviceProxy  # monkey-patch
+    _DeviceProxy = tango.DeviceProxy
+    mocker.patch(
+        'tango.DeviceProxy',
+        wraps=lambda fqdn, *args, **kwargs: _DeviceProxy(
+            "tango://{0}:{1}/{2}#dbase=no".format(HOST, PORT, fqdn),
+            *args,
+            **kwargs
+        )
+    )
 
     devices_info = [
         {
@@ -165,7 +167,20 @@ def tango_context():
         },
     ]
 
-    with MultiDeviceTestContext(
-        devices_info, host=_DeviceProxy.HOST, port=_DeviceProxy.PORT
-    ) as context:
+    with MultiDeviceTestContext(devices_info, host=HOST, port=PORT) as context:
         yield context
+
+
+@pytest.fixture(scope="function")
+def mock_device_proxy(mocker):
+    """
+    A fixture that mocks tango.DeviceProxy and keeps each mock in a
+    dictionary keyed by FQDN, so that every time you open a DeviceProxy
+    to a device specified by the same FQDN, you get the same mock.
+    """
+    mock_device_proxies = defaultdict(mocker.Mock)
+    mocker.patch(
+        'tango.DeviceProxy',
+        side_effect=lambda fqdn: mock_device_proxies[fqdn]
+    )
+    yield mock_device_proxies

@@ -2,9 +2,49 @@
 Module for MCCS utils
 """
 from functools import wraps
+import inspect
 import json
 import jsonschema
+
 from tango import Except, ErrSeverity
+from tango.server import Device
+
+
+def tango_raise(msg, origin=None, reason="API_CommandFailed", severity=ErrSeverity.ERR):
+    """Helper function to concisely way to throw `tango.Except.throw_exception`
+
+    Example::
+
+        class MyDevice:
+            def some_command(self):
+                if condition:
+                    pass
+                else:
+                    tango_throw("Condition not true")
+
+
+    :param msg: [description]
+    :type msg: [type]
+    :param origin: the calling object name, defaults to None (autodetected)
+                   Note that autodetection only works for class methods not e.g.
+                   decorators
+    :type origin: str, optional
+    :param reason: the tango api DevError description string, defaults to
+                     "API_CommandFailed"
+    :type reason: str, optional
+    :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
+    :type severity: `tango.ErrSeverity`, optional
+    """
+    if origin is None:
+        frame = inspect.currentframe().f_back
+        calling_method = frame.f_code.co_name
+        if not "self" in frame.f_locals:
+        calling_class = frame.f_locals["self"].__class__
+        if Device not in inspect.getmro(calling_class):
+            raise TypeError("Can only be used in a tango device instance")
+        class_name = calling_class.__name__
+        origin = f"{class_name}.{calling_method}()"
+    Except.throw_exception(reason, msg, origin, severity)
 
 
 def call_with_json(func, **kwargs):
@@ -69,12 +109,12 @@ class json_input:
 
         if schema_path is not None:
             try:
-                with open(schema_path, 'r') as schema_file:
+                with open(schema_path, "r") as schema_file:
                     schema_string = schema_file.read()
             except FileNotFoundError:
                 self._throw(
                     "@json_input",
-                    "JSON schema file not found at {}".format(schema_path)
+                    "JSON schema file not found at {}".format(schema_path),
                 )
 
             try:
@@ -83,9 +123,8 @@ class json_input:
                 self._throw(
                     "@json_input",
                     "Invalid JSON. Input is:\n{}\nParser error is\n{}".format(
-                        schema_string,
-                        error
-                    )
+                        schema_string, error
+                    ),
                 )
 
     def __call__(self, func):
@@ -98,13 +137,12 @@ class json_input:
         :type func: function
 
         """
+
         @wraps(func)
         def wrapped(cls, json_string):
-            json_object = self._parse(
-                json_string,
-                func.__name__
-            )
+            json_object = self._parse(json_string, func.__name__)
             return func(cls, **json_object)
+
         return wrapped
 
     def _parse(self, json_string, origin):
@@ -128,9 +166,8 @@ class json_input:
             self._throw(
                 origin,
                 "Not valid JSON. Input is:\n{}\nParser error is\n{}".format(
-                    json_string,
-                    error
-                )
+                    json_string, error
+                ),
             )
         if self.schema is None:
             return json_object
@@ -139,8 +176,7 @@ class json_input:
             jsonschema.validate(json_object, self.schema)
         except jsonschema.ValidationError as error:
             self._throw(
-                origin,
-                "JSON object does not validate: {}".format(error.message)
+                origin, "JSON object does not validate: {}".format(error.message)
             )
 
         return json_object
@@ -161,5 +197,5 @@ class json_input:
             "API_CommandFailed",
             "{}: {}".format(origin, reason),
             origin,
-            ErrSeverity.ERR
+            ErrSeverity.ERR,
         )

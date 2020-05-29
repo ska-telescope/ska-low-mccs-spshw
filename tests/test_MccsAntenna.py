@@ -12,13 +12,10 @@
 """Contain the tests for the SKA MCCS Antenna Device Server."""
 
 # Imports
-import pytest
-
-from PyTango import DevState
+from tango import DevState
 from ska.base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel
 
 
-@pytest.mark.usefixtures("tango_device", "initialize_device")
 class TestMccsAntenna(object):
     """Test case for Antenna DS."""
 

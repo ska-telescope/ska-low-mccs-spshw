@@ -239,7 +239,13 @@ class MccsMaster(SKAMaster):
 
         :return: None
         """
-        assert 1 <= subarray_id <= len(self._subarray_fqdns)
+        if not (1 <= subarray_id <= len(self._subarray_fqdns)):
+            Except.throw_exception(
+                "API_CommandFailed",
+                "Subarray index {} is out of range".format(subarray_id),
+                "MccsMaster.EnableSubarray()",
+                ErrSeverity.ERR,
+            )
 
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
 
@@ -362,20 +368,14 @@ class MccsMaster(SKAMaster):
                 ErrSeverity.ERR,
             )
 
+        subarray_device = tango.DeviceProxy(subarray_fqdn)
+
         release_mask = numpy.logical_and(
             self._station_allocated == subarray_id,
             numpy.logical_not(station_allocation)
         )
-        stations_to_release = list(self._station_fqdns[release_mask])
-
-        assign_mask = numpy.logical_and(
-            self._station_allocated == 0,
-            station_allocation
-        )
-        stations_to_assign = list(self._station_fqdns[assign_mask])
-
-        subarray_device = tango.DeviceProxy(subarray_fqdn)
-        if stations_to_release:
+        if numpy.any(release_mask):
+            stations_to_release = list(self._station_fqdns[release_mask])
             call_with_json(
                 subarray_device.ReleaseResources,
                 stations=stations_to_release
@@ -384,7 +384,12 @@ class MccsMaster(SKAMaster):
                 device = tango.DeviceProxy(fqdn)
                 device.subarrayId = 0
 
-        if stations_to_assign:
+        assign_mask = numpy.logical_and(
+            self._station_allocated == 0,
+            station_allocation
+        )
+        if numpy.any(assign_mask):
+            stations_to_assign = list(self._station_fqdns[assign_mask])
             call_with_json(
                 subarray_device.AssignResources,
                 stations=stations_to_assign
@@ -393,8 +398,8 @@ class MccsMaster(SKAMaster):
                 device = tango.DeviceProxy(fqdn)
                 device.subarrayId = subarray_id
 
-            self._station_allocated[release_mask] = 0
-            self._station_allocated[assign_mask] = subarray_id
+        self._station_allocated[release_mask] = 0
+        self._station_allocated[assign_mask] = subarray_id
 
     def is_Allocate_allowed(self):
 

@@ -281,10 +281,8 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @command()
     def Configure(self):
-        self._tiles = []
         for id, tile in enumerate(self.TileFQDNS):
             proxy = tango.DeviceProxy(tile)
-            self._tiles.append(proxy)
             proxy.subarrayId = self._subarray_id
             proxy.stationId = self._station_id
             proxy.logicalTileId = id + 1

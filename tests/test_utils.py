@@ -38,7 +38,7 @@ class TestUtils:
         """
         with DeviceTestContext(DummyDevice) as tango_device:
             with pytest.raises(DevFailed) as ex:
-                assert tango_device.method_to_raise()
+                tango_device.method_to_raise()
             assert ex.value.args[0].desc == "raise me"
             assert ex.value.args[0].reason == "API_CommandFailed"
             assert ex.value.args[0].origin == "DummyDevice.method_to_raise()"

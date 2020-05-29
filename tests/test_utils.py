@@ -56,7 +56,7 @@ class TestUtils:
 
         with pytest.raises(TypeError):
             nondevice = NonDevice()
-            assert nondevice.illegal_use()
+            nondevice.illegal_use()
 
     @pytest.mark.parametrize(
         "origin,severity", [("here()", ErrSeverity.ERR), ("there()", ErrSeverity.WARN)]

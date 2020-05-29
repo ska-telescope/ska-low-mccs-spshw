@@ -38,7 +38,6 @@ def tango_raise(msg, origin=None, reason="API_CommandFailed", severity=ErrSeveri
     if origin is None:
         frame = inspect.currentframe().f_back
         calling_method = frame.f_code.co_name
-        if not "self" in frame.f_locals:
         calling_class = frame.f_locals["self"].__class__
         if Device not in inspect.getmro(calling_class):
             raise TypeError("Can only be used in a tango device instance")

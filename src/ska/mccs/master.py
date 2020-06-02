@@ -24,7 +24,7 @@ from tango.server import attribute, command, device_property
 from ska.base import SKAMaster
 from ska.base.control_model import AdminMode
 
-from ska.mccs.utils import call_with_json, json_input
+from ska.mccs.utils import call_with_json, json_input, tango_raise
 import ska.mccs.release as release
 
 
@@ -72,22 +72,18 @@ class MccsMaster(SKAMaster):
         self._version_id = release.version
 
         self._subarray_fqdns = numpy.array(
-            [] if self.MccsSubarrays is None else self.MccsSubarrays,
-            dtype=str
+            [] if self.MccsSubarrays is None else self.MccsSubarrays, dtype=str
         )
 
         # whether subarray is enabled
-        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays),
-                                             dtype=bool)
+        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays), dtype=bool)
 
         self._station_fqdns = numpy.array(
-            [] if self.MccsStations is None else self.MccsStations,
-            dtype=str
+            [] if self.MccsStations is None else self.MccsStations, dtype=str
         )
 
         # id of subarray that station is allocated to, zero if unallocated
-        self._station_allocated = numpy.zeros(len(self.MccsStations),
-                                              dtype=numpy.ubyte)
+        self._station_allocated = numpy.zeros(len(self.MccsStations), dtype=numpy.ubyte)
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -240,22 +236,12 @@ class MccsMaster(SKAMaster):
         :return: None
         """
         if not (1 <= subarray_id <= len(self._subarray_fqdns)):
-            Except.throw_exception(
-                "API_CommandFailed",
-                "Subarray index {} is out of range".format(subarray_id),
-                "MccsMaster.EnableSubarray()",
-                ErrSeverity.ERR,
-            )
+            tango_raise("Subarray index {} is out of range".format(subarray_id))
 
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
 
         if self._subarray_enabled[subarray_id - 1]:
-            Except.throw_exception(
-                "API_CommandFailed",
-                "Subarray {} is already enabled".format(subarray_fqdn),
-                "MccsMaster.EnableSubarray()",
-                ErrSeverity.ERR,
-            )
+            tango_raise("Subarray {} is already enabled".format(subarray_fqdn))
         else:
             subarray_device = tango.DeviceProxy(subarray_fqdn)
             subarray_device.adminMode = AdminMode.ONLINE
@@ -285,14 +271,9 @@ class MccsMaster(SKAMaster):
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
 
         if not self._subarray_enabled[subarray_id - 1]:
-            Except.throw_exception(
-                "API_CommandFailed",
-                "Subarray {} is already disabled".format(subarray_fqdn),
-                "MccsMaster.DisableSubarray()",
-                ErrSeverity.ERR,
-            )
+            tango_raise("Subarray {} is already disabled".format(subarray_fqdn))
         else:
-            mask = (self._station_allocated == subarray_id)
+            mask = self._station_allocated == subarray_id
             fqdns = self._station_fqdns[mask]
             fqdns = list(fqdns)
             for fqdn in fqdns:
@@ -337,37 +318,29 @@ class MccsMaster(SKAMaster):
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
 
         if not self._subarray_enabled[subarray_id - 1]:
-            Except.throw_exception(
-                "API_CommandFailed",
+            tango_raise(
                 "Cannot allocate resources to disabled subarray {}".format(
                     subarray_fqdn
-                ),
-                "MccsMaster.Allocate()",
-                ErrSeverity.ERR,
+                )
             )
-
-        station_allocation = numpy.isin(self._station_fqdns,
-                                        stations,
-                                        assume_unique=True)
+        station_allocation = numpy.isin(
+            self._station_fqdns, stations, assume_unique=True
+        )
         already_allocated = numpy.logical_and.reduce(
             (
                 self._station_allocated != 0,
                 self._station_allocated != subarray_id,
-                station_allocation
+                station_allocation,
             )
         )
 
         if numpy.any(already_allocated):
             already_allocated_fqdns = list(self._station_fqdns[already_allocated])
-            Except.throw_exception(
-                "API_CommandFailed",
+            tango_raise(
                 "Cannot allocate stations already allocated: {}".format(
                     ", ".join(already_allocated_fqdns)
                 ),
-                "MccsMaster.Allocate()",
-                ErrSeverity.ERR,
             )
-
         subarray_device = tango.DeviceProxy(subarray_fqdn)
 
         release_mask = numpy.logical_and(
@@ -377,23 +350,18 @@ class MccsMaster(SKAMaster):
         if numpy.any(release_mask):
             stations_to_release = list(self._station_fqdns[release_mask])
             call_with_json(
-                subarray_device.ReleaseResources,
-                stations=stations_to_release
+                subarray_device.ReleaseResources, stations=stations_to_release
             )
             for fqdn in stations_to_release:
                 device = tango.DeviceProxy(fqdn)
                 device.subarrayId = 0
 
         assign_mask = numpy.logical_and(
-            self._station_allocated == 0,
-            station_allocation
+            self._station_allocated == 0, station_allocation
         )
         if numpy.any(assign_mask):
             stations_to_assign = list(self._station_fqdns[assign_mask])
-            call_with_json(
-                subarray_device.AssignResources,
-                stations=stations_to_assign
-            )
+            call_with_json(subarray_device.AssignResources, stations=stations_to_assign)
             for fqdn in stations_to_assign:
                 device = tango.DeviceProxy(fqdn)
                 device.subarrayId = subarray_id
@@ -431,18 +399,14 @@ class MccsMaster(SKAMaster):
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
 
         if not self._subarray_enabled[subarray_id - 1]:
-            Except.throw_exception(
-                "API_CommandFailed",
+            tango_raise(
                 "Cannot release resources from disabled subarray {}".format(
                     subarray_fqdn
-                ),
-                "MccsMaster.Release()",
-                ErrSeverity.ERR,
+                )
             )
-
         subarray_device = tango.DeviceProxy(subarray_fqdn)
         subarray_device.ReleaseAllResources()
-        mask = (self._station_allocated == subarray_id)
+        mask = self._station_allocated == subarray_id
         fqdns = list(self._station_fqdns[mask])
         for fqdn in fqdns:
             device = tango.DeviceProxy(fqdn)

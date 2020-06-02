@@ -13,7 +13,7 @@ __all__ = ["ReturnCode", "device_check"]
 
 import enum
 from functools import wraps
-from tango import Except, ErrSeverity
+from ska.mccs.utils import tango_raise
 
 
 class ReturnCode(enum.IntEnum):
@@ -134,10 +134,12 @@ class device_check:
         :type func: function
 
         """
+
         @wraps(func)
         def wrapped(device, *args, **kwargs):
             self._check(device, func.__name__)
             return func(device, *args, **kwargs)
+
         return wrapped
 
     def _check(self, device, origin, throw=True):
@@ -178,9 +180,4 @@ class device_check:
         :type check: string
 
         """
-        Except.throw_exception(
-            "API_CommandFailed",
-            "{}: Command disallowed on check '{}'".format(origin, check),
-            origin,
-            ErrSeverity.ERR
-        )
+        tango_raise("{}: Command disallowed on check '{}'".format(origin, check))

@@ -5,6 +5,7 @@ from functools import wraps
 import inspect
 import json
 import jsonschema
+import warnings
 
 from tango import Except, ErrSeverity
 from tango.server import Device
@@ -15,7 +16,8 @@ def tango_raise(msg, origin=None, reason="API_CommandFailed", severity=ErrSeveri
 
     Example::
 
-        class MyDevice:
+        class MyDevice(Device):
+            @command
             def some_command(self):
                 if condition:
                     pass
@@ -192,9 +194,4 @@ class json_input:
         :type reason: string
 
         """
-        Except.throw_exception(
-            "API_CommandFailed",
-            "{}: {}".format(origin, reason),
-            origin,
-            ErrSeverity.ERR,
-        )
+        tango_raise("{}: {}".format(origin, reason))

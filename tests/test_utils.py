@@ -8,6 +8,7 @@
 ########################################################################
 """contains the tests for the ska.mccs.utils module"""
 import json
+import jsonschema
 import pytest
 from tango import DevFailed, ErrSeverity
 from tango.server import Device, command
@@ -166,7 +167,12 @@ class TestUtils:
     )
     def test_json_input_schema_raises(self, json_arg_string):
         """
-        Test for method decorated with json_input with a schema
+        Test that a method decorated with @json_input with a schema
+        argument will raise an exception on input that doesn't validate.
+
+        :todo: test for FileNotFoundException on missing schema
+        :todo: test for json.JSONDecodeError on bad schema
+        :todo: test for json.JSONDecodeError on bad input
         """
-        with pytest.raises(DevFailed):
+        with pytest.raises(jsonschema.ValidationError):
             self.json_input_schema_tester(json_arg_string)

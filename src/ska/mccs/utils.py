@@ -88,6 +88,11 @@ class json_input:
         JSON should be validated. Not working at the moment, so leave it
         None.
     :ptype: string
+    :raises FileNotFoundException: if no file is found at the schema
+        path provided
+    :raises json.JSONDecodeError: if the file at the specified schema
+        path is not valid JSON
+
     :example: Conceptually, MccsMaster.Allocate() takes as arguments a
         subarray id, an array of stations, and an array of tiles. In
         practice, however, these arguments are encoded into a JSON
@@ -109,24 +114,10 @@ class json_input:
         self.schema = None
 
         if schema_path is not None:
-            try:
-                with open(schema_path, "r") as schema_file:
-                    schema_string = schema_file.read()
-            except FileNotFoundError:
-                self._throw(
-                    "@json_input",
-                    "JSON schema file not found at {}".format(schema_path),
-                )
+            with open(schema_path, "r") as schema_file:
+                schema_string = schema_file.read()
 
-            try:
-                self.schema = json.loads(schema_string)
-            except json.JSONDecodeError as error:
-                self._throw(
-                    "@json_input",
-                    "Invalid JSON. Input is:\n{}\nParser error is\n{}".format(
-                        schema_string, error
-                    ),
-                )
+            self.schema = json.loads(schema_string)
 
     def __call__(self, func):
         """
@@ -161,37 +152,9 @@ class json_input:
             does not validate against a schema
 
         """
-        try:
-            json_object = json.loads(json_string)
-        except json.JSONDecodeError as error:
-            self._throw(
-                origin,
-                "Not valid JSON. Input is:\n{}\nParser error is\n{}".format(
-                    json_string, error
-                ),
-            )
-        if self.schema is None:
-            return json_object
+        json_object = json.loads(json_string)
 
-        try:
+        if self.schema is not None:
             jsonschema.validate(json_object, self.schema)
-        except jsonschema.ValidationError as error:
-            self._throw(
-                origin, "JSON object does not validate: {}".format(error.message)
-            )
 
         return json_object
-
-    def _throw(self, origin, reason):
-        """
-        Helper method that constructs and throws a ``Tango.DevFailed``
-        exception.
-
-        :param origin: the origin of the error; typically the name of
-            the command that the check was being conducted for.
-        :type origin: string
-        :param reason: the reason for the error
-        :type reason: string
-
-        """
-        tango_raise("{}: {}".format(origin, reason), _origin=origin)

@@ -10,8 +10,8 @@ from tango import Except, ErrSeverity
 from tango.server import Device
 
 
-def tango_raise(msg, _origin=None, reason="API_CommandFailed",
-                severity=ErrSeverity.ERR):
+def tango_raise(msg, reason="API_CommandFailed", severity=ErrSeverity.ERR,
+                _origin=None):
     """Helper function to provide a concise way to throw `tango.Except.throw_exception`
 
     Example::
@@ -27,15 +27,15 @@ def tango_raise(msg, _origin=None, reason="API_CommandFailed",
 
     :param msg: [description]
     :type msg: [type]
-    :param _origin: the calling object name, defaults to None (autodetected)
-                   Note that autodetection only works for class methods not e.g.
-                   decorators
-    :type _origin: str, optional
     :param reason: the tango api DevError description string, defaults to
                      "API_CommandFailed"
     :type reason: str, optional
     :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
     :type severity: `tango.ErrSeverity`, optional
+    :param _origin: the calling object name, defaults to None (autodetected)
+                   Note that autodetection only works for class methods not e.g.
+                   decorators
+    :type _origin: str, optional
     """
     if _origin is None:
         frame = inspect.currentframe().f_back

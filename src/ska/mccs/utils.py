@@ -193,4 +193,4 @@ class json_input:
         :type reason: string
 
         """
-        tango_raise(origin, "{}: {}".format(origin, reason))
+        tango_raise("{}: {}".format(origin, reason), origin=origin)

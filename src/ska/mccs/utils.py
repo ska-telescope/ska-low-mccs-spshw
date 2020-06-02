@@ -5,7 +5,6 @@ from functools import wraps
 import inspect
 import json
 import jsonschema
-import warnings
 
 from tango import Except, ErrSeverity
 from tango.server import Device
@@ -194,4 +193,4 @@ class json_input:
         :type reason: string
 
         """
-        tango_raise("{}: {}".format(origin, reason))
+        tango_raise(origin, "{}: {}".format(origin, reason))

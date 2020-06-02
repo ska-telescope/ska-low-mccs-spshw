@@ -10,7 +10,8 @@ from tango import Except, ErrSeverity
 from tango.server import Device
 
 
-def tango_raise(msg, origin=None, reason="API_CommandFailed", severity=ErrSeverity.ERR):
+def tango_raise(msg, _origin=None, reason="API_CommandFailed",
+                severity=ErrSeverity.ERR):
     """Helper function to provide a concise way to throw `tango.Except.throw_exception`
 
     Example::
@@ -26,25 +27,25 @@ def tango_raise(msg, origin=None, reason="API_CommandFailed", severity=ErrSeveri
 
     :param msg: [description]
     :type msg: [type]
-    :param origin: the calling object name, defaults to None (autodetected)
+    :param _origin: the calling object name, defaults to None (autodetected)
                    Note that autodetection only works for class methods not e.g.
                    decorators
-    :type origin: str, optional
+    :type _origin: str, optional
     :param reason: the tango api DevError description string, defaults to
                      "API_CommandFailed"
     :type reason: str, optional
     :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
     :type severity: `tango.ErrSeverity`, optional
     """
-    if origin is None:
+    if _origin is None:
         frame = inspect.currentframe().f_back
         calling_method = frame.f_code.co_name
         calling_class = frame.f_locals["self"].__class__
         if Device not in inspect.getmro(calling_class):
             raise TypeError("Can only be used in a tango device instance")
         class_name = calling_class.__name__
-        origin = f"{class_name}.{calling_method}()"
-    Except.throw_exception(reason, msg, origin, severity)
+        _origin = f"{class_name}.{calling_method}()"
+    Except.throw_exception(reason, msg, _origin, severity)
 
 
 def call_with_json(func, **kwargs):
@@ -193,4 +194,4 @@ class json_input:
         :type reason: string
 
         """
-        tango_raise("{}: {}".format(origin, reason), origin=origin)
+        tango_raise("{}: {}".format(origin, reason), _origin=origin)

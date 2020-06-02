@@ -67,7 +67,7 @@ class TestUtils:
         with optional parameters
         """
         with pytest.raises(DevFailed) as ex:
-            tango_raise("Raise Me", origin=origin, severity=severity)
+            tango_raise("Raise Me", _origin=origin, severity=severity)
         assert ex.value.args[0].desc == "Raise Me"
         assert ex.value.args[0].reason == "API_CommandFailed"
         assert ex.value.args[0].origin == origin

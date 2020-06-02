@@ -17,7 +17,7 @@ import numpy
 
 # PyTango imports
 import tango
-from tango import DebugIt, DevState, Except, ErrSeverity
+from tango import DebugIt, DevState
 from tango.server import attribute, command, device_property
 
 # Additional import
@@ -345,7 +345,7 @@ class MccsMaster(SKAMaster):
 
         release_mask = numpy.logical_and(
             self._station_allocated == subarray_id,
-            numpy.logical_not(station_allocation)
+            numpy.logical_not(station_allocation),
         )
         if numpy.any(release_mask):
             stations_to_release = list(self._station_fqdns[release_mask])

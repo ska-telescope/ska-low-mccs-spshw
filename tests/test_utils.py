@@ -38,7 +38,7 @@ class TestUtils:
         """
         with DeviceTestContext(DummyDevice) as tango_device:
             with pytest.raises(DevFailed) as ex:
-                assert tango_device.method_to_raise()
+                tango_device.method_to_raise()
             assert ex.value.args[0].desc == "raise me"
             assert ex.value.args[0].reason == "API_CommandFailed"
             assert ex.value.args[0].origin == "DummyDevice.method_to_raise()"
@@ -56,7 +56,7 @@ class TestUtils:
 
         with pytest.raises(TypeError):
             nondevice = NonDevice()
-            assert nondevice.illegal_use()
+            nondevice.illegal_use()
 
     @pytest.mark.parametrize(
         "origin,severity", [("here()", ErrSeverity.ERR), ("there()", ErrSeverity.WARN)]

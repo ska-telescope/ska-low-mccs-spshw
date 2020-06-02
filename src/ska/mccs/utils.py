@@ -12,7 +12,7 @@ from tango.server import Device
 
 
 def tango_raise(msg, origin=None, reason="API_CommandFailed", severity=ErrSeverity.ERR):
-    """Helper function to concisely way to throw `tango.Except.throw_exception`
+    """Helper function to provide a concise way to throw `tango.Except.throw_exception`
 
     Example::
 

@@ -22,7 +22,7 @@ from ska.base.control_model import (
     TestMode,
 )
 from ska.mccs import release
-from ska.mccs.utils import call_with_json
+from ska.mccs.utils import call_with_json, tango_raise
 
 
 # pylint: disable=invalid-name
@@ -184,9 +184,7 @@ class TestMccsMaster:
         # Can't allocate to an array that hasn't been enabled
         with pytest.raises(tango.DevFailed):
             call_with_json(
-                master.Allocate,
-                subarray_id=1,
-                stations=["low/elt/station_1"],
+                master.Allocate, subarray_id=1, stations=["low/elt/station_1"],
             )
 
         # check no side-effect to failure
@@ -203,9 +201,7 @@ class TestMccsMaster:
 
         # allocate station_1 to subarray_1
         call_with_json(
-            master.Allocate,
-            subarray_id=1,
-            stations=["low/elt/station_1"],
+            master.Allocate, subarray_id=1, stations=["low/elt/station_1"],
         )
 
         # check that the mock subarray_1 was told to assign that resource
@@ -225,9 +221,7 @@ class TestMccsMaster:
         # allocated to subarray 1
         with pytest.raises(tango.DevFailed):
             call_with_json(
-                master.Allocate,
-                subarray_id=2,
-                stations=["low/elt/station_1"],
+                master.Allocate, subarray_id=2, stations=["low/elt/station_1"],
             )
 
         # check no side-effects
@@ -263,9 +257,7 @@ class TestMccsMaster:
         # allocating station 2 to subarray 1 should succeed, because the
         # it only requires resource release
         call_with_json(
-            master.Allocate,
-            subarray_id=1,
-            stations=["low/elt/station_2"],
+            master.Allocate, subarray_id=1, stations=["low/elt/station_2"],
         )
 
         # check
@@ -322,18 +314,10 @@ class TestMccsMaster:
         master.EnableSubarray(2)
 
         # allocate stations 1 to subarray 1
-        call_with_json(
-            master.Allocate,
-            subarray_id=1,
-            stations=["low/elt/station_1"]
-        )
+        call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
 
         # allocate station 2 to subarray 2
-        call_with_json(
-            master.Allocate,
-            subarray_id=2,
-            stations=["low/elt/station_2"]
-        )
+        call_with_json(master.Allocate, subarray_id=2, stations=["low/elt/station_2"])
 
         # check initial state
         assert mock_station_1.subarrayId == 1
@@ -353,13 +337,11 @@ class TestMccsMaster:
 
         # tell mock_subarray_2 that it is an empty subarray that should
         # raise an exception if ReleaseAllResources is called on it.
-        mock_subarray_2.ReleaseAllResources.side_effect = \
-            lambda: tango.Except.throw_exception(
-                "MockException",
-                "Command disallowed when obsState==IDLE",
-                "Subarray.ReleaseAllResources()",
-                tango.ErrSeverity.ERR
-            )
+        mock_subarray_2.ReleaseAllResources.side_effect = lambda: tango_raise(
+            "Command disallowed when obsState==IDLE",
+            origin="Subarray.ReleaseAllResources()",
+            reason="MockException",
+        )
 
         # releasing resources of unresourced subarray_2 should fail
         with pytest.raises(tango.DevFailed):

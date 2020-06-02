@@ -2,9 +2,50 @@
 Module for MCCS utils
 """
 from functools import wraps
+import inspect
 import json
 import jsonschema
+
 from tango import Except, ErrSeverity
+from tango.server import Device
+
+
+def tango_raise(msg, reason="API_CommandFailed", severity=ErrSeverity.ERR,
+                _origin=None):
+    """Helper function to provide a concise way to throw `tango.Except.throw_exception`
+
+    Example::
+
+        class MyDevice(Device):
+            @command
+            def some_command(self):
+                if condition:
+                    pass
+                else:
+                    tango_throw("Condition not true")
+
+
+    :param msg: [description]
+    :type msg: [type]
+    :param reason: the tango api DevError description string, defaults to
+                     "API_CommandFailed"
+    :type reason: str, optional
+    :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
+    :type severity: `tango.ErrSeverity`, optional
+    :param _origin: the calling object name, defaults to None (autodetected)
+                   Note that autodetection only works for class methods not e.g.
+                   decorators
+    :type _origin: str, optional
+    """
+    if _origin is None:
+        frame = inspect.currentframe().f_back
+        calling_method = frame.f_code.co_name
+        calling_class = frame.f_locals["self"].__class__
+        if Device not in inspect.getmro(calling_class):
+            raise TypeError("Can only be used in a tango device instance")
+        class_name = calling_class.__name__
+        _origin = f"{class_name}.{calling_method}()"
+    Except.throw_exception(reason, msg, _origin, severity)
 
 
 def call_with_json(func, **kwargs):
@@ -47,6 +88,11 @@ class json_input:
         JSON should be validated. Not working at the moment, so leave it
         None.
     :ptype: string
+    :raises FileNotFoundException: if no file is found at the schema
+        path provided
+    :raises json.JSONDecodeError: if the file at the specified schema
+        path is not valid JSON
+
     :example: Conceptually, MccsMaster.Allocate() takes as arguments a
         subarray id, an array of stations, and an array of tiles. In
         practice, however, these arguments are encoded into a JSON
@@ -68,25 +114,10 @@ class json_input:
         self.schema = None
 
         if schema_path is not None:
-            try:
-                with open(schema_path, 'r') as schema_file:
-                    schema_string = schema_file.read()
-            except FileNotFoundError:
-                self._throw(
-                    "@json_input",
-                    "JSON schema file not found at {}".format(schema_path)
-                )
+            with open(schema_path, "r") as schema_file:
+                schema_string = schema_file.read()
 
-            try:
-                self.schema = json.loads(schema_string)
-            except json.JSONDecodeError as error:
-                self._throw(
-                    "@json_input",
-                    "Invalid JSON. Input is:\n{}\nParser error is\n{}".format(
-                        schema_string,
-                        error
-                    )
-                )
+            self.schema = json.loads(schema_string)
 
     def __call__(self, func):
         """
@@ -98,13 +129,12 @@ class json_input:
         :type func: function
 
         """
+
         @wraps(func)
         def wrapped(cls, json_string):
-            json_object = self._parse(
-                json_string,
-                func.__name__
-            )
+            json_object = self._parse(json_string, func.__name__)
             return func(cls, **json_object)
+
         return wrapped
 
     def _parse(self, json_string, origin):
@@ -122,44 +152,9 @@ class json_input:
             does not validate against a schema
 
         """
-        try:
-            json_object = json.loads(json_string)
-        except json.JSONDecodeError as error:
-            self._throw(
-                origin,
-                "Not valid JSON. Input is:\n{}\nParser error is\n{}".format(
-                    json_string,
-                    error
-                )
-            )
-        if self.schema is None:
-            return json_object
+        json_object = json.loads(json_string)
 
-        try:
+        if self.schema is not None:
             jsonschema.validate(json_object, self.schema)
-        except jsonschema.ValidationError as error:
-            self._throw(
-                origin,
-                "JSON object does not validate: {}".format(error.message)
-            )
 
         return json_object
-
-    def _throw(self, origin, reason):
-        """
-        Helper method that constructs and throws a ``Tango.DevFailed``
-        exception.
-
-        :param origin: the origin of the error; typically the name of
-            the command that the check was being conducted for.
-        :type origin: string
-        :param reason: the reason for the error
-        :type reason: string
-
-        """
-        Except.throw_exception(
-            "API_CommandFailed",
-            "{}: {}".format(origin, reason),
-            origin,
-            ErrSeverity.ERR
-        )

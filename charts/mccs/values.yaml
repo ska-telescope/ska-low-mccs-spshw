@@ -1,4 +1,4 @@
-# Default values for mccs (lfaa-lmc-prototype)
+# Default values for mccs (ska-low-mccs)
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -10,7 +10,7 @@ mccs:
   enabled: true
   image:
     registry: nexus.engageska-portugal.pt/ska-docker
-    image: lfaa-mccs-prototype
+    image: ska-low-mccs
     tag: latest
     pullPolicy: IfNotPresent
 

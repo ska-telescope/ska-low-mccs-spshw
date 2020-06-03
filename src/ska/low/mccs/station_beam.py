@@ -20,7 +20,7 @@ from tango.server import device_property
 
 # Additional imports
 from ska.base import SKAObsDevice
-import ska.mccs.release as release
+import ska.low.mccs.release as release
 
 
 class MccsStationBeam(SKAObsDevice):

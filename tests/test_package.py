@@ -1,5 +1,5 @@
 """Test for release module"""
-from ska.mccs import release
+from ska.low.mccs import release
 
 
 def test_release():

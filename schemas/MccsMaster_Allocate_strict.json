@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/schema#",
-    "$id": "ska.mccs.MccsMaster.Allocate.json",
+    "$id": "ska.low.mccs.MccsMaster.Allocate.json",
     "type": "object",
     "properties": {
         "subarray_id": {

@@ -7,7 +7,7 @@ import setuptools
 # pylint: disable=invalid-name
 setup_dir = os.path.dirname(os.path.abspath(__file__))
 release_module = {}
-release_filename = os.path.join(setup_dir, 'src', 'ska', 'mccs', 'release.py')
+release_filename = os.path.join(setup_dir, 'src', 'ska', 'low', 'mccs', 'release.py')
 # pylint: disable=exec-used
 exec(open(release_filename).read(), release_module)
 
@@ -34,13 +34,13 @@ setuptools.setup(
     keywords="lmc mccs tango ska",
     entry_points={
         "console_scripts": [
-            "MccsMaster=ska.mccs.master:main",
-            "MccsSubarray=ska.mccs.subarray:main",
-            "MccsStation=ska.mccs.station:main",
-            "MccsStationBeam=ska.mccs.station_beam:main",
-            "MccsTile=ska.mccs.tile:main",
-            "mccs-master=ska.mccs.master_cli:main",
-            "mccs-tile=ska.mccs.tile_cli:main"
+            "MccsMaster=ska.low.mccs.master:main",
+            "MccsSubarray=ska.low.mccs.subarray:main",
+            "MccsStation=ska.low.mccs.station:main",
+            "MccsStationBeam=ska.low.mccs.station_beam:main",
+            "MccsTile=ska.low.mccs.tile:main",
+            "mccs-master=ska.low.mccs.master_cli:main",
+            "mccs-tile=ska.low.mccs.tile_cli:main"
         ]
     },
     install_requires=["lmcbaseclasses >= 0.5.3",

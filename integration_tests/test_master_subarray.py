@@ -33,18 +33,16 @@ master.Allocate(
 
 master.EnableSubarray(1)
 
-master.Allocate(
-    '{"subarray_id": 1, "stations": ["low/elt/station_1"]}'
-)
+master.Allocate('{"subarray_id": 1, "stations": ["low/elt/station_1"]}')
 
 subarray.stationFQDNs  # ('low/elt/station_1')
-station_1.subarray_id # 1 - this is allocated to subarray 1
-tile_1.subarray_id # 1 - this is attached to station 1, so allocated to subarray 1
-tile_2.subarray_id # 1 - this is attached to station 1, so allocated to subarray 1
+station_1.subarray_id  # 1 - this is allocated to subarray 1
+tile_1.subarray_id  # 1 - this is attached to station 1, so allocated to subarray 1
+tile_2.subarray_id  # 1 - this is attached to station 1, so allocated to subarray 1
 
-station_2.subarray_id # 0 - this is unallocated
-tile_1.subarray_id # 1 - this is attached to station 2, so unallocated
-tile_2.subarray_id # 1 - this is attached to station 2, so unallocated
+station_2.subarray_id  # 0 - this is unallocated
+tile_1.subarray_id  # 1 - this is attached to station 2, so unallocated
+tile_2.subarray_id  # 1 - this is attached to station 2, so unallocated
 
 master.Release(1)
 subarray.stationFQDNs  # empty

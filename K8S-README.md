@@ -78,7 +78,7 @@ To run and test from a local MCCS docker image run:
 ```bash
 make delete
 eval $(minikube docker-env)
-docker build -t nexus.engageska-portugal.pt/ska-docker/lfaa-mccs-prototype:latest .
+docker build -t nexus.engageska-portugal.pt/ska-docker/ska-low-mccs:latest .
 make deploy
 ```
 
@@ -88,7 +88,7 @@ Example output
 ### Logs
 
 ```
-ska-mccs:lfaa-lmc-prototype$ make logs
+ska-mccs:ska-low-mccs$ make logs
 ---------------------------------------------------
 Main Pod logs for pod/mccs-mccs-test
 ---------------------------------------------------
@@ -144,7 +144,7 @@ Container: mccstile47
 itango
 
 ```
-ska-mccs:lfaa-lmc-prototype$ make itango
+ska-mccs:ska-low-mccs$ make itango
 kubectl exec -it -n integration itango-tango-base-test  -- itango3
 ITango 9.3.1 -- An interactive Tango client.
 

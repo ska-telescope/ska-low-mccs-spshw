@@ -17,7 +17,7 @@ import types
 import functools
 import fire
 import tango
-from ska.mccs.utils import call_with_json
+from ska.low.mccs.utils import call_with_json
 
 
 class CliMeta(type):

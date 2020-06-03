@@ -1,7 +1,7 @@
 ########################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the SKA lfaa-lmc-prototype project
+# This file is part of the SKA ska-low-mccs project
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
@@ -18,8 +18,8 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.mccs import release
-from ska.mccs.utils import call_with_json
+from ska.low.mccs import release
+from ska.low.mccs.utils import call_with_json
 
 
 # pylint: disable=invalid-name

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the SKA Software lfaa-lmc-prototype project
+# This file is part of the SKA Software ska-low-mccs project
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
@@ -13,7 +13,7 @@ __all__ = ["ReturnCode", "device_check"]
 
 import enum
 from functools import wraps
-from ska.mccs.utils import tango_raise
+from ska.low.mccs.utils import tango_raise
 
 
 class ReturnCode(enum.IntEnum):

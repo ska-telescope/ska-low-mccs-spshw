@@ -4,6 +4,6 @@ MCCS Station Beam
 .. toctree::
    :maxdepth: 2
 
-.. autoclass:: ska.mccs.MccsStationBeam
+.. autoclass:: ska.low.mccs.MccsStationBeam
    :members:
 

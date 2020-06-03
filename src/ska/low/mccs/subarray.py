@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the SKA Software lfaa-lmc-prototype project
+# This file is part of the SKA Software ska-low-mccs project
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
@@ -23,10 +23,10 @@ from tango import DeviceProxy
 # Additional import
 from ska.base import SKASubarray
 from ska.base.control_model import AdminMode, ObsState
-import ska.mccs.release as release
-from ska.mccs.control_model import ReturnCode
-from ska.mccs.control_model import device_check
-from ska.mccs.utils import json_input
+import ska.low.mccs.release as release
+from ska.low.mccs.control_model import ReturnCode
+from ska.low.mccs.control_model import device_check
+from ska.low.mccs.utils import json_input
 
 
 class MccsSubarray(SKASubarray):

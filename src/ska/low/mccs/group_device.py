@@ -19,7 +19,7 @@ from tango import DevState
 
 # Additional import
 from .device import MccsDevice
-import ska.mccs.release as release
+import ska.low.mccs.release as release
 
 
 class MccsGroupDevice(MccsDevice):

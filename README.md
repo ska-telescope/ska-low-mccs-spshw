@@ -3,11 +3,11 @@ This project is developing the Local Monitoring and Control (LMC) prototype for 
 Documentation
 -------------
 
-[![Documentation Status](https://readthedocs.org/projects/lfaa-lmc-prototype/badge/?version=latest)](https://developer.skatelescope.org/projects/lfaa-lmc-prototype/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/ska-low-mccs/badge/?version=latest)](https://developer.skatelescope.org/projects/ska-low-mccs/en/latest/?badge=latest)
 
 The documentation for this project, including how to get started with it, can be found in the `docs` folder, and can be better browsed in the SKA development portal:
 
- * [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/lfaa-lmc-prototype/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")
+ * [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/ska-low-mccs/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")
 
 How to use
 ----------
@@ -27,14 +27,14 @@ $ cd /usr/src/ska-docker/docker-compose
 $ make start itango #not needed if it already shows in "make status"
 $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
   itango python3 \
-  /hosthome/lfaa-lmc-prototype/src/ska/mccs/MccsMaster.py -?
+  /hosthome/ska-low-mccs/src/ska/mccs/MccsMaster.py -?
 usage :  MccsMaster instance_name [-v[trace level]] [-nodb [-dlist <device name list>]]
 Instance name defined in database for server MccsMaster :
 $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
   itango tango_admin --add-server MccsMaster/01 MccsMaster lfaa/master/01
 $ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
   itango python3 \
-  /hosthome/lfaa-lmc-prototype/src/ska/mccs/MccsMaster.py 01
+  /hosthome/ska-low-mccs/src/ska/mccs/MccsMaster.py 01
 1|2020-03-13T05:27:15.844Z|INFO|MainThread|write_loggingLevel|SKABaseDevice.py#490|tango-device:lfaa/master/01|Logging level set to LoggingLevel.INFO on Python and Tango loggers
 1|2020-03-13T05:27:15.845Z|INFO|MainThread|update_logging_handlers|SKABaseDevice.py#169|tango-device:lfaa/master/01|Logging targets set to []
 1|2020-03-13T05:27:15.846Z|INFO|MainThread|init_device|SKABaseDevice.py#399|tango-device:lfaa/master/01|No Groups loaded for device: lfaa/master/01

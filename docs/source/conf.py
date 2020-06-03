@@ -135,7 +135,7 @@ html_context = {
     "logo": "img/logo.jpg",
     "theme_logo_only": True,
     "gitlab_user": "ska-telescope",  # Username
-    "gitlab_repo": "lfaa-lmc-prototype",  # Repo name
+    "gitlab_repo": "ska-low-mccs",  # Repo name
     "gitlab_version": "master",  # Version
     "conf_py_path": "/docs/source/",  # Path in the checkout to the docs root
 }

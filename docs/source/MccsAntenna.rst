@@ -4,6 +4,6 @@ MCCS Antenna
 .. toctree::
    :maxdepth: 2
 
-.. autoclass:: ska.mccs.MccsAntenna
+.. autoclass:: ska.low.mccs.MccsAntenna
    :members:
 

@@ -4,6 +4,6 @@ MCCS Tile
 .. toctree::
    :maxdepth: 2
 
-.. autoclass:: ska.mccs.MccsTile
+.. autoclass:: ska.low.mccs.MccsTile
    :members:
 

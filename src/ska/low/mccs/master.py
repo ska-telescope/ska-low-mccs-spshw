@@ -24,8 +24,8 @@ from tango.server import attribute, command, device_property
 from ska.base import SKAMaster
 from ska.base.control_model import AdminMode
 
-from ska.mccs.utils import call_with_json, json_input, tango_raise
-import ska.mccs.release as release
+from ska.low.mccs.utils import call_with_json, json_input, tango_raise
+import ska.low.mccs.release as release
 
 
 class MccsMaster(SKAMaster):

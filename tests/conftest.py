@@ -1,5 +1,5 @@
 """
-A module defining a list of fixtures that are shared across all ska.mccs tests.
+A module defining a list of fixtures that are shared across all ska.low.mccs tests.
 """
 from collections import defaultdict
 import importlib
@@ -9,7 +9,7 @@ import tango
 from tango.test_context import (DeviceTestContext,
                                 MultiDeviceTestContext,
                                 get_host_ip)
-from ska.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
+from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 
 
 @pytest.fixture(scope="function")
@@ -41,7 +41,7 @@ def tango_device(request):
     # first "test_" to get the module name
     test_class_name = request.cls.__name__
     class_name = test_class_name.split("Test", 1)[-1]
-    module = importlib.import_module("ska.mccs", class_name)
+    module = importlib.import_module("ska.low.mccs", class_name)
     class_type = getattr(module, class_name)
 
     with DeviceTestContext(

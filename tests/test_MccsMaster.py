@@ -21,8 +21,8 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.mccs import release
-from ska.mccs.utils import call_with_json, tango_raise
+from ska.low.mccs import release
+from ska.low.mccs.utils import call_with_json, tango_raise
 
 
 # pylint: disable=invalid-name

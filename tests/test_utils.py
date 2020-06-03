@@ -6,7 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""contains the tests for the ska.mccs.utils module"""
+"""contains the tests for the ska.low.mccs.utils module"""
 import json
 import jsonschema
 import pytest
@@ -14,7 +14,7 @@ from tango import DevFailed, ErrSeverity
 from tango.server import Device, command
 from tango.test_context import DeviceTestContext
 
-from ska.mccs.utils import call_with_json, json_input, tango_raise
+from ska.low.mccs.utils import call_with_json, json_input, tango_raise
 
 
 class DummyDevice(Device):
@@ -29,7 +29,7 @@ class DummyDevice(Device):
 # pylint: disable=invalid-name
 class TestUtils:
     """
-    Test cases for ska.mccs.utils module
+    Test cases for ska.low.mccs.utils module
     """
 
     def test_tango_raise_device(self):

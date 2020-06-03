@@ -21,8 +21,8 @@ from tango.server import device_property
 
 # additional imports
 from ska.base import SKAObsDevice
-from ska.mccs import MccsGroupDevice
-import ska.mccs.release as release
+from ska.low.mccs import MccsGroupDevice
+import ska.low.mccs.release as release
 
 
 class MccsStation(SKAObsDevice, MccsGroupDevice):

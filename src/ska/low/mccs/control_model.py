@@ -13,7 +13,7 @@ __all__ = ["ReturnCode", "device_check"]
 
 import enum
 from functools import wraps
-from ska.mccs.utils import tango_raise
+from ska.low.mccs.utils import tango_raise
 
 
 class ReturnCode(enum.IntEnum):

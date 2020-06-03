@@ -3,7 +3,7 @@ import pytest
 from tango import DevFailed, DevSource, DevState
 
 from ska.base.control_model import AdminMode
-from ska.mccs.utils import call_with_json
+from ska.low.mccs.utils import call_with_json
 
 
 class TestMccsIntegration:

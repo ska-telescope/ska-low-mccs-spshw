@@ -12,7 +12,7 @@
 
 from tango import DevState
 from ska.base.control_model import LoggingLevel
-from ska.mccs import release
+from ska.low.mccs import release
 
 
 class TestMccsDevice(object):

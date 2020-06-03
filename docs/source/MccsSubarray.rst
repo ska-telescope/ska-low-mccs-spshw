@@ -4,6 +4,6 @@ MCCS Subarray
 .. toctree::
    :maxdepth: 2
 
-.. autoclass:: ska.mccs.MccsSubarray
+.. autoclass:: ska.low.mccs.MccsSubarray
    :members:
 

@@ -8,166 +8,172 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""Contain the tests for the Mccs Base Device."""
+"""
+This module contains the tests for MccsDevice.
+"""
 
+import pytest
 from tango import DevState
 from ska.base.control_model import LoggingLevel
-from ska.low.mccs import release
+from ska.low.mccs import MccsDevice, release
 
 
-class TestMccsDevice(object):
-    """Test case for packet generation."""
-
-    properties = {
+device_info = {
+    "class": MccsDevice,
+    "properties": {
         "SkaLevel": "4",
         "GroupDefinitions": "",
         "LoggingLevelDefault": "4",
-        "LoggingTargetsDefault": "",
+        # "LoggingTargetsDefault": "",
     }
+}
 
-    @classmethod
-    def mocking(cls):
-        """Mock external libraries."""
-        # Example : Mock numpy
-        # cls.numpy = MccsDevice.numpy = MagicMock()
 
-    def test_properties(self, tango_device):
-        # Test the properties
+class TestMccsDevice(object):
+    """
+    Test class for MccsDevice tests.
+    """
+
+    @pytest.mark.skip(reason="Not implemented")
+    def test_properties(self, device_under_test):
+        """
+        Test for device properties. Not implemented.
+        """
         pass
 
-    def test_State(self, tango_device):
+    def test_State(self, device_under_test):
         """Test for State"""
-        assert tango_device.State() == DevState.UNKNOWN
+        assert device_under_test.State() == DevState.UNKNOWN
 
-    def test_Status(self, tango_device):
+    def test_Status(self, device_under_test):
         """Test for Status"""
         status = "The device is in UNKNOWN state."
-        assert tango_device.Status() == status
+        assert device_under_test.Status() == status
 
-    def test_GetVersionInfo(self, tango_device):
+    def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
-        info = release.get_release_info(tango_device.info().dev_class)
-        assert tango_device.GetVersionInfo() == [info]
+        info = release.get_release_info(device_under_test.info().dev_class)
+        assert device_under_test.GetVersionInfo() == [info]
 
-    def test_Reset(self, tango_device):
+    def test_Reset(self, device_under_test):
         """Test for Reset"""
-        assert tango_device.Reset() is None
+        assert device_under_test.Reset() is None
 
-    def test_ExceptionCallback(self, tango_device):
+    def test_ExceptionCallback(self, device_under_test):
         """Test for ExceptionCallback"""
-        assert tango_device.ExceptionCallback() is None
+        assert device_under_test.ExceptionCallback() is None
 
-    def test_DefaultAlarmOnCallback(self, tango_device):
+    def test_DefaultAlarmOnCallback(self, device_under_test):
         """Test for DefaultAlarmOnCallback"""
-        assert tango_device.DefaultAlarmOnCallback() is None
+        assert device_under_test.DefaultAlarmOnCallback() is None
 
-    def test_DefaultAlarmOffCallback(self, tango_device):
+    def test_DefaultAlarmOffCallback(self, device_under_test):
         """Test for DefaultAlarmOffCallback"""
-        assert tango_device.DefaultAlarmOffCallback() is None
+        assert device_under_test.DefaultAlarmOffCallback() is None
 
-    def test_GetFullReport(self, tango_device):
+    def test_GetFullReport(self, device_under_test):
         """Test for GetFullReport"""
-        assert tango_device.GetFullReport() is None
+        assert device_under_test.GetFullReport() is None
 
-    def test_GetCommandReport(self, tango_device):
+    def test_GetCommandReport(self, device_under_test):
         """Test for GetCommandReport"""
-        assert tango_device.GetCommandReport() == [""]
+        assert device_under_test.GetCommandReport() == [""]
 
-    def test_GetAttributeReport(self, tango_device):
+    def test_GetAttributeReport(self, device_under_test):
         """Test for GetAttributeReport"""
-        assert tango_device.GetAttributeReport() == [""]
+        assert device_under_test.GetAttributeReport() == [""]
 
-    def test_ConstructDeviceProxyAddress(self, tango_device):
+    def test_ConstructDeviceProxyAddress(self, device_under_test):
         """Test for ConstructDeviceProxyAddress"""
-        assert tango_device.ConstructDeviceProxyAddress("") is None
+        assert device_under_test.ConstructDeviceProxyAddress("") is None
 
-    def test_buildState(self, tango_device):
+    def test_buildState(self, device_under_test):
         """Test for buildState"""
-        print(tango_device.buildState)
-        assert tango_device.buildState == (
+        print(device_under_test.buildState)
+        assert device_under_test.buildState == (
             ", ".join((release.name, release.version, release.description))
         )  # noqa: E501
 
-    def test_loggingLevel(self, tango_device):
+    def test_loggingLevel(self, device_under_test):
         """Test for loggingLevel"""
-        assert tango_device.loggingLevel == LoggingLevel.INFO
+        assert device_under_test.loggingLevel == LoggingLevel.INFO
 
-    def test_healthState(self, tango_device):
+    def test_healthState(self, device_under_test):
         """Test for healthState"""
-        assert tango_device.healthState == 0
+        assert device_under_test.healthState == 0
 
-    def test_adminMode(self, tango_device):
+    def test_adminMode(self, device_under_test):
         """Test for adminMode"""
-        assert tango_device.adminMode == 0
+        assert device_under_test.adminMode == 0
 
-    def test_controlMode(self, tango_device):
+    def test_controlMode(self, device_under_test):
         """Test for controlMode"""
-        assert tango_device.controlMode == 0
+        assert device_under_test.controlMode == 0
 
-    def test_simulationMode(self, tango_device):
+    def test_simulationMode(self, device_under_test):
         """Test for simulationMode"""
-        assert tango_device.simulationMode == 0
+        assert device_under_test.simulationMode == 0
 
-    def test_testMode(self, tango_device):
+    def test_testMode(self, device_under_test):
         """Test for testMode"""
-        assert tango_device.testMode == 0
+        assert device_under_test.testMode == 0
 
-    def test_isHardwareDevice(self, tango_device):
+    def test_isHardwareDevice(self, device_under_test):
         """Test for isHardwareDevice"""
-        assert tango_device.isHardwareDevice is False
+        assert device_under_test.isHardwareDevice is False
 
-    def test_diagMode(self, tango_device):
+    def test_diagMode(self, device_under_test):
         """Test for diagMode"""
-        assert tango_device.diagMode is False
+        assert device_under_test.diagMode is False
 
-    def test_calledUndefinedDevice(self, tango_device):
+    def test_calledUndefinedDevice(self, device_under_test):
         """Test for calledUndefinedDevice"""
-        assert tango_device.calledUndefinedDevice is False
+        assert device_under_test.calledUndefinedDevice is False
 
-    def test_calledDeadServer(self, tango_device):
+    def test_calledDeadServer(self, device_under_test):
         """Test for calledDeadServer"""
-        assert tango_device.calledDeadServer is False
+        assert device_under_test.calledDeadServer is False
 
-    def test_detectedDeadServer(self, tango_device):
+    def test_detectedDeadServer(self, device_under_test):
         """Test for detectedDeadServer"""
-        assert tango_device.detectedDeadServer is False
+        assert device_under_test.detectedDeadServer is False
 
-    def test_calledNonRunningDevice(self, tango_device):
+    def test_calledNonRunningDevice(self, device_under_test):
         """Test for calledNonRunningDevice"""
-        assert tango_device.calledNonRunningDevice is False
+        assert device_under_test.calledNonRunningDevice is False
 
-    def test_callTimeout(self, tango_device):
+    def test_callTimeout(self, device_under_test):
         """Test for callTimeout"""
-        assert tango_device.callTimeout is False
+        assert device_under_test.callTimeout is False
 
-    def test_callCommFailed(self, tango_device):
+    def test_callCommFailed(self, device_under_test):
         """Test for callCommFailed"""
-        assert tango_device.callCommFailed is False
+        assert device_under_test.callCommFailed is False
 
-    def test_invalidAsynId(self, tango_device):
+    def test_invalidAsynId(self, device_under_test):
         """Test for invalidAsynId"""
-        assert tango_device.invalidAsynId is False
+        assert device_under_test.invalidAsynId is False
 
-    def test_calledInexistentCallback(self, tango_device):
+    def test_calledInexistentCallback(self, device_under_test):
         """Test for calledInexistentCalback"""
-        assert tango_device.calledInexistentCallback is False
+        assert device_under_test.calledInexistentCallback is False
 
-    def test_requestIdMismatch(self, tango_device):
+    def test_requestIdMismatch(self, device_under_test):
         """Test for requestIdMismatch"""
-        assert tango_device.requestIdMismatch is False
+        assert device_under_test.requestIdMismatch is False
 
-    def test_expectedReplyNotReady(self, tango_device):
+    def test_expectedReplyNotReady(self, device_under_test):
         """Test for expectedReplyNotReady"""
-        assert tango_device.expectedReplyNotReady is False
+        assert device_under_test.expectedReplyNotReady is False
 
-    def test_experiencedSubscriptionFailure(self, tango_device):
+    def test_experiencedSubscriptionFailure(self, device_under_test):
         """Test for experiencedSubscriptionFailure"""
-        assert tango_device.experiencedSubscriptionFailure is False
+        assert device_under_test.experiencedSubscriptionFailure is False
 
-    def test_invalidEventId(self, tango_device):
+    def test_invalidEventId(self, device_under_test):
         """Test for invalidEventId"""
-        assert tango_device.invalidEventId is False
+        assert device_under_test.invalidEventId is False
 
-    def test_loggingTargets(self, tango_device):
+    def test_loggingTargets(self, device_under_test):
         """Test for loggingTargets"""
-        assert tango_device.loggingTargets == ('tango::logger',)
+        assert device_under_test.loggingTargets == ('tango::logger',)

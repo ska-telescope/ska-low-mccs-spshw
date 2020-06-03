@@ -1,72 +1,77 @@
 """
-A module defining a list of fixtures that are shared across all ska.low.mccs tests.
+A module defining pytest fixtures for testing ska.low.mccs.
 """
 from collections import defaultdict
-import importlib
 import pytest
 import socket
 import tango
 from tango.test_context import (DeviceTestContext,
                                 MultiDeviceTestContext,
                                 get_host_ip)
-from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 
 
-@pytest.fixture(scope="function")
-def tango_device(request):
+@pytest.fixture(scope="module")
+def device_info(request):
     """
-    Creates and returns a DeviceProxy under a DeviceTestContext.
+    Pytest fixture that retrieves the `device_info` (note singular
+    "device") attribute from the module under test. The `device_info`
+    attribute contains information about the device under test, such as
+    property values, necessary to stand up that device in a
+    tango.DeviceTestContext for unit testing.
 
-    :param request: A request object gives access to the requesting test
+    :param request: A pytest object giving access to the requesting test
         context.
     :type request: _pytest.fixtures.SubRequest
     """
-    test_properties = {
-        "MccsMaster": {
-            "SkaLevel": "4",
-            "LoggingTargetsDefault": "",
-            "GroupDefinitions": "",
-            "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
-            "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
-        },
-        "MccsSubarray": {"CapabilityTypes": ["BAND1", "BAND2"]},
-        "MccsStation": {"TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
-        "MccsTile": {"AntennasPerTile": "16"},
-    }
-
-    # This fixture is used to decorate classes like "TestMccsMaster" or
-    # "TestMccsStation". We drop the first "Test" from the string to get the
-    # class name of the device under test.
-    # Similarly, the test module is like "test_MccsTile.py".  We drop the
-    # first "test_" to get the module name
-    test_class_name = request.cls.__name__
-    class_name = test_class_name.split("Test", 1)[-1]
-    module = importlib.import_module("ska.low.mccs", class_name)
-    class_type = getattr(module, class_name)
-
-    with DeviceTestContext(
-        class_type, properties=test_properties.get(class_name, {})
-    ) as tango_device:
-        yield tango_device
+    yield getattr(request.module, "device_info")
 
 
-@pytest.fixture(scope="function")
-def initialize_device(tango_device):
-    """Re-initializes the device.
-
-    Parameters
-    ----------
-    tango_device: tango.DeviceProxy
-        Context to run a device without a database.
+@pytest.fixture(scope="module")
+def devices_info(request):
     """
-    yield tango_device.Init()
+    Pytest fixture that retrieves the `devices_info` (note plural
+    "devices") attribute from the module under test. The `devices_info`
+    attribute contains information about the multiple devices, necessary
+    to stand up those devices in a tango.MultiDeviceTestContext for
+    integration testing.
+
+    :param request: A pytest object giving access to the requesting test
+        context.
+    :type request: _pytest.fixtures.SubRequest
+    """
+    yield getattr(request.module, "devices_info")
 
 
 @pytest.fixture(scope="function")
-def tango_context(mocker):
+def device_under_test(device_info):
+    """
+    Creates and returns a DeviceProxy under a DeviceTestContext.
+
+    :param device_info: Information about the device under test that is
+        needed to stand the device up in a DeviceTestContext, such as
+        the device class and properties
+    :type device_info: dict
+    """
+    with DeviceTestContext(
+        device_info["class"],
+        properties=device_info["properties"]
+    ) as device_under_test:
+        yield device_under_test
+
+
+@pytest.fixture(scope="function")
+def device_context(mocker, devices_info):
     """
     Creates and returns a TANGO MultiDeviceTestContext object, with a
     tango.DeviceProxy patched to a work around a name resolving issue.
+
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: pytest wrapper
+    :param devices_info: Information about the devices under test that
+        are needed to stand the device up in a DeviceTestContext, such
+        as the device classes and properties
+    :type devices_info: dict
     """
     def _get_open_port():
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -89,84 +94,6 @@ def tango_context(mocker):
         )
     )
 
-    devices_info = [
-        {
-            "class": MccsMaster,
-            "devices": (
-                {
-                    "name": "low/elt/master",
-                    "properties": {
-                        "MccsSubarrays": ["low/elt/subarray_1",
-                                          "low/elt/subarray_2"],
-                        "MccsStations": ["low/elt/station_1",
-                                         "low/elt/station_2"],
-                        "MccsTiles": ["low/elt/tile_1",
-                                      "low/elt/tile_2",
-                                      "low/elt/tile_3",
-                                      "low/elt/tile_4"],
-                    }
-                },
-            )
-        },
-        {
-            "class": MccsSubarray,
-            "devices": [
-                {
-                    "name": "low/elt/subarray_1",
-                    "properties": {
-                    }
-                },
-                {
-                    "name": "low/elt/subarray_2",
-                    "properties": {
-                    }
-                }
-            ]
-        },
-        {
-            "class": MccsStation,
-            "devices": [
-                {
-                    "name": "low/elt/station_1",
-                    "properties": {
-                        "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]
-                    }
-                },
-                {
-                    "name": "low/elt/station_2",
-                    "properties": {
-                        "TileFQDNs": ["low/elt/tile_3", "low/elt/tile_4"]
-                    }
-                },
-            ]
-        },
-        {
-            "class": MccsTile,
-            "devices": [
-                {
-                    "name": "low/elt/tile_1",
-                    "properties": {
-                    }
-                },
-                {
-                    "name": "low/elt/tile_2",
-                    "properties": {
-                    }
-                },
-                {
-                    "name": "low/elt/tile_3",
-                    "properties": {
-                    }
-                },
-                {
-                    "name": "low/elt/tile_4",
-                    "properties": {
-                    }
-                },
-            ]
-        },
-    ]
-
     with MultiDeviceTestContext(devices_info, host=HOST, port=PORT) as context:
         yield context
 
@@ -177,6 +104,10 @@ def mock_device_proxy(mocker):
     A fixture that mocks tango.DeviceProxy and keeps each mock in a
     dictionary keyed by FQDN, so that every time you open a DeviceProxy
     to a device specified by the same FQDN, you get the same mock.
+
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: pytest wrapper
     """
     mock_device_proxies = defaultdict(mocker.Mock)
     mocker.patch(

@@ -8,9 +8,10 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-""" Test file for SKA MCCS Tile Device Server. """
+"""
+This module contains the tests for MccsTile.
+"""
 
-# Imports
 import io
 import json
 import time
@@ -18,151 +19,160 @@ import pytest
 import itertools
 import numpy as np
 from contextlib import redirect_stdout
-
-# PyTango imports
 from tango import DevState, DevFailed
+
+from ska.low.mccs import MccsTile
+
+device_info = {
+    "class": MccsTile,
+    "properties": {
+        "AntennasPerTile": "16",
+    }
+}
 
 
 class TestMccsTile(object):
     """
-    The Tile Device represents the TANGO interface to a Tile (TPM) unit.
+    Test class for MccsTile tests.
+
+    The Tile device represents the TANGO interface to a Tile (TPM) unit.
     Tests conducted herein aim to exercise the currently defined MCCS Tile
     device server methods.
     """
 
-    def test_State(self, tango_device):
+    def test_State(self, device_under_test):
         """Test for State"""
-        assert tango_device.state() == DevState.OFF
-        tango_device.Connect(True)
-        assert tango_device.state() == DevState.ON
+        assert device_under_test.state() == DevState.OFF
+        device_under_test.Connect(True)
+        assert device_under_test.state() == DevState.ON
 
-    def test_tileId(self, tango_device):
+    def test_tileId(self, device_under_test):
         """Test for the tileId attribute."""
-        assert tango_device.tileID == 0
-        tango_device.tileID = 9
-        assert tango_device.tileID == 9
+        assert device_under_test.tileID == 0
+        device_under_test.tileID = 9
+        assert device_under_test.tileID == 9
 
-    def test_logicalTileId(self, tango_device):
+    def test_logicalTileId(self, device_under_test):
         """Test for the logicalTpmId attribute."""
-        assert tango_device.logicalTileId == 0
-        tango_device.logicalTileId = 7
-        assert tango_device.logicalTileId == 7
+        assert device_under_test.logicalTileId == 0
+        device_under_test.logicalTileId = 7
+        assert device_under_test.logicalTileId == 7
 
-    def test_subarrayId(self, tango_device):
+    def test_subarrayId(self, device_under_test):
         """Test for the subarrayId attribute."""
-        assert tango_device.subarrayId == 0
-        tango_device.subarrayId = 3
-        assert tango_device.subarrayId == 3
+        assert device_under_test.subarrayId == 0
+        device_under_test.subarrayId = 3
+        assert device_under_test.subarrayId == 3
 
-    def test_stationId(self, tango_device):
+    def test_stationId(self, device_under_test):
         """Test for the stationId attribute."""
-        assert tango_device.stationId == 0
-        tango_device.stationId = 5
-        assert tango_device.stationId == 5
+        assert device_under_test.stationId == 0
+        device_under_test.stationId = 5
+        assert device_under_test.stationId == 5
 
-    def test_ipAddress(self, tango_device):
+    def test_ipAddress(self, device_under_test):
         """Test for the ipAddress attribute."""
-        assert tango_device.ipAddress == "0.0.0.0"
-        tango_device.ipAddress = "10.0.23.99"
-        assert tango_device.ipAddress == "10.0.23.99"
+        assert device_under_test.ipAddress == "0.0.0.0"
+        device_under_test.ipAddress = "10.0.23.99"
+        assert device_under_test.ipAddress == "10.0.23.99"
 
-    def test_lmcIp(self, tango_device):
+    def test_lmcIp(self, device_under_test):
         """Test for the lmcIp attribute"""
-        assert tango_device.lmcIp == "0.0.0.0"
-        tango_device.lmcIp = "10.0.23.50"
-        assert tango_device.lmcIp == "10.0.23.50"
+        assert device_under_test.lmcIp == "0.0.0.0"
+        device_under_test.lmcIp = "10.0.23.50"
+        assert device_under_test.lmcIp == "10.0.23.50"
 
-    def test_lmcPort(self, tango_device):
+    def test_lmcPort(self, device_under_test):
         """Test for the lmcPort attribute"""
-        assert tango_device.lmcPort == 30000
-        tango_device.lmcPort = 40000
-        assert tango_device.lmcPort == 40000
+        assert device_under_test.lmcPort == 30000
+        device_under_test.lmcPort = 40000
+        assert device_under_test.lmcPort == 40000
 
-    def test_cspDestinationIp(self, tango_device):
+    def test_cspDestinationIp(self, device_under_test):
         """Test for the cspDestinationIp attribute."""
-        assert tango_device.cspDestinationIp == ""
-        tango_device.cspDestinationIp = "10.0.23.56"
-        assert tango_device.cspDestinationIp == "10.0.23.56"
+        assert device_under_test.cspDestinationIp == ""
+        device_under_test.cspDestinationIp = "10.0.23.56"
+        assert device_under_test.cspDestinationIp == "10.0.23.56"
 
-    def test_cspDestinationMac(self, tango_device):
+    def test_cspDestinationMac(self, device_under_test):
         """Test for the cspDestinationMac attribute."""
-        assert tango_device.cspDestinationMac == ""
-        tango_device.cspDestinationMac = "10:fe:fa:06:0b:99"
-        assert tango_device.cspDestinationMac == "10:fe:fa:06:0b:99"
+        assert device_under_test.cspDestinationMac == ""
+        device_under_test.cspDestinationMac = "10:fe:fa:06:0b:99"
+        assert device_under_test.cspDestinationMac == "10:fe:fa:06:0b:99"
 
-    def test_cspDestinationPort(self, tango_device):
+    def test_cspDestinationPort(self, device_under_test):
         """Test for the cspDestinationPort attribute."""
-        assert tango_device.cspDestinationPort == 0
-        tango_device.cspDestinationPort = 4567
-        assert tango_device.cspDestinationPort == 4567
+        assert device_under_test.cspDestinationPort == 0
+        device_under_test.cspDestinationPort = 4567
+        assert device_under_test.cspDestinationPort == 4567
 
-    def test_firmwareName(self, tango_device):
+    def test_firmwareName(self, device_under_test):
         """Test for the firmwareName attribute."""
-        assert tango_device.firmwareName == ""
-        tango_device.firmwareName = "test_firmware"
-        assert tango_device.firmwareName == "test_firmware"
+        assert device_under_test.firmwareName == ""
+        device_under_test.firmwareName = "test_firmware"
+        assert device_under_test.firmwareName == "test_firmware"
 
-    def test_firmwareVersion(self, tango_device):
+    def test_firmwareVersion(self, device_under_test):
         """Test for the firmwareVersion attribute."""
-        assert tango_device.firmwareVersion == ""
-        tango_device.firmwareVersion = "01-beta"
-        assert tango_device.firmwareVersion == "01-beta"
+        assert device_under_test.firmwareVersion == ""
+        device_under_test.firmwareVersion = "01-beta"
+        assert device_under_test.firmwareVersion == "01-beta"
 
-    def test_voltage(self, tango_device):
+    def test_voltage(self, device_under_test):
         """Test for the voltage attribute."""
-        tango_device.Connect(True)
-        assert tango_device.voltage == 10.5
+        device_under_test.Connect(True)
+        assert device_under_test.voltage == 10.5
 
-    def test_current(self, tango_device):
+    def test_current(self, device_under_test):
         """Test for the current attribute."""
-        tango_device.Connect(True)
-        tango_device.current == 0.4
+        device_under_test.Connect(True)
+        device_under_test.current == 0.4
 
-    def test_isProgrammed(self, tango_device):
+    def test_isProgrammed(self, device_under_test):
         """Test for isProgrammed"""
-        tango_device.Connect(True)
-        assert tango_device.isProgrammed is True
+        device_under_test.Connect(True)
+        assert device_under_test.isProgrammed is True
 
-    def test_board_temperature(self, tango_device):
+    def test_board_temperature(self, device_under_test):
         """Test for the board_temperature attribute."""
-        tango_device.Connect(True)
-        assert tango_device.board_temperature == 40.0
+        device_under_test.Connect(True)
+        assert device_under_test.board_temperature == 40.0
 
-    def test_fpga1_temperature(self, tango_device):
+    def test_fpga1_temperature(self, device_under_test):
         """Test for the fpga1_temperature attribute."""
-        tango_device.Connect(True)
-        assert tango_device.fpga1_temperature == 38.0
+        device_under_test.Connect(True)
+        assert device_under_test.fpga1_temperature == 38.0
 
-    def test_fpga2_temperature(self, tango_device):
+    def test_fpga2_temperature(self, device_under_test):
         """Test for the fpga2_temperature attribute."""
-        tango_device.Connect(True)
-        assert tango_device.fpga2_temperature == 37.5
+        device_under_test.Connect(True)
+        assert device_under_test.fpga2_temperature == 37.5
 
-    def test_fpga1_time(self, tango_device):
+    def test_fpga1_time(self, device_under_test):
         """Test for the fpga1_time attribute."""
-        tango_device.Connect(True)
-        assert tango_device.fpga1_time == 0
+        device_under_test.Connect(True)
+        assert device_under_test.fpga1_time == 0
         sec = int(time.time())
-        tango_device.fpga1_time = sec
-        assert tango_device.fpga1_time == sec
+        device_under_test.fpga1_time = sec
+        assert device_under_test.fpga1_time == sec
 
-    def test_fpga2_time(self, tango_device):
+    def test_fpga2_time(self, device_under_test):
         """Test the fpga2_time attribute."""
-        tango_device.Connect(True)
-        assert tango_device.fpga2_time == 0
-        tango_device.fpga2_time = 1535
-        assert tango_device.fpga2_time == 1535
+        device_under_test.Connect(True)
+        assert device_under_test.fpga2_time == 0
+        device_under_test.fpga2_time = 1535
+        assert device_under_test.fpga2_time == 1535
 
-    def test_antennaIds(self, tango_device):
+    def test_antennaIds(self, device_under_test):
         """Test for the antennaIds attribute."""
-        assert (tango_device.AntennaIds == []).all()
+        assert (device_under_test.AntennaIds == []).all()
         new_ids = [i for i in range(8)]
-        tango_device.AntennaIds = new_ids
-        assert (tango_device.AntennaIds == new_ids).all()
+        device_under_test.AntennaIds = new_ids
+        assert (device_under_test.AntennaIds == new_ids).all()
 
-    def test_fortyGbDestinationIps(self, tango_device):
+    def test_fortyGbDestinationIps(self, device_under_test):
         """Test for fortyGbDestinationIps"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -173,7 +183,7 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict1)
-        tango_device.Configure40GCore(jstr)
+        device_under_test.Configure40GCore(jstr)
         dict2 = {
             "CoreID": 2,
             "SrcMac": "10:fe:ed:08:0a:56",
@@ -184,12 +194,12 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict2)
-        tango_device.Configure40GCore(jstr)
-        assert tango_device.fortyGbDestinationIps == ("10.0.98.3", "10.0.98.4")
+        device_under_test.Configure40GCore(jstr)
+        assert device_under_test.fortyGbDestinationIps == ("10.0.98.3", "10.0.98.4")
 
-    def test_fortyGbDestinationMacs(self, tango_device):
+    def test_fortyGbDestinationMacs(self, device_under_test):
         """Test for fortyGbDestinationMacs"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -200,7 +210,7 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict1)
-        tango_device.Configure40GCore(jstr)
+        device_under_test.Configure40GCore(jstr)
         dict2 = {
             "CoreID": 2,
             "SrcMac": "10:fe:ed:08:0a:56",
@@ -211,15 +221,15 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict2)
-        tango_device.Configure40GCore(jstr)
-        assert tango_device.fortyGbDestinationMacs == (
+        device_under_test.Configure40GCore(jstr)
+        assert device_under_test.fortyGbDestinationMacs == (
             "10:fe:ed:08:0b:59",
             "10:fe:ed:08:0b:57",
         )
 
-    def test_fortyGbDestinationPorts(self, tango_device):
+    def test_fortyGbDestinationPorts(self, device_under_test):
         """Test for fortyGbDestinationPorts"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -230,7 +240,7 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict1)
-        tango_device.Configure40GCore(jstr)
+        device_under_test.Configure40GCore(jstr)
         dict2 = {
             "CoreID": 2,
             "SrcMac": "10:fe:ed:08:0a:56",
@@ -241,74 +251,74 @@ class TestMccsTile(object):
             "DstPort": 5001,
         }
         jstr = json.dumps(dict2)
-        tango_device.Configure40GCore(jstr)
-        assert (tango_device.fortyGbDestinationPorts == (5000, 5001)).all()
+        device_under_test.Configure40GCore(jstr)
+        assert (device_under_test.fortyGbDestinationPorts == (5000, 5001)).all()
 
-    def test_adcPower(self, tango_device):
+    def test_adcPower(self, device_under_test):
         """ Test if board is not programmed, return None"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = [float(i) for i in range(32)]
-        assert (tango_device.adcPower == expected).all()
+        assert (device_under_test.adcPower == expected).all()
 
-    def test_currentTileBeamformerFrame(self, tango_device):
-        tango_device.Connect(True)
-        assert tango_device.CurrentTileBeamformerFrame == 23
+    def test_currentTileBeamformerFrame(self, device_under_test):
+        device_under_test.Connect(True)
+        assert device_under_test.CurrentTileBeamformerFrame == 23
 
-    def test_checkPendingDataRequests(self, tango_device):
-        tango_device.Connect(True)
-        assert tango_device.CheckPendingDataRequests is False
+    def test_checkPendingDataRequests(self, device_under_test):
+        device_under_test.Connect(True)
+        assert device_under_test.CheckPendingDataRequests is False
 
-    def test_isBeamformerRunning(self, tango_device):
-        tango_device.Connect(True)
-        assert tango_device.isBeamformerRunning is False
-        tango_device.StartBeamformer("{}")
-        assert tango_device.isBeamformerRunning is True
+    def test_isBeamformerRunning(self, device_under_test):
+        device_under_test.Connect(True)
+        assert device_under_test.isBeamformerRunning is False
+        device_under_test.StartBeamformer("{}")
+        assert device_under_test.isBeamformerRunning is True
 
-    def test_phaseTerminalCount(self, tango_device):
-        tango_device.Connect(True)
-        assert tango_device.PhaseTerminalCount == 0
-        tango_device.PhaseTerminalCount = 45
-        assert tango_device.PhaseTerminalCount == 45
+    def test_phaseTerminalCount(self, device_under_test):
+        device_under_test.Connect(True)
+        assert device_under_test.PhaseTerminalCount == 0
+        device_under_test.PhaseTerminalCount = 45
+        assert device_under_test.PhaseTerminalCount == 45
 
-    def test_ppsDelay(self, tango_device):
-        tango_device.Connect(True)
-        assert tango_device.ppsDelay == 12
+    def test_ppsDelay(self, device_under_test):
+        device_under_test.Connect(True)
+        assert device_under_test.ppsDelay == 12
 
     # ------------------------------------------------------
     # Commands.
     # Tests for commands by calling the method by assertion.
     # ------------------------------------------------------
 
-    def test_Initialise(self, tango_device):
+    def test_Initialise(self, device_under_test):
         """Test for Initialise"""
-        tango_device.Connect(False)
+        device_under_test.Connect(False)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.Initialise()
+            device_under_test.Initialise()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: initialise"
 
-    def test_Connect(self, tango_device):
+    def test_Connect(self, device_under_test):
         """Test for Connect"""
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.Connect(False)
+            device_under_test.Connect(False)
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: connect"
 
-    def test_Disconnect(self, tango_device):
+    def test_Disconnect(self, device_under_test):
         """ Test for Disconnect from the board"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.disconnect()
+            device_under_test.disconnect()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: disconnect"
 
-    def test_GetFirmwareList(self, tango_device):
+    def test_GetFirmwareList(self, device_under_test):
         """ Test for GetFirmwareList """
-        tango_device.Connect(True)
-        firmware_str = tango_device.GetFirmwareList()
+        device_under_test.Connect(True)
+        firmware_str = device_under_test.GetFirmwareList()
         firmware_list = json.loads(firmware_str)
         assert firmware_list == {
             "firmware1": {"design": "model1", "major": 2, "minor": 3},
@@ -316,45 +326,45 @@ class TestMccsTile(object):
             "firmware3": {"design": "model3", "major": 2, "minor": 6},
         }
 
-    def test_DownloadFirmware(self, tango_device):
+    def test_DownloadFirmware(self, device_under_test):
         """Test for DownloadFirmware"""
-        tango_device.Connect(False)
+        device_under_test.Connect(False)
         bitfile = "test_bitload_firmware"
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.DownloadFirmware(bitfile)
+            device_under_test.DownloadFirmware(bitfile)
         result = ss.getvalue().strip()
         assert result == bitfile
 
-    def test_ProgramCPLD(self, tango_device):
+    def test_ProgramCPLD(self, device_under_test):
         """Test for ProgramCPLD"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         bitfile = "test_bitload_cpld"
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ProgramCPLD(bitfile)
+            device_under_test.ProgramCPLD(bitfile)
         result = ss.getvalue().strip()
         assert result == bitfile
 
-    def test_WaitPPSEvent(self, tango_device):
+    def test_WaitPPSEvent(self, device_under_test):
         """Test for WaitPPSEvent"""
-        tango_device.Connect(True)
-        tango_device.fpga1_time = int(time.time())
-        assert tango_device.WaitPPSEvent() is None
+        device_under_test.Connect(True)
+        device_under_test.fpga1_time = int(time.time())
+        assert device_under_test.WaitPPSEvent() is None
 
-    def test_GetRegisterList(self, tango_device):
+    def test_GetRegisterList(self, device_under_test):
         """Test for GetRegisterList"""
-        tango_device.Connect(True)
-        assert tango_device.GetRegisterList() == [
+        device_under_test.Connect(True)
+        assert device_under_test.GetRegisterList() == [
             "test-reg1",
             "test-reg2",
             "test-reg3",
             "test-reg4",
         ]
 
-    def test_ReadAndWriteRegister(self, tango_device):
+    def test_ReadAndWriteRegister(self, device_under_test):
         """Test for ReadRegister & WriteRegister"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         nb_read = 4
         offset = 1
         device = 0
@@ -365,7 +375,7 @@ class TestMccsTile(object):
             "Device": device,
         }
         jstr = json.dumps(dict)
-        values = tango_device.ReadRegister(jstr)
+        values = device_under_test.ReadRegister(jstr)
         assert (values == [0 for i in range(nb_read)]).all()
         values = [i for i in range(9)]
         offset = 2
@@ -376,30 +386,30 @@ class TestMccsTile(object):
             "Device": device,
         }
         jstr = json.dumps(dict1)
-        tango_device.WriteRegister(jstr)
+        device_under_test.WriteRegister(jstr)
         jstr = json.dumps(dict)
-        values = tango_device.ReadRegister(jstr)
+        values = device_under_test.ReadRegister(jstr)
         assert (values == [0, 0, 1, 2]).all()
         dict2 = dict.copy()
         dict2.pop("RegisterName")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
-            tango_device.ReadRegister(jstr)
+            device_under_test.ReadRegister(jstr)
         dict2 = dict.copy()
         dict2.pop("NbRead")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
-            tango_device.ReadRegister(jstr)
+            device_under_test.ReadRegister(jstr)
         dict2 = dict.copy()
         dict2.pop("Offset")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
-            tango_device.ReadRegister(jstr)
+            device_under_test.ReadRegister(jstr)
         dict2 = dict.copy()
         dict2.pop("Device")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
-            tango_device.ReadRegister(jstr)
+            device_under_test.ReadRegister(jstr)
         device = 1
         dict = {
             "RegisterName": "test-reg1",
@@ -408,7 +418,7 @@ class TestMccsTile(object):
             "Device": device,
         }
         jstr = json.dumps(dict)
-        values = tango_device.ReadRegister(jstr)
+        values = device_under_test.ReadRegister(jstr)
         assert (values == [0 for i in range(nb_read)]).all()
         dict = {
             "RegisterName": "test-reg5",
@@ -417,51 +427,51 @@ class TestMccsTile(object):
             "Device": device,
         }
         jstr = json.dumps(dict)
-        values = tango_device.ReadRegister(jstr)
+        values = device_under_test.ReadRegister(jstr)
         assert len(values) == 0
 
         dict3 = dict1.copy()
         dict3.pop("RegisterName")
         jstr = json.dumps(dict3)
         with pytest.raises(DevFailed):
-            tango_device.WriteRegister(jstr)
+            device_under_test.WriteRegister(jstr)
         dict3 = dict1.copy()
         dict3.pop("Values")
         jstr = json.dumps(dict3)
         with pytest.raises(DevFailed):
-            tango_device.WriteRegister(jstr)
+            device_under_test.WriteRegister(jstr)
         dict3 = dict1.copy()
         dict3.pop("Offset")
         jstr = json.dumps(dict3)
         with pytest.raises(DevFailed):
-            tango_device.WriteRegister(jstr)
+            device_under_test.WriteRegister(jstr)
         dict3 = dict1.copy()
         dict3.pop("Device")
         jstr = json.dumps(dict3)
         with pytest.raises(DevFailed):
-            tango_device.WriteRegister(jstr)
+            device_under_test.WriteRegister(jstr)
 
-    def test_ReadAndWriteAddress(self, tango_device):
+    def test_ReadAndWriteAddress(self, device_under_test):
         """Test for ReadAddress and WriteAddress"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         address = 0xf
         nvalues = 10
         expected = [0 for i in range(nvalues)]
-        assert (tango_device.ReadAddress([address, nvalues]) == expected).all()
+        assert (device_under_test.ReadAddress([address, nvalues]) == expected).all()
         values = [val for val in range(nvalues)]
         values.insert(0, address)
-        tango_device.WriteAddress(values)
+        device_under_test.WriteAddress(values)
         assert (
-            tango_device.ReadAddress([address, nvalues]) == values[1:]
+            device_under_test.ReadAddress([address, nvalues]) == values[1:]
         ).all()
         with pytest.raises(DevFailed):
-            tango_device.ReadAddress([address])
+            device_under_test.ReadAddress([address])
         with pytest.raises(DevFailed):
-            tango_device.WriteAddress([address])
+            device_under_test.WriteAddress([address])
 
-    def test_Configure40GCore(self, tango_device):
+    def test_Configure40GCore(self, device_under_test):
         """Test for Configure40GCore"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -472,7 +482,7 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict1)
-        tango_device.Configure40GCore(jstr)
+        device_under_test.Configure40GCore(jstr)
         dict2 = {
             "CoreID": 2,
             "SrcMac": "10:fe:ed:08:0a:56",
@@ -483,52 +493,52 @@ class TestMccsTile(object):
             "DstPort": 5000,
         }
         jstr = json.dumps(dict2)
-        tango_device.Configure40GCore(jstr)
-        output = tango_device.Get40GCoreConfiguration(1)
+        device_under_test.Configure40GCore(jstr)
+        output = device_under_test.Get40GCoreConfiguration(1)
         result = json.loads(output)
         assert result == dict1.pop("CoreID")
         with pytest.raises(DevFailed):
-            output = tango_device.Get40GCoreConfiguration(3)
+            output = device_under_test.Get40GCoreConfiguration(3)
 
         dict = dict2.copy()
         dict.pop("CoreID")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
         dict = dict2.copy()
         dict.pop("SrcMac")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
         dict = dict2.copy()
         dict.pop("SrcIP")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
         dict = dict2.copy()
         dict.pop("SrcPort")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
         dict = dict2.copy()
         dict.pop("DstMac")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
         dict = dict2.copy()
         dict.pop("DstIP")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
         dict = dict2.copy()
         dict.pop("DstPort")
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.Configure40GCore(jstr)
+            device_under_test.Configure40GCore(jstr)
 
-    def test_SetLmcDownload(self, tango_device):
+    def test_SetLmcDownload(self, device_under_test):
         """Test for SetLMCDownload"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {
             "Mode": "1G",
             "PayloadLength": 4,
@@ -541,17 +551,17 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetLmcDownload(jstr)
+            device_under_test.SetLmcDownload(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
         dict = {"PayloadLength": 4, "DstIP": "10.0.1.23"}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.SetLmcDownload(jstr)
+            device_under_test.SetLmcDownload(jstr)
 
-    def test_SetChanneliserTruncation(self, tango_device):
+    def test_SetChanneliserTruncation(self, device_under_test):
         """Test for SetChanneliserTruncation"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         trunc = [
             [0, 1, 2, 3, 4, 5],
             [6, 7, 8, 9, 10, 11],
@@ -564,7 +574,7 @@ class TestMccsTile(object):
         argin = np.concatenate([np.array((n, m)), arr])
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetChanneliserTruncation(argin)
+            device_under_test.SetChanneliserTruncation(argin)
         out = ss.getvalue().strip()
         result = []
         for x in out[1:-1].split(" "):
@@ -573,71 +583,71 @@ class TestMccsTile(object):
         assert (result == arr).all()
         argin = [2, 2]
         with pytest.raises(DevFailed):
-            tango_device.SetChanneliserTruncation(argin)
+            device_under_test.SetChanneliserTruncation(argin)
 
-    def test_SetBeamFormerRegions(self, tango_device):
+    def test_SetBeamFormerRegions(self, device_under_test):
         """Test for SetBeamFormerRegions"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         regions = [[5, 16, 1], [25, 32, 2], [45, 48, 3]]
         input = list(itertools.chain.from_iterable(regions))
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         out = ss.getvalue().strip()
         result = [int(x) for x in out[1:-1].split(",")]
         assert input == result
         input = [3, 8]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         input = [i for i in range(49)]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         input = [5, 16, 1, 25, 32, 2, 45, 48]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         input = [5, 15, 1, 25, 32, 2, 45, 48, 3]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         input = [5, 16, -1, 25, 32, 2, 45, 48, 3]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         input = [5, 16, 1, 25, 32, 2, 45, 48, 8]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
         input = [5, 160, 1, 25, 160, 2, 45, 72, 3]
         with pytest.raises(DevFailed):
-            tango_device.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(input)
 
-    def test_ConfigureStationBeamformer(self, tango_device):
+    def test_ConfigureStationBeamformer(self, device_under_test):
         """Test for ConfigureStationBeamformer"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         dict = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ConfigureStationBeamformer(jstr)
+            device_under_test.ConfigureStationBeamformer(jstr)
         result = json.loads(ss.getvalue())
         assert result == dict
         dict = {"NumTiles": 4, "IsFirst": True, "IsLast": False}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.ConfigureStationBeamformer(jstr)
+            device_under_test.ConfigureStationBeamformer(jstr)
         dict = {"StartChannel": 2, "IsFirst": True, "IsLast": False}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.ConfigureStationBeamformer(jstr)
+            device_under_test.ConfigureStationBeamformer(jstr)
         dict = {"StartChannel": 2, "NumTiles": 4, "IsLast": False}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.ConfigureStationBeamformer(jstr)
+            device_under_test.ConfigureStationBeamformer(jstr)
         dict = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.ConfigureStationBeamformer(jstr)
+            device_under_test.ConfigureStationBeamformer(jstr)
 
-    def test_LoadCalibrationCoefficients(self, tango_device):
+    def test_LoadCalibrationCoefficients(self, device_under_test):
         """Test for LoadCalibrationCoefficients"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         antenna = 2
         complex_coeffs = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
@@ -648,128 +658,128 @@ class TestMccsTile(object):
         coeffs.insert(0, float(antenna))
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.LoadCalibrationCoefficients(coeffs)
+            device_under_test.LoadCalibrationCoefficients(coeffs)
         out = ss.getvalue().strip()
         result = [float(x) for x in out[1:-1].split(",")]
         assert result == coeffs
         with pytest.raises(DevFailed):
-            tango_device.LoadCalibrationCoefficients(coeffs[0:8])
+            device_under_test.LoadCalibrationCoefficients(coeffs[0:8])
         with pytest.raises(DevFailed):
-            tango_device.LoadCalibrationCoefficients(coeffs[0:16])
+            device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
 
-    def test_LoadBeamAngle(self, tango_device):
+    def test_LoadBeamAngle(self, device_under_test):
         """Test for LoadBeamAngle"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         angle_coeffs = [float(i) for i in range(16)]
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.LoadBeamAngle(angle_coeffs)
+            device_under_test.LoadBeamAngle(angle_coeffs)
         out = ss.getvalue().strip()
         result = [float(x) for x in out[1:-1].split(",")]
         assert result == angle_coeffs
 
-    def test_LoadAntennaTapering(self, tango_device):
+    def test_LoadAntennaTapering(self, device_under_test):
         """Test for LoadAntennaTapering"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         tapering_coeffs = [float(i) for i in range(16)]
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.LoadAntennaTapering(tapering_coeffs)
+            device_under_test.LoadAntennaTapering(tapering_coeffs)
         out = ss.getvalue().strip()
         result = [float(x) for x in out[1:-1].split(",")]
         assert result == tapering_coeffs
         with pytest.raises(DevFailed):
-            tango_device.LoadAntennaTapering(tapering_coeffs[:12])
+            device_under_test.LoadAntennaTapering(tapering_coeffs[:12])
 
-    def test_SwitchCalibrationBank(self, tango_device):
+    def test_SwitchCalibrationBank(self, device_under_test):
         """Test for SwitchCalibrationBank"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SwitchCalibrationBank(19)
+            device_under_test.SwitchCalibrationBank(19)
         result = ss.getvalue().strip()
         assert result == "19"
 
-    def test_SetPointingDelay(self, tango_device):
+    def test_SetPointingDelay(self, device_under_test):
         """Test for SetPointingDelay"""
         delays = [3]
         for i in range(32):
             delays.append(float(i))
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetPointingDelay(delays)
+            device_under_test.SetPointingDelay(delays)
         out = ss.getvalue().strip()
         result = [float(x) for x in out[1:-1].split(",")]
         assert result == delays
         with pytest.raises(DevFailed):
-            tango_device.SetPointingDelay(delays[:32])
+            device_under_test.SetPointingDelay(delays[:32])
         delays[0] = 8
         with pytest.raises(DevFailed):
-            tango_device.SetPointingDelay(delays)
+            device_under_test.SetPointingDelay(delays)
 
-    def test_LoadPointingDelay(self, tango_device):
+    def test_LoadPointingDelay(self, device_under_test):
         """Test for LoadPointingDelay"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         delay = 11
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.LoadPointingDelay(delay)
+            device_under_test.LoadPointingDelay(delay)
         result = ss.getvalue().strip()
         assert int(result) == delay
 
-    def test_StartBeamformer(self, tango_device):
+    def test_StartBeamformer(self, device_under_test):
         """Test for StartBeamformer"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {"StartTime": 0, "Duration": 5}
         dict = {"Duration": 5}
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.StartBeamformer(jstr)
+            device_under_test.StartBeamformer(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
 
-    def test_StopBeamformer(self, tango_device):
+    def test_StopBeamformer(self, device_under_test):
         """Test for StopBeamformer"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.StopBeamformer()
+            device_under_test.StopBeamformer()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: stop_beamformer"
 
-    def test_ConfigureIntegratedChannelData(self, tango_device):
+    def test_ConfigureIntegratedChannelData(self, device_under_test):
         """Test for ConfigureIntegratedChannelData"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ConfigureIntegratedChannelData(6.284)
+            device_under_test.ConfigureIntegratedChannelData(6.284)
         result = ss.getvalue().strip()
         assert result == "6.284"
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ConfigureIntegratedChannelData(0.0)
+            device_under_test.ConfigureIntegratedChannelData(0.0)
         result = ss.getvalue().strip()
         assert result == "0.5"
 
-    def test_ConfigureIntegratedBeamData(self, tango_device):
+    def test_ConfigureIntegratedBeamData(self, device_under_test):
         """Test for ConfigureIntegratedBeamData"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ConfigureIntegratedBeamData(3.142)
+            device_under_test.ConfigureIntegratedBeamData(3.142)
         result = ss.getvalue().strip()
         assert result == "3.142"
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ConfigureIntegratedBeamData(0.0)
+            device_under_test.ConfigureIntegratedBeamData(0.0)
         result = ss.getvalue().strip()
         assert result == "0.5"
 
-    def test_SendRawData(self, tango_device):
+    def test_SendRawData(self, device_under_test):
         """Test for SendRawData"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {
             "Sync": True,
             "Period": 5,
@@ -781,13 +791,13 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SendRawData(jstr)
+            device_under_test.SendRawData(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
 
-    def test_SendChannelisedData(self, tango_device):
+    def test_SendChannelisedData(self, device_under_test):
         """Test for SendChannelisedData"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {
             "NSamples": 4,
             "FirstChannel": 7,
@@ -801,13 +811,13 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SendChannelisedData(jstr)
+            device_under_test.SendChannelisedData(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
 
-    def test_SendChannelisedDataContinuous(self, tango_device):
+    def test_SendChannelisedDataContinuous(self, device_under_test):
         """Test for SendChannelisedDataContinuous"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {
             "ChannelID": 2,
             "NSamples": 4,
@@ -820,81 +830,81 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SendChannelisedDataContinuous(jstr)
+            device_under_test.SendChannelisedDataContinuous(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
         dict = {"NSamples": 4, "WaitSeconds": 3.5}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.SendChannelisedDataContinuous(jstr)
+            device_under_test.SendChannelisedDataContinuous(jstr)
 
-    def test_SendBeamData(self, tango_device):
+    def test_SendBeamData(self, device_under_test):
         """Test for SendBeamData"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
         dict = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SendBeamData(jstr)
+            device_under_test.SendBeamData(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
 
-    def test_StopDataTransmission(self, tango_device):
+    def test_StopDataTransmission(self, device_under_test):
         """Test for StopDataTransmission"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.StopDataTransmission()
+            device_under_test.StopDataTransmission()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: stop_data_transmission"
 
-    def test_ComputeCalibrationCoefficients(self, tango_device):
+    def test_ComputeCalibrationCoefficients(self, device_under_test):
         """Test for ComputeCalibrationCoefficients"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.ComputeCalibrationCoefficients()
+            device_under_test.ComputeCalibrationCoefficients()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: compute_calibration_coefficients"
 
-    def test_StartAcquisition(self, tango_device):
+    def test_StartAcquisition(self, device_under_test):
         """ Test for StartAcquisition"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {"StartTime": 5, "Delay": 2}
         dict = {"StartTime": 5}
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.StartAcquisition(jstr)
+            device_under_test.StartAcquisition(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
 
-    def test_SetTimeDelays(self, tango_device):
+    def test_SetTimeDelays(self, device_under_test):
         """Test for SetTimeDelays"""
         delays = []
         for i in range(32):
             delays.append(float(i))
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetTimeDelays(delays)
+            device_under_test.SetTimeDelays(delays)
         out = ss.getvalue().strip()
         result = [float(x) for x in out[1:-1].split(",")]
         assert result == delays
 
-    def test_SetCspRounding(self, tango_device):
+    def test_SetCspRounding(self, device_under_test):
         """ Test for SetCspRounding"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetCspRounding(6.284)
+            device_under_test.SetCspRounding(6.284)
         result = ss.getvalue().strip()
         assert result == "6.284"
 
-    def test_SetLmcIntegratedDownload(self, tango_device):
+    def test_SetLmcIntegratedDownload(self, device_under_test):
         """ Test for SetLmcIntegratedDownload """
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {
             "Mode": "1G",
             "ChannelPayloadLength": 4,
@@ -913,29 +923,29 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SetLmcIntegratedDownload(jstr)
+            device_under_test.SetLmcIntegratedDownload(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
         dict = {"ChannelPayloadLength": 4, "BeamPayloadLength": 6, "DstIP": "10.0.1.23"}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.SetLmcIntegratedDownload(jstr)
+            device_under_test.SetLmcIntegratedDownload(jstr)
 
-    def test_SendRawDataSynchronised(self, tango_device):
+    def test_SendRawDataSynchronised(self, device_under_test):
         """ Test for SendRawDataSynchronised """
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
         dict = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SendRawDataSynchronised(jstr)
+            device_under_test.SendRawDataSynchronised(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
 
-    def test_SendChannelisedDataNarrowband(self, tango_device):
+    def test_SendChannelisedDataNarrowband(self, device_under_test):
         """ Test for SendChannelisedDataNarrowband"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         expected = {
             "Frequency": 4000,
             "RoundBits": 256,
@@ -955,48 +965,48 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SendChannelisedDataNarrowband(jstr)
+            device_under_test.SendChannelisedDataNarrowband(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
         dict = {"RoundBits": 256, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.SendChannelisedDataNarrowband(jstr)
+            device_under_test.SendChannelisedDataNarrowband(jstr)
         dict = {"Frequency": 4000, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.SendChannelisedDataNarrowband(jstr)
+            device_under_test.SendChannelisedDataNarrowband(jstr)
 
-    def test_TweakTransceivers(self, tango_device):
+    def test_TweakTransceivers(self, device_under_test):
         """ Test for TweakTransceivers"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.TweakTransceivers()
+            device_under_test.TweakTransceivers()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: tweak_transceivers"
 
-    def test_PostSynchronisation(self, tango_device):
+    def test_PostSynchronisation(self, device_under_test):
         """ Test for PostSynchronisation"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.PostSynchronisation()
+            device_under_test.PostSynchronisation()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: post_synchronisation"
 
-    def test_SyncFpgas(self, tango_device):
+    def test_SyncFpgas(self, device_under_test):
         """ Test for SyncFpgas"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.SyncFpgas()
+            device_under_test.SyncFpgas()
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: sync_fpgas"
 
-    def test_CalculateDelay(self, tango_device):
+    def test_CalculateDelay(self, device_under_test):
         """ Test for CalculateDelay"""
-        tango_device.Connect(True)
+        device_under_test.Connect(True)
         dict = expected = {
             "CurrentDelay": 5.0,
             "CurrentTC": 2,
@@ -1006,22 +1016,22 @@ class TestMccsTile(object):
         jstr = json.dumps(dict)
         ss = io.StringIO()
         with redirect_stdout(ss):
-            tango_device.CalculateDelay(jstr)
+            device_under_test.CalculateDelay(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
         dict = {"CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.CalculateDelay(jstr)
+            device_under_test.CalculateDelay(jstr)
         dict = expected = {"CurrentDelay": 5.0, "RefLo": 3.0, "RefHi": 78.0}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.CalculateDelay(jstr)
+            device_under_test.CalculateDelay(jstr)
         dict = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefHi": 78.0}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.CalculateDelay(jstr)
+            device_under_test.CalculateDelay(jstr)
         dict = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0}
         jstr = json.dumps(dict)
         with pytest.raises(DevFailed):
-            tango_device.CalculateDelay(jstr)
+            device_under_test.CalculateDelay(jstr)

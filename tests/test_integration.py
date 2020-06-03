@@ -3,7 +3,92 @@ import pytest
 from tango import DevFailed, DevSource, DevState
 
 from ska.base.control_model import AdminMode
+from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 from ska.low.mccs.utils import call_with_json
+
+devices_info = [
+    {
+        "class": MccsMaster,
+        "devices": (
+            {
+                "name": "low/elt/master",
+                "properties": {
+                    "MccsSubarrays": ["low/elt/subarray_1",
+                                      "low/elt/subarray_2"],
+                    "MccsStations": ["low/elt/station_1",
+                                     "low/elt/station_2"],
+                    "MccsTiles": ["low/elt/tile_1",
+                                  "low/elt/tile_2",
+                                  "low/elt/tile_3",
+                                  "low/elt/tile_4"],
+                }
+            },
+        )
+    },
+    {
+        "class": MccsSubarray,
+        "devices": [
+            {
+                "name": "low/elt/subarray_1",
+                "properties": {
+                    "CapabilityTypes": ["BAND1", "BAND2"],
+                }
+            },
+            {
+                "name": "low/elt/subarray_2",
+                "properties": {
+                    "CapabilityTypes": ["BAND1", "BAND2"],
+                }
+            }
+        ]
+    },
+    {
+        "class": MccsStation,
+        "devices": [
+            {
+                "name": "low/elt/station_1",
+                "properties": {
+                    "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]
+                }
+            },
+            {
+                "name": "low/elt/station_2",
+                "properties": {
+                    "TileFQDNs": ["low/elt/tile_3", "low/elt/tile_4"]
+                }
+            },
+        ]
+    },
+    {
+        "class": MccsTile,
+        "devices": [
+            {
+                "name": "low/elt/tile_1",
+                "properties": {
+                    "AntennasPerTile": "16",
+                }
+            },
+            {
+                "name": "low/elt/tile_2",
+                "properties": {
+                    "AntennasPerTile": "16",
+                }
+            },
+            {
+                "name": "low/elt/tile_3",
+                "properties": {
+                    "AntennasPerTile": "16",
+                }
+            },
+            {
+                "name": "low/elt/tile_4",
+                "properties": {
+                    "AntennasPerTile": "16",
+                }
+            },
+        ]
+    },
+]
 
 
 class TestMccsIntegration:
@@ -11,13 +96,13 @@ class TestMccsIntegration:
     Integration test cases for the Mccs device classes
     """
 
-    def test_master_enable_subarray(self, tango_context):
+    def test_master_enable_subarray(self, device_context):
         """
         Test that a MccsMaster device can enable an MccsSubarray device.
         """
-        master = tango_context.get_device("low/elt/master")
-        subarray_1 = tango_context.get_device("low/elt/subarray_1")
-        subarray_2 = tango_context.get_device("low/elt/subarray_2")
+        master = device_context.get_device("low/elt/master")
+        subarray_1 = device_context.get_device("low/elt/subarray_1")
+        subarray_2 = device_context.get_device("low/elt/subarray_2")
 
         # check both subarrays are disabled
         assert subarray_1.adminMode == AdminMode.OFFLINE
@@ -57,14 +142,14 @@ class TestMccsIntegration:
         assert subarray_2.adminMode == AdminMode.ONLINE
         assert subarray_2.State() == DevState.OFF
 
-    def test_master_disable_subarray(self, tango_context):
+    def test_master_disable_subarray(self, device_context):
         """
         Test that an MccsMaster device can disable an MccsSubarray
         device.
         """
-        master = tango_context.get_device("low/elt/master")
-        subarray_1 = tango_context.get_device("low/elt/subarray_1")
-        subarray_2 = tango_context.get_device("low/elt/subarray_2")
+        master = device_context.get_device("low/elt/master")
+        subarray_1 = device_context.get_device("low/elt/subarray_1")
+        subarray_2 = device_context.get_device("low/elt/subarray_2")
 
         master.EnableSubarray(1)
         master.EnableSubarray(2)
@@ -107,20 +192,20 @@ class TestMccsIntegration:
         assert subarray_2.adminMode == AdminMode.OFFLINE
         assert subarray_2.State() == DevState.DISABLE
 
-    def test_master_allocate_subarray(self, tango_context):
+    def test_master_allocate_subarray(self, device_context):
         """
         Test that an MccsMaster device can allocate resources to an
         MccsSubarray device.
         """
-        master = tango_context.get_device("low/elt/master")
-        subarray_1 = tango_context.get_device("low/elt/subarray_1")
-        subarray_2 = tango_context.get_device("low/elt/subarray_2")
-        station_1 = tango_context.get_device("low/elt/station_1")
-        station_2 = tango_context.get_device("low/elt/station_2")
-        tile_1 = tango_context.get_device("low/elt/tile_1")
-        tile_2 = tango_context.get_device("low/elt/tile_2")
-        tile_3 = tango_context.get_device("low/elt/tile_3")
-        tile_4 = tango_context.get_device("low/elt/tile_4")
+        master = device_context.get_device("low/elt/master")
+        subarray_1 = device_context.get_device("low/elt/subarray_1")
+        subarray_2 = device_context.get_device("low/elt/subarray_2")
+        station_1 = device_context.get_device("low/elt/station_1")
+        station_2 = device_context.get_device("low/elt/station_2")
+        tile_1 = device_context.get_device("low/elt/tile_1")
+        tile_2 = device_context.get_device("low/elt/tile_2")
+        tile_3 = device_context.get_device("low/elt/tile_3")
+        tile_4 = device_context.get_device("low/elt/tile_4")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
@@ -269,20 +354,20 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-    def test_master_release_subarray(self, tango_context):
+    def test_master_release_subarray(self, device_context):
         """
         Test that an MccsMaster device can release the resources of an
         MccsSubarray device.
         """
-        master = tango_context.get_device("low/elt/master")
-        subarray_1 = tango_context.get_device("low/elt/subarray_1")
-        subarray_2 = tango_context.get_device("low/elt/subarray_2")
-        station_1 = tango_context.get_device("low/elt/station_1")
-        station_2 = tango_context.get_device("low/elt/station_2")
-        tile_1 = tango_context.get_device("low/elt/tile_1")
-        tile_2 = tango_context.get_device("low/elt/tile_2")
-        tile_3 = tango_context.get_device("low/elt/tile_3")
-        tile_4 = tango_context.get_device("low/elt/tile_4")
+        master = device_context.get_device("low/elt/master")
+        subarray_1 = device_context.get_device("low/elt/subarray_1")
+        subarray_2 = device_context.get_device("low/elt/subarray_2")
+        station_1 = device_context.get_device("low/elt/station_1")
+        station_2 = device_context.get_device("low/elt/station_2")
+        tile_1 = device_context.get_device("low/elt/tile_1")
+        tile_2 = device_context.get_device("low/elt/tile_2")
+        tile_3 = device_context.get_device("low/elt/tile_3")
+        tile_4 = device_context.get_device("low/elt/tile_4")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
@@ -365,15 +450,15 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-    def test_station_tile_subarray_id(self, tango_context):
+    def test_station_tile_subarray_id(self, device_context):
         """
         Test that a write to attribute subarrayId on an MccsStation
         device also results in an update to attribute subarrayId on its
         MccsTiles.
         """
-        station = tango_context.get_device("low/elt/station_1")
-        tile_1 = tango_context.get_device("low/elt/tile_1")
-        tile_2 = tango_context.get_device("low/elt/tile_2")
+        station = device_context.get_device("low/elt/station_1")
+        tile_1 = device_context.get_device("low/elt/tile_1")
+        tile_2 = device_context.get_device("low/elt/tile_2")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a

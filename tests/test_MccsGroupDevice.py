@@ -1,45 +1,48 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsGroupDevice project
+# This file is part of the SKA MCCS project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""Contain the tests for the Grouping of MCCS devices."""
+"""
+This module contains the tests for MccsGroupDevice.
+"""
 
-# Imports
 from tango import DevState
+from ska.low.mccs import MccsGroupDevice
 
 
-# Device test case
+device_info = {
+    "class": MccsGroupDevice,
+    "properties": {}
+}
+
+
 class TestMccsGroupDevice(object):
-    """Test case for packet generation."""
+    """
+    Test class for MccsGroupDevice tests.
+    """
 
-    @classmethod
-    def mocking(cls):
-        """Mock external libraries."""
-        # Example : Mock numpy
-        # cls.numpy = MccsGroupDevice.numpy = MagicMock()
-
-    def test_AddMember(self, tango_device):
+    def test_AddMember(self, device_under_test):
         """Test for AddMember"""
-        assert tango_device.AddMember("") is None
+        assert device_under_test.AddMember("") is None
 
-    def test_RemoveMember(self, tango_device):
+    def test_RemoveMember(self, device_under_test):
         """Test for RemoveMember"""
-        assert tango_device.RemoveMember("") is None
+        assert device_under_test.RemoveMember("") is None
 
-    def test_RunCommand(self, tango_device):
+    def test_RunCommand(self, device_under_test):
         """Test for RunCommand"""
-        assert tango_device.RunCommand("") is None
+        assert device_under_test.RunCommand("") is None
 
-    def test_memberStates(self, tango_device):
+    def test_memberStates(self, device_under_test):
         """Test for memberStates"""
-        assert tango_device.memberStates == (DevState.UNKNOWN,)
+        assert device_under_test.memberStates == (DevState.UNKNOWN,)
 
-    def test_memberList(self, tango_device):
+    def test_memberList(self, device_under_test):
         """Test for memberList"""
-        assert tango_device.memberList == ("",)
+        assert device_under_test.memberList == ("",)

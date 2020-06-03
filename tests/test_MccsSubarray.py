@@ -6,7 +6,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""contains the tests for the MccsSubarray"""
+"""
+This module contains the tests for MccsSubarray.
+"""
 import itertools
 import pytest
 from tango import DevSource, DevState, DevFailed
@@ -18,100 +20,108 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import release
+from ska.low.mccs import MccsSubarray, release
 from ska.low.mccs.utils import call_with_json
+
+
+device_info = {
+    "class": MccsSubarray,
+    "properties": {
+        "CapabilityTypes": ["BAND1", "BAND2"],
+    }
+}
 
 
 # pylint: disable=invalid-name
 class TestMccsSubarray:
     """
-    Test cases for MccsSubarray
+    Test class for MccsSubarray tests
     """
 
     # tests of general methods
-    def test_InitDevice(self, tango_device):
+    def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
 
         :todo: Test for different memorized values of adminMode.
         """
-        assert tango_device.adminMode == AdminMode.OFFLINE
-        assert tango_device.state() == DevState.DISABLE
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+        assert device_under_test.state() == DevState.DISABLE
 
-        assert tango_device.obsState == ObsState.IDLE
-        assert tango_device.healthState == HealthState.OK
-        assert tango_device.controlMode == ControlMode.REMOTE
-        assert tango_device.simulationMode == SimulationMode.FALSE
-        assert tango_device.testMode == TestMode.NONE
-        assert tango_device.assignedResources is None
+        assert device_under_test.obsState == ObsState.IDLE
+        assert device_under_test.healthState == HealthState.OK
+        assert device_under_test.controlMode == ControlMode.REMOTE
+        assert device_under_test.simulationMode == SimulationMode.FALSE
+        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.assignedResources is None
 
         # The following reads might not be allowed in this state once
         # properly implemented
-        assert tango_device.scanId == -1
-        assert list(tango_device.configuredCapabilities) == [
+        assert device_under_test.scanId == -1
+        assert list(device_under_test.configuredCapabilities) == [
             "BAND1:0",
             "BAND2:0",
         ]
-        assert tango_device.stationFQDNs == ()
-        #         assert tango_device.tileFQDNs is None
-        #         assert tango_device.stationBeamFQDNs is None
-        assert tango_device.activationTime == 0
+        assert device_under_test.stationFQDNs == ()
+        #         assert device_under_test.tileFQDNs is None
+        #         assert device_under_test.stationBeamFQDNs is None
+        assert device_under_test.activationTime == 0
 
     # tests of overridden base class commands
-    def test_GetVersionInfo(self, tango_device):
+    def test_GetVersionInfo(self, device_under_test):
         """
         Test for GetVersionInfo
         """
-        version_info = release.get_release_info(tango_device.info().dev_class)
-        assert tango_device.GetVersionInfo() == [version_info]
+        version_info = release.get_release_info(device_under_test.info().dev_class)
+        assert device_under_test.GetVersionInfo() == [version_info]
 
-    def test_AssignResources(self, tango_device):
+    def test_AssignResources(self, device_under_test):
         """
         Test for AssignResources
         """
-        tango_device.set_source(DevSource.DEV)
-        tango_device.adminMode = AdminMode.ONLINE
+        device_under_test.set_source(DevSource.DEV)
+        device_under_test.adminMode = AdminMode.ONLINE
 
         call_with_json(
-            tango_device.AssignResources, stations=["low/elt/station_1"]
+            device_under_test.AssignResources, stations=["low/elt/station_1"]
         )
-        assert list(tango_device.stationFQDNs) == ["low/elt/station_1"]
+        assert list(device_under_test.stationFQDNs) == ["low/elt/station_1"]
 
     # tests of MccsSubarray commands
-    def test_sendTransientBuffer(self, tango_device):
+    def test_sendTransientBuffer(self, device_under_test):
         """
         Test for sendTransientBuffer
         """
         segment_spec = []
-        returned = tango_device.sendTransientBuffer(segment_spec)
+        returned = device_under_test.sendTransientBuffer(segment_spec)
         assert list(returned) == ["OK", "sendTransientBuffer command completed"]
 
     # tests of overridden base class attributes
-    def test_buildState(self, tango_device):
+    def test_buildState(self, device_under_test):
         """
         Test for buildState
         """
         build_info = release.get_release_info()
-        assert tango_device.buildState == build_info
+        assert device_under_test.buildState == build_info
 
-    def test_versionId(self, tango_device):
+    def test_versionId(self, device_under_test):
         """
         Test for versionId
         """
-        assert tango_device.versionId == release.version
+        assert device_under_test.versionId == release.version
 
     # tests of MccsSubarray attributes
-    def test_scanId(self, tango_device):
+    def test_scanId(self, device_under_test):
         """
         Test for scanID attribute
         """
-        assert tango_device.scanId == -1
+        assert device_under_test.scanId == -1
 
-    def test_stationFQDNs(self, tango_device):
+    def test_stationFQDNs(self, device_under_test):
         """
         Test for stationFQDNs attribute
         """
-        assert tango_device.stationFQDNs == ()
+        assert device_under_test.stationFQDNs == ()
 
     # General device behaviour tests
 
@@ -154,7 +164,7 @@ class TestMccsSubarray:
             ],
         ),
     )
-    def test_state_machine(self, tango_device,  # mock_device_proxy,
+    def test_state_machine(self, device_under_test,  # mock_device_proxy,
                            state_under_test, action_under_test):
         """
         Test the subarray state machine: for a given initial state and
@@ -199,9 +209,9 @@ class TestMccsSubarray:
 
         def assert_state(state):
             assert states[state] == (
-                tango_device.adminMode,
-                tango_device.state(),
-                tango_device.obsState,
+                device_under_test.adminMode,
+                device_under_test.state(),
+                device_under_test.obsState,
             )
 
         actions = {
@@ -241,7 +251,7 @@ class TestMccsSubarray:
         }
 
         def perform_action(action):
-            actions[action](tango_device)
+            actions[action](device_under_test)
 
         transitions = {
             ("DISABLED (NOTFITTED)", "notfitted"): "DISABLED (NOTFITTED)",
@@ -349,7 +359,7 @@ class TestMccsSubarray:
 
         # bypass cache for this test because we are testing for a change
         # in the polled attribute obsState
-        tango_device.set_source(DevSource.DEV)
+        device_under_test.set_source(DevSource.DEV)
 
         # Put the device into the state under test
         for action in setups[state_under_test]:

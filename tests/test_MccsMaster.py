@@ -8,7 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""Contains the tests for the MccsMaster Tango tango_device prototype."""
+"""Contains the tests for the MccsMaster Tango device_under_test prototype."""
 
 import json
 import pytest
@@ -21,8 +21,19 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import release
+from ska.low.mccs import MccsMaster, release
 from ska.low.mccs.utils import call_with_json, tango_raise
+
+
+device_info = {
+    "class": MccsMaster,
+    "properties": {
+        "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
+        "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
+        "MccsTiles": ["low/elt/tile_1", "low/elt/tile_2",
+                      "low/elt/tile_3", "low/elt/tile_4"],
+    }
+}
 
 
 # pylint: disable=invalid-name
@@ -50,58 +61,58 @@ class TestMccsMaster:
         # Example : Mock numpy
         # cls.numpy = MccsMaster.numpy = MagicMock()
 
-    def test_properties(self, tango_device):
+    def test_properties(self, device_under_test):
         """ Test the properties """
 
-    def test_State(self, tango_device):
+    def test_State(self, device_under_test):
         """Test for State"""
-        assert tango_device.State() == tango.DevState.ON
+        assert device_under_test.State() == tango.DevState.ON
 
-    def test_Status(self, tango_device):
+    def test_Status(self, device_under_test):
         """Test for Status"""
-        assert tango_device.Status() == "The device is in ON state."
+        assert device_under_test.Status() == "The device is in ON state."
 
-    def test_GetVersionInfo(self, tango_device):
+    def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
-        vinfo = release.get_release_info(tango_device.info().dev_class)
-        assert tango_device.GetVersionInfo() == [vinfo]
+        vinfo = release.get_release_info(device_under_test.info().dev_class)
+        assert device_under_test.GetVersionInfo() == [vinfo]
 
     @pytest.mark.skip(reason="have to work out how this works")
-    def test_isCapabilityAchievable(self, tango_device):
+    def test_isCapabilityAchievable(self, device_under_test):
         """Test for isCapabilityAchievable"""
-        assert tango_device.isCapabilityAchievable([[0], [""]]) is not False
+        assert device_under_test.isCapabilityAchievable([[0], [""]]) is not False
 
-    def test_Reset(self, tango_device):
+    def test_Reset(self, device_under_test):
         """Test for Reset"""
-        assert tango_device.Reset() is None
+        assert device_under_test.Reset() is None
 
-    def test_On(self, tango_device):
+    def test_On(self, device_under_test):
         """Test for On"""
         with pytest.raises(tango.DevFailed):
-            assert tango_device.On()
+            assert device_under_test.On()
 
-    def test_Off(self, tango_device):
+    def test_Off(self, device_under_test):
         """Test for Off"""
-        assert tango_device.Off() is None
+        assert device_under_test.Off() is None
 
-    def test_StandbyLow(self, tango_device):
+    def test_StandbyLow(self, device_under_test):
         """Test for StandbyLow"""
-        assert tango_device.StandbyLow() == 0
+        assert device_under_test.StandbyLow() == 0
 
-    def test_StandbyFull(self, tango_device):
+    def test_StandbyFull(self, device_under_test):
         """Test for StandbyFull"""
-        assert tango_device.StandbyFull() == 0
+        assert device_under_test.StandbyFull() == 0
 
-    def test_Operate(self, tango_device):
+    def test_Operate(self, device_under_test):
         """Test for Operate"""
-        assert tango_device.Operate() == 0
+        assert device_under_test.Operate() == 0
 
-    def test_Maintenance(self, tango_device):
+    def test_Maintenance(self, device_under_test):
         """Test for Maintenance"""
-        assert tango_device.Maintenance() is None
+        assert device_under_test.Maintenance() is None
 
-    def test_EnableSubarray(self, tango_device, mock_device_proxy):
-        master = tango_device  # to make test clearer to read
+    def test_EnableSubarray(self, device_under_test, mock_device_proxy):
+        master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
 
@@ -135,8 +146,8 @@ class TestMccsMaster:
         assert mock_subarray_1.adminMode == AdminMode.ONLINE
         assert mock_subarray_2.adminMode == AdminMode.ONLINE
 
-    def test_DisableSubarray(self, tango_device, mock_device_proxy):
-        master = tango_device  # to make test clearer to read
+    def test_DisableSubarray(self, device_under_test, mock_device_proxy):
+        master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
 
@@ -166,11 +177,11 @@ class TestMccsMaster:
         assert mock_subarray_1.adminMode == AdminMode.OFFLINE
         assert mock_subarray_2.adminMode == AdminMode.ONLINE
 
-    def test_Allocate(self, tango_device, mock_device_proxy):
+    def test_Allocate(self, device_under_test, mock_device_proxy):
         """
         Test the Allocate command.
         """
-        master = tango_device  # for readability
+        master = device_under_test  # for readability
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
         mock_station_1 = tango.DeviceProxy("low/elt/station_1")
@@ -299,11 +310,11 @@ class TestMccsMaster:
         assert mock_station_1.subarrayId == 2
         assert mock_station_2.subarrayId == 2
 
-    def test_Release(self, tango_device, mock_device_proxy):
+    def test_Release(self, device_under_test, mock_device_proxy):
         """
         Test Release command.
         """
-        master = tango_device  # for readability
+        master = device_under_test  # for readability
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
         mock_station_1 = tango.DeviceProxy("low/elt/station_1")
@@ -365,53 +376,53 @@ class TestMccsMaster:
         assert mock_station_1.subarrayId == 0
         assert mock_station_2.subarrayId == 0
 
-    def test_buildState(self, tango_device):
+    def test_buildState(self, device_under_test):
         """Test for buildState"""
         binfo = ", ".join((release.name, release.version, release.description))
-        assert tango_device.buildState == binfo
+        assert device_under_test.buildState == binfo
 
-    def test_versionId(self, tango_device):
+    def test_versionId(self, device_under_test):
         """Test for versionId"""
-        assert tango_device.versionId == release.version
+        assert device_under_test.versionId == release.version
 
-    def test_healthState(self, tango_device):
+    def test_healthState(self, device_under_test):
         """Test for healthState"""
-        assert tango_device.healthState == HealthState.OK
+        assert device_under_test.healthState == HealthState.OK
 
-    def test_adminMode(self, tango_device):
+    def test_adminMode(self, device_under_test):
         """Test for adminMode"""
-        assert tango_device.adminMode == AdminMode.ONLINE
-        tango_device.adminMode = AdminMode.OFFLINE
-        assert tango_device.adminMode == AdminMode.OFFLINE
+        assert device_under_test.adminMode == AdminMode.ONLINE
+        device_under_test.adminMode = AdminMode.OFFLINE
+        assert device_under_test.adminMode == AdminMode.OFFLINE
 
-    def test_controlMode(self, tango_device):
+    def test_controlMode(self, device_under_test):
         """Test for controlMode"""
-        assert tango_device.controlMode == ControlMode.REMOTE
+        assert device_under_test.controlMode == ControlMode.REMOTE
 
-    def test_simulationMode(self, tango_device):
+    def test_simulationMode(self, device_under_test):
         """Test for simulationMode"""
-        assert tango_device.simulationMode == SimulationMode.FALSE
+        assert device_under_test.simulationMode == SimulationMode.FALSE
 
-    def test_testMode(self, tango_device):
+    def test_testMode(self, device_under_test):
         """Test for testMode"""
-        assert tango_device.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.NONE
 
-    def test_commandProgress(self, tango_device):
+    def test_commandProgress(self, device_under_test):
         """Test for commandProgress"""
-        assert tango_device.commandProgress == 0
+        assert device_under_test.commandProgress == 0
 
-    def test_commandDelayExpected(self, tango_device):
+    def test_commandDelayExpected(self, device_under_test):
         """Test for commandDelayExpected"""
-        assert tango_device.commandDelayExpected == 0
+        assert device_under_test.commandDelayExpected == 0
 
-    def test_opState(self, tango_device):
+    def test_opState(self, device_under_test):
         """Test for opState"""
-        assert tango_device.opState == tango.DevState.UNKNOWN
+        assert device_under_test.opState == tango.DevState.UNKNOWN
 
-    def test_maxCapabilities(self, tango_device):
+    def test_maxCapabilities(self, device_under_test):
         """Test for maxCapabilities"""
-        assert tango_device.maxCapabilities is None
+        assert device_under_test.maxCapabilities is None
 
-    def test_availableCapabilities(self, tango_device):
+    def test_availableCapabilities(self, device_under_test):
         """Test for availableCapabilities"""
-        assert tango_device.availableCapabilities is None
+        assert device_under_test.availableCapabilities is None

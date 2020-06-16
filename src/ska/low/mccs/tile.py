@@ -14,6 +14,7 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 __all__ = ["MccsTile", "main"]
 
 import json
+import asyncio
 import numpy as np
 
 # PyTango imports
@@ -151,7 +152,6 @@ class MccsTile(SKABaseDevice):
         return self._subarray_id
 
     @subarrayId.write
-    @DebugIt()
     def subarrayId(self, value):
         """Set the subarrayId attribute."""
         self._subarray_id = value

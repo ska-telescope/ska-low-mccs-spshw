@@ -262,15 +262,15 @@ class MccsTile(SKABaseDevice):
         """Set the firmwareVersion attribute."""
         self._firmware_version = value
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(dtype="DevDouble")
     def voltage(self):
         """Return the voltage attribute."""
-        return self._tpm.voltage()
+        return self._voltage
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(dtype="DevDouble")
     def current(self):
         """Return the current attribute."""
-        return self._tpm.current()
+        return self._current
 
     @attribute(
         dtype="DevBoolean",
@@ -280,20 +280,20 @@ class MccsTile(SKABaseDevice):
         """ Function that returns true if board is programmed"""
         return self._tpm.is_programmed()
 
-    @attribute(dtype="DevDouble", doc="The board temperature", fisallowed=is_connected)
+    @attribute(dtype="DevDouble", doc="The board temperature")
     def board_temperature(self):
         """Return the board_temperature attribute."""
-        return self._tpm.temperature()
+        return self._board_temperature
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(dtype="DevDouble")
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        return self._tpm.get_fpga1_temperature()
+        return self._fpga1_temperature
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(dtype="DevDouble")
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        return self._tpm.get_fpga2_temperature()
+        return self._fpga2_temperature
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def fpga1_time(self):
@@ -2534,6 +2534,54 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("CalculateDelay")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
+
+    # --------------------
+    # Asynchronous routine
+    # --------------------
+    def _create_long_running_task(self):
+        self._streaming = True
+        self._lock = asyncio.Lock()
+        loop = asyncio.get_event_loop()
+        self.logger.info("create task")
+        info = self
+        task = loop.create_task(__do_read(info))
+
+
+async def __do_read(self):
+    while self._streaming:
+        try:
+            # if connected read the values from tpm
+            if self._tpm is not None and self._is_connected:
+                print("stream on")
+                volts = self._tpm.voltage()
+                curr = self._tpm.current()
+                temp = self._tpm.temperature()
+                temp1 = self._tpm.get_fpga1_temperature()
+                temp2 = self._tpm.get_fpga2_temperature()
+
+                async with self._lock:
+                    # now update the attribute using lock to prevent access conflict
+                    self._voltage = volts
+                    self._current = curr
+                    self._board_temperature = temp
+                    self._fpga1_temperature = temp1
+                    self._fpga2_temperature = temp2
+                    self.push_change_event("voltage", volts)
+                    self.push_change_event("current", curr)
+                    self.push_change_event("board_temperature", temp)
+                    self.push_change_event("fpga1_temperature", temp1)
+                    self.push_change_event("fpga2_temperature", temp2)
+
+            #  update every second (should be settable?)
+            self.looger.info("sleep 1")
+            await asyncio.sleep(1)
+        except Exception as exc:
+            self.set_state(DevState.FAULT)
+            self.push_change_event("state", self.get_state())
+            self.logger.error(exc.what())
+
+        if not self._streaming:
+            break
 
 
 # ----------

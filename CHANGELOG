@@ -1,5 +1,9 @@
 # Version History
 
+## 0.1.1
+
+Patch release to create versioned docker image
+
 ## 0.1.0
 
 Initial release

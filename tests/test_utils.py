@@ -92,7 +92,7 @@ class TestUtils:
         """
         return args
 
-    @json_input("schemas/MccsMaster_Allocate_lax.json")
+    @json_input("MccsMaster_Allocate_lax.json")
     def json_input_schema_tester(self, **args):
         """
         Helper method, takes any arguments but decorated to take them as

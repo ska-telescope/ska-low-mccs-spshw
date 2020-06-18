@@ -20,7 +20,7 @@ setuptools.setup(
     license=release_module["license"],
     package_dir={"": "src"},
     packages=setuptools.find_namespace_packages(where="src"),
-    package_data={"": ["schemas/*.json"],},
+    package_data={"": ["schemas/*.json"]},
     url=release_module["url"],
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -1,7 +1,6 @@
 """
 Module for MCCS utils
 """
-import os
 from functools import wraps
 import inspect
 import pkg_resources

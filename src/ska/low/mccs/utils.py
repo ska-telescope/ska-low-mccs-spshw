@@ -1,8 +1,10 @@
 """
 Module for MCCS utils
 """
+import os
 from functools import wraps
 import inspect
+import pkg_resources
 import json
 import jsonschema
 
@@ -10,8 +12,9 @@ from tango import Except, ErrSeverity
 from tango.server import Device
 
 
-def tango_raise(msg, reason="API_CommandFailed", severity=ErrSeverity.ERR,
-                _origin=None):
+def tango_raise(
+    msg, reason="API_CommandFailed", severity=ErrSeverity.ERR, _origin=None
+):
     """Helper function to provide a concise way to throw `tango.Except.throw_exception`
 
     Example::
@@ -114,9 +117,9 @@ class json_input:
         self.schema = None
 
         if schema_path is not None:
-            with open(schema_path, "r") as schema_file:
-                schema_string = schema_file.read()
-
+            schema_string = pkg_resources.resource_string(
+                "ska.low.mccs.schemas", schema_path
+            )
             self.schema = json.loads(schema_string)
 
     def __call__(self, func):

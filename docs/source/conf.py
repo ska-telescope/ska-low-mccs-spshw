@@ -54,8 +54,8 @@ copyright = "2020, SKA MCCS Team"
 author = "SKA MCCS Team"
 
 # The full version, including alpha/beta/rc tags
-version = "0.1.0"
-release = "0.1.0-alpha"
+version = "0.1.1"
+release = "0.1.1-alpha"
 
 
 # -- General configuration ------------------------------------------------

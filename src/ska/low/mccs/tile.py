@@ -24,12 +24,12 @@ from tango.server import device_property
 
 # Additional import
 
-from ska.low.mccs import MccsGroupDevice
+# from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base.control_model import SimulationMode, LoggingLevel
 
 
-class MccsTile(MccsGroupDevice):
+class MccsTile(SKABaseDevice):
     """
     The Tile Device represents the TANGO interface to a Tile (TPM) unit
 
@@ -52,12 +52,9 @@ class MccsTile(MccsGroupDevice):
     # General methods
     # ---------------
 
-    def init_device(self):
+    def do_init_device(self):
         """Initialises the attributes and properties of the Mccs."""
-        super().init_device()
-
         self.logger.LoggingLevel = LoggingLevel.ERROR
-        self.set_state(DevState.INIT)
         self._ip_address = self.TileIP
         self._port = self.TpmCpldPort
         self._lmc_ip = self.LmcIp
@@ -87,7 +84,6 @@ class MccsTile(MccsGroupDevice):
         self.simulationMode = SimulationMode.TRUE
         self._default_tapering_coeffs = [float(1) for i in range(self.AntennasPerTile)]
         self._is_connected = False
-        self.set_state(DevState.OFF)
         self.logger.info("MccsTile init_device complete")
 
     def always_executed_hook(self):
@@ -114,7 +110,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         access=AttrWriteType.READ_WRITE,
-        doc="The global tile identifier"
+        doc="The global tile identifier",
     )
     def tileId(self):
         """Return the tileId attribute."""
@@ -128,7 +124,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         access=AttrWriteType.READ_WRITE,
-        doc="Logical tile identifier within a station"
+        doc="Logical tile identifier within a station",
     )
     def logicalTileId(self):
         """Return the logicalTileId attribute."""
@@ -142,7 +138,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         access=AttrWriteType.READ_WRITE,
-        doc="The identifier of the associated subarray."
+        doc="The identifier of the associated subarray.",
     )
     def subarrayId(self):
         """Return the subarrayId attribute."""
@@ -157,7 +153,8 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         access=AttrWriteType.READ_WRITE,
-        doc="The identifier of the associated station.")
+        doc="The identifier of the associated station.",
+    )
     def stationId(self):
         """Return the stationId attribute."""
         return self._station_id
@@ -170,7 +167,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevString",
         access=AttrWriteType.READ_WRITE,
-        doc="LMC address (and global identifier) of Tile"
+        doc="LMC address (and global identifier) of Tile",
     )
     def ipAddress(self):
         """Return the ipAddress attribute."""
@@ -184,7 +181,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevString",
         access=AttrWriteType.READ_WRITE,
-        doc="LMC IP address to (and from) which LMC data will flow"
+        doc="LMC IP address to (and from) which LMC data will flow",
     )
     def lmcIp(self):
         """Return the lmcIp attribute."""
@@ -198,7 +195,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevLong",
         access=AttrWriteType.READ_WRITE,
-        doc="LMC port to (and from) which LMC data will flow"
+        doc="LMC port to (and from) which LMC data will flow",
     )
     def lmcPort(self):
         """Return the lmcPort attribute."""
@@ -257,7 +254,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevString",
         access=AttrWriteType.READ_WRITE,
-        doc="Name and identifier of currently running firmware"
+        doc="Name and identifier of currently running firmware",
     )
     def firmwareName(self):
         """Return the firmwareName attribute."""
@@ -271,7 +268,7 @@ class MccsTile(MccsGroupDevice):
     @attribute(
         dtype="DevString",
         access=AttrWriteType.READ_WRITE,
-        doc="Version of currently running firmware"
+        doc="Version of currently running firmware",
     )
     def firmwareVersion(self):
         """Return the firmwareVersion attribute."""
@@ -316,9 +313,7 @@ class MccsTile(MccsGroupDevice):
         return self._tpm.get_fpga2_temperature()
 
     @attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        fisallowed=is_connected
+        dtype="DevLong", access=AttrWriteType.READ_WRITE, fisallowed=is_connected
     )
     def fpga1_time(self):
         """Return the fpga1_time attribute."""
@@ -330,9 +325,7 @@ class MccsTile(MccsGroupDevice):
         self._tpm.set_fpga1_time(value)
 
     @attribute(
-        dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
-        fisallowed=is_connected
+        dtype="DevLong", access=AttrWriteType.READ_WRITE, fisallowed=is_connected
     )
     def fpga2_time(self):
         """Return the fpga2_time attribute."""

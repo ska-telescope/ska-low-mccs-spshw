@@ -16,7 +16,7 @@ __all__ = ["MccsStation", "main"]
 # PyTango imports
 import tango
 from tango.server import attribute, command
-from tango import AttrWriteType, DebugIt, DevState
+from tango import AttrWriteType, DebugIt
 from tango.server import device_property
 
 # additional imports
@@ -44,14 +44,10 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # General methods
     # ---------------
 
-    def init_device(self):
+    def do_init_device(self):
         """
         Initialises the attributes and properties of the MccsStation.
         """
-        super().init_device()
-
-        self.set_state(DevState.INIT)
-
         self._subarray_id = 0
         self._tile_fqdns = list(self.TileFQDNs)
         self._beam_fqdns = []
@@ -81,7 +77,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
         self.set_archive_event("beamFQDNs", True, True)
 
         self._station_id = self.StationId
-        self.set_state(DevState.OFF)
 
     def always_executed_hook(self):
         """

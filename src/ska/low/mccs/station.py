@@ -16,16 +16,17 @@ __all__ = ["MccsStation", "main"]
 # PyTango imports
 import tango
 from tango.server import attribute, command
-from tango import AttrWriteType, DebugIt
+from tango import DebugIt
 from tango.server import device_property
 
 # additional imports
 from ska.base import SKAObsDevice
-from ska.low.mccs import MccsGroupDevice
+
+# from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
 
 
-class MccsStation(SKAObsDevice, MccsGroupDevice):
+class MccsStation(SKAObsDevice):
     """
     MccsStation is the Tango device class for the MCCS Station prototype.
 
@@ -110,7 +111,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @attribute(
         dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
         format="%i",
         max_value=16,
         min_value=0,
@@ -232,7 +232,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        access=AttrWriteType.READ_WRITE,
         max_dim_x=2,
         polling_period=1000,
         doc="""WGS84 position of the delay centre of the Station.

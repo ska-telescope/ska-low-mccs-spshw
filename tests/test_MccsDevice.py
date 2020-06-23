@@ -14,7 +14,8 @@ This module contains the tests for MccsDevice.
 
 import pytest
 from tango import DevState
-from ska.base.control_model import LoggingLevel
+from ska.base.commands import ResultCode
+from ska.base.control_model import AdminMode, LoggingLevel
 from ska.low.mccs import MccsDevice, release
 
 
@@ -43,21 +44,17 @@ class TestMccsDevice(object):
 
     def test_State(self, device_under_test):
         """Test for State"""
-        assert device_under_test.State() == DevState.UNKNOWN
+        assert device_under_test.State() == DevState.OFF
 
     def test_Status(self, device_under_test):
         """Test for Status"""
-        status = "The device is in UNKNOWN state."
+        status = "The device is in OFF state."
         assert device_under_test.Status() == status
 
     def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
         info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [info]
-
-    def test_Reset(self, device_under_test):
-        """Test for Reset"""
-        assert device_under_test.Reset() is None
 
     def test_ExceptionCallback(self, device_under_test):
         """Test for ExceptionCallback"""
@@ -73,7 +70,7 @@ class TestMccsDevice(object):
 
     def test_GetFullReport(self, device_under_test):
         """Test for GetFullReport"""
-        assert device_under_test.GetFullReport() is None
+        assert device_under_test.GetFullReport() == [""]
 
     def test_GetCommandReport(self, device_under_test):
         """Test for GetCommandReport"""
@@ -85,7 +82,9 @@ class TestMccsDevice(object):
 
     def test_ConstructDeviceProxyAddress(self, device_under_test):
         """Test for ConstructDeviceProxyAddress"""
-        assert device_under_test.ConstructDeviceProxyAddress("") is None
+        assert list(device_under_test.ConstructDeviceProxyAddress("")) == [
+            [ResultCode.OK], ["Stub implementation, did nothing"]
+        ]
 
     def test_buildState(self, device_under_test):
         """Test for buildState"""
@@ -104,7 +103,7 @@ class TestMccsDevice(object):
 
     def test_adminMode(self, device_under_test):
         """Test for adminMode"""
-        assert device_under_test.adminMode == 0
+        assert device_under_test.adminMode == AdminMode.MAINTENANCE
 
     def test_controlMode(self, device_under_test):
         """Test for controlMode"""

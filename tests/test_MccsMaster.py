@@ -40,27 +40,7 @@ device_info = {
 class TestMccsMaster:
     """Test case for packet generation."""
 
-    properties = {
-        "SkaLevel": "4",
-        "CentralLoggingTarget": "",
-        "ElementLoggingTarget": "",
-        "StorageLoggingTarget": "localhost",
-        "GroupDefinitions": "",
-        "NrSubarrays": "16",
-        "CapabilityTypes": "",
-        "MaxCapabilities": "",
-        "MccsSubarrays": "",
-        "LoggingLevelDefault": "4",
-        "LoggingTargetsDefault": "",
-        "MccsStations": "",
-    }
-
-    @classmethod
-    def mocking(cls):
-        """Mock external libraries."""
-        # Example : Mock numpy
-        # cls.numpy = MccsMaster.numpy = MagicMock()
-
+    @pytest.mark.skip(reason="Not implemented")
     def test_properties(self, device_under_test):
         """ Test the properties """
 

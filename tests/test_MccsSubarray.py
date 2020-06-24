@@ -9,17 +9,15 @@
 """
 This module contains the tests for MccsSubarray.
 """
-import itertools
-import pytest
-from tango import DevSource, DevState, DevFailed
+import tango
+from tango import DevSource
 from ska.base.control_model import (
-    AdminMode,
     ControlMode,
     HealthState,
-    ObsState,
     SimulationMode,
     TestMode,
 )
+from ska.base.commands import ResultCode
 from ska.low.mccs import MccsSubarray, release
 from ska.low.mccs.utils import call_with_json
 
@@ -45,10 +43,6 @@ class TestMccsSubarray:
 
         :todo: Test for different memorized values of adminMode.
         """
-        assert device_under_test.adminMode == AdminMode.OFFLINE
-        assert device_under_test.state() == DevState.DISABLE
-
-        assert device_under_test.obsState == ObsState.IDLE
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
@@ -62,7 +56,7 @@ class TestMccsSubarray:
             "BAND1:0",
             "BAND2:0",
         ]
-        assert device_under_test.stationFQDNs == ()
+        assert device_under_test.stationFQDNs is None
         #         assert device_under_test.tileFQDNs is None
         #         assert device_under_test.stationBeamFQDNs is None
         assert device_under_test.activationTime == 0
@@ -75,17 +69,24 @@ class TestMccsSubarray:
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
-    def test_AssignResources(self, device_under_test):
+    def test_AssignResources(self, device_under_test, mock_device_proxy):
         """
         Test for AssignResources
         """
         device_under_test.set_source(DevSource.DEV)
-        device_under_test.adminMode = AdminMode.ONLINE
 
-        call_with_json(
-            device_under_test.AssignResources, stations=["low/elt/station_1"]
+        station_fqdn = "low/elt/station_1"
+        mock_station = tango.DeviceProxy(station_fqdn)
+
+        device_under_test.On()
+        [[result_code], [message]] = call_with_json(
+            device_under_test.AssignResources, stations=[station_fqdn]
         )
-        assert list(device_under_test.stationFQDNs) == ["low/elt/station_1"]
+        assert result_code == ResultCode.OK
+        assert message == "AssignResources command completed successfully"
+        assert list(device_under_test.stationFQDNs) == [station_fqdn]
+
+        mock_station.Configure.assert_called_once_with()
 
     # tests of MccsSubarray commands
     def test_sendTransientBuffer(self, device_under_test):
@@ -94,7 +95,10 @@ class TestMccsSubarray:
         """
         segment_spec = []
         returned = device_under_test.sendTransientBuffer(segment_spec)
-        assert list(returned) == ["OK", "sendTransientBuffer command completed"]
+        assert returned == [
+            [ResultCode.OK],
+            ["SendTransientBuffer command completed successfully"]
+        ]
 
     # tests of overridden base class attributes
     def test_buildState(self, device_under_test):
@@ -121,259 +125,4 @@ class TestMccsSubarray:
         """
         Test for stationFQDNs attribute
         """
-        assert device_under_test.stationFQDNs == ()
-
-    # General device behaviour tests
-
-    @pytest.mark.parametrize(
-        "state_under_test, action_under_test",
-        itertools.product(
-            [
-                "DISABLED (NOTFITTED)",
-                "DISABLED (OFFLINE)",
-                "OFF (ONLINE)",
-                "OFF (MAINTENANCE)",
-                "ON (ONLINE)",
-                "ON (MAINTENANCE)",
-                "READY (ONLINE)",
-                "READY (MAINTENANCE)",
-                "SCANNING (ONLINE)",
-                "SCANNING (MAINTENANCE)",
-                "ABORTED (ONLINE)",
-                "ABORTED (MAINTENANCE)",
-            ],
-            [
-                "notfitted",
-                "offline",
-                "online",
-                "maintenance",
-                "assign",
-                "release",
-                "release (all)",
-                "releaseall",
-                "configure",
-                "deconfigure",
-                "deconfigure (all)",
-                "deconfigureall",
-                "deconfigureall (all)",
-                "scan",
-                "endscan",
-                "endsb",
-                "abort",
-                "reset",
-            ],
-        ),
-    )
-    def test_state_machine(self, device_under_test,  # mock_device_proxy,
-                           state_under_test, action_under_test):
-        """
-        Test the subarray state machine: for a given initial state and
-        an action, does execution of that action, from that initial
-        state, yield the expected results? If the action was not allowed
-        from that initial state, does the device raise a DevFailed
-        exception? If the action was allowed, does it result in the
-        correct state transition?
-
-        :todo: Need to refactor to better handle side-effects of
-            transitions. At present, we are not testing that we stay in
-            the right state when incrementally assigning resources i.e.
-            multiple applications of different "assign"-like actions.
-        """
-
-        states = {
-            "DISABLED (NOTFITTED)": (
-                AdminMode.NOT_FITTED,
-                DevState.DISABLE,
-                ObsState.IDLE,
-            ),
-            "DISABLED (OFFLINE)": (AdminMode.OFFLINE, DevState.DISABLE, ObsState.IDLE),
-            "OFF (ONLINE)": (AdminMode.ONLINE, DevState.OFF, ObsState.IDLE),
-            "OFF (MAINTENANCE)": (AdminMode.MAINTENANCE, DevState.OFF, ObsState.IDLE),
-            "ON (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.IDLE),
-            "ON (MAINTENANCE)": (AdminMode.MAINTENANCE, DevState.ON, ObsState.IDLE),
-            "READY (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.READY),
-            "READY (MAINTENANCE)": (AdminMode.MAINTENANCE, DevState.ON, ObsState.READY),
-            "SCANNING (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.SCANNING),
-            "SCANNING (MAINTENANCE)": (
-                AdminMode.MAINTENANCE,
-                DevState.ON,
-                ObsState.SCANNING,
-            ),
-            "ABORTED (ONLINE)": (AdminMode.ONLINE, DevState.ON, ObsState.ABORTED),
-            "ABORTED (MAINTENANCE)": (
-                AdminMode.MAINTENANCE,
-                DevState.ON,
-                ObsState.ABORTED,
-            ),
-        }
-
-        def assert_state(state):
-            assert states[state] == (
-                device_under_test.adminMode,
-                device_under_test.state(),
-                device_under_test.obsState,
-            )
-
-        actions = {
-            "notfitted": lambda d: d.write_attribute("adminMode", AdminMode.NOT_FITTED),
-            "offline": lambda d: d.write_attribute("adminMode", AdminMode.OFFLINE),
-            "online": lambda d: d.write_attribute("adminMode", AdminMode.ONLINE),
-            "maintenance": lambda d: d.write_attribute(
-                "adminMode", AdminMode.MAINTENANCE
-            ),
-            "assign": lambda d: call_with_json(
-                d.AssignResources,
-                stations=["low/elt/station_1", "low/elt/station_2"]
-            ),
-            "release": lambda d: call_with_json(
-                d.ReleaseResources, stations=["low/elt/station_1"],
-            ),
-            "release (all)": lambda d: call_with_json(
-                d.ReleaseResources,
-                stations=["low/elt/station_1", "low/elt/station_2"]
-            ),
-            "releaseall": lambda d: d.ReleaseAllResources(),
-            "configure": lambda d: d.ConfigureCapability([[2, 2], ["BAND1", "BAND2"]]),
-            "deconfigure": lambda d: d.DeconfigureCapability([[1], ["BAND1"]]),
-            "deconfigure (all)": lambda d: d.DeconfigureCapability(
-                [[2, 2], ["BAND1", "BAND2"]]
-            ),
-            "deconfigureall": lambda d: d.DeconfigureAllCapabilities("BAND1"),
-            "deconfigureall (all)": lambda d: [
-                d.DeconfigureAllCapabilities("BAND1"),
-                d.DeconfigureAllCapabilities("BAND2"),
-            ],
-            "scan": lambda d: d.Scan(["Dummy scan id"]),
-            "endscan": lambda d: d.EndScan(),
-            "endsb": lambda d: d.EndSB(),
-            "abort": lambda d: d.Abort(),
-            "reset": lambda d: d.Reset(),
-        }
-
-        def perform_action(action):
-            actions[action](device_under_test)
-
-        transitions = {
-            ("DISABLED (NOTFITTED)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("DISABLED (NOTFITTED)", "offline"): "DISABLED (OFFLINE)",
-            ("DISABLED (NOTFITTED)", "online"): "OFF (ONLINE)",
-            ("DISABLED (NOTFITTED)", "maintenance"): "OFF (MAINTENANCE)",
-            ("DISABLED (OFFLINE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("DISABLED (OFFLINE)", "offline"): "DISABLED (OFFLINE)",
-            ("DISABLED (OFFLINE)", "online"): "OFF (ONLINE)",
-            ("DISABLED (OFFLINE)", "maintenance"): "OFF (MAINTENANCE)",
-            ("OFF (ONLINE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("OFF (ONLINE)", "offline"): "DISABLED (OFFLINE)",
-            ("OFF (ONLINE)", "online"): "OFF (ONLINE)",
-            ("OFF (ONLINE)", "maintenance"): "OFF (MAINTENANCE)",
-            ("OFF (ONLINE)", "assign"): "ON (ONLINE)",
-            ("OFF (MAINTENANCE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("OFF (MAINTENANCE)", "offline"): "DISABLED (OFFLINE)",
-            ("OFF (MAINTENANCE)", "online"): "OFF (ONLINE)",
-            ("OFF (MAINTENANCE)", "maintenance"): "OFF (MAINTENANCE)",
-            ("OFF (MAINTENANCE)", "assign"): "ON (MAINTENANCE)",
-            ("ON (ONLINE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("ON (ONLINE)", "offline"): "DISABLED (OFFLINE)",
-            ("ON (ONLINE)", "online"): "ON (ONLINE)",
-            ("ON (ONLINE)", "maintenance"): "ON (MAINTENANCE)",
-            # ("ON (ONLINE)", "assign"): "ON (ONLINE)",
-            ("ON (ONLINE)", "release"): "ON (ONLINE)",
-            ("ON (ONLINE)", "release (all)"): "OFF (ONLINE)",
-            ("ON (ONLINE)", "releaseall"): "OFF (ONLINE)",
-            ("ON (ONLINE)", "configure"): "READY (ONLINE)",
-            ("ON (MAINTENANCE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("ON (MAINTENANCE)", "offline"): "DISABLED (OFFLINE)",
-            ("ON (MAINTENANCE)", "online"): "ON (ONLINE)",
-            ("ON (MAINTENANCE)", "maintenance"): "ON (MAINTENANCE)",
-            # ("ON (MAINTENANCE)", "assign"): "ON (MAINTENANCE)",
-            ("ON (MAINTENANCE)", "release"): "ON (MAINTENANCE)",
-            ("ON (MAINTENANCE)", "release (all)"): "OFF (MAINTENANCE)",
-            ("ON (MAINTENANCE)", "releaseall"): "OFF (MAINTENANCE)",
-            ("ON (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
-            ("READY (ONLINE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("READY (ONLINE)", "offline"): "DISABLED (OFFLINE)",
-            ("READY (ONLINE)", "online"): "READY (ONLINE)",
-            ("READY (ONLINE)", "maintenance"): "READY (MAINTENANCE)",
-            ("READY (ONLINE)", "endsb"): "ON (ONLINE)",
-            ("READY (ONLINE)", "reset"): "ON (ONLINE)",
-            ("READY (ONLINE)", "configure"): "READY (ONLINE)",
-            ("READY (ONLINE)", "deconfigure"): "READY (ONLINE)",
-            ("READY (ONLINE)", "deconfigure (all)"): "ON (ONLINE)",
-            ("READY (ONLINE)", "deconfigureall"): "READY (ONLINE)",
-            ("READY (ONLINE)", "deconfigureall (all)"): "ON (ONLINE)",
-            ("READY (ONLINE)", "scan"): "SCANNING (ONLINE)",
-            ("READY (ONLINE)", "abort"): "ABORTED (ONLINE)",
-            ("READY (MAINTENANCE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("READY (MAINTENANCE)", "offline"): "DISABLED (OFFLINE)",
-            ("READY (MAINTENANCE)", "online"): "READY (ONLINE)",
-            ("READY (MAINTENANCE)", "maintenance"): "READY (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "endsb"): "ON (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "configure"): "READY (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "deconfigure"): "READY (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "deconfigure (all)"): "ON (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "deconfigureall"): "READY (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "deconfigureall (all)"): "ON (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "scan"): "SCANNING (MAINTENANCE)",
-            ("READY (MAINTENANCE)", "abort"): "ABORTED (MAINTENANCE)",
-            ("SCANNING (ONLINE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("SCANNING (ONLINE)", "offline"): "DISABLED (OFFLINE)",
-            ("SCANNING (ONLINE)", "online"): "SCANNING (ONLINE)",
-            ("SCANNING (ONLINE)", "maintenance"): "SCANNING (MAINTENANCE)",
-            ("SCANNING (ONLINE)", "endscan"): "READY (ONLINE)",
-            ("SCANNING (ONLINE)", "abort"): "ABORTED (ONLINE)",
-            ("SCANNING (ONLINE)", "reset"): "ON (ONLINE)",
-            ("SCANNING (MAINTENANCE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("SCANNING (MAINTENANCE)", "offline"): "DISABLED (OFFLINE)",
-            ("SCANNING (MAINTENANCE)", "online"): "SCANNING (ONLINE)",
-            ("SCANNING (MAINTENANCE)", "maintenance"): "SCANNING (MAINTENANCE)",
-            ("SCANNING (MAINTENANCE)", "endscan"): "READY (MAINTENANCE)",
-            ("SCANNING (MAINTENANCE)", "abort"): "ABORTED (MAINTENANCE)",
-            ("SCANNING (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
-            ("ABORTED (ONLINE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("ABORTED (ONLINE)", "offline"): "DISABLED (OFFLINE)",
-            ("ABORTED (ONLINE)", "online"): "ABORTED (ONLINE)",
-            ("ABORTED (ONLINE)", "maintenance"): "ABORTED (MAINTENANCE)",
-            ("ABORTED (ONLINE)", "reset"): "ON (ONLINE)",
-            ("ABORTED (MAINTENANCE)", "notfitted"): "DISABLED (NOTFITTED)",
-            ("ABORTED (MAINTENANCE)", "offline"): "DISABLED (OFFLINE)",
-            ("ABORTED (MAINTENANCE)", "online"): "ABORTED (ONLINE)",
-            ("ABORTED (MAINTENANCE)", "maintenance"): "ABORTED (MAINTENANCE)",
-            ("ABORTED (MAINTENANCE)", "reset"): "ON (MAINTENANCE)",
-        }
-
-        setups = {
-            "DISABLED (NOTFITTED)": ["notfitted"],
-            "DISABLED (OFFLINE)": ["offline"],
-            "OFF (ONLINE)": ["online"],
-            "OFF (MAINTENANCE)": ["maintenance"],
-            "ON (ONLINE)": ["online", "assign"],
-            "ON (MAINTENANCE)": ["maintenance", "assign"],
-            "READY (ONLINE)": ["online", "assign", "configure"],
-            "READY (MAINTENANCE)": ["maintenance", "assign", "configure"],
-            "SCANNING (ONLINE)": ["online", "assign", "configure", "scan"],
-            "SCANNING (MAINTENANCE)": ["maintenance", "assign", "configure", "scan"],
-            "ABORTED (ONLINE)": ["online", "assign", "configure", "abort"],
-            "ABORTED (MAINTENANCE)": ["maintenance", "assign", "configure", "abort"],
-        }
-
-        # bypass cache for this test because we are testing for a change
-        # in the polled attribute obsState
-        device_under_test.set_source(DevSource.DEV)
-
-        # Put the device into the state under test
-        for action in setups[state_under_test]:
-            perform_action(action)
-
-        # Check that we are in the state under test
-        assert_state(state_under_test)
-
-        # Test that the action under test does what we expect it to
-        if (state_under_test, action_under_test) in transitions:
-            # Action should succeed
-            perform_action(action_under_test)
-            assert_state(transitions[(state_under_test, action_under_test)])
-        else:
-            # Action should fail
-            with pytest.raises(DevFailed):
-                perform_action(action_under_test)
+        assert device_under_test.stationFQDNs is None

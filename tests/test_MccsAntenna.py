@@ -25,7 +25,7 @@ device_info = {
         "GroupDefinitions": "",
         "LoggingLevelDefault": "4",
         # "LoggingTargetsDefault": "",
-    }
+    },
 }
 
 
@@ -37,14 +37,6 @@ class TestMccsAntenna(object):
     def test_properties(self, device_under_test):
         """Test the properties """
         assert device_under_test.loggingLevel == LoggingLevel.INFO
-
-    def test_State(self, device_under_test):
-        """Test for State"""
-        assert device_under_test.state() == DevState.ON
-
-    def test_Status(self, device_under_test):
-        """Test for Status"""
-        assert device_under_test.status() == "The device is in ON state."
 
     def test_PowerOn(self, device_under_test):
         """Test for PowerOn"""
@@ -180,7 +172,7 @@ class TestMccsAntenna(object):
 
     def test_loggingTargets(self, device_under_test):
         """Test for loggingTargets"""
-        assert device_under_test.loggingTargets == ('tango::logger',)
+        assert device_under_test.loggingTargets == ("tango::logger",)
 
     def test_delays(self, device_under_test):
         """Test for delays"""

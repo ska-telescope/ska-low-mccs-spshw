@@ -24,7 +24,7 @@ from ska.base import SKAObsDevice
 
 # from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
-from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska.base.commands import ResponseCommand, ResultCode
 
 
 class MccsStation(SKAObsDevice):
@@ -302,9 +302,6 @@ class MccsStation(SKAObsDevice):
 
         def do(self):
             device = self.target
-            print(dir(self))
-            print(dir(self.state_model))
-            print(dir(device))
             for id, tile in enumerate(device.TileFQDNs):
                 proxy = tango.DeviceProxy(tile)
                 proxy.subarrayId = device._subarray_id

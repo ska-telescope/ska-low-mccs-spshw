@@ -17,8 +17,7 @@ import json
 import numpy as np
 
 # PyTango imports
-from tango import AttrWriteType, DebugIt
-from tango import DevState
+from tango import DebugIt
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -422,155 +421,112 @@ class MccsTile(SKABaseDevice):
         args = (self, self.state_model, self.logger)
 
         self.register_command_object("Initialise", self.InitialiseCommand(*args))
-
         self.register_command_object("Connect", self.ConnectCommand(*args))
-
         self.register_command_object("Disconnect", self.DisconnectCommand(*args))
-
         self.register_command_object(
             "GetFirmwareList", self.GetFirmwareListCommand(*args)
         )
-
         self.register_command_object(
             "DownloadFirmware", self.DownloadFirmwareCommand(*args)
         )
-
         self.register_command_object("ProgramCPLD", self.ProgramCPLDCommand(*args))
-
         self.register_command_object("WaitPPSEvent", self.WaitPPSEventCommand(*args))
-
         self.register_command_object(
             "GetRegisterList", self.GetRegisterListCommand(*args)
         )
-
         self.register_command_object("ReadRegister", self.ReadRegisterCommand(*args))
-
         self.register_command_object("WriteRegister", self.WriteRegisterCommand(*args))
-
         self.register_command_object("ReadAddress", self.ReadAddressCommand(*args))
-
         self.register_command_object("WriteAddress", self.WriteAddressCommand(*args))
-
         self.register_command_object(
             "Configure40GCore", self.Configure40GCoreCommand(*args)
         )
-
         self.register_command_object(
             "Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand(*args)
         )
-
         self.register_command_object(
             "SetLmcDownload", self.SetLmcDownloadCommand(*args)
         )
-
         self.register_command_object(
             "SetChanneliserTruncation", self.SetChanneliserTruncationCommand(*args)
         )
-
         self.register_command_object(
             "SetBeamFormerRegions", self.SetBeamFormerRegionsCommand(*args)
         )
-
         self.register_command_object(
             "ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand(*args)
         )
-
         self.register_command_object(
             "LoadCalibrationCoefficients",
             self.LoadCalibrationCoefficientsCommand(*args),
         )
-
         self.register_command_object("LoadBeamAngle", self.LoadBeamAngleCommand(*args))
-
         self.register_command_object(
             "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*args)
         )
-
         self.register_command_object(
             "SwitchCalibrationBank", self.SwitchCalibrationBankCommand(*args)
         )
-
         self.register_command_object(
             "SetPointingDelay", self.SetPointingDelayCommand(*args)
         )
-
         self.register_command_object(
             "LoadPointingDelay", self.LoadPointingDelayCommand(*args)
         )
-
         self.register_command_object(
             "StartBeamformer", self.StartBeamformerCommand(*args)
         )
-
         self.register_command_object(
             "StopBeamformer", self.StopBeamformerCommand(*args)
         )
-
         self.register_command_object(
             "ConfigureIntegratedChannelData",
             self.ConfigureIntegratedChannelDataCommand(*args),
         )
-
         self.register_command_object(
             "ConfigureIntegratedBeamData",
             self.ConfigureIntegratedBeamDataCommand(*args),
         )
-
         self.register_command_object("SendRawData", self.SendRawDataCommand(*args))
-
         self.register_command_object(
             "SendChannelisedData", self.SendChannelisedDataCommand(*args)
         )
-
         self.register_command_object(
             "SendChannelisedDataContinuous",
             self.SendChannelisedDataContinuousCommand(*args),
         )
-
         self.register_command_object("SendBeamData", self.SendBeamDataCommand(*args))
-
         self.register_command_object(
             "StopDataTransmission", self.StopDataTransmissionCommand(*args)
         )
-
         self.register_command_object(
             "ComputeCalibrationCoefficients",
             self.ComputeCalibrationCoefficientsCommand(*args),
         )
-
         self.register_command_object(
             "StartAcquisition", self.StartAcquisitionCommand(*args)
         )
-
         self.register_command_object("SetTimeDelays", self.SetTimeDelaysCommand(*args))
-
         self.register_command_object(
             "SetCspRounding", self.SetCspRoundingCommand(*args)
         )
-
         self.register_command_object(
             "SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand(*args)
         )
-
         self.register_command_object(
             "SendRawDataSynchronised", self.SendRawDataSynchronisedCommand(*args)
         )
-
         self.register_command_object(
             "SendChannelisedDataNarrowband",
             self.SendChannelisedDataNarrowbandCommand(*args),
         )
-
         self.register_command_object(
             "TweakTransceivers", self.TweakTransceiversCommand(*args)
         )
-
         self.register_command_object(
             "PostSynchronisation", self.PostSynchronisationCommand(*args)
         )
-
         self.register_command_object("SyncFpgas", self.SyncFpgasCommand(*args))
-
         self.register_command_object(
             "CalculateDelay", self.CalculateDelayCommand(*args)
         )
@@ -2096,7 +2052,7 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("StopDataTransmission")
         """
         handler = self.get_command_object("StopDataTransmission")
-        (return_code, message) = handler(argin)
+        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class ComputeCalibrationCoefficientsCommand(ResponseCommand):

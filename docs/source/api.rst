@@ -11,5 +11,4 @@ API
    MccsStationBeam
    MccsTile
    MccsAntenna
-   control_model
    utils

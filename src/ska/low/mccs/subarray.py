@@ -6,50 +6,115 @@
 # See LICENSE.txt for more info.
 
 """
-MCCS Subarray
-
-MccsSubarray is the Tango device class for the MCCS Subarray prototype.
-
-:todo: All MccsSubarray commands are functionless stubs
+This module provides MccsSubarray, the Tango device class for the MCCS
+Subarray prototype.
 """
 __all__ = ["MccsSubarray", "main"]
 
+import json
+
 # PyTango imports
-from tango import AttrWriteType, DebugIt, Except, ErrSeverity, DevFailed
+import tango
+from tango import DebugIt
 from tango.server import attribute, command
-from tango import DevState
-from tango import DeviceProxy
 
 # Additional import
 from ska.base import SKASubarray
-from ska.base.control_model import AdminMode, ObsState
+from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
-from ska.low.mccs.control_model import ReturnCode
-from ska.low.mccs.control_model import device_check
-from ska.low.mccs.utils import json_input
+
+
+class StationPoolManager:
+    """
+    A simple manager for the pool of stations that are assigned to a
+    subarray. The current implementation allows to assign and release
+    stations, and get a list of the FQDNs of the assigned stations.
+    """
+    def __init__(self):
+        """
+        Create a new StationPoolManager
+        """
+        self._stations = {}
+
+    def __len__(self):
+        """
+        Return the number of stations assigned to this station pool
+        manager.
+
+        :return: the number of stations assigned to this station pool
+            manager
+        :rtype: int
+        """
+        return len(self._stations)
+
+    def assign(self, stations):
+        """
+        Assign stations to this station pool manager
+
+        :param stations: list of FQDNs of stations to be assigned
+        :type stations: list of string
+        """
+        for fqdn in stations:
+            if fqdn not in self._stations:
+                station = tango.DeviceProxy(fqdn)
+                station.Configure()
+                self._stations[fqdn] = station
+
+    def release(self, stations):
+        """
+        Release stations from this station pool manager
+
+        :param stations: list of FQDNs of stations to be released
+        :type stations: list of string
+        """
+        (self._stations.pop(station, None) for station in stations)
+
+    def release_all(self):
+        """
+        Release all stations from this station pool manager
+        """
+        self._stations.clear()
+
+    @property
+    def fqdns(self):
+        """
+        Returns the FQDNs of currently assigned stations
+
+        :return: FQDNs of currently assigned stations
+        :rtype: list of string
+        """
+        returning = sorted(self._stations)
+        print(f"Returning {returning}")
+        return sorted(self._stations)
+
+
+class TransientBufferManager:
+    """
+    Stub class for management of a transient buffer. Currently does
+    nothing useful
+    """
+    def __init__(self):
+        """
+        Construct a new TransientBufferManager
+        """
+        pass
+
+    def send(self, segment_spec):
+        """
+        Instructs the manager to send the specified segments of the
+        transient buffer
+
+        :param segment_spec: specification of the segment to be sent
+        :type segment_spec: JSON string
+        """
+        pass
 
 
 class MccsSubarray(SKASubarray):
     """
     MccsSubarray is the Tango device class for the MCCS Subarray
     prototype.
-
-    :todo: All commands are functionless stubs
     """
-
-    device_check.register("states", lambda device, states: device.get_state() in states)
-    device_check.register(
-        "admin_modes", lambda device, adminModes: device._admin_mode in adminModes
-    )
-    device_check.register(
-        "obs_states", lambda device, obsStates: device._obs_state in obsStates
-    )
-    device_check.register(
-        "is_obs",  # shortcut for most common case
-        lambda device, obsStates: device.get_state() == DevState.ON
-        and device._admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
-        and device._obs_state in obsStates,
-    )
 
     # -----------------
     # Device Properties
@@ -59,60 +124,66 @@ class MccsSubarray(SKASubarray):
     # General methods
     # ---------------
 
-    def init_device(self):
+    class InitCommand(SKASubarray.InitCommand):
         """
-        Initialises the attributes and properties of the MccsSubarray.
+        Command class for device initialisation
         """
-        self.set_state(DevState.INIT)
-        super().init_device()
-        # push back to DevState.INIT again because we are still
-        # initialising, and SKASubarray.init_device() prematurely
-        # pushes to  DevState.DISABLE
-        self.set_state(DevState.INIT)
+        def do(self):
+            """
+            Stateless hook for initialisation of the attributes and
+            properties of the MccsSubarray.
+            """
+            (result_code, message) = super().do()
 
-        # The standard control models mandates initialising adminMode to
-        # its "factory default" of MAINTENANCE, which will usually be
-        # overwritten by its memorised value. But subarrays are purely
-        # logical devices, and a pool of them is created at start-up,
-        # to be used on demand. Therefore the subarray adminMode isi
-        # initialised into adminMode OFFLINE, and is NOT memorized.
-        self._admin_mode = AdminMode.OFFLINE
+            device = self.target
+            device.station_pool_manager = StationPoolManager()
+            device.transient_buffer_manager = TransientBufferManager()
 
-        # This next call will eventually be asynchronous
-        self.do_init()
+            device._scan_id = -1
 
-    def do_init(self):
+            device.set_change_event("stationFQDNs", True, True)
+            device.set_archive_event("stationFQDNs", True, True)
+
+            device._build_state = release.get_release_info()
+            device._version_id = release.version
+
+            return (result_code, message)
+
+    def init_command_objects(self):
         """
-        Does the initialisation then sets the State. This
-        exists as a separate method because it is the extent of
-        initialisation that should eventually become an async method.
+        Initialises the command handlers for commands supported by this
+        device.
         """
-        self.initialise_device()
-        self.init_completed()
+        super().init_command_objects()
 
-    @device_check(states=[DevState.INIT])
-    def init_completed(self):
-        if self._admin_mode in [AdminMode.OFFLINE, AdminMode.NOT_FITTED]:
-            self.set_state(DevState.DISABLE)
-        else:
-            self.set_state(DevState.OFF)
-
-        self.logger.info("MCCS Subarray device initialised.")
-
-    def initialise_device(self):
-        """
-        Hook for the asynchronous initialisation code.
-        :return: Whether the initialisation was completed successfully.
-        :rtype: boolean
-        """
-        self._scan_id = -1
-        self._fqdns = {"stations": []}
-
-        self.set_change_event("stationFQDNs", True, True)
-        self.set_archive_event("stationFQDNs", True, True)
-
-        self._build_state = release.get_release_info()
-        self._version_id = release.version
+        args = (self, self.state_model, self.logger)
+        resourcing_args = (
+            self.station_pool_manager, self.state_model, self.logger
+        )
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("Off", self.OnCommand(*args))
+        self.register_command_object(
+            "AssignResources", self.AssignResourcesCommand(*resourcing_args)
+        )
+        self.register_command_object(
+            "ReleaseResources", self.ReleaseResourcesCommand(*resourcing_args)
+        )
+        self.register_command_object(
+            "ReleaseAllResources",
+            self.ReleaseAllResourcesCommand(*resourcing_args)
+        )
+        self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("Scan", self.ScanCommand(*args))
+        self.register_command_object("EndScan", self.EndScanCommand(*args))
+        self.register_command_object("End", self.EndCommand(*args))
+        self.register_command_object("Abort", self.AbortCommand(*args))
+        self.register_command_object("ObsReset", self.ResetCommand(*args))
+        self.register_command_object("Restart", self.RestartCommand(*args))
+        self.register_command_object(
+            "SendTransientBuffer", self.SendTransientBufferCommand(
+                self.transient_buffer_manager, self.state_model, self.logger
+            )
+        )
 
     def always_executed_hook(self):
         """
@@ -146,6 +217,12 @@ class MccsSubarray(SKASubarray):
 
     @scanId.write
     def scanId(self, id):
+        """
+        Set the scanId attribute
+
+        :param id: the new scanId
+        :type id: int
+        """
         self._scan_id = id
 
     @attribute(
@@ -160,520 +237,274 @@ class MccsSubarray(SKASubarray):
         """
         Return the stationFQDNs attribute.
         """
-        return self._fqdns["stations"]
-
-    @stationFQDNs.write
-    def stationFQDNs(self, values):
-        self._station_FQDNs = values
-
-    # -------------------------------------
-    # Base class attribute method overrides
-    # -------------------------------------
-    @attribute(
-        dtype=AdminMode,
-        access=AttrWriteType.READ_WRITE,
-        doc="The admin mode reported for this device. It may interpret "
-        "the current device condition and condition of all managed "
-        "devices to set this.",
-    )
-    def adminMode(self):
-        return super().read_adminMode()
-
-    @adminMode.write
-    def adminMode(self, value):
-        """
-        Write the new adminMode value. Used by TM to put the subarray
-        online and to take it offline. This action triggers further
-        actions and state changes as follows:
-
-        +-----------+-------+-------+--------+------------+--------------------+
-        |         To|ONLINE |MAINT- |OFFLINE              |NOT_FITTED          |
-        |           |       |ENANCE |                     |                    |
-        |From       |       |       |                     |                    |
-        +-----------+-------+-------+---------------------+--------------------+
-        |ONLINE     |N/A    |no     |Reset()              |Reset()             |
-        |           |       |further|ReleaseAllResources()|ReleaseAllResource()|
-        |           |       |action |[OFF|ON] -> DISABLE  |[OFF|ON] -> DISABLE |
-        +-----------+-------+-------+---------------------+--------------------+
-        |MAINTENANCE|no     |N/A    |Reset()              |Reset()             |
-        |           |further|       |ReleaseAllResources()|ReleaseAllResource()|
-        |           |action |       |[OFF|ON] -> DISABLE  |[OFF|ON] -> DISABLE |
-        +-----------+-------+-------+---------------------+--------------------+
-        |OFFLINE    |DISABLE|DISABLE|N/A                  |no                  |
-        |           | -> OFF| -> OFF|                     |further             |
-        |           |       |       |                     |action              |
-        +-----------+-------+-------+---------------------+--------------------+
-        |NOT_FITTED |DISABLE|DISABLE|no further action    |N/A                 |
-        |           |->  OFF| -> OFF|                     |                    |
-        +-----------+-------+-------+---------------------+--------------------+
-
-        Notes:
-
-        #. The subarray can change between ONLINE and MAINTENANCE at any
-           time, with no further change to the state machine. The
-           subarray simply changes from a "science subarray" to an
-           "engineering subarray" (or vice versa) and continues on with
-           whatever it was doing.
-
-        #. The subarray can be taken OFFLINE or put into NOT_FITTED mode
-           at any time, in which case it aborts whatever it was doing,
-           deconfigures, releases its resources, and changes State to
-           DISABLED.
-
-        #. When the subarray is placed into ONLINE or MAINTENANCE mode
-           from OFFLINE or NOT_FITTED mode, the subarray is being put
-           online, so the state changes from DISABLE to OFF.
-
-        :param value: the new admin mode
-        :type value: AdminMode enum value
-        """
-        enabling_modes = [AdminMode.ONLINE, AdminMode.MAINTENANCE]
-        disabling_modes = [AdminMode.OFFLINE, AdminMode.NOT_FITTED]
-
-        state = self.get_state()
-        if state == DevState.DISABLE and value in enabling_modes:
-            # This write must enable the subarray
-            self.set_state(DevState.OFF)
-        elif state in [DevState.OFF, DevState.ON] and value in disabling_modes:
-            # This write must disable the subarray
-            if state == DevState.ON:
-                self.Reset()
-                self.ReleaseAllResources()
-            self.set_state(DevState.DISABLE)
-        # super().write_adminMode(value)
-        self._admin_mode = value
+        return self.station_pool_manager.fqdns
 
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
-    @device_check(
-        admin_modes=[AdminMode.ONLINE, AdminMode.MAINTENANCE],
-        states=[DevState.OFF, DevState.ON],
-        obs_states=[ObsState.IDLE],
-    )
-    def is_AssignResources_allowed(self):
+
+    class OnCommand(SKASubarray.OnCommand):
         """
-        Check whether command AssignResources() is permitted in this devic
-        state.
-
-        Probably don't need to override this -- the base class implementation
-        is sound -- but doing so for the sake of completeness.
+        Command class for the On() command
         """
-        return True  # but see decorator
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            On command
 
-    @command(
-        dtype_in="str",
-        doc_in="JSON string describing resources to be added to this subarray",
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
-    @json_input()
-    @DebugIt()
-    def AssignResources(self, **resources):
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
+
+            # MCCS-specific stuff goes here
+            return (result_code, message)
+
+    class OffCommand(SKASubarray.OffCommand):
         """
-        Assign some resources.
-
-        Overriding to reimplement
-
-        :param argin: a string JSON-encoding of a dictionary containing
-            the following optional key-value entries:
-            * stations:  a list of station FQDNs
-        :type argin: str
+        Command class for the Off() command
         """
-        for resource in resources:
-            current = set(self._fqdns[resource])
-            to_assign = set(resources[resource])
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            Off command
 
-            if not current.isdisjoint(to_assign):
-                Except.throw_exception(
-                    "API_CommandFailed",
-                    "Cannot assign {} already assigned: {}".format(
-                        resource, ", ".join(to_assign & current)
-                    ),
-                    "MccsSubarray.AssignResources()",
-                    ErrSeverity.ERR,
-                )
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
 
-        for resource in resources:
-            current = set(self._fqdns[resource])
-            to_assign = set(resources[resource])
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-            self._fqdns[resource] = sorted(current | to_assign)
-
-        for station_fqdn in resources.get("stations"):
-            try:
-                proxy = DeviceProxy(station_fqdn)
-                proxy.command_inout("Configure")
-            except DevFailed:
-                # temporarily here to enable unit testing
-                pass  # noqa: E722
-
-        if any(self._fqdns.values()):
-            self.set_state(DevState.ON)
-        return [ReturnCode.OK.name, "AssignResources command completed"]
-
-    @device_check(is_obs=[ObsState.IDLE])
-    def is_ReleaseResources_allowed(self):
+    class AssignResourcesCommand(SKASubarray.AssignResourcesCommand):
         """
-        Check whether command ReleaseResources() is permitted in this device state.
-
-        Overriding because base class allows releasing of resources when the
-        subarray is in OFF state (i.e. it is already empty).
+        Command class for the AssignResources() command
         """
-        return True  # but see decorator
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            AssignResources command
 
-    @command(
-        dtype_in="str",
-        doc_in="JSON string describing resources to be removed from subarray.",
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
-    @json_input()
-    def ReleaseResources(self, **resources):
+            :param argin: The resources to be assigned
+            :type argin: list of str
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            # deliberately not calling super() -- we're passing a different
+            # target object
+            stations = json.loads(argin)["stations"]
+            station_pool_manager = self.target
+            station_pool_manager.assign(stations)
+            return [
+                ResultCode.OK,
+                "AssignResources command completed successfully"
+            ]
+
+    class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):
         """
-        Release some resources.
-
-        Overriding in reimplement, and in order to set state back to OFF
-        if array has been emptied.
+        Command class for the ReleaseResources() command
         """
-        for resource in resources:
-            current = set(self._fqdns[resource])
-            to_release = set(resources[resource])
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            ReleaseResources command
 
-            if not current >= to_release:
-                Except.throw_exception(
-                    "API_CommandFailed",
-                    "Cannot release {} not assigned: {}".format(
-                        resource, ", ".join(to_release - current)
-                    ),
-                    "MccsSubarray.ReleaseResources()",
-                    ErrSeverity.ERR,
-                )
+            :param argin: The resources to be released
+            :type argin: list of str
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            # deliberately not calling super() -- we're passing a different
+            # target object
+            stations = json.loads(argin)["stations"]
+            station_pool_manager = self.target
+            station_pool_manager.release(stations)
+            return [
+                ResultCode.OK,
+                "ReleaseResources command completed successfully"
+            ]
 
-        for resource in resources:
-            current = set(self._fqdns[resource])
-            to_release = set(resources[resource])
-            self._fqdns[resource] = sorted(current - to_release)
-
-        if not any(self._fqdns.values()):
-            self.set_state(DevState.OFF)
-
-        return [ReturnCode.OK.name, "ReleaseResources command completed"]
-
-    @device_check(is_obs=[ObsState.IDLE])
-    def is_ReleaseAllResources_allowed(self):
+    class ReleaseAllResourcesCommand(SKASubarray.ReleaseAllResourcesCommand):
         """
-        Overriding because base class allows releasing of resources when the
-        subarray is in OFF state (i.e. it is already empty).
+        Command class for the ReleaseAllResources() command
         """
-        return True  # but see decorator
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            ReleaseAllResources command
 
-    @command(
-        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def ReleaseAllResources(self):
-        """
-        Release all resources.
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            # deliberately not calling super() -- we're passing a different
+            # target object
+            station_pool_manager = self.target
+            station_pool_manager.clear()
+            return (
+                ResultCode.OK,
+                "ReleaseAllResources command completed successfully"
+            )
 
-        Overriding to reimplement, and in order to set state back to OFF
+    class ConfigureCommand(SKASubarray.ConfigureCommand):
         """
-        for resource in self._fqdns:
-            self._fqdns[resource].clear()
-        self.set_state(DevState.OFF)
-        return [ReturnCode.OK.name, "ReleaseAllResources command completed."]
+        Command class for the Configure() command
+        """
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            Configure command
 
-    @device_check(is_obs=[ObsState.IDLE, ObsState.READY])
-    def is_ConfigureCapability_allowed(self):
-        """
-        Check whether command ConfigureCapability is permitted in this
-        device state.
+            :param argin: Configuration specification
+            :type argin: JSON str
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do(argin)
 
-        Overriding because base class requires device to be in adminMode
-        ONLINE, whereas it should also be possible to configure
-        capabilities while in adminMode=MAINTENANCE.
-        """
-        return True  # but see decorator
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-    @command(
-        dtype_in="DevVarLongStringArray",
-        doc_in="[Number of instances to add][Capability types]",
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
-    @DebugIt()
-    def ConfigureCapability(self, argin):
+    class ScanCommand(SKASubarray.ScanCommand):
         """
-        Configure one or more capability instances
+        Command class for the Scan() command
+        """
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            Scan command
 
-        Overriding to support asynchronous callback
-        """
-        super().ConfigureCapability(argin)
+            :param argin: Scan specification
+            :type argin: JSON string
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do(argin)
 
-        # push back to CONFIGURING because the base class pushes to READY
-        self._obs_state = ObsState.CONFIGURING
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-        # This next call will eventually be asynchronous
-        self._do_configure(argin)
+    class EndScanCommand(SKASubarray.EndScanCommand):
+        """
+        Command class for the EndScan() command
+        """
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            EndScan command
 
-        # Once this is asynchronous, we will
-        # return ["STARTED", "ConfigureCapability started"]
-        return [ReturnCode.OK.name, "ConfigureCapability executed synchronously"]
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
 
-    def _do_configure(self, argin):
-        """
-        Does the configuration then sets the obsState to READY. This
-        exists as a separate method because it is the extent of
-        configuration that should eventually become an async method.
-        """
-        if self._configure(argin):
-            self._configure_completed()
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-    @device_check(is_obs=[ObsState.CONFIGURING])
-    def _configure_completed(self):
-        self._obs_state = ObsState.READY
+    class EndCommand(SKASubarray.EndCommand):
+        """
+        Command class for the End() command
+        """
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            End command
 
-    def _configure(self, argin):
-        """
-        Hook for the asynchronous configuration code.
-        :return: Whether the configuration was completed successfully.
-        :rtype: boolean
-        """
-        return True
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
 
-    @device_check(is_obs=[ObsState.READY])
-    def is_DeconfigureCapability_allowed(self):
-        """
-        Check whether command DeconfigureCapability() is permitted in
-        this device state.
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-        Overriding because base class permits this to run in obsState
-        IDLE, when it has no configured capabilities to deconfigure, and
-        because it disallows it in adminMode MAINTENANCE.
+    class AbortCommand(SKASubarray.AbortCommand):
         """
-        return True  # but see decorator
+        Command class for the Abort() command
+        """
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            Abort command
 
-    @command(
-        dtype_in="DevVarLongStringArray",
-        doc_in="[Number of instances to remove][Capability types]",
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
-    @DebugIt()
-    def DeconfigureCapability(self, argin):
-        """
-        Deconfigure one or more instances of one or more capabilities.
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
 
-        Overriding to ensure device ends up in the right state.
-        """
-        super().DeconfigureCapability(argin)
-        if not any(self._configured_capabilities.values()):
-            self._obs_state = ObsState.IDLE
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-        return [ReturnCode.OK.name, "DeconfigureCapability command completed"]
+    class ObsResetCommand(SKASubarray.ObsResetCommand):
+        """
+        Command class for the ObsReset() command
+        """
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            ObsReset command
 
-    @device_check(is_obs=[ObsState.READY])
-    def is_DeconfigureAllCapabilities_allowed(self):
-        """
-        Check whether command DeconfigureAllCapabilities() is permitted
-        in this device state.
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
 
-        Overriding because base class permits this to run in obsState
-        IDLE, when it has no configured capabilities to deconfigure, and
-        because it disallows it in adminMode MAINTENANCE.
-        """
-        return True  # but see decorator
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
-    @command(
-        dtype_in="str",
-        doc_in="Capability type",
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
-    @DebugIt()
-    def DeconfigureAllCapabilities(self, argin):
+    class RestartCommand(SKASubarray.RestartCommand):
         """
-        Deconfigure all instances of a given capability type.
+        Command class for the Restart() command
+        """
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            Restart command
 
-        Overriding to ensure device ends up in the right state.
-        """
-        super().DeconfigureAllCapabilities(argin)
-        if not any(self._configured_capabilities.values()):
-            self._obs_state = ObsState.IDLE
-        return [ReturnCode.OK.name, "DeconfigureAllCapabilities command completed"]
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
 
-    @device_check(is_obs=[ObsState.READY])
-    def is_Scan_allowed(self):
-        """
-        Check device state to confirm that command `Scan()` is allowed.
-        """
-        return True  # but see decorator
-
-    @command(
-        dtype_in=("str",),
-        dtype_out="DevVarStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
-    def Scan(self, argin):
-        """
-        Start scanning.
-
-        Overriding in order to set obsState to SCANNING.
-        """
-        super().Scan(argin)
-        self._obs_state = ObsState.SCANNING
-
-        # This next call will eventually be asynchronous
-        self._do_scan(argin)
-
-        return [ReturnCode.STARTED.name, "Scan command started"]
-
-    def _do_scan(self, argin):
-        """
-        Does the scan then sets the obsState to READY. This
-        exists as a separate method because it comprises that part of
-        the scan command that will eventually be done asynchtonously.
-        """
-        if self._scan(argin):
-            self._scan_completed()
-
-    @device_check(is_obs=[ObsState.SCANNING])
-    def _scan_completed(self):
-        self._obs_state = ObsState.READY
-
-    def _scan(self, argin):
-        """
-        Hook for the asynchronous scan code.
-        :return: Whether the scan completed successfully. If true, then
-        the device will transition from SCANNING to READY. If False,
-        it is assumed that something else occurred (such as an Abort()
-        or an EndScan(), and that that something else will handle the
-        device state, so no state transition occurs.
-        :rtype: boolean
-        """
-        # For this synchronous version of the code, we don't want the
-        # scan to complete, we want it to remain SCANNING until we
-        # interrupt it, for example with EndScan() or Abort().
-        return False
-
-    @device_check(is_obs=[ObsState.SCANNING])
-    def is_EndScan_allowed(self):
-        """
-        Check device state to confirm that command `EndScan()` is
-        allowed.
-        """
-        return True  # but see decorator
-
-    @command(
-        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def EndScan(self):
-        """
-        Ends the scan.
-
-        Overriding in order to set obsState to READY.
-        """
-        super().EndScan()
-        self._obs_state = ObsState.READY
-        return [ReturnCode.OK.name, "EndScan command completed"]
-
-    @device_check(is_obs=[ObsState.READY])
-    def is_EndSB_allowed(self):
-        """
-        Check device state to confirm that command `EndSB()` is allowed.
-        """
-        return True  # but see decorator
-
-    @command(
-        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def EndSB(self):
-        """
-        Signals the end of the scanblock.
-
-        Overriding in order to change obsState to IDLE
-        """
-        super().EndSB()
-        self._obs_state = ObsState.IDLE
-        return [ReturnCode.OK.name, "EndSB command completed"]
-
-    @device_check(is_obs=[ObsState.CONFIGURING, ObsState.READY, ObsState.SCANNING])
-    def is_Abort_allowed(self):
-        """
-        Check device state to confirm that command `Abort()` is allowed.
-        """
-        return True  # but see decorator
-
-    @command(
-        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def Abort(self):
-        """
-        Abort the scan.
-
-        Overriding in order to set obsState to ABORTED.
-        """
-        super().Abort()
-        self._obs_state = ObsState.ABORTED
-        return [ReturnCode.OK.name, "Abort command completed"]
-
-    @device_check(
-        is_obs=[
-            ObsState.CONFIGURING,
-            ObsState.READY,
-            ObsState.SCANNING,
-            ObsState.ABORTED,
-        ]
-    )
-    def is_Reset_allowed(self):
-        """
-        Check whether Reset() is allowed in this device state
-
-        Overriding because base class allows reset at any time, whereas
-        this command seems to be defined for subarrays as 'stop what
-        you're doing and deconfigure but don't release your resources.'
-        This semantics only makes sense when we are in ON state with an
-        obsState not IDLE.
-        """
-        return True  # but see decorator
-
-    @command(
-        dtype_out="DevVarStringArray", doc_out="[ReturnCode, information-only string]"
-    )
-    @DebugIt()
-    def Reset(self):
-        """
-        Reset the scan
-
-        Overriding in order to conform to state machine
-        """
-
-        if self.get_state() == DevState.ON:
-            # abort any configuring or running scan
-            # deconfigure
-            self._obs_state = ObsState.IDLE
-        return [ReturnCode.OK.name, "Reset command completed"]
-
-    def is_Pause_allowed(self):
-        """
-        Returns False, because Pause command has been removed, but at
-        present it is still implemented in the base classes.
-        """
-        return False
-
-    def is_Resume_allowed(self):
-        """
-        Returns False, because Resume command has been removed, but at
-        present it is still implemented in the base classes.
-        """
-        return False
+            # MCCS-specific stuff goes here
+            return (result_code, message)
 
     # ---------------------
     # MccsSubarray Commands
     # ---------------------
+
+    class SendTransientBufferCommand(ResponseCommand):
+        def do(self, argin):
+            transient_buffer_manager = self.target
+            transient_buffer_manager.send(argin)
+            return (
+                ResultCode.OK,
+                "SendTransientBuffer command completed successfully"
+            )
 
     @command(
         dtype_in="DevVarLongArray",
@@ -689,10 +520,7 @@ class MccsSubarray(SKASubarray):
         "Additional metadata, such as the ID of a triggering Scheduling"
         "Block, may need to be supplied to allow SDP to assign data"
         "ownership correctly (TBD75).",
-        # dtype_out="DevString",
-        # doc_out="ASCII string that indicates status, for information "
-        # "purposes only",
-        dtype_out="DevVarStringArray",
+        dtype_out="DevVarLongStringArray",
         doc_out="[ReturnCode, information-only string]",
     )
     @DebugIt()
@@ -722,7 +550,9 @@ class MccsSubarray(SKASubarray):
             purposes only
         :rtype: DevString
         """
-        return [ReturnCode.OK.name, "sendTransientBuffer command completed"]
+        handler = self.get_command_object("SendTransientBuffer")
+        (result_code, message) = handler(argin)
+        return [[result_code], [message]]
 
 
 # ----------

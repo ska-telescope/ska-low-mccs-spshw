@@ -26,6 +26,7 @@ from tango.server import device_property
 # from ska.low.mccs import MccsGroupDevice
 from ska.base import SKABaseDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.base import SKABaseDevice
 from ska.base.control_model import SimulationMode, LoggingLevel
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 

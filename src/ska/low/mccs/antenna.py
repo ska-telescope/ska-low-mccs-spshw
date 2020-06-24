@@ -21,6 +21,7 @@ from tango import DevState
 
 # Additional import
 from ska.base import SKABaseDevice
+from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 
 class MccsAntenna(SKABaseDevice):
@@ -168,10 +169,64 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     # General methods
     # ---------------
+class InitCommand(SKABaseDevice.InitCommand):
+    def do(self):
+            """
+        Stateless hook for device initialisation: initialises the
+        attributes and properties of the MccsDevice.
+        """
+        super().do()
+        
+        device = self.target
+        device._antennaId = 0
+        device._logicalTpmAntenna_id = 0
+        device._logicalApiuAntenna_id = 0.0
+        device._tpmId = 0.0
+        device._apiuId = 0.0
+        device._gain = 0.0
+        device._rms = 0.0
+        device._voltage = 0.0
+        device._temperature = 0.0
+        device._xPolarisationFaulty = False
+        device._yPolarisationFaulty = False
+        device._fieldNodeLongitude = 0.0
+        device._fieldNodeLatitude = 0.0
+        device._altitude = 0.0
+        device._xDisplacement = 0.0
+        device._yDisplacement = 0.0
+        device._timestampOfLastSpectrum = ""
+        device._logicalAntennaId = 0
+        device._xPolarisationScalingFactor = [0]
+        device._yPolarisationScalingFactor = [0]
+        device._calibrationCoefficient = [0.0]
+        device._pointingCoefficient = [0.0]
+        device._spectrumX = [0.0]
+        device._spectrumY = [0.0]
+        device._position = [0.0]
+        device._delays = [0.0]
+        device._delayRates = [0.0]
+        device._bandpassCoefficient = [0.0]
 
-    def init_device(self):
-        SKABaseDevice.init_device(self)
-        self.set_state(DevState.ON)
+        return (ResultCode.OK, "Init command succeeded")
+
+
+    def init_command_objects(self):
+        """
+        Set up the handler objects for Commands
+        """
+        super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object(
+            "PowerOn",
+            self.PowerOn(*args)
+        )
+        
+        self.register_command_object(
+            "PowerOff",
+            self.PowerOff(*args)
+        )
 
     def always_executed_hook(self):
 
@@ -185,133 +240,150 @@ class MccsAntenna(SKABaseDevice):
     # Attributes methods
     # ------------------
 
-    def read_antennaId(self):
+    def antennaId(self):
+        #return 0
+        return self._antennaId
 
-        return 0
+    def logicalTpmAntenna_id(self):
+        #return 0
+        return self._logicalTpmAntenna_id
 
-    def read_logicalTpmAntenna_id(self):
+    def logicalApiuAntenna_id(self):
+        #return 0.0
+        return self._logicalApiuAntenna_id
 
-        return 0
+    def tpmId(self):
+        #return 0.0
+        return self._tpmId
 
-    def read_logicalApiuAntenna_id(self):
+    def apiuId(self):
+        #return 0.0
+        return self._apiuId
 
-        return 0.0
+    def gain(self):
+        #return 0.0
+        return self._gain
 
-    def read_tpmId(self):
+    def rms(self):
+        #return 0.0
+        return self._rms
 
-        return 0.0
+    def voltage(self):
+        #return 0.0
+        return self._voltage
 
-    def read_apiuId(self):
+    def temperature(self):
+        #return 0.0
+        return self._temperature
 
-        return 0.0
+    def xPolarisationFaulty(self):
+        #return False
+        return self._xPolarisationFaulty
+        
+    def yPolarisationFaulty(self):
+        #return False
+        return self._yPolarisationFaulty
 
-    def read_gain(self):
+    def fieldNodeLongitude(self):
+        #return 0.0
+        return self._fieldNodeLongitude
 
-        return 0.0
+    def fieldNodeLatitude(self):
+        #return 0.0
+        return self._fieldNodeLongitude
 
-    def read_rms(self):
+    def altitude(self):
+        #return 0.0
+        return self._altitude
 
-        return 0.0
+    def xDisplacement(self):
+        #return 0.0
+        return self._xDisplacement
 
-    def read_voltage(self):
+    def yDisplacement(self):
+        #return 0.0
+        return self._yDisplacement
 
-        return 0.0
+    def timestampOfLastSpectrum(self):
+        #return ""
+        return self._timestampOfLastSpectrum
 
-    def read_temperature(self):
+    def logicalAntennaId(self):
+        #return 0
+        return self._logicalAntennaId
 
-        return 0.0
+    def xPolarisationScalingFactor(self):
+        #return [0]
+        return self._xPolarisationScalingFactor
 
-    def read_xPolarisationFaulty(self):
+    def yPolarisationScalingFactor(self):
+        #return [0]
+        return self._yPolarisationScalingFactor
 
-        return False
+    def calibrationCoefficient(self):
+        #return [0.0]
+        return self._calibrationCoefficient
 
-    def read_yPolarisationFaulty(self):
+    def pointingCoefficient(self):
+        #return [0.0]
+        return self._pointingCoefficient
 
-        return False
+    def spectrumX(self):
+        #return [0.0]
+        return self._spectrumX
 
-    def read_fieldNodeLongitude(self):
+    def spectrumY(self):
+        #return [0.0]
+        return self._spectrumY
 
-        return 0.0
+    def position(self):
+        #return [0.0]
+        return self._position
 
-    def read_fieldNodeLatitude(self):
+    def delays(self):
+        #return [0.0]
+        return self._delays
 
-        return 0.0
+    def delayRates(self):
+        #return [0.0]
+        return self._delayRates
 
-    def read_altitude(self):
-
-        return 0.0
-
-    def read_xDisplacement(self):
-
-        return 0.0
-
-    def read_yDisplacement(self):
-
-        return 0.0
-
-    def read_timestampOfLastSpectrum(self):
-
-        return ""
-
-    def read_logicalAntennaId(self):
-
-        return 0
-
-    def read_xPolarisationScalingFactor(self):
-
-        return [0]
-
-    def read_yPolarisationScalingFactor(self):
-
-        return [0]
-
-    def read_calibrationCoefficient(self):
-
-        return [0.0]
-
-    def read_pointingCoefficient(self):
-
-        return [0.0]
-
-    def read_spectrumX(self):
-
-        return [0.0]
-
-    def read_spectrumY(self):
-
-        return [0.0]
-
-    def read_position(self):
-
-        return [0.0]
-
-    def read_delays(self):
-
-        return [0.0]
-
-    def read_delayRates(self):
-
-        return [0.0]
-
-    def read_bandpassCoefficient(self):
-
-        return [0.0]
+    def bandpassCoefficient(self):
+        #return [0.0]
+        return self._bandpassCoefficient
 
     # --------
     # Commands
     # --------
+    class PowerOnCommand(ResponseCommand):
+        def do(self):
+            """
+            Stateless hook for implementation of ExceptionCallback()
+            command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
 
     @command()
     @DebugIt()
     def PowerOn(self):
+        handler = self.get_command_object("PowerOn")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
-        pass
+    class PowerOffCommand(ResponseCommand):
+        def do(self):
+            """
+            Stateless hook for implementation of ExceptionCallback()
+            command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
 
     @command()
     @DebugIt()
     def PowerOff(self):
-
-        pass
+        handler = self.get_command_object("PowerOff")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
 
 # ----------

@@ -13,7 +13,6 @@
 This module contains the tests for the MccsAntenna.
 """
 
-from tango import DevState
 from ska.base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel
 from ska.low.mccs import MccsAntenna
 

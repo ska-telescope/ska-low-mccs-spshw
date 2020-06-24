@@ -24,7 +24,6 @@ from tango.server import device_property
 # Additional import
 
 # from ska.low.mccs import MccsGroupDevice
-from ska.base import SKABaseDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
 from ska.base.control_model import SimulationMode, LoggingLevel
@@ -1522,10 +1521,10 @@ class MccsTile(SKABaseDevice):
         def do(self, argin):
             if len(argin) < self.AntennasPerTile:
                 self.logger.error(
-                    f"Insufficient tapering coefficients should be {self.AntennasPerTile}"
+                    f"Insufficient coefficients should be {self.AntennasPerTile}"
                 )
                 raise ValueError(
-                    f"Insufficient tapering coefficients should be {self.AntennasPerTile}"
+                    f"Insufficient coefficients should be {self.AntennasPerTile}"
                 )
             self.target._tpm.load_antenna_tapering(argin)
             return (ResultCode.OK, "Command succeeded")

@@ -205,7 +205,7 @@ The SKA software developer portal way
 
     .. code-block:: shell-session
 
-      $ python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple lmc-base-classes
+      $ python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple lmcbaseclasses
 
     To install MCCS classes:
 

@@ -97,7 +97,7 @@ The SKA software developer portal way
 
      $ sudo apt install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
      $ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-     $ sudo add-apt-repository "deb [arch-amd64] https://download.docker.com/linux/ubuntu #(lsb_release -cs) stable"
+     $ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
      $ sudo apt-get update
      $ sudo apt install docker-ce docker-ce-cli
 
@@ -218,6 +218,7 @@ The SKA software developer portal way
     so that your edits to the code are reflected in the install.
 
 14. Go code!
+
     * The other sidebar you need to know about is the git sidebar. This
       sidebar helps you keep track of git status and perform git
       commands. For example, to make a commit, simply stage the

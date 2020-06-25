@@ -189,8 +189,35 @@ The SKA software developer portal way
     * If you click on the message box, it will open a terminal showing
       you that things are happening. Go have a cup of tea.
 
-13. You're ready to develop!
+13. You are now ready to develop, but you will find that VScode emits
+    pylint import errors. This occurs because the dependencies are not
+    installed in the container.
 
+    It is not essential to fix these errors, because we do our testing
+    in tox, which spins up its own virtual environment and installs the
+    dependencies in that. Thus your tests might pass in tox even though
+    VScode linting complains.
+
+    However to make the most of your IDE, we can fix this by installing
+    the lmc-base-classes and our own classes into the container.
+
+    To install lmc-base-classes:
+
+    .. code-block:: shell-session
+
+      $ python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple lmc-base-classes
+
+    To install MCCS classes:
+
+    .. code-block:: shell-session
+
+      # cd ska-low-mccs
+      $ python3 -m pip install -e .
+
+    The ``-e`` flag ensures that the MCCS class install is "editable",
+    so that your edits to the code are reflected in the install.
+
+14. Go code!
     * The other sidebar you need to know about is the git sidebar. This
       sidebar helps you keep track of git status and perform git
       commands. For example, to make a commit, simply stage the
@@ -199,7 +226,6 @@ The SKA software developer portal way
       more complex git stuff like stashing, rebasing, etc, it might be
       possible to do it through the GUI, but you might still find it
       easier to do it in the terminal.
-
 
 .. _SKA software developer portal: https://developer.skatelescope.org/
 .. _Tango Development Environment set up: https://developer.skatelescope.org/en/latest/tools/tango-devenv-setup.html

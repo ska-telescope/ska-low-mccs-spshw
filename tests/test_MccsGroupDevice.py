@@ -14,12 +14,10 @@ This module contains the tests for MccsGroupDevice.
 
 from tango import DevState
 from ska.low.mccs import MccsGroupDevice
+from ska.base.commands import ResultCode
 
 
-device_info = {
-    "class": MccsGroupDevice,
-    "properties": {}
-}
+device_info = {"class": MccsGroupDevice, "properties": {}}
 
 
 class TestMccsGroupDevice(object):
@@ -29,15 +27,22 @@ class TestMccsGroupDevice(object):
 
     def test_AddMember(self, device_under_test):
         """Test for AddMember"""
-        assert device_under_test.AddMember("") is None
+        [[result_code], [message]] = device_under_test.AddMember("")
+        assert result_code == ResultCode.OK
+        assert message == "AddMember command succeeded"
 
     def test_RemoveMember(self, device_under_test):
         """Test for RemoveMember"""
-        assert device_under_test.RemoveMember("") is None
+        [[result_code], [message]] = device_under_test.RemoveMember("")
+        assert result_code == ResultCode.OK
+        assert message == "RemoveMember command succeeded"
 
     def test_RunCommand(self, device_under_test):
         """Test for RunCommand"""
-        assert device_under_test.RunCommand("") is None
+        [[result_code], [message]] = device_under_test.Run("")
+        assert result_code == ResultCode.OK
+        assert message == "Run command succeeded"
+
 
     def test_memberStates(self, device_under_test):
         """Test for memberStates"""

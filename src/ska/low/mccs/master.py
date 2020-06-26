@@ -64,20 +64,23 @@ class MccsMaster(SKAMaster):
     # General methods
     # ---------------
 
-    def init_command_objects(self)
+    def init_command_objects(self):
         """
         Initialises the command handlers for commands supported by this
         device.
         """
 
         super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+
         self.register_command_object(
             "EnableSubarray",
-            self.EnableSubarrayCommand(self, self.state_model, self.logger)
+            self.EnableSubarrayCommand(*args)
         )
         self.register_command_object(
             "DisableSubarray",
-            self.DisableSubarrayCommand(self, self.state_model, self.logger)
+            self.DisableSubarrayCommand(*args)
         )
 
     def init_device(self):
@@ -155,22 +158,51 @@ class MccsMaster(SKAMaster):
     # Commands
     # --------
 
-    @command()
-    @DebugIt()
-    def On(self):
-
+    class OnCommand(ResponseCommand):
         """
-        Power off the MCCS system.
+        Class for handling the On command.
 
-        :return: `None`
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
         """
-        pass
+        def do(self):
+            """
+            Stateless hook for implementation of ExceptionCallback()
+            command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            :raises: DevFailed if this command is not allowed to be run
+                in current device state
+            """
+            if not self.state_model.dev_state in [
+                DevState.ON, DevState.FAULT, DevState.DISABLE
+            ]:
+                tango_raise(
+                    "On() is not allowed in current state"
+                )
+            return True
 
     def is_On_allowed(self):
-
-        """ Is the :meth:`On` command alllowed """
-        allowed = [DevState.ON, DevState.FAULT, DevState.DISABLE]
-        return self.get_state() not in allowed
+        """
+        Whether this command is allowed to be run in current device
+        state
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object('On')
+        return handler.check_allowed()
 
     @command()
     @DebugIt()
@@ -282,6 +314,7 @@ class MccsMaster(SKAMaster):
         """
         def do(self, argin):
             device = self.target
+            subarray_id = argin
 
             if not (1 <= subarray_id <= len(device._subarray_fqdns)):
                 tango_raise("Subarray index {} is out of range".format(subarray_id))
@@ -349,8 +382,6 @@ class MccsMaster(SKAMaster):
         (resultcode, message) = handler(argin)
         return [[resultcode], [message]]
 
-        
-
     class DisableSubarrayCommand(ResponseCommand):
         """
         De-activate an MCCS Sub-Array
@@ -362,6 +393,7 @@ class MccsMaster(SKAMaster):
         """
         def do(self, argin):
             device = self.target
+            subarray_id = argin
 
             if not (1 <= subarray_id <= len(device._subarray_fqdns)):
                 tango_raise("Subarray index {} is out of range".format(subarray_id))

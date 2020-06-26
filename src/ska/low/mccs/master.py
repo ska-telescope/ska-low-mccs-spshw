@@ -75,6 +75,26 @@ class MccsMaster(SKAMaster):
         args = (self, self.state_model, self.logger)
 
         self.register_command_object(
+            "On",
+            self.OnCommand(*args)
+        )
+        self.register_command_object(
+            "Off",
+            self.OffCommand(*args)
+        )
+        self.register_command_object(
+            "StandbyLow",
+            self.StandbyLowCommand(*args)
+        )
+        self.register_command_object(
+            "StandbyHigh",
+            self.StandbyHighCommand(*args)
+        )
+        self.register_command_object(
+            "Operate",
+            self.OperateCommand(*args)
+        )
+        self.register_command_object(
             "EnableSubarray",
             self.EnableSubarrayCommand(*args)
         )
@@ -191,6 +211,19 @@ class MccsMaster(SKAMaster):
                 )
             return True
 
+    @command()
+    @DebugIt()
+    def On(self):
+        """
+        On Command
+
+        :todo: What does this command do?
+        :return: None
+        """
+        handler = self.get_command_object("On")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
     def is_On_allowed(self):
         """
         Whether this command is allowed to be run in current device
@@ -204,63 +237,155 @@ class MccsMaster(SKAMaster):
         handler = self.get_command_object('On')
         return handler.check_allowed()
 
+    class OffCommand(ResponseCommand):
+        """
+        Class for handling the Off command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Power off the MCCS system.
+
+            :return: None
+            """
+            return (ResultCode.OK, "Stub implementation of Off(), does nothing")
+
     @command()
     @DebugIt()
     def Off(self):
-
         """
-        Power off the MCCS system.
+        Off Command
 
+        :todo: What does this command do?
         :return: None
         """
-        pass
+        handler = self.get_command_object("Off")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class StandbyLowCommand(ResponseCommand):
+        """
+        Class for handling the StandbyLow command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Transition the MCCS system to the low-power STANDBY_LOW_POWER
+            operating state.
+
+            :return: DevEnum
+            """
+            return (ResultCode.OK, "Stub implementation of StandbyLowCommand(), does nothing")
 
     @command(dtype_out="DevEnum")
     @DebugIt()
     def StandbyLow(self):
-
         """
-        Transition the MCCS system to the low-power STANDBY_LOW_POWER
-        operating state.
+        StandbyLow Command
 
-        :return:  DevEnum
+        :todo: What does this command do?
+        :return: None
         """
-        return 0
+        handler = self.get_command_object("StandbyLow")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class StandbyHighCommand(ResponseCommand):
+        """
+        Class for handling the StandbyHigh command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Transition the MCCS system to the STANDBY_FULL_POWER operating state.
+
+            :return: DevEnum
+            """
+            return (ResultCode.OK, "Stub implementation of StandbyLowCommand(), does nothing")
 
     @command(dtype_out="DevEnum")
     @DebugIt()
-    def StandbyFull(self):
-
+    def StandbyHigh(self):
         """
-        standbyFull	None	N/A	DevEnum	OPERATOR	ON, STANDBY_LOW_POWER
-        Transition the MCCS system to the STANDBY_FULL_POWER operating state.
+        StandbyHigh Command
 
-        :return:  DevEnum
+        :todo: What does this command do?
+        :return: None
         """
-        return 0
+        handler = self.get_command_object("StandbyHigh")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
-    @command(dtype_out="DevEnum")
+    class OperateCommand(ResponseCommand):
+        """
+        Class for handling the Operate command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of ExceptionCallback()
+            command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            :raises: DevFailed if this command is not allowed to be run
+                in current device state
+            """
+            if self.state_model.dev_state in [
+                DevState.OFF,
+                DevState.FAULT,
+                DevState.INIT,
+                DevState.ALARM,
+                DevState.UNKNOWN,
+                DevState.STANDBY,
+                DevState.DISABLE,
+            ]:
+                tango_raise(
+                    "Operate() is not allowed in current state"
+                )
+            return True
+
+    @command()
     @DebugIt()
     def Operate(self):
-
         """
         Transit to the OPERATE operating state, ready for signal processing.
 
-        :return:  DevEnum
+        :todo: What does this command do?
+        :return: None
         """
-        return 0
+        handler = self.get_command_object("Operate")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
     def is_Operate_allowed(self):
-
-        return self.get_state() not in [
-            DevState.OFF,
-            DevState.FAULT,
-            DevState.INIT,
-            DevState.ALARM,
-            DevState.UNKNOWN,
-            DevState.STANDBY,
-            DevState.DISABLE,
-        ]
+        """
+        Whether this command is allowed to be run in current device
+        state
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object('Operate')
+        return handler.check_allowed()
 
     class ResetCommand(SKABaseDevice.ResetCommand):
         """

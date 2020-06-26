@@ -189,33 +189,18 @@ The SKA software developer portal way
     * If you click on the message box, it will open a terminal showing
       you that things are happening. Go have a cup of tea.
 
-13. You are now ready to develop, but you will find that VScode emits
-    pylint import errors. This occurs because the dependencies are not
-    installed in the container.
+13. Now that you have reopened VScode in a container, it is important to
+    understand the difference between doing stuff in your local
+    environment, and doing stuff inside your container.
 
-    It is not essential to fix these errors, because we do our testing
-    in tox, which spins up its own virtual environment and installs the
-    dependencies in that. Thus your tests might pass in tox even though
-    VScode linting complains.
-
-    However to make the most of your IDE, we can fix this by installing
-    the lmc-base-classes and our own classes into the container.
-
-    To install lmc-base-classes:
-
-    .. code-block:: shell-session
-
-      $ python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple lmcbaseclasses
-
-    To install MCCS classes:
-
-    .. code-block:: shell-session
-
-      # cd ska-low-mccs
-      $ python3 -m pip install -e .
-
-    The ``-e`` flag ensures that the MCCS class install is "editable",
-    so that your edits to the code are reflected in the install.
+    * Your local environment is not set up to run and test the MCCS
+      code. You can only do that inside your Docker container.
+    * The VScode terminal is running inside the Docker container. Use
+      the VScode terminal to run your tests. If you need to
+      manage your container environment, use the VScode terminal.
+    * The VScode IDE linter is running inside the Docker container.
+    * If you want to use a VScode extension with your code, you must
+      install it into the remote container.
 
 14. Go code!
 

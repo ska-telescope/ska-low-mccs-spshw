@@ -75,7 +75,11 @@ class MccsMaster(SKAMaster):
             "EnableSubarray",
             self.EnableSubarrayCommand(self, self.state_model, self.logger)
         )
-        
+        self.register_command_object(
+            "DisableSubarray",
+            self.DisableSubarrayCommand(self, self.state_model, self.logger)
+        )
+
     def init_device(self):
         """Initialises the attributes and properties of the MccsMaster."""
         super().init_device()
@@ -257,8 +261,7 @@ class MccsMaster(SKAMaster):
         """
         Activate an MCCS Sub-Array
 
-        :param argin: Specification of the segment of the transient
-            buffer to send
+        :param argin: Sub-Array ID
         :type argin: DevVarLongArray
         :return: ASCII String that indicates status, for information
             purposes only
@@ -305,7 +308,7 @@ class MccsMaster(SKAMaster):
             :raises: DevFailed if this command is not allowed to be run
                 in current device state
             """
-            if not self.state_model.dev_state in [
+            if self.state_model.dev_state in [
                 DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE,
             ]:
                 tango_raise(
@@ -326,43 +329,100 @@ class MccsMaster(SKAMaster):
         handler = self.get_command_object('EnableSubarray')
         return handler.check_allowed()
 
-    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
-    @DebugIt()
-    def DisableSubarray(self, subarray_id):
-
+    @command(
+        dtype_in= "DevLong",
+        doc_in= "Sub-Array ID",
+        dtype_out= "DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')", 
+    )
+    def DisableSubarray(self, argin):
         """
-        Deactivate an MCCS Sub-Array
+        De-activate an MCCS Sub-Array
+
+        :param argin: Sub-Array ID
+        :type argin: DevVarLongArray
+        :return: ASCII String that indicates status, for information
+            purposes only
+        :rtype: DevString
+        """
+        handler = self.get_command_object('DisableSubarray')
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
+
+        
+
+    class DisableSubarrayCommand(ResponseCommand):
+        """
+        De-activate an MCCS Sub-Array
 
         :param subarray_id: Sub-Array ID
         :type subarray_id: :class:`~tango.DevLong`
 
         :return: None
         """
-        assert 1 <= subarray_id <= len(self._subarray_fqdns)
+        def do(self, argin):
+            device = self.target
 
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+                tango_raise("Subarray index {} is out of range".format(subarray_id))
 
-        if not self._subarray_enabled[subarray_id - 1]:
-            tango_raise("Subarray {} is already disabled".format(subarray_fqdn))
-        else:
-            mask = self._station_allocated == subarray_id
-            fqdns = self._station_fqdns[mask]
-            fqdns = list(fqdns)
-            for fqdn in fqdns:
-                station = tango.DeviceProxy(fqdn)
-                station.subarrayId = 0
-            self._station_allocated[mask] = 0
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
 
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
-            subarray_device.adminMode = AdminMode.OFFLINE
-            self._subarray_enabled[subarray_id - 1] = False
+            if not device._subarray_enabled[subarray_id - 1]:
+                tango_raise("Subarray {} is already disabled".format(subarray_fqdn))
+            else:
+                mask = device._station_allocated == subarray_id
+                fqdns = device._station_fqdns[mask]
+                fqdns = list(fqdns)
+                for fqdn in fqdns:
+                    station = tango.DeviceProxy(fqdn)
+                    station.subarrayId = 0
+                device._station_allocated[mask] = 0
+
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                subarray_device.Off()
+                device._subarray_enabled[subarray_id - 1] = False
+
+            if device._subarray_enabled[subarray_id - 1]:
+                tango_raise("Subarray {} is already enabled".format(subarray_fqdn))
+            else:
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                subarray_device.On()
+                device._subarray_enabled[subarray_id - 1] = True
+
+            return (ResultCode.OK, "EnableSubarray command successful")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            :raises: DevFailed if this command is not allowed to be run
+                in current device state
+            """
+            if self.state_model.dev_state in [
+                DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE,
+            ]:
+                tango_raise(
+                    "DisableSubarray() is not allowed in current state"
+                )
+            return True
 
     def is_DisableSubarray_allowed(self):
-        return self.get_state() not in [
-            DevState.FAULT,
-            DevState.UNKNOWN,
-            DevState.DISABLE,
-        ]
+        """
+        Whether this command is allowed to be run in current device
+        state
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object('DisableSubarray')
+        return handler.check_allowed()
 
     @command(dtype_in="DevString", doc_in="JSON-formatted string")
     @DebugIt()

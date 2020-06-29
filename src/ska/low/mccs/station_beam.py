@@ -15,11 +15,11 @@ __all__ = ["MccsStationBeam", "main"]
 
 # PyTango imports
 from tango.server import attribute
-from tango import DevState
 from tango.server import device_property
 
 # Additional imports
 from ska.base import SKAObsDevice
+from ska.base.commands import ResultCode
 import ska.low.mccs.release as release
 
 
@@ -40,40 +40,56 @@ class MccsStationBeam(SKAObsDevice):
     # ---------------
     # General methods
     # ---------------
-
-    def init_device(self):
+    class InitCommand(SKAObsDevice.InitCommand):
         """
-        Initialises the attributes and properties of the MccsStationBeam.
+        A class for the MccsStationBeam's init_device() "command".
         """
-        SKAObsDevice.init_device(self)
 
-        self.set_state(DevState.INIT)
-        self._beam_id = self.BeamId
-        self._station_id = 0
-        self._logical_beam_id = 0
-        self._channels = []
-        self._desired_pointing = []
-        self._pointing_delay = []
-        self._pointing_delay_rate = []
-        self._update_rate = 0
-        self._antenna_weights = []
-        self._is_locked = False
+        def do(self):
+            """
+            Initialises the attributes and properties of the MccsStationBeam.
+            State is managed under the hood; the basic sequence is:
 
-        self._build_state = release.get_release_info()
-        self._version_id = release.version
+            1. Device state is set to INIT
+            2. The do() method is run
+            3. Device state is set to the OFF
 
-        self.set_change_event("stationId", True, True)
-        self.set_archive_event("stationId", True, True)
-        self.set_change_event("logicalBeamId", True, True)
-        self.set_archive_event("logicalBeamId", True, True)
-        self.set_change_event("updateRate", True, True)
-        self.set_archive_event("updateRate", True, True)
-        self.set_change_event("isLocked", True, True)
-        self.set_archive_event("isLocked", True, True)
-        self.set_change_event("channels", True, True)
-        self.set_archive_event("channels", True, True)
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            super().do()
 
-        self.set_state(DevState.OFF)
+            device = self.target
+            device._beam_id = device.BeamId
+            device._station_id = 0
+            device._logical_beam_id = 0
+            device._channels = []
+            device._desired_pointing = []
+            device._pointing_delay = []
+            device._pointing_delay_rate = []
+            device._update_rate = 0.0
+            device._antenna_weights = []
+            device._is_locked = False
+
+            device._build_state = release.get_release_info()
+            device._version_id = release.version
+
+            device.set_change_event("stationId", True, True)
+            device.set_archive_event("stationId", True, True)
+            device.set_change_event("logicalBeamId", True, True)
+            device.set_archive_event("logicalBeamId", True, True)
+            device.set_change_event("updateRate", True, True)
+            device.set_archive_event("updateRate", True, True)
+            device.set_change_event("isLocked", True, True)
+            device.set_archive_event("isLocked", True, True)
+            device.set_change_event("channels", True, True)
+            device.set_archive_event("channels", True, True)
+
+            message = "MccsStationBeam Init command completed OK"
+            self.logger.info(message)
+            return (ResultCode.OK, message)
 
     def always_executed_hook(self):
         """

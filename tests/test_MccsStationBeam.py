@@ -15,7 +15,7 @@ import pytest
 import tango
 from tango import DevSource
 from ska.base.control_model import (
-    AdminMode,
+    # AdminMode,
     ControlMode,
     HealthState,
     SimulationMode,
@@ -55,7 +55,7 @@ class TestMccsStationBeam:
         """
         assert device_under_test.state() == tango.DevState.OFF
         assert device_under_test.status() == "The device is in OFF state."
-        assert device_under_test.adminMode == AdminMode.ONLINE
+        # assert device_under_test.admin_mode == AdminMode.ONLINE
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE

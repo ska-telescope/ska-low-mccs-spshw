@@ -1,3 +1,6 @@
+SKA-Low-MCCS
+============
+
 This project is developing the Local Monitoring and Control (LMC) prototype for the [Square Kilometre Array](https://skatelescope.org/).
 
 Documentation
@@ -7,55 +10,56 @@ Documentation
 
 The documentation for this project, including how to get started with it, can be found in the `docs` folder, and can be better browsed in the SKA development portal:
 
- * [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/ska-low-mccs/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")
+* [MCCS LMC Prototype documentation](https://developer.skatelescope.org/projects/ska-low-mccs/en/latest/index.html "SKA Developer Portal: MCCS LMC Prototype documentation")
 
 How to use
 ----------
 
 Full details of how to deploy this prototype can be found in the documentation. Briefly:
 
-1. To set up your environment, follow the instructions on the [Tango Development Environment set up](https://developer.skatelescope.org/en/latest/tools/tango-devenv-setup.html "Tango Development Environment set up") page.
-2. Set up your itango docker container to mount your host working directory. This will allow you to launch locally hosted code within the itango container. To do this, edit `/usr/src/ska-docker/docker-compose/itango.yml` and add the following lines under the itango service definition:
-```yaml
-    volumes:
-      - ${HOME}:/hosthome:rw
-```
-3. Clone this repo
-4. Verify your setup::
-```bash
-$ cd /usr/src/ska-docker/docker-compose
-$ make start itango #not needed if it already shows in "make status"
-$ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
-  itango python3 \
-  /hosthome/ska-low-mccs/src/ska/mccs/MccsMaster.py -?
-usage :  MccsMaster instance_name [-v[trace level]] [-nodb [-dlist <device name list>]]
-Instance name defined in database for server MccsMaster :
-$ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
-  itango tango_admin --add-server MccsMaster/01 MccsMaster lfaa/master/01
-$ docker exec -it -e PYTHONPATH=/hosthome/ska-logging:/hosthome/lmc-base-classes/src \
-  itango python3 \
-  /hosthome/ska-low-mccs/src/ska/mccs/MccsMaster.py 01
-1|2020-03-13T05:27:15.844Z|INFO|MainThread|write_loggingLevel|SKABaseDevice.py#490|tango-device:lfaa/master/01|Logging level set to LoggingLevel.INFO on Python and Tango loggers
-1|2020-03-13T05:27:15.845Z|INFO|MainThread|update_logging_handlers|SKABaseDevice.py#169|tango-device:lfaa/master/01|Logging targets set to []
-1|2020-03-13T05:27:15.846Z|INFO|MainThread|init_device|SKABaseDevice.py#399|tango-device:lfaa/master/01|No Groups loaded for device: lfaa/master/01
-1|2020-03-13T05:27:15.846Z|INFO|MainThread|init_device|SKABaseDevice.py#401|tango-device:lfaa/master/01|Completed SKABaseDevice.init_device
-Ready to accept request
-```
+For instructions on fully deploying the project, consult the kubernetes
+readme file K8S-README.md.
 
-Test and build docs
--------------------
+For a basic environment in which devices may be tested:
 
-This project uses ``tox`` to set up the various build stages. To execute in 
-the development environment, simply run::
+1. Install and set up Git and Docker.
 
-    python -m pip install tox
-    tox 
+2. Clone the SKA-Low-MCCS repository:
 
-Two target environments are run ``py37`` tests and ``docs``. These can be 
-selected using the `-e` option.
+       me@local:~$ git clone https://gitlab.com/ska-telescope/ska-low-mccs.git
+
+3. Spin up a SKA Docker instance with the SKA-Low-MCCS repository
+   mounted at ``/app``, and with access to a container ``bash``
+   terminal session.
+
+       me@local:~$ cd ska-low-mccs
+       me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest bash
+       root@caa98e8e264d:/app#
+
+4. Install project dependencies:
+
+       root@caa98e8e264d:/app# python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt
+
+Testing and linting code, and building docs
+-------------------------------------------
+
+This project uses ``tox`` to set up the various build stages. To execute
+in the development environment, simply run::
+
+    root@caa98e8e264d:/app# tox
+
+Three target environments are available:
+
+* ``py37`` for testing
+* ``docs`` for building documentation
+* ``lint`` for linting the code.
+
+ These can be selected using the `-e` option.
+
+    root@caa98e8e264d:/app# tox -e py37
 
 License
 -------
 
-As you can see from the LICENSE file, this project is under a BSD 3-clause 
-"Revised" License.
+As you can see from the LICENSE file, this project is under a BSD
+3-clause "Revised" License.

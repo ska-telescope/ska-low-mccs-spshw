@@ -102,6 +102,10 @@ class MccsMaster(SKAMaster):
             "DisableSubarray",
             self.DisableSubarrayCommand(*args)
         )
+        self.register_command_object(
+            "Maintenance",
+            self.MaintenanceCommand(*args)
+        )
 
     def init_device(self):
         """Initialises the attributes and properties of the MccsMaster."""
@@ -714,15 +718,33 @@ class MccsMaster(SKAMaster):
             DevState.DISABLE,
         ]
 
+    class MaintenanceCommand(ResponseCommand):
+        """
+        Class for handling the Maintenance command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Power off the MCCS system.
+
+            :return: None
+            """
+            return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
+
     @command()
     @DebugIt()
     def Maintenance(self):
-
         """
         Transition the MCCS to a MAINTENANCE state.
 
+        :todo: What does this command do?
         :return: None
         """
+        handler = self.get_command_object("Maintenance")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
 
 # ----------

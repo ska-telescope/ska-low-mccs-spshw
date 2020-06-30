@@ -75,7 +75,6 @@ class MccsTile(SKABaseDevice):
             """Initialises the attributes and properties of the Mccs Tile."""
             (result_code, message) = super().do()
             device = self.target
-            print(dir(device))
             device.logger.LoggingLevel = LoggingLevel.ERROR
             device._ip_address = device.TileIP
             device._port = device.TpmCpldPort
@@ -105,10 +104,11 @@ class MccsTile(SKABaseDevice):
             device._adc_power = []
             device._sampling_rate = 0.0
             device._tpm = None
-            device.simulationMode = SimulationMode.TRUE
+            device._simulationMode = SimulationMode.TRUE
             device._default_tapering_coeffs = [
                 float(1) for i in range(device.AntennasPerTile)
             ]
+            device._test_mode = TestMode.TEST
             device._is_connected = False
             device._streaming = False
             device._update_frequency = 1
@@ -129,7 +129,8 @@ class MccsTile(SKABaseDevice):
         destructor and by the device Init command.
         """
         if self._read_task is not None:
-            self._streaming is False
+            with self._lock:
+                self._streaming is False
 
     # ----------
     # Attributes
@@ -590,7 +591,7 @@ class MccsTile(SKABaseDevice):
         def do(self, argin):
             initialise_tpm = argin
             device = self.target
-            if device.simulationMode:
+            if device._simulation_mode == SimulationMode.FALSE:
                 device._tpm = TpmSimulator(self.logger)
             else:
                 device._tpm = Tpm(  # noqa: F821
@@ -601,7 +602,7 @@ class MccsTile(SKABaseDevice):
                     device._sampling_rate,
                 )
 
-            tm = True if device.read_testMode() == TestMode.TEST else False
+            tm = True if device._test_mode == TestMode.TEST else False
             device._tpm.connect(
                 initialise=initialise_tpm, simulation=device.simulationMode, testmode=tm
             )
@@ -652,7 +653,10 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
-            self.target._tpm.disconnect()
+            device = self.target
+            with device._lock:
+                device._is_connected = False
+            device._tpm.disconnect()
             return (ResultCode.OK, "Command succeeded")
 
     @command(
@@ -2567,10 +2571,11 @@ class MccsTile(SKABaseDevice):
 
     def __do_read(self):
         while self._streaming:
+            print("+++++++++++++++++++", self._streaming)
             try:
                 # if connected read the values from tpm
                 if self._tpm is not None and self._is_connected:
-                    self.logger.debug("stream on")
+                    self.logger.info("stream on")
                     volts = self._tpm.voltage()
                     curr = self._tpm.current()
                     temp = self._tpm.temperature()
@@ -2595,7 +2600,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error(exc.what())
 
             #  update every second (should be settable?)
-            self.logger.debug(f"sleep {self._update_frequency}")
+            self.logger.info(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:
                 break

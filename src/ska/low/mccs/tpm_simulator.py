@@ -38,7 +38,7 @@ class TpmSimulator:
         print("TpmSimulator: connect")
 
     def disconnect(self):
-        self.logger.info("TpmSimulator: connect")
+        self.logger.info("TpmSimulator: disconnect")
         print("TpmSimulator: disconnect")
 
     def get_firmware_list(self):

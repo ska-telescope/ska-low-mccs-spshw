@@ -131,7 +131,6 @@ class MccsTile(SKABaseDevice):
         if self._read_task is not None:
             with self._lock:
                 self._streaming = False
-                print("+++++++++++++++++++", self._streaming)
             self._read_task = None
 
     # ----------

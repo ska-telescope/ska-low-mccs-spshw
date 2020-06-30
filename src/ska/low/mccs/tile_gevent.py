@@ -29,7 +29,7 @@ from gevent import lock
 # from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
-from ska.base.control_model import SimulationMode, LoggingLevel
+from ska.base.control_model import SimulationMode, TestMode, LoggingLevel
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 
@@ -593,10 +593,9 @@ class MccsTile(SKABaseDevice):
                     device._sampling_rate,
                 )
 
+            tm = True if device.read_testMode() == TestMode.TEST else False
             device._tpm.connect(
-                initialise=initialise_tpm,
-                simulation=device.simulationMode,
-                testmode=device.testMode,
+                initialise=initialise_tpm, simulation=device.simulationMode, testmode=tm
             )
 
             # Load tpm test firmware for both FPGAs

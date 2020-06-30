@@ -14,20 +14,23 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 __all__ = ["MccsTile", "main"]
 
 import json
-import asyncio
 import numpy as np
+import threading
+import time
 
 # PyTango imports
 from tango import DebugIt
+
 from tango.server import attribute, command
 from tango.server import device_property
+from tango import futures_executor
 
 # Additional import
 
 # from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
-from ska.base.control_model import SimulationMode, LoggingLevel
+from ska.base.control_model import SimulationMode, TestMode, LoggingLevel
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 
@@ -39,6 +42,8 @@ class MccsTile(SKABaseDevice):
 
     - Device Property
     """
+
+    green_mode = GreenMode.Futures
 
     # -----------------
     # Device Properties
@@ -68,8 +73,9 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             """Initialises the attributes and properties of the Mccs Tile."""
-            super().do()
+            (result_code, message) = super().do()
             device = self.target
+            print(dir(device))
             device.logger.LoggingLevel = LoggingLevel.ERROR
             device._ip_address = device.TileIP
             device._port = device.TpmCpldPort
@@ -89,11 +95,13 @@ class MccsTile(SKABaseDevice):
             device._firmware_version = ""
             device._voltage = 0.0
             device._current = 0.0
+            device._board_temperature = 0.0
+            device._fpga1_temperature = 0.0
+            device._fpga2_temperature = 0.0
             device._antenna_ids = []
             device._forty_gb_destination_ips = []
             device._forty_gb_destination_macs = []
             device._forty_gb_destination_ports = []
-            #        device._forty_gb_core_list = []
             device._adc_power = []
             device._sampling_rate = 0.0
             device._tpm = None
@@ -102,6 +110,11 @@ class MccsTile(SKABaseDevice):
                 float(1) for i in range(device.AntennasPerTile)
             ]
             device._is_connected = False
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
 
@@ -115,6 +128,8 @@ class MccsTile(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
+        if self._read_task is not None:
+            self._streaming is False
 
     # ----------
     # Attributes
@@ -152,6 +167,7 @@ class MccsTile(SKABaseDevice):
         return self._subarray_id
 
     @subarrayId.write
+    @DebugIt()
     def subarrayId(self, value):
         """Set the subarrayId attribute."""
         self._subarray_id = value
@@ -262,12 +278,12 @@ class MccsTile(SKABaseDevice):
         """Set the firmwareVersion attribute."""
         self._firmware_version = value
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def voltage(self):
         """Return the voltage attribute."""
         return self._voltage
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def current(self):
         """Return the current attribute."""
         return self._current
@@ -280,17 +296,17 @@ class MccsTile(SKABaseDevice):
         """ Function that returns true if board is programmed"""
         return self._tpm.is_programmed()
 
-    @attribute(dtype="DevDouble", doc="The board temperature")
+    @attribute(dtype="DevDouble", doc="The board temperature", fisallowed=is_connected)
     def board_temperature(self):
         """Return the board_temperature attribute."""
         return self._board_temperature
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
         return self._fpga1_temperature
 
-    @attribute(dtype="DevDouble")
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
         return self._fpga2_temperature
@@ -532,6 +548,7 @@ class MccsTile(SKABaseDevice):
             "CalculateDelay", self.CalculateDelayCommand(*args)
         )
 
+
     class InitialiseCommand(ResponseCommand):
         """
         Class for handling the Initialise() command.
@@ -584,10 +601,9 @@ class MccsTile(SKABaseDevice):
                     device._sampling_rate,
                 )
 
+            tm = True if device.read_testMode() == TestMode.TEST else False
             device._tpm.connect(
-                initialise=initialise_tpm,
-                simulation=device.simulationMode,
-                enable_ada=device.testMode,
+                initialise=initialise_tpm, simulation=device.simulationMode, testmode=tm
             )
 
             # Load tpm test firmware for both FPGAs
@@ -596,8 +612,10 @@ class MccsTile(SKABaseDevice):
             elif not device._tpm.is_programmed():
                 self.logger.warning("TPM is not programmed! No plugins loaded")
 
+
             if initialise_tpm:
                 device.Initialise()
+
 
             device._is_connected = True
             return (ResultCode.OK, "Command succeeded")
@@ -888,13 +906,11 @@ class MccsTile(SKABaseDevice):
         :rtype: DevVarUlongArray
 
         :example:
-
-            >>> dp = tango.DeviceProxy("mccs/tile/01")
-            >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
-                        "Offset": offset, "Device":device}
-            >>> jstr = json.dumps(dict)
-            >>> values = dp.command_inout("ReadRegister", jstr)
-
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
+                    "Offset": offset, "Device":device}
+        >>> jstr = json.dumps(dict)
+        >>> values = dp.command_inout("ReadRegister", jstr)
         """
         handler = self.get_command_object("ReadRegister")
         return handler(argin)
@@ -1524,7 +1540,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) < self.target.AntennasPerTile:
+            if len(argin) < self.AntennasPerTile:
                 self.logger.error(
                     f"Insufficient coefficients should be {self.AntennasPerTile}"
                 )
@@ -1602,8 +1618,12 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+<<<<<<< HEAD
             device = self.target
             if len(argin) != device.AntennasPerTile * 2 + 1:
+=======
+            if len(argin) != self.AntennasPerTile * 2 + 1:
+>>>>>>> renamed tile_futures
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
@@ -1611,9 +1631,9 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
-            for i in range(device.AntennasPerTile):
+            for i in range(self.AntennasPerTile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
-            device._tpm.set_pointing_delay(delay_array, beam_index)
+            self.target._tpm.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, "Command succeeded")
 
     @command(
@@ -2538,50 +2558,47 @@ class MccsTile(SKABaseDevice):
     # --------------------
     # Asynchronous routine
     # --------------------
+    #    @green(consume_green_mode=False)
     def _create_long_running_task(self):
         self._streaming = True
-        self._lock = asyncio.Lock()
-        loop = asyncio.get_event_loop()
         self.logger.info("create task")
-        info = self
-        task = loop.create_task(__do_read(info))
+        executor = futures_executor.get_global_executor()
+        self._read_task = executor.delegate(self.__do_read)
 
+    def __do_read(self):
+        while self._streaming:
+            try:
+                # if connected read the values from tpm
+                if self._tpm is not None and self._is_connected:
+                    self.logger.debug("stream on")
+                    volts = self._tpm.voltage()
+                    curr = self._tpm.current()
+                    temp = self._tpm.temperature()
+                    temp1 = self._tpm.get_fpga1_temperature()
+                    temp2 = self._tpm.get_fpga2_temperature()
 
-async def __do_read(self):
-    while self._streaming:
-        try:
-            # if connected read the values from tpm
-            if self._tpm is not None and self._is_connected:
-                print("stream on")
-                volts = self._tpm.voltage()
-                curr = self._tpm.current()
-                temp = self._tpm.temperature()
-                temp1 = self._tpm.get_fpga1_temperature()
-                temp2 = self._tpm.get_fpga2_temperature()
+                    with self._lock:
+                        # now update the attribute using lock to prevent access conflict
+                        self._voltage = volts
+                        self._current = curr
+                        self._board_temperature = temp
+                        self._fpga1_temperature = temp1
+                        self._fpga2_temperature = temp2
+                        self.push_change_event("voltage", volts)
+                        self.push_change_event("current", curr)
+                        self.push_change_event("board_temperature", temp)
+                        self.push_change_event("fpga1_temperature", temp1)
+                        self.push_change_event("fpga2_temperature", temp2)
 
-                async with self._lock:
-                    # now update the attribute using lock to prevent access conflict
-                    self._voltage = volts
-                    self._current = curr
-                    self._board_temperature = temp
-                    self._fpga1_temperature = temp1
-                    self._fpga2_temperature = temp2
-                    self.push_change_event("voltage", volts)
-                    self.push_change_event("current", curr)
-                    self.push_change_event("board_temperature", temp)
-                    self.push_change_event("fpga1_temperature", temp1)
-                    self.push_change_event("fpga2_temperature", temp2)
+            except Exception as exc:
+                self.push_change_event("state", self.get_state())
+                self.logger.error(exc.what())
 
             #  update every second (should be settable?)
-            self.looger.info("sleep 1")
-            await asyncio.sleep(1)
-        except Exception as exc:
-            self.set_state(DevState.FAULT)
-            self.push_change_event("state", self.get_state())
-            self.logger.error(exc.what())
-
-        if not self._streaming:
-            break
+            self.logger.debug(f"sleep {self._update_frequency}")
+            time.sleep(self._update_frequency)
+            if not self._streaming:
+                break
 
 
 # ----------

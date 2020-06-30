@@ -14,6 +14,7 @@ MccsMaster TANGO device class for the MccsMaster prototype
 __all__ = ["MccsMaster", "main"]
 
 import numpy
+import json
 
 # PyTango imports
 import tango
@@ -188,7 +189,7 @@ class MccsMaster(SKAMaster):
             :raises: DevFailed if this command is not allowed to be run
                 in current device state
             """
-            if not self.state_model.dev_state in [
+            if self.state_model.dev_state not in [
                 DevState.ON,
                 DevState.FAULT,
                 DevState.DISABLE,

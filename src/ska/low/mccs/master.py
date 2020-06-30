@@ -74,38 +74,18 @@ class MccsMaster(SKAMaster):
 
         args = (self, self.state_model, self.logger)
 
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("Off", self.OffCommand(*args))
+        self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
+        self.register_command_object("StandbyHigh", self.StandbyHighCommand(*args))
+        self.register_command_object("Operate", self.OperateCommand(*args))
         self.register_command_object(
-            "On",
-            self.OnCommand(*args)
+            "EnableSubarray", self.EnableSubarrayCommand(*args)
         )
         self.register_command_object(
-            "Off",
-            self.OffCommand(*args)
+            "DisableSubarray", self.DisableSubarrayCommand(*args)
         )
-        self.register_command_object(
-            "StandbyLow",
-            self.StandbyLowCommand(*args)
-        )
-        self.register_command_object(
-            "StandbyHigh",
-            self.StandbyHighCommand(*args)
-        )
-        self.register_command_object(
-            "Operate",
-            self.OperateCommand(*args)
-        )
-        self.register_command_object(
-            "EnableSubarray",
-            self.EnableSubarrayCommand(*args)
-        )
-        self.register_command_object(
-            "DisableSubarray",
-            self.DisableSubarrayCommand(*args)
-        )
-        self.register_command_object(
-            "Maintenance",
-            self.MaintenanceCommand(*args)
-        )
+        self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
     def init_device(self):
         """Initialises the attributes and properties of the MccsMaster."""
@@ -189,6 +169,7 @@ class MccsMaster(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Stateless hook for implementation of ExceptionCallback()
@@ -208,18 +189,16 @@ class MccsMaster(SKAMaster):
                 in current device state
             """
             if not self.state_model.dev_state in [
-                DevState.ON, DevState.FAULT, DevState.DISABLE
+                DevState.ON,
+                DevState.FAULT,
+                DevState.DISABLE,
             ]:
-                tango_raise(
-                    "On() is not allowed in current state"
-                )
+                tango_raise("On() is not allowed in current state")
             return True
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def On(self):
@@ -245,7 +224,7 @@ class MccsMaster(SKAMaster):
         :raises: DevFailed if this command is not allowed to be run
             in current device state
         """
-        handler = self.get_command_object('On')
+        handler = self.get_command_object("On")
         return handler.check_allowed()
 
     class OffCommand(ResponseCommand):
@@ -255,6 +234,7 @@ class MccsMaster(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Power off the MCCS system.
@@ -266,10 +246,8 @@ class MccsMaster(SKAMaster):
             return (ResultCode.OK, "Stub implementation of Off(), does nothing")
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def Off(self):
@@ -292,6 +270,7 @@ class MccsMaster(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Transition the MCCS system to the low-power STANDBY_LOW_POWER
@@ -299,14 +278,14 @@ class MccsMaster(SKAMaster):
 
             :return: DevEnum
             """
-            return (ResultCode.OK, "Stub implementation of StandbyLowCommand(), does nothing")
+            return (
+                ResultCode.OK,
+                "Stub implementation of StandbyLowCommand(), does nothing",
+            )
 
     @command(
-        dtype_out="DevEnum"
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def StandbyLow(self):
@@ -329,15 +308,22 @@ class MccsMaster(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Transition the MCCS system to the STANDBY_FULL_POWER operating state.
 
             :return: DevEnum
             """
-            return (ResultCode.OK, "Stub implementation of StandbyLowCommand(), does nothing")
+            return (
+                ResultCode.OK,
+                "Stub implementation of StandbyLowCommand(), does nothing",
+            )
 
-    @command(dtype_out="DevEnum")
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
     @DebugIt()
     def StandbyHigh(self):
         """
@@ -359,6 +345,7 @@ class MccsMaster(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Stateless hook for implementation of ExceptionCallback()
@@ -386,16 +373,12 @@ class MccsMaster(SKAMaster):
                 DevState.STANDBY,
                 DevState.DISABLE,
             ]:
-                tango_raise(
-                    "Operate() is not allowed in current state"
-                )
+                tango_raise("Operate() is not allowed in current state")
             return True
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def Operate(self):
@@ -421,14 +404,14 @@ class MccsMaster(SKAMaster):
         :raises: DevFailed if this command is not allowed to be run
             in current device state
         """
-        handler = self.get_command_object('Operate')
+        handler = self.get_command_object("Operate")
         return handler.check_allowed()
 
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.
         """
-        
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -440,16 +423,16 @@ class MccsMaster(SKAMaster):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
-        
+
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     def EnableSubarray(self, argin):
         """
@@ -461,7 +444,7 @@ class MccsMaster(SKAMaster):
             purposes only
         :rtype: DevString
         """
-        handler = self.get_command_object('EnableSubarray')
+        handler = self.get_command_object("EnableSubarray")
         (resultcode, message) = handler(argin)
         return [[resultcode], [message]]
 
@@ -469,6 +452,7 @@ class MccsMaster(SKAMaster):
         """
         Activate an MCCS Sub-Array
         """
+
         def do(self, argin):
             device = self.target
             subarray_id = argin
@@ -499,11 +483,11 @@ class MccsMaster(SKAMaster):
                 in current device state
             """
             if self.state_model.dev_state in [
-                DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE,
+                DevState.FAULT,
+                DevState.UNKNOWN,
+                DevState.DISABLE,
             ]:
-                tango_raise(
-                    "EnableSubarray() is not allowed in current state"
-                )
+                tango_raise("EnableSubarray() is not allowed in current state")
             return True
 
     def is_EnableSubarray_allowed(self):
@@ -516,14 +500,14 @@ class MccsMaster(SKAMaster):
         :raises: DevFailed if this command is not allowed to be run
             in current device state
         """
-        handler = self.get_command_object('EnableSubarray')
+        handler = self.get_command_object("EnableSubarray")
         return handler.check_allowed()
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     def DisableSubarray(self, argin):
         """
@@ -535,7 +519,7 @@ class MccsMaster(SKAMaster):
             purposes only
         :rtype: DevString
         """
-        handler = self.get_command_object('DisableSubarray')
+        handler = self.get_command_object("DisableSubarray")
         (resultcode, message) = handler(argin)
         return [[resultcode], [message]]
 
@@ -543,6 +527,7 @@ class MccsMaster(SKAMaster):
         """
         De-activate an MCCS Sub-Array
         """
+
         def do(self, argin):
             device = self.target
             subarray_id = argin
@@ -588,11 +573,11 @@ class MccsMaster(SKAMaster):
                 in current device state
             """
             if self.state_model.dev_state in [
-                DevState.FAULT, DevState.UNKNOWN, DevState.DISABLE,
+                DevState.FAULT,
+                DevState.UNKNOWN,
+                DevState.DISABLE,
             ]:
-                tango_raise(
-                    "DisableSubarray() is not allowed in current state"
-                )
+                tango_raise("DisableSubarray() is not allowed in current state")
             return True
 
     def is_DisableSubarray_allowed(self):
@@ -605,14 +590,14 @@ class MccsMaster(SKAMaster):
         :raises: DevFailed if this command is not allowed to be run
             in current device state
         """
-        handler = self.get_command_object('DisableSubarray')
+        handler = self.get_command_object("DisableSubarray")
         return handler.check_allowed()
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     def Allocate(self, argin):
         """
@@ -636,7 +621,7 @@ class MccsMaster(SKAMaster):
                             "stations": ["mccs/station/01", "mccs/station/02",]}')
         """
 
-        handler = self.get_command_object('Allocate')
+        handler = self.get_command_object("Allocate")
         (resultcode, message) = handler(argin)
         return [[resultcode], [message]]
 
@@ -646,6 +631,7 @@ class MccsMaster(SKAMaster):
         The JSON argument specifies the overall sub-array composition in
         terms of which stations should be allocated to the specified Sub-Array.
         """
+
         # subarray_id, stations
         def do(self, argin):
             """
@@ -690,7 +676,9 @@ class MccsMaster(SKAMaster):
             )
 
             if numpy.any(already_allocated):
-                already_allocated_fqdns = list(masterdevice._station_fqdns[already_allocated])
+                already_allocated_fqdns = list(
+                    masterdevice._station_fqdns[already_allocated]
+                )
                 tango_raise(
                     "Cannot allocate stations already allocated: {}".format(
                         ", ".join(already_allocated_fqdns)
@@ -716,7 +704,9 @@ class MccsMaster(SKAMaster):
             )
             if numpy.any(assign_mask):
                 stations_to_assign = list(masterdevice._station_fqdns[assign_mask])
-                call_with_json(subarray_device.AssignResources, stations=stations_to_assign)
+                call_with_json(
+                    subarray_device.AssignResources, stations=stations_to_assign
+                )
                 for fqdn in stations_to_assign:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
@@ -735,11 +725,8 @@ class MccsMaster(SKAMaster):
                 DevState.STANDBY,
                 DevState.DISABLE,
             ]:
-                tango_raise(
-                    "Allocate() is not allowed in current state"
-                )
+                tango_raise("Allocate() is not allowed in current state")
             return True
-            
 
     def is_Allocate_allowed(self):
         """
@@ -751,14 +738,14 @@ class MccsMaster(SKAMaster):
         :raises: DevFailed if this command is not allowed to be run
             in current device state
         """
-        handler = self.get_command_object('Allocate')
+        handler = self.get_command_object("Allocate")
         return handler.check_allowed()
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     def Release(self, argin):
         """
@@ -770,7 +757,7 @@ class MccsMaster(SKAMaster):
             purposes only
         :rtype: DevString
         """
-        handler = self.get_command_object('Release')
+        handler = self.get_command_object("Release")
         (resultcode, message) = handler(argin)
         return [[resultcode], [message]]
 
@@ -780,6 +767,7 @@ class MccsMaster(SKAMaster):
         marking the resources and Capabilities as unassigned and
         idle.
         """
+
         def do(self, argin):
             subarray_id = argin
             assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
@@ -812,9 +800,7 @@ class MccsMaster(SKAMaster):
                 DevState.STANDBY,
                 DevState.DISABLE,
             ]:
-                tango_raise(
-                    "Release() is not allowed in current state"
-                )
+                tango_raise("Release() is not allowed in current state")
             return True
 
     def is_Release_allowed(self):
@@ -827,7 +813,7 @@ class MccsMaster(SKAMaster):
         :raises: DevFailed if this command is not allowed to be run
             in current device state
         """
-        handler = self.get_command_object('Release')
+        handler = self.get_command_object("Release")
         return handler.check_allowed()
 
     class MaintenanceCommand(ResponseCommand):
@@ -837,6 +823,7 @@ class MccsMaster(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Power off the MCCS system.
@@ -848,10 +835,8 @@ class MccsMaster(SKAMaster):
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 
     @command(
-        dtype_in= "DevLong",
-        doc_in= "Sub-Array ID",
-        dtype_out= "DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')", 
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def Maintenance(self):

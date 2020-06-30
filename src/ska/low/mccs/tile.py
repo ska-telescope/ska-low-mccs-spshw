@@ -130,7 +130,9 @@ class MccsTile(SKABaseDevice):
         """
         if self._read_task is not None:
             with self._lock:
-                self._streaming is False
+                self._streaming = False
+                print("+++++++++++++++++++", self._streaming)
+            self._read_task = None
 
     # ----------
     # Attributes
@@ -2571,7 +2573,6 @@ class MccsTile(SKABaseDevice):
 
     def __do_read(self):
         while self._streaming:
-            print("+++++++++++++++++++", self._streaming)
             try:
                 # if connected read the values from tpm
                 if self._tpm is not None and self._is_connected:

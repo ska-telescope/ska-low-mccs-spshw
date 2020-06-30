@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import time
+import random
 import itertools
 
 
@@ -27,9 +28,13 @@ class TpmSimulator:
             "test-reg4": {},
         }
         self._use_clock = False
+        self._unittest_mode = False
 
-    def connect(self, initialise=None, simulation=True, enable_ada=None):
+    def connect(
+        self, initialise=None, simulation=True, enable_ada=None, testmode=False
+    ):
         self.logger.info("TpmSimulator: connect")
+        self._unittest_mode = testmode
         print("TpmSimulator: connect")
 
     def disconnect(self):
@@ -63,34 +68,52 @@ class TpmSimulator:
 
     def temperature(self):
         self.logger.info("TpmSimulator: temperature")
-        return 40.0
+        if self._unittest_mode:  # for unit testing
+            return 36.0
+        else:  # simulate real voltage
+            return random.uniform(25.0, 40.0)
 
     def voltage(self):
         self.logger.info("TpmSimulator: voltage")
-        return 10.5
+        if self._unittest_mode:  # for unit testing
+            return 5.0
+        else:  # simulate real voltage
+            return random.uniform(4.5, 5.5)
 
     def current(self):
         self.logger.info("TpmSimulator: current")
-        return 0.4
+        if self._unittest_mode:  # for unit testing
+            return 0.4
+        else:  # simulate real current
+            return random.uniform(0.0, 3.0)
 
     def get_adc_rms(self):
         self.logger.info("TpmSimulator: get_adc_rms")
         rms = []
         for i in range(0, 32, 2):
-            x = float(i)
-            y = float(i + 1)
+            if self._unittest_mode:  # for unit testing
+                x = float(i)
+                y = float(i + 1)
+            else:  # simulate real adc
+                x = random.uniform(0.0, 3.0)
+                y = random.uniform(0.0, 3.0)
             rms.append(x)
             rms.append(y)
-
         return rms
 
     def get_fpga1_temperature(self):
         self.logger.info("TpmSimulator: get_fpga1_temperature")
-        return 38
+        if self._unittest_mode:  # for unit testing
+            return 38.0
+        else:  # simulate real temperature
+            return random.uniform(25.0, 40.0)
 
     def get_fpga2_temperature(self):
         self.logger.info("TpmSimulator: get_fpga2_temperature")
-        return 37.5
+        if self._unittest_mode:  # for unit testing
+            return 37.5
+        else:  # simulate real temperature
+            return random.uniform(25.0, 40.0)
 
     def get_fpga1_time(self):
         self.logger.info("TpmSimulator: get_fpga1_time")

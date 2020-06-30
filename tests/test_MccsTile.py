@@ -111,7 +111,7 @@ class TestMccsTile(object):
     def test_voltage(self, device_under_test):
         """Test for the voltage attribute."""
         device_under_test.Connect(True)
-        assert device_under_test.voltage == 10.5
+        assert device_under_test.voltage == 5.0
 
     def test_current(self, device_under_test):
         """Test for the current attribute."""
@@ -126,7 +126,7 @@ class TestMccsTile(object):
     def test_board_temperature(self, device_under_test):
         """Test for the board_temperature attribute."""
         device_under_test.Connect(True)
-        assert device_under_test.board_temperature == 40.0
+        assert device_under_test.board_temperature == 36.0
 
     def test_fpga1_temperature(self, device_under_test):
         """Test for the fpga1_temperature attribute."""

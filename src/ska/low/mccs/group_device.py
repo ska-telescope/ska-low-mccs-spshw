@@ -19,9 +19,10 @@ from tango import DevState
 
 # Additional import
 from ska.base import SKABaseDevice
+
 # from .device import MccsDevice
 import ska.low.mccs.release as release
-from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska.base.commands import ResponseCommand, ResultCode
 
 
 class MccsGroupDevice(SKABaseDevice):
@@ -100,18 +101,18 @@ class MccsGroupDevice(SKABaseDevice):
 
         args = (self, self.state_model, self.logger)
 
-        self.register_command_object("AddMember", self.AddMemberCommand(*args)) 
-        self.register_command_object("RemoveMember", self.RemoveMemberCommand(*args)) 
-        self.register_command_object("Run", self.RunCommand(*args)) 
-
-
+        self.register_command_object("AddMember", self.AddMemberCommand(*args))
+        self.register_command_object("RemoveMember", self.RemoveMemberCommand(*args))
+        self.register_command_object("Run", self.RunCommand(*args))
 
     class AddMemberCommand(ResponseCommand):
         """
         Class for handling the AddMember command.
         """
-        def do(self, argin):            
+
+        def do(self, argin):
             return (ResultCode.OK, "AddMember command succeeded")
+
     @command(
         dtype_in="DevString",
         doc_in="The device name to register eg. sys/tg_test/1",
@@ -132,19 +133,20 @@ class MccsGroupDevice(SKABaseDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-
     class RemoveMemberCommand(ResponseCommand):
         """
         Class for handling the RemoveMember command
         """
+
         def do(self, argin):
-             return (ResultCode.OK, "RemoveMember command succeeded")
+            return (ResultCode.OK, "RemoveMember command succeeded")
+
     @command(
         dtype_in="DevString",
         doc_in="The name of the device to de-register",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
-        )
+    )
     @DebugIt()
     def RemoveMember(self, argin):
         """
@@ -163,14 +165,16 @@ class MccsGroupDevice(SKABaseDevice):
         """
         Class for handling the Run command
         """
+
         def do(self, argin):
-             return (ResultCode.OK, "Run command succeeded")
+            return (ResultCode.OK, "Run command succeeded")
+
     @command(
         dtype_in="DevString",
         doc_in="The command to run",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
-        )
+    )
     @DebugIt()
     def Run(self, argin):
         """

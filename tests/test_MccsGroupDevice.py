@@ -43,7 +43,6 @@ class TestMccsGroupDevice(object):
         assert result_code == ResultCode.OK
         assert message == "Run command succeeded"
 
-
     def test_memberStates(self, device_under_test):
         """Test for memberStates"""
         assert device_under_test.memberStates == (DevState.UNKNOWN,)

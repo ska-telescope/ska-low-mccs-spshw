@@ -74,17 +74,18 @@ class MccsMaster(SKAMaster):
 
         args = (self, self.state_model, self.logger)
 
+        self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object("On", self.OnCommand(*args))
         self.register_command_object("Off", self.OffCommand(*args))
         self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
-        self.register_command_object("StandbyHigh", self.StandbyHighCommand(*args))
+        self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
         self.register_command_object("Operate", self.OperateCommand(*args))
         self.register_command_object(
-            "EnableSubarray", self.EnableSubarrayCommand(*args)
-        )
+            "EnableSubarray", self.EnableSubarrayCommand(*args))
         self.register_command_object(
-            "DisableSubarray", self.DisableSubarrayCommand(*args)
-        )
+            "DisableSubarray", self.DisableSubarrayCommand(*args))
+        self.register_command_object("Allocate", self.AllocateCommand(*args))
+        self.register_command_object("Release", self.ReleaseCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
     def init_device(self):
@@ -301,9 +302,9 @@ class MccsMaster(SKAMaster):
         (return_code, message) = handler()
         return [[return_code], [message]]
 
-    class StandbyHighCommand(ResponseCommand):
+    class StandbyFullCommand(ResponseCommand):
         """
-        Class for handling the StandbyHigh command.
+        Class for handling the StandbyFull command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -317,7 +318,7 @@ class MccsMaster(SKAMaster):
             """
             return (
                 ResultCode.OK,
-                "Stub implementation of StandbyLowCommand(), does nothing",
+                "Stub implementation of StandbyFullCommand(), does nothing",
             )
 
     @command(
@@ -325,16 +326,16 @@ class MccsMaster(SKAMaster):
         doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
-    def StandbyHigh(self):
+    def StandbyFull(self):
         """
-        StandbyHigh Command
+        StandbyFull Command
 
         :todo: What does this command do?
         :return: ASCII String that indicates status, for information
             purposes only
         :rtype: DevString
         """
-        handler = self.get_command_object("StandbyHigh")
+        handler = self.get_command_object("StandbyFull")
         (return_code, message) = handler()
         return [[return_code], [message]]
 
@@ -429,7 +430,7 @@ class MccsMaster(SKAMaster):
             return (result_code, message)
 
     @command(
-        dtype_in="DevLong",
+        dtype_in="DevString",
         doc_in="Sub-Array ID",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
@@ -595,7 +596,7 @@ class MccsMaster(SKAMaster):
 
     @command(
         dtype_in="DevLong",
-        doc_in="Sub-Array ID",
+        doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
     )
@@ -743,7 +744,7 @@ class MccsMaster(SKAMaster):
 
     @command(
         dtype_in="DevLong",
-        doc_in="Sub-Array ID",
+        doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
     )
@@ -769,7 +770,9 @@ class MccsMaster(SKAMaster):
         """
 
         def do(self, argin):
-            subarray_id = argin
+            args = json.loads(argin)
+            subarray_id = args["subarray_id"]
+            # subarray_id = argin
             assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
 
             subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]

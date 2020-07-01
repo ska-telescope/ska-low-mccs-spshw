@@ -75,16 +75,16 @@ class MccsAntenna(SKABaseDevice):
             device._bandpassCoefficient = [0.0]
             return (ResultCode.OK, "Init command succeeded")
 
-        def init_command_objects(self):
-            """
-            Set up the handler objects for Commands
-            """
-            super().init_command_objects()
+    def init_command_objects(self):
+        """
+        Set up the handler objects for Commands
+        """
+        super().init_command_objects()
 
-            args = (self, self.state_model, self.logger)
+        args = (self, self.state_model, self.logger)
 
-            self.register_command_object("PowerOn", self.PowerOn(*args))
-            self.register_command_object("PowerOff", self.PowerOff(*args))
+        self.register_command_object("PowerOn", self.PowerOnCommand(*args))
+        self.register_command_object("PowerOff", self.PowerOffCommand(*args))
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -288,7 +288,10 @@ class MccsAntenna(SKABaseDevice):
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
-    @command()
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
     @DebugIt()
     def PowerOn(self):
         handler = self.get_command_object("PowerOn")
@@ -303,7 +306,10 @@ class MccsAntenna(SKABaseDevice):
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
-    @command()
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
     @DebugIt()
     def PowerOff(self):
         handler = self.get_command_object("PowerOff")

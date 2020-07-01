@@ -83,6 +83,7 @@ class MccsAntenna(SKABaseDevice):
 
         args = (self, self.state_model, self.logger)
 
+        self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object("PowerOn", self.PowerOnCommand(*args))
         self.register_command_object("PowerOff", self.PowerOffCommand(*args))
 
@@ -280,6 +281,27 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
+    class ResetCommand(SKABaseDevice.ResetCommand):
+        """
+        Command class for the Reset() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            Reset command. This implementation resets the MCCS
+            system as a whole as an attempt to clear a FAULT
+            state.
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+
+            (result_code, message) = super().do()
+            # MCCS-specific Reset functionality goes here
+            return (result_code, message)
+
     class PowerOnCommand(ResponseCommand):
         def do(self):
             """

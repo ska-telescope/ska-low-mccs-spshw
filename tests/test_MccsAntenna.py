@@ -13,6 +13,7 @@
 This module contains the tests for the MccsAntenna.
 """
 import pytest
+import tango
 
 from ska.base.control_model import (
     ControlMode,
@@ -54,11 +55,12 @@ class TestMccsAntenna(object):
         (result, info) = device_under_test.PowerOff()
         assert result == ResultCode.OK
 
-    @pytest.mark.skip(reason="skip for now, overriding base reset")
     def test_Reset(self, device_under_test):
-        """Test for Reset"""
-        (result, info) = device_under_test.Reset()
-        assert result == ResultCode.OK
+        """Test for Reset. 
+        Expected to fail as can't reset in the Off state
+        """
+        with pytest.raises(tango.DevFailed):
+            result = device_under_test.Reset()
 
     def test_antennaId(self, device_under_test):
         """Test for antennaId"""

@@ -23,10 +23,9 @@ from tango.server import attribute, command, device_property
 
 # Additional import
 from ska.base import SKAMaster, SKABaseDevice
-from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska.base.control_model import AdminMode
+from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.low.mccs.utils import call_with_json, json_input, tango_raise
+from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
 
 

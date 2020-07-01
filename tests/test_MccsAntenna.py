@@ -56,11 +56,12 @@ class TestMccsAntenna(object):
         assert result == ResultCode.OK
 
     def test_Reset(self, device_under_test):
-        """Test for Reset. 
+        """
+        Test for Reset.
         Expected to fail as can't reset in the Off state
         """
         with pytest.raises(tango.DevFailed):
-            result = device_under_test.Reset()
+            device_under_test.Reset()
 
     def test_antennaId(self, device_under_test):
         """Test for antennaId"""

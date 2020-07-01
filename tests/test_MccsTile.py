@@ -22,8 +22,9 @@ from contextlib import redirect_stdout
 from tango import DevFailed
 
 from ska.low.mccs import MccsTile
+from ska.base.commands import ResultCode
 
-device_info = {"class": MccsTile, "properties": {"AntennasPerTile": "16"}}
+device_info = {"class": MccsTile, "properties": {"AntennasPerTile": 16}}
 
 
 class TestMccsTile(object):
@@ -339,7 +340,8 @@ class TestMccsTile(object):
         """Test for WaitPPSEvent"""
         device_under_test.Connect(True)
         device_under_test.fpga1_time = int(time.time())
-        assert device_under_test.WaitPPSEvent() is None
+        (result, info) = device_under_test.WaitPPSEvent()
+        assert result == ResultCode.OK
 
     def test_GetRegisterList(self, device_under_test):
         """Test for GetRegisterList"""

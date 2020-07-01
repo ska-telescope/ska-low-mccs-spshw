@@ -60,6 +60,7 @@ class MccsStation(SKAObsDevice):
 
         def do(self):
             """Initialises the attributes and properties of the MccsStation."""
+            super().do()
             device = self.target
             device._subarray_id = 0
             device._tile_fqdns = list(device.TileFQDNs)

@@ -67,6 +67,7 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             """Initialises the attributes and properties of the Mccs Tile."""
+            super().do()
             device = self.target
             device.logger.LoggingLevel = LoggingLevel.ERROR
             device._ip_address = device.TileIP
@@ -1519,7 +1520,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) < self.AntennasPerTile:
+            if len(argin) < self.target.AntennasPerTile:
                 self.logger.error(
                     f"Insufficient coefficients should be {self.AntennasPerTile}"
                 )
@@ -1597,7 +1598,8 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) != self.AntennasPerTile * 2 + 1:
+            device = self.target
+            if len(argin) != device.AntennasPerTile * 2 + 1:
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
@@ -1605,9 +1607,9 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
-            for i in range(self.AntennasPerTile):
+            for i in range(device.AntennasPerTile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
-            self.target._tpm.set_pointing_delay(delay_array, beam_index)
+            device._tpm.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, "Command succeeded")
 
     @command(

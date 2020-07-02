@@ -14,8 +14,11 @@ architecture in SKA-TEL-LFAA-06000052-02.
 """
 __all__ = ["MccsAntenna", "main"]
 
+import threading
+import time
+
 # tango imports
-from tango import DebugIt
+from tango import DebugIt, futures_executor
 from tango.server import attribute, command
 
 # Additional import
@@ -73,6 +76,7 @@ class MccsAntenna(SKABaseDevice):
             device._delays = [0.0]
             device._delayRates = [0.0]
             device._bandpassCoefficient = [0.0]
+<<<<<<< HEAD
             return (ResultCode.OK, "Init command succeeded")
 
     def init_command_objects(self):
@@ -86,6 +90,25 @@ class MccsAntenna(SKABaseDevice):
         self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object("PowerOn", self.PowerOnCommand(*args))
         self.register_command_object("PowerOff", self.PowerOffCommand(*args))
+=======
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
+            return (ResultCode.OK, "Init command succeeded")
+
+        def init_command_objects(self):
+            """
+            Set up the handler objects for Commands
+            """
+            super().init_command_objects()
+
+            args = (self, self.state_model, self.logger)
+
+            self.register_command_object("PowerOn", self.PowerOn(*args))
+            self.register_command_object("PowerOff", self.PowerOff(*args))
+>>>>>>> antenna MCCS-82 add async
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -281,6 +304,7 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
+<<<<<<< HEAD
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.
@@ -302,6 +326,8 @@ class MccsAntenna(SKABaseDevice):
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
+=======
+>>>>>>> antenna MCCS-82 add async
     class PowerOnCommand(ResponseCommand):
         def do(self):
             """
@@ -310,10 +336,14 @@ class MccsAntenna(SKABaseDevice):
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
+<<<<<<< HEAD
     @command(
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
+=======
+    @command()
+>>>>>>> antenna MCCS-82 add async
     @DebugIt()
     def PowerOn(self):
         handler = self.get_command_object("PowerOn")
@@ -328,16 +358,68 @@ class MccsAntenna(SKABaseDevice):
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
+<<<<<<< HEAD
     @command(
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
+=======
+    @command()
+>>>>>>> antenna MCCS-82 add async
     @DebugIt()
     def PowerOff(self):
         handler = self.get_command_object("PowerOff")
         (return_code, message) = handler()
         return [[return_code], [message]]
 
+<<<<<<< HEAD
+=======
+#WIP adding this routine to start building health monitoring MCCS-73
+    # --------------------
+    # Asynchronous routine
+    # --------------------
+    #    @green(consume_green_mode=False)
+    def _create_long_running_task(self):
+        self._streaming = True
+        self.logger.info("create task")
+        executor = futures_executor.get_global_executor()
+        self._read_task = executor.delegate(self.__do_read)
+
+    def __do_read(self):
+        while self._streaming:
+            try:
+                # if connected read the values from tpm
+                if self._antenna is not None:
+                    self.logger.debug("stream on")
+                    state = self._antenna.state()
+                    volts = self._antenna.voltage()
+                    temp = self._antenna.temperature()
+                    xPolarisationFaulty = self._antenna.xPolarisationFaulty()
+                    yPolarisationFaulty = self._antenna.yPolarisationFaulty()
+
+                    with self._lock:
+                        # now update the attribute using lock to prevent access conflict
+                        self._voltage = volts
+                        self._state = state
+                        self._temp = temp
+                        self._xPolarisationFaulty = xPolarisationFaulty
+                        self._yPolarisationFaulty = yPolarisationFaulty
+                        self.push_change_event("voltage", volts)
+                        self.push_change_event("state", state)
+                        self.push_change_event("temperature", temp)
+                        self.push_change_event("xPolarisationFaulty", xPolarisationFaulty)
+                        self.push_change_event("yPolarisationFaulty", yPolarisationFaulty)
+
+            except Exception as exc:
+                self.push_change_event("state", self.get_state())
+                self.logger.error(exc.what())
+
+            #  update every second (should be settable?)
+            self.logger.debug(f"sleep {self._update_frequency}")
+            time.sleep(self._update_frequency)
+            if not self._streaming:
+                break
+>>>>>>> antenna MCCS-82 add async
 
 # ----------
 # Run server

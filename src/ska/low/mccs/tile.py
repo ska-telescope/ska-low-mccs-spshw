@@ -1623,12 +1623,8 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-<<<<<<< HEAD
             device = self.target
             if len(argin) != device.AntennasPerTile * 2 + 1:
-=======
-            if len(argin) != self.AntennasPerTile * 2 + 1:
->>>>>>> renamed tile_futures
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])

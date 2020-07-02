@@ -81,9 +81,11 @@ class MccsMaster(SKAMaster):
         self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
         self.register_command_object("Operate", self.OperateCommand(*args))
         self.register_command_object(
-            "EnableSubarray", self.EnableSubarrayCommand(*args))
+            "EnableSubarray", self.EnableSubarrayCommand(*args)
+        )
         self.register_command_object(
-            "DisableSubarray", self.DisableSubarrayCommand(*args))
+            "DisableSubarray", self.DisableSubarrayCommand(*args)
+        )
         self.register_command_object("Allocate", self.AllocateCommand(*args))
         self.register_command_object("Release", self.ReleaseCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
@@ -118,14 +120,18 @@ class MccsMaster(SKAMaster):
             )
 
             # whether subarray is enabled
-            device._subarray_enabled = numpy.zeros(len(device.MccsSubarrays), dtype=bool)
+            device._subarray_enabled = numpy.zeros(
+                len(device.MccsSubarrays), dtype=bool
+            )
 
             device._station_fqdns = numpy.array(
                 [] if device.MccsStations is None else device.MccsStations, dtype=str
             )
 
             # id of subarray that station is allocated to, zero if unallocated
-            device._station_allocated = numpy.zeros(len(device.MccsStations), dtype=numpy.ubyte)
+            device._station_allocated = numpy.zeros(
+                len(device.MccsStations), dtype=numpy.ubyte
+            )
 
             message = "MccsMaster Init command completed OK"
             self.logger.info(message)

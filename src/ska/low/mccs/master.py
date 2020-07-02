@@ -88,27 +88,48 @@ class MccsMaster(SKAMaster):
         self.register_command_object("Release", self.ReleaseCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
-    def init_device(self):
-        """Initialises the attributes and properties of the MccsMaster."""
-        super().init_device()
+    class InitCommand(SKAMaster.InitCommand):
+        """
+        A class for the MccsMaster's init_device() "command".
+        """
 
-        self.set_state(DevState.ON)
-        self._build_state = release.get_release_info()
-        self._version_id = release.version
+        def do(self):
+            """
+            Initialises the attributes and properties of the MccsMaster.
+            State is managed under the hood; the basic sequence is:
 
-        self._subarray_fqdns = numpy.array(
-            [] if self.MccsSubarrays is None else self.MccsSubarrays, dtype=str
-        )
+            1. Device state is set to INIT
+            2. The do() method is run
+            3. Device state is set to the OFF
 
-        # whether subarray is enabled
-        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays), dtype=bool)
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            super().do()
 
-        self._station_fqdns = numpy.array(
-            [] if self.MccsStations is None else self.MccsStations, dtype=str
-        )
+            device = self.target
+            device._build_state = release.get_release_info()
+            device._version_id = release.version
 
-        # id of subarray that station is allocated to, zero if unallocated
-        self._station_allocated = numpy.zeros(len(self.MccsStations), dtype=numpy.ubyte)
+            device._subarray_fqdns = numpy.array(
+                [] if device.MccsSubarrays is None else device.MccsSubarrays, dtype=str
+            )
+
+            # whether subarray is enabled
+            device._subarray_enabled = numpy.zeros(len(device.MccsSubarrays), dtype=bool)
+
+            device._station_fqdns = numpy.array(
+                [] if device.MccsStations is None else device.MccsStations, dtype=str
+            )
+
+            # id of subarray that station is allocated to, zero if unallocated
+            device._station_allocated = numpy.zeros(len(device.MccsStations), dtype=numpy.ubyte)
+
+            message = "MccsMaster Init command completed OK"
+            self.logger.info(message)
+            return (ResultCode.OK, message)
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""

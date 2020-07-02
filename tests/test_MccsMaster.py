@@ -46,11 +46,11 @@ class TestMccsMaster:
 
     def test_State(self, device_under_test):
         """Test for State"""
-        assert device_under_test.State() == tango.DevState.ON
+        assert device_under_test.State() == tango.DevState.OFF
 
     def test_Status(self, device_under_test):
         """Test for Status"""
-        assert device_under_test.Status() == "The device is in ON state."
+        assert device_under_test.Status() == "The device is in OFF state."
 
     def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
@@ -423,12 +423,6 @@ class TestMccsMaster:
     def test_healthState(self, device_under_test):
         """Test for healthState"""
         assert device_under_test.healthState == HealthState.OK
-
-    def test_adminMode(self, device_under_test):
-        """Test for adminMode"""
-        assert device_under_test.adminMode == AdminMode.ONLINE
-        device_under_test.adminMode = AdminMode.OFFLINE
-        assert device_under_test.adminMode == AdminMode.OFFLINE
 
     def test_controlMode(self, device_under_test):
         """Test for controlMode"""

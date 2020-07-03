@@ -28,6 +28,53 @@ from ska.base.commands import ResponseCommand, ResultCode
 from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
 
+class MccsMasterDeviceStateModel(SKABaseDeviceStateModel):
+    """
+    Implements the state model for the MccsMaster
+    """
+    def __init__(self, dev_state_callback=None):
+        """
+        Initialises the model. Note that this does not imply moving to
+        INIT state. The INIT state is managed by the model itself.
+        """
+        super().__init__(
+            dev_state_callback=dev_state_callback
+        )
+        self.update_transitions(
+            {
+                ('OFF', 'on_succeeded'): (
+                    "ON",
+                    lambda self: self._set_dev_state(DevState.ON)
+                ),
+                ('OFF', 'on_failed'): (
+                    "FAULT",
+                    lambda self: self._set_dev_state(DevState.FAULT)
+                ),
+                ('ON', 'off_succeeded'): (
+                    "OFF",
+                    lambda self: self._set_dev_state(DevState.OFF)
+                ),
+                ('ON', 'off_failed'): (
+                    "FAULT",
+                    lambda self: self._set_dev_state(DevState.FAULT)
+                ),
+            }
+        )
+        self._obs_state = None
+
+    def _set_obs_state(self, obs_state):
+        """
+        Helper method: set the value of obs_state value
+
+        :param obs_state: the new obs_state value
+        :type obs_state: ObsState
+        """
+        self._obs_state = obs_state
+
+    @property
+    def obs_state(self):
+        return self._obs_state
+
 
 class MccsMaster(SKAMaster):
     """
@@ -63,6 +110,14 @@ class MccsMaster(SKAMaster):
     # ---------------
     # General methods
     # ---------------
+
+    def _init_state_model(self):
+        """
+        Sets up the state model for the device
+        """
+        self.state_model = MccsMasterDeviceStateModel(
+            dev_state_callback=self._update_state,
+        )
 
     def init_command_objects(self):
         """

@@ -30,9 +30,13 @@ device_info = {
     "properties": {
         "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
         "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
-        "MccsTiles": ["low/elt/tile_1", "low/elt/tile_2",
-                      "low/elt/tile_3", "low/elt/tile_4"],
-    }
+        "MccsTiles": [
+            "low/elt/tile_1",
+            "low/elt/tile_2",
+            "low/elt/tile_3",
+            "low/elt/tile_4",
+        ],
+    },
 }
 
 
@@ -70,14 +74,17 @@ class TestMccsMaster:
 
     def test_On(self, device_under_test):
         """Test for On"""
-        with pytest.raises(tango.DevFailed):
-            assert device_under_test.On()
+        [[result_code], [message]] = device_under_test.On()
+        assert result_code == ResultCode.OK
+        assert message == "On command completed OK"
 
     def test_Off(self, device_under_test):
         """Test for Off"""
+        # Need to turn it on before we can turn it off
+        device_under_test.On()
         [[result_code], [message]] = device_under_test.Off()
         assert result_code == ResultCode.OK
-        assert message == "Stub implementation of Off(), does nothing"
+        assert message == "Off command completed OK"
 
     def test_StandbyLow(self, device_under_test):
         """Test for StandbyLow"""

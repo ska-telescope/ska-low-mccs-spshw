@@ -22,41 +22,41 @@ from tango import DebugIt, DevState
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice
-from ska.base.commands import ResponseCommand, ResultCode
+from ska.base import SKAMaster, SKABaseDevice, SKABaseDeviceStateModel
+from ska.base.commands import ActionCommand, ResponseCommand, ResultCode
 
 from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
+
 
 class MccsMasterDeviceStateModel(SKABaseDeviceStateModel):
     """
     Implements the state model for the MccsMaster
     """
+
     def __init__(self, dev_state_callback=None):
         """
         Initialises the model. Note that this does not imply moving to
         INIT state. The INIT state is managed by the model itself.
         """
-        super().__init__(
-            dev_state_callback=dev_state_callback
-        )
+        super().__init__(dev_state_callback=dev_state_callback)
         self.update_transitions(
             {
-                ('OFF', 'on_succeeded'): (
+                ("OFF", "on_succeeded"): (
                     "ON",
-                    lambda self: self._set_dev_state(DevState.ON)
+                    lambda self: self._set_dev_state(DevState.ON),
                 ),
-                ('OFF', 'on_failed'): (
+                ("OFF", "on_failed"): (
                     "FAULT",
-                    lambda self: self._set_dev_state(DevState.FAULT)
+                    lambda self: self._set_dev_state(DevState.FAULT),
                 ),
-                ('ON', 'off_succeeded'): (
+                ("ON", "off_succeeded"): (
                     "OFF",
-                    lambda self: self._set_dev_state(DevState.OFF)
+                    lambda self: self._set_dev_state(DevState.OFF),
                 ),
-                ('ON', 'off_failed'): (
+                ("ON", "off_failed"): (
                     "FAULT",
-                    lambda self: self._set_dev_state(DevState.FAULT)
+                    lambda self: self._set_dev_state(DevState.FAULT),
                 ),
             }
         )
@@ -245,105 +245,134 @@ class MccsMaster(SKAMaster):
     # Commands
     # --------
 
-    class OnCommand(ResponseCommand):
+    class OnCommand(ActionCommand):
         """
-        Class for handling the On command.
+        A class for the SKASubarray's On() command.
+        """
 
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
-        """
+        def __init__(self, target, state_model, logger=None):
+            """
+            Constructor for OnCommand
+
+            :param target: the object that this command acts upon; for
+                example, the SKABaseDevice for which this class
+                implements the command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: SKABaseClassStateModel or a subclass of
+                same
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, "on", logger=logger)
 
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
-            command functionality.
-            """
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            Stateless hook for On() command functionality.
 
-        def check_allowed(self):
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
-            Whether this command is allowed to be run in current device
-            state
+            message = "On command completed OK"
+            self.logger.info(message)
+            return (ResultCode.OK, message)
 
-            :return: True if this command is allowed to be run in
-                current device state
-            :rtype: boolean
-            :raises: DevFailed if this command is not allowed to be run
-                in current device state
-            """
-            if self.state_model.dev_state not in [
-                DevState.ON,
-                DevState.FAULT,
-                DevState.DISABLE,
-            ]:
-                tango_raise("On() is not allowed in current state")
-            return True
+    def is_On_allowed(self):
+        """
+        Check if command `On` is allowed in the current device state.
+
+        :raises ``tango.DevFailed``: if the command is not allowed
+        :return: ``True`` if the command is allowed
+        :rtype: boolean
+        """
+        command = self.get_command_object("On")
+        return command.check_allowed()
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
+        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def On(self):
         """
-        On Command
+        Turn subarray on
 
-        :todo: What does this command do?
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        To modify behaviour for this command, modify the do() method of
+        the command class.
         """
-        handler = self.get_command_object("On")
-        (return_code, message) = handler()
+        command = self.get_command_object("On")
+        (return_code, message) = command()
         return [[return_code], [message]]
 
-    def is_On_allowed(self):
+    class OffCommand(ActionCommand):
         """
-        Whether this command is allowed to be run in current device
-        state
-        :return: True if this command is allowed to be run in
-            current device state
-        :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
+        A class for the SKASubarray's Off() command.
         """
-        handler = self.get_command_object("On")
-        return handler.check_allowed()
 
-    class OffCommand(ResponseCommand):
-        """
-        Class for handling the Off command.
+        def __init__(self, target, state_model, logger=None):
+            """
+            Constructor for OffCommand
 
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
-        """
+            :param target: the object that this command acts upon; for
+                example, the SKABaseDevice for which this class
+                implements the command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: SKABaseClassStateModel or a subclass of
+                same
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, "off", logger=logger)
 
         def do(self):
             """
-            Power off the MCCS system.
+            Stateless hook for Off() command functionality.
 
-            :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
-            return (ResultCode.OK, "Stub implementation of Off(), does nothing")
+            message = "Off command completed OK"
+            self.logger.info(message)
+            return (ResultCode.OK, message)
+
+    def is_Off_allowed(self):
+        """
+        Check if command `Off` is allowed in the current device state.
+
+        :raises ``tango.DevFailed``: if the command is not allowed
+        :return: ``True`` if the command is allowed
+        :rtype: boolean
+        """
+        command = self.get_command_object("Off")
+        return command.check_allowed()
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
+        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def Off(self):
         """
-        Off Command
+        Turn the subarray off
 
-        :todo: What does this command do?
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        To modify behaviour for this command, modify the do() method of
+        the command class.
         """
-        handler = self.get_command_object("Off")
-        (return_code, message) = handler()
+        command = self.get_command_object("Off")
+        (return_code, message) = command()
         return [[return_code], [message]]
 
     class StandbyLowCommand(ResponseCommand):

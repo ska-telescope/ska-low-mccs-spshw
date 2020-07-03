@@ -454,10 +454,57 @@ class MccsMaster(SKAMaster):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
-
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            :raises: DevFailed if this command is not allowed to be run
+                in current device state
+            """
+            if self.state_model.dev_state not in [
+                DevState.OFF,
+                DevState.FAULT,
+                DevState.DISABLE,
+            ]:
+                tango_raise("Reset() is not allowed in current state")
+            return True
+
+    def is_Reset_allowed(self):
+        """
+        Whether this command is allowed to be run in current device
+        state
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("Reset")
+        return handler.check_allowed()
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    @DebugIt()
+    def Reset(self):
+        """
+        Reset Command
+
+        :todo: What does this command do?
+        :return: None
+        """
+        handler = self.get_command_object("Reset")
+        (resultcode, message) = handler()
+        return [[resultcode], [message]]
 
     @command(
         dtype_in="DevLong",
@@ -713,7 +760,7 @@ class MccsMaster(SKAMaster):
                 tango_raise(
                     "Cannot allocate stations already allocated: {}".format(
                         ", ".join(already_allocated_fqdns)
-                    ),
+                    )
                 )
             subarray_device = tango.DeviceProxy(subarray_fqdn)
 
@@ -861,7 +908,7 @@ class MccsMaster(SKAMaster):
 
             :return: ASCII String that indicates status, for information
             purposes only
-        :rtype: DevString
+            :rtype: DevString
             """
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 

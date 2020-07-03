@@ -30,9 +30,13 @@ device_info = {
     "properties": {
         "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
         "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
-        "MccsTiles": ["low/elt/tile_1", "low/elt/tile_2",
-                      "low/elt/tile_3", "low/elt/tile_4"],
-    }
+        "MccsTiles": [
+            "low/elt/tile_1",
+            "low/elt/tile_2",
+            "low/elt/tile_3",
+            "low/elt/tile_4",
+        ],
+    },
 }
 
 
@@ -64,9 +68,47 @@ class TestMccsMaster:
 
     def test_Reset(self, device_under_test):
         """Test for Reset"""
+
+    def _reset_test_helper(
+        self,
+        device_under_test,
+        state=tango.DevState.OFF,
+        ctl=ControlMode.REMOTE,
+        sim=SimulationMode.FALSE,
+        test=TestMode.NONE,
+    ):
+        assert device_under_test.state() == state
+        assert device_under_test.status() == "The device is in {} state.".format(state)
+        assert device_under_test.controlMode == ctl
+        assert device_under_test.simulationMode == sim
+        assert device_under_test.testMode == test
+
+    def test_Reset(self, device_under_test):
+        """Test for Reset"""
+        # Test initial conditions
+        self._reset_test_helper(device_under_test)
+
+        # Force system into a FAULT state
+        with pytest.raises(Exception):
+            device_under_test.Reset()
+
+        # Force status values away from their default
+        device_under_test.controlMode = ControlMode.LOCAL
+        device_under_test.simulationMode = SimulationMode.TRUE
+        device_under_test.testMode = TestMode.TEST
+        self._reset_test_helper(
+            device_under_test,
+            tango.DevState.FAULT,
+            ControlMode.LOCAL,
+            SimulationMode.TRUE,
+            TestMode.TEST,
+        )
+
+        # Issue Reset() and check DUT has been reset
         [[result_code], [message]] = device_under_test.Reset()
         assert result_code == ResultCode.OK
         assert message == "Reset command completed OK"
+        self._reset_test_helper(device_under_test)
 
     def test_On(self, device_under_test):
         """Test for On"""
@@ -189,7 +231,7 @@ class TestMccsMaster:
         # Can't allocate to an array that hasn't been enabled
         with pytest.raises(tango.DevFailed):
             call_with_json(
-                master.Allocate, subarray_id=1, stations=["low/elt/station_1"],
+                master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
             )
 
         # check no side-effect to failure
@@ -205,9 +247,7 @@ class TestMccsMaster:
         master.EnableSubarray(2)
 
         # allocate station_1 to subarray_1
-        call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_1"],
-        )
+        call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
 
         # check that the mock subarray_1 was told to assign that resource
         mock_subarray_1.ReleaseResources.assert_not_called()
@@ -226,7 +266,7 @@ class TestMccsMaster:
         # allocated to subarray 1
         with pytest.raises(tango.DevFailed):
             call_with_json(
-                master.Allocate, subarray_id=2, stations=["low/elt/station_1"],
+                master.Allocate, subarray_id=2, stations=["low/elt/station_1"]
             )
 
         # check no side-effects
@@ -261,9 +301,7 @@ class TestMccsMaster:
 
         # allocating station 2 to subarray 1 should succeed, because the
         # it only requires resource release
-        call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_2"],
-        )
+        call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_2"])
 
         # check
         mock_subarray_1.ReleaseResources.assert_called_once_with(

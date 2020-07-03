@@ -379,7 +379,10 @@ class MccsMaster(SKAMaster):
             Stateless hook for implementation of ExceptionCallback()
             command functionality.
             """
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            return (
+                ResultCode.OK,
+                "Stub implementation of OperateCommand(), does nothing",
+            )
 
         def check_allowed(self):
             """
@@ -457,7 +460,7 @@ class MccsMaster(SKAMaster):
             return (result_code, message)
 
     @command(
-        dtype_in="DevString",
+        dtype_in="DevLong",
         doc_in="Sub-Array ID",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
@@ -622,7 +625,7 @@ class MccsMaster(SKAMaster):
         return handler.check_allowed()
 
     @command(
-        dtype_in="DevLong",
+        dtype_in="DevString",
         doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
@@ -771,7 +774,7 @@ class MccsMaster(SKAMaster):
 
     @command(
         dtype_in="DevLong",
-        doc_in="JSON-formatted string",
+        doc_in="Sub-Array ID",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
     )
@@ -797,9 +800,7 @@ class MccsMaster(SKAMaster):
         """
 
         def do(self, argin):
-            args = json.loads(argin)
-            subarray_id = args["subarray_id"]
-            # subarray_id = argin
+            subarray_id = argin
             assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
 
             subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]

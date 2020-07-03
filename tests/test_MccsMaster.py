@@ -96,7 +96,7 @@ class TestMccsMaster:
         # assert device_under_test.Operate() == 0
         [[result_code], [message]] = device_under_test.Operate()
         assert result_code == ResultCode.OK
-        assert message == "Stub implementation, does nothing"
+        assert message == "Stub implementation of OperateCommand(), does nothing"
 
     def test_Maintenance(self, device_under_test):
         """Test for Maintenance"""
@@ -116,12 +116,7 @@ class TestMccsMaster:
         mock_subarray_2.adminMode = AdminMode.OFFLINE
 
         # Tell master to enable subarray 1
-        # master.EnableSubarray(1)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=1,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
+        master.EnableSubarray(1)
 
         # Check that the ONLINE adminMode attribute was written on the
         # mock subarray_1, and that subarray_2 remains OFFLINE
@@ -137,12 +132,7 @@ class TestMccsMaster:
         assert mock_subarray_2.adminMode == AdminMode.OFFLINE
 
         # Tell master to enable subarray 2
-        # master.EnableSubarray(2)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=2,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
+        master.EnableSubarray(2)
 
         # Check that the ONLINE adminMode attribute was written on the
         # mock subarray_2 and that the mock subarray_1 remains
@@ -156,18 +146,8 @@ class TestMccsMaster:
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
 
         # setup by telling master to enable subarrays 1 and 2
-        # master.EnableSubarray(1)
-        # master.EnableSubarray(2)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=1,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=2,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
+        master.EnableSubarray(1)
+        master.EnableSubarray(2)
 
         # check that the ONLINE adminMode attribute was written on both
         # mock subarrays
@@ -221,18 +201,8 @@ class TestMccsMaster:
         assert mock_station_2.subarrayId == 0
 
         # now enable subarrays
-        # master.EnableSubarray(1)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=1,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
-        # master.EnableSubarray(2)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=2,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
+        master.EnableSubarray(1)
+        master.EnableSubarray(2)
 
         # allocate station_1 to subarray_1
         call_with_json(
@@ -345,18 +315,8 @@ class TestMccsMaster:
         mock_station_2 = tango.DeviceProxy("low/elt/station_2")
 
         # enable subarrays
-        # master.EnableSubarray(1)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=1,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
-        # master.EnableSubarray(2)
-        call_with_json(
-            master.EnableSubarray,
-            subarray_id=2,
-            stations=["low/elt/station_1", "low/elt/station_2"],
-        )
+        master.EnableSubarray(1)
+        master.EnableSubarray(2)
 
         # allocate stations 1 to subarray 1
         call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
@@ -369,8 +329,7 @@ class TestMccsMaster:
         assert mock_station_2.subarrayId == 2
 
         # release resources of subarray_2
-        # master.Release(2)
-        call_with_json(master.Release, subarray_id=2)
+        master.Release(2)
 
         # check
         mock_subarray_1.ReleaseAllResources.assert_not_called()

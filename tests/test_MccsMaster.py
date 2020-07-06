@@ -66,9 +66,6 @@ class TestMccsMaster:
         """Test for isCapabilityAchievable"""
         assert device_under_test.isCapabilityAchievable([[0], [""]]) is not False
 
-    def test_Reset(self, device_under_test):
-        """Test for Reset"""
-
     def _reset_test_helper(
         self,
         device_under_test,

@@ -15,9 +15,11 @@ __all__ = ["MccsStation", "main"]
 
 # PyTango imports
 import tango
-from tango.server import attribute, command
 from tango import DebugIt
+from tango import EventType
+from tango import DeviceProxy
 from tango.server import device_property
+from tango.server import attribute, command
 
 # additional imports
 from ska.base import SKAObsDevice
@@ -25,6 +27,35 @@ from ska.base import SKAObsDevice
 # from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
 from ska.base.commands import ResponseCommand, ResultCode
+
+
+class EventManager:
+    def __init__(self, deviceProxy):
+        self._deviceProxy = deviceProxy
+        self._eventIds = []
+        try:
+            for event_name in deviceProxy.event_names:
+                print("subscribing to ", event_name)
+                id = deviceProxy.subscribe_event(
+                    event_name, EventType.CHANGE_EVENT, self
+                )
+                self._eventIds.append(id)
+        except tango.DevFailed as df:
+            print(df)
+
+    def unsubscribe(self):
+        for eventId in self._eventIds:
+            self._deviceProxy.unsubscribe_event(eventId)
+
+    def push_event(self, ev):
+        print(type(ev))
+        if ev.attr_value is not None and ev.attr_value.value is not None:
+            print("----------------------------")
+            print("Event @ ", ev.get_date())
+            print(self._deviceProxy.name())
+            print(ev.attr_value.name)
+            print(ev.attr_value.value)
+            print(ev.attr_value.quality)
 
 
 class MccsStation(SKAObsDevice):
@@ -90,6 +121,11 @@ class MccsStation(SKAObsDevice):
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
 
+            device._eventManagerList = []
+            for fqdn in device._tile_fqdns:
+                deviceProxy = DeviceProxy(fqdn)
+                device._eventManagerList.append(EventManager(deviceProxy))
+
             device._station_id = device.StationId
             return (ResultCode.OK, "Station Init complete")
 
@@ -106,6 +142,9 @@ class MccsStation(SKAObsDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
+        for event_manager in self._eventManagerList:
+            event_manager.unsubscribe()
+        eventManagerList = None
 
     # ----------
     # Attributes

@@ -18,9 +18,8 @@ import numpy as np
 import threading
 import time
 
-# PyTango imports
-from tango import DebugIt
-
+from tango import DebugIt, DevState
+from tango import GreenMode
 from tango.server import attribute, command
 from tango.server import device_property
 from tango import futures_executor
@@ -108,7 +107,19 @@ class MccsTile(SKABaseDevice):
             device._default_tapering_coeffs = [
                 float(1) for i in range(device.AntennasPerTile)
             ]
-            device._test_mode = TestMode.TEST
+            device._event_names = [
+                "voltage",
+                "current",
+                "board_temperature",
+                "fpga1_temperature",
+                "fpga2_temperature",
+                "state",
+            ]
+            for name in device._event_names:
+                device.set_change_event(name, True, True)
+                device.set_archive_event(name, True, True)
+
+            device._test_mode = TestMode.NONE
             device._is_connected = False
             device._streaming = False
             device._update_frequency = 1
@@ -280,12 +291,28 @@ class MccsTile(SKABaseDevice):
         """Set the firmwareVersion attribute."""
         self._firmware_version = value
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(
+        dtype="DevDouble",
+        fisallowed=is_connected,
+        abs_change=0.05,
+        min_value=4.5,
+        max_value=5.5,
+        min_alarm=4.7,
+        max_alarm=5.3,
+    )
     def voltage(self):
         """Return the voltage attribute."""
         return self._voltage
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(
+        dtype="DevDouble",
+        fisallowed=is_connected,
+        abs_change=0.05,
+        min_value=0.0,
+        max_value=3.0,
+        min_alarm=0.25,
+        max_alarm=2.75,
+    )
     def current(self):
         """Return the current attribute."""
         return self._current
@@ -298,17 +325,42 @@ class MccsTile(SKABaseDevice):
         """ Function that returns true if board is programmed"""
         return self._tpm.is_programmed()
 
-    @attribute(dtype="DevDouble", doc="The board temperature", fisallowed=is_connected)
+    @attribute(
+        dtype="DevDouble",
+        doc="The board temperature",
+        fisallowed=is_connected,
+        abs_change=0.1,
+        min_value=25.0,
+        max_value=40.0,
+        min_alarm=27.0,
+        max_alarm=37.0,
+    )
     def board_temperature(self):
         """Return the board_temperature attribute."""
         return self._board_temperature
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(
+        dtype="DevDouble",
+        fisallowed=is_connected,
+        abs_change=0.1,
+        min_value=25.0,
+        max_value=40.0,
+        min_alarm=27.0,
+        max_alarm=37.0,
+    )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
         return self._fpga1_temperature
 
-    @attribute(dtype="DevDouble", fisallowed=is_connected)
+    @attribute(
+        dtype="DevDouble",
+        fisallowed=is_connected,
+        abs_change=0.1,
+        min_value=25.0,
+        max_value=40.0,
+        min_alarm=27.0,
+        max_alarm=37.0,
+    )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
         return self._fpga2_temperature
@@ -427,6 +479,11 @@ class MccsTile(SKABaseDevice):
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def ppsDelay(self):
         return self._tpm.get_pps_delay()
+
+    @attribute(dtype=["DevString"], max_dim_x=32)
+    def event_names(self):
+        """List of event names which push change events"""
+        return self._event_names
 
     # --------
     # Commands
@@ -2567,6 +2624,7 @@ class MccsTile(SKABaseDevice):
         self._read_task = executor.delegate(self.__do_read)
 
     def __do_read(self):
+        #        self.set_state(DevState.ON)
         while self._streaming:
             try:
                 # if connected read the values from tpm
@@ -2590,13 +2648,19 @@ class MccsTile(SKABaseDevice):
                         self.push_change_event("board_temperature", temp)
                         self.push_change_event("fpga1_temperature", temp1)
                         self.push_change_event("fpga2_temperature", temp2)
+                        #                         self.push_change_event("state", self.getstate())
+                        self.push_archive_event("voltage", volts)
+                        self.push_archive_event("current", curr)
+                        self.push_archive_event("board_temperature", temp)
+                        self.push_archive_event("fpga1_temperature", temp1)
+                        self.push_archive_event("fpga2_temperature", temp2)
 
             except Exception as exc:
                 self.push_change_event("state", self.get_state())
                 self.logger.error(exc.what())
 
             #  update every second (should be settable?)
-            self.logger.info(f"sleep {self._update_frequency}")
+            self.logger.debug(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:
                 break

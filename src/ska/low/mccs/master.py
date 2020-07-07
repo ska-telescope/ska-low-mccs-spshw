@@ -22,63 +22,16 @@ from tango import DebugIt, DevState
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice, SKABaseDeviceStateModel
-from ska.base.commands import ActionCommand, ResponseCommand, ResultCode
+from ska.base import SKAMaster, SKABaseDevice
+from ska.base.commands import ResponseCommand, ResultCode
 
 from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
 
 
-class MccsMasterDeviceStateModel(SKABaseDeviceStateModel):
-    """
-    Implements the state model for the MccsMaster
-    """
-
-    def __init__(self, dev_state_callback=None):
-        """
-        Initialises the model. Note that this does not imply moving to
-        INIT state. The INIT state is managed by the model itself.
-        """
-        super().__init__(dev_state_callback=dev_state_callback)
-        self.update_transitions(
-            {
-                ("OFF", "on_succeeded"): (
-                    "ON",
-                    lambda self: self._set_dev_state(DevState.ON),
-                ),
-                ("OFF", "on_failed"): (
-                    "FAULT",
-                    lambda self: self._set_dev_state(DevState.FAULT),
-                ),
-                ("ON", "off_succeeded"): (
-                    "OFF",
-                    lambda self: self._set_dev_state(DevState.OFF),
-                ),
-                ("ON", "off_failed"): (
-                    "FAULT",
-                    lambda self: self._set_dev_state(DevState.FAULT),
-                ),
-            }
-        )
-        self._obs_state = None
-
-    def _set_obs_state(self, obs_state):
-        """
-        Helper method: set the value of obs_state value
-
-        :param obs_state: the new obs_state value
-        :type obs_state: ObsState
-        """
-        self._obs_state = obs_state
-
-    @property
-    def obs_state(self):
-        return self._obs_state
-
-
 class MccsMaster(SKAMaster):
     """
-    MccsMaster TANGO device class for the MccsMaster prototype
+    MccsMaster TANGO device class for the MCCS prototype
 
     **Properties:**
 
@@ -111,14 +64,6 @@ class MccsMaster(SKAMaster):
     # General methods
     # ---------------
 
-    def _init_state_model(self):
-        """
-        Sets up the state model for the device
-        """
-        self.state_model = MccsMasterDeviceStateModel(
-            dev_state_callback=self._update_state,
-        )
-
     def init_command_objects(self):
         """
         Initialises the command handlers for commands supported by this
@@ -147,7 +92,7 @@ class MccsMaster(SKAMaster):
 
     class InitCommand(SKAMaster.InitCommand):
         """
-        A class for the MccsMaster's init_device() "command".
+        A class for MccsMaster's init_device() "command".
         """
 
         def do(self):
@@ -157,7 +102,7 @@ class MccsMaster(SKAMaster):
 
             1. Device state is set to INIT
             2. The do() method is run
-            3. Device state is set to the OFF
+            3. Device state is set to OFF
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -193,10 +138,13 @@ class MccsMaster(SKAMaster):
             return (ResultCode.OK, message)
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in init_device.
 
         This method allows for any memory or other resources allocated in the
         init_device method to be released.  This method is called by the device
@@ -220,8 +168,12 @@ class MccsMaster(SKAMaster):
         "are executed in stages (e.g power up, power down)",
     )
     def commandProgress(self):
+        """
+        Return the commandProgress attribute value.
 
-        """Return the commandProgress attribute."""
+        :return: command progress as a percentage
+        :rtype: int
+        """
         return 0
 
     @attribute(
@@ -232,149 +184,18 @@ class MccsMaster(SKAMaster):
     )
     def commandDelayExpected(self):
 
-        """Return the commandDelayExpected attribute."""
+        """
+        Return the commandDelayExpected attribute.
+
+        :return: number of seconds it is expected to take to complete
+           the command
+        :rtype: int
+        """
         return 0
-
-    @attribute(dtype="DevState")
-    def opState(self):
-
-        """Return the opState attribute."""
-        return DevState.UNKNOWN
 
     # --------
     # Commands
     # --------
-
-    class OnCommand(ActionCommand):
-        """
-        A class for the SKASubarray's On() command.
-        """
-
-        def __init__(self, target, state_model, logger=None):
-            """
-            Constructor for OnCommand
-
-            :param target: the object that this command acts upon; for
-                example, the SKABaseDevice for which this class
-                implements the command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model: SKABaseClassStateModel or a subclass of
-                same
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
-            """
-            super().__init__(target, state_model, "on", logger=logger)
-
-        def do(self):
-            """
-            Stateless hook for On() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (ResultCode, str)
-            """
-            message = "On command completed OK"
-            self.logger.info(message)
-            return (ResultCode.OK, message)
-
-    def is_On_allowed(self):
-        """
-        Check if command `On` is allowed in the current device state.
-
-        :raises ``tango.DevFailed``: if the command is not allowed
-        :return: ``True`` if the command is allowed
-        :rtype: boolean
-        """
-        command = self.get_command_object("On")
-        return command.check_allowed()
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
-    )
-    @DebugIt()
-    def On(self):
-        """
-        Turn subarray on
-
-        To modify behaviour for this command, modify the do() method of
-        the command class.
-        """
-        command = self.get_command_object("On")
-        (return_code, message) = command()
-        return [[return_code], [message]]
-
-    class OffCommand(ActionCommand):
-        """
-        A class for the SKASubarray's Off() command.
-        """
-
-        def __init__(self, target, state_model, logger=None):
-            """
-            Constructor for OffCommand
-
-            :param target: the object that this command acts upon; for
-                example, the SKABaseDevice for which this class
-                implements the command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model: SKABaseClassStateModel or a subclass of
-                same
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
-            """
-            super().__init__(target, state_model, "off", logger=logger)
-
-        def do(self):
-            """
-            Stateless hook for Off() command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (ResultCode, str)
-            """
-            message = "Off command completed OK"
-            self.logger.info(message)
-            return (ResultCode.OK, message)
-
-    def is_Off_allowed(self):
-        """
-        Check if command `Off` is allowed in the current device state.
-
-        :raises ``tango.DevFailed``: if the command is not allowed
-        :return: ``True`` if the command is allowed
-        :rtype: boolean
-        """
-        command = self.get_command_object("Off")
-        return command.check_allowed()
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
-    )
-    @DebugIt()
-    def Off(self):
-        """
-        Turn the subarray off
-
-        To modify behaviour for this command, modify the do() method of
-        the command class.
-        """
-        command = self.get_command_object("Off")
-        (return_code, message) = command()
-        return [[return_code], [message]]
-
     class StandbyLowCommand(ResponseCommand):
         """
         Class for handling the StandbyLow command.
@@ -388,7 +209,10 @@ class MccsMaster(SKAMaster):
             Transition the MCCS system to the low-power STANDBY_LOW_POWER
             operating state.
 
-            :return: DevEnum
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             return (
                 ResultCode.OK,
@@ -405,9 +229,10 @@ class MccsMaster(SKAMaster):
         StandbyLow Command
 
         :todo: What does this command do?
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("StandbyLow")
         (return_code, message) = handler()
@@ -425,7 +250,10 @@ class MccsMaster(SKAMaster):
             """
             Transition the MCCS system to the STANDBY_FULL_POWER operating state.
 
-            :return: DevEnum
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             return (
                 ResultCode.OK,
@@ -442,9 +270,10 @@ class MccsMaster(SKAMaster):
         StandbyFull Command
 
         :todo: What does this command do?
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("StandbyFull")
         (return_code, message) = handler()
@@ -460,8 +289,13 @@ class MccsMaster(SKAMaster):
 
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of Operate()
             command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             return (
                 ResultCode.OK,
@@ -476,20 +310,8 @@ class MccsMaster(SKAMaster):
             :return: True if this command is allowed to be run in
                 current device state
             :rtype: boolean
-            :raises: DevFailed if this command is not allowed to be run
-                in current device state
             """
-            if self.state_model.dev_state in [
-                DevState.OFF,
-                DevState.FAULT,
-                DevState.INIT,
-                DevState.ALARM,
-                DevState.UNKNOWN,
-                DevState.STANDBY,
-                DevState.DISABLE,
-            ]:
-                tango_raise("Operate() is not allowed in current state")
-            return True
+            return self.state_model.dev_state == DevState.OFF
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -501,9 +323,10 @@ class MccsMaster(SKAMaster):
         Transit to the OPERATE operating state, ready for signal processing.
 
         :todo: What does this command do?
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("Operate")
         (return_code, message) = handler()
@@ -513,6 +336,7 @@ class MccsMaster(SKAMaster):
         """
         Whether this command is allowed to be run in current device
         state
+
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
@@ -520,7 +344,9 @@ class MccsMaster(SKAMaster):
             in current device state
         """
         handler = self.get_command_object("Operate")
-        return handler.check_allowed()
+        if not handler.check_allowed():
+            tango_raise("Operate() is not allowed in current state")
+        return True
 
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
@@ -542,54 +368,6 @@ class MccsMaster(SKAMaster):
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
-        def check_allowed(self):
-            """
-            Whether this command is allowed to be run in current device
-            state
-
-            :return: True if this command is allowed to be run in
-                current device state
-            :rtype: boolean
-            :raises: DevFailed if this command is not allowed to be run
-                in current device state
-            """
-            if self.state_model.dev_state not in [
-                DevState.OFF,
-                DevState.FAULT,
-                DevState.DISABLE,
-            ]:
-                tango_raise("Reset() is not allowed in current state")
-            return True
-
-    def is_Reset_allowed(self):
-        """
-        Whether this command is allowed to be run in current device
-        state
-        :return: True if this command is allowed to be run in
-            current device state
-        :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
-        """
-        handler = self.get_command_object("Reset")
-        return handler.check_allowed()
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
-    )
-    @DebugIt()
-    def Reset(self):
-        """
-        Reset Command
-
-        :todo: What does this command do?
-        :return: None
-        """
-        handler = self.get_command_object("Reset")
-        (resultcode, message) = handler()
-        return [[resultcode], [message]]
-
     @command(
         dtype_in="DevLong",
         doc_in="Sub-Array ID",
@@ -602,9 +380,10 @@ class MccsMaster(SKAMaster):
 
         :param argin: Sub-Array ID
         :type argin: DevVarLongArray
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("EnableSubarray")
         (resultcode, message) = handler(argin)
@@ -616,22 +395,35 @@ class MccsMaster(SKAMaster):
         """
 
         def do(self, argin):
+            """
+            Stateless do hook for the EnableSubarray() command
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             device = self.target
             subarray_id = argin
 
             if not (1 <= subarray_id <= len(device._subarray_fqdns)):
-                tango_raise("Subarray index {} is out of range".format(subarray_id))
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
 
             if device._subarray_enabled[subarray_id - 1]:
-                tango_raise("Subarray {} is already enabled".format(subarray_fqdn))
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already enabled".format(subarray_fqdn),
+                )
             else:
                 subarray_device = tango.DeviceProxy(subarray_fqdn)
                 subarray_device.On()
                 device._subarray_enabled[subarray_id - 1] = True
-
-            return (ResultCode.OK, "EnableSubarray command successful")
+                return (ResultCode.OK, "EnableSubarray command successful")
 
         def check_allowed(self):
             """
@@ -641,21 +433,14 @@ class MccsMaster(SKAMaster):
             :return: True if this command is allowed to be run in
                 current device state
             :rtype: boolean
-            :raises: DevFailed if this command is not allowed to be run
-                in current device state
             """
-            if self.state_model.dev_state in [
-                DevState.FAULT,
-                DevState.UNKNOWN,
-                DevState.DISABLE,
-            ]:
-                tango_raise("EnableSubarray() is not allowed in current state")
-            return True
+            return self.state_model.dev_state == DevState.ON
 
     def is_EnableSubarray_allowed(self):
         """
         Whether this command is allowed to be run in current device
         state
+
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
@@ -663,7 +448,9 @@ class MccsMaster(SKAMaster):
             in current device state
         """
         handler = self.get_command_object("EnableSubarray")
-        return handler.check_allowed()
+        if not handler.check_allowed():
+            tango_raise("EnableSubarray() is not allowed in current state")
+        return True
 
     @command(
         dtype_in="DevLong",
@@ -677,9 +464,10 @@ class MccsMaster(SKAMaster):
 
         :param argin: Sub-Array ID
         :type argin: DevVarLongArray
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("DisableSubarray")
         (resultcode, message) = handler(argin)
@@ -691,16 +479,32 @@ class MccsMaster(SKAMaster):
         """
 
         def do(self, argin):
+            """
+            Stateless do hook for the DisableSubarray command
+
+            :param argin: Sub-Array ID
+            :type argin: DevVarLongArray
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             device = self.target
             subarray_id = argin
 
             if not (1 <= subarray_id <= len(device._subarray_fqdns)):
-                tango_raise("Subarray index {} is out of range".format(subarray_id))
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
 
             if not device._subarray_enabled[subarray_id - 1]:
-                tango_raise("Subarray {} is already disabled".format(subarray_fqdn))
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already disabled".format(subarray_fqdn),
+                )
             else:
                 mask = device._station_allocated == subarray_id
                 fqdns = device._station_fqdns[mask]
@@ -713,15 +517,7 @@ class MccsMaster(SKAMaster):
                 subarray_device = tango.DeviceProxy(subarray_fqdn)
                 subarray_device.Off()
                 device._subarray_enabled[subarray_id - 1] = False
-
-            if device._subarray_enabled[subarray_id - 1]:
-                tango_raise("Subarray {} is already enabled".format(subarray_fqdn))
-            else:
-                subarray_device = tango.DeviceProxy(subarray_fqdn)
-                subarray_device.On()
-                device._subarray_enabled[subarray_id - 1] = True
-
-            return (ResultCode.OK, "EnableSubarray command successful")
+                return (ResultCode.OK, "DisableSubarray command successful")
 
         def check_allowed(self):
             """
@@ -731,21 +527,14 @@ class MccsMaster(SKAMaster):
             :return: True if this command is allowed to be run in
                 current device state
             :rtype: boolean
-            :raises: DevFailed if this command is not allowed to be run
-                in current device state
             """
-            if self.state_model.dev_state in [
-                DevState.FAULT,
-                DevState.UNKNOWN,
-                DevState.DISABLE,
-            ]:
-                tango_raise("DisableSubarray() is not allowed in current state")
-            return True
+            return self.state_model.dev_state == DevState.ON
 
     def is_DisableSubarray_allowed(self):
         """
         Whether this command is allowed to be run in current device
         state
+
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
@@ -753,7 +542,9 @@ class MccsMaster(SKAMaster):
             in current device state
         """
         handler = self.get_command_object("DisableSubarray")
-        return handler.check_allowed()
+        if not handler.check_allowed():
+            tango_raise("DisableSubarray() is not allowed in current state")
+        return True
 
     @command(
         dtype_in="DevString",
@@ -770,10 +561,10 @@ class MccsMaster(SKAMaster):
         :param argin: JSON-formatted string containing an integer
             subarray_id, and arrays of station fqdns.
         :type argin: str
-
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
 
         :example:
 
@@ -806,10 +597,10 @@ class MccsMaster(SKAMaster):
             :param argin: JSON-formatted string containing an integer
                 subarray_id, and arrays of station fqdns.
             :type argin: str
-
-            :return: ASCII String that indicates status, for information
-            purposes only
-            :rtype: DevString
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
 
             args = json.loads(argin)
@@ -821,10 +612,11 @@ class MccsMaster(SKAMaster):
             subarray_fqdn = masterdevice._subarray_fqdns[subarray_id - 1]
 
             if not masterdevice._subarray_enabled[subarray_id - 1]:
-                tango_raise(
+                return (
+                    ResultCode.FAILED,
                     "Cannot allocate resources to disabled subarray {}".format(
                         subarray_fqdn
-                    )
+                    ),
                 )
             station_allocation = numpy.isin(
                 masterdevice._station_fqdns, stations, assume_unique=True
@@ -841,10 +633,11 @@ class MccsMaster(SKAMaster):
                 already_allocated_fqdns = list(
                     masterdevice._station_fqdns[already_allocated]
                 )
-                tango_raise(
+                return (
+                    ResultCode.FAILED,
                     "Cannot allocate stations already allocated: {}".format(
                         ", ".join(already_allocated_fqdns)
-                    )
+                    ),
                 )
             subarray_device = tango.DeviceProxy(subarray_fqdn)
 
@@ -875,25 +668,24 @@ class MccsMaster(SKAMaster):
 
             masterdevice._station_allocated[release_mask] = 0
             masterdevice._station_allocated[assign_mask] = subarray_id
+            return (ResultCode.OK, "Allocate command successful")
 
         def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
 
-            if self.state_model.dev_state in [
-                DevState.OFF,
-                DevState.FAULT,
-                DevState.INIT,
-                DevState.ALARM,
-                DevState.UNKNOWN,
-                DevState.STANDBY,
-                DevState.DISABLE,
-            ]:
-                tango_raise("Allocate() is not allowed in current state")
-            return True
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.ON
 
     def is_Allocate_allowed(self):
         """
         Whether this command is allowed to be run in current device
         state
+
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
@@ -901,7 +693,9 @@ class MccsMaster(SKAMaster):
             in current device state
         """
         handler = self.get_command_object("Allocate")
-        return handler.check_allowed()
+        if not handler.check_allowed():
+            tango_raise("Allocate() is not allowed in current state")
+        return True
 
     @command(
         dtype_in="DevLong",
@@ -915,9 +709,10 @@ class MccsMaster(SKAMaster):
 
         :param argin: Sub-Array ID
         :type argin: DevVarLongArray
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("Release")
         (resultcode, message) = handler(argin)
@@ -931,16 +726,27 @@ class MccsMaster(SKAMaster):
         """
 
         def do(self, argin):
+            """
+            Stateless do hook for the Release command
+
+            :param argin: Sub-Array ID
+            :type argin: DevVarLongArray
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             subarray_id = argin
             assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
 
             subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]
 
             if not self.target._subarray_enabled[subarray_id - 1]:
-                tango_raise(
+                return (
+                    ResultCode.FAILED,
                     "Cannot release resources from disabled subarray {}".format(
                         subarray_fqdn
-                    )
+                    ),
                 )
             subarray_device = tango.DeviceProxy(subarray_fqdn)
             subarray_device.ReleaseAllResources()
@@ -950,25 +756,24 @@ class MccsMaster(SKAMaster):
                 device = tango.DeviceProxy(fqdn)
                 device.subarrayId = 0
             self.target._station_allocated[mask] = 0
+            return (ResultCode.OK, "Release() command successful")
 
         def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
 
-            if self.state_model.dev_state in [
-                DevState.OFF,
-                DevState.FAULT,
-                DevState.INIT,
-                DevState.ALARM,
-                DevState.UNKNOWN,
-                DevState.STANDBY,
-                DevState.DISABLE,
-            ]:
-                tango_raise("Release() is not allowed in current state")
-            return True
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.ON
 
     def is_Release_allowed(self):
         """
         Whether this command is allowed to be run in current device
         state
+
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
@@ -976,7 +781,9 @@ class MccsMaster(SKAMaster):
             in current device state
         """
         handler = self.get_command_object("Release")
-        return handler.check_allowed()
+        if not handler.check_allowed():
+            tango_raise("Release() is not allowed in current state")
+        return True
 
     class MaintenanceCommand(ResponseCommand):
         """
@@ -990,9 +797,10 @@ class MccsMaster(SKAMaster):
             """
             Power off the MCCS system.
 
-            :return: ASCII String that indicates status, for information
-            purposes only
-            :rtype: DevString
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 
@@ -1006,9 +814,10 @@ class MccsMaster(SKAMaster):
         Transition the MCCS to a MAINTENANCE state.
 
         :todo: What does this command do?
-        :return: ASCII String that indicates status, for information
-            purposes only
-        :rtype: DevString
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
         handler = self.get_command_object("Maintenance")
         (return_code, message) = handler()

@@ -875,10 +875,12 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-        * RegisterName - (string) register_name is the registers string representation
-        * NbRead - (int) is the number of 32-bit values to read
-        * Offset - (int) offset is the address offset within the register to write to
-        * Device - (int) device is the FPGA to write to (0 or 1)
+            * RegisterName - (string) register_name is the registers
+                string representation
+            * NbRead - (int) is the number of 32-bit values to read
+            * Offset - (int) offset is the address offset within the
+                register to write to
+            * Device - (int) device is the FPGA to write to (0 or 1)
 
         :type argin: DevString
 
@@ -886,11 +888,13 @@ class MccsTile(SKABaseDevice):
         :rtype: DevVarUlongArray
 
         :example:
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
-                    "Offset": offset, "Device":device}
-        >>> jstr = json.dumps(dict)
-        >>> values = dp.command_inout("ReadRegister", jstr)
+
+            >>> dp = tango.DeviceProxy("mccs/tile/01")
+            >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
+                        "Offset": offset, "Device":device}
+            >>> jstr = json.dumps(dict)
+            >>> values = dp.command_inout("ReadRegister", jstr)
+
         """
         handler = self.get_command_object("ReadRegister")
         return handler(argin)

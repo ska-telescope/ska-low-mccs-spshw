@@ -369,21 +369,22 @@ class MccsAntenna(SKABaseDevice):
                 #                   state = self._antenna.state()
                 volts = random.uniform(4.5, 5.5)  # self._antenna.voltage()
                 temp = random.uniform(30.0, 35.0)  # self._antenna.temperature()
-                #                   xPolarisationFaulty = self._antenna.xPolarisationFaulty()
-                #                    yPolarisationFaulty = self._antenna.yPolarisationFaulty()
+                # xPolarisationFaulty = self._antenna.xPolarisationFaulty()
+                # yPolarisationFaulty = self._antenna.yPolarisationFaulty()
 
                 with self._lock:
                     # now update the attribute using lock to prevent access conflict
                     self._voltage = volts
                     #                        self._state = state
                     self._temperature = temp
-                    #                        self._xPolarisationFaulty = xPolarisationFaulty
-                    #                        self._yPolarisationFaulty = yPolarisationFaulty
+                    # self._xPolarisationFaulty = xPolarisationFaulty
+                    # self._yPolarisationFaulty = yPolarisationFaulty
                     self.push_change_event("voltage", volts)
-                    #                        self.push_change_event("state", state)
                     self.push_change_event("temperature", temp)
-            #                        self.push_change_event("xPolarisationFaulty", xPolarisationFaulty)
-            #                        self.push_change_event("yPolarisationFaulty", yPolarisationFaulty)
+                    # self.push_change_event("xPolarisationFaulty",
+                    #                        xPolarisationFaulty)
+                    # self.push_change_event("yPolarisationFaulty",
+                    #                        yPolarisationFaulty)
 
             except Exception as exc:
                 self.push_change_event("state", self.get_state())

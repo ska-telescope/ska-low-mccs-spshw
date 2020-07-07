@@ -49,6 +49,7 @@ class MccsGroupDevice(SKABaseDevice):
 
         def do(self):
             """Initialises the attributes and properties of the MccsGroupDevice."""
+            super().do()
             device = self.target
             device._member_states = (DevState.UNKNOWN,)
             device._member_list = ("",)

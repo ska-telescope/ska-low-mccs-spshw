@@ -15,7 +15,7 @@ This module contains the tests for MccsGroupDevice.
 from tango import DevState
 from ska.low.mccs import MccsGroupDevice
 from ska.base.commands import ResultCode
-
+from ska.base.control_model import HealthState, ControlMode, SimulationMode, TestMode
 
 device_info = {"class": MccsGroupDevice, "properties": {}}
 
@@ -24,6 +24,16 @@ class TestMccsGroupDevice(object):
     """
     Test class for MccsGroupDevice tests.
     """
+
+    def test_InitDevice(self, device_under_test):
+        """
+           Test for Initial state.
+           """
+        assert device_under_test.State() == DevState.OFF
+        assert device_under_test.healthState == HealthState.OK
+        assert device_under_test.controlMode == ControlMode.REMOTE
+        assert device_under_test.simulationMode == SimulationMode.FALSE
+        assert device_under_test.testMode == TestMode.NONE
 
     def test_AddMember(self, device_under_test):
         """Test for AddMember"""

@@ -18,11 +18,14 @@ from tango.server import attribute, command
 from tango import DevState
 
 # Additional import
-from .device import MccsDevice
+from ska.base import SKABaseDevice
+
+# from .device import MccsDevice
 import ska.low.mccs.release as release
+from ska.base.commands import ResponseCommand, ResultCode
 
 
-class MccsGroupDevice(MccsDevice):
+class MccsGroupDevice(SKABaseDevice):
     """
 
     **Properties:**
@@ -38,13 +41,21 @@ class MccsGroupDevice(MccsDevice):
     # General methods
     # ---------------
 
-    def init_device(self):
-        """Initialises the attributes and properties of the MccsGroupDevice."""
-        super().init_device()
-        self._member_states = (DevState.UNKNOWN,)
-        self._member_list = ("",)
-        self._version_id = release.version
-        self._build_state = release.get_release_info()
+    class InitCommand(SKABaseDevice.InitCommand):
+        """
+        Class that implements device initialisation for the MCCS Group Device
+
+        """
+
+        def do(self):
+            """Initialises the attributes and properties of the MccsGroupDevice."""
+            super().do()
+            device = self.target
+            device._member_states = (DevState.UNKNOWN,)
+            device._member_list = ("",)
+            device._version_id = release.version
+            device._build_state = release.get_release_info()
+            return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -82,9 +93,32 @@ class MccsGroupDevice(MccsDevice):
     # --------
     # Commands
     # --------
+    def init_command_objects(self):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
+        super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object("AddMember", self.AddMemberCommand(*args))
+        self.register_command_object("RemoveMember", self.RemoveMemberCommand(*args))
+        self.register_command_object("Run", self.RunCommand(*args))
+
+    class AddMemberCommand(ResponseCommand):
+        """
+        Class for handling the AddMember command.
+        """
+
+        def do(self, argin):
+            return (ResultCode.OK, "AddMember command succeeded")
 
     @command(
-        dtype_in="DevString", doc_in="The device name to register eg. sys/tg_test/1"
+        dtype_in="DevString",
+        doc_in="The device name to register eg. sys/tg_test/1",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def AddMember(self, argin):
@@ -94,11 +128,26 @@ class MccsGroupDevice(MccsDevice):
         :param argin: The device name to register eg. sys/tg_test/1
         :type argin: 'DevString'
 
-        :return: None
+        :return: (ResultCode, 'informational message')
         """
-        pass
+        handler = self.get_command_object("AddMember")
+        (return_code, message) = handler(argin)
+        return [[return_code], [message]]
 
-    @command(dtype_in="DevString", doc_in="The name of the device to de-register")
+    class RemoveMemberCommand(ResponseCommand):
+        """
+        Class for handling the RemoveMember command
+        """
+
+        def do(self, argin):
+            return (ResultCode.OK, "RemoveMember command succeeded")
+
+    @command(
+        dtype_in="DevString",
+        doc_in="The name of the device to de-register",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
     @DebugIt()
     def RemoveMember(self, argin):
         """
@@ -107,13 +156,28 @@ class MccsGroupDevice(MccsDevice):
         :param argin: The name of the device to de-register
         :type argin: 'DevString'
 
-        :return: None
+        :return: (ResultCode, 'informational message')
         """
-        pass
+        handler = self.get_command_object("RemoveMember")
+        (return_code, message) = handler(argin)
+        return [[return_code], [message]]
 
-    @command(dtype_in="DevString", doc_in="The command to run")
+    class RunCommand(ResponseCommand):
+        """
+        Class for handling the Run command
+        """
+
+        def do(self, argin):
+            return (ResultCode.OK, "Run command succeeded")
+
+    @command(
+        dtype_in="DevString",
+        doc_in="The command to run",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
     @DebugIt()
-    def RunCommand(self, argin):
+    def Run(self, argin):
         """
         A wrapper around running commands on a group proxy for this group of
         devices
@@ -121,9 +185,11 @@ class MccsGroupDevice(MccsDevice):
         :param argin: The command to run
         :type argin: 'DevString'
 
-        :return: None
+        :return: (ResultCode, 'informational message')
         """
-        pass
+        handler = self.get_command_object("Run")
+        (return_code, message) = handler(argin)
+        return [[return_code], [message]]
 
 
 # ----------

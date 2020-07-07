@@ -14,6 +14,7 @@ MccsMaster TANGO device class for the MccsMaster prototype
 __all__ = ["MccsMaster", "main"]
 
 import numpy
+import json
 
 # PyTango imports
 import tango
@@ -21,16 +22,16 @@ from tango import DebugIt, DevState
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster
-from ska.base.control_model import AdminMode
+from ska.base import SKAMaster, SKABaseDevice
+from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.low.mccs.utils import call_with_json, json_input, tango_raise
+from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
 
 
 class MccsMaster(SKAMaster):
     """
-    MccsMaster TANGO device class for the MccsMaster prototype
+    MccsMaster TANGO device class for the MCCS prototype
 
     **Properties:**
 
@@ -63,33 +64,87 @@ class MccsMaster(SKAMaster):
     # General methods
     # ---------------
 
-    def init_device(self):
-        """Initialises the attributes and properties of the MccsMaster."""
-        super().init_device()
+    def init_command_objects(self):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
 
-        self.set_state(DevState.ON)
-        self._build_state = release.get_release_info()
-        self._version_id = release.version
+        super().init_command_objects()
 
-        self._subarray_fqdns = numpy.array(
-            [] if self.MccsSubarrays is None else self.MccsSubarrays, dtype=str
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("Off", self.OffCommand(*args))
+        self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
+        self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
+        self.register_command_object("Operate", self.OperateCommand(*args))
+        self.register_command_object(
+            "EnableSubarray", self.EnableSubarrayCommand(*args)
         )
-
-        # whether subarray is enabled
-        self._subarray_enabled = numpy.zeros(len(self.MccsSubarrays), dtype=bool)
-
-        self._station_fqdns = numpy.array(
-            [] if self.MccsStations is None else self.MccsStations, dtype=str
+        self.register_command_object(
+            "DisableSubarray", self.DisableSubarrayCommand(*args)
         )
+        self.register_command_object("Allocate", self.AllocateCommand(*args))
+        self.register_command_object("Release", self.ReleaseCommand(*args))
+        self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
-        # id of subarray that station is allocated to, zero if unallocated
-        self._station_allocated = numpy.zeros(len(self.MccsStations), dtype=numpy.ubyte)
+    class InitCommand(SKAMaster.InitCommand):
+        """
+        A class for MccsMaster's init_device() "command".
+        """
+
+        def do(self):
+            """
+            Initialises the attributes and properties of the MccsMaster.
+            State is managed under the hood; the basic sequence is:
+
+            1. Device state is set to INIT
+            2. The do() method is run
+            3. Device state is set to OFF
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            super().do()
+
+            device = self.target
+            device._build_state = release.get_release_info()
+            device._version_id = release.version
+
+            device._subarray_fqdns = numpy.array(
+                [] if device.MccsSubarrays is None else device.MccsSubarrays, dtype=str
+            )
+
+            # whether subarray is enabled
+            device._subarray_enabled = numpy.zeros(
+                len(device.MccsSubarrays), dtype=bool
+            )
+
+            device._station_fqdns = numpy.array(
+                [] if device.MccsStations is None else device.MccsStations, dtype=str
+            )
+
+            # id of subarray that station is allocated to, zero if unallocated
+            device._station_allocated = numpy.zeros(
+                len(device.MccsStations), dtype=numpy.ubyte
+            )
+
+            message = "MccsMaster Init command completed OK"
+            self.logger.info(message)
+            return (ResultCode.OK, message)
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in init_device.
 
         This method allows for any memory or other resources allocated in the
         init_device method to be released.  This method is called by the device
@@ -113,8 +168,12 @@ class MccsMaster(SKAMaster):
         "are executed in stages (e.g power up, power down)",
     )
     def commandProgress(self):
+        """
+        Return the commandProgress attribute value.
 
-        """Return the commandProgress attribute."""
+        :return: command progress as a percentage
+        :rtype: int
+        """
         return 0
 
     @attribute(
@@ -125,177 +184,375 @@ class MccsMaster(SKAMaster):
     )
     def commandDelayExpected(self):
 
-        """Return the commandDelayExpected attribute."""
+        """
+        Return the commandDelayExpected attribute.
+
+        :return: number of seconds it is expected to take to complete
+           the command
+        :rtype: int
+        """
         return 0
-
-    @attribute(dtype="DevState")
-    def opState(self):
-
-        """Return the opState attribute."""
-        return DevState.UNKNOWN
 
     # --------
     # Commands
     # --------
-
-    @command()
-    @DebugIt()
-    def On(self):
-
+    class StandbyLowCommand(ResponseCommand):
         """
-        Power off the MCCS system.
+        Class for handling the StandbyLow command.
 
-        :return: `None`
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
         """
-        pass
 
-    def is_On_allowed(self):
+        def do(self):
+            """
+            Transition the MCCS system to the low-power STANDBY_LOW_POWER
+            operating state.
 
-        """ Is the :meth:`On` command alllowed """
-        allowed = [DevState.ON, DevState.FAULT, DevState.DISABLE]
-        return self.get_state() not in allowed
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            return (
+                ResultCode.OK,
+                "Stub implementation of StandbyLowCommand(), does nothing",
+            )
 
-    @command()
-    @DebugIt()
-    def Off(self):
-
-        """
-        Power off the MCCS system.
-
-        :return: None
-        """
-        pass
-
-    @command(dtype_out="DevEnum")
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
     @DebugIt()
     def StandbyLow(self):
-
         """
-        Transition the MCCS system to the low-power STANDBY_LOW_POWER
-        operating state.
+        StandbyLow Command
 
-        :return:  DevEnum
+        :todo: What does this command do?
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
-        return 0
+        handler = self.get_command_object("StandbyLow")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
-    @command(dtype_out="DevEnum")
+    class StandbyFullCommand(ResponseCommand):
+        """
+        Class for handling the StandbyFull command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+
+        def do(self):
+            """
+            Transition the MCCS system to the STANDBY_FULL_POWER operating state.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            return (
+                ResultCode.OK,
+                "Stub implementation of StandbyFullCommand(), does nothing",
+            )
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
     @DebugIt()
     def StandbyFull(self):
-
         """
-        standbyFull	None	N/A	DevEnum	OPERATOR	ON, STANDBY_LOW_POWER
-        Transition the MCCS system to the STANDBY_FULL_POWER operating state.
+        StandbyFull Command
 
-        :return:  DevEnum
+        :todo: What does this command do?
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
-        return 0
+        handler = self.get_command_object("StandbyFull")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
-    @command(dtype_out="DevEnum")
+    class OperateCommand(ResponseCommand):
+        """
+        Class for handling the Operate command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+
+        def do(self):
+            """
+            Stateless hook for implementation of Operate()
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            return (
+                ResultCode.OK,
+                "Stub implementation of OperateCommand(), does nothing",
+            )
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.OFF
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
     @DebugIt()
     def Operate(self):
-
         """
         Transit to the OPERATE operating state, ready for signal processing.
 
-        :return:  DevEnum
+        :todo: What does this command do?
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
-        return 0
+        handler = self.get_command_object("Operate")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
     def is_Operate_allowed(self):
-
-        return self.get_state() not in [
-            DevState.OFF,
-            DevState.FAULT,
-            DevState.INIT,
-            DevState.ALARM,
-            DevState.UNKNOWN,
-            DevState.STANDBY,
-            DevState.DISABLE,
-        ]
-
-    @command()
-    @DebugIt()
-    def Reset(self):
-
         """
-        The MCCS system as a whole is reinitialised as an attempt to clear
-        an ALARM or FAULT state.
+        Whether this command is allowed to be run in current device
+        state
 
-        :return: None
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("Operate")
+        if not handler.check_allowed():
+            tango_raise("Operate() is not allowed in current state")
+        return True
+
+    class ResetCommand(SKABaseDevice.ResetCommand):
+        """
+        Command class for the Reset() command.
         """
 
-    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
-    @DebugIt()
-    def EnableSubarray(self, subarray_id):
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            Reset command. This implementation resets the MCCS
+            system as a whole as an attempt to clear a FAULT
+            state.
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            (result_code, message) = super().do()
+            # MCCS-specific Reset functionality goes here
+            return (result_code, message)
+
+    @command(
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    def EnableSubarray(self, argin):
         """
         Activate an MCCS Sub-Array
 
-        :param subarray_id: Sub-Array ID
-        :type subarray_id: :class:`~tango.DevLong`
-
-        :return: None
+        :param argin: Sub-Array ID
+        :type argin: DevVarLongArray
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
-        if not (1 <= subarray_id <= len(self._subarray_fqdns)):
-            tango_raise("Subarray index {} is out of range".format(subarray_id))
+        handler = self.get_command_object("EnableSubarray")
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
 
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
+    class EnableSubarrayCommand(ResponseCommand):
+        """
+        Activate an MCCS Sub-Array
+        """
 
-        if self._subarray_enabled[subarray_id - 1]:
-            tango_raise("Subarray {} is already enabled".format(subarray_fqdn))
-        else:
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
-            subarray_device.adminMode = AdminMode.ONLINE
-            self._subarray_enabled[subarray_id - 1] = True
+        def do(self, argin):
+            """
+            Stateless do hook for the EnableSubarray() command
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            device = self.target
+            subarray_id = argin
+
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
+
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
+
+            if device._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already enabled".format(subarray_fqdn),
+                )
+            else:
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                subarray_device.On()
+                device._subarray_enabled[subarray_id - 1] = True
+                return (ResultCode.OK, "EnableSubarray command successful")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.ON
 
     def is_EnableSubarray_allowed(self):
-        return self.get_state() not in [
-            DevState.FAULT,
-            DevState.UNKNOWN,
-            DevState.DISABLE,
-        ]
-
-    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
-    @DebugIt()
-    def DisableSubarray(self, subarray_id):
-
         """
-        Deactivate an MCCS Sub-Array
+        Whether this command is allowed to be run in current device
+        state
 
-        :param subarray_id: Sub-Array ID
-        :type subarray_id: :class:`~tango.DevLong`
-
-        :return: None
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
         """
-        assert 1 <= subarray_id <= len(self._subarray_fqdns)
+        handler = self.get_command_object("EnableSubarray")
+        if not handler.check_allowed():
+            tango_raise("EnableSubarray() is not allowed in current state")
+        return True
 
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
+    @command(
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    def DisableSubarray(self, argin):
+        """
+        De-activate an MCCS Sub-Array
 
-        if not self._subarray_enabled[subarray_id - 1]:
-            tango_raise("Subarray {} is already disabled".format(subarray_fqdn))
-        else:
-            mask = self._station_allocated == subarray_id
-            fqdns = self._station_fqdns[mask]
-            fqdns = list(fqdns)
-            for fqdn in fqdns:
-                station = tango.DeviceProxy(fqdn)
-                station.subarrayId = 0
-            self._station_allocated[mask] = 0
+        :param argin: Sub-Array ID
+        :type argin: DevVarLongArray
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
+        handler = self.get_command_object("DisableSubarray")
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
 
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
-            subarray_device.adminMode = AdminMode.OFFLINE
-            self._subarray_enabled[subarray_id - 1] = False
+    class DisableSubarrayCommand(ResponseCommand):
+        """
+        De-activate an MCCS Sub-Array
+        """
+
+        def do(self, argin):
+            """
+            Stateless do hook for the DisableSubarray command
+
+            :param argin: Sub-Array ID
+            :type argin: DevVarLongArray
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            device = self.target
+            subarray_id = argin
+
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
+
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
+
+            if not device._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already disabled".format(subarray_fqdn),
+                )
+            else:
+                mask = device._station_allocated == subarray_id
+                fqdns = device._station_fqdns[mask]
+                fqdns = list(fqdns)
+                for fqdn in fqdns:
+                    station = tango.DeviceProxy(fqdn)
+                    station.subarrayId = 0
+                device._station_allocated[mask] = 0
+
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                subarray_device.Off()
+                device._subarray_enabled[subarray_id - 1] = False
+                return (ResultCode.OK, "DisableSubarray command successful")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.ON
 
     def is_DisableSubarray_allowed(self):
-        return self.get_state() not in [
-            DevState.FAULT,
-            DevState.UNKNOWN,
-            DevState.DISABLE,
-        ]
+        """
+        Whether this command is allowed to be run in current device
+        state
 
-    @command(dtype_in="DevString", doc_in="JSON-formatted string")
-    @DebugIt()
-    @json_input("MccsMaster_Allocate_lax.json")
-    def Allocate(self, subarray_id, stations):
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("DisableSubarray")
+        if not handler.check_allowed():
+            tango_raise("DisableSubarray() is not allowed in current state")
+        return True
+
+    @command(
+        dtype_in="DevString",
+        doc_in="JSON-formatted string",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    def Allocate(self, argin):
         """
         Allocate a set of unallocated MCCS resources to a sub-array.
         The JSON argument specifies the overall sub-array composition in
@@ -304,136 +561,267 @@ class MccsMaster(SKAMaster):
         :param argin: JSON-formatted string containing an integer
             subarray_id, and arrays of station fqdns.
         :type argin: str
-
-        :return: None
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
 
         :example:
 
         >>> proxy = tango.DeviceProxy("low/elt/master")
         >>> proxy.EnableSubarray(1)
         >>> proxy.Allocate('{"subarray_id":1,
-                             "stations": ["mccs/station/01", "mccs/station/02",]}')
+                            "stations": ["mccs/station/01", "mccs/station/02",]}')
         """
-        assert 1 <= subarray_id <= len(self._subarray_fqdns)
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
 
-        if not self._subarray_enabled[subarray_id - 1]:
-            tango_raise(
-                "Cannot allocate resources to disabled subarray {}".format(
-                    subarray_fqdn
+        handler = self.get_command_object("Allocate")
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
+
+    class AllocateCommand(ResponseCommand):
+        """
+        Allocate a set of unallocated MCCS resources to a sub-array.
+        The JSON argument specifies the overall sub-array composition in
+        terms of which stations should be allocated to the specified Sub-Array.
+        """
+
+        # subarray_id, stations
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the Allocate command
+
+            Allocate a set of unallocated MCCS resources to a sub-array.
+            The JSON argument specifies the overall sub-array composition in
+            terms of which stations should be allocated to the specified Sub-Array.
+
+            :param argin: JSON-formatted string containing an integer
+                subarray_id, and arrays of station fqdns.
+            :type argin: str
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+
+            args = json.loads(argin)
+            subarray_id = args["subarray_id"]
+            stations = args["stations"]
+            masterdevice = self.target
+
+            assert 1 <= subarray_id <= len(masterdevice._subarray_fqdns)
+            subarray_fqdn = masterdevice._subarray_fqdns[subarray_id - 1]
+
+            if not masterdevice._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Cannot allocate resources to disabled subarray {}".format(
+                        subarray_fqdn
+                    ),
+                )
+            station_allocation = numpy.isin(
+                masterdevice._station_fqdns, stations, assume_unique=True
+            )
+            already_allocated = numpy.logical_and.reduce(
+                (
+                    masterdevice._station_allocated != 0,
+                    masterdevice._station_allocated != subarray_id,
+                    station_allocation,
                 )
             )
-        station_allocation = numpy.isin(
-            self._station_fqdns, stations, assume_unique=True
-        )
-        already_allocated = numpy.logical_and.reduce(
-            (
-                self._station_allocated != 0,
-                self._station_allocated != subarray_id,
-                station_allocation,
+
+            if numpy.any(already_allocated):
+                already_allocated_fqdns = list(
+                    masterdevice._station_fqdns[already_allocated]
+                )
+                return (
+                    ResultCode.FAILED,
+                    "Cannot allocate stations already allocated: {}".format(
+                        ", ".join(already_allocated_fqdns)
+                    ),
+                )
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
+
+            release_mask = numpy.logical_and(
+                masterdevice._station_allocated == subarray_id,
+                numpy.logical_not(station_allocation),
             )
-        )
+            if numpy.any(release_mask):
+                stations_to_release = list(masterdevice._station_fqdns[release_mask])
+                call_with_json(
+                    subarray_device.ReleaseResources, stations=stations_to_release
+                )
+                for fqdn in stations_to_release:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = 0
 
-        if numpy.any(already_allocated):
-            already_allocated_fqdns = list(self._station_fqdns[already_allocated])
-            tango_raise(
-                "Cannot allocate stations already allocated: {}".format(
-                    ", ".join(already_allocated_fqdns)
-                ),
+            assign_mask = numpy.logical_and(
+                masterdevice._station_allocated == 0, station_allocation
             )
-        subarray_device = tango.DeviceProxy(subarray_fqdn)
+            if numpy.any(assign_mask):
+                stations_to_assign = list(masterdevice._station_fqdns[assign_mask])
+                call_with_json(
+                    subarray_device.AssignResources, stations=stations_to_assign
+                )
+                for fqdn in stations_to_assign:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = subarray_id
 
-        release_mask = numpy.logical_and(
-            self._station_allocated == subarray_id,
-            numpy.logical_not(station_allocation),
-        )
-        if numpy.any(release_mask):
-            stations_to_release = list(self._station_fqdns[release_mask])
-            call_with_json(
-                subarray_device.ReleaseResources, stations=stations_to_release
-            )
-            for fqdn in stations_to_release:
-                device = tango.DeviceProxy(fqdn)
-                device.subarrayId = 0
+            masterdevice._station_allocated[release_mask] = 0
+            masterdevice._station_allocated[assign_mask] = subarray_id
+            return (ResultCode.OK, "Allocate command successful")
 
-        assign_mask = numpy.logical_and(
-            self._station_allocated == 0, station_allocation
-        )
-        if numpy.any(assign_mask):
-            stations_to_assign = list(self._station_fqdns[assign_mask])
-            call_with_json(subarray_device.AssignResources, stations=stations_to_assign)
-            for fqdn in stations_to_assign:
-                device = tango.DeviceProxy(fqdn)
-                device.subarrayId = subarray_id
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
 
-        self._station_allocated[release_mask] = 0
-        self._station_allocated[assign_mask] = subarray_id
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.ON
 
     def is_Allocate_allowed(self):
+        """
+        Whether this command is allowed to be run in current device
+        state
 
-        return self.get_state() not in [
-            DevState.OFF,
-            DevState.FAULT,
-            DevState.INIT,
-            DevState.ALARM,
-            DevState.UNKNOWN,
-            DevState.STANDBY,
-            DevState.DISABLE,
-        ]
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("Allocate")
+        if not handler.check_allowed():
+            tango_raise("Allocate() is not allowed in current state")
+        return True
 
-    @command(dtype_in="DevLong", doc_in="Sub-Array ID")
-    @DebugIt()
-    def Release(self, subarray_id):
+    @command(
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    def Release(self, argin):
+        """
+        De-activate an MCCS Sub-Array
+
+        :param argin: Sub-Array ID
+        :type argin: DevVarLongArray
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
+        handler = self.get_command_object("Release")
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
+
+    class ReleaseCommand(ResponseCommand):
         """
         Release a sub-array's Capabilities and resources (stations),
         marking the resources and Capabilities as unassigned and
         idle.
-
-        :param subarray_id: Sub-Array ID
-        :type subarray_id: :class:`~tango.DevLong`
-
-        :return: None
         """
-        assert 1 <= subarray_id <= len(self._subarray_fqdns)
 
-        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
+        def do(self, argin):
+            """
+            Stateless do hook for the Release command
 
-        if not self._subarray_enabled[subarray_id - 1]:
-            tango_raise(
-                "Cannot release resources from disabled subarray {}".format(
-                    subarray_fqdn
+            :param argin: Sub-Array ID
+            :type argin: DevVarLongArray
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            subarray_id = argin
+            assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
+
+            subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]
+
+            if not self.target._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Cannot release resources from disabled subarray {}".format(
+                        subarray_fqdn
+                    ),
                 )
-            )
-        subarray_device = tango.DeviceProxy(subarray_fqdn)
-        subarray_device.ReleaseAllResources()
-        mask = self._station_allocated == subarray_id
-        fqdns = list(self._station_fqdns[mask])
-        for fqdn in fqdns:
-            device = tango.DeviceProxy(fqdn)
-            device.subarrayId = 0
-        self._station_allocated[mask] = 0
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
+            subarray_device.ReleaseAllResources()
+            mask = self.target._station_allocated == subarray_id
+            fqdns = list(self.target._station_fqdns[mask])
+            for fqdn in fqdns:
+                device = tango.DeviceProxy(fqdn)
+                device.subarrayId = 0
+            self.target._station_allocated[mask] = 0
+            return (ResultCode.OK, "Release() command successful")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.dev_state == DevState.ON
 
     def is_Release_allowed(self):
+        """
+        Whether this command is allowed to be run in current device
+        state
 
-        return self.get_state() not in [
-            DevState.OFF,
-            DevState.FAULT,
-            DevState.INIT,
-            DevState.ALARM,
-            DevState.UNKNOWN,
-            DevState.STANDBY,
-            DevState.DISABLE,
-        ]
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("Release")
+        if not handler.check_allowed():
+            tango_raise("Release() is not allowed in current state")
+        return True
 
-    @command()
+    class MaintenanceCommand(ResponseCommand):
+        """
+        Class for handling the Maintenance command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+
+        def do(self):
+            """
+            Power off the MCCS system.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
     @DebugIt()
     def Maintenance(self):
-
         """
         Transition the MCCS to a MAINTENANCE state.
 
-        :return: None
+        :todo: What does this command do?
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
         """
+        handler = self.get_command_object("Maintenance")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
 
 # ----------

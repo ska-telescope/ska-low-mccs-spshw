@@ -12,10 +12,17 @@
 """
 This module contains the tests for the MccsAntenna.
 """
+import pytest
+import tango
 
-from tango import DevState
-from ska.base.control_model import AdminMode, ControlMode, HealthState, LoggingLevel
+from ska.base.control_model import (
+    ControlMode,
+    SimulationMode,
+    HealthState,
+    LoggingLevel,
+)
 from ska.low.mccs import MccsAntenna
+from ska.base.commands import ResultCode
 
 
 device_info = {
@@ -25,7 +32,7 @@ device_info = {
         "GroupDefinitions": "",
         "LoggingLevelDefault": "4",
         # "LoggingTargetsDefault": "",
-    }
+    },
 }
 
 
@@ -38,25 +45,23 @@ class TestMccsAntenna(object):
         """Test the properties """
         assert device_under_test.loggingLevel == LoggingLevel.INFO
 
-    def test_State(self, device_under_test):
-        """Test for State"""
-        assert device_under_test.state() == DevState.ON
-
-    def test_Status(self, device_under_test):
-        """Test for Status"""
-        assert device_under_test.status() == "The device is in ON state."
-
     def test_PowerOn(self, device_under_test):
         """Test for PowerOn"""
-        assert device_under_test.PowerOn() is None
+        (result, info) = device_under_test.PowerOn()
+        assert result == ResultCode.OK
 
     def test_PowerOff(self, device_under_test):
         """Test for PowerOff"""
-        assert device_under_test.PowerOff() is None
+        (result, info) = device_under_test.PowerOff()
+        assert result == ResultCode.OK
 
     def test_Reset(self, device_under_test):
-        """Test for Reset"""
-        assert device_under_test.Reset() is None
+        """
+        Test for Reset.
+        Expected to fail as can't reset in the Off state
+        """
+        with pytest.raises(tango.DevFailed):
+            device_under_test.Reset()
 
     def test_antennaId(self, device_under_test):
         """Test for antennaId"""
@@ -134,17 +139,13 @@ class TestMccsAntenna(object):
         """Test for healthState"""
         assert device_under_test.healthState == HealthState.OK
 
-    def test_adminMode(self, device_under_test):
-        """Test for adminMode"""
-        assert device_under_test.adminMode == AdminMode.ONLINE
-
     def test_controlMode(self, device_under_test):
         """Test for controlMode"""
         assert device_under_test.controlMode == ControlMode.REMOTE
 
     def test_simulationMode(self, device_under_test):
         """Test for simulationMode"""
-        assert device_under_test.SimulationMode == 0  # Equates to False
+        assert device_under_test.SimulationMode == SimulationMode.FALSE
 
     def test_logicalAntennaId(self, device_under_test):
         """Test for logicalAntennaId"""
@@ -180,7 +181,7 @@ class TestMccsAntenna(object):
 
     def test_loggingTargets(self, device_under_test):
         """Test for loggingTargets"""
-        assert device_under_test.loggingTargets == ('tango::logger',)
+        assert device_under_test.loggingTargets == ("tango::logger",)
 
     def test_delays(self, device_under_test):
         """Test for delays"""

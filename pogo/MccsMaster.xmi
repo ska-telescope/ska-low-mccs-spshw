@@ -369,14 +369,6 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <properties description="Amount of time it will take to prepare the requested state/mode transition &#x2013; implemented as needed." label="" unit="s" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
-    <attributes name="opState" attType="Scalar" rwType="READ" displayLevel="OPERATOR" polledPeriod="0" maxX="" maxY="" allocReadMember="true" isDynamic="false">
-      <dataType xsi:type="pogoDsl:StateType"/>
-      <changeEvent fire="false" libCheckCriteria="false"/>
-      <archiveEvent fire="false" libCheckCriteria="false"/>
-      <dataReadyEvent fire="false" libCheckCriteria="true"/>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <properties description="" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
-    </attributes>
     <attributes name="maxCapabilities" attType="Spectrum" rwType="READ" displayLevel="OPERATOR" polledPeriod="1000" maxX="20" maxY="" allocReadMember="true">
       <dataType xsi:type="pogoDsl:StringType"/>
       <changeEvent fire="false" libCheckCriteria="false"/>

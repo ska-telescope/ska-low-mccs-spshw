@@ -14,21 +14,14 @@ This module contains the tests for MccsStation.
 import pytest
 import time
 import tango
-from ska.base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
+from tango import DevState
+from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import MccsStation, release
 
 
 device_info = {
     "class": MccsStation,
-    "properties": {
-        "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]
-    }
+    "properties": {"TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
 }
 
 
@@ -51,9 +44,8 @@ class TestMccsStation:
         A freshly initialised station device has no assigned resources
         and is therefore in OFF state.
         """
-        assert device_under_test.state() == tango.DevState.OFF
-        assert device_under_test.status() == "The device is in OFF state."
-        assert device_under_test.adminMode == AdminMode.ONLINE
+        # assert device_under_test.adminMode == AdminMode.ONLINE
+        assert device_under_test.State() == DevState.OFF
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
@@ -68,8 +60,7 @@ class TestMccsStation:
         assert device_under_test.calibrationJobId == 0
         assert device_under_test.daqJobId == 0
         assert device_under_test.dataDirectory == ""
-        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1",
-                                                     "low/elt/tile_2"]
+        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
         assert device_under_test.beamFQDNs is None
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
@@ -119,8 +110,7 @@ class TestMccsStation:
 
     def test_tileFQDNs(self, device_under_test):
         """Test for tileFQDNs attribute"""
-        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1",
-                                                     "low/elt/tile_2"]
+        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
 
     def test_beamFQDNs(self, device_under_test):
         """Test for beamFQDNs attribute"""

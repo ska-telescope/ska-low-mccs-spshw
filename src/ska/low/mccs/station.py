@@ -16,16 +16,18 @@ __all__ = ["MccsStation", "main"]
 # PyTango imports
 import tango
 from tango.server import attribute, command
-from tango import AttrWriteType, DebugIt, DevState
+from tango import DebugIt
 from tango.server import device_property
 
 # additional imports
 from ska.base import SKAObsDevice
-from ska.low.mccs import MccsGroupDevice
+
+# from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
+from ska.base.commands import ResponseCommand, ResultCode
 
 
-class MccsStation(SKAObsDevice, MccsGroupDevice):
+class MccsStation(SKAObsDevice):
     """
     MccsStation is the Tango device class for the MCCS Station prototype.
 
@@ -44,44 +46,52 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # General methods
     # ---------------
 
-    def init_device(self):
+    class InitCommand(SKAObsDevice.InitCommand):
         """
-        Initialises the attributes and properties of the MccsStation.
+        Class that implements device initialisation for the MCCS Tile
+        State is managed under the hood; the basic sequence is:
+
+        1. Device state is set to INIT
+        2. The do() method is run
+        3. Device state is set to the appropriate outgoing state,
+           usually off
+
         """
-        super().init_device()
 
-        self.set_state(DevState.INIT)
+        def do(self):
+            """Initialises the attributes and properties of the MccsStation."""
+            super().do()
+            device = self.target
+            device._subarray_id = 0
+            device._tile_fqdns = list(device.TileFQDNs)
+            device._beam_fqdns = []
+            device._transient_buffer_fqdn = ""
+            device._delay_centre = []
+            device._calibration_coefficients = []
+            device._is_calibrated = False
+            device._is_configured = False
+            device._calibration_job_id = 0
+            device._daq_job_id = 0
+            device._data_directory = ""
 
-        self._subarray_id = 0
-        self._tile_fqdns = list(self.TileFQDNs)
-        self._beam_fqdns = []
-        self._transient_buffer_fqdn = ""
-        self._delay_centre = []
-        self._calibration_coefficients = []
-        self._is_calibrated = False
-        self._is_configured = False
-        self._calibration_job_id = 0
-        self._daq_job_id = 0
-        self._data_directory = ""
+            device._build_state = release.get_release_info()
+            device._version_id = release.version
 
-        self._build_state = release.get_release_info()
-        self._version_id = release.version
+            device.set_change_event("subarrayId", True, True)
+            device.set_archive_event("subarrayId", True, True)
+            device.set_change_event("transientBufferFQDN", True, False)
+            device.set_archive_event("transientBufferFQDN", True, False)
+            device.set_change_event("isCalibrated", True, True)
+            device.set_archive_event("isCalibrated", True, True)
+            device.set_change_event("isConfigured", True, True)
+            device.set_archive_event("isConfigured", True, True)
+            device.set_change_event("tileFQDNs", True, True)
+            device.set_archive_event("tileFQDNs", True, True)
+            device.set_change_event("beamFQDNs", True, True)
+            device.set_archive_event("beamFQDNs", True, True)
 
-        self.set_change_event("subarrayId", True, True)
-        self.set_archive_event("subarrayId", True, True)
-        self.set_change_event("transientBufferFQDN", True, False)
-        self.set_archive_event("transientBufferFQDN", True, False)
-        self.set_change_event("isCalibrated", True, True)
-        self.set_archive_event("isCalibrated", True, True)
-        self.set_change_event("isConfigured", True, True)
-        self.set_archive_event("isConfigured", True, True)
-        self.set_change_event("tileFQDNs", True, True)
-        self.set_archive_event("tileFQDNs", True, True)
-        self.set_change_event("beamFQDNs", True, True)
-        self.set_archive_event("beamFQDNs", True, True)
-
-        self._station_id = self.StationId
-        self.set_state(DevState.OFF)
+            device._station_id = device.StationId
+            return (ResultCode.OK, "Station Init complete")
 
     def always_executed_hook(self):
         """
@@ -115,7 +125,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @attribute(
         dtype="DevLong",
-        access=AttrWriteType.READ_WRITE,
         format="%i",
         max_value=16,
         min_value=0,
@@ -237,7 +246,6 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        access=AttrWriteType.READ_WRITE,
         max_dim_x=2,
         polling_period=1000,
         doc="""WGS84 position of the delay centre of the Station.
@@ -278,32 +286,64 @@ class MccsStation(SKAObsDevice, MccsGroupDevice):
     # --------
     # Commands
     # --------
+    def init_command_objects(self):
+        """
+        Set up the handler objects for Commands
+        """
+        super().init_command_objects()
 
-    @command()
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object("Configure", self.ConfigureCommand(*args))
+
+    class ConfigureCommand(ResponseCommand):
+        """
+        Class for handling the Configure() command.
+        """
+
+        def do(self):
+            device = self.target
+            for id, tile in enumerate(device.TileFQDNs):
+                proxy = tango.DeviceProxy(tile)
+                proxy.subarrayId = device._subarray_id
+                proxy.stationId = device._station_id
+                proxy.logicalTileId = id + 1
+                # self.AddMember(tile)
+                print(proxy)
+                print(f"tileId {proxy.TileId}")
+                print(f"logicalTpmId {proxy.logicalTileId}")
+                proxy.command_inout("Connect", True)
+                print(proxy.adcPower)
+                print(proxy.command_inout("GetRegisterList"))
+
+            #             self._beams = []
+            #             for id, beam in enumerate(self._beam_fqdns):
+            #                 proxy = tango.DeviceProxy(beam)
+            #                 self._beam.append(proxy)
+            #                 proxy.stationId = self.StationId
+            #                 proxy.logicalBeamId = id + 1
+            #                 print(proxy)
+            #                 print(f"beamId {proxy.beamId}")
+            #                 print(f"logicalBeamId {proxy.logicalBeamId}")
+
+            return (ResultCode.OK, "Command succeeded")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
     def Configure(self):
-        for id, tile in enumerate(self.TileFQDNS):
-            proxy = tango.DeviceProxy(tile)
-            proxy.subarrayId = self._subarray_id
-            proxy.stationId = self._station_id
-            proxy.logicalTileId = id + 1
-            self.AddMember(tile)
-            print(proxy)
-            print(f"tileId {proxy.TileId}")
-            print(f"logicalTpmId {proxy.logicalTileId}")
-            proxy.command_inout("Connect", True)
-            print(proxy.adcPower)
-            print(proxy.command_inout("GetRegisterList"))
+        """
+        Configure the station with tiles
 
+        :example:
 
-#         self._beams = []
-#         for id, beam in enumerate(self._beam_fqdns):
-#             proxy = tango.DeviceProxy(beam)
-#             self._beam.append(proxy)
-#             proxy.stationId = self.StationId
-#             proxy.logicalBeamId = id + 1
-#             print(proxy)
-#             print(f"beamId {proxy.beamId}")
-#             print(f"logicalBeamId {proxy.logicalBeamId}")
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dp.command_inout("Configure")
+        """
+        handler = self.get_command_object("Configure")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
 
 # ----------

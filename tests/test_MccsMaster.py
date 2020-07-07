@@ -14,25 +14,23 @@ import json
 import pytest
 import tango
 
-from ska.base.control_model import (
-    AdminMode,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
+from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import MccsMaster, release
 from ska.low.mccs.utils import call_with_json, tango_raise
-
+from ska.base.commands import ResultCode
 
 device_info = {
     "class": MccsMaster,
     "properties": {
         "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
         "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
-        "MccsTiles": ["low/elt/tile_1", "low/elt/tile_2",
-                      "low/elt/tile_3", "low/elt/tile_4"],
-    }
+        "MccsTiles": [
+            "low/elt/tile_1",
+            "low/elt/tile_2",
+            "low/elt/tile_3",
+            "low/elt/tile_4",
+        ],
+    },
 }
 
 
@@ -40,37 +38,17 @@ device_info = {
 class TestMccsMaster:
     """Test case for packet generation."""
 
-    properties = {
-        "SkaLevel": "4",
-        "CentralLoggingTarget": "",
-        "ElementLoggingTarget": "",
-        "StorageLoggingTarget": "localhost",
-        "GroupDefinitions": "",
-        "NrSubarrays": "16",
-        "CapabilityTypes": "",
-        "MaxCapabilities": "",
-        "MccsSubarrays": "",
-        "LoggingLevelDefault": "4",
-        "LoggingTargetsDefault": "",
-        "MccsStations": "",
-    }
-
-    @classmethod
-    def mocking(cls):
-        """Mock external libraries."""
-        # Example : Mock numpy
-        # cls.numpy = MccsMaster.numpy = MagicMock()
-
+    @pytest.mark.skip(reason="Not implemented")
     def test_properties(self, device_under_test):
         """ Test the properties """
 
     def test_State(self, device_under_test):
         """Test for State"""
-        assert device_under_test.State() == tango.DevState.ON
+        assert device_under_test.State() == tango.DevState.OFF
 
     def test_Status(self, device_under_test):
         """Test for Status"""
-        assert device_under_test.Status() == "The device is in ON state."
+        assert device_under_test.Status() == "The device is in OFF state."
 
     def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
@@ -84,98 +62,111 @@ class TestMccsMaster:
 
     def test_Reset(self, device_under_test):
         """Test for Reset"""
-        assert device_under_test.Reset() is None
+
+        with pytest.raises(Exception):
+            device_under_test.Reset()
 
     def test_On(self, device_under_test):
         """Test for On"""
-        with pytest.raises(tango.DevFailed):
-            assert device_under_test.On()
+        [[result_code], [message]] = device_under_test.On()
+        assert result_code == ResultCode.OK
+        assert message == "On command completed OK"
 
     def test_Off(self, device_under_test):
         """Test for Off"""
-        assert device_under_test.Off() is None
+        # Need to turn it on before we can turn it off
+        device_under_test.On()
+        [[result_code], [message]] = device_under_test.Off()
+        assert result_code == ResultCode.OK
+        assert message == "Off command completed OK"
 
     def test_StandbyLow(self, device_under_test):
         """Test for StandbyLow"""
-        assert device_under_test.StandbyLow() == 0
+        [[result_code], [message]] = device_under_test.StandbyLow()
+        assert result_code == ResultCode.OK
+        assert message == "Stub implementation of StandbyLowCommand(), does nothing"
 
     def test_StandbyFull(self, device_under_test):
         """Test for StandbyFull"""
-        assert device_under_test.StandbyFull() == 0
+        [[result_code], [message]] = device_under_test.StandbyFull()
+        assert result_code == ResultCode.OK
+        assert message == "Stub implementation of StandbyFullCommand(), does nothing"
 
     def test_Operate(self, device_under_test):
         """Test for Operate"""
-        assert device_under_test.Operate() == 0
+        # assert device_under_test.Operate() == 0
+        [[result_code], [message]] = device_under_test.Operate()
+        assert result_code == ResultCode.OK
+        assert message == "Stub implementation of OperateCommand(), does nothing"
 
     def test_Maintenance(self, device_under_test):
         """Test for Maintenance"""
-        assert device_under_test.Maintenance() is None
+        # assert device_under_test.Maintenance() is None
+        [[result_code], [message]] = device_under_test.Maintenance()
+        assert result_code == ResultCode.OK
+        assert message == "Stub implementation of Maintenance(), does nothing"
 
     def test_EnableSubarray(self, device_under_test, mock_device_proxy):
         master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
 
-        # These subarrays are mock devices so we have to manually
-        # set their initial states
-        mock_subarray_1.adminMode = AdminMode.OFFLINE
-        mock_subarray_2.adminMode = AdminMode.OFFLINE
+        master.On()
 
         # Tell master to enable subarray 1
-        master.EnableSubarray(1)
+        (result_code, message) = master.EnableSubarray(1)
+        assert result_code == ResultCode.OK
 
-        # Check that the ONLINE adminMode attribute was written on the
-        # mock subarray_1, and that subarray_2 remains OFFLINE
-        assert mock_subarray_1.adminMode == AdminMode.ONLINE
-        assert mock_subarray_2.adminMode == AdminMode.OFFLINE
+        # Check that subarray 1 was turned on, and subarray 2 was not
+        mock_subarray_1.On.assert_called_once_with()
+        mock_subarray_2.On.assert_not_called()
+
+        mock_subarray_1.reset_mock()
 
         # Telling master to enable an enabled subarray should fail
-        with pytest.raises(tango.DevFailed):
-            master.EnableSubarray(1)
+        (result_code, message) = master.EnableSubarray(1)
+        assert result_code == ResultCode.FAILED
 
         # Check no side-effect of failed call
-        assert mock_subarray_1.adminMode == AdminMode.ONLINE
-        assert mock_subarray_2.adminMode == AdminMode.OFFLINE
+        mock_subarray_1.On.assert_not_called()
+        mock_subarray_2.On.assert_not_called()
 
         # Tell master to enable subarray 2
         master.EnableSubarray(2)
 
-        # Check that the ONLINE adminMode attribute was written on the
-        # mock subarray_2 and that the mock subarray_1 remains
-        # unaffected.
-        assert mock_subarray_1.adminMode == AdminMode.ONLINE
-        assert mock_subarray_2.adminMode == AdminMode.ONLINE
+        # Check that the subarray 2 was turned on and subarray 1 wasn't.
+        mock_subarray_1.On.assert_not_called()
+        mock_subarray_2.On.assert_called_once_with()
 
     def test_DisableSubarray(self, device_under_test, mock_device_proxy):
         master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
 
+        master.On()
+
         # setup by telling master to enable subarrays 1 and 2
         master.EnableSubarray(1)
         master.EnableSubarray(2)
 
-        # check that the ONLINE adminMode attribute was written on both
-        # mock subarrays
-        assert mock_subarray_1.adminMode == AdminMode.ONLINE
-        assert mock_subarray_2.adminMode == AdminMode.ONLINE
-
         # now tell master to disable subarray 1
-        master.DisableSubarray(1)
+        [[result_code], [message]] = master.DisableSubarray(1)
+        assert result_code == ResultCode.OK
 
-        # Check that the OFFLINE adminMode attribute was written on the
-        # mock subarray_1 and that the mock subarray_2 remains
-        # unaffected.
-        assert mock_subarray_1.adminMode == AdminMode.OFFLINE
-        assert mock_subarray_2.adminMode == AdminMode.ONLINE
+        # Check that the subarray 1 only was turned off.
+        mock_subarray_1.Off.assert_called_once_with()
+        mock_subarray_2.Off.assert_not_called()
+
+        mock_subarray_1.reset_mock()
 
         # Disabling a subarray that is already disabled should fail
-        with pytest.raises(tango.DevFailed):
-            master.DisableSubarray(1)
+        [[result_code], [message]] = master.DisableSubarray(1)
+        print((result_code, message))
+        assert result_code == ResultCode.FAILED
 
         # check no side-effect of failed command.
-        assert mock_subarray_1.adminMode == AdminMode.OFFLINE
-        assert mock_subarray_2.adminMode == AdminMode.ONLINE
+        mock_subarray_1.Off.assert_not_called()
+        mock_subarray_2.Off.assert_not_called()
 
     def test_Allocate(self, device_under_test, mock_device_proxy):
         """
@@ -192,11 +183,13 @@ class TestMccsMaster:
         mock_station_1.subarrayId = 0
         mock_station_2.subarrayId = 0
 
+        master.On()
+
         # Can't allocate to an array that hasn't been enabled
-        with pytest.raises(tango.DevFailed):
-            call_with_json(
-                master.Allocate, subarray_id=1, stations=["low/elt/station_1"],
-            )
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+        )
+        assert result_code == ResultCode.FAILED
 
         # check no side-effect to failure
         mock_subarray_1.ReleaseResources.assert_not_called()
@@ -211,9 +204,10 @@ class TestMccsMaster:
         master.EnableSubarray(2)
 
         # allocate station_1 to subarray_1
-        call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_1"],
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
         )
+        assert result_code == ResultCode.OK
 
         # check that the mock subarray_1 was told to assign that resource
         mock_subarray_1.ReleaseResources.assert_not_called()
@@ -230,10 +224,10 @@ class TestMccsMaster:
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
-        with pytest.raises(tango.DevFailed):
-            call_with_json(
-                master.Allocate, subarray_id=2, stations=["low/elt/station_1"],
-            )
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=2, stations=["low/elt/station_1"]
+        )
+        assert result_code == ResultCode.FAILED
 
         # check no side-effects
         mock_subarray_1.ReleaseResources.assert_not_called()
@@ -246,11 +240,12 @@ class TestMccsMaster:
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
         # subarray
-        call_with_json(
+        (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=1,
             stations=["low/elt/station_1", "low/elt/station_2"],
         )
+        assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseResources.assert_not_called()
@@ -267,9 +262,10 @@ class TestMccsMaster:
 
         # allocating station 2 to subarray 1 should succeed, because the
         # it only requires resource release
-        call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_2"],
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=1, stations=["low/elt/station_2"]
         )
+        assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseResources.assert_called_once_with(
@@ -294,11 +290,12 @@ class TestMccsMaster:
         # now that subarray 1 has been disabled, its resources should
         # have been released so we should be able to allocate them to
         # subarray 2
-        call_with_json(
+        (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=2,
             stations=["low/elt/station_1", "low/elt/station_2"],
         )
+        assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseResources.assert_not_called()
@@ -319,6 +316,8 @@ class TestMccsMaster:
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
         mock_station_1 = tango.DeviceProxy("low/elt/station_1")
         mock_station_2 = tango.DeviceProxy("low/elt/station_2")
+
+        master.On()
 
         # enable subarrays
         master.EnableSubarray(1)
@@ -389,12 +388,6 @@ class TestMccsMaster:
         """Test for healthState"""
         assert device_under_test.healthState == HealthState.OK
 
-    def test_adminMode(self, device_under_test):
-        """Test for adminMode"""
-        assert device_under_test.adminMode == AdminMode.ONLINE
-        device_under_test.adminMode = AdminMode.OFFLINE
-        assert device_under_test.adminMode == AdminMode.OFFLINE
-
     def test_controlMode(self, device_under_test):
         """Test for controlMode"""
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -414,10 +407,6 @@ class TestMccsMaster:
     def test_commandDelayExpected(self, device_under_test):
         """Test for commandDelayExpected"""
         assert device_under_test.commandDelayExpected == 0
-
-    def test_opState(self, device_under_test):
-        """Test for opState"""
-        assert device_under_test.opState == tango.DevState.UNKNOWN
 
     def test_maxCapabilities(self, device_under_test):
         """Test for maxCapabilities"""

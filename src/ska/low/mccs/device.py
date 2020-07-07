@@ -7,9 +7,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" Mccs Base Device
-
-A base class for all Mccs Devices
+"""
+This module implements the MCCS Base Device, a base class for all MCCS
+devices
 """
 __all__ = ["MccsDevice", "main"]
 
@@ -19,18 +19,15 @@ from tango.server import attribute, command
 
 # Additional import
 from ska.base import SKABaseDevice
+from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
-# local imports
+# Local imports
 import ska.low.mccs.release as release
 
 
 class MccsDevice(SKABaseDevice):
     """
     A base class for all Mccs Devices
-
-    **Properties:**
-
-    - Device Property
     """
 
     # -----------------
@@ -40,26 +37,81 @@ class MccsDevice(SKABaseDevice):
     # ---------------
     # General methods
     # ---------------
+    class InitCommand(SKABaseDevice.InitCommand):
+        """
+        Class that implements device initialisation for the MCCS Base
+        Device. State is managed under the hood; the basic sequence is:
 
-    def init_device(self):
-        """Initialises the attributes and properties of the MccsDevice."""
-        super().init_device()
-        self._is_hardware_device = False
-        self._diag_mode = False
-        self._called_undefined_device = False
-        self._called_dead_server = False
-        self._detected_dead_server = False
-        self._called_non_running_device = False
-        self._call_timeout = False
-        self._call_comm_failed = False
-        self._invalid_asyn_id = False
-        self._called_inexistent_callback = False
-        self._request_id_mismatch = False
-        self._expected_reply_not_ready = False
-        self._experienced_subscription_failure = False
-        self._invalid_event_id = False
-        self._version_id = release.version
-        self._build_state = release.get_release_info()
+        1. Device state is set to INIT
+        2. The do() method is run
+        3. Device state is set to the appropriate outgoing state,
+           usually off
+
+        """
+        def do(self):
+            """
+            Stateless hook for device initialisation: initialises the
+            attributes and properties of the MccsDevice.
+            """
+            super().do()
+
+            device = self.target
+            device._is_hardware_device = False
+            device._diag_mode = False
+            device._called_undefined_device = False
+            device._called_dead_server = False
+            device._detected_dead_server = False
+            device._called_non_running_device = False
+            device._call_timeout = False
+            device._call_comm_failed = False
+            device._invalid_asyn_id = False
+            device._called_inexistent_callback = False
+            device._request_id_mismatch = False
+            device._expected_reply_not_ready = False
+            device._experienced_subscription_failure = False
+            device._invalid_event_id = False
+
+            device._version_id = release.version
+            device._build_state = release.get_release_info()
+
+            return (ResultCode.OK, "Init command succeeded")
+
+    def init_command_objects(self):
+        """
+        Set up the handler objects for Commands
+        """
+        super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object(
+            "ExceptionCallback",
+            self.ExceptionCallbackCommand(*args)
+        )
+        self.register_command_object(
+            "DefaultAlarmOffCallback",
+            self.DefaultAlarmOffCallbackCommand(*args)
+        )
+        self.register_command_object(
+            "DefaultAlarmOnCallback",
+            self.DefaultAlarmOnCallbackCommand(*args)
+        )
+        self.register_command_object(
+            "ConstructDeviceProxyAddress",
+            self.ConstructDeviceProxyAddressCommand(*args)
+        )
+        self.register_command_object(
+            "GetFullReport",
+            self.GetFullReportCommand(*args)
+        )
+        self.register_command_object(
+            "GetCommandReport",
+            self.GetCommandReportCommand(*args)
+        )
+        self.register_command_object(
+            "GetAttributeReport",
+            self.GetAttributeReportCommand(*args)
+        )
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -160,70 +212,183 @@ class MccsDevice(SKABaseDevice):
     # Commands
     # --------
 
+    class ExceptionCallbackCommand(ResponseCommand):
+        """
+        Class for handling the ExceptionCallback command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of ExceptionCallback()
+            command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
+
     @command()
     @DebugIt()
     def ExceptionCallback(self):
         """
+        ExceptionCallback Command
 
+        :todo: What does this command do?
         :return: None
         """
-        pass
+        handler = self.get_command_object("ExceptionCallback")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class DefaultAlarmOnCallbackCommand(ResponseCommand):
+        """
+        Class for handling the DefaultAlarmOnCallback command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of
+            DefaultAlarmOnCallback() command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
 
     @command()
     @DebugIt()
     def DefaultAlarmOnCallback(self):
         """
+        DefaultAlarmOnCallback Command
 
+        :todo: What does this command do?
         :return: None
         """
-        pass
+        handler = self.get_command_object("DefaultAlarmOnCallback")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class DefaultAlarmOffCallbackCommand(ResponseCommand):
+        """
+        Class for handling the DefaultAlarmOffCallback command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of
+            DefaultAlarmOffCallback() command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, does nothing")
 
     @command()
     @DebugIt()
     def DefaultAlarmOffCallback(self):
         """
+        DefaultAlarmOffCallback Command
 
+        :todo: What does this command do?
         :return: None
         """
-        pass
+        handler = self.get_command_object("DefaultAlarmOffCallback")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
 
-    @command()
+    class GetFullReportCommand(BaseCommand):
+        """
+        Class for handling the GetFullReport() command.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of GetFullReport()
+            command functionality.
+            """
+            return [""]
+
+    @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetFullReport(self):
         """
+        GetFullReport Command
 
         :return: None
         """
-        pass
+        handler = self.get_command_object("GetFullReport")
+        return handler()
+
+    class GetCommandReportCommand(BaseCommand):
+        """
+        Class for handling the GetCommandReport() command.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of GetCommandReport()
+            command functionality.
+            """
+            return [""]
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetCommandReport(self):
         """
+        GetCommandReport Command
 
         :return: 'DevVarStringArray'
         """
-        return [""]
+        handler = self.get_command_object("GetCommandReport")
+        return handler()
+
+    class GetAttributeReportCommand(BaseCommand):
+        """
+        Class for handling the GetAttributeReport() command.
+        """
+        def do(self):
+            """
+            Stateless hook for implementation of GetAttributeReport()
+            command functionality.
+            """
+            return [""]
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
     def GetAttributeReport(self):
         """
+        GetAttributeReport Command
 
         :return: 'DevVarStringArray'
         """
-        return [""]
+        handler = self.get_command_object("GetAttributeReport")
+        return handler()
 
-    @command(dtype_in="DevString")
+    class ConstructDeviceProxyAddressCommand(ResponseCommand):
+        """
+        Class for handling the ConstructDeviceProxyAddress() command.
+
+        :todo: What does this command do? It sounds like it constructs
+            an address, but if so it doesn't return it.
+        """
+        def do(self, argin):
+            """
+            Stateless hook for implementation of
+            ConstructDeviceProxyAddress() command functionality.
+            """
+            return (ResultCode.OK, "Stub implementation, did nothing")
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
     @DebugIt()
     def ConstructDeviceProxyAddress(self, argin):
         """
+        ConstructDeviceProxyAddress Command
 
         :param argin: 'DevString'
-
         :return: None
         """
-        pass
+        handler = self.get_command_object("ConstructDeviceProxyAddress")
+        (return_code, message) = handler(argin)
+        return [[return_code], [message]]
 
 
 # ----------

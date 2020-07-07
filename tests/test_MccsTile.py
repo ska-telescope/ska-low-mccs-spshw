@@ -19,16 +19,12 @@ import pytest
 import itertools
 import numpy as np
 from contextlib import redirect_stdout
-from tango import DevState, DevFailed
+from tango import DevFailed
 
 from ska.low.mccs import MccsTile
+from ska.base.commands import ResultCode
 
-device_info = {
-    "class": MccsTile,
-    "properties": {
-        "AntennasPerTile": "16",
-    }
-}
+device_info = {"class": MccsTile, "properties": {"AntennasPerTile": 16}}
 
 
 class TestMccsTile(object):
@@ -39,12 +35,6 @@ class TestMccsTile(object):
     Tests conducted herein aim to exercise the currently defined MCCS Tile
     device server methods.
     """
-
-    def test_State(self, device_under_test):
-        """Test for State"""
-        assert device_under_test.state() == DevState.OFF
-        device_under_test.Connect(True)
-        assert device_under_test.state() == DevState.ON
 
     def test_tileId(self, device_under_test):
         """Test for the tileId attribute."""
@@ -350,7 +340,8 @@ class TestMccsTile(object):
         """Test for WaitPPSEvent"""
         device_under_test.Connect(True)
         device_under_test.fpga1_time = int(time.time())
-        assert device_under_test.WaitPPSEvent() is None
+        (result, info) = device_under_test.WaitPPSEvent()
+        assert result == ResultCode.OK
 
     def test_GetRegisterList(self, device_under_test):
         """Test for GetRegisterList"""
@@ -461,9 +452,7 @@ class TestMccsTile(object):
         values = [val for val in range(nvalues)]
         values.insert(0, address)
         device_under_test.WriteAddress(values)
-        assert (
-            device_under_test.ReadAddress([address, nvalues]) == values[1:]
-        ).all()
+        assert (device_under_test.ReadAddress([address, nvalues]) == values[1:]).all()
         with pytest.raises(DevFailed):
             device_under_test.ReadAddress([address])
         with pytest.raises(DevFailed):

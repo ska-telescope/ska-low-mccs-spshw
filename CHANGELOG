@@ -1,5 +1,9 @@
 # Version History
 
+## 0.1.2
+
+Update to lmc-base-classes version 0.6.1
+
 ## 0.1.1
 
 Patch release to create versioned docker image

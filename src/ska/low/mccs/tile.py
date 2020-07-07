@@ -19,7 +19,7 @@ import threading
 import time
 
 # PyTango imports
-from tango import DebugIt, DevState, AttrQuality
+from tango import DebugIt, DevState
 from tango import GreenMode
 from tango.server import attribute, command
 from tango.server import device_property
@@ -608,7 +608,6 @@ class MccsTile(SKABaseDevice):
             "CalculateDelay", self.CalculateDelayCommand(*args)
         )
 
-
     class InitialiseCommand(ResponseCommand):
         """
         Class for handling the Initialise() command.
@@ -672,10 +671,8 @@ class MccsTile(SKABaseDevice):
             elif not device._tpm.is_programmed():
                 self.logger.warning("TPM is not programmed! No plugins loaded")
 
-
             if initialise_tpm:
                 device.Initialise()
-
 
             device._is_connected = True
             return (ResultCode.OK, "Command succeeded")
@@ -956,12 +953,10 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with mandatory keywords:
 
-            * RegisterName - (string) register_name is the registers
-                string representation
-            * NbRead - (int) is the number of 32-bit values to read
-            * Offset - (int) offset is the address offset within the
-                register to write to
-            * Device - (int) device is the FPGA to write to (0 or 1)
+        * RegisterName - (string) register_name is the registers string representation
+        * NbRead - (int) is the number of 32-bit values to read
+        * Offset - (int) offset is the address offset within the register to write to
+        * Device - (int) device is the FPGA to write to (0 or 1)
 
         :type argin: DevString
 
@@ -1681,8 +1676,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            device = self.target
-            if len(argin) != device.AntennasPerTile * 2 + 1:
+            if len(argin) != self.AntennasPerTile * 2 + 1:
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])

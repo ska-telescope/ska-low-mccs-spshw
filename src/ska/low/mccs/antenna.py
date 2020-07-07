@@ -77,19 +77,24 @@ class MccsAntenna(SKABaseDevice):
             device._delays = [0.0]
             device._delayRates = [0.0]
             device._bandpassCoefficient = [0.0]
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
             return (ResultCode.OK, "Init command succeeded")
 
-    def init_command_objects(self):
-        """
-        Set up the handler objects for Commands
-        """
-        super().init_command_objects()
+        def init_command_objects(self):
+            """
+            Set up the handler objects for Commands
+            """
+            super().init_command_objects()
 
-        args = (self, self.state_model, self.logger)
+            args = (self, self.state_model, self.logger)
 
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object("PowerOn", self.PowerOnCommand(*args))
-        self.register_command_object("PowerOff", self.PowerOffCommand(*args))
+            self.register_command_object("Reset", self.ResetCommand(*args))
+            self.register_command_object("PowerOn", self.PowerOnCommand(*args))
+            self.register_command_object("PowerOff", self.PowerOffCommand(*args))
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -349,7 +354,6 @@ class MccsAntenna(SKABaseDevice):
     # --------------------
     # Asynchronous routine
     # --------------------
-    #    @green(consume_green_mode=False)
     def _create_long_running_task(self):
         self._streaming = True
         self.logger.info("create task")
@@ -357,7 +361,6 @@ class MccsAntenna(SKABaseDevice):
         self._read_task = executor.delegate(self.__do_read)
 
     def __do_read(self):
-        print("+++++++++++++++++++++++++++++++++++++")
         while self._streaming:
             try:
                 # if connected read the values from tpm

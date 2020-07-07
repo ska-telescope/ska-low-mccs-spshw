@@ -146,7 +146,7 @@ class MccsStation(SKAObsDevice):
         """
         for event_manager in self._eventManagerList:
             event_manager.unsubscribe()
-        eventManagerList = None
+        self._eventManagerList = None
 
     # ----------
     # Attributes

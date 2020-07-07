@@ -97,7 +97,7 @@ The SKA software developer portal way
 
      $ sudo apt install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
      $ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-     $ sudo add-apt-repository "deb [arch-amd64] https://download.docker.com/linux/ubuntu #(lsb_release -cs) stable"
+     $ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
      $ sudo apt-get update
      $ sudo apt install docker-ce docker-ce-cli
 
@@ -189,7 +189,20 @@ The SKA software developer portal way
     * If you click on the message box, it will open a terminal showing
       you that things are happening. Go have a cup of tea.
 
-13. You're ready to develop!
+13. Now that you have reopened VScode in a container, it is important to
+    understand the difference between doing stuff in your local
+    environment, and doing stuff inside your container.
+
+    * Your local environment is not set up to run and test the MCCS
+      code. You can only do that inside your Docker container.
+    * The VScode terminal is running inside the Docker container. Use
+      the VScode terminal to run your tests. If you need to
+      manage your container environment, use the VScode terminal.
+    * The VScode IDE linter is running inside the Docker container.
+    * If you want to use a VScode extension with your code, you must
+      install it into the remote container.
+
+14. Go code!
 
     * The other sidebar you need to know about is the git sidebar. This
       sidebar helps you keep track of git status and perform git
@@ -199,7 +212,6 @@ The SKA software developer portal way
       more complex git stuff like stashing, rebasing, etc, it might be
       possible to do it through the GUI, but you might still find it
       easier to do it in the terminal.
-
 
 .. _SKA software developer portal: https://developer.skatelescope.org/
 .. _Tango Development Environment set up: https://developer.skatelescope.org/en/latest/tools/tango-devenv-setup.html

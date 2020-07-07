@@ -34,6 +34,9 @@ class EventManager:
         self._deviceProxy = deviceProxy
         self._eventIds = []
         try:
+            # Always subscribe to state change, it's pushed by the base classes
+            id = deviceProxy.subscribe_event("state", EventType.CHANGE_EVENT, self)
+            self._eventIds.append(id)
             for event_name in deviceProxy.event_names:
                 print("subscribing to ", event_name)
                 id = deviceProxy.subscribe_event(
@@ -48,7 +51,6 @@ class EventManager:
             self._deviceProxy.unsubscribe_event(eventId)
 
     def push_event(self, ev):
-        print(type(ev))
         if ev.attr_value is not None and ev.attr_value.value is not None:
             print("----------------------------")
             print("Event @ ", ev.get_date())

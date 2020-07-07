@@ -18,7 +18,8 @@ import numpy as np
 import threading
 import time
 
-from tango import DebugIt, DevState
+# PyTango imports
+from tango import DebugIt, DevState, AttrQuality
 from tango import GreenMode
 from tango.server import attribute, command
 from tango.server import device_property
@@ -29,7 +30,7 @@ from tango import futures_executor
 # from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
-from ska.base.control_model import SimulationMode, TestMode, LoggingLevel
+from ska.base.control_model import HealthState, SimulationMode, TestMode, LoggingLevel
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 
@@ -113,7 +114,7 @@ class MccsTile(SKABaseDevice):
                 "board_temperature",
                 "fpga1_temperature",
                 "fpga2_temperature",
-                "state",
+                "healthState",
             ]
             for name in device._event_names:
                 device.set_change_event(name, True, True)
@@ -297,8 +298,8 @@ class MccsTile(SKABaseDevice):
         abs_change=0.05,
         min_value=4.5,
         max_value=5.5,
-        min_alarm=4.7,
-        max_alarm=5.3,
+        min_alarm=4.55,
+        max_alarm=5.45,
     )
     def voltage(self):
         """Return the voltage attribute."""
@@ -310,8 +311,8 @@ class MccsTile(SKABaseDevice):
         abs_change=0.05,
         min_value=0.0,
         max_value=3.0,
-        min_alarm=0.25,
-        max_alarm=2.75,
+        min_alarm=0.05,
+        max_alarm=2.95,
     )
     def current(self):
         """Return the current attribute."""
@@ -332,8 +333,8 @@ class MccsTile(SKABaseDevice):
         abs_change=0.1,
         min_value=25.0,
         max_value=40.0,
-        min_alarm=27.0,
-        max_alarm=37.0,
+        min_alarm=26.0,
+        max_alarm=39.0,
     )
     def board_temperature(self):
         """Return the board_temperature attribute."""
@@ -345,8 +346,8 @@ class MccsTile(SKABaseDevice):
         abs_change=0.1,
         min_value=25.0,
         max_value=40.0,
-        min_alarm=27.0,
-        max_alarm=37.0,
+        min_alarm=26.0,
+        max_alarm=39.0,
     )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
@@ -358,8 +359,8 @@ class MccsTile(SKABaseDevice):
         abs_change=0.1,
         min_value=25.0,
         max_value=40.0,
-        min_alarm=27.0,
-        max_alarm=37.0,
+        min_alarm=26.0,
+        max_alarm=39.0,
     )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
@@ -2616,7 +2617,6 @@ class MccsTile(SKABaseDevice):
     # --------------------
     # Asynchronous routine
     # --------------------
-    #    @green(consume_green_mode=False)
     def _create_long_running_task(self):
         self._streaming = True
         self.logger.info("create task")
@@ -2624,7 +2624,6 @@ class MccsTile(SKABaseDevice):
         self._read_task = executor.delegate(self.__do_read)
 
     def __do_read(self):
-        #        self.set_state(DevState.ON)
         while self._streaming:
             try:
                 # if connected read the values from tpm
@@ -2638,6 +2637,9 @@ class MccsTile(SKABaseDevice):
 
                     with self._lock:
                         # now update the attribute using lock to prevent access conflict
+                        state = self.get_state()
+                        if state != DevState.ALARM:
+                            saved_state = state
                         self._voltage = volts
                         self._current = curr
                         self._board_temperature = temp
@@ -2648,15 +2650,37 @@ class MccsTile(SKABaseDevice):
                         self.push_change_event("board_temperature", temp)
                         self.push_change_event("fpga1_temperature", temp1)
                         self.push_change_event("fpga2_temperature", temp2)
-                        #                         self.push_change_event("state", self.getstate())
                         self.push_archive_event("voltage", volts)
                         self.push_archive_event("current", curr)
                         self.push_archive_event("board_temperature", temp)
                         self.push_archive_event("fpga1_temperature", temp1)
                         self.push_archive_event("fpga2_temperature", temp2)
-
+                        if (
+                            self._voltage < self.voltage.get_min_alarm()
+                            or self._voltage > self.voltage.get_max_alarm()
+                            or self._current < self.current.get_min_alarm()
+                            or self._current > self.current.get_max_alarm()
+                            or self._board_temperature
+                            < self.board_temperature.get_min_alarm()
+                            or self._board_temperature
+                            > self.board_temperature.get_max_alarm()
+                            or self._fpga1_temperature
+                            < self.fpga1_temperature.get_min_alarm()
+                            or self._fpga1_temperature
+                            > self.fpga1_temperature.get_max_alarm()
+                            or self._fpga2_temperature
+                            < self.fpga2_temperature.get_min_alarm()
+                            or self._fpga2_temperature
+                            > self.fpga2_temperature.get_max_alarm()
+                        ):
+                            self.set_state(DevState.ALARM)
+                            self._healthState = HealthState.DEGRADED
+                        else:
+                            self.set_state(saved_state)
+                            self._healthState = HealthState.OK
+                        self.push_change_event("healthState", self._healthState)
             except Exception as exc:
-                self.push_change_event("state", self.get_state())
+                self.set_state(DevState.FAULT)
                 self.logger.error(exc.what())
 
             #  update every second (should be settable?)

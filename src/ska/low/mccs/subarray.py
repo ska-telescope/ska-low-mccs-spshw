@@ -350,7 +350,7 @@ class MccsSubarray(SKASubarray):
             # deliberately not calling super() -- we're passing a different
             # target object
             station_pool_manager = self.target
-            station_pool_manager.clear()
+            station_pool_manager.release_all()
             return (
                 ResultCode.OK,
                 "ReleaseAllResources command completed successfully"

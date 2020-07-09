@@ -962,9 +962,11 @@ class MccsTile(SKABaseDevice):
         :type argin: DevString
 
         :return: a list of register values
+
         :rtype: DevVarUlongArray
 
         :example:
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
                     "Offset": offset, "Device":device}

@@ -113,6 +113,9 @@ class TestMccsMaster:
 
         master.On()
 
+        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
+        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
+
         # Tell master to enable subarray 1
         (result_code, message) = master.EnableSubarray(1)
         assert result_code == ResultCode.OK
@@ -122,6 +125,7 @@ class TestMccsMaster:
         mock_subarray_2.On.assert_not_called()
 
         mock_subarray_1.reset_mock()
+        mock_subarray_1.On.side_effect = ((ResultCode.FAILED, "Subarray already on."),)
 
         # Telling master to enable an enabled subarray should fail
         (result_code, message) = master.EnableSubarray(1)
@@ -132,7 +136,8 @@ class TestMccsMaster:
         mock_subarray_2.On.assert_not_called()
 
         # Tell master to enable subarray 2
-        master.EnableSubarray(2)
+        (result_code, message) = master.EnableSubarray(2)
+        assert result_code == ResultCode.OK
 
         # Check that the subarray 2 was turned on and subarray 1 wasn't.
         mock_subarray_1.On.assert_not_called()
@@ -145,12 +150,18 @@ class TestMccsMaster:
 
         master.On()
 
+        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
+        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
+
         # setup by telling master to enable subarrays 1 and 2
         master.EnableSubarray(1)
         master.EnableSubarray(2)
 
+        mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Subarray is off."),)
+        mock_subarray_2.Off.side_effect = ((ResultCode.OK, "Subarray is off."),)
+
         # now tell master to disable subarray 1
-        [[result_code], [message]] = master.DisableSubarray(1)
+        (result_code, message) = master.DisableSubarray(1)
         assert result_code == ResultCode.OK
 
         # Check that the subarray 1 only was turned off.
@@ -158,10 +169,10 @@ class TestMccsMaster:
         mock_subarray_2.Off.assert_not_called()
 
         mock_subarray_1.reset_mock()
+        # mock_subarray_1.Off.side_effect = ((ResultCode.FAILED, "Subarray already off."),)
 
         # Disabling a subarray that is already disabled should fail
-        [[result_code], [message]] = master.DisableSubarray(1)
-        print((result_code, message))
+        (result_code, message) = master.DisableSubarray(1)
         assert result_code == ResultCode.FAILED
 
         # check no side-effect of failed command.
@@ -199,9 +210,16 @@ class TestMccsMaster:
         assert mock_station_1.subarrayId == 0
         assert mock_station_2.subarrayId == 0
 
+        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
+        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
+
         # now enable subarrays
         master.EnableSubarray(1)
         master.EnableSubarray(2)
+
+        mock_subarray_1.AssignResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
 
         # allocate station_1 to subarray_1
         (result_code, message) = call_with_json(
@@ -240,6 +258,10 @@ class TestMccsMaster:
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
         # subarray
+        mock_subarray_1.AssignResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
+
         (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=1,
@@ -259,6 +281,10 @@ class TestMccsMaster:
 
         mock_subarray_1.reset_mock()
         mock_subarray_2.reset_mock()
+
+        mock_subarray_1.ReleaseResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
 
         # allocating station 2 to subarray 1 should succeed, because the
         # it only requires resource release
@@ -280,12 +306,18 @@ class TestMccsMaster:
         mock_subarray_1.reset_mock()
         mock_subarray_2.reset_mock()
 
+        mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Resources assigned"),)
+
         # now disable subarray 1
         master.DisableSubarray(1)
 
         # check
         assert mock_station_1.subarrayId == 0
         assert mock_station_2.subarrayId == 0
+
+        mock_subarray_2.AssignResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
 
         # now that subarray 1 has been disabled, its resources should
         # have been released so we should be able to allocate them to
@@ -320,13 +352,21 @@ class TestMccsMaster:
         master.On()
 
         # enable subarrays
+        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
         master.EnableSubarray(1)
+        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
         master.EnableSubarray(2)
 
         # allocate stations 1 to subarray 1
+        mock_subarray_1.AssignResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
         call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
 
         # allocate station 2 to subarray 2
+        mock_subarray_2.AssignResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
         call_with_json(master.Allocate, subarray_id=2, stations=["low/elt/station_2"])
 
         # check initial state
@@ -334,7 +374,11 @@ class TestMccsMaster:
         assert mock_station_2.subarrayId == 2
 
         # release resources of subarray_2
-        master.Release(2)
+        mock_subarray_2.ReleaseAllResources.side_effect = (
+            (ResultCode.OK, "Resources released"),
+        )
+        (result_code, message) = master.Release(2)
+        assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseAllResources.assert_not_called()
@@ -349,13 +393,13 @@ class TestMccsMaster:
         # raise an exception if ReleaseAllResources is called on it.
         mock_subarray_2.ReleaseAllResources.side_effect = lambda: tango_raise(
             "Command disallowed when obsState==IDLE",
-            origin="Subarray.ReleaseAllResources()",
+            _origin="Subarray.ReleaseAllResources()",
             reason="MockException",
         )
 
         # releasing resources of unresourced subarray_2 should fail
-        with pytest.raises(tango.DevFailed):
-            master.Release(2)
+        (result_code, message) = master.Release(2)
+        assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
         mock_subarray_1.ReleaseAllResources.assert_not_called()
@@ -367,7 +411,11 @@ class TestMccsMaster:
         mock_subarray_2.reset_mock()
 
         # release resources of subarray_1
-        master.Release(1)
+        mock_subarray_1.ReleaseAllResources.side_effect = (
+            (ResultCode.OK, "Resources released"),
+        )
+        (result_code, message) = master.Release(1)
+        assert result_code == ResultCode.OK
 
         # check all released
         mock_subarray_1.ReleaseAllResources.assert_called_once_with()

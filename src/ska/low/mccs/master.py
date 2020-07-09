@@ -18,7 +18,7 @@ import json
 
 # PyTango imports
 import tango
-from tango import DebugIt, DevState
+from tango import DebugIt, DevFailed, DevState
 from tango.server import attribute, command, device_property
 
 # Additional import
@@ -421,7 +421,12 @@ class MccsMaster(SKAMaster):
                 )
             else:
                 subarray_device = tango.DeviceProxy(subarray_fqdn)
-                subarray_device.On()
+                (result_code, message) = subarray_device.On()
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Failed to enable subarray {subarray_fqdn}: {message}",
+                    )
                 device._subarray_enabled[subarray_id - 1] = True
                 return (ResultCode.OK, "EnableSubarray command successful")
 
@@ -647,9 +652,15 @@ class MccsMaster(SKAMaster):
             )
             if numpy.any(release_mask):
                 stations_to_release = list(masterdevice._station_fqdns[release_mask])
-                call_with_json(
+                (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
                 )
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Failed to release resources from subarray {subarray_fqdn}:"
+                        f"{message}",
+                    )
                 for fqdn in stations_to_release:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = 0
@@ -659,9 +670,15 @@ class MccsMaster(SKAMaster):
             )
             if numpy.any(assign_mask):
                 stations_to_assign = list(masterdevice._station_fqdns[assign_mask])
-                call_with_json(
+                (result_code, message) = call_with_json(
                     subarray_device.AssignResources, stations=stations_to_assign
                 )
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Failed to assign resources to subarray {subarray_fqdn}:"
+                        f"{message}",
+                    )
                 for fqdn in stations_to_assign:
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
@@ -749,7 +766,20 @@ class MccsMaster(SKAMaster):
                     ),
                 )
             subarray_device = tango.DeviceProxy(subarray_fqdn)
-            subarray_device.ReleaseAllResources()
+            try:
+                (result_code, message) = subarray_device.ReleaseAllResources()
+            except DevFailed:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray errored on release resources: it probably has "
+                    "no resources to release.",
+                )
+            if result_code == ResultCode.FAILED:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray failed to release resources: {message}",
+                )
+
             mask = self.target._station_allocated == subarray_id
             fqdns = list(self.target._station_fqdns[mask])
             for fqdn in fqdns:

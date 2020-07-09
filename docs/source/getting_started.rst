@@ -132,10 +132,18 @@ Installing Docker should be fairly simple on any operating system.
 
 Windows-specific instructions
 `````````````````````````````
-The program you need to install is Docker Desktop. There is no need for
-docker-compose. Before installing, ensure that any older Docker versions
-(such as Docker Toolbox) are fully uninstalled, and that all Docker
-environment variables have been deleted.
+The program you need to install is "Docker Desktop for Windows".
+
+Before installing, ensure that any older Docker versions (such as Docker
+Toolbox) are fully uninstalled, and that all Docker environment variables
+have been deleted.
+
+Installing is very straight-forward: simply download and run the installer.
+
+Warning: Docker Desktop enables the Hyper-V feature of Windows. Some people
+find that this interferes in the operation of other hypervisors such as
+VirtualBox.
+
 
 Ubuntu-specific instructions
 ````````````````````````````

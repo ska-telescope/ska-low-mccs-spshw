@@ -1,5 +1,5 @@
 numpy == 1.17.2
 pytango >= 9.3.2
 jsonschema >= 3.2.0
-lmcbaseclasses == 0.6.1
+lmcbaseclasses >= 0.6.3
 fire

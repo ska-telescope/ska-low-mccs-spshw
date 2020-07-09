@@ -1,9 +1,6 @@
-import pytest
-
-from tango import DevFailed, DevSource, DevState
+from tango import DevSource, DevState
 
 from ska.base.commands import ResultCode
-from ska.base.control_model import AdminMode
 from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
 from ska.low.mccs.utils import call_with_json
 
@@ -64,7 +61,7 @@ devices_info = [
 ]
 
 
-@pytest.mark.skip("Triggering bug in base classes implementation")
+# @pytest.mark.skip("Triggering bug in base classes implementation")
 class TestMccsIntegration:
     """
     Integration test cases for the Mccs device classes
@@ -77,6 +74,8 @@ class TestMccsIntegration:
         master = device_context.get_device("low/elt/master")
         subarray_1 = device_context.get_device("low/elt/subarray_1")
         subarray_2 = device_context.get_device("low/elt/subarray_2")
+
+        master.On()
 
         # check both subarrays are off
         assert subarray_1.State() == DevState.OFF
@@ -114,46 +113,38 @@ class TestMccsIntegration:
         subarray_1 = device_context.get_device("low/elt/subarray_1")
         subarray_2 = device_context.get_device("low/elt/subarray_2")
 
+        master.On()
+
         master.EnableSubarray(1)
         master.EnableSubarray(2)
 
         # check both subarrays are enabled
-        assert subarray_1.adminMode == AdminMode.ONLINE
-        assert subarray_1.State() == DevState.OFF
-
-        assert subarray_2.adminMode == AdminMode.ONLINE
-        assert subarray_2.State() == DevState.OFF
+        assert subarray_1.State() == DevState.ON
+        assert subarray_2.State() == DevState.ON
 
         # disable subarray 1
-        master.DisableSubarray(1)
+        (result_code, message) = master.DisableSubarray(1)
+        assert result_code == ResultCode.OK
 
         # check only subarray 1 is disabled.
-        assert subarray_1.adminMode == AdminMode.OFFLINE
-        assert subarray_1.State() == DevState.DISABLE
-
-        assert subarray_2.adminMode == AdminMode.ONLINE
-        assert subarray_2.State() == DevState.OFF
+        assert subarray_1.State() == DevState.OFF
+        assert subarray_2.State() == DevState.ON
 
         # try to disable subarray 1 again -- this should fail
-        with pytest.raises(DevFailed):
-            master.DisableSubarray(1)
+        (result_code, message) = master.DisableSubarray(1)
+        assert result_code == ResultCode.FAILED
 
         # check failure has no side-effect
-        assert subarray_1.adminMode == AdminMode.OFFLINE
-        assert subarray_1.State() == DevState.DISABLE
-
-        assert subarray_2.adminMode == AdminMode.ONLINE
-        assert subarray_2.State() == DevState.OFF
+        assert subarray_1.State() == DevState.OFF
+        assert subarray_2.State() == DevState.ON
 
         # disable subarray 2
-        master.DisableSubarray(2)
+        (result_code, message) = master.DisableSubarray(2)
+        assert result_code == ResultCode.OK
 
         # check both subarrays now disabled
-        assert subarray_1.adminMode == AdminMode.OFFLINE
-        assert subarray_1.State() == DevState.DISABLE
-
-        assert subarray_2.adminMode == AdminMode.OFFLINE
-        assert subarray_2.State() == DevState.DISABLE
+        assert subarray_1.State() == DevState.OFF
+        assert subarray_2.State() == DevState.OFF
 
     def test_master_allocate_subarray(self, device_context):
         """
@@ -184,8 +175,8 @@ class TestMccsIntegration:
         tile_4.set_source(DevSource.DEV)
 
         # check initial state
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 0
@@ -193,15 +184,17 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
+        master.On()
+
         # Can't allocate to an array that hasn't been enabled
-        with pytest.raises(DevFailed):
-            call_with_json(
-                master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
-            )
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+        )
+        assert result_code == ResultCode.FAILED
 
         # check no side-effect to failure
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 0
@@ -214,11 +207,14 @@ class TestMccsIntegration:
         master.EnableSubarray(2)
 
         # allocate station_1 to subarray_1
-        call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+        )
+        assert result_code == ResultCode.OK
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 1
@@ -228,14 +224,14 @@ class TestMccsIntegration:
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
-        with pytest.raises(DevFailed):
-            call_with_json(
-                master.Allocate, subarray_id=2, stations=["low/elt/station_1"]
-            )
+        (result_code, message) = call_with_json(
+            master.Allocate, subarray_id=2, stations=["low/elt/station_1"]
+        )
+        assert result_code == ResultCode.FAILED
 
         # check no side-effects
         assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 1
@@ -246,18 +242,19 @@ class TestMccsIntegration:
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
         # subarray
-        call_with_json(
+        (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=1,
             stations=["low/elt/station_1", "low/elt/station_2"],
         )
+        assert result_code == ResultCode.OK
 
         # check
         assert list(subarray_1.stationFQDNs) == [
             "low/elt/station_1",
             "low/elt/station_2",
         ]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
         assert tile_1.subarrayId == 1
@@ -269,8 +266,8 @@ class TestMccsIntegration:
         master.DisableSubarray(1)
 
         # check that subarray 1's resources have been released
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 0
@@ -281,14 +278,15 @@ class TestMccsIntegration:
         # now that subarray 1 has been disabled, its resources should have
         # been released and it should be possible to allocate them to
         # subarray 2
-        call_with_json(
+        (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=2,
             stations=["low/elt/station_1", "low/elt/station_2"],
         )
+        assert result_code == ResultCode.OK
 
         # check
-        assert list(subarray_1.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
         assert list(subarray_2.stationFQDNs) == [
             "low/elt/station_1",
             "low/elt/station_2",
@@ -304,8 +302,8 @@ class TestMccsIntegration:
         master.DisableSubarray(2)
 
         # check all resources released
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 0
@@ -341,6 +339,8 @@ class TestMccsIntegration:
         tile_3.set_source(DevSource.DEV)
         tile_4.set_source(DevSource.DEV)
 
+        master.On()
+
         # enable subarrays
         master.EnableSubarray(1)
         master.EnableSubarray(2)
@@ -362,11 +362,12 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 2
 
         # release resources of subarray_2
-        master.Release(2)
+        (result_code, message) = master.Release(2)
+        assert result_code == ResultCode.OK
 
         # check
         assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 1
@@ -375,12 +376,12 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should fail
-        with pytest.raises(DevFailed):
-            master.Release(2)
+        (result_code, message) = master.Release(2)
+        assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
         assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 1
@@ -389,11 +390,12 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # release resources of subarray_1
-        master.Release(1)
+        (result_code, message) = master.Release(1)
+        assert result_code == ResultCode.OK
 
         # check all released
-        assert list(subarray_1.stationFQDNs) == []
-        assert list(subarray_2.stationFQDNs) == []
+        assert subarray_1.stationFQDNs is None
+        assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 0

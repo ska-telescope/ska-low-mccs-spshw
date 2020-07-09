@@ -60,6 +60,7 @@ class TestMccsMaster:
         """Test for isCapabilityAchievable"""
         assert device_under_test.isCapabilityAchievable([[0], [""]]) is not False
 
+    @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(self, device_under_test):
         """Test for Reset"""
 
@@ -157,8 +158,10 @@ class TestMccsMaster:
         master.EnableSubarray(1)
         master.EnableSubarray(2)
 
+        mock_subarray_1.ReleaseAllResources.side_effect = (
+            (ResultCode.FAILED, "No resources to release"),
+        )
         mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Subarray is off."),)
-        mock_subarray_2.Off.side_effect = ((ResultCode.OK, "Subarray is off."),)
 
         # now tell master to disable subarray 1
         (result_code, message) = master.DisableSubarray(1)
@@ -169,7 +172,6 @@ class TestMccsMaster:
         mock_subarray_2.Off.assert_not_called()
 
         mock_subarray_1.reset_mock()
-        # mock_subarray_1.Off.side_effect = ((ResultCode.FAILED, "Subarray already off."),)
 
         # Disabling a subarray that is already disabled should fail
         (result_code, message) = master.DisableSubarray(1)
@@ -306,6 +308,9 @@ class TestMccsMaster:
         mock_subarray_1.reset_mock()
         mock_subarray_2.reset_mock()
 
+        mock_subarray_1.ReleaseAllResources.side_effect = (
+            (ResultCode.FAILED, "No resources to release"),
+        )
         mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Resources assigned"),)
 
         # now disable subarray 1
@@ -315,13 +320,13 @@ class TestMccsMaster:
         assert mock_station_1.subarrayId == 0
         assert mock_station_2.subarrayId == 0
 
-        mock_subarray_2.AssignResources.side_effect = (
-            (ResultCode.OK, "Resources assigned"),
-        )
-
         # now that subarray 1 has been disabled, its resources should
         # have been released so we should be able to allocate them to
         # subarray 2
+
+        mock_subarray_2.AssignResources.side_effect = (
+            (ResultCode.OK, "Resources assigned"),
+        )
         (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=2,

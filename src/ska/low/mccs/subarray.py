@@ -30,6 +30,7 @@ class StationPoolManager:
     subarray. The current implementation allows to assign and release
     stations, and get a list of the FQDNs of the assigned stations.
     """
+
     def __init__(self):
         """
         Create a new StationPoolManager
@@ -83,8 +84,6 @@ class StationPoolManager:
         :return: FQDNs of currently assigned stations
         :rtype: list of string
         """
-        returning = sorted(self._stations)
-        print(f"Returning {returning}")
         return sorted(self._stations)
 
 
@@ -93,6 +92,7 @@ class TransientBufferManager:
     Stub class for management of a transient buffer. Currently does
     nothing useful
     """
+
     def __init__(self):
         """
         Construct a new TransientBufferManager
@@ -128,6 +128,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for device initialisation
         """
+
         def do(self):
             """
             Stateless hook for initialisation of the attributes and
@@ -157,11 +158,9 @@ class MccsSubarray(SKASubarray):
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
-        resourcing_args = (
-            self.station_pool_manager, self.state_model, self.logger
-        )
+        resourcing_args = (self.station_pool_manager, self.state_model, self.logger)
         self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Off", self.OnCommand(*args))
+        self.register_command_object("Off", self.OffCommand(*args))
         self.register_command_object(
             "AssignResources", self.AssignResourcesCommand(*resourcing_args)
         )
@@ -169,8 +168,7 @@ class MccsSubarray(SKASubarray):
             "ReleaseResources", self.ReleaseResourcesCommand(*resourcing_args)
         )
         self.register_command_object(
-            "ReleaseAllResources",
-            self.ReleaseAllResourcesCommand(*resourcing_args)
+            "ReleaseAllResources", self.ReleaseAllResourcesCommand(*resourcing_args)
         )
         self.register_command_object("Configure", self.ConfigureCommand(*args))
         self.register_command_object("Scan", self.ScanCommand(*args))
@@ -180,9 +178,10 @@ class MccsSubarray(SKASubarray):
         self.register_command_object("ObsReset", self.ResetCommand(*args))
         self.register_command_object("Restart", self.RestartCommand(*args))
         self.register_command_object(
-            "SendTransientBuffer", self.SendTransientBufferCommand(
+            "SendTransientBuffer",
+            self.SendTransientBufferCommand(
                 self.transient_buffer_manager, self.state_model, self.logger
-            )
+            ),
         )
 
     def always_executed_hook(self):
@@ -247,6 +246,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the On() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -266,6 +266,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the Off() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -285,6 +286,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the AssignResources() command
         """
+
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -302,15 +304,13 @@ class MccsSubarray(SKASubarray):
             stations = json.loads(argin)["stations"]
             station_pool_manager = self.target
             station_pool_manager.assign(stations)
-            return [
-                ResultCode.OK,
-                "AssignResources command completed successfully"
-            ]
+            return [ResultCode.OK, "AssignResources command completed successfully"]
 
     class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):
         """
         Command class for the ReleaseResources() command
         """
+
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -328,15 +328,13 @@ class MccsSubarray(SKASubarray):
             stations = json.loads(argin)["stations"]
             station_pool_manager = self.target
             station_pool_manager.release(stations)
-            return [
-                ResultCode.OK,
-                "ReleaseResources command completed successfully"
-            ]
+            return [ResultCode.OK, "ReleaseResources command completed successfully"]
 
     class ReleaseAllResourcesCommand(SKASubarray.ReleaseAllResourcesCommand):
         """
         Command class for the ReleaseAllResources() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -351,15 +349,13 @@ class MccsSubarray(SKASubarray):
             # target object
             station_pool_manager = self.target
             station_pool_manager.release_all()
-            return (
-                ResultCode.OK,
-                "ReleaseAllResources command completed successfully"
-            )
+            return (ResultCode.OK, "ReleaseAllResources command completed successfully")
 
     class ConfigureCommand(SKASubarray.ConfigureCommand):
         """
         Command class for the Configure() command
         """
+
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -381,6 +377,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the Scan() command
         """
+
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -402,6 +399,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the EndScan() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -421,6 +419,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the End() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -440,6 +439,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the Abort() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -459,6 +459,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the ObsReset() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -478,6 +479,7 @@ class MccsSubarray(SKASubarray):
         """
         Command class for the Restart() command
         """
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -501,10 +503,7 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)
-            return (
-                ResultCode.OK,
-                "SendTransientBuffer command completed successfully"
-            )
+            return (ResultCode.OK, "SendTransientBuffer command completed successfully")
 
     @command(
         dtype_in="DevVarLongArray",

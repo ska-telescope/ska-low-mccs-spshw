@@ -520,7 +520,17 @@ class MccsMaster(SKAMaster):
                 device._station_allocated[mask] = 0
 
                 subarray_device = tango.DeviceProxy(subarray_fqdn)
-                subarray_device.Off()
+                try:
+                    (result_code, message) = subarray_device.ReleaseAllResources()
+                except DevFailed:
+                    pass  # it probably has no resources to release
+
+                (result_code, message) = subarray_device.Off()
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Subarray failed to turn off: {message}",
+                    )
                 device._subarray_enabled[subarray_id - 1] = False
                 return (ResultCode.OK, "DisableSubarray command successful")
 

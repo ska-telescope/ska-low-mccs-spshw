@@ -25,6 +25,7 @@ from tango.server import attribute, command
 # Additional import
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import TestMode
 
 
 class MccsAntenna(SKABaseDevice):
@@ -83,18 +84,6 @@ class MccsAntenna(SKABaseDevice):
             device._lock = threading.Lock()
             device._create_long_running_task()
             return (ResultCode.OK, "Init command succeeded")
-
-        def init_command_objects(self):
-            """
-            Set up the handler objects for Commands
-            """
-            super().init_command_objects()
-
-            args = (self, self.state_model, self.logger)
-
-            self.register_command_object("Reset", self.ResetCommand(*args))
-            self.register_command_object("PowerOn", self.PowerOnCommand(*args))
-            self.register_command_object("PowerOff", self.PowerOffCommand(*args))
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -294,6 +283,18 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
+    def init_command_objects(self):
+        """
+        Set up the handler objects for Commands
+        """
+        super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object("PowerOn", self.PowerOnCommand(*args))
+        self.register_command_object("PowerOff", self.PowerOffCommand(*args))
+
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.
@@ -363,19 +364,19 @@ class MccsAntenna(SKABaseDevice):
     def __do_read(self):
         while self._streaming:
             try:
-                # if connected read the values from tpm
-                #               if self._antenna is not None:
                 self.logger.info("stream on")
-                #                   state = self._antenna.state()
-                volts = random.uniform(4.5, 5.5)  # self._antenna.voltage()
-                temp = random.uniform(30.0, 35.0)  # self._antenna.temperature()
+                if self._test_mode == TestMode.NONE:
+                    volts = random.uniform(4.5, 5.5)  # self._antenna.voltage()
+                    temp = random.uniform(30.0, 35.0)  # self._antenna.temperature()
+                else:
+                    volts = 3.5
+                    temp = 20.6
                 # xPolarisationFaulty = self._antenna.xPolarisationFaulty()
                 # yPolarisationFaulty = self._antenna.yPolarisationFaulty()
 
                 with self._lock:
                     # now update the attribute using lock to prevent access conflict
                     self._voltage = volts
-                    #                        self._state = state
                     self._temperature = temp
                     # self._xPolarisationFaulty = xPolarisationFaulty
                     # self._yPolarisationFaulty = yPolarisationFaulty

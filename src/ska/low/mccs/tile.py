@@ -119,7 +119,8 @@ class MccsTile(SKABaseDevice):
             for name in device._event_names:
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
-
+            # TestMode is used in this server to denote
+            # unit testing when TestMode = TEST
             device._test_mode = TestMode.NONE
             device._is_connected = False
             device._streaming = False
@@ -1598,7 +1599,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) < self.AntennasPerTile:
+            if len(argin) < self.target.AntennasPerTile:
                 self.logger.error(
                     f"Insufficient coefficients should be {self.AntennasPerTile}"
                 )
@@ -1676,7 +1677,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) != self.AntennasPerTile * 2 + 1:
+            if len(argin) != self.target.AntennasPerTile * 2 + 1:
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
@@ -1684,7 +1685,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
-            for i in range(self.AntennasPerTile):
+            for i in range(self.target.AntennasPerTile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
             self.target._tpm.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, "Command succeeded")

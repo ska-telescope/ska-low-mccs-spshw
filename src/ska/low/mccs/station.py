@@ -44,13 +44,13 @@ class EventManager:
         try:
             # Always subscribe to state change, it's pushed by the base classes
             id = self._deviceProxy.subscribe_event(
-                "state", EventType.CHANGE_EVENT, self
+                "state", EventType.CHANGE_EVENT, self, stateless=True
             )
             self._eventIds.append(id)
             for event_name in self._deviceProxy.event_names:
                 print("subscribing to ", event_name)
                 id = self._deviceProxy.subscribe_event(
-                    event_name, EventType.CHANGE_EVENT, self
+                    event_name, EventType.CHANGE_EVENT, self, stateless=True
                 )
                 self._eventIds.append(id)
         except tango.DevFailed as df:

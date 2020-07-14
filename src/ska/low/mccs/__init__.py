@@ -8,6 +8,7 @@ __all__ = [
     "MccsTile",
     "MccsAntenna",
     "MccsTileSimulator",
+    "MccsTelState",
     "control_model",
 ]
 
@@ -19,3 +20,4 @@ from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .tile import MccsTile
 from .antenna import MccsAntenna
+from .tel_state import MccsTelState

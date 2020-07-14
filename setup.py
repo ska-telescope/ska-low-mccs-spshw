@@ -40,6 +40,7 @@ setuptools.setup(
             "MccsStation=ska.low.mccs.station:main",
             "MccsStationBeam=ska.low.mccs.station_beam:main",
             "MccsTile=ska.low.mccs.tile:main",
+            "MccsTelState=ska.low.mccs.tel_state:main",
             "mccs-master=ska.low.mccs.master_cli:main",
             "mccs-tile=ska.low.mccs.tile_cli:main",
         ]

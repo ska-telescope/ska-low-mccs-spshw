@@ -22,6 +22,7 @@ device_info = {
     "properties": {"SkaLevel": "4", "LoggingLevelDefault": "4"},
 }
 
+
 # Device test case
 class TestMccsTelState(object):
     """Test case for packet generation."""

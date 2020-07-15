@@ -55,6 +55,10 @@ def device_under_test(request, device_info, mocker):
     """
     Creates and returns a DeviceProxy under a DeviceTestContext.
 
+    For tests that are marked with the custom "mock_device_proxy" marker
+    (i.e. `@pytest.mark.mock_device_proxy`), `tango.DeviceProxy` will be
+    mocked prior to initialisation of the device under test.
+
     :param device_info: Information about the device under test that is
         needed to stand the device up in a DeviceTestContext, such as
         the device class and properties

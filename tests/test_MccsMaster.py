@@ -107,7 +107,8 @@ class TestMccsMaster:
         assert result_code == ResultCode.OK
         assert message == "Stub implementation of Maintenance(), does nothing"
 
-    def test_EnableSubarray(self, device_under_test, mock_device_proxy):
+    @pytest.mark.mock_device_proxy
+    def test_EnableSubarray(self, device_under_test):
         master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
@@ -144,7 +145,8 @@ class TestMccsMaster:
         mock_subarray_1.On.assert_not_called()
         mock_subarray_2.On.assert_called_once_with()
 
-    def test_DisableSubarray(self, device_under_test, mock_device_proxy):
+    @pytest.mark.mock_device_proxy
+    def test_DisableSubarray(self, device_under_test):
         master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
@@ -181,7 +183,8 @@ class TestMccsMaster:
         mock_subarray_1.Off.assert_not_called()
         mock_subarray_2.Off.assert_not_called()
 
-    def test_Allocate(self, device_under_test, mock_device_proxy):
+    @pytest.mark.mock_device_proxy
+    def test_Allocate(self, device_under_test):
         """
         Test the Allocate command.
         """
@@ -344,7 +347,8 @@ class TestMccsMaster:
         assert mock_station_1.subarrayId == 2
         assert mock_station_2.subarrayId == 2
 
-    def test_Release(self, device_under_test, mock_device_proxy):
+    @pytest.mark.mock_device_proxy
+    def test_Release(self, device_under_test):
         """
         Test Release command.
         """

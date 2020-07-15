@@ -82,7 +82,8 @@ class TestMccsStation:
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
-    def test_subarrayId(self, device_under_test, mock_device_proxy):
+    @pytest.mark.mock_device_proxy
+    def test_subarrayId(self, device_under_test):
         """
         Test for subarrayId attribute
         """

@@ -9,14 +9,10 @@
 """
 This module contains the tests for MccsSubarray.
 """
+import pytest
 import tango
 from tango import DevSource
-from ska.base.control_model import (
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
+from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
 from ska.low.mccs import MccsSubarray, release
 from ska.low.mccs.utils import call_with_json
@@ -24,9 +20,7 @@ from ska.low.mccs.utils import call_with_json
 
 device_info = {
     "class": MccsSubarray,
-    "properties": {
-        "CapabilityTypes": ["BAND1", "BAND2"],
-    }
+    "properties": {"CapabilityTypes": ["BAND1", "BAND2"]},
 }
 
 
@@ -52,10 +46,7 @@ class TestMccsSubarray:
         # The following reads might not be allowed in this state once
         # properly implemented
         assert device_under_test.scanId == -1
-        assert list(device_under_test.configuredCapabilities) == [
-            "BAND1:0",
-            "BAND2:0",
-        ]
+        assert list(device_under_test.configuredCapabilities) == ["BAND1:0", "BAND2:0"]
         assert device_under_test.stationFQDNs is None
         #         assert device_under_test.tileFQDNs is None
         #         assert device_under_test.stationBeamFQDNs is None
@@ -69,7 +60,8 @@ class TestMccsSubarray:
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
-    def test_AssignResources(self, device_under_test, mock_device_proxy):
+    @pytest.mark.mock_device_proxy
+    def test_AssignResources(self, device_under_test):
         """
         Test for AssignResources
         """
@@ -97,7 +89,7 @@ class TestMccsSubarray:
         returned = device_under_test.sendTransientBuffer(segment_spec)
         assert returned == [
             [ResultCode.OK],
-            ["SendTransientBuffer command completed successfully"]
+            ["SendTransientBuffer command completed successfully"],
         ]
 
     # tests of overridden base class attributes

@@ -5,9 +5,17 @@ from collections import defaultdict
 import pytest
 import socket
 import tango
-from tango.test_context import (DeviceTestContext,
-                                MultiDeviceTestContext,
-                                get_host_ip)
+from tango.test_context import DeviceTestContext, MultiDeviceTestContext, get_host_ip
+
+
+def pytest_configure(config):
+    """
+    pytest hook, used here to register custom marks to get rid of spurious
+    warnings
+    """
+    config.addinivalue_line(
+        "markers", "mock_device_proxy: the test requires tango.DeviceProxy to be mocked"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -43,7 +51,7 @@ def devices_info(request):
 
 
 @pytest.fixture(scope="function")
-def device_under_test(device_info):
+def device_under_test(request, device_info, mocker):
     """
     Creates and returns a DeviceProxy under a DeviceTestContext.
 
@@ -52,9 +60,15 @@ def device_under_test(device_info):
         the device class and properties
     :type device_info: dict
     """
+    mock_device_proxy = request.node.get_closest_marker("mock_device_proxy") is not None
+    if mock_device_proxy:
+        mock_device_proxies = defaultdict(mocker.Mock)
+        mocker.patch(
+            "tango.DeviceProxy", side_effect=lambda fqdn: mock_device_proxies[fqdn]
+        )
+
     with DeviceTestContext(
-        device_info["class"],
-        properties=device_info["properties"]
+        device_info["class"], properties=device_info["properties"]
     ) as device_under_test:
         yield device_under_test
 
@@ -73,6 +87,7 @@ def device_context(mocker, devices_info):
         as the device classes and properties
     :type devices_info: dict
     """
+
     def _get_open_port():
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("", 0))
@@ -86,32 +101,11 @@ def device_context(mocker, devices_info):
 
     _DeviceProxy = tango.DeviceProxy
     mocker.patch(
-        'tango.DeviceProxy',
+        "tango.DeviceProxy",
         wraps=lambda fqdn, *args, **kwargs: _DeviceProxy(
-            "tango://{0}:{1}/{2}#dbase=no".format(HOST, PORT, fqdn),
-            *args,
-            **kwargs
-        )
+            "tango://{0}:{1}/{2}#dbase=no".format(HOST, PORT, fqdn), *args, **kwargs
+        ),
     )
 
     with MultiDeviceTestContext(devices_info, host=HOST, port=PORT) as context:
         yield context
-
-
-@pytest.fixture(scope="function")
-def mock_device_proxy(mocker):
-    """
-    A fixture that mocks tango.DeviceProxy and keeps each mock in a
-    dictionary keyed by FQDN, so that every time you open a DeviceProxy
-    to a device specified by the same FQDN, you get the same mock.
-
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
-        `unittest.mock` package
-    :type mocker: pytest wrapper
-    """
-    mock_device_proxies = defaultdict(mocker.Mock)
-    mocker.patch(
-        'tango.DeviceProxy',
-        side_effect=lambda fqdn: mock_device_proxies[fqdn]
-    )
-    yield mock_device_proxies

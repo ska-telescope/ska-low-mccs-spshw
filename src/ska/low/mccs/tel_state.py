@@ -13,26 +13,12 @@ MccsTelState TANGO device class for the MccsTelState prototype
 """
 
 # PyTango imports
-# import tango
-# from tango import DebugIt
-from tango.server import run
-
-# from tango.server import Device
-from tango.server import attribute
-
-# from tango.server import command
-# from tango.server import device_property
-# from tango import AttrQuality
-from tango import AttrWriteType
-
-# import enum
-from ska.base import SKATelState
+from tango.server import run, attribute
 
 # Additional import
-# PROTECTED REGION ID(MccsTelState.additionnal_import) ENABLED START #
+from ska.base import SKATelState
 import ska.low.mccs.release as release
 
-# PROTECTED REGION END #    //  MccsTelState.additionnal_import
 
 __all__ = ["MccsTelState", "main"]
 
@@ -46,9 +32,6 @@ class MccsTelState(SKATelState):
     - Device Property
     """
 
-    # PROTECTED REGION ID(MccsTelState.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  MccsTelState.class_variable
-
     # -----------------
     # Device Properties
     # -----------------
@@ -56,14 +39,6 @@ class MccsTelState(SKATelState):
     # ----------
     # Attributes
     # ----------
-
-    elementsStates = attribute(dtype="DevString")
-
-    observationsStates = attribute(dtype="DevString")
-
-    algorithms = attribute(dtype="DevString", access=AttrWriteType.READ_WRITE)
-
-    algorithmsVersion = attribute(dtype="DevString", access=AttrWriteType.READ_WRITE)
 
     # ---------------
     # General methods
@@ -81,10 +56,10 @@ class MccsTelState(SKATelState):
             (result_code, message) = super().do()
 
             device = self.target
-            device._elements_states = device.elementsStates
-            device._observations_states = device.observationsStates
-            device._algorithms = device.algorithms
-            device._algorithms_version = device.algorithmsVersion
+            device._elements_states = ""
+            device._observations_states = ""
+            device._algorithms = ""
+            device._algorithms_version = ""
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
@@ -92,8 +67,6 @@ class MccsTelState(SKATelState):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        # PROTECTED REGION ID(MccsTelState.always_executed_hook) ENABLED START #
-        # PROTECTED REGION END #    //  MccsTelState.always_executed_hook
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -102,48 +75,52 @@ class MccsTelState(SKATelState):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        # PROTECTED REGION ID(MccsTelState.delete_device) ENABLED START #
-        # PROTECTED REGION END #    //  MccsTelState.delete_device
 
     # ------------------
     # Attributes methods
     # ------------------
 
-    def read_elementsStates(self):
-        # PROTECTED REGION ID(MccsTelState.elementsStates_read) ENABLED START #
+    @attribute(dtype="DevString", doc="The elementsStates of the MccsTelState class")
+    def elementsStates(self):
         """Return the elementsStates attribute."""
         return self._elements_states
-        # PROTECTED REGION END #    //  MccsTelState.elementsStates_read
 
-    def read_observationsStates(self):
-        # PROTECTED REGION ID(MccsTelState.observationsStates_read) ENABLED START #
+    @elementsStates.write
+    def elementsStates(self, value):
+        """Set the elementsStates attribute."""
+        self._elements_states = value
+
+    @attribute(
+        dtype="DevString", doc="The observationsStates of the MccsTelState class"
+    )
+    def observationsStates(self):
         """Return the observationsStates attribute."""
         return self._observations_states
-        # PROTECTED REGION END #    //  MccsTelState.observationsStates_read
 
-    def read_algorithms(self):
-        # PROTECTED REGION ID(MccsTelState.algorithms_read) ENABLED START #
+    @observationsStates.write
+    def observationsStates(self, value):
+        """Set the observationsStates attribute."""
+        self._observations_states = value
+
+    @attribute(dtype="DevString", doc="The algorithms of the MccsTelState class")
+    def algorithms(self):
         """Return the algorithms attribute."""
         return self._algorithms
-        # PROTECTED REGION END #    //  MccsTelState.algorithms_read
 
-    def write_algorithms(self, value):
-        # PROTECTED REGION ID(MccsTelState.algorithms_write) ENABLED START #
+    @algorithms.write
+    def algorithms(self, value):
         """Set the algorithms attribute."""
-        pass
-        # PROTECTED REGION END #    //  MccsTelState.algorithms_write
+        self._algorithms = value
 
-    def read_algorithmsVersion(self):
-        # PROTECTED REGION ID(MccsTelState.algorithmsVersion_read) ENABLED START #
+    @attribute(dtype="DevString", doc="The algorithmsVersion of the MccsTelState class")
+    def algorithmsVersion(self):
         """Return the algorithmsVersion attribute."""
         return self._algorithms_version
-        # PROTECTED REGION END #    //  MccsTelState.algorithmsVersion_read
 
-    def write_algorithmsVersion(self, value):
-        # PROTECTED REGION ID(MccsTelState.algorithmsVersion_write) ENABLED START #
+    @algorithmsVersion.write
+    def algorithmsVersion(self, value):
         """Set the algorithmsVersion attribute."""
-        pass
-        # PROTECTED REGION END #    //  MccsTelState.algorithmsVersion_write
+        self._algorithms_version = value
 
     # --------
     # Commands
@@ -157,9 +134,7 @@ class MccsTelState(SKATelState):
 
 def main(args=None, **kwargs):
     """Main function of the MccsTelState module."""
-    # PROTECTED REGION ID(MccsTelState.main) ENABLED START #
     return run((MccsTelState,), args=args, **kwargs)
-    # PROTECTED REGION END #    //  MccsTelState.main
 
 
 if __name__ == "__main__":

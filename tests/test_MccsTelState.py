@@ -27,14 +27,6 @@ device_info = {
 class TestMccsTelState(object):
     """Test case for packet generation."""
 
-    # properties = {
-    #    "TelStateConfigFile": "",
-    #    "SkaLevel": "4",
-    #    "GroupDefinitions": "",
-    #    "LoggingLevelDefault": "4",
-    #    "LoggingTargetsDefault": "",
-    # }
-
     @classmethod
     def mocking(cls):
         """Mock external libraries."""
@@ -67,10 +59,9 @@ class TestMccsTelState(object):
         info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [info]
 
-    @pytest.mark.skip(reason="too weak a test to count")
+    # @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(self, device_under_test):
         """Test for Reset"""
-
         with pytest.raises(Exception):
             device_under_test.Reset()
 
@@ -103,25 +94,33 @@ class TestMccsTelState(object):
         """Test for testMode"""
         assert device_under_test.testMode == TestMode.NONE
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_elementsStates(self, device_under_test):
         """Test for elementsStates"""
         assert device_under_test.elementsStates == ""
+        test_string = "This is my test string for elementsStates"
+        device_under_test.elementsStates = test_string
+        assert device_under_test.elementsStates == test_string
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_observationsStates(self, device_under_test):
         """Test for observationsStates"""
         assert device_under_test.observationsStates == ""
+        test_string = "This is my test string for observationsStates"
+        device_under_test.observationsStates = test_string
+        assert device_under_test.observationsStates == test_string
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_algorithms(self, device_under_test):
         """Test for algorithms"""
         assert device_under_test.algorithms == ""
+        test_string = "This is my test string for algorithms"
+        device_under_test.algorithms = test_string
+        assert device_under_test.algorithms == test_string
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_algorithmsVersion(self, device_under_test):
         """Test for algorithmsVersion"""
         assert device_under_test.algorithmsVersion == ""
+        test_string = "This is my test string for algorithmsVersion"
+        device_under_test.algorithmsVersion = test_string
+        assert device_under_test.algorithmsVersion == test_string
 
     def test_loggingTargets(self, device_under_test):
         """Test for loggingTargets"""

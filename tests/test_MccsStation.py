@@ -15,7 +15,6 @@ import pytest
 import time
 import tango
 
-from tango import DevState
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import MccsStation, release
 

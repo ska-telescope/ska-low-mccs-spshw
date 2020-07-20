@@ -128,6 +128,7 @@ class MccsTile(SKABaseDevice):
             device._read_task = None
             device._lock = threading.Lock()
             device._create_long_running_task()
+
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
 
@@ -2675,12 +2676,14 @@ class MccsTile(SKABaseDevice):
                         else:
                             self.set_state(saved_state)
                             self._healthState = HealthState.OK
-                        self.push_change_event("healthState", self._healthState)
             except Exception as exc:
+                self._healthState = HealthState.FAILED
                 self.set_state(DevState.FAULT)
                 self.logger.error(exc.what())
 
             #  update every second (should be settable?)
+            self.push_change_event("healthState", self._healthState)
+            self.push_archive_event("healthState", self._healthState)
             self.logger.debug(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:

@@ -23,7 +23,6 @@ from tango import DebugIt
 from tango import DevState
 from tango import EventType
 from tango import GreenMode
-from tango import DeviceProxy
 from tango import futures_executor
 from tango.server import device_property
 from tango.server import attribute, command
@@ -38,8 +37,12 @@ from ska.base.commands import ResponseCommand, ResultCode
 
 class EventManager:
     def __init__(self, fqdn):
-        self._deviceProxy = DeviceProxy(fqdn)
+        print("22222+++++++++++++++++++++++++++++")
+        print(tango.DeviceProxy)
+        print("22222-----------------------------")
+        self._deviceProxy = tango.DeviceProxy(fqdn)
         self._eventIds = []
+        self._event_names = []
         # TODO: need to deal with device not running or restarted!!!!!!!!!!
         try:
             # Always subscribe to state change, it's pushed by the base classes
@@ -47,12 +50,14 @@ class EventManager:
                 "state", EventType.CHANGE_EVENT, self, stateless=True
             )
             self._eventIds.append(id)
-            for event_name in self._deviceProxy.event_names:
-                print("subscribing to ", event_name)
-                id = self._deviceProxy.subscribe_event(
-                    event_name, EventType.CHANGE_EVENT, self, stateless=True
-                )
-                self._eventIds.append(id)
+            self._event_names = self._deviceProxy.event_names
+            if isinstance(self._event_names, list):
+                for event_name in self._event_names:
+                    print("subscribing to ", event_name)
+                    id = self._deviceProxy.subscribe_event(
+                        event_name, EventType.CHANGE_EVENT, self, stateless=True
+                    )
+                    self._eventIds.append(id)
         except tango.DevFailed as df:
             print(df)
 

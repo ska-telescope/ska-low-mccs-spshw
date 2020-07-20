@@ -5,8 +5,8 @@ image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest
 
 # cache is used to specify a list of files and directories which should be cached between jobs. You can only use paths that are within the project workspace.
 # If cache is defined outside the scope of jobs, it means it is set globally and all jobs will use that definition
-cache:
-  paths:
+#cache:
+#  paths:
 # before_script is used to define the command that should be run before all jobs, including deploy jobs, but after the restoration of artifacts.
 # This can be an array or a multi-line string.
 before_script:
@@ -14,8 +14,10 @@ before_script:
   - python3 -m pip install pipdeptree
 
 stages:
-  - test
   - linting
+  - test
+  - build
+  - integration
   - deploy
   - docs
   - publish
@@ -40,7 +42,6 @@ test:
 list_dependencies:
   stage: test
   script:
-    # - pipenv graph >> pipenv_deps.txt
     - pipdeptree --json >> pip_deps.json
     - pipdeptree >> pip_deps.txt
     - dpkg -l >> system_deps.txt
@@ -54,6 +55,55 @@ list_dependencies:
   artifacts:
     paths:
       - public
+
+build-image:
+  stage: build
+  image: nexus.engageska-portugal.pt/ska-docker/tango-builder:latest
+  dependencies:
+    - test
+  tags:
+    - docker-executor
+  script:
+    - export IMG="$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker build --pull --tag "$IMG" .
+    - echo -n "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker push "$IMG"
+  artifacts:
+    paths:
+      - current_tag.txt
+
+# integration testing on new kubernetes runners
+integration_test:
+  stage: integration
+  tags:
+    - auto-k8sv2
+  dependencies:
+    - build-image # no point running when image hasn't been built (tests fail)
+  script:
+    # install kubectl
+    # todo: need to specify kubectl version (it is on makefile, maybe add this as a target?)
+    - curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.18.2/bin/linux/amd64/kubectl
+    - chmod +x ./kubectl
+    - sudo mv ./kubectl /usr/local/bin/kubectl
+    # install helm
+    # todo: need to specify helm version (it is on makefile, maybe add this as a target?)
+    - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+    - chmod 700 get_helm.sh
+    - ./get_helm.sh
+    # test
+    - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
+    - make k8s
+    - make deploy
+    - make show
+    - make wait
+    - make integration_test
+  after_script:
+    - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
+    - make delete
+    - make delete_namespace
+  artifacts:
+    paths:
+      - ./test-results
 
 linting:
   #  image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest

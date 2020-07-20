@@ -1,0 +1,22 @@
+{{- define "tango-util.service.tpl" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "tango-util.deviceName" . }}
+  namespace: {{ .global.Release.Namespace }}
+  labels:
+    app: {{ template "tango-util.deviceName" . }}
+    chart: {{ template "tango-util.chart" .global }}
+    release: {{ .global.Release.Name }}
+    heritage: {{ .global.Release.Service }}
+spec:
+  clusterIP: None
+  ports:
+  - name: dummy # Actually, no port is needed.
+    port: 1234
+    targetPort: 1234
+  selector:
+    app: {{ template "tango-util.deviceName" . }}
+    chart: {{ template "tango-util.chart" .global }}
+    release: {{ .global.Release.Name }}
+{{- end -}}

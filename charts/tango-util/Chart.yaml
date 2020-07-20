@@ -1,0 +1,10 @@
+apiVersion: v1
+description: A Helm chart library of utilities for TANGO deployents
+name: tango-util
+type: library
+appVersion: 0.0.1
+version: 0.0.1
+icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
+maintainers:
+- name: Malte Marquarding
+  email: Malte.Marquarding@csiro.au

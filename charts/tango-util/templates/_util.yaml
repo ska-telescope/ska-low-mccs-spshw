@@ -1,0 +1,70 @@
+{{- /*
+tango-util.merge will merge two YAML templates and output the result.
+This takes an array of three values:
+- the top context
+- the template name of the overrides (destination)
+- the template name of the base (source)
+*/ -}}
+{{- define "tango-util.merge" -}}
+{{- $top := first . -}}
+{{- $overrides := fromYaml (include (index . 1) $top) | default (dict ) -}}
+{{- $tpl := fromYaml (include (index . 2) $top) | default (dict ) -}}
+{{- toYaml (merge $overrides $tpl) -}}
+{{- end -}}
+
+{{/* vim: set filetype=mustache: */}}
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "tango-util.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "tango-util.fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "tango-util.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+
+{{- /*
+Generate name for TANGO device server
+*/ -}}
+{{- define "tango-util.deviceName" -}}
+{{- printf "%s-%s-%s" (include "tango-util.name" .global) (include "tango-util.deviceInstance" .) .global.Release.Name -}}
+{{- end -}}
+
+{{- /*
+Generate name for deviceserver instance (numbered).
+A number of 0 indicates unnumbered instance  
+*/ -}}
+{{- define "tango-util.deviceInstance" -}}
+{{/*
+values of lists of ints seem to be float?!
+*/}}
+{{- $instance := (.instance | toString) -}}
+{{- if eq $instance "0" -}}
+{{- .device.name -}}
+{{- else -}}
+{{- printf "%s%s" .device.name $instance -}}
+{{- end -}}
+{{- end -}}

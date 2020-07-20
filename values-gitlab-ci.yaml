@@ -1,0 +1,19 @@
+# static overrides for gitlab ci job
+deviceServers:
+  subarrays:
+    instances: [1]
+  stations:
+    instances: [1, 2]
+  beams:
+    instances: [1, 2]
+  tiles:
+    instances: [1, 6]
+
+minikube: false
+
+cli:
+  enabled: false
+
+tango-base:
+  itango:
+    enabled: false

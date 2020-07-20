@@ -44,9 +44,7 @@ class TestMccsStation:
         """
         Test for Initial state.
         A freshly initialised station device has no assigned resources
-        and is therefore in OFF state.
         """
-        assert device_under_test.State() == DevState.OFF
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE

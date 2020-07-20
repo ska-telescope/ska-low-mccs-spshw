@@ -37,9 +37,6 @@ from ska.base.commands import ResponseCommand, ResultCode
 
 class EventManager:
     def __init__(self, fqdn):
-        print("22222+++++++++++++++++++++++++++++")
-        print(tango.DeviceProxy)
-        print("22222-----------------------------")
         self._deviceProxy = tango.DeviceProxy(fqdn)
         self._eventIds = []
         self._event_names = []
@@ -126,6 +123,7 @@ class MccsStation(SKAObsDevice):
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
+            device._station_id = device.StationId
 
             device.set_change_event("subarrayId", True, True)
             device.set_archive_event("subarrayId", True, True)
@@ -140,16 +138,18 @@ class MccsStation(SKAObsDevice):
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
 
+            # subscribe to events from tiles
             device._eventManagerList = []
             for fqdn in device._tile_fqdns:
                 device._eventManagerList.append(EventManager(fqdn))
 
+            # create asychronous task to push station health & attributes
             device._streaming = False
             device._update_frequency = 1
             device._read_task = None
             device._lock = threading.Lock()
             device._create_long_running_task()
-            device._station_id = device.StationId
+
             return (ResultCode.OK, "Station Init complete")
 
     def always_executed_hook(self):

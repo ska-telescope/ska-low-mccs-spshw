@@ -1,0 +1,5 @@
+
+project:
+  image:
+    registry: CI_REGISTRY
+    tag: CI_TAG

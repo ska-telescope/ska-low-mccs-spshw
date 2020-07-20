@@ -1,0 +1,56 @@
+{{- define "tango-util.statefulset.tpl" -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "tango-util.deviceName" . }}
+  namespace: {{ .global.Release.Namespace }}
+  labels:
+{{ include "tango-util.metadata" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "tango-util.deviceName" . }}
+      chart: {{ template "tango-util.chart" .global }}
+      release: {{ .global.Release.Name }}
+  serviceName: {{ template "tango-util.deviceName" . }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+{{ include "tango-util.metadata" . | indent 8 }}
+        deviceServer: {{ include "tango-util.deviceInstance" . }}
+    spec:
+      initContainers:
+      - name: "init-{{ template "tango-util.deviceName" . }}"
+        image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
+        imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
+        command:
+          - /usr/local/bin/wait-for-it.sh
+          - {{ include "tango-util.databaseds" .global }}
+          - --timeout=30
+          - --strict
+      containers:
+      - name: {{ template "tango-util.deviceName" . }}
+        image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
+        imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
+        command:
+          - sh
+        args:
+{{ include "tango-util.deviceArgs" . | indent 10 }}
+        env:
+{{ include "tango-util.dbenv" .global |indent 8 }}
+        resources:
+{{ toYaml .global.Values.resources | indent 10 }}
+{{- with .global.Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .global.Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .global.Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- end -}}

@@ -51,3 +51,10 @@ unit-tests.xml
 
 # Miscellaneous
 .DS_Store
+
+# k8s deployment
+PrivateRules.mak
+Chart.lock
+tls.crt
+tls.key
+/test-results/*

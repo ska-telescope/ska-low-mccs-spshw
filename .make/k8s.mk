@@ -23,69 +23,35 @@ delete_namespace: ## delete the kubernetes namespace
 	kubectl describe namespace $(KUBE_NAMESPACE) && kubectl delete namespace $(KUBE_NAMESPACE); \
 	fi
 
-deploy: namespace mkcerts  ## deploy the helm chart
-	@helm template $(HELM_RELEASE) charts/$(HELM_CHART)/ \
-		--namespace $(KUBE_NAMESPACE) \
-		--set xauthority="$(XAUTHORITYx)" \
-		--set display="$(DISPLAY)" \
-		--set ingress.hostname=$(INGRESS_HOST) \
-		--set helmTests=false \
-		 | kubectl -n $(KUBE_NAMESPACE) apply -f -
+# minikube only 
+minikube_setup:
+	@test $$(kubectl config current-context | grep minikube) || exit 0; \
+	test ! -d $(MINIKUBE_TMP) && mkdir $(MINIKUBE_TMP); \
+	owner=$$(stat -c "%u:%g" $(MINIKUBE_TMP) ); \
+	if [ $$owner != "1000:1000" ]; \
+	then echo "changing permissions of $(MINIKUBE_TMP) to tango user (1000)"; \
+	sudo chown 1000:1000 $(MINIKUBE_TMP);fi
 
-deploy_all: namespace mkcerts ## deploy ALL of the helm chart
-	@for i in charts/*; do \
-	helm template $(HELM_RELEASE) $$i \
-				 --namespace $(KUBE_NAMESPACE) \
-	             --set display="$(DISPLAY)" \
-	             --set xauthority="$(XAUTHORITYx)" \
-				 --set ingress.hostname=$(INGRESS_HOST) \
-				 --set ingress.nginx=$(USE_NGINX) \
-	             --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl apply -f - ; \
-	done
-
-delete_all: ## delete ALL of the helm chart release
-	@for i in charts/*; do \
-	helm template $(HELM_RELEASE) $$i \
-				 --namespace $(KUBE_NAMESPACE) \
-	             --set display="$(DISPLAY)" \
-	             --set xauthority="$(XAUTHORITYx)" \
-				 --set ingress.hostname=$(INGRESS_HOST) \
-				 --set ingress.nginx=$(USE_NGINX) \
-	             --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl delete -f - ; \
-	done
-
-install: namespace mkcerts  ## install the helm chart
+deploy: minikube_setup namespace mkcerts depends  ## deploy the helm chart
 	@helm install $(HELM_RELEASE) charts/$(HELM_CHART)/ \
 		--namespace $(KUBE_NAMESPACE) \
-		--set xauthority="$(XAUTHORITYx)" \
-		--set display="$(DISPLAY)" \
-		--set ingress.hostname=$(INGRESS_HOST)
+		--set ingress.hostname=$(INGRESS_HOST) \
+		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) 
 
 show: mkcerts ## show the helm chart
 	@helm template $(HELM_RELEASE) charts/$(HELM_CHART)/ \
 		--namespace $(KUBE_NAMESPACE) \
-		--set xauthority="$(XAUTHORITYx)" \
-		--set display="$(DISPLAY)" \
-		--set ingress.hostname=$(INGRESS_HOST)
+		--set ingress.hostname=$(INGRESS_HOST) \
+		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES)
 
 chart_lint: ## lint check the helm chart
 	@helm lint charts/$(HELM_CHART)/ \
 		--namespace $(KUBE_NAMESPACE) \
 		--set ingress.hostname=$(INGRESS_HOST) \
-		--set xauthority="$(XAUTHORITYx)" \
-		--set display="$(DISPLAY)" \
+		$(CUSTOM_VALUES)
 
-delete: ## delete the helm chart release (without Tiller)
-	@helm template $(HELM_RELEASE) charts/$(HELM_CHART)/ \
-		--namespace $(KUBE_NAMESPACE) \
-		--set xauthority="$(XAUTHORITYx)" \
-		--set display="$(DISPLAY)" \
-		--set ingress.hostname=$(INGRESS_HOST) \
-		--set helmTests=false \
-		 | kubectl -n $(KUBE_NAMESPACE) delete -f -
-
-helm_delete: ## delete the helm chart release (with Tiller)
-	@helm uninstall $(HELM_RELEASE) --purge \
+delete: ## delete the helm chart release
+	@helm uninstall $(HELM_RELEASE) --namespace $(KUBE_NAMESPACE)
 
 describe: ## describe Pods executed from Helm chart
 	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -l app.kubernetes.io/instance=$(HELM_RELEASE) -o=name`; \
@@ -98,47 +64,25 @@ describe: ## describe Pods executed from Helm chart
 	echo ""; echo ""; echo ""; \
 	done
 
-logs_all: ## show all Helm chart POD logs
-	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -o=name`; \
+logs: ## show Helm chart POD logs
+	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -o=name -l deviceServer`; \
 	do \
 	echo "---------------------------------------------------"; \
 	echo "Logs for $${i}"; \
-	echo kubectl -n $(KUBE_NAMESPACE) logs $${i}; \
-	echo kubectl -n $(KUBE_NAMESPACE) get $${i} -o jsonpath="{.spec.initContainers[*].name}"; \
+	echo kubectl logs -n $(KUBE_NAMESPACE) $${i}; \
 	echo "---------------------------------------------------"; \
-	for j in `kubectl -n $(KUBE_NAMESPACE) get $${i} -o jsonpath="{.spec.initContainers[*].name}"`; do \
-	RES=`kubectl -n $(KUBE_NAMESPACE) logs $${i} -c $${j} 2>/dev/null`; \
-	echo "initContainer: $${j}"; echo "$${RES}"; \
-	echo "---------------------------------------------------";\
-	done; \
-	echo "Main Pod logs for $${i}"; \
+	kubectl logs -n $(KUBE_NAMESPACE) $${i}; \
 	echo "---------------------------------------------------"; \
-	for j in `kubectl -n $(KUBE_NAMESPACE) get $${i} -o jsonpath="{.spec.containers[*].name}"`; do \
-	RES=`kubectl -n $(KUBE_NAMESPACE) logs $${i} -c $${j} 2>/dev/null`; \
-	echo "Container: $${j}"; echo "$${RES}"; \
-	echo "---------------------------------------------------";\
-	done; \
-	echo "---------------------------------------------------"; \
-	echo ""; echo ""; echo ""; \
+	echo ""; \
 	done
 
-logs: ## show Helm chart POD logs
-	@POD=`kubectl -n $(KUBE_NAMESPACE) get pods -o=name |grep '$(HELM_CHART)-$(HELM_RELEASE)'`;\
-	echo "---------------------------------------------------"; \
-	echo "Main Pod logs for $${POD}"; \
-	echo "---------------------------------------------------"; \
-	for j in `kubectl -n $(KUBE_NAMESPACE) get $${POD} -o jsonpath="{.spec.containers[*].name}"`; do \
-	RES=`kubectl -n $(KUBE_NAMESPACE) logs $${POD} -c $${j} 2>/dev/null`; \
-	echo "Container: $${j}"; echo ""; echo "$${RES}"; \
-	echo "---------------------------------------------------";\
-	done;
-
-tail:  ## provide container=name
-	@POD=`kubectl -n $(KUBE_NAMESPACE) get pods -o=name |grep '$(HELM_CHART)-$(HELM_RELEASE)'`;\
-	if [ -z "$$container" ]; \
-	then echo "usage:";echo "  make tail container=<name>"; \
-	echo "names: "`kubectl -n $(KUBE_NAMESPACE) get $${POD} -o jsonpath="{.spec.containers[*].name}"`;exit 0; fi; \
-	kubectl -n $(KUBE_NAMESPACE) logs -f $${POD} -c $${container};
+tail:  ## provide alias=name
+	@POD=`kubectl -n $(KUBE_NAMESPACE) get pods -o=name -l deviceServer`;\
+	if [ -z "$$alias" ]; \
+	then echo "usage:";echo "  make tail alias=<name>"; \
+	echo "aliases: "`kubectl -n $(KUBE_NAMESPACE) get pod -o jsonpath='{.items[*].metadata.labels.deviceServer}'`;exit 0; fi; \
+	echo "kubectl -n $(KUBE_NAMESPACE) logs -f -l deviceServer=$${alias};" && \
+	kubectl -n $(KUBE_NAMESPACE) logs -f -l deviceServer=$${alias};
 
 localip:  ## set local Minikube IP in /etc/hosts file for Ingress $(INGRESS_HOST)
 	@new_ip=`minikube ip` && \
@@ -159,118 +103,40 @@ mkcerts:  ## Make dummy certificates for $(INGRESS_HOST) and Ingress
 	echo "SSL cert already exits in charts/$(HELM_CHART)/secrets ... skipping"; \
 	fi
 
-# Utility target to install Helm dependencies
-helm_dependencies:
-	@which helm ; rc=$$?; \
-	if [[ $$rc != 0 ]]; then \
-	curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3; \
-	chmod 700 get_helm.sh; \
-	./get_helm.sh; \
-	fi; \
-	helm version --client
-
-# Utility target to install K8s dependencies
-kubectl_dependencies:
-	@([ -n "$(KUBE_CONFIG_BASE64)" ] && [ -n "$(KUBECONFIG)" ]) || (echo "unset variables [KUBE_CONFIG_BASE64/KUBECONFIG] - abort!"; exit 1)
-	@which kubectl ; rc=$$?; \
-	if [[ $$rc != 0 ]]; then \
-		curl -L -o /usr/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl"; \
-		chmod +x /usr/bin/kubectl; \
-		mkdir -p /etc/deploy; \
-		echo $(KUBE_CONFIG_BASE64) | base64 -d > $(KUBECONFIG); \
-	fi
-	@echo -e "\nkubectl client version:"
-	@kubectl version --client
-	@echo -e "\nkubectl config view:"
-	@kubectl config view
-	@echo -e "\nkubectl config get-contexts:"
-	@kubectl config get-contexts
-	@echo -e "\nkubectl version:"
-	@kubectl version
-
 kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 	@KUBE_CONFIG_BASE64=`kubectl config view --flatten | base64 -w 0`; \
 	echo "KUBE_CONFIG_BASE64: $$(echo $${KUBE_CONFIG_BASE64} | cut -c 1-40)..."; \
 	echo "appended to: PrivateRules.mak"; \
 	echo -e "\n\n# base64 encoded from: kubectl config view --flatten\nKUBE_CONFIG_BASE64 = $${KUBE_CONFIG_BASE64}" >> PrivateRules.mak
 
-# run the test function
-# save the status
-# clean out build dir
-# print the logs minus the base64 encoded payload
-# pull out the base64 payload and unpack build/ dir
-# base64 payload is given a boundary "~~~~BOUNDARY~~~~" and extracted using perl
-# clean up the run to completion container
-# exit the saved status
-k8s_test: ## test the application on K8s
-	$(call k8s_test,test); \
-	  status=$$?; \
-	  rm -fr build; \
-	  kubectl --namespace $(KUBE_NAMESPACE) logs $(TEST_RUNNER) | perl -ne 'BEGIN {$$on=1;}; if (index($$_, "~~~~BOUNDARY~~~~")!=-1){$$on+=1;next;}; print if $$on % 2;'; \
-		kubectl --namespace $(KUBE_NAMESPACE) logs $(TEST_RUNNER) | \
-		perl -ne 'BEGIN {$$on=0;}; if (index($$_, "~~~~BOUNDARY~~~~")!=-1){$$on+=1;next;}; print if $$on % 2;' | \
-		base64 -d | tar -xzf -; \
-		kubectl --namespace $(KUBE_NAMESPACE) delete pod $(TEST_RUNNER); \
-	  exit $$status
+# run helm  test 
+integration_test: ## test the application on K8s
+	@helm test $(HELM_RELEASE) --namespace $(KUBE_NAMESPACE) --logs; \
+	test -n $(RDEBUG) && kubectl -n $(KUBE_NAMESPACE) describe pod integration-$(HELM_CHART)-$(HELM_RELEASE); \
+	yaml=$$(mktemp --suffix=.yaml); \
+	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(HELM_RELEASE)/" charts/test-fetcher.yaml >> $$yaml; \
+	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
+	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=30s -f $$yaml >/dev/null; \
+	mkdir -p $(TEST_RESULTS_DIR); kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR) > /dev/null; \
+	kubectl -n $(KUBE_NAMESPACE) delete pod -l transient > /dev/null; \
+	kubectl -n $(KUBE_NAMESPACE) delete -f $$yaml --now; rm $$yaml; \
+	echo "test report:"; \
+	cat $(TEST_RESULTS_DIR)/*; echo;
 
-rlint:  ## run lint check on Helm Chart using gitlab-runner
-	if [ -n "$(RDEBUG)" ]; then DEBUG_LEVEL=debug; else DEBUG_LEVEL=warn; fi && \
-	gitlab-runner --log-level $${DEBUG_LEVEL} exec $(EXECUTOR) \
-	--docker-privileged \
-	--docker-disable-cache=false \
-	--docker-host $(DOCKER_HOST) \
-	--docker-volumes  $(DOCKER_VOLUMES) \
-	--docker-pull-policy always \
-	--timeout $(TIMEOUT) \
-	--env "DOCKER_HOST=$(DOCKER_HOST)" \
-	--env "DOCKER_REGISTRY_USER_LOGIN=$(DOCKER_REGISTRY_USER_LOGIN)" \
-	--env "CI_REGISTRY_PASS_LOGIN=$(CI_REGISTRY_PASS_LOGIN)" \
-	--env "CI_REGISTRY=$(CI_REGISTRY)" \
-	lint-check-chart || true
+wait:
+	@echo "Waiting for device servers to be ready"
+	@date
+	@kubectl -n $(KUBE_NAMESPACE) get pods -l deviceServer
+	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -l deviceServer pods
+	@date
 
-# K8s testing with local gitlab-runner
-# Run the powersupply tests in the TEST_RUNNER run to completion Pod:
-#   set namespace
-#   install dependencies for Helm and kubectl
-#   deploy into namespace
-#   run test in run to completion Pod
-#   extract Pod logs
-#   set test return code
-#   delete
-#   delete namespace
-#   return result
-rk8s_test:  ## run k8s_test on K8s using gitlab-runner
-	if [ -n "$(RDEBUG)" ]; then DEBUG_LEVEL=debug; else DEBUG_LEVEL=warn; fi && \
-	KUBE_NAMESPACE=`git rev-parse --abbrev-ref HEAD | tr -dc 'A-Za-z0-9\-' | tr '[:upper:]' '[:lower:]'` && \
-	gitlab-runner --log-level $${DEBUG_LEVEL} exec $(EXECUTOR) \
-	--docker-privileged \
-	--docker-disable-cache=false \
-	--docker-host $(DOCKER_HOST) \
-	--docker-volumes  $(DOCKER_VOLUMES) \
-	--docker-pull-policy always \
-	--timeout $(TIMEOUT) \
-	--env "DOCKER_HOST=$(DOCKER_HOST)" \
-	--env "DOCKER_REGISTRY_USER_LOGIN=$(DOCKER_REGISTRY_USER_LOGIN)" \
-	--env "CI_REGISTRY_PASS_LOGIN=$(CI_REGISTRY_PASS_LOGIN)" \
-	--env "CI_REGISTRY=$(CI_REGISTRY)" \
-	--env "KUBE_CONFIG_BASE64=$(KUBE_CONFIG_BASE64)" \
-	--env "KUBECONFIG=$(KUBECONFIG)" \
-	--env "KUBE_NAMESPACE=$${KUBE_NAMESPACE}" \
-	test-chart || true
-
-
-helm_tests:  ## run Helm chart tests 
-	helm test --name $(HELM_RELEASE) --cleanup
-
-ingress_check:  ## curl test Tango REST API - https://tango-controls.readthedocs.io/en/latest/development/advanced/rest-api.html#tango-rest-api-implementations
-	@echo "---------------------------------------------------"
-	@echo "Test HTTP:"; echo ""
-	curl -u "tango-cs:tango" -XGET http://$(INGRESS_HOST)/tango/rest/rc4/hosts/databaseds-tango-example-$(HELM_RELEASE)/10000 | json_pp
-	@echo "", echo ""
-	@echo "---------------------------------------------------"
-	@echo "Test HTTPS:"; echo ""
-	curl -k -u "tango-cs:tango" -XGET https://$(INGRESS_HOST)/tango/rest/rc4/hosts/databaseds-tango-example-$(HELM_RELEASE)/10000 | json_pp
-	@echo ""
+bounce:
+	@chart_version=$$(helm -n $(KUBE_NAMESPACE) show chart charts/$(HELM_CHART) |grep version|tail -n 1| awk '{print $$NF;}'); \
+	echo "stopping ..."; \
+	kubectl -n $(KUBE_NAMESPACE) scale --replicas=0 statefulset.apps -l chart=$(HELM_CHART)-$$chart_version; \
+	echo "starting ..."; \
+	kubectl -n $(KUBE_NAMESPACE) scale --replicas=1 statefulset.apps -l chart=$(HELM_CHART)-$$chart_version; \
+	echo "WARN: 'make wait' for terminating pods not possible. Use 'make watch'"
 
 help:  ## show this help.
 	@echo "make targets:"
@@ -278,32 +144,14 @@ help:  ## show this help.
 	@echo ""; echo "make vars (+defaults):"
 	@grep -hE '^[0-9a-zA-Z_-]+ \?=.*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = " ?= "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\#\#/  \#/'
 
-smoketest: ## check that the number of waiting containers is zero (10 attempts, wait time 30s).
-	@echo "Smoke test START"; \
-	n=10; \
-	while [ $$n -gt 0 ]; do \
-		waiting=`kubectl get pods -n $(KUBE_NAMESPACE) -o=jsonpath='{.items[*].status.containerStatuses[*].state.waiting.reason}' | wc -w`; \
-		echo "Waiting containers=$$waiting"; \
-		if [ $$waiting -ne 0 ]; then \
-			echo "Waiting 30s for pods to become running...#$$n"; \
-			sleep 30s; \
-		fi; \
-		if [ $$waiting -eq 0 ]; then \
-			echo "Smoke test SUCCESS"; \
-			exit 0; \
-		fi; \
-		if [ $$n -eq 1 ]; then \
-			waiting=`kubectl get pods -n $(KUBE_NAMESPACE) -o=jsonpath='{.items[*].status.containerStatuses[*].state.waiting.reason}' | wc -w`; \
-			echo "Smoke test FAILS"; \
-			echo "Found $$waiting waiting containers: "; \
-			kubectl get pods -n $(KUBE_NAMESPACE) -o=jsonpath='{range .items[*].status.containerStatuses[?(.state.waiting)]}{.state.waiting.message}{"\n"}{end}'; \
-			exit 1; \
-		fi; \
-		n=`expr $$n - 1`; \
-	done
-
-cli:
-	kubectl exec -it -n integration mccs-$(HELM_CHART)-$(HELM_RELEASE) --container mccs-cli  -- bash
+smoketest:
+	@echo "Smoke test START"
 
 itango:
 	kubectl exec -it -n $(KUBE_NAMESPACE) itango-tango-base-$(HELM_RELEASE)  -- itango3
+
+cli:
+	kubectl exec -it -n $(KUBE_NAMESPACE) cli-$(HELM_CHART)-$(HELM_RELEASE)  -- bash
+
+depends:
+	helm dependency update charts/$(HELM_CHART)/ 

@@ -32,6 +32,15 @@ deploy: namespace mkcerts  ## deploy the helm chart
 		--set helmTests=false \
 		 | kubectl -n $(KUBE_NAMESPACE) apply -f -
 
+deploy_mccs: namespace mkcerts ## deploy MCCS helm chart
+	helm template $(HELM_RELEASE) charts/mccs/ \
+		--namespace $(KUBE_NAMESPACE) \
+                --set display="$(DISPLAY)" \
+                --set xauthority="$(XAUTHORITYx)" \
+                --set ingress.hostname=$(INGRESS_HOST) \
+                --set ingress.nginx=$(USE_NGINX) \
+                --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl apply -f -
+
 deploy_all: namespace mkcerts ## deploy ALL of the helm chart
 	@for i in charts/*; do \
 	helm template $(HELM_RELEASE) $$i \
@@ -53,6 +62,15 @@ delete_all: ## delete ALL of the helm chart release
 				 --set ingress.nginx=$(USE_NGINX) \
 	             --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl delete -f - ; \
 	done
+
+delete_mccs: ## delete MCCS helm chart release
+	helm template $(HELM_RELEASE) charts/mccs/ \
+		--namespace $(KUBE_NAMESPACE) \
+                --set display="$(DISPLAY)" \
+                --set xauthority="$(XAUTHORITYx)" \
+                --set ingress.hostname=$(INGRESS_HOST) \
+                --set ingress.nginx=$(USE_NGINX) \
+                --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl delete -f -
 
 install: namespace mkcerts  ## install the helm chart
 	@helm install $(HELM_RELEASE) charts/$(HELM_CHART)/ \

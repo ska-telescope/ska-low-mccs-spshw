@@ -19,6 +19,8 @@ import fire
 import tango
 from ska.low.mccs.utils import call_with_json
 
+from ska.base.commands import ResultCode
+
 
 class CliMeta(type):
     """Metaclass to catch and disect `PyTango.DevFailed` and other exceptions for
@@ -43,6 +45,21 @@ class CliMeta(type):
                 raise fire.core.FireError(str(ex))
 
         return wrapper
+
+
+def format_wrapper(method):
+    """
+    Wrapper to format device command results as a two-line string
+    """
+
+    @functools.wraps(method)
+    def wrapper(*args, **kwargs):
+        reslist = method(*args, **kwargs)
+        return (
+            f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
+        )
+
+    return wrapper
 
 
 class MccsMasterCli(metaclass=CliMeta):
@@ -104,40 +121,49 @@ class MccsMasterCli(metaclass=CliMeta):
             self._dp.logginglevel = elevel
         return self._dp.logginglevel.name
 
+    @format_wrapper
     def on(self):
-        self._dp.command_inout("On")
+        return self._dp.command_inout("On")
 
+    @format_wrapper
     def off(self):
-        self._dp.command_inout("Off")
+        return self._dp.command_inout("Off")
 
+    @format_wrapper
     def standbylow(self):
-        self._dp.command_inout("StandbyLow")
+        return self._dp.command_inout("StandbyLow")
 
+    @format_wrapper
     def standbyfull(self):
-        self._dp.command_inout("StandbyFull")
+        return self._dp.command_inout("StandbyFull")
 
+    @format_wrapper
     def operate(self):
-        self._dp.command_inout("Operate")
+        return self._dp.command_inout("Operate")
 
+    @format_wrapper
     def reset(self):
-        self._dp.command_inout("Reset")
+        return self._dp.command_inout("Reset")
 
+    @format_wrapper
     def enablesubarray(self, subarray_id):
         """Enable given subarray
 
         :param subarray_id: the id of the subarray
         :type subarray_id: int
         """
-        self._dp.command_inout("EnableSubarray", subarray_id)
+        return self._dp.command_inout("EnableSubarray", subarray_id)
 
+    @format_wrapper
     def disablesubarray(self, subarray_id):
         """Disable given subarray
 
         :param subarray_id: the id of the subarray
         :type subarray_id: int
         """
-        self._dp.command_inout("DisableSubarray", subarray_id)
+        return self._dp.command_inout("DisableSubarray", subarray_id)
 
+    @format_wrapper
     def allocate(self, subarray_id=0, stations=None):
         """
         Args:
@@ -152,24 +178,28 @@ class MccsMasterCli(metaclass=CliMeta):
             fqdn = "low/elt/station_{}".format(station)
             station_fqdns.append(fqdn)
             station_proxies.append(tango.DeviceProxy(fqdn))
+        message = self._dp.Allocate
         call_with_json(
-            self._dp.Allocate, subarray_id=subarray_id, stations=station_fqdns,
+            message, subarray_id=subarray_id, stations=station_fqdns,
         )
         for proxy in station_proxies:
             status = proxy.adminmode.name
             name = proxy.name()
             print(f"{name}: {status}")
+        return message
 
+    @format_wrapper
     def release(self, subarray_id):
         """Release given subarray
 
         :param subarray_id: the id of the subarray
         :type subarray_id: int
         """
-        self._dp.command_inout("Release", subarray_id)
+        return self._dp.command_inout("Release", subarray_id)
 
+    @format_wrapper
     def maintenance(self):
-        self._dp.command_inout("Maintenance")
+        return self._dp.command_inout("Maintenance")
 
 
 def main():

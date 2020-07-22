@@ -12,6 +12,8 @@ import fire
 import json
 import tango
 
+from ska.base.commands import ResultCode
+
 
 class CliMeta(type):
     """Metaclass to catch and disect `tango.DevFailed` and other exceptions for
@@ -38,14 +40,31 @@ class CliMeta(type):
         return wrapper
 
 
+def commandResultAsString(method):
+    """
+    Wrapper to format device command results as a two-line string
+    """
+
+    @functools.wraps(method)
+    def wrapper(*args, **kwds):
+        reslist = method(*args, **kwds)
+        # The commands convert the command tuple to the form [[return_code], [message]]
+        return (
+            f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
+        )
+
+    return wrapper
+
+
 class MccsTileCli(metaclass=CliMeta):
     def __init__(self):
         self.tile_number = 1
         self._dp = tango.DeviceProxy(f"low/elt/tile_{self.tile_number}")
 
+    @commandResultAsString
     def connect(self):
         """Connect to the hardware"""
-        self._dp.command_inout("connect", True)
+        return self._dp.command_inout("connect", True)
 
     def subarrayid(self):
         """return the id of the subarray the tike has been allocated to"""
@@ -64,6 +83,7 @@ class MccsTileCli(metaclass=CliMeta):
             self._dp.logginglevel = elevel
         return self._dp.logginglevel.name
 
+    @commandResultAsString
     def SendBeamData(self, period=0, timeout=0, timestamp=None, seconds=0.2):
         dict = {
             "Period": period,
@@ -72,8 +92,9 @@ class MccsTileCli(metaclass=CliMeta):
             "Seconds": seconds,
         }
         jstr = json.dumps(dict)
-        self._dp.command_inout("SendBeamData", jstr)
+        return self._dp.command_inout("SendBeamData", jstr)
 
+    @commandResultAsString
     def SendChannelisedDataContinuous(
         self,
         channelID=None,
@@ -93,10 +114,11 @@ class MccsTileCli(metaclass=CliMeta):
                 "Seconds": seconds,
             }
             jstr = json.dumps(dict)
-            self._dp.command_inout("SendChannelisedDataContinuous", jstr)
+            return self._dp.command_inout("SendChannelisedDataContinuous", jstr)
         except tango.DevFailed:
             raise RuntimeError("ChannelID mandatory argument...cannot be a NULL value")
 
+    @commandResultAsString
     def SendChannelisedData(
         self,
         nSamples=128,
@@ -117,8 +139,9 @@ class MccsTileCli(metaclass=CliMeta):
             "Seconds": seconds,
         }
         jstr = json.dumps(dict)
-        self._dp.command_inout("SendChannelisedData", jstr)
+        return self._dp.command_inout("SendChannelisedData", jstr)
 
+    @commandResultAsString
     def SendRawData(self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2):
         dict = {
             "Sync": sync,
@@ -128,24 +151,31 @@ class MccsTileCli(metaclass=CliMeta):
             "Seconds": seconds,
         }
         jstr = json.dumps(dict)
-        self._dp.command_inout("SendRawData", jstr)
+        return self._dp.command_inout("SendRawData", jstr)
 
+    @commandResultAsString
     def ConfigureIntegratedBeamData(self, integration_time=0.5):
-        self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
+        return self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
+    @commandResultAsString
     def ConfigureIntegratedChannelData(self, integration_time=0.5):
-        self._dp.command_inout("ConfigureIntegratedChannelData", integration_time)
+        return self._dp.command_inout(
+            "ConfigureIntegratedChannelData", integration_time
+        )
 
+    @commandResultAsString
     def StartBeamformer(self, startTime=0, duration=-1):
         dict = {"StartTime": startTime, "Duration": duration}
         jstr = json.dumps(dict)
-        self._dp.command_inout("StartBeamformer", jstr)
+        return self._dp.command_inout("StartBeamformer", jstr)
 
+    @commandResultAsString
     def StopBeamformer(self):
-        self._dp.command_inout("StopBeamformer")
+        return self._dp.command_inout("StopBeamformer")
 
+    @commandResultAsString
     def LoadPointingDelay(self, load_time=0):
-        self._dp.command_inout("LoadPointingDelay", load_time)
+        return self._dp.command_inout("LoadPointingDelay", load_time)
 
 
 def main():

@@ -25,7 +25,7 @@ from ska.low.mccs import MccsTile
 from ska.base.control_model import TestMode
 from ska.base.commands import ResultCode
 
-device_info = {"class": MccsTile, "properties": {"AntennasPerTile": "16"}}
+device_info = {"class": MccsTile, "properties": {"TileId": 1, "AntennasPerTile": "16"}}
 
 
 class TestMccsTile(object):
@@ -39,7 +39,7 @@ class TestMccsTile(object):
 
     def test_tileId(self, device_under_test):
         """Test for the tileId attribute."""
-        assert device_under_test.tileID == 0
+        assert device_under_test.tileID == 1
         device_under_test.tileID = 9
         assert device_under_test.tileID == 9
 
@@ -115,7 +115,7 @@ class TestMccsTile(object):
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the voltage has been read and cached
-        time.sleep(1.2)
+        time.sleep(2)
         assert device_under_test.voltage == 5.0
 
     def test_current(self, device_under_test):
@@ -124,7 +124,7 @@ class TestMccsTile(object):
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the current has been read and cached
-        time.sleep(1.2)
+        time.sleep(2)
         device_under_test.current == 0.4
 
     def test_isProgrammed(self, device_under_test):
@@ -138,7 +138,7 @@ class TestMccsTile(object):
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the temperature has been read and cached
-        time.sleep(1.2)
+        time.sleep(2)
         assert device_under_test.board_temperature == 36.0
 
     def test_fpga1_temperature(self, device_under_test):
@@ -147,7 +147,7 @@ class TestMccsTile(object):
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the temperature has been read and cached
-        time.sleep(1.2)
+        time.sleep(2)
         assert device_under_test.fpga1_temperature == 38.0
 
     def test_fpga2_temperature(self, device_under_test):
@@ -156,7 +156,7 @@ class TestMccsTile(object):
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the temperature has been read and cached
-        time.sleep(1.2)
+        time.sleep(2)
         assert device_under_test.fpga2_temperature == 37.5
 
     def test_fpga1_time(self, device_under_test):

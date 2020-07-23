@@ -2626,7 +2626,7 @@ class MccsTile(SKABaseDevice):
             try:
                 # if connected read the values from tpm
                 if self._tpm is not None and self._is_connected:
-                    self.logger.info("stream on")
+                    self.logger.debug("stream on")
                     volts = self._tpm.voltage()
                     curr = self._tpm.current()
                     temp = self._tpm.temperature()
@@ -2676,6 +2676,8 @@ class MccsTile(SKABaseDevice):
                         else:
                             self.set_state(saved_state)
                             self._healthState = HealthState.OK
+                else:
+                    self._healthState = HealthState.UNKNOWN
             except Exception as exc:
                 self._healthState = HealthState.FAILED
                 self.set_state(DevState.FAULT)

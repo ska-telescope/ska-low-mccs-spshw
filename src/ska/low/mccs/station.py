@@ -21,7 +21,6 @@ import threading
 import tango
 from tango import DebugIt
 from tango import DevState
-from tango import EventType
 from tango import GreenMode
 from tango import futures_executor
 from tango.server import device_property
@@ -32,44 +31,8 @@ from ska.base import SKAObsDevice
 
 # from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
+from ska.low.mccs.utils import EventManager
 from ska.base.commands import ResponseCommand, ResultCode
-
-
-class EventManager:
-    def __init__(self, fqdn):
-        self._deviceProxy = tango.DeviceProxy(fqdn)
-        self._eventIds = []
-        self._event_names = []
-        # TODO: need to deal with device not running or restarted!!!!!!!!!!
-        try:
-            # Always subscribe to state change, it's pushed by the base classes
-            id = self._deviceProxy.subscribe_event(
-                "state", EventType.CHANGE_EVENT, self, stateless=True
-            )
-            self._eventIds.append(id)
-            self._event_names = self._deviceProxy.event_names
-            if isinstance(self._event_names, list):
-                for event_name in self._event_names:
-                    print("subscribing to ", event_name)
-                    id = self._deviceProxy.subscribe_event(
-                        event_name, EventType.CHANGE_EVENT, self, stateless=True
-                    )
-                    self._eventIds.append(id)
-        except tango.DevFailed as df:
-            print(df)
-
-    def unsubscribe(self):
-        for eventId in self._eventIds:
-            self._deviceProxy.unsubscribe_event(eventId)
-
-    def push_event(self, ev):
-        if ev.attr_value is not None and ev.attr_value.value is not None:
-            print("----------------------------")
-            print("Event @ ", ev.get_date())
-            print(self._deviceProxy.name())
-            print(ev.attr_value.name)
-            print(ev.attr_value.value)
-            print(ev.attr_value.quality)
 
 
 class MccsStation(SKAObsDevice):
@@ -361,12 +324,7 @@ class MccsStation(SKAObsDevice):
                 proxy.subarrayId = device._subarray_id
                 proxy.stationId = device._station_id
                 proxy.logicalTileId = id + 1
-                print(proxy)
-                print(f"tileId {proxy.tileId}")
-                print(f"logicalTpmId {proxy.logicalTileId}")
                 proxy.command_inout("Connect", True)
-                print(proxy.adcPower)
-                print(proxy.command_inout("GetRegisterList"))
 
             #             self._beams = []
             #             for id, beam in enumerate(self._beam_fqdns):

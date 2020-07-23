@@ -21,7 +21,7 @@ from ska.low.mccs import MccsStation, release
 
 device_info = {
     "class": MccsStation,
-    "properties": {"TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
+    "properties": {"StationId": 1, "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
 }
 
 
@@ -31,14 +31,13 @@ class TestMccsStation:
     Test class for MccsStation tests
     """
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_properties(self, device_under_test):
         """
         Test the properties. Not implemented.
         """
-        pass
+        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
+        assert device_under_test.StationId == 1
 
-    @pytest.mark.mock_device_proxy
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
@@ -63,18 +62,18 @@ class TestMccsStation:
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
 
+    # overridden base class attributes
+    def test_buildState(self, device_under_test):
+        """Test for buildState"""
+        build_info = release.get_release_info()
+        assert device_under_test.buildState == build_info
+
     # overridden base class commands
     @pytest.mark.mock_device_proxy
     def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
-
-    # overridden base class attributes
-    def test_buildState(self, device_under_test):
-        """Test for buildState"""
-        build_info = release.get_release_info()
-        assert device_under_test.buildState == build_info
 
     def test_versionId(self, device_under_test):
         """Test for versionId"""

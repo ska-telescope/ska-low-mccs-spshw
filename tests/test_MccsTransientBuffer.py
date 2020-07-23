@@ -11,13 +11,8 @@
 """
 This module contains the tests for MccsTransientBuffer.
 """
-import tango
-import pytest
-from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.control_model import LoggingLevel
-from ska.low.mccs import MccsTransientBuffer, release
-
-from ska.base.commands import ResultCode
+from ska.low.mccs import MccsTransientBuffer
 
 device_info = {
     "class": MccsTransientBuffer,

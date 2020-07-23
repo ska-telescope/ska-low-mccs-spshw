@@ -10,6 +10,7 @@ __all__ = [
     "MccsTileSimulator",
     "MccsTelState",
     "MccsTransientBuffer",
+    "MccsClusterManager",
     "control_model",
 ]
 
@@ -23,3 +24,4 @@ from .tile import MccsTile
 from .antenna import MccsAntenna
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer
+from .cluster_manager import MccsClusterManager

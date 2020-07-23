@@ -30,7 +30,7 @@ class TestMccsTransientBuffer(object):
         assert device_under_test.loggingLevel == LoggingLevel.INFO
 
     def test_stationId(self, device_under_test):
-        """Test for antennaId"""
+        """Test for stationId"""
         assert device_under_test.stationId == ""
 
     def test_transientBufferJobId(self, device_under_test):

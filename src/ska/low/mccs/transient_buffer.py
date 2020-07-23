@@ -7,27 +7,18 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MCCS MVP Project
+""" LFAA Transient Buffer Device Server
 
+An implementation of the Transient Buffer Device Server for the MCCS based upon
+architecture in SKA-TEL-LFAA-06000052-02.
 """
 
 # PyTango imports
-import tango
-from tango import DebugIt
-from tango.server import run
-from tango.server import Device
-from tango.server import attribute, command
-from tango.server import device_property
-from tango import AttrQuality, DispLevel, DevState
-from tango import AttrWriteType, PipeWriteType
-import enum
+from tango.server import attribute
 from ska.low.mccs import MccsDevice
 
-# Local imports
-import ska.low.mccs.release as release
-
 # Additional import
-from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.commands import ResultCode
 
 __all__ = ["MccsTransientBuffer", "main"]
 

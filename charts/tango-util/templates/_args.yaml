@@ -1,0 +1,16 @@
+{{- /*
+Generate arguments to start the device server process.
+Default can be changed via 'deviceServers.<server>.args'
+*/ -}}
+{{- define "tango-util.deviceArgs" -}}
+{{- if .device.args -}}
+{{- toYaml .device.args -}}
+{{- else -}}
+{{- $prefix := (.global.Values.project.name |camelcase) -}}
+{{- $serverName := printf "%s%s" $prefix (default ( .device.name | camelcase) .device.serverName) -}}
+{{- $waitDevice := default "low/elt/master" .global.Values.deviceServers.master.fqdn -}}
+- -c
+- "retry --max=10 -- tango_admin --ping-device {{ $waitDevice }} &&
+{{- printf " %s %s\"" $serverName (include "tango-util.deviceInstance" .) }}
+{{- end -}}
+{{- end -}}

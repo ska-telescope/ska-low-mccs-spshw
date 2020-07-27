@@ -1,0 +1,6 @@
+{{- define "tango-util.metadata" -}}
+app: {{ template "tango-util.deviceName" . }}
+chart: {{ template "tango-util.chart" .global }}
+release: {{ .global.Release.Name | quote }}
+heritage: {{ .global.Release.Service | quote  }}
+{{- end -}}

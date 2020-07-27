@@ -34,6 +34,13 @@ HELM_VERSION = v3.1.2
 # kubectl version
 KUBERNETES_VERSION = v1.18.2
 
+# minikube needs a Persistent Volume modified to be writable by the tango
+# user/group 1000. This will require sudo access in "make create_tmp"
+MINIKUBE_TMP = /tmp/minikube-tango
+
+# where to put the output of "make integration_test"
+TEST_RESULTS_DIR = test-results
+
 # Docker, K8s and Gitlab CI variables
 # gitlab-runner debug mode - turn on with non-empty value
 RDEBUG ?=
@@ -46,9 +53,20 @@ DOCKER_VOLUMES ?= /var/run/docker.sock:/var/run/docker.sock
 # registry credentials - user/pass/registry - set these in PrivateRules.mak
 DOCKER_REGISTRY_USER_LOGIN ?=  ## registry credentials - user - set in PrivateRules.mak
 CI_REGISTRY_PASS_LOGIN ?=  ## registry credentials - pass - set in PrivateRules.mak
-CI_REGISTRY ?= gitlab.com/ska-telescope/lfaa-mccs-protoype
+CI_REGISTRY ?= gitlab.com/ska-telescope/$(PROJECT)
 KUBE_CONFIG_BASE64 ?=  ## base64 encoded kubectl credentials for KUBECONFIG
 KUBECONFIG ?= /etc/deploy/config ## KUBECONFIG location
+
+# Run from local image only, requires either a pulled or local image 
+CUSTOM_VALUES ?= --set project.image.pullPolicy=Never
+
+ifneq ($(CI_JOB_ID),)
+CI_PROJECT_IMAGE := 
+CUSTOM_VALUES = --set project.image.registry=$(CI_REGISTRY)/ska-telescope \
+	--set project.image.tag=$(CI_COMMIT_SHORT_SHA) \
+	-f values-gitlab-ci.yaml
+else
+endif
 
 XAUTHORITYx ?= ${XAUTHORITY}
 
@@ -75,4 +93,4 @@ include .make/release.mk
 include .make/docker.mk
 include .make/k8s.mk
 
-.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete_namespace ingress_check kubeconfig kubectl_dependencies helm_dependencies rk8s_test k8s_test rlint
+.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete_namespace ingress_check kubeconfig  rk8s_test k8s_test rlint

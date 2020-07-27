@@ -1,0 +1,18 @@
+{{- /*
+Generate databaseds connection string
+Can be changed via 'tangodbPrefix' and 'tangodbPort'
+*/ -}}
+{{- define "tango-util.databaseds" -}}
+{{- $ds := default "databaseds-tango-base" .Values.tangodbPrefix -}}
+{{- $tbrelease := default .Release.Name .Values.tangodbRelease -}}
+{{- $port := default 10000 .Values.tangodbPort -}}
+{{- (printf "%s-%s:%s" $ds $tbrelease ($port | toString)) | quote -}}
+{{- end -}}
+
+{{- /*
+Generate TANGO_HOST env
+*/ -}}
+{{- define "tango-util.dbenv" -}}
+- name: TANGO_HOST
+  value: {{ include "tango-util.databaseds" . }}
+{{- end -}}

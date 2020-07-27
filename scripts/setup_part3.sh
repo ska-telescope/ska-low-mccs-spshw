@@ -1,0 +1,108 @@
+#!/bin/bash
+curl -X POST --insecure -H "Authorization: Bearer eyJrIjoieUd5RXJ4eEZvVWpSUG5JQTlwalFRNnNmNUdodlE4U0kiLCJuIjoibWNjc19kYXNoYm9hcmQiLCJpZCI6MX0=" -H "Content-Type: application/json" -d '{
+"dashboard": {
+    "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 1595583008861,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "description": "Attribute list for device $device",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 21,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "id": 19,
+      "options": {
+        "dense": true,
+        "header": true,
+        "pagination": true,
+        "tablehead": true
+      },
+      "targets": [
+        {
+          "expr": "device_attribute{device=~\"$device\"}  ",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Attribute list for device $device",
+      "type": "inaf-ska-tango-device-view"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 25,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": "",
+        "current": {
+          "selected": false,
+          "text": "low/elt/master",
+          "value": "low/elt/master"
+        },
+        "datasource": "Prometheus",
+        "definition": "label_values(device_attribute, device)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "device",
+        "options": [],
+        "query": "label_values(device_attribute, device)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-5s",
+    "to": "now"
+  },
+  "timepicker": {
+    "nowDelay": "",
+    "refresh_intervals": []
+  },
+  "timezone": "",
+  "title": "MCCS Device Dashboard",
+  "uid": "HxL_Yi4Mk",
+  "version": 0
+  },
+  "overwrite": true
+}' http://grafana.integration.engageska-portugal.pt/api/dashboards/db

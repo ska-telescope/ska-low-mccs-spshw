@@ -78,7 +78,7 @@ class MccsAPIU(MccsGroupDevice):
             device._overCurrentThreshold = 0.0
             device._overVoltageThreshold = 0.0
             device._humidityThreshold = 0.0
-            device._logicalAntennaId = [0]
+            device._logicalAntennaId = []
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
@@ -106,6 +106,11 @@ class MccsAPIU(MccsGroupDevice):
         """Return the voltage attribute."""
         return self._voltage
 
+    @voltage.write
+    def voltage(self, value):
+        """Set the voltage attribute."""
+        self._voltage = value
+
     @attribute(
         dtype="DevDouble",
         access=AttrWriteType.READ_WRITE,
@@ -116,6 +121,11 @@ class MccsAPIU(MccsGroupDevice):
         """Return the current attribute."""
         return self._current
 
+    @current.write
+    def current(self, value):
+        """Set the current attribute."""
+        self._current = value
+
     @attribute(
         dtype="DevDouble",
         access=AttrWriteType.READ_WRITE,
@@ -125,6 +135,11 @@ class MccsAPIU(MccsGroupDevice):
     def temperature(self):
         """Return the temperature attribute."""
         return self._temperature
+
+    @temperature.write
+    def temperature(self, value):
+        """Set the temperature attribute."""
+        self._temperature = value
 
     @attribute(
         dtype="DevDouble",
@@ -138,8 +153,13 @@ class MccsAPIU(MccsGroupDevice):
         """Return the humidity attribute."""
         return self._humidity
 
+    @humidity.write
+    def humidity(self, value):
+        """Set the humidity attribute."""
+        self._humidity = value
+
     @attribute(
-        dtype="DevBoolean", access=AttrWriteType.READ_WRITE, label="Is alive?",
+        dtype="DevBoolean", access=AttrWriteType.READ, label="Is alive?",
     )
     def isAlive(self):
         """Return the isAlive attribute"""
@@ -155,6 +175,11 @@ class MccsAPIU(MccsGroupDevice):
         """Return the overCurrentThreshold attribute"""
         return self._overCurrentThreshold
 
+    @overCurrentThreshold.write
+    def overCurrentThreshold(self, value):
+        """Set the overCurrentThreshold attribute."""
+        self._overCurrentThreshold = value
+
     @attribute(
         dtype="DevDouble",
         access=AttrWriteType.READ_WRITE,
@@ -164,6 +189,11 @@ class MccsAPIU(MccsGroupDevice):
     def overVoltageThreshold(self):
         """Return the overVoltageThreshold attribute"""
         return self._overVoltageThreshold
+
+    @overVoltageThreshold.write
+    def overVoltageThreshold(self, value):
+        """Set the overVoltageThreshold attribute."""
+        self._overVoltageThreshold = value
 
     @attribute(
         dtype="DevDouble",
@@ -175,8 +205,13 @@ class MccsAPIU(MccsGroupDevice):
         """Return the humidityThreshold attribute"""
         return self._humidityThreshold
 
+    @humidityThreshold.write
+    def humidityThreshold(self, value):
+        """Set the humidity attribute."""
+        self._humidity = value
+
     @attribute(
-        dtype=("DevULong",), access=AttrWriteType.READ_WRITE, max_dim_x=100,
+        dtype=("DevULong",), access=AttrWriteType.READ, max_dim_x=100,
     )
     def logicalAntennaId(self):
         """Return the logicalAntennaId attribute"""

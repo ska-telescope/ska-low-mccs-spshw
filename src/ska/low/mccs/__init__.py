@@ -1,6 +1,7 @@
 """ Mccs device module """
 
 __all__ = [
+    "MccsAPIU",
     "MccsMaster",
     "MccsSubarray",
     "MccsStation",
@@ -16,6 +17,7 @@ __all__ = [
 
 from .device import MccsDevice  # noqa: F401
 from .group_device import MccsGroupDevice  # noqa: F401
+from .apiu import MccsAPIU
 from .master import MccsMaster
 from .subarray import MccsSubarray
 from .station import MccsStation

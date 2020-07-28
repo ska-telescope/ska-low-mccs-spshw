@@ -92,10 +92,9 @@ kubectl config view
 eval $(minikube docker-env)
 # Navigate to the MCCS scripts folder
 cd ska-low-mccs/scripts
-# Run setup part1 - skampi, tango-base and webjive
-./setup_part1.sh
-# Run setup part2 - Traefik, TANGO-grafana, make install-chart
-./setup_part2.sh
+# Run setup script - installs tango-base, webjive, Traefik and
+# TANGO-grafana charts
+./setup_tango_grafana.sh
 cd ..
 # Create an ska-low-mccs:latest docker image reflecting the repository
 make devimage
@@ -128,6 +127,7 @@ admin:admin
 * Open Dashboards->Manage->examples->Tango Dashboard
 * select device: low/alt/master
 * Attribute list can be seen on the right hand side half way down the dashboard
+* Change dashboard time-span: From: now-5s To: now
 * You can then open the CLI to interact with master and observe changes in Grafana dashboard
 ```bash
 make cli

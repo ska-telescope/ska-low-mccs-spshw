@@ -12,11 +12,13 @@
 """
 This module contains the tests for the MccsAntenna.
 """
+import time
 import pytest
 import tango
 
 from ska.base.control_model import (
     ControlMode,
+    TestMode,
     SimulationMode,
     HealthState,
     LoggingLevel,
@@ -93,11 +95,15 @@ class TestMccsAntenna(object):
 
     def test_voltage(self, device_under_test):
         """Test for voltage"""
-        assert device_under_test.voltage == 0.0
+        device_under_test.testMode = TestMode.TEST
+        time.sleep(1.1)
+        assert device_under_test.voltage == 3.5
 
     def test_temperature(self, device_under_test):
         """Test for temperature"""
-        assert device_under_test.temperature == 0.0
+        device_under_test.testMode = TestMode.TEST
+        time.sleep(1.1)
+        assert device_under_test.temperature == 20.6
 
     def test_xPolarisationFaulty(self, device_under_test):
         """Test for xPolarisationFaulty"""

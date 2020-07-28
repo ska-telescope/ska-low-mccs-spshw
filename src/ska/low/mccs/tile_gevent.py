@@ -15,22 +15,21 @@ __all__ = ["MccsTile", "main"]
 
 import json
 import numpy as np
-import threading
-import time
 
 # PyTango imports
-from tango import DebugIt, DevState
+from tango import DebugIt
 from tango import GreenMode
 from tango.server import attribute, command
 from tango.server import device_property
-from tango import futures_executor
 
 # Additional import
+import gevent
+from gevent import lock
 
 # from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
-from ska.base.control_model import HealthState, SimulationMode, TestMode, LoggingLevel
+from ska.base.control_model import SimulationMode, TestMode, LoggingLevel
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 
@@ -43,7 +42,7 @@ class MccsTile(SKABaseDevice):
     - Device Property
     """
 
-    green_mode = GreenMode.Futures
+    green_mode = GreenMode.Gevent
 
     # -----------------
     # Device Properties
@@ -104,32 +103,14 @@ class MccsTile(SKABaseDevice):
             device._adc_power = []
             device._sampling_rate = 0.0
             device._tpm = None
-            device._simulationMode = SimulationMode.TRUE
+            device.simulationMode = SimulationMode.TRUE
             device._default_tapering_coeffs = [
                 float(1) for i in range(device.AntennasPerTile)
             ]
-            device._event_names = [
-                "voltage",
-                "current",
-                "board_temperature",
-                "fpga1_temperature",
-                "fpga2_temperature",
-                "healthState",
-            ]
-            for name in device._event_names:
-                device.set_change_event(name, True, True)
-                device.set_archive_event(name, True, True)
-            # TestMode is used in this server to denote
-            # unit testing when TestMode = TEST
-            device._test_mode = TestMode.NONE
             device._is_connected = False
-            device._streaming = False
-            device._update_frequency = 1
-            device._read_task = None
-            device._lock = threading.Lock()
-            device._create_long_running_task()
-
             device.logger.info("MccsTile init_device complete")
+            device._lock = lock.Semaphore()
+            device._create_long_running_task()
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
@@ -142,10 +123,6 @@ class MccsTile(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        if self._read_task is not None:
-            with self._lock:
-                self._streaming = False
-            self._read_task = None
 
     # ----------
     # Attributes
@@ -294,28 +271,12 @@ class MccsTile(SKABaseDevice):
         """Set the firmwareVersion attribute."""
         self._firmware_version = value
 
-    @attribute(
-        dtype="DevDouble",
-        fisallowed=is_connected,
-        abs_change=0.05,
-        min_value=4.5,
-        max_value=5.5,
-        min_alarm=4.55,
-        max_alarm=5.45,
-    )
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def voltage(self):
         """Return the voltage attribute."""
         return self._voltage
 
-    @attribute(
-        dtype="DevDouble",
-        fisallowed=is_connected,
-        abs_change=0.05,
-        min_value=0.0,
-        max_value=3.0,
-        min_alarm=0.05,
-        max_alarm=2.95,
-    )
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def current(self):
         """Return the current attribute."""
         return self._current
@@ -328,42 +289,17 @@ class MccsTile(SKABaseDevice):
         """ Function that returns true if board is programmed"""
         return self._tpm.is_programmed()
 
-    @attribute(
-        dtype="DevDouble",
-        doc="The board temperature",
-        fisallowed=is_connected,
-        abs_change=0.1,
-        min_value=25.0,
-        max_value=40.0,
-        min_alarm=26.0,
-        max_alarm=39.0,
-    )
+    @attribute(dtype="DevDouble", doc="The board temperature", fisallowed=is_connected)
     def board_temperature(self):
         """Return the board_temperature attribute."""
         return self._board_temperature
 
-    @attribute(
-        dtype="DevDouble",
-        fisallowed=is_connected,
-        abs_change=0.1,
-        min_value=25.0,
-        max_value=40.0,
-        min_alarm=26.0,
-        max_alarm=39.0,
-    )
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
         return self._fpga1_temperature
 
-    @attribute(
-        dtype="DevDouble",
-        fisallowed=is_connected,
-        abs_change=0.1,
-        min_value=25.0,
-        max_value=40.0,
-        min_alarm=26.0,
-        max_alarm=39.0,
-    )
+    @attribute(dtype="DevDouble", fisallowed=is_connected)
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
         return self._fpga2_temperature
@@ -482,11 +418,6 @@ class MccsTile(SKABaseDevice):
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def ppsDelay(self):
         return self._tpm.get_pps_delay()
-
-    @attribute(dtype=["DevString"], max_dim_x=32)
-    def event_names(self):
-        """List of event names which push change events"""
-        return self._event_names
 
     # --------
     # Commands
@@ -651,7 +582,7 @@ class MccsTile(SKABaseDevice):
         def do(self, argin):
             initialise_tpm = argin
             device = self.target
-            if device._simulation_mode == SimulationMode.FALSE:
+            if device.simulationMode:
                 device._tpm = TpmSimulator(self.logger)
             else:
                 device._tpm = Tpm(  # noqa: F821
@@ -662,7 +593,7 @@ class MccsTile(SKABaseDevice):
                     device._sampling_rate,
                 )
 
-            tm = True if device._test_mode == TestMode.TEST else False
+            tm = True if device.read_testMode() == TestMode.TEST else False
             device._tpm.connect(
                 initialise=initialise_tpm, simulation=device.simulationMode, testmode=tm
             )
@@ -711,10 +642,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
-            device = self.target
-            with device._lock:
-                device._is_connected = False
-            device._tpm.disconnect()
+            self.target._tpm.disconnect()
             return (ResultCode.OK, "Command succeeded")
 
     @command(
@@ -963,11 +891,9 @@ class MccsTile(SKABaseDevice):
         :type argin: DevString
 
         :return: a list of register values
-
         :rtype: DevVarUlongArray
 
         :example:
-
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
                     "Offset": offset, "Device":device}
@@ -1602,7 +1528,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) < self.target.AntennasPerTile:
+            if len(argin) < self.AntennasPerTile:
                 self.logger.error(
                     f"Insufficient coefficients should be {self.AntennasPerTile}"
                 )
@@ -1680,7 +1606,7 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
-            if len(argin) != self.target.AntennasPerTile * 2 + 1:
+            if len(argin) != self.AntennasPerTile * 2 + 1:
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
@@ -1688,7 +1614,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
-            for i in range(self.target.AntennasPerTile):
+            for i in range(self.AntennasPerTile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
             self.target._tpm.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, "Command succeeded")
@@ -2617,16 +2543,15 @@ class MccsTile(SKABaseDevice):
     # --------------------
     def _create_long_running_task(self):
         self._streaming = True
-        self.logger.info("create task")
-        executor = futures_executor.get_global_executor()
-        self._read_task = executor.delegate(self.__do_read)
+        print("create task")
+        self._read_task = gevent.spawn(self.__do_read)
 
     def __do_read(self):
         while self._streaming:
             try:
                 # if connected read the values from tpm
                 if self._tpm is not None and self._is_connected:
-                    self.logger.debug("stream on")
+                    print("stream on")
                     volts = self._tpm.voltage()
                     curr = self._tpm.current()
                     temp = self._tpm.temperature()
@@ -2635,9 +2560,6 @@ class MccsTile(SKABaseDevice):
 
                     with self._lock:
                         # now update the attribute using lock to prevent access conflict
-                        state = self.get_state()
-                        if state != DevState.ALARM:
-                            saved_state = state
                         self._voltage = volts
                         self._current = curr
                         self._board_temperature = temp
@@ -2648,46 +2570,14 @@ class MccsTile(SKABaseDevice):
                         self.push_change_event("board_temperature", temp)
                         self.push_change_event("fpga1_temperature", temp1)
                         self.push_change_event("fpga2_temperature", temp2)
-                        self.push_archive_event("voltage", volts)
-                        self.push_archive_event("current", curr)
-                        self.push_archive_event("board_temperature", temp)
-                        self.push_archive_event("fpga1_temperature", temp1)
-                        self.push_archive_event("fpga2_temperature", temp2)
-                        if (
-                            self._voltage < self.voltage.get_min_alarm()
-                            or self._voltage > self.voltage.get_max_alarm()
-                            or self._current < self.current.get_min_alarm()
-                            or self._current > self.current.get_max_alarm()
-                            or self._board_temperature
-                            < self.board_temperature.get_min_alarm()
-                            or self._board_temperature
-                            > self.board_temperature.get_max_alarm()
-                            or self._fpga1_temperature
-                            < self.fpga1_temperature.get_min_alarm()
-                            or self._fpga1_temperature
-                            > self.fpga1_temperature.get_max_alarm()
-                            or self._fpga2_temperature
-                            < self.fpga2_temperature.get_min_alarm()
-                            or self._fpga2_temperature
-                            > self.fpga2_temperature.get_max_alarm()
-                        ):
-                            self.set_state(DevState.ALARM)
-                            self._healthState = HealthState.DEGRADED
-                        else:
-                            self.set_state(saved_state)
-                            self._healthState = HealthState.OK
-                else:
-                    self._healthState = HealthState.UNKNOWN
+
             except Exception as exc:
-                self._healthState = HealthState.FAILED
-                self.set_state(DevState.FAULT)
+                self.push_change_event("state", self.get_state())
                 self.logger.error(exc.what())
 
             #  update every second (should be settable?)
-            self.push_change_event("healthState", self._healthState)
-            self.push_archive_event("healthState", self._healthState)
-            self.logger.debug(f"sleep {self._update_frequency}")
-            time.sleep(self._update_frequency)
+            print("sleep 1")
+            gevent.sleep(1)
             if not self._streaming:
                 break
 

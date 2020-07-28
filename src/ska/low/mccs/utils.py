@@ -7,6 +7,8 @@ import pkg_resources
 import json
 import jsonschema
 
+import tango
+from tango import EventType
 from tango import Except, ErrSeverity
 from tango.server import Device
 
@@ -160,3 +162,35 @@ class json_input:
             jsonschema.validate(json_object, self.schema)
 
         return json_object
+
+
+class EventManager:
+    def __init__(self, fqdn):
+        self._eventIds = []
+        # Always subscribe to state change, it's pushed by the base classes
+        self._event_names = ["state", "healthState"]
+        # stateless=True is needed to deal with device not running or device restart
+        try:
+            self._deviceProxy = tango.DeviceProxy(fqdn)
+            #            self._event_names.append(self._deviceProxy.event_names)
+            for event_name in self._event_names:
+                print(f"subscribing to {fqdn} {event_name}")
+                id = self._deviceProxy.subscribe_event(
+                    event_name, EventType.CHANGE_EVENT, self, stateless=True
+                )
+                self._eventIds.append(id)
+        except tango.DevFailed as df:
+            print(df)
+
+    def unsubscribe(self):
+        for eventId in self._eventIds:
+            self._deviceProxy.unsubscribe_event(eventId)
+
+    def push_event(self, ev):
+        if ev.attr_value is not None and ev.attr_value.value is not None:
+            print("----------------------------")
+            print("Event @ ", ev.get_date())
+            print(self._deviceProxy.name())
+            print(ev.attr_value.name)
+            print(ev.attr_value.value)
+            print(ev.attr_value.quality)

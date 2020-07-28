@@ -6,7 +6,6 @@ git clone https://gitlab.com/ska-telescope/TANGO-grafana.git
 cd TANGO-grafana/
 git submodule update --init --recursive
 make install-chart
-cd ../..
-make deploy_mccs
-cd scripts
-watch -n 5 kubectl get pods --all-namespaces # All pods should be running
+echo
+echo Waiting for all pods to be created and ready to use
+kubectl -n tango-grafana wait --for=condition=ready --timeout=720s --all pods

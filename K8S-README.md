@@ -72,12 +72,68 @@ make cli
 # shutdown
 make delete
 ```
-
-Notes
------
-
 At this stage there is no set up to do _interactive_ development in k8s, like
 the vscode container dev environment.
+
+To start up a TANGO-grafana cluster:
+```bash
+# I've found it necessary to close ALL apps before starting this sequence
+cd ska-low-mccs/
+# Tidy up any previous minikube environment
+./scripts/tear_down.sh
+exit
+# Start minikube in a new terminal window
+minikube start
+# Now check the server IP address using
+kubectl config view
+# My config switched between x.x.x.3 and x.x.x.4, where only .3 worked
+# In this case, close all apps and try again
+# Export Docker environment variables to Bash
+eval $(minikube docker-env)
+# Navigate to the MCCS scripts folder
+cd ska-low-mccs/scripts
+# Run setup part1 - skampi, tango-base and webjive
+./setup_part1.sh
+# Run setup part2 - Traefik, TANGO-grafana, make install-chart
+./setup_part2.sh
+cd ..
+# Create an ska-low-mccs:latest docker image reflecting the repository
+make devimage
+# Set environment variable to prevent tango-base being deployed again
+export TANGO_BASE_ENABLED=false
+# Starts up mccs
+make deploy
+make watch # Patience is a virtue in the world of k8s
+```
+
+If everything went smoothly, when all the pods are running...
+
+```bash
+# Take a note of the server IP address
+kubectl config view | grep server:
+```
+
+Place IP address and names in /etc/hosts file:
+
+e.g.
+172.17.0.3	grafana.integration.engageska-portugal.pt
+172.17.0.3	tangogql-proxy.integration.engageska-portugal.pt
+
+Navigate to this address in a web-browser:
+URL: http://grafana.integration.engageska-portugal.pt
+
+Log-in:
+admin:admin
+
+* Open Dashboards->Manage->examples->Tango Dashboard
+* select device: low/alt/master
+* Attribute list can be seen on the right hand side half way down the dashboard
+* You can then open the CLI to interact with master and observe changes in Grafana dashboard
+```bash
+make cli
+mccs-master on
+mccs-master off
+```
 
 Tango device server configuration
 ---------------------------------

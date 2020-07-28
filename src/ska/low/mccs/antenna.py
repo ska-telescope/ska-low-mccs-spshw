@@ -14,13 +14,18 @@ architecture in SKA-TEL-LFAA-06000052-02.
 """
 __all__ = ["MccsAntenna", "main"]
 
+import threading
+import random
+import time
+
 # tango imports
-from tango import DebugIt
+from tango import DebugIt, futures_executor
 from tango.server import attribute, command
 
 # Additional import
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import TestMode
 
 
 class MccsAntenna(SKABaseDevice):
@@ -73,19 +78,12 @@ class MccsAntenna(SKABaseDevice):
             device._delays = [0.0]
             device._delayRates = [0.0]
             device._bandpassCoefficient = [0.0]
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
             return (ResultCode.OK, "Init command succeeded")
-
-    def init_command_objects(self):
-        """
-        Set up the handler objects for Commands
-        """
-        super().init_command_objects()
-
-        args = (self, self.state_model, self.logger)
-
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object("PowerOn", self.PowerOnCommand(*args))
-        self.register_command_object("PowerOff", self.PowerOffCommand(*args))
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -97,6 +95,10 @@ class MccsAntenna(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
+        if self._read_task is not None:
+            with self._lock:
+                self._streaming = False
+            self._read_task = None
 
     # ----------
     # Attributes
@@ -281,6 +283,18 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
+    def init_command_objects(self):
+        """
+        Set up the handler objects for Commands
+        """
+        super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object("PowerOn", self.PowerOnCommand(*args))
+        self.register_command_object("PowerOff", self.PowerOffCommand(*args))
+
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.
@@ -292,9 +306,11 @@ class MccsAntenna(SKABaseDevice):
             Reset command. This implementation resets the MCCS
             system as a whole as an attempt to clear a FAULT
             state.
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+
             :rtype: (ResultCode, str)
             """
 
@@ -337,6 +353,51 @@ class MccsAntenna(SKABaseDevice):
         handler = self.get_command_object("PowerOff")
         (return_code, message) = handler()
         return [[return_code], [message]]
+
+    # --------------------
+    # Asynchronous routine
+    # --------------------
+    def _create_long_running_task(self):
+        self._streaming = True
+        self.logger.info("create task")
+        executor = futures_executor.get_global_executor()
+        self._read_task = executor.delegate(self.__do_read)
+
+    def __do_read(self):
+        while self._streaming:
+            try:
+                self.logger.info("stream on")
+                if self._test_mode == TestMode.NONE:
+                    volts = random.uniform(4.5, 5.5)  # self._antenna.voltage()
+                    temp = random.uniform(30.0, 35.0)  # self._antenna.temperature()
+                else:
+                    volts = 3.5
+                    temp = 20.6
+                # xPolarisationFaulty = self._antenna.xPolarisationFaulty()
+                # yPolarisationFaulty = self._antenna.yPolarisationFaulty()
+
+                with self._lock:
+                    # now update the attribute using lock to prevent access conflict
+                    self._voltage = volts
+                    self._temperature = temp
+                    # self._xPolarisationFaulty = xPolarisationFaulty
+                    # self._yPolarisationFaulty = yPolarisationFaulty
+                    self.push_change_event("voltage", volts)
+                    self.push_change_event("temperature", temp)
+                    # self.push_change_event("xPolarisationFaulty",
+                    #                        xPolarisationFaulty)
+                    # self.push_change_event("yPolarisationFaulty",
+                    #                        yPolarisationFaulty)
+
+            except Exception as exc:
+                self.push_change_event("state", self.get_state())
+                self.logger.error(exc.what())
+
+            #  update every second (should be settable?)
+            self.logger.info(f"sleep {self._update_frequency}")
+            time.sleep(self._update_frequency)
+            if not self._streaming:
+                break
 
 
 # ----------

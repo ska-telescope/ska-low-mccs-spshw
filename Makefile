@@ -26,6 +26,9 @@ HELM_CHART ?= mccs
 # publishing services via the Ingress Controller
 INGRESS_HOST ?= $(HELM_RELEASE).$(HELM_CHART).local
 
+# Optional creation of the tango-base dependency
+ENABLE_TANGO_BASE ?= true
+
 # Fixed variables
 # Timeout for gitlab-runner when run locally
 TIMEOUT = 86400

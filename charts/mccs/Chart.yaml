@@ -10,3 +10,4 @@ dependencies:
 - name: tango-base
   version: 0.1.1
   repository: https://gitlab.com/ska-telescope/skampi/-/raw/master/repository
+  condition: tango-base.enabled

@@ -26,7 +26,7 @@ device_info = {
         "GroupDefinitions": "",
         "LoggingLevelDefault": "4",
         # "LoggingTargetsDefault": "",
-    }
+    },
 }
 
 
@@ -34,13 +34,6 @@ class TestMccsDevice(object):
     """
     Test class for MccsDevice tests.
     """
-
-    @pytest.mark.skip(reason="Not implemented")
-    def test_properties(self, device_under_test):
-        """
-        Test for device properties. Not implemented.
-        """
-        pass
 
     def test_State(self, device_under_test):
         """Test for State"""
@@ -83,7 +76,8 @@ class TestMccsDevice(object):
     def test_ConstructDeviceProxyAddress(self, device_under_test):
         """Test for ConstructDeviceProxyAddress"""
         assert list(device_under_test.ConstructDeviceProxyAddress("")) == [
-            [ResultCode.OK], ["Stub implementation, did nothing"]
+            [ResultCode.OK],
+            ["Stub implementation, did nothing"],
         ]
 
     def test_buildState(self, device_under_test):
@@ -175,4 +169,4 @@ class TestMccsDevice(object):
 
     def test_loggingTargets(self, device_under_test):
         """Test for loggingTargets"""
-        assert device_under_test.loggingTargets == ('tango::logger',)
+        assert device_under_test.loggingTargets == ("tango::logger",)

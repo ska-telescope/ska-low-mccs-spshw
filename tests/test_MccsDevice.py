@@ -12,6 +12,7 @@
 This module contains the tests for MccsDevice.
 """
 
+import pytest
 from tango import DevState
 from ska.base.commands import ResultCode
 from ska.base.control_model import AdminMode, LoggingLevel
@@ -33,6 +34,13 @@ class TestMccsDevice(object):
     """
     Test class for MccsDevice tests.
     """
+
+    @pytest.mark.skip(reason="Not implemented")
+    def test_properties(self, device_under_test):
+        """
+        Test for device properties. Not implemented.
+        """
+        pass
 
     def test_State(self, device_under_test):
         """Test for State"""

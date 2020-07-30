@@ -20,6 +20,8 @@ from tango import DebugIt
 # Additional imports
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.low.mccs import MccsGroupDevice
+
+# from ska.low.mccs import MccsDevice
 from ska.base import SKABaseDevice
 
 # PyTango imports
@@ -79,6 +81,10 @@ class MccsAPIU(MccsGroupDevice):
             device._overVoltageThreshold = 0.0
             device._humidityThreshold = 0.0
             device._logicalAntennaId = []
+
+            device.set_change_event("voltage", True, False)
+            device.set_archive_event("voltage", True, False)
+
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
@@ -146,8 +152,8 @@ class MccsAPIU(MccsGroupDevice):
         access=AttrWriteType.READ_WRITE,
         label="Humidity",
         unit="percent",
-        max_value=0,
-        min_value=100,
+        # max_value=0.0,
+        # min_value=100.0,
     )
     def humidity(self):
         """Return the humidity attribute."""
@@ -208,10 +214,10 @@ class MccsAPIU(MccsGroupDevice):
     @humidityThreshold.write
     def humidityThreshold(self, value):
         """Set the humidity attribute."""
-        self._humidity = value
+        self._humidityThreshold = value
 
     @attribute(
-        dtype=("DevULong",), access=AttrWriteType.READ, max_dim_x=100,
+        dtype="DevULong", access=AttrWriteType.READ, max_dim_x=100,
     )
     def logicalAntennaId(self):
         """Return the logicalAntennaId attribute"""
@@ -235,10 +241,10 @@ class MccsAPIU(MccsGroupDevice):
             "PowerUpAntenna", self.PowerUpAntennaCommand(*args)
         )
         self.register_command_object(
-            "PowerDownAntenna", self.PowerDownAntennaommand(*args)
+            "PowerDownAntenna", self.PowerDownAntennaCommand(*args)
         )
-        self.register_command_object("PowerUp", self.RunCommand(*args))
-        self.register_command_object("PowerDown", self.RunCommand(*args))
+        self.register_command_object("PowerUp", self.PowerUpCommand(*args))
+        self.register_command_object("PowerDown", self.PowerDownCommand(*args))
 
     class PowerUpAntennaCommand(ResponseCommand):
         def do(self, argin):
@@ -285,6 +291,13 @@ class MccsAPIU(MccsGroupDevice):
         return [[return_code], [message]]
 
     class PowerUpCommand(ResponseCommand):
+        """
+        Class for handling the PowerUp command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+
         def do(self):
             """
             Stateless hook for implementation of ExceptionCallback()
@@ -303,6 +316,13 @@ class MccsAPIU(MccsGroupDevice):
         return [[return_code], [message]]
 
     class PowerDownCommand(ResponseCommand):
+        """
+        Class for handling the PowerDown command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+
         def do(self):
             """
             Stateless hook for implementation of ExceptionCallback()

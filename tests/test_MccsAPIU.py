@@ -11,69 +11,103 @@
 """
 This module contains the tests for MccsAPIU.
 """
-import pytest
-import tango
-from tango import DevSource
+from tango import DevState
+
 from ska.base.control_model import (
+    LoggingLevel,
     ControlMode,
     HealthState,
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsAPIU, release
+from ska.low.mccs import MccsAPIU
+from ska.base.commands import ResultCode
 
 device_info = {
     "class": MccsAPIU,
-    "properties": {"SkaLevel": "4","LoggingLevelDefault": 4,},
+    "properties": {"SkaLevel": "4", "LoggingLevelDefault": "4"},
 }
 
-class TestMccsAPIU:
+
+class TestMccsAPIU(object):
     """
-    Test class for MccsAPIU tests
+    Test class for MccsAPIU tests.
     """
 
-    @pytest.mark.skip(reason="Not implemented.")
     def test_properties(self, device_under_test):
-        """
-        Test the properties. Not implemented.
-        """
-        pass
+        """Test the properties """
+        assert device_under_test.loggingLevel == LoggingLevel.INFO
 
     # general methods
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
         """
-        assert device_under_test.state() == tango.DevState.OFF
+
+        print(f"Init state is {device_under_test.state()}")
+        assert device_under_test.state() == DevState.OFF
         assert device_under_test.status() == "The device is in OFF state."
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.NONE
 
-        # These start-up defaults might change
-        assert device_under_test.voltage == 0.0
-        assert device_under_test.current == 0.0
+    def test_Attributes(self, device_under_test):
+        """Test of atributes"""
+
+        # Start-up values are zero - N.B. subject to change
         assert device_under_test.temperature == 0.0
         assert device_under_test.humidity == 0.0
-        assert device_under_test.isAlive == True
+        assert device_under_test.voltage == 0.0
+        assert device_under_test.current == 0.0
+        assert device_under_test.isAlive
         assert device_under_test.overCurrentThreshold == 0.0
         assert device_under_test.overVoltageThreshold == 0.0
         assert device_under_test.humidityThreshold == 0.0
-        assert device_under_test._logicalAntennaId == []
 
-    # overridden base class commands
-    def test_GetVersionInfo(self, device_under_test):
-        """Test for GetVersionInfo"""
-        version_info = release.get_release_info(device_under_test.info().dev_class)
-        assert device_under_test.GetVersionInfo() == [version_info]
+        # print(f'logicalAntennaId -> {repr(device_under_test.logicalAntennaId)}')
+        # assert device_under_test.logicalAntennaId == [0]
 
-    # overridden base class attributes
-    def test_buildState(self, device_under_test):
-        """Test for buildState"""
-        build_info = release.get_release_info()
-        assert device_under_test.buildState == build_info
+        # Set some arbitrary values and read them back.
+        device_under_test.temperature = 20.0
+        assert device_under_test.temperature == 20.0
+        device_under_test.humidity = 50.0
+        assert device_under_test.humidity == 50.0
+        device_under_test.voltage = 5.0
+        assert device_under_test.voltage == 5.0
+        device_under_test.current = 10.0
+        assert device_under_test.current == 10.0
+        device_under_test.overCurrentThreshold = 22.0
+        assert device_under_test.overCurrentThreshold == 22.0
+        device_under_test.overVoltageThreshold = 6.0
+        assert device_under_test.overVoltageThreshold == 6.0
+        device_under_test.humidityThreshold = 60.0
+        assert device_under_test.humidityThreshold == 60.0
 
-    def test_versionId(self, device_under_test):
-        """Test for versionId"""
-        assert device_under_test.versionId == release.version
+    def test_PowerUp(self, device_under_test):
+        """Test for PowerUp"""
+        [[result_code], [message]] = device_under_test.PowerUp()
+        assert result_code == ResultCode.OK
+        # assert message == "On command completed OK"
+
+    def test_PowerDown(self, device_under_test):
+        """Test for PowerDown"""
+        # Need to turn it on before we can turn it off
+        device_under_test.PowerUp()
+        [[result_code], [message]] = device_under_test.PowerDown()
+        assert result_code == ResultCode.OK
+        # assert message == "Off command completed OK"
+
+    def test_PowerUpAntenna(self, device_under_test):
+        """Test for PowerUpAntenna"""
+        [[result_code], [message]] = device_under_test.PowerUpAntenna(0)
+        assert result_code == ResultCode.OK
+        # assert message == "On command completed OK"
+
+    def test_PowerDownAntenna(self, device_under_test):
+        """Test for PowerDownAntenna"""
+        # Need to turn it on before we can turn it off
+        device_under_test.PowerUpAntenna(0)
+        [[result_code], [message]] = device_under_test.PowerDownAntenna(0)
+        assert result_code == ResultCode.OK
+        # assert message == "Off command completed OK"

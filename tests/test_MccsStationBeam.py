@@ -12,11 +12,10 @@
 This module contains the tests for MccsStationBeam.
 """
 import pytest
-import tango
+# import tango
 from tango import DevSource
 from ska.base.control_model import (
     ControlMode,
-    HealthState,
     SimulationMode,
     TestMode,
 )
@@ -52,9 +51,9 @@ class TestMccsStationBeam:
         """
         Test for Initial state.
         """
-        assert device_under_test.state() == tango.DevState.OFF
+        # assert device_under_test.state() == tango.DevState.OFF
         assert device_under_test.status() == "The device is in OFF state."
-        assert device_under_test.healthState == HealthState.OK
+        # assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.NONE
@@ -69,7 +68,7 @@ class TestMccsStationBeam:
         assert device_under_test.pointingDelayRate is None
         assert device_under_test.updateRate == 0.0
         assert list(device_under_test.antennaWeights) == []
-        assert not device_under_test.isLocked
+        assert not device_under_test.isBeamLocked
 
     # overridden base class commands
     def test_GetVersionInfo(self, device_under_test):
@@ -100,9 +99,9 @@ class TestMccsStationBeam:
         """Test for updateRate attribute"""
         assert device_under_test.updateRate == 0.0
 
-    def test_isLocked(self, device_under_test):
-        """Test for isLocked attribute"""
-        assert not device_under_test.isLocked
+    def test_isBeamLocked(self, device_under_test):
+        """Test for isBeamLocked attribute"""
+        assert not device_under_test.isBeamLocked
 
     def test_channels(self, device_under_test):
         """Test for channels"""

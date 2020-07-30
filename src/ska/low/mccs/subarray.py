@@ -11,16 +11,20 @@ Subarray prototype.
 """
 __all__ = ["MccsSubarray", "main"]
 
+# imports
+import threading
+import time
 import json
 
 # PyTango imports
 import tango
-from tango import DebugIt
+from tango import DebugIt, futures_executor, DevState
 from tango.server import attribute, command
 
 # Additional import
 from ska.base import SKASubarray
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import HealthState, AdminMode
 import ska.low.mccs.release as release
 
 
@@ -145,8 +149,17 @@ class MccsSubarray(SKASubarray):
             device.set_change_event("stationFQDNs", True, True)
             device.set_archive_event("stationFQDNs", True, True)
 
+            device.set_change_event("adminMode", True, True)
+            device.set_archive_event("adminMode", True, True)
+
             device._build_state = release.get_release_info()
             device._version_id = release.version
+
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
 
             return (result_code, message)
 
@@ -349,6 +362,7 @@ class MccsSubarray(SKASubarray):
             # target object
             station_pool_manager = self.target
             station_pool_manager.release_all()
+
             return (ResultCode.OK, "ReleaseAllResources command completed successfully")
 
     class ConfigureCommand(SKASubarray.ConfigureCommand):
@@ -552,6 +566,51 @@ class MccsSubarray(SKASubarray):
         handler = self.get_command_object("SendTransientBuffer")
         (result_code, message) = handler(argin)
         return [[result_code], [message]]
+
+    # Add Async Class here for health monitoring
+    # --------------------
+    # Asynchronous routine
+    # --------------------
+    def _create_long_running_task(self):
+        self._streaming = True
+        self.logger.info("create task")
+        executor = futures_executor.get_global_executor()
+        self._read_task = executor.delegate(self.__do_read)
+
+    def __do_read(self):
+        while self._streaming:
+            try:
+                self.logger.info("stream on")
+
+                with self._lock:
+                    # now update the attribute using
+                    # lock to prevent access conflict
+                    state = self.get_state()
+                    if state is not DevState.ALARM:
+                        saved_state = state
+                    adMode = self.read_adminMode()
+
+                    if adMode == AdminMode.NOT_FITTED:
+                        self.logger.info("Alarm Raised")
+                        self.set_state(DevState.ALARM)
+                        self._health_state = HealthState.DEGRADED
+                    else:
+                        self.set_state(saved_state)
+                        self._health_state = HealthState.OK
+                        self.push_change_event("healthState", self._health_state)
+
+            except Exception:
+                self.logger.info("Exception routine")
+                self._health_state = HealthState.FAILED
+                self.set_state(DevState.FAULT)
+
+            #  update every second (should be settable?)
+            self.push_change_event("healthState", self._health_state)
+            self.push_archive_event("healthState", self._health_state)
+            self.logger.info(f"sleep {self._update_frequency}")
+            time.sleep(self._update_frequency)
+            if not self._streaming:
+                break
 
 
 # ----------

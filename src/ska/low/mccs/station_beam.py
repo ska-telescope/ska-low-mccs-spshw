@@ -13,13 +13,19 @@ Prototype TANGO device server for the MCSS Station Beam
 """
 __all__ = ["MccsStationBeam", "main"]
 
+# imports
+import threading
+import time
+
 # PyTango imports
+from tango import DevState, futures_executor
 from tango.server import attribute
 from tango.server import device_property
 
 # Additional imports
 from ska.base import SKAObsDevice
 from ska.base.commands import ResultCode
+from ska.base.control_model import HealthState
 import ska.low.mccs.release as release
 
 
@@ -71,21 +77,19 @@ class MccsStationBeam(SKAObsDevice):
             device._pointing_delay_rate = []
             device._update_rate = 0.0
             device._antenna_weights = []
-            device._is_locked = False
+            device._is_beam_locked = False
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device.set_change_event("stationId", True, True)
-            device.set_archive_event("stationId", True, True)
-            device.set_change_event("logicalBeamId", True, True)
-            device.set_archive_event("logicalBeamId", True, True)
-            device.set_change_event("updateRate", True, True)
-            device.set_archive_event("updateRate", True, True)
-            device.set_change_event("isLocked", True, True)
-            device.set_archive_event("isLocked", True, True)
-            device.set_change_event("channels", True, True)
-            device.set_archive_event("channels", True, True)
+            device.set_change_event("isBeamLocked", True, True)
+            device.set_archive_event("isBeamLocked", True, True)
+
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
 
             message = "MccsStationBeam Init command completed OK"
             self.logger.info(message)
@@ -117,10 +121,7 @@ class MccsStationBeam(SKAObsDevice):
         return self._beam_id
 
     @attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-        doc="ID of the associated station",
+        dtype="DevLong", format="%i", doc="ID of the associated station",
     )
     def stationId(self):
         """
@@ -135,7 +136,6 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(
         dtype="DevLong",
         format="%i",
-        polling_period=1000,
         max_value=7,
         min_value=0,
         doc="Logical ID of the beam within the associated Station",
@@ -154,7 +154,6 @@ class MccsStationBeam(SKAObsDevice):
         dtype="DevDouble",
         unit="Hz",
         standard_unit="s^-1",
-        polling_period=1000,
         max_value=1e37,
         min_value=0,
         doc="The update rate in Hz to use when updating pointing coefficients",
@@ -166,20 +165,21 @@ class MccsStationBeam(SKAObsDevice):
         return self._update_rate
 
     @attribute(
-        dtype="DevBoolean",
-        polling_period=1000,
-        doc="Flag specifying whether beam is locked to target",
+        dtype="DevBoolean", doc="Flag specifying whether beam is locked to target",
     )
-    def isLocked(self):
+    def isBeamLocked(self):
         """
-        Return the isLocked attribute.
+        Return the isBeamLocked attribute.
         """
-        return self._is_locked
+        return self._is_beam_locked
+
+    @isBeamLocked.write
+    def isBeamLocked(self, value):
+        self._is_beam_locked = value
 
     @attribute(
         dtype=("DevLong",),
         max_dim_x=384,
-        polling_period=1000,
         doc="The channel configuration for the Station Beam, specified as an "
         "array of channel IDs (where the lowest frequency is "
         "(channelID+1)*781250 Hz). When the Station Beam is OFF, the array is"
@@ -194,7 +194,6 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=4,
-        polling_period=1000,
         doc="An array of doubles conforming to the Sky Coordinate Set "
         "definition. It comprises:"
         "* activation time (s) -- value range 0-10^37"
@@ -218,7 +217,6 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=256,
-        polling_period=1000,
         doc="Latest computed pointing delay per antenna",
     )
     def pointingDelay(self):
@@ -230,7 +228,6 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=256,
-        polling_period=1000,
         doc="Latest computed pointing delay rate per antenna",
     )
     def pointingDelayRate(self):
@@ -242,7 +239,6 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=256,
-        polling_period=1000,
         doc="Defines the contribution of each antenna to the station beam to "
         "give a desired beam shape, e.g. to suppress sidelobs",
     )
@@ -262,6 +258,55 @@ class MccsStationBeam(SKAObsDevice):
     # --------
     # Commands
     # --------
+
+    # --------------------
+    # Asynchronous routine
+    # --------------------
+    def _create_long_running_task(self):
+        self._streaming = True
+        self.logger.info("create task")
+        executor = futures_executor.get_global_executor()
+        self._read_task = executor.delegate(self.__do_read)
+
+    def __do_read(self):
+        while self._streaming:
+            try:
+                self.logger.debug("stream on")
+
+                with self._lock:
+                    # now update the attribute using lock to prevent access conflict
+                    state = self.get_state()
+                    if state is not DevState.ALARM:
+                        saved_state = state
+
+                    self.push_change_event("isBeamLocked", self._is_beam_locked)
+                    self.push_archive_event("isBeamLocked", self._is_beam_locked)
+
+                    # Would like to tie this to an isLocked attribute
+                    # rather than False or True explicits.
+                    if not self._is_beam_locked:
+
+                        # self.set_state(DevState.ALARM)
+                        self._health_state = HealthState.DEGRADED
+                        print(self._is_beam_locked, self._health_state)
+                    else:
+                        print(self._health_state, self._is_beam_locked)
+                        self.set_state(saved_state)
+                        self._health_state = HealthState.OK
+
+            # except Exception as exc:
+            except Exception:
+                self.logger.info("++++Exception routine ++++")
+                self._health_state = HealthState.FAILED
+                self.set_state(DevState.FAULT)
+
+            #  update every second (should be settable?)
+            self.push_change_event("healthState", self._health_state)
+            self.push_archive_event("healthState", self._health_state)
+            self.logger.info(f"sleep {self._update_frequency}")
+            time.sleep(self._update_frequency)
+            if not self._streaming:
+                break
 
 
 # ----------

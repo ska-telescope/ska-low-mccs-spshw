@@ -8,7 +8,7 @@ import json
 import jsonschema
 
 import tango
-from tango import EventType
+from tango import EventType, AttrQuality
 from tango import Except, ErrSeverity
 from tango.server import Device
 
@@ -165,14 +165,15 @@ class json_input:
 
 
 class EventManager:
-    def __init__(self, fqdn):
+    def __init__(self, fqdn, update_callback=None):
         self._eventIds = []
+        self._fqdn = fqdn
+        self.callback = update_callback
         # Always subscribe to state change, it's pushed by the base classes
         self._event_names = ["state", "healthState"]
         # stateless=True is needed to deal with device not running or device restart
         try:
             self._deviceProxy = tango.DeviceProxy(fqdn)
-            #            self._event_names.append(self._deviceProxy.event_names)
             for event_name in self._event_names:
                 print(f"subscribing to {fqdn} {event_name}")
                 id = self._deviceProxy.subscribe_event(
@@ -191,6 +192,10 @@ class EventManager:
             print("----------------------------")
             print("Event @ ", ev.get_date())
             print(self._deviceProxy.name())
-            print(ev.attr_value.name)
-            print(ev.attr_value.value)
+            print("in  push_event", ev.attr_value.name, ev.attr_value.value)
             print(ev.attr_value.quality)
+            if (
+                ev.attr_value.quality == AttrQuality.ATTR_VALID
+                and self.callback is not None
+            ):
+                self.callback(self._fqdn, ev.attr_value.name, ev.attr_value.value)

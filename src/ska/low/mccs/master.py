@@ -27,6 +27,35 @@ from ska.base.commands import ResponseCommand, ResultCode
 
 from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
+from ska.low.mccs.utils import EventManager
+from ska.base.control_model import HealthState
+
+
+class MasterHealthMonitor:
+    def __init__(self, device):
+        self._health_state_table = {}
+        self._device = device
+
+    def initialise(self, fqdn):
+        self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
+        print(self._health_state_table)
+
+    def update_health(self, fqdn, event, value):
+        state, health = self._health_state_table[fqdn]
+        if event == "State":
+            self._health_state_table.update({fqdn: (value, health)})
+        elif event == "healthstate":
+            self._health_state_table.update({fqdn: (state, HealthState(value))})
+
+        health_state = HealthState.OK
+        for key, (state, health) in self._health_state_table.items():
+            if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
+                health_state = HealthState.DEGRADED
+            elif health == HealthState.FAILED:
+                health_state = HealthState.FAILED
+
+        self._device.push_change_event("HealthState", health_state)
+        print("master health =", health_state)
 
 
 class MccsMaster(SKAMaster):
@@ -132,6 +161,14 @@ class MccsMaster(SKAMaster):
             device._station_allocated = numpy.zeros(
                 len(device.MccsStations), dtype=numpy.ubyte
             )
+
+            device._eventManagerList = []
+            device._health_monitor = MasterHealthMonitor(device)
+            for fqdn in device._station_fqdns:
+                device._health_monitor.initialise(fqdn)
+                device._eventManagerList.append(
+                    EventManager(fqdn, device._health_monitor.update_health)
+                )
 
             message = "MccsMaster Init command completed OK"
             self.logger.info(message)

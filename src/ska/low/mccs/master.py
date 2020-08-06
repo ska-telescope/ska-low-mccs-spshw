@@ -348,7 +348,7 @@ class MccsMaster(SKAMaster):
                 current device state
             :rtype: boolean
             """
-            return self.state_model.dev_state == DevState.OFF
+            return self.state_model.op_state == DevState.OFF
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -476,7 +476,7 @@ class MccsMaster(SKAMaster):
                 current device state
             :rtype: boolean
             """
-            return self.state_model.dev_state == DevState.ON
+            return self.state_model.op_state == DevState.ON
 
     def is_EnableSubarray_allowed(self):
         """
@@ -580,7 +580,7 @@ class MccsMaster(SKAMaster):
                 current device state
             :rtype: boolean
             """
-            return self.state_model.dev_state == DevState.ON
+            return self.state_model.op_state == DevState.ON
 
     def is_DisableSubarray_allowed(self):
         """
@@ -743,7 +743,7 @@ class MccsMaster(SKAMaster):
                 current device state
             :rtype: boolean
             """
-            return self.state_model.dev_state == DevState.ON
+            return self.state_model.op_state == DevState.ON
 
     def is_Allocate_allowed(self):
         """
@@ -844,7 +844,7 @@ class MccsMaster(SKAMaster):
                 current device state
             :rtype: boolean
             """
-            return self.state_model.dev_state == DevState.ON
+            return self.state_model.op_state == DevState.ON
 
     def is_Release_allowed(self):
         """

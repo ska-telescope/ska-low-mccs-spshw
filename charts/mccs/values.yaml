@@ -44,17 +44,17 @@ deviceServers:
     instances: [0]
   subarrays:
     name: subarray
-    instances: [1]
+    instances: [1, 2]
   stations:
     name: station
-    instances: [1]
+    instances: [1, 2]
   beams:
     name: beam
     serverName: StationBeam
     instances: [1]
   tiles:
     name: tile
-    instances: [1,6]
+    instances: [1, 2, 3, 4, 5, 6]
 
 nodeSelector: {}
 

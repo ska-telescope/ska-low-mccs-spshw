@@ -14,7 +14,8 @@
     "extensions": [
         "ms-python.python",
         "lextudio.restructuredtext",
-        "davidanson.vscode-markdownlint"
+        "davidanson.vscode-markdownlint",
+        "alexkrechik.cucumberautocomplete"
     ],
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],

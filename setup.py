@@ -46,7 +46,7 @@ setuptools.setup(
         ]
     },
     install_requires=[
-        "lmcbaseclasses >= 0.5.3",
+        "lmcbaseclasses >= 0.6.4",
         "pytango >= 9.3.2",
         "jsonschema >= 3.2.0",
         "fire",

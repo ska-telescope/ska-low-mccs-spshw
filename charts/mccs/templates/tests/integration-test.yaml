@@ -73,7 +73,7 @@ spec:
       - "-ce"
       - |
         pip3 install -rrequirements-tst.txt  # TODO: should be part of image?
-        pytest integration_tests/features --junitxml=/reports/integration-tests.xml
+        pytest --true-context tests -k functional --junitxml=/reports/integration-tests.xml
     env:
 {{ include "tango-util.dbenv" . | indent 4 }}
     volumeMounts:

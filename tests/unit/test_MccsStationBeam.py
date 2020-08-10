@@ -12,13 +12,10 @@
 This module contains the tests for MccsStationBeam.
 """
 import pytest
+
 # import tango
 from tango import DevSource
-from ska.base.control_model import (
-    ControlMode,
-    SimulationMode,
-    TestMode,
-)
+from ska.base.control_model import ControlMode, SimulationMode, TestMode
 from ska.low.mccs import MccsStationBeam, release
 
 

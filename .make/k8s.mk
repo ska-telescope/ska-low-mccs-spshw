@@ -141,7 +141,7 @@ mkcerts:  ## Make dummy certificates for $(INGRESS_HOST) and Ingress
 		 -out charts/$(HELM_CHART)/secrets/tls.crt \
 		 -subj "/CN=$(INGRESS_HOST)/O=Minikube"; \
 	else \
-	echo "SSL cert already exits in charts/$(HELM_CHART)/secrets ... skipping"; \
+	echo "SSL cert already exists in charts/$(HELM_CHART)/secrets ... skipping"; \
 	fi
 
 kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64

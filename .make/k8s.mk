@@ -23,61 +23,21 @@ delete_namespace: ## delete the kubernetes namespace
 	kubectl describe namespace $(KUBE_NAMESPACE) && kubectl delete namespace $(KUBE_NAMESPACE); \
 	fi
 
-deploy: namespace mkcerts  ## deploy the helm chart
-	@helm template $(HELM_RELEASE) charts/$(HELM_CHART)/ \
-		--namespace $(KUBE_NAMESPACE) \
-		--set xauthority="$(XAUTHORITYx)" \
-		--set display="$(DISPLAY)" \
-		--set ingress.hostname=$(INGRESS_HOST) \
-		--set helmTests=false \
-		 | kubectl -n $(KUBE_NAMESPACE) apply -f -
+# minikube only 
+minikube_setup:
+	@test $$(kubectl config current-context | grep minikube) || exit 0; \
+	test ! -d $(MINIKUBE_TMP) && mkdir $(MINIKUBE_TMP); \
+	owner=$$(stat -c "%u:%g" $(MINIKUBE_TMP) ); \
+	if [ $$owner != "1000:1000" ]; \
+	then echo "changing permissions of $(MINIKUBE_TMP) to tango user (1000)"; \
+	sudo chown 1000:1000 $(MINIKUBE_TMP);fi
 
-deploy_mccs: namespace mkcerts ## deploy MCCS helm chart
-	helm template $(HELM_RELEASE) charts/mccs/ \
-		--namespace $(KUBE_NAMESPACE) \
-                --set display="$(DISPLAY)" \
-                --set xauthority="$(XAUTHORITYx)" \
-                --set ingress.hostname=$(INGRESS_HOST) \
-                --set ingress.nginx=$(USE_NGINX) \
-                --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl apply -f -
-
-deploy_all: namespace mkcerts ## deploy ALL of the helm chart
-	@for i in charts/*; do \
-	helm template $(HELM_RELEASE) $$i \
-				 --namespace $(KUBE_NAMESPACE) \
-	             --set display="$(DISPLAY)" \
-	             --set xauthority="$(XAUTHORITYx)" \
-				 --set ingress.hostname=$(INGRESS_HOST) \
-				 --set ingress.nginx=$(USE_NGINX) \
-	             --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl apply -f - ; \
-	done
-
-delete_all: ## delete ALL of the helm chart release
-	@for i in charts/*; do \
-	helm template $(HELM_RELEASE) $$i \
-				 --namespace $(KUBE_NAMESPACE) \
-	             --set display="$(DISPLAY)" \
-	             --set xauthority="$(XAUTHORITYx)" \
-				 --set ingress.hostname=$(INGRESS_HOST) \
-				 --set ingress.nginx=$(USE_NGINX) \
-	             --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl delete -f - ; \
-	done
-
-delete_mccs: ## delete MCCS helm chart release
-	helm template $(HELM_RELEASE) charts/mccs/ \
-		--namespace $(KUBE_NAMESPACE) \
-                --set display="$(DISPLAY)" \
-                --set xauthority="$(XAUTHORITYx)" \
-                --set ingress.hostname=$(INGRESS_HOST) \
-                --set ingress.nginx=$(USE_NGINX) \
-                --set tangoexample.debug="$(REMOTE_DEBUG)" | kubectl delete -f -
-
-install: namespace mkcerts  ## install the helm chart
+deploy: minikube_setup namespace mkcerts depends  ## deploy the helm chart
 	@helm install $(HELM_RELEASE) charts/$(HELM_CHART)/ \
 		--namespace $(KUBE_NAMESPACE) \
 		--set ingress.hostname=$(INGRESS_HOST) \
-		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) \
-	        --set tango-base.enabled=$(TANGO_BASE_ENABLED)
+		--set tango-base.enabled=$(TANGO_BASE_ENABLED) \
+		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) 
 
 show: mkcerts ## show the helm chart
 	@helm template $(HELM_RELEASE) charts/$(HELM_CHART)/ \

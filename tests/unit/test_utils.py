@@ -6,7 +6,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""contains the tests for the ska.low.mccs.utils module"""
+"""
+This module contains the tests for the ska.low.mccs.utils module.
+"""
 import json
 import jsonschema
 import pytest
@@ -17,16 +19,6 @@ from tango.test_context import DeviceTestContext
 from ska.low.mccs.utils import call_with_json, json_input, tango_raise
 
 
-class DummyDevice(Device):
-    def __init__(self, device_class, device_name):
-        super().__init__(device_class, device_name)
-
-    @command
-    def method_to_raise(self):
-        tango_raise("raise me")
-
-
-# pylint: disable=invalid-name
 class TestUtils:
     """
     Test cases for ska.low.mccs.utils module
@@ -37,6 +29,32 @@ class TestUtils:
         Test for correct execution of `tango_raise` helper function when used
         in a tango device class method.
         """
+
+        class DummyDevice(Device):
+            """
+            A dummy device with a `method_to_raise` method that uses the
+            `tango_raise` helper function to raise a DevFailed exception
+            """
+
+            def __init__(self, device_class, device_name):
+                """
+                Initialises a new dummy device
+
+                :param device_class: the class of the device
+                :type device_class: type
+                :param device_name: the name of the device
+                :type device_name: FQDN string
+                """
+                super().__init__(device_class, device_name)
+
+            @command
+            def method_to_raise(self):
+                """
+                A dummy command that uses the `tango_raise` helper
+                function to raise a DevFailed exception
+                """
+                tango_raise("raise me")
+
         with DeviceTestContext(DummyDevice) as tango_device:
             with pytest.raises(DevFailed) as ex:
                 tango_device.method_to_raise()
@@ -52,7 +70,15 @@ class TestUtils:
         """
 
         class NonDevice:
+            """
+            Dummy class, not a tango Device
+            """
+
             def illegal_use(self):
+                """
+                Dummy method that tries to use the `tango_raise` helper
+                function to raise a tango DevFailed exception
+                """
                 tango_raise("Never happens")
 
         with pytest.raises(TypeError):

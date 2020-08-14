@@ -109,6 +109,9 @@ class TestMccsMaster:
 
     @pytest.mark.mock_device_proxy
     def test_EnableSubarray(self, device_under_test):
+        """
+        Test that master can enable a subarray
+        """
         master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
@@ -147,6 +150,9 @@ class TestMccsMaster:
 
     @pytest.mark.mock_device_proxy
     def test_DisableSubarray(self, device_under_test):
+        """
+        Test that master can disable a subarray
+        """
         master = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
         mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")

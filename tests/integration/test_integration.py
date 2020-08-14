@@ -1,3 +1,8 @@
+"""
+This module contains tests of interactions between ska.low.mccs classes,
+particularly tango devices.
+"""
+
 from tango import DevSource, DevState
 
 from ska.base.commands import ResultCode

@@ -1,11 +1,25 @@
 """
-A module defining pytest fixtures for testing ska.low.mccs.
+This module contains pytest fixtures and other test setups for the
+ska.low.mccs unit tests
 """
 from collections import defaultdict
 import pytest
 
 # import tango
 from tango.test_context import DeviceTestContext
+
+
+def pytest_itemcollected(item):
+    """
+    pytest hook implementation; add the "forked" custom mark to all
+    tests that use the `device_context` fixture, causing them to be
+    sandboxed in their own process
+
+    param item: the collected test for which this hook is called
+    type item: a collected test
+    """
+    if "device_under_test" in item.fixturenames:
+        item.add_marker("forked")
 
 
 def pytest_configure(config):

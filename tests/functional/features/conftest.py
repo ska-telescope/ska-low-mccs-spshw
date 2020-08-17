@@ -1,3 +1,7 @@
+"""
+This module contains pytest fixtures and other test setups for the
+ska.low.mccs functional (BDD) tests
+"""
 from contextlib import contextmanager
 import pytest
 import socket
@@ -63,7 +67,7 @@ def _tango_test_context(_devices_info, _module_mocker):
 
     def _get_open_port():
         """
-        Finds and returns an open port on localhost
+        Helper function that returns an available port on the local machine
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("", 0))
@@ -83,7 +87,7 @@ def _tango_test_context(_devices_info, _module_mocker):
         ),
     )
 
-    return MultiDeviceTestContext(_devices_info, host=HOST, port=PORT)
+    return MultiDeviceTestContext(_devices_info, process=True, host=HOST, port=PORT)
 
 
 @pytest.fixture(scope="module")

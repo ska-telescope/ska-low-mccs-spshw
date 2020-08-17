@@ -1,10 +1,25 @@
 """
-A module defining pytest fixtures for testing ska.low.mccs.
+This module contains pytest fixtures and other test setups for the
+ska.low.mccs lightweight integration tests
 """
+
 import pytest
 import socket
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
+
+
+def pytest_itemcollected(item):
+    """
+    pytest hook implementation; add the "forked" custom mark to all
+    tests that use the `device_context` fixture, causing them to be
+    sandboxed in their own process
+
+    param item: the collected test for which this hook is called
+    type item: a collected test
+    """
+    if "device_context" in item.fixturenames:
+        item.add_marker("forked")
 
 
 @pytest.fixture(scope="module")
@@ -39,6 +54,9 @@ def device_context(mocker, devices_info):
     """
 
     def _get_open_port():
+        """
+        Helper function that returns an available port on the local machine
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("", 0))
         s.listen(1)

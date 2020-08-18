@@ -450,13 +450,13 @@ class MccsStation(SKAObsDevice):
                 self.set_state(DevState.FAULT)
                 self.logger.error(exc.what())
 
-            #  update every second (should be settable?)
             self.logger.debug(
-                f"pushing local health_state {self._local_health_state} from station {self._station_id}"
+                f"pushing localhealthstate {self._local_health_state}"
+                + f" from station {self._station_id}"
             )
             time.sleep(0.5)  # temporary sleep for base class problem
             self.push_change_event("localHealthState", self._local_health_state)
-            #            self.push_archive_event("localHealthState", self._local_health_state)
+            #  update every second (should be settable?)
             self.logger.debug(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:

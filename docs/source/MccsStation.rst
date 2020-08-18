@@ -6,4 +6,4 @@ MCCS Station
 
 .. autoclass:: ska.low.mccs.MccsStation
    :members:
-
+   :private-members:

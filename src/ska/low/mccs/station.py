@@ -18,8 +18,7 @@ import threading
 
 # PyTango imports
 import tango
-from tango import DebugIt
-from tango import DevState
+from tango import DebugIt, DevState
 from tango import GreenMode
 from tango import futures_executor
 from tango.server import device_property
@@ -27,51 +26,12 @@ from tango.server import attribute, command
 
 # additional imports
 from ska.base import SKAObsDevice
-
-# from ska.low.mccs import MccsGroupDevice
-import ska.low.mccs.release as release
-from ska.low.mccs.utils import EventManager
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
-
-class StationHealthMonitor:
-    """
-    StationHealthMonitor is the health monitor for the MCCS Station prototype.
-    """
-
-    def __init__(self, device):
-        """StationHealthMonitor constructor"""
-        self._health_state_table = {}
-        self._device = device
-
-    def initialise(self, fqdn):
-        """Initialises the attributes of StationHealthMonitor"""
-        self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
-
-    def update_health(self, fqdn, event, value):
-        """
-        Callback routine for Event Manager push events
-        """
-        state, health = self._health_state_table[fqdn]
-        if event == "State":
-            self._health_state_table.update({fqdn: (value, health)})
-        elif event == "healthstate":
-            self._health_state_table.update({fqdn: (state, HealthState(value))})
-
-        health_state = HealthState.OK
-        # TODO: Resolve how to drive health state to DEGRADED
-        # if not self._device._is_configured or not self._device._is_calibrated:
-        #     health = HealthState.DEGRADED
-
-        for key, (state, health) in self._health_state_table.items():
-            if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
-                health_state = HealthState.DEGRADED
-            elif health == HealthState.FAILED:
-                health_state = HealthState.FAILED
-
-        self._device.push_change_event("HealthState", health_state)
-        print("station health =", health_state)
+# from ska.low.mccs import MccsGroupDevice
+import ska.low.mccs.release as release
+from ska.low.mccs.utils import EventManager, HealthMonitor
 
 
 class MccsStation(SKAObsDevice):
@@ -96,6 +56,7 @@ class MccsStation(SKAObsDevice):
     # -----------------
     StationId = device_property(dtype=int, default_value=0)
     TileFQDNs = device_property(dtype=(str,))
+    AntennaFQDNs = device_property(dtype=(str,))
 
     # ---------------
     # General methods
@@ -119,15 +80,17 @@ class MccsStation(SKAObsDevice):
             device = self.target
             device._subarray_id = 0
             device._tile_fqdns = list(device.TileFQDNs)
+            device._antenna_fqdns = list(device.AntennaFQDNs)
             device._beam_fqdns = []
             device._transient_buffer_fqdn = ""
             device._delay_centre = []
             device._calibration_coefficients = []
-            device._is_calibrated = False
-            device._is_configured = False
+            device._is_calibrated = True  # set to true for demo
+            device._is_configured = True  # set to True for demo
             device._calibration_job_id = 0
             device._daq_job_id = 0
             device._data_directory = ""
+            device._local_health_state = HealthState.OK
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
@@ -148,30 +111,43 @@ class MccsStation(SKAObsDevice):
             device.set_archive_event("isConfigured", True, True)
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
+            device.set_change_event("localHealthState", True, True)
 
             print(f"init thread {threading.current_thread().ident}")
-            # subscribe to events from tiles
+            # initialise the health table using the FQDN as the key.
+            # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
-            device._health_monitor = StationHealthMonitor(device)
-
+            device._health_monitor = HealthMonitor(device)
+            device._health_monitor.init_health_table([device.get_name()])
+            device._eventManagerList.append(
+                EventManager(
+                    device.get_name(), device._health_monitor.update_health_table
+                )
+            )
+            device._health_monitor.init_health_table(device._tile_fqdns)
             for fqdn in device._tile_fqdns:
-                device._health_monitor.initialise(fqdn)
                 device._eventManagerList.append(
-                    EventManager(fqdn, device._health_monitor.update_health)
+                    EventManager(fqdn, device._health_monitor.update_health_table)
+                )
+            device._health_monitor.init_health_table(device._antenna_fqdns)
+            for fqdn in device._antenna_fqdns:
+                device._eventManagerList.append(
+                    EventManager(fqdn, device._health_monitor.update_health_table)
                 )
 
+            # device._health_monitor.init_health_table(device._beam_fqdns)
             # for fqdn in device._beam_fqdns:
-            #     device._health_monitor.initialise(fqdn)
             #     device._eventManagerList.append(
-            #         EventManager(fqdn, device._health_monitor.update_health)
+            #         EventManager(fqdn, device._health_monitor.update_health_table)
             #     )
 
             # create asychronous task to push station health & attributes
-            # device._streaming = False
-            # device._update_frequency = 1
-            # device._read_task = None
-            # device._lock = threading.Lock()
-            # device._create_long_running_task()
+            device._streaming = False
+            device._update_frequency = 1
+            device._read_task = None
+            device._lock = threading.Lock()
+            device._create_long_running_task()
+
             return (ResultCode.OK, "Station Init complete")
 
     def always_executed_hook(self):
@@ -190,10 +166,18 @@ class MccsStation(SKAObsDevice):
         for event_manager in self._eventManagerList:
             event_manager.unsubscribe()
         self._eventManagerList = None
+        if self._read_task is not None:
+            with self._lock:
+                self._streaming = False
+            self._read_task = None
 
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype=HealthState)
+    def localHealthState(self):
+        return self._local_health_state
+
     @attribute(
         dtype="DevLong",
         format="%i",
@@ -254,6 +238,10 @@ class MccsStation(SKAObsDevice):
         Return the isCalibrated attribute.
         """
         return self._is_calibrated
+
+    @isCalibrated.write
+    def isCalibrated(self, value):
+        self._is_calibrated = value
 
     @attribute(
         dtype="DevBoolean",
@@ -374,6 +362,7 @@ class MccsStation(SKAObsDevice):
         args = (self, self.state_model, self.logger)
 
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("On", self.OnCommand(*args))
 
     class ConfigureCommand(ResponseCommand):
         """
@@ -437,27 +426,32 @@ class MccsStation(SKAObsDevice):
         """
         while self._streaming:
             try:
-                # if connected read the values from tpm
                 self.logger.debug("stream on")
-                with self._lock:
-                    state = self.get_state()
-                    if state != DevState.ALARM:
-                        saved_state = state
-                    isCalibrated = self._station.isCalibrated()
-                    isConfigured = self._station.isConfigured()
+                state = self.get_state()
+                if state != DevState.ALARM:
+                    saved_state = state
 
-                    # now update the attribute using lock to prevent access conflict
-                    self.push_change_event("isCalibrated", isCalibrated)
-                    self.push_change_event("isConfigured", isConfigured)
-                    self.push_archive_event("isCalibrated", isCalibrated)
-                    self.push_archive_event("isConfigured", isConfigured)
-                    # TODO: this needs to change !!!!!!!!!!!!!
+                self.push_change_event("isCalibrated", self._is_calibrated)
+                self.push_change_event("isConfigured", self._is_configured)
+                self.push_archive_event("isCalibrated", self._is_calibrated)
+                self.push_archive_event("isConfigured", self._is_configured)
+                if self._is_calibrated and self._is_configured:
                     self.set_state(saved_state)
+                    self._local_health_state = HealthState.OK
+                else:
+                    self.set_state(DevState.ALARM)
+                    self._local_health_state = HealthState.DEGRADED
             except Exception as exc:
+                self._local_health_state = HealthState.FAILED
                 self.set_state(DevState.FAULT)
                 self.logger.error(exc.what())
 
-            # TODO: update every second (should be settable?)
+            #  update every second (should be settable?)
+            self.logger.debug(
+                f"pushing local health_state {self._local_health_state} from station {self._station_id}"
+            )
+            self.push_change_event("localHealthState", self._local_health_state)
+            #            self.push_archive_event("localHealthState", self._local_health_state)
             self.logger.debug(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:

@@ -116,7 +116,7 @@ class TestMccsTile(object):
         # Give the thread a chance to run once so that
         # the voltage has been read and cached
         time.sleep(2)
-        assert device_under_test.voltage == 5.0
+        assert device_under_test.voltage == 4.7
 
     def test_current(self, device_under_test):
         """Test for the current attribute."""

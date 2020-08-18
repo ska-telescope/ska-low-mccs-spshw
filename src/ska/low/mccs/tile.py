@@ -104,7 +104,7 @@ class MccsTile(SKABaseDevice):
             device._adc_power = []
             device._sampling_rate = 0.0
             device._tpm = None
-            device._simulationMode = SimulationMode.TRUE
+            device._simulation_mode = SimulationMode.TRUE
             device._default_tapering_coeffs = [
                 float(1) for i in range(device.AntennasPerTile)
             ]
@@ -119,9 +119,6 @@ class MccsTile(SKABaseDevice):
             for name in device._event_names:
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
-            # TestMode is used in this server to denote
-            # unit testing when TestMode = TEST
-            device._test_mode = TestMode.NONE
             device._is_connected = False
             device._streaming = False
             device._update_frequency = 1
@@ -651,7 +648,7 @@ class MccsTile(SKABaseDevice):
         def do(self, argin):
             initialise_tpm = argin
             device = self.target
-            if device._simulation_mode == SimulationMode.FALSE:
+            if device._simulation_mode == SimulationMode.TRUE:
                 device._tpm = TpmSimulator(self.logger)
             else:
                 device._tpm = Tpm(  # noqa: F821
@@ -2626,13 +2623,12 @@ class MccsTile(SKABaseDevice):
             try:
                 # if connected read the values from tpm
                 if self._tpm is not None and self._is_connected:
-                    self.logger.debug("stream on")
+                    self.logger.info("stream on")
                     volts = self._tpm.voltage()
                     curr = self._tpm.current()
                     temp = self._tpm.temperature()
                     temp1 = self._tpm.get_fpga1_temperature()
                     temp2 = self._tpm.get_fpga2_temperature()
-
                     with self._lock:
                         # now update the attribute using lock to prevent access conflict
                         state = self.get_state()
@@ -2672,20 +2668,23 @@ class MccsTile(SKABaseDevice):
                             > self.fpga2_temperature.get_max_alarm()
                         ):
                             self.set_state(DevState.ALARM)
-                            self._healthState = HealthState.DEGRADED
+                            self._health_state = HealthState.DEGRADED
                         else:
                             self.set_state(saved_state)
-                            self._healthState = HealthState.OK
+                            self._health_state = HealthState.OK
                 else:
-                    self._healthState = HealthState.UNKNOWN
+                    self._health_state = HealthState.UNKNOWN
             except Exception as exc:
-                self._healthState = HealthState.FAILED
+                self._health_state = HealthState.FAILED
                 self.set_state(DevState.FAULT)
                 self.logger.error(exc.what())
 
             #  update every second (should be settable?)
-            self.push_change_event("healthState", self._healthState)
-            self.push_archive_event("healthState", self._healthState)
+            self.logger.info(
+                f"pushing health_state {self._health_state} from tile {self._tile_id}"
+            )
+            self.push_change_event("healthState", self._health_state)
+            self.push_archive_event("healthState", self._health_state)
             self.logger.debug(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:

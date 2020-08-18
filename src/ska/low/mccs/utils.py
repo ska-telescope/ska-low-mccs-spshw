@@ -3,14 +3,18 @@ Module for MCCS utils
 """
 from functools import wraps
 import inspect
+import threading
 import pkg_resources
 import json
 import jsonschema
 
 import tango
+from tango import DevState
 from tango import EventType, AttrQuality
 from tango import Except, ErrSeverity
 from tango.server import Device
+
+from ska.base.control_model import HealthState
 
 
 def tango_raise(
@@ -170,7 +174,7 @@ class EventManager:
         self._fqdn = fqdn
         self.callback = update_callback
         # Always subscribe to state change, it's pushed by the base classes
-        self._event_names = ["state", "healthState"]
+        self._event_names = ["state", "healthState", "localHealthState"]
         # stateless=True is needed to deal with device not running or device restart
         try:
             self._deviceProxy = tango.DeviceProxy(fqdn)
@@ -191,11 +195,53 @@ class EventManager:
         if ev.attr_value is not None and ev.attr_value.value is not None:
             print("----------------------------")
             print("Event @ ", ev.get_date())
-            print(self._deviceProxy.name())
-            print("in  push_event", ev.attr_value.name, ev.attr_value.value)
-            print(ev.attr_value.quality)
+            # print(self._deviceProxy.name())
+            # print("in  push_event", ev.attr_value.name, ev.attr_value.value)
+            # print(ev.attr_value.quality)
             if (
                 ev.attr_value.quality == AttrQuality.ATTR_VALID
                 and self.callback is not None
             ):
                 self.callback(self._fqdn, ev.attr_value.name, ev.attr_value.value)
+
+
+class HealthMonitor:
+    def __init__(self, device):
+        self._health_state_table = {}
+        self._device = device
+        self._lock = threading.Lock()
+
+    def init_health_table(self, fqdns):
+        for fqdn in fqdns:
+            self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
+
+    def update_health_table(self, fqdn, event, value):
+        state, health = self._health_state_table[fqdn]
+        if fqdn != self._device.get_name():
+            if event == "state":
+                self._health_state_table.update({fqdn: (value, health)})
+            elif event == "healthstate":
+                self._health_state_table.update({fqdn: (state, HealthState(value))})
+        else:
+            if event == "state":
+                self._health_state_table.update({fqdn: (value, health)})
+            elif event == "localhealthstate":
+                self._health_state_table.update({fqdn: (state, HealthState(value))})
+
+        self.rollup_health()
+
+    def rollup_health(self):
+        health_state = HealthState.OK
+        if health_state != HealthState.FAILED:
+            for key, (state, health) in self._health_state_table.items():
+                if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
+                    health_state = HealthState.DEGRADED
+                elif health == HealthState.FAILED:
+                    health_state = HealthState.FAILED
+                    break
+
+        # print(self._health_state_table)
+        self._device.push_change_event("healthState", health_state)
+        with self._lock:
+            self._device._health_state = health_state
+        print("station health =", health_state)

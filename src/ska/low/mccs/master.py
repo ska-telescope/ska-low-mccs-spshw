@@ -25,37 +25,9 @@ from tango.server import attribute, command, device_property
 from ska.base import SKAMaster, SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
-from ska.low.mccs.utils import EventManager
-from ska.base.control_model import HealthState
-
-
-class MasterHealthMonitor:
-    def __init__(self, device):
-        self._health_state_table = {}
-        self._device = device
-
-    def initialise(self, fqdn):
-        self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
-        print(self._health_state_table)
-
-    def update_health(self, fqdn, event, value):
-        state, health = self._health_state_table[fqdn]
-        if event == "State":
-            self._health_state_table.update({fqdn: (value, health)})
-        elif event == "healthstate":
-            self._health_state_table.update({fqdn: (state, HealthState(value))})
-
-        health_state = HealthState.OK
-        for key, (state, health) in self._health_state_table.items():
-            if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
-                health_state = HealthState.DEGRADED
-            elif health == HealthState.FAILED:
-                health_state = HealthState.FAILED
-
-        self._device.push_change_event("HealthState", health_state)
-        print("master health =", health_state)
+from ska.low.mccs.utils import call_with_json, tango_raise
+from ska.low.mccs.utils import EventManager, HealthMonitor
 
 
 class MccsMaster(SKAMaster):
@@ -163,11 +135,17 @@ class MccsMaster(SKAMaster):
             )
 
             device._eventManagerList = []
-            device._health_monitor = MasterHealthMonitor(device)
+            device._health_monitor = HealthMonitor(device)
+            device._health_monitor.init_health_table([device.get_name()])
+            device._eventManagerList.append(
+                EventManager(
+                    device.get_name(), device._health_monitor.update_health_table
+                )
+            )
+            device._health_monitor.init_health_table(device._station_fqdns)
             for fqdn in device._station_fqdns:
-                device._health_monitor.initialise(fqdn)
                 device._eventManagerList.append(
-                    EventManager(fqdn, device._health_monitor.update_health)
+                    EventManager(fqdn, device._health_monitor.update_health_table)
                 )
 
             message = "MccsMaster Init command completed OK"

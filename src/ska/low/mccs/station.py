@@ -85,8 +85,8 @@ class MccsStation(SKAObsDevice):
             device._transient_buffer_fqdn = ""
             device._delay_centre = []
             device._calibration_coefficients = []
-            device._is_calibrated = True  # set to true for demo
-            device._is_configured = True  # set to True for demo
+            device._is_calibrated = False
+            device._is_configured = False
             device._calibration_job_id = 0
             device._daq_job_id = 0
             device._data_directory = ""
@@ -253,6 +253,10 @@ class MccsStation(SKAObsDevice):
         Return the isConfigured attribute.
         """
         return self._is_configured
+
+    @isConfigured.write
+    def isConfigured(self, value):
+        self._is_configured = value
 
     @attribute(
         dtype="DevLong",
@@ -450,6 +454,7 @@ class MccsStation(SKAObsDevice):
             self.logger.debug(
                 f"pushing local health_state {self._local_health_state} from station {self._station_id}"
             )
+            time.sleep(0.5)  # temporary sleep for base class problem
             self.push_change_event("localHealthState", self._local_health_state)
             #            self.push_archive_event("localHealthState", self._local_health_state)
             self.logger.debug(f"sleep {self._update_frequency}")

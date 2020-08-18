@@ -92,11 +92,11 @@ class MccsTile(SKABaseDevice):
             device._csp_destination_port = 0
             device._firmware_name = ""
             device._firmware_version = ""
-            device._voltage = 0.0
-            device._current = 0.0
-            device._board_temperature = 0.0
-            device._fpga1_temperature = 0.0
-            device._fpga2_temperature = 0.0
+            device._voltage = 4.7
+            device._current = 0.4
+            device._board_temperature = 36.0
+            device._fpga1_temperature = 38.0
+            device._fpga2_temperature = 37.5
             device._antenna_ids = []
             device._forty_gb_destination_ips = []
             device._forty_gb_destination_macs = []

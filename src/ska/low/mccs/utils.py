@@ -206,16 +206,25 @@ class EventManager:
 
 
 class HealthMonitor:
+    """
+    HealthMonitor is the health monitor for the MCCS prototype.
+    """
+
     def __init__(self, device):
+        """HealthMonitor constructor"""
         self._health_state_table = {}
         self._device = device
         self._lock = threading.Lock()
 
     def init_health_table(self, fqdns):
+        """Initialise a table of State and Health with FQDN keys"""
         for fqdn in fqdns:
             self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
 
     def update_health_table(self, fqdn, event, value):
+        """
+        Callback routine for Event Manager push events
+        """
         state, health = self._health_state_table[fqdn]
         if fqdn != self._device.get_name():
             if event == "state":
@@ -231,17 +240,20 @@ class HealthMonitor:
         self.rollup_health()
 
     def rollup_health(self):
+        """
+        Rollup the health states of an element and its constituent sub-elements
+        and push the resultant health state to the enclosing element.
+        """
         health_state = HealthState.OK
-        if health_state != HealthState.FAILED:
-            for key, (state, health) in self._health_state_table.items():
-                if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
-                    health_state = HealthState.DEGRADED
-                elif health == HealthState.FAILED:
-                    health_state = HealthState.FAILED
-                    break
+        for key, (state, health) in self._health_state_table.items():
+            if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
+                health_state = HealthState.DEGRADED
+            elif health == HealthState.FAILED:
+                health_state = HealthState.FAILED
+                break
 
         # print(self._health_state_table)
         self._device.push_change_event("healthState", health_state)
         with self._lock:
             self._device._health_state = health_state
-        print("station health =", health_state)
+        print("health state=", health_state)

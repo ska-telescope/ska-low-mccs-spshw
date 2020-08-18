@@ -111,7 +111,7 @@ class TestMccsTile(object):
 
     def test_voltage(self, device_under_test):
         """Test for the voltage attribute."""
-        device_under_test.testMode = TestMode.TEST
+        #        device_under_test.testMode = TestMode.TEST
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the voltage has been read and cached
@@ -120,7 +120,7 @@ class TestMccsTile(object):
 
     def test_current(self, device_under_test):
         """Test for the current attribute."""
-        device_under_test.testMode = TestMode.TEST
+        #        device_under_test.testMode = TestMode.TEST
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the current has been read and cached
@@ -134,7 +134,7 @@ class TestMccsTile(object):
 
     def test_board_temperature(self, device_under_test):
         """Test for the board_temperature attribute."""
-        device_under_test.testMode = TestMode.TEST
+        #        device_under_test.testMode = TestMode.TEST
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the temperature has been read and cached
@@ -143,7 +143,7 @@ class TestMccsTile(object):
 
     def test_fpga1_temperature(self, device_under_test):
         """Test for the fpga1_temperature attribute."""
-        device_under_test.testMode = TestMode.TEST
+        #        device_under_test.testMode = TestMode.TEST
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the temperature has been read and cached
@@ -152,7 +152,7 @@ class TestMccsTile(object):
 
     def test_fpga2_temperature(self, device_under_test):
         """Test for the fpga2_temperature attribute."""
-        device_under_test.testMode = TestMode.TEST
+        #        device_under_test.testMode = TestMode.TEST
         device_under_test.Connect(True)
         # Give the thread a chance to run once so that
         # the temperature has been read and cached
@@ -990,7 +990,7 @@ class TestMccsTile(object):
 
     def test_TweakTransceivers(self, device_under_test):
         """ Test for TweakTransceivers"""
-        device_under_test.Connect(True)
+        device_under_test.Connect(False)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.TweakTransceivers()
@@ -999,7 +999,7 @@ class TestMccsTile(object):
 
     def test_PostSynchronisation(self, device_under_test):
         """ Test for PostSynchronisation"""
-        device_under_test.Connect(True)
+        device_under_test.Connect(False)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.PostSynchronisation()
@@ -1008,7 +1008,7 @@ class TestMccsTile(object):
 
     def test_SyncFpgas(self, device_under_test):
         """ Test for SyncFpgas"""
-        device_under_test.Connect(True)
+        device_under_test.Connect(False)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SyncFpgas()

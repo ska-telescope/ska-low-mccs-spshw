@@ -30,16 +30,20 @@ class TpmSimulator:
             "test-reg4": {},
         }
         self._use_clock = False
-        self._unittest_mode = False
+        self._test_mode = False
         self._tpm_proxy = None
 
     def connect(
         self, initialise=None, simulation=True, enable_ada=None, testmode=False
     ):
         self.logger.debug("TpmSimulator: connect")
-        self._unittest_mode = testmode
-        self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
-        self._tpm_proxy.simulate = False
+        self._test_mode = testmode
+        try:
+            self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
+            self._tpm_proxy.simulate = False
+            print(self._tpm_proxy, "+++++++++++++++++++++++++++++++")
+        except tango.DevFailed:
+            self._tpm_proxy = None
         print("TpmSimulator: connect")
 
     def disconnect(self):
@@ -73,56 +77,44 @@ class TpmSimulator:
 
     def temperature(self):
         self.logger.debug("TpmSimulator: temperature")
-        return self._tpm_proxy.temperature
-
-    #         if self._unittest_mode:  # for unit testing
-    #             return 36.0
-    #         else:  # simulate real voltage
-    #             return random.uniform(25.0, 40.0)
+        if self._tpm_proxy is None:  # for unit testing
+            return 36.0
+        else:
+            return self._tpm_proxy.temperature
 
     def voltage(self):
         self.logger.info("TpmSimulator: voltage")
-        v = self._tpm_proxy.voltage
-        print("************************", v)
-        return v
-
-    #         if self._unittest_mode:  # for unit testing
-    #             return 5.0
-    #         else:  # simulate real voltage
-    #             return random.uniform(4.5, 5.5)
+        if self._tpm_proxy is None:  # for unit testing
+            return 4.7
+        else:
+            return self._tpm_proxy.voltage
 
     def current(self):
         self.logger.debug("TpmSimulator: current")
-        return self._tpm_proxy.current
-
-    #         if self._unittest_mode:  # for unit testing
-    #             return 0.4
-    #         else:  # simulate real current
-    #             return random.uniform(0.0, 3.0)
+        if self._tpm_proxy is None:  # for unit testing
+            return 0.4
+        else:
+            return self._tpm_proxy.current
 
     def get_fpga1_temperature(self):
         self.logger.debug("TpmSimulator: get_fpga1_temperature")
-        return self._tpm_proxy.fpga1_temperature
-
-    #         if self._unittest_mode:  # for unit testing
-    #             return 38.0
-    #         else:  # simulate real temperature
-    #             return random.uniform(25.0, 40.0)
+        if self._tpm_proxy is None:  # for unit testing
+            return 38.0
+        else:
+            return self._tpm_proxy.fpga1_temperature
 
     def get_fpga2_temperature(self):
         self.logger.debug("TpmSimulator: get_fpga2_temperature")
-        return self._tpm_proxy.fpga2_temperature
-
-    #         if self._unittest_mode:  # for unit testing
-    #             return 37.5
-    #         else:  # simulate real temperature
-    #             return random.uniform(25.0, 40.0)
+        if self._tpm_proxy is None:  # for unit testing
+            return 37.5
+        else:
+            return self._tpm_proxy.fpga2_temperature
 
     def get_adc_rms(self):
         self.logger.debug("TpmSimulator: get_adc_rms")
         rms = []
         for i in range(0, 32, 2):
-            if self._unittest_mode:  # for unit testing
+            if self._test_mode:  # for unit testing
                 x = float(i)
                 y = float(i + 1)
             else:  # simulate real adc

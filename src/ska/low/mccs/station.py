@@ -36,14 +36,23 @@ from ska.base.commands import ResponseCommand, ResultCode
 
 
 class StationHealthMonitor:
+    """
+    StationHealthMonitor is the health monitor for the MCCS Station prototype.
+    """
+
     def __init__(self, device):
+        """StationHealthMonitor constructor"""
         self._health_state_table = {}
         self._device = device
 
     def initialise(self, fqdn):
+        """Initialises the attributes of StationHealthMonitor"""
         self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
 
     def update_health(self, fqdn, event, value):
+        """
+        Callback routine for Event Manager push events
+        """
         state, health = self._health_state_table[fqdn]
         if event == "State":
             self._health_state_table.update({fqdn: (value, health)})
@@ -51,6 +60,7 @@ class StationHealthMonitor:
             self._health_state_table.update({fqdn: (state, HealthState(value))})
 
         health_state = HealthState.OK
+        # TODO: Resolve how to drive health state to DEGRADED
         # if not self._device._is_configured or not self._device._is_calibrated:
         #     health = HealthState.DEGRADED
 
@@ -71,6 +81,12 @@ class MccsStation(SKAObsDevice):
     **Properties:**
 
     - Device Property
+        StationId
+            - MCCS station ID for this station
+            - Type: int (scalar attribute)
+        TileFQDNs
+            - List of Tile FQDNs (Fully Qualified Domain Name)
+            - Type: str (spectrum attribute)
     """
 
     green_mode = GreenMode.Futures
@@ -156,7 +172,6 @@ class MccsStation(SKAObsDevice):
             # device._read_task = None
             # device._lock = threading.Lock()
             # device._create_long_running_task()
-
             return (ResultCode.OK, "Station Init complete")
 
     def always_executed_hook(self):
@@ -208,6 +223,10 @@ class MccsStation(SKAObsDevice):
     @subarrayId.write
     @DebugIt()
     def subarrayId(self, id):
+        """
+        Set the ID of the Subarray to which this Station is allocated
+        Note: ID propogates to each tile in this station too
+        """
         self._subarray_id = id
         for fqdn in self._tile_fqdns:
             tile = tango.DeviceProxy(fqdn)
@@ -404,12 +423,18 @@ class MccsStation(SKAObsDevice):
     # Asynchronous routine
     # --------------------
     def _create_long_running_task(self):
+        """
+        Create task to continually push MCCS station health & attributes
+        """
         self._streaming = True
         self.logger.info("create task")
         executor = futures_executor.get_global_executor()
         self._read_task = executor.delegate(self.__do_read)
 
     def __do_read(self):
+        """
+        Task that continually pushes MCCS station health & attributes
+        """
         while self._streaming:
             try:
                 # if connected read the values from tpm
@@ -426,13 +451,13 @@ class MccsStation(SKAObsDevice):
                     self.push_change_event("isConfigured", isConfigured)
                     self.push_archive_event("isCalibrated", isCalibrated)
                     self.push_archive_event("isConfigured", isConfigured)
-                    # this needs to change !!!!!!!!!!!!!
+                    # TODO: this needs to change !!!!!!!!!!!!!
                     self.set_state(saved_state)
             except Exception as exc:
                 self.set_state(DevState.FAULT)
                 self.logger.error(exc.what())
 
-            #  update every second (should be settable?)
+            # TODO: update every second (should be settable?)
             self.logger.debug(f"sleep {self._update_frequency}")
             time.sleep(self._update_frequency)
             if not self._streaming:

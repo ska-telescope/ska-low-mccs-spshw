@@ -14,11 +14,9 @@ Prototype TANGO device server for the MCSS Station Beam
 __all__ = ["MccsStationBeam", "main"]
 
 # imports
-import threading
-import time
 
 # PyTango imports
-from tango import DevState, futures_executor
+from tango import DevState
 from tango.server import attribute
 from tango.server import device_property
 
@@ -82,15 +80,6 @@ class MccsStationBeam(SKAObsDevice):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device.set_change_event("isBeamLocked", True, True)
-            device.set_archive_event("isBeamLocked", True, True)
-
-            device._streaming = False
-            device._update_frequency = 1
-            device._read_task = None
-            device._lock = threading.Lock()
-            device._create_long_running_task()
-
             message = "MccsStationBeam Init command completed OK"
             self.logger.info(message)
             return (ResultCode.OK, message)
@@ -99,6 +88,18 @@ class MccsStationBeam(SKAObsDevice):
         """
         Method always executed before any TANGO command is executed.
         """
+        if self._is_beam_locked:
+            self._health_state = HealthState.OK
+        else:
+            self._health_state = HealthState.DEGRADED
+
+        state = self.get_state()
+        if self._health_state == HealthState.OK:
+            if state == DevState.ALARM:
+                self.set_state(DevState.ON)
+        else:
+            if state == DevState.ON:
+                self.set_state(DevState.ALARM)
 
     def delete_device(self):
         """
@@ -120,9 +121,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self._beam_id
 
-    @attribute(
-        dtype="DevLong", format="%i", doc="ID of the associated station",
-    )
+    @attribute(dtype="DevLong", format="%i", doc="ID of the associated station")
     def stationId(self):
         """
         Return the stationId attribute.
@@ -165,7 +164,9 @@ class MccsStationBeam(SKAObsDevice):
         return self._update_rate
 
     @attribute(
-        dtype="DevBoolean", doc="Flag specifying whether beam is locked to target",
+        dtype="DevBoolean",
+        doc="Flag specifying whether beam is locked to target",
+        polling_period=1000,
     )
     def isBeamLocked(self):
         """
@@ -259,61 +260,10 @@ class MccsStationBeam(SKAObsDevice):
     # Commands
     # --------
 
-    # --------------------
-    # Asynchronous routine
-    # --------------------
-    def _create_long_running_task(self):
-        self._streaming = True
-        self.logger.info("create task")
-        executor = futures_executor.get_global_executor()
-        self._read_task = executor.delegate(self.__do_read)
-
-    def __do_read(self):
-        while self._streaming:
-            try:
-                self.logger.debug("stream on")
-
-                with self._lock:
-                    # now update the attribute using lock to prevent access conflict
-                    state = self.get_state()
-                    if state is not DevState.ALARM:
-                        saved_state = state
-
-                    self.push_change_event("isBeamLocked", self._is_beam_locked)
-                    self.push_archive_event("isBeamLocked", self._is_beam_locked)
-
-                    # Would like to tie this to an isLocked attribute
-                    # rather than False or True explicits.
-                    if not self._is_beam_locked:
-
-                        # self.set_state(DevState.ALARM)
-                        self._health_state = HealthState.DEGRADED
-                        print(self._is_beam_locked, self._health_state)
-                    else:
-                        print(self._health_state, self._is_beam_locked)
-                        self.set_state(saved_state)
-                        self._health_state = HealthState.OK
-
-            # except Exception as exc:
-            except Exception:
-                self.logger.info("++++Exception routine ++++")
-                self._health_state = HealthState.FAILED
-                self.set_state(DevState.FAULT)
-
-            #  update every second (should be settable?)
-            self.push_change_event("healthState", self._health_state)
-            self.push_archive_event("healthState", self._health_state)
-            self.logger.info(f"sleep {self._update_frequency}")
-            time.sleep(self._update_frequency)
-            if not self._streaming:
-                break
-
 
 # ----------
 # Run server
 # ----------
-
-
 def main(args=None, **kwargs):
     """Main function of the MccsStationBeam module."""
 

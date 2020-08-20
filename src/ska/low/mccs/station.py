@@ -13,14 +13,9 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 """
 __all__ = ["MccsStation", "main"]
 
-import time
-import threading
-
 # PyTango imports
 import tango
 from tango import DebugIt, DevState
-from tango import GreenMode
-from tango import futures_executor
 from tango.server import device_property
 from tango.server import attribute, command
 
@@ -48,8 +43,6 @@ class MccsStation(SKAObsDevice):
             - List of Tile FQDNs (Fully Qualified Domain Name)
             - Type: str (spectrum attribute)
     """
-
-    green_mode = GreenMode.Futures
 
     # -----------------
     # Device Properties
@@ -105,15 +98,9 @@ class MccsStation(SKAObsDevice):
             device.set_change_event("transientBufferFQDN", True, False)
             device.set_archive_event("transientBufferFQDN", True, False)
 
-            device.set_change_event("isCalibrated", True, True)
-            device.set_archive_event("isCalibrated", True, True)
-            device.set_change_event("isConfigured", True, True)
-            device.set_archive_event("isConfigured", True, True)
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
-            device.set_change_event("localHealthState", True, True)
 
-            print(f"init thread {threading.current_thread().ident}")
             # initialise the health table using the FQDN as the key.
             # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
@@ -141,19 +128,19 @@ class MccsStation(SKAObsDevice):
             #         EventManager(fqdn, device._health_monitor.update_health_table)
             #     )
 
-            # create asychronous task to push station health & attributes
-            device._streaming = False
-            device._update_frequency = 1
-            device._read_task = None
-            device._lock = threading.Lock()
-            device._create_long_running_task()
-
             return (ResultCode.OK, "Station Init complete")
 
     def always_executed_hook(self):
         """
         Method always executed before any TANGO command is executed.
         """
+        state = self.get_state()
+        if self._is_calibrated and self._is_configured:
+            if state == DevState.ALARM:
+                self.set_state(DevState.ON)
+        else:
+            if state == DevState.ON:
+                self.set_state(DevState.ALARM)
 
     def delete_device(self):
         """
@@ -166,18 +153,10 @@ class MccsStation(SKAObsDevice):
         for event_manager in self._eventManagerList:
             event_manager.unsubscribe()
         self._eventManagerList = None
-        if self._read_task is not None:
-            with self._lock:
-                self._streaming = False
-            self._read_task = None
 
     # ----------
     # Attributes
     # ----------
-    @attribute(dtype=HealthState)
-    def localHealthState(self):
-        return self._local_health_state
-
     @attribute(
         dtype="DevLong",
         format="%i",
@@ -232,6 +211,7 @@ class MccsStation(SKAObsDevice):
         dtype="DevBoolean",
         doc="Defined whether the calibration cycle was successful "
         "(converged, good phase centres)",
+        polling_period=1000,
     )
     def isCalibrated(self):
         """
@@ -247,6 +227,7 @@ class MccsStation(SKAObsDevice):
         dtype="DevBoolean",
         doc="True when the Station is configured, False when the Station "
         "is unconfigured or in the process of reconfiguring.",
+        polling_period=1000,
     )
     def isConfigured(self):
         """
@@ -411,56 +392,6 @@ class MccsStation(SKAObsDevice):
         handler = self.get_command_object("Configure")
         (return_code, message) = handler()
         return [[return_code], [message]]
-
-    # --------------------
-    # Asynchronous routine
-    # --------------------
-    def _create_long_running_task(self):
-        """
-        Create task to continually push MCCS station health & attributes
-        """
-        self._streaming = True
-        self.logger.info("create task")
-        executor = futures_executor.get_global_executor()
-        self._read_task = executor.delegate(self.__do_read)
-
-    def __do_read(self):
-        """
-        Task that continually pushes MCCS station health & attributes
-        """
-        while self._streaming:
-            try:
-                self.logger.debug("stream on")
-                state = self.get_state()
-                if state != DevState.ALARM:
-                    saved_state = state
-
-                self.push_change_event("isCalibrated", self._is_calibrated)
-                self.push_change_event("isConfigured", self._is_configured)
-                self.push_archive_event("isCalibrated", self._is_calibrated)
-                self.push_archive_event("isConfigured", self._is_configured)
-                if self._is_calibrated and self._is_configured:
-                    self.set_state(saved_state)
-                    self._local_health_state = HealthState.OK
-                else:
-                    self.set_state(DevState.ALARM)
-                    self._local_health_state = HealthState.DEGRADED
-            except Exception as exc:
-                self._local_health_state = HealthState.FAILED
-                self.set_state(DevState.FAULT)
-                self.logger.error(exc.what())
-
-            self.logger.debug(
-                f"pushing localhealthstate {self._local_health_state}"
-                + f" from station {self._station_id}"
-            )
-            time.sleep(0.5)  # temporary sleep for base class problem
-            self.push_change_event("localHealthState", self._local_health_state)
-            #  update every second (should be settable?)
-            self.logger.debug(f"sleep {self._update_frequency}")
-            time.sleep(self._update_frequency)
-            if not self._streaming:
-                break
 
 
 # ----------

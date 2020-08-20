@@ -10,8 +10,6 @@ Background:
     And we have tile 2
     And we have tile 3
     And we have tile 4
-    And we have tile 5
-    And we have tile 6
 
 Scenario: Master is turned on
     Given master is off
@@ -21,8 +19,6 @@ Scenario: Master is turned on
     And tile 2 is off
     And tile 3 is off
     And tile 4 is off
-    And tile 5 is off
-    And tile 6 is off
 
     When we turn master on
 
@@ -33,8 +29,6 @@ Scenario: Master is turned on
     # And tile 2 should be on
     # And tile 3 should be on
     # And tile 4 should be on
-    # And tile 5 should be on
-    # And tile 6 should be on
 
 Scenario: Master enables subarray
     Given master is on

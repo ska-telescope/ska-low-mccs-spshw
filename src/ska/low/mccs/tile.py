@@ -15,22 +15,18 @@ __all__ = ["MccsTile", "main"]
 
 import json
 import numpy as np
-import threading
-import time
 
 # PyTango imports
-from tango import DebugIt, DevState
-from tango import GreenMode
+from tango import DebugIt
 from tango.server import attribute, command
 from tango.server import device_property
-from tango import futures_executor
 
 # Additional import
 
 # from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
-from ska.base.control_model import HealthState, SimulationMode, TestMode, LoggingLevel
+from ska.base.control_model import SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 
@@ -42,8 +38,6 @@ class MccsTile(SKABaseDevice):
 
     - Device Property
     """
-
-    green_mode = GreenMode.Futures
 
     # -----------------
     # Device Properties
@@ -75,7 +69,6 @@ class MccsTile(SKABaseDevice):
             """Initialises the attributes and properties of the Mccs Tile."""
             (result_code, message) = super().do()
             device = self.target
-            device.logger.LoggingLevel = LoggingLevel.ERROR
             device._ip_address = device.TileIP
             device._port = device.TpmCpldPort
             device._lmc_ip = device.LmcIp
@@ -108,29 +101,19 @@ class MccsTile(SKABaseDevice):
             device._default_tapering_coeffs = [
                 float(1) for i in range(device.AntennasPerTile)
             ]
-            device._event_names = [
-                "voltage",
-                "current",
-                "board_temperature",
-                "fpga1_temperature",
-                "fpga2_temperature",
-                "healthState",
-            ]
-            for name in device._event_names:
-                device.set_change_event(name, True, True)
-                device.set_archive_event(name, True, True)
             device._is_connected = False
-            device._streaming = False
-            device._update_frequency = 1
-            device._read_task = None
-            device._lock = threading.Lock()
-            device._create_long_running_task()
 
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
+        if self._tpm is not None:
+            self._voltage = self._tpm.voltage()
+            self._current = self._tpm.current()
+            self._board_temperature = self._tpm.temperature()
+            self._fpga1_temperature = self._tpm.get_fpga1_temperature()
+            self._fpga2_temperature = self._tpm.get_fpga2_temperature()
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -139,10 +122,6 @@ class MccsTile(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        if self._read_task is not None:
-            with self._lock:
-                self._streaming = False
-            self._read_task = None
 
     # ----------
     # Attributes
@@ -299,6 +278,7 @@ class MccsTile(SKABaseDevice):
         max_value=5.5,
         min_alarm=4.55,
         max_alarm=5.45,
+        polling_period=1000,
     )
     def voltage(self):
         """Return the voltage attribute."""
@@ -312,6 +292,7 @@ class MccsTile(SKABaseDevice):
         max_value=3.0,
         min_alarm=0.05,
         max_alarm=2.95,
+        polling_period=1000,
     )
     def current(self):
         """Return the current attribute."""
@@ -334,6 +315,7 @@ class MccsTile(SKABaseDevice):
         max_value=40.0,
         min_alarm=26.0,
         max_alarm=39.0,
+        polling_period=1000,
     )
     def board_temperature(self):
         """Return the board_temperature attribute."""
@@ -347,6 +329,7 @@ class MccsTile(SKABaseDevice):
         max_value=40.0,
         min_alarm=26.0,
         max_alarm=39.0,
+        polling_period=1000,
     )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
@@ -360,6 +343,7 @@ class MccsTile(SKABaseDevice):
         max_value=40.0,
         min_alarm=26.0,
         max_alarm=39.0,
+        polling_period=1000,
     )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
@@ -479,11 +463,6 @@ class MccsTile(SKABaseDevice):
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def ppsDelay(self):
         return self._tpm.get_pps_delay()
-
-    @attribute(dtype=["DevString"], max_dim_x=32)
-    def event_names(self):
-        """List of event names which push change events"""
-        return self._event_names
 
     # --------
     # Commands
@@ -709,8 +688,7 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             device = self.target
-            with device._lock:
-                device._is_connected = False
+            device._is_connected = False
             device._tpm.disconnect()
             return (ResultCode.OK, "Command succeeded")
 
@@ -2608,87 +2586,6 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("CalculateDelay")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
-
-    # --------------------
-    # Asynchronous routine
-    # --------------------
-    def _create_long_running_task(self):
-        self._streaming = True
-        self.logger.info("create task")
-        executor = futures_executor.get_global_executor()
-        self._read_task = executor.delegate(self.__do_read)
-
-    def __do_read(self):
-        while self._streaming:
-            try:
-                # if connected read the values from tpm
-                if self._tpm is not None and self._is_connected:
-                    self.logger.info("stream on")
-                    volts = self._tpm.voltage()
-                    curr = self._tpm.current()
-                    temp = self._tpm.temperature()
-                    temp1 = self._tpm.get_fpga1_temperature()
-                    temp2 = self._tpm.get_fpga2_temperature()
-                    with self._lock:
-                        # now update the attribute using lock to prevent access conflict
-                        state = self.get_state()
-                        if state != DevState.ALARM:
-                            saved_state = state
-                        self._voltage = volts
-                        self._current = curr
-                        self._board_temperature = temp
-                        self._fpga1_temperature = temp1
-                        self._fpga2_temperature = temp2
-                        self.push_change_event("voltage", volts)
-                        self.push_change_event("current", curr)
-                        self.push_change_event("board_temperature", temp)
-                        self.push_change_event("fpga1_temperature", temp1)
-                        self.push_change_event("fpga2_temperature", temp2)
-                        self.push_archive_event("voltage", volts)
-                        self.push_archive_event("current", curr)
-                        self.push_archive_event("board_temperature", temp)
-                        self.push_archive_event("fpga1_temperature", temp1)
-                        self.push_archive_event("fpga2_temperature", temp2)
-                        if (
-                            self._voltage < self.voltage.get_min_alarm()
-                            or self._voltage > self.voltage.get_max_alarm()
-                            or self._current < self.current.get_min_alarm()
-                            or self._current > self.current.get_max_alarm()
-                            or self._board_temperature
-                            < self.board_temperature.get_min_alarm()
-                            or self._board_temperature
-                            > self.board_temperature.get_max_alarm()
-                            or self._fpga1_temperature
-                            < self.fpga1_temperature.get_min_alarm()
-                            or self._fpga1_temperature
-                            > self.fpga1_temperature.get_max_alarm()
-                            or self._fpga2_temperature
-                            < self.fpga2_temperature.get_min_alarm()
-                            or self._fpga2_temperature
-                            > self.fpga2_temperature.get_max_alarm()
-                        ):
-                            self.set_state(DevState.ALARM)
-                            self._health_state = HealthState.DEGRADED
-                        else:
-                            self.set_state(saved_state)
-                            self._health_state = HealthState.OK
-                else:
-                    self._health_state = HealthState.UNKNOWN
-            except Exception as exc:
-                self._health_state = HealthState.FAILED
-                self.set_state(DevState.FAULT)
-                self.logger.error(exc.what())
-
-            #  update every second (should be settable?)
-            self.logger.info(
-                f"pushing health_state {self._health_state} from tile {self._tile_id}"
-            )
-            self.push_change_event("healthState", self._health_state)
-            self.push_archive_event("healthState", self._health_state)
-            self.logger.debug(f"sleep {self._update_frequency}")
-            time.sleep(self._update_frequency)
-            if not self._streaming:
-                break
 
 
 # ----------

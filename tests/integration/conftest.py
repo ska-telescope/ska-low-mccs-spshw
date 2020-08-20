@@ -75,5 +75,7 @@ def device_context(mocker, devices_info):
         ),
     )
 
-    with MultiDeviceTestContext(devices_info, host=HOST, port=PORT) as context:
+    with MultiDeviceTestContext(
+        devices_info, process=True, host=HOST, port=PORT
+    ) as context:
         yield context

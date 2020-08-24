@@ -360,7 +360,7 @@ class MccsTile(SKABaseDevice):
     )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        return self._fpga1_temperature()
+        return self._fpga1_temperature
 
     @attribute(
         dtype="DevDouble",
@@ -374,7 +374,7 @@ class MccsTile(SKABaseDevice):
     )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        return self._fpga2_temperature()
+        return self._fpga2_temperature
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def fpga1_time(self):

@@ -396,6 +396,7 @@ class MccsMaster(SKAMaster):
             Reset command. This implementation resets the MCCS
             system as a whole as an attempt to clear a FAULT
             state.
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

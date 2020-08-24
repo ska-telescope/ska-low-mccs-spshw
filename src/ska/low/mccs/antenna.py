@@ -25,6 +25,9 @@ from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import TestMode
 
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthMonitor
+
 
 class MccsAntenna(SKABaseDevice):
     """
@@ -84,11 +87,14 @@ class MccsAntenna(SKABaseDevice):
                 "xPolarisationFaulty",
                 "yPolarisationFaulty",
             ]
-            # device._eventManagerList = []
-            # fqdn = device.get_name()
-            # device._health_monitor = TileHealthMonitor(device, [fqdn])
-            # device._eventManagerList.append(
-            EventManager(fqdn, device._health_monitor.update_health_table, event_names)
+            device._eventManagerList = []
+            fqdn = device.get_name()
+            device._health_monitor = HealthMonitor(device, [fqdn])
+            device._eventManagerList.append(
+                EventManager(
+                    fqdn, device._health_monitor.update_health_table, event_names
+                )
+            )
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):

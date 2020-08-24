@@ -23,11 +23,13 @@ from tango.server import device_property
 
 # Additional import
 
-# from ska.low.mccs import MccsGroupDevice
-from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
 from ska.base.control_model import SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
+
+from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import TileHealthMonitor
 
 
 class MccsTile(SKABaseDevice):
@@ -85,11 +87,11 @@ class MccsTile(SKABaseDevice):
             device._csp_destination_port = 0
             device._firmware_name = ""
             device._firmware_version = ""
-            device._voltage = 4.7
-            device._current = 0.4
-            device._board_temperature = 36.0
-            device._fpga1_temperature = 38.0
-            device._fpga2_temperature = 37.5
+            device._voltage = 0.0
+            device._current = 0.0
+            device._board_temperature = 0.0
+            device._fpga1_temperature = 0.0
+            device._fpga2_temperature = 0.0
             device._antenna_ids = []
             device._forty_gb_destination_ips = []
             device._forty_gb_destination_macs = []
@@ -102,6 +104,26 @@ class MccsTile(SKABaseDevice):
                 float(1) for i in range(device.AntennasPerTile)
             ]
             device._is_connected = False
+            device.set_change_event("healthState", True, True)
+            device.set_archive_event("healthState", True, True)
+
+            # make this device listen to its own events so that it can
+            # push a health state to station
+            event_names = [
+                "current",
+                "voltage",
+                "board_temperature",
+                "fpga1_temperature",
+                "fpga2_temperature",
+            ]
+            device._eventManagerList = []
+            fqdn = device.get_name()
+            device._health_monitor = TileHealthMonitor(device, [fqdn])
+            device._eventManagerList.append(
+                EventManager(
+                    fqdn, device._health_monitor.update_health_table, event_names
+                )
+            )
 
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
@@ -122,6 +144,9 @@ class MccsTile(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
+        for event_manager in self._eventManagerList:
+            event_manager.unsubscribe()
+        self._eventManagerList = None
 
     # ----------
     # Attributes
@@ -290,6 +315,8 @@ class MccsTile(SKABaseDevice):
         abs_change=0.05,
         min_value=0.0,
         max_value=3.0,
+        min_warning=0.1,
+        max_warning=2.85,
         min_alarm=0.05,
         max_alarm=2.95,
         polling_period=1000,
@@ -333,7 +360,7 @@ class MccsTile(SKABaseDevice):
     )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        return self._fpga1_temperature
+        return self._fpga1_temperature()
 
     @attribute(
         dtype="DevDouble",
@@ -347,7 +374,7 @@ class MccsTile(SKABaseDevice):
     )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        return self._fpga2_temperature
+        return self._fpga2_temperature()
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def fpga1_time(self):
@@ -1223,7 +1250,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("Mode is a mandatory parameter")
             payload_length = params.get("PayloadLength", 1024)
             dst_ip = params.get("DstIP", None)
-            src_port = params.get("SrcPort", 0xf0d0)
+            src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
             self.target._tpm.set_lmc_download(
@@ -2269,7 +2296,7 @@ class MccsTile(SKABaseDevice):
             channel_payload_length = params.get("ChannelPayloadLength", 2)
             beam_payload_length = params.get("BeamPayloadLength", 2)
             dst_ip = params.get("DstIP", None)
-            src_port = params.get("SrcPort", 0xf0d0)
+            src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
             self.target._tpm.set_lmc_integrated_download(

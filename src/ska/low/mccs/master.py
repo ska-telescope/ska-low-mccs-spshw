@@ -27,7 +27,8 @@ from ska.base.commands import ResponseCommand, ResultCode
 
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
-from ska.low.mccs.utils import EventManager, HealthMonitor
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthMonitor
 
 
 class MccsMaster(SKAMaster):
@@ -134,15 +135,11 @@ class MccsMaster(SKAMaster):
                 len(device.MccsStations), dtype=numpy.ubyte
             )
 
+            # initialise the health table using the FQDN as the key.
+            # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
-            device._health_monitor = HealthMonitor(device)
-            device._health_monitor.init_health_table([device.get_name()])
-            device._eventManagerList.append(
-                EventManager(
-                    device.get_name(), device._health_monitor.update_health_table
-                )
-            )
-            device._health_monitor.init_health_table(device._station_fqdns)
+            fqdns = device._station_fqdns
+            device._health_monitor = HealthMonitor(device, fqdns)
             for fqdn in device._station_fqdns:
                 device._eventManagerList.append(
                     EventManager(fqdn, device._health_monitor.update_health_table)

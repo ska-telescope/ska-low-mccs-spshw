@@ -41,7 +41,6 @@ class TpmSimulator:
         try:
             self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
             self._tpm_proxy.simulate = False
-            print(self._tpm_proxy, "+++++++++++++++++++++++++++++++")
         except tango.DevFailed:
             self._tpm_proxy = None
         print("TpmSimulator: connect")
@@ -83,7 +82,7 @@ class TpmSimulator:
             return self._tpm_proxy.temperature
 
     def voltage(self):
-        self.logger.info("TpmSimulator: voltage")
+        self.logger.debug("TpmSimulator: voltage")
         if self._tpm_proxy is None:  # for unit testing
             return 4.7
         else:

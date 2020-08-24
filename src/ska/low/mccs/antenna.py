@@ -76,6 +76,15 @@ class MccsAntenna(SKABaseDevice):
             device._delays = [0.0]
             device._delayRates = [0.0]
             device._bandpassCoefficient = [0.0]
+            # make this device listen to its own events so that it can
+            # push a health state to station
+            #             event_names = ["voltage", "temperature", "xPolarisationFaulty", "yPolarisationFaulty"]
+            #             device._eventManagerList = []
+            #             fqdn = device.get_name()
+            #             device._health_monitor = TileHealthMonitor(device, [fqdn])
+            #             device._eventManagerList.append(
+            #                 EventManager(fqdn, device._health_monitor.update_health_table, event_names)
+            #             )
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):

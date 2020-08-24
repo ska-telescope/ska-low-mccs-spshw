@@ -21,12 +21,12 @@ from tango.server import attribute, command
 
 # additional imports
 from ska.base import SKAObsDevice
-from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
 # from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
-from ska.low.mccs.utils import EventManager, HealthMonitor
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthMonitor
 
 
 class MccsStation(SKAObsDevice):
@@ -83,7 +83,6 @@ class MccsStation(SKAObsDevice):
             device._calibration_job_id = 0
             device._daq_job_id = 0
             device._data_directory = ""
-            device._local_health_state = HealthState.OK
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
@@ -97,32 +96,23 @@ class MccsStation(SKAObsDevice):
             device.set_archive_event("beamFQDNs", True, True)
             device.set_change_event("transientBufferFQDN", True, False)
             device.set_archive_event("transientBufferFQDN", True, False)
-
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
 
             # initialise the health table using the FQDN as the key.
             # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
-            device._health_monitor = HealthMonitor(device)
-            device._health_monitor.init_health_table([device.get_name()])
-            device._eventManagerList.append(
-                EventManager(
-                    device.get_name(), device._health_monitor.update_health_table
-                )
-            )
-            device._health_monitor.init_health_table(device._tile_fqdns)
+            fqdns = device._tile_fqdns + device._antenna_fqdns  # + device._beam_fqdns
+            device._health_monitor = HealthMonitor(device, fqdns)
+
             for fqdn in device._tile_fqdns:
                 device._eventManagerList.append(
                     EventManager(fqdn, device._health_monitor.update_health_table)
                 )
-            device._health_monitor.init_health_table(device._antenna_fqdns)
             for fqdn in device._antenna_fqdns:
                 device._eventManagerList.append(
                     EventManager(fqdn, device._health_monitor.update_health_table)
                 )
-
-            # device._health_monitor.init_health_table(device._beam_fqdns)
             # for fqdn in device._beam_fqdns:
             #     device._eventManagerList.append(
             #         EventManager(fqdn, device._health_monitor.update_health_table)
@@ -347,7 +337,6 @@ class MccsStation(SKAObsDevice):
         args = (self, self.state_model, self.logger)
 
         self.register_command_object("Configure", self.ConfigureCommand(*args))
-        self.register_command_object("On", self.OnCommand(*args))
 
     class ConfigureCommand(ResponseCommand):
         """

@@ -28,7 +28,7 @@ class HealthMonitor:
         """
         Initialise a new HealthMonitor object
         """
-        self._health_state_table = {}
+        self._healthstate_table = {}
         self._device = device
         self._lock = threading.Lock()
         self._initialise_table(fqdns)
@@ -37,16 +37,25 @@ class HealthMonitor:
         # Initialise a table of State and Health with FQDN keys
         print("initialise default table")
         for fqdn in fqdns:
-            self._health_state_table.update(
-                {fqdn: {"state": DevState.UNKNOWN, "healthstate": HealthState.OK}}
+            self._healthstate_table.update(
+                {fqdn: {"State": DevState.UNKNOWN, "healthstate": HealthState.OK}}
             )
 
     def update_health_table(self, fqdn, event, value, quality):
         """
         Callback routine for Event Manager push events
+
+        :param fqdn: fully qualified device name
+        :type fqdn: str
+        :param event: event name
+        :type event: str
+        :param value: the value of the attribute event name
+        :type value: object
+        :param quality: the quality of the event
+        :type quality: AttrQuality enum (defined in tango)
         """
-        event_dict = self._health_state_table[fqdn]
-        if event == "state":
+        event_dict = self._healthstate_table[fqdn]
+        if event == "State":
             event_dict[event] = value
         elif event == "healthstate":
             event_dict[event] = HealthState(value)
@@ -59,13 +68,13 @@ class HealthMonitor:
         and push the resultant health state to the enclosing element.
         """
         health_state = HealthState.OK
-        for fqdn, event_dict in self._health_state_table.items():
+        for fqdn, event_dict in self._healthstate_table.items():
             for event, health in event_dict.items():
-                if event == "state" and (
+                if event == "State" and (
                     health == DevState.FAULT or health == DevState.ALARM
                 ):
                     health_state = HealthState.FAILED
-                elif event == "state":
+                elif event == "State":
                     health_state = HealthState.OK
                 elif health == HealthState.FAILED:
                     health_state = HealthState.FAILED
@@ -77,43 +86,57 @@ class HealthMonitor:
             if health_state == HealthState.FAILED:
                 break
 
-        print(self._health_state_table)
+        print(self._healthstate_table)
         self._device.push_change_event("healthState", health_state)
         with self._lock:
             self._device._health_state = health_state
         print("health state=", health_state)
 
 
-class TileHealthMonitor(HealthMonitor):
+class LocalHealthMonitor(HealthMonitor):
     """
-    TileHealthMonitor is the health monitor specifically for the tile hardware.
+    LocalHealthMonitor is the health monitor specifically for ascertaining the
+    health state of the current device by aggregating the quality of its attributes.
     """
 
     def __init__(self, device, fqdns):
         super().__init__(device, fqdns)
 
     def _initialise_table(self, fqdns):
-        print("initialise tile table")
+        """
+        Internal routine to initialise the healthstate table
+
+        :param fqdns: a list of fully qualified device names
+        :type fqdns: list of str
+        """
+        print("initialise hardware healthstate table")
         for fqdn in fqdns:
-            self._health_state_table.update(
-                {
-                    fqdn: {
-                        "current": HealthState.OK,
-                        "voltage": HealthState.OK,
-                        "board_temperature": HealthState.OK,
-                        "fpga1_temperature": HealthState.OK,
-                        "fpga2_temperature": HealthState.OK,
-                    }
-                }
-            )
+            event_dict = {}
+            for name in self._device._event_names:
+                event_dict.update({name: HealthState.OK})
+            self._healthstate_table.update({fqdn: event_dict})
+        print(self._healthstate_table)
 
     def update_health_table(self, fqdn, event, value, quality):
         """
         Callback routine for Event Manager push events which converts
-        attribute quality into health state.
+        attribute quality into health state according to:
+        ATTR_ALARM    -> HealthState.FAILED
+        ATTR_WARNING  -> HealthState.DEGRADED
+        ATTR_VALID    -> HealthState.OK
+        ATTR_CHANGING -> HealthState.UNKNOWN
+        ATTR_INVALID  -> HealthState.UNKNOWN
+
+        :param fqdn: fully qualified device name
+        :type fqdn: str
+        :param event: event name
+        :type event: str
+        :param value: the value of the attribute event name
+        :type value: object
+        :param quality: the quality of the event
+        :type quality: AttrQuality enum (defined in tango)
         """
-        print("tile update health table")
-        event_dict = self._health_state_table[fqdn]
+        event_dict = self._healthstate_table[fqdn]
         if quality == AttrQuality.ATTR_ALARM:
             event_dict[event] = HealthState.FAILED
         elif quality == AttrQuality.ATTR_WARNING:

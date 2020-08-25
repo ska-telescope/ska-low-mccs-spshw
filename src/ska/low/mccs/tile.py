@@ -17,7 +17,7 @@ import json
 import numpy as np
 
 # PyTango imports
-from tango import DebugIt
+from tango import DebugIt, DevState
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -29,7 +29,7 @@ from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import TileHealthMonitor
+from ska.low.mccs.health import LocalHealthMonitor
 
 
 class MccsTile(SKABaseDevice):
@@ -109,7 +109,7 @@ class MccsTile(SKABaseDevice):
 
             # make this device listen to its own events so that it can
             # push a health state to station
-            event_names = [
+            device._event_names = [
                 "current",
                 "voltage",
                 "board_temperature",
@@ -118,13 +118,16 @@ class MccsTile(SKABaseDevice):
             ]
             device._eventManagerList = []
             fqdn = device.get_name()
-            device._health_monitor = TileHealthMonitor(device, [fqdn])
+            device._health_monitor = LocalHealthMonitor(device, [fqdn])
             device._eventManagerList.append(
                 EventManager(
-                    fqdn, device._health_monitor.update_health_table, event_names
+                    fqdn,
+                    device._health_monitor.update_health_table,
+                    device._event_names,
                 )
             )
 
+            device.set_state(DevState.OFF)
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
 

@@ -14,7 +14,7 @@ architecture in SKA-TEL-LFAA-06000052-02.
 """
 __all__ = ["MccsAntenna", "main"]
 
-import random
+# import random
 
 # tango imports
 from tango import DebugIt
@@ -23,10 +23,11 @@ from tango.server import attribute, command
 # Additional import
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import TestMode
+
+# from ska.base.control_model import TestMode
 
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor
+from ska.low.mccs.health import LocalHealthMonitor
 
 
 class MccsAntenna(SKABaseDevice):
@@ -79,9 +80,12 @@ class MccsAntenna(SKABaseDevice):
             device._delays = [0.0]
             device._delayRates = [0.0]
             device._bandpassCoefficient = [0.0]
+            device.set_change_event("healthState", True, True)
+            device.set_archive_event("healthState", True, True)
+
             # make this device listen to its own events so that it can
             # push a health state to station
-            event_names = [
+            device._event_names = [
                 "voltage",
                 "temperature",
                 "xPolarisationFaulty",
@@ -89,22 +93,24 @@ class MccsAntenna(SKABaseDevice):
             ]
             device._eventManagerList = []
             fqdn = device.get_name()
-            device._health_monitor = HealthMonitor(device, [fqdn])
+            device._health_monitor = LocalHealthMonitor(device, [fqdn])
             device._eventManagerList.append(
                 EventManager(
-                    fqdn, device._health_monitor.update_health_table, event_names
+                    fqdn,
+                    device._health_monitor.update_health_table,
+                    device._event_names,
                 )
             )
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        if self._test_mode == TestMode.NONE:
-            self._voltage = random.uniform(4.5, 5.5)
-            self._temperature = random.uniform(30.0, 35.0)
-        else:
-            self._voltage = 3.5
-            self._temperature = 20.6
+        # if self._test_mode == TestMode.NONE:
+        #    self._voltage = random.uniform(4.5, 5.5)
+        #     self._temperature = random.uniform(30.0, 35.0)
+        # else:
+        # self._voltage = 3.5
+        # self._temperature = 20.6
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -160,9 +166,24 @@ class MccsAntenna(SKABaseDevice):
     def rms(self):
         return self._rms
 
-    @attribute(dtype="float", label="voltage", unit="volts")
+    @attribute(
+        dtype="float",
+        label="voltage",
+        unit="volts",
+        abs_change=0.05,
+        min_value=2.5,
+        max_value=5.5,
+        min_alarm=2.75,
+        max_alarm=5.45,
+        polling_period=1000,
+    )
     def voltage(self):
         return self._voltage
+
+    # added for demo only
+    @voltage.write
+    def voltage(self, value):
+        self._voltage = value
 
     @attribute(dtype="float", label="temperature", unit="DegC")
     def temperature(self):

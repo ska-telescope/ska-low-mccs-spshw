@@ -14,7 +14,7 @@ architecture in SKA-TEL-LFAA-06000052-02.
 """
 __all__ = ["MccsAntenna", "main"]
 
-# import random
+import random
 
 # tango imports
 from tango import DebugIt
@@ -24,7 +24,7 @@ from tango.server import attribute, command
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 
-# from ska.base.control_model import TestMode
+from ska.base.control_model import TestMode
 
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import LocalHealthMonitor
@@ -82,6 +82,7 @@ class MccsAntenna(SKABaseDevice):
             device._bandpassCoefficient = [0.0]
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
+            device._first = True
 
             # make this device listen to its own events so that it can
             # push a health state to station
@@ -105,12 +106,14 @@ class MccsAntenna(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        # if self._test_mode == TestMode.NONE:
-        #    self._voltage = random.uniform(4.5, 5.5)
-        #     self._temperature = random.uniform(30.0, 35.0)
-        # else:
-        # self._voltage = 3.5
-        # self._temperature = 20.6
+        if self._test_mode == TestMode.TEST:
+            self._voltage = random.uniform(4.5, 5.5)
+            self._temperature = random.uniform(30.0, 35.0)
+        else:
+            if self._first:
+                self._voltage = 3.5
+                self._temperature = 20.6
+                self._first = False
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.

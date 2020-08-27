@@ -125,7 +125,7 @@ Log-in:
 admin:admin
 
 * Open Dashboards->Manage->examples->Tango Dashboard
-* select device: low/alt/master
+* select device: low/elt/master
 * Attribute list can be seen on the right hand side half way down the dashboard
 * Change dashboard time-span: From: now-5s To: now
 * You can then open the CLI to interact with master and observe changes in Grafana dashboard

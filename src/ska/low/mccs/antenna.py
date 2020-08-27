@@ -15,6 +15,7 @@ architecture in SKA-TEL-LFAA-06000052-02.
 __all__ = ["MccsAntenna", "main"]
 
 import random
+import threading
 
 # tango imports
 from tango import DebugIt
@@ -27,7 +28,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import TestMode
 
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import LocalHealthMonitor
+from ska.low.mccs.health import LocalHealthMonitor, RollupPolicy
 
 
 class MccsAntenna(SKABaseDevice):
@@ -83,10 +84,11 @@ class MccsAntenna(SKABaseDevice):
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
             device._first = True
+            device._lock = threading.Lock()
 
             # make this device listen to its own events so that it can
             # push a health state to station
-            device._event_names = [
+            event_names = [
                 "voltage",
                 "temperature",
                 "xPolarisationFaulty",
@@ -94,12 +96,13 @@ class MccsAntenna(SKABaseDevice):
             ]
             device._eventManagerList = []
             fqdn = device.get_name()
-            device._health_monitor = LocalHealthMonitor(device, [fqdn])
+            device._rollup_policy = RollupPolicy(device.update_healthstate)
+            device._health_monitor = LocalHealthMonitor(
+                [fqdn], device._rollup_policy.rollup_health, event_names
+            )
             device._eventManagerList.append(
                 EventManager(
-                    fqdn,
-                    device._health_monitor.update_health_table,
-                    device._event_names,
+                    fqdn, device._health_monitor.update_health_table, event_names
                 )
             )
             return (ResultCode.OK, "Init command succeeded")
@@ -391,6 +394,12 @@ class MccsAntenna(SKABaseDevice):
         handler = self.get_command_object("PowerOff")
         (return_code, message) = handler()
         return [[return_code], [message]]
+
+    def update_healthstate(self, health_state):
+        self.push_change_event("healthState", health_state)
+        with self._lock:
+            self._health_state = health_state
+        print("health state=", health_state)
 
 
 # ----------

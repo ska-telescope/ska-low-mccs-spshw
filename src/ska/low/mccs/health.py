@@ -11,8 +11,6 @@ subsystem.
 """
 __all__ = ["HealthMonitor"]
 
-import threading
-
 from tango import DevState
 from tango import AttrQuality
 
@@ -24,13 +22,13 @@ class HealthMonitor:
     HealthMonitor is the health monitor for the MCCS prototype.
     """
 
-    def __init__(self, device, fqdns):
+    def __init__(self, fqdns, rollup_callback, event_names=None):
         """
         Initialise a new HealthMonitor object
         """
         self._healthstate_table = {}
-        self._device = device
-        self._lock = threading.Lock()
+        self._rollup_callback = rollup_callback
+        self._event_names = event_names
         self._initialise_table(fqdns)
 
     def _initialise_table(self, fqdns):
@@ -60,37 +58,9 @@ class HealthMonitor:
         elif event == "healthstate":
             event_dict[event] = HealthState(value)
 
-        self.rollup_health()
-
-    def rollup_health(self):
-        """
-        Rollup the health states of an element and its constituent sub-elements
-        and push the resultant health state to the enclosing element.
-        """
-        health_state = HealthState.OK
-        for fqdn, event_dict in self._healthstate_table.items():
-            for event, health in event_dict.items():
-                if event == "State" and (
-                    health == DevState.FAULT or health == DevState.ALARM
-                ):
-                    health_state = HealthState.FAILED
-                elif event == "State":
-                    health_state = HealthState.OK
-                elif health == HealthState.FAILED:
-                    health_state = HealthState.FAILED
-                    break
-                elif health == HealthState.DEGRADED:
-                    health_state = HealthState.DEGRADED
-                elif health == HealthState.UNKNOWN and health != HealthState.DEGRADED:
-                    health_state = HealthState.UNKNOWN
-            if health_state == HealthState.FAILED:
-                break
-
         print(self._healthstate_table)
-        self._device.push_change_event("healthState", health_state)
-        with self._lock:
-            self._device._health_state = health_state
-        print("health state=", health_state)
+        if self._rollup_callback is not None:
+            self._rollup_callback(self._healthstate_table)
 
 
 class LocalHealthMonitor(HealthMonitor):
@@ -99,8 +69,8 @@ class LocalHealthMonitor(HealthMonitor):
     health state of the current device by aggregating the quality of its attributes.
     """
 
-    def __init__(self, device, fqdns):
-        super().__init__(device, fqdns)
+    def __init__(self, fqdns, rollup_callback, event_names):
+        super().__init__(fqdns, rollup_callback, event_names)
 
     def _initialise_table(self, fqdns):
         """
@@ -112,7 +82,7 @@ class LocalHealthMonitor(HealthMonitor):
         print("initialise hardware healthstate table")
         for fqdn in fqdns:
             event_dict = {}
-            for name in self._device._event_names:
+            for name in self._event_names:
                 event_dict.update({name: HealthState.OK})
             self._healthstate_table.update({fqdn: event_dict})
         print(self._healthstate_table)
@@ -146,4 +116,34 @@ class LocalHealthMonitor(HealthMonitor):
         else:
             event_dict[event] = HealthState.UNKNOWN
 
-        self.rollup_health()
+        self._rollup_callback(self._healthstate_table)
+
+
+class RollupPolicy:
+    def __init__(self, update_healthstate_callback):
+        self._update_healthstate_callback = update_healthstate_callback
+
+    def rollup_health(self, healthstate_table):
+        """
+        Rollup the health states of an element and its constituent sub-elements
+        and push the resultant health state to the enclosing element.
+        """
+        health_state = HealthState.OK
+        for fqdn, event_dict in healthstate_table.items():
+            for event, health in event_dict.items():
+                if event == "State" and (
+                    health == DevState.FAULT or health == DevState.ALARM
+                ):
+                    health_state = HealthState.FAILED
+                elif event == "State":
+                    health_state = HealthState.OK
+                elif health == HealthState.FAILED:
+                    health_state = HealthState.FAILED
+                    break
+                elif health == HealthState.DEGRADED:
+                    health_state = HealthState.DEGRADED
+                elif health == HealthState.UNKNOWN and health != HealthState.DEGRADED:
+                    health_state = HealthState.UNKNOWN
+            if health_state == HealthState.FAILED:
+                break
+        self._update_healthstate_callback(health_state)

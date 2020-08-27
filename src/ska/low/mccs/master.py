@@ -15,6 +15,7 @@ __all__ = ["MccsMaster", "main"]
 
 import numpy
 import json
+import threading
 
 # PyTango imports
 import tango
@@ -28,7 +29,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor
+from ska.low.mccs.health import HealthMonitor, RollupPolicy
 
 
 class MccsMaster(SKAMaster):
@@ -135,11 +136,15 @@ class MccsMaster(SKAMaster):
                 len(device.MccsStations), dtype=numpy.ubyte
             )
 
+            device._lock = threading.Lock()
             # initialise the health table using the FQDN as the key.
             # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
             fqdns = device._station_fqdns
-            device._health_monitor = HealthMonitor(device, fqdns)
+            device._rollup_policy = RollupPolicy(device.update_healthstate)
+            device._health_monitor = HealthMonitor(
+                fqdns, device._rollup_policy.rollup_health
+            )
             for fqdn in device._station_fqdns:
                 device._eventManagerList.append(
                     EventManager(fqdn, device._health_monitor.update_health_table)
@@ -875,6 +880,12 @@ class MccsMaster(SKAMaster):
         handler = self.get_command_object("Maintenance")
         (return_code, message) = handler()
         return [[return_code], [message]]
+
+    def update_healthstate(self, health_state):
+        self.push_change_event("healthState", health_state)
+        with self._lock:
+            self._health_state = health_state
+        print("health state=", health_state)
 
 
 # ----------

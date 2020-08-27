@@ -13,6 +13,8 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 """
 __all__ = ["MccsStation", "main"]
 
+import threading
+
 # PyTango imports
 import tango
 from tango import DebugIt, DevState
@@ -26,7 +28,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 # from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor
+from ska.low.mccs.health import HealthMonitor, RollupPolicy
 
 
 class MccsStation(SKAObsDevice):
@@ -98,12 +100,16 @@ class MccsStation(SKAObsDevice):
             device.set_archive_event("transientBufferFQDN", True, False)
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
+            device._lock = threading.Lock()
 
             # initialise the health table using the FQDN as the key.
             # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
             fqdns = device._tile_fqdns + device._antenna_fqdns  # + device._beam_fqdns
-            device._health_monitor = HealthMonitor(device, fqdns)
+            device._rollup_policy = RollupPolicy(device.update_healthstate)
+            device._health_monitor = HealthMonitor(
+                fqdns, device._rollup_policy.rollup_health
+            )
 
             for fqdn in device._tile_fqdns:
                 device._eventManagerList.append(
@@ -381,6 +387,12 @@ class MccsStation(SKAObsDevice):
         handler = self.get_command_object("Configure")
         (return_code, message) = handler()
         return [[return_code], [message]]
+
+    def update_healthstate(self, health_state):
+        self.push_change_event("healthState", health_state)
+        with self._lock:
+            self._health_state = health_state
+        print("health state=", health_state)
 
 
 # ----------

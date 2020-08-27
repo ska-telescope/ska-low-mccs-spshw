@@ -77,17 +77,10 @@ the vscode container dev environment.
 
 To start up a TANGO-grafana cluster:
 ```bash
-# I've found it necessary to close ALL apps before starting this sequence
-cd ska-low-mccs/
-# Tidy up any previous minikube environment
-./scripts/tear_down.sh
-exit
-# Start minikube in a new terminal window
-minikube start
-# Now check the server IP address using
+# Check the server IP address using
 kubectl config view
 # My config switched between x.x.x.3 and x.x.x.4, where only .3 worked
-# In this case, close all apps and try again
+# In this case, tear-down and restart minikube
 # Export Docker environment variables to Bash
 eval $(minikube docker-env)
 # Navigate to the MCCS scripts folder
@@ -103,6 +96,17 @@ export TANGO_BASE_ENABLED=false
 # Starts up mccs
 make deploy
 make watch # Patience is a virtue in the world of k8s
+```
+
+If you need to restart minikube:
+```bash
+# If your k8s cluster is broken, use the following to restart it
+cd ska-low-mccs/scripts/
+# Tidy up any previous minikube environment
+./tear_down.sh
+exit
+# Start minikube in a new terminal window
+minikube start
 ```
 
 If everything went smoothly, when all the pods are running...
@@ -124,9 +128,8 @@ URL: http://grafana.integration.engageska-portugal.pt
 Log-in:
 admin:admin
 
-* Open Dashboards->Manage->examples->Tango Dashboard
-* select device: low/alt/master
-* Attribute list can be seen on the right hand side half way down the dashboard
+* Open Dashboards->Manage->examples->MCCS Device Dashboard
+* select device: low/elt/master (default)
 * Change dashboard time-span: From: now-5s To: now
 * You can then open the CLI to interact with master and observe changes in Grafana dashboard
 ```bash

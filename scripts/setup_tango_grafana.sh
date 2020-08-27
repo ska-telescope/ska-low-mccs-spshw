@@ -7,7 +7,9 @@ git clone https://gitlab.com/ska-telescope/skampi.git
 cd skampi
 make deploy HELM_CHART=tango-base
 echo
-make traefik EXTERNAL_IP=$(kubectl config view | gawk 'match($0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
+if [ $(kubectl get all -n kube-system | grep -c traefik) != 4 ];then
+        make traefik EXTERNAL_IP=$(kubectl config view | gawk 'match($0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
+fi
 cd ..
 cd TANGO-grafana/
 git submodule update --init --recursive

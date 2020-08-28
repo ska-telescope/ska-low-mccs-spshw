@@ -1,7 +1,7 @@
 apiVersion: v2
 description: A Helm chart for deploying the MCCS prototype on Kubernetes
 name: mccs
-version: 0.0.1
+version: 0.0.2
 icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
 dependencies:
 - name: tango-util
@@ -10,3 +10,4 @@ dependencies:
 - name: tango-base
   version: 0.1.1
   repository: https://gitlab.com/ska-telescope/skampi/-/raw/master/repository
+  condition: tango-base.enabled

@@ -98,15 +98,19 @@ make deploy
 make watch # Patience is a virtue in the world of k8s
 ```
 
-If you need to restart minikube:
+Tidy-up resources:
 ```bash
-# If your k8s cluster is broken, use the following to restart it
+# Remove tango grafana elements
+cd ska-low-mccs/scripts
+./tear_down_tango_grafana.sh
+```
+
+If you need to tear down minikube:
+```bash
+# If your k8s cluster is broken... 
 cd ska-low-mccs/scripts/
-# Tidy up any previous minikube environment
-./tear_down.sh
+./tear_down_minikube.sh
 exit
-# Start minikube in a new terminal window
-minikube start
 ```
 
 If everything went smoothly, when all the pods are running...
@@ -156,8 +160,8 @@ Integration test
 Development
 -----------
 
-The genral recipe will get the lates ska-low-mccs docker images from nexus.
-Most likely for devlopment we want to deply teh current repository state.
+The general recipe will get the latest ska-low-mccs docker images from nexus.
+Most likely for devlopment we want to deply the current repository state.
 
 To run from a local MCCS docker image execute:
 

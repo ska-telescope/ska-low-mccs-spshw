@@ -10,8 +10,7 @@ echo
 if [ $(kubectl get all -n kube-system | grep -c traefik) != 4 ];then
         make traefik EXTERNAL_IP=$(kubectl config view | gawk 'match($0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 fi
-cd ..
-cd TANGO-grafana/
+cd ../TANGO-grafana
 git submodule update --init --recursive
 make install-chart
 echo

@@ -16,7 +16,7 @@ make install-chart
 cd ../..
 echo
 echo 1 of 2: Waiting for all pods to be created and ready to use
-kubectl -n tango-grafana wait --for=condition=ready --timeout=800s --all pods
+kubectl wait --all-namespaces --for=condition=ready --timeout=800s --all pods
 
 # Create an ska-low-mccs:latest docker image reflecting the repository
 make devimage
@@ -31,4 +31,4 @@ git apply ../skampi.patch
 make deploy HELM_CHART=archiver
 echo
 echo 2 of 2: Waiting for all pods to be created and ready to use
-kubectl -n integration wait --for=condition=ready --timeout=300s --all pods
+kubectl wait -n integration --for=condition=complete --timeout=120s job.batch/attrconfig-archiver-test

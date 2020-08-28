@@ -1,6 +1,8 @@
 #!/bin/bash
 echo Tear down Tango Grafana elements
-cd ..
+cd skampi
+make delete HELM_CHART=archiver
+cd ../..
 make delete
 cd scripts/TANGO-grafana/
 make uninstall-chart

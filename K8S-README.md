@@ -81,6 +81,7 @@ To start up a TANGO-grafana cluster:
 kubectl config view
 # My config switched between x.x.x.3 and x.x.x.4, where only .3 worked
 # In this case, tear-down and restart minikube
+
 # Export Docker environment variables to Bash
 eval $(minikube docker-env)
 # Navigate to the MCCS scripts folder
@@ -88,14 +89,6 @@ cd ska-low-mccs/scripts
 # Run setup script - installs tango-base, webjive, Traefik and
 # TANGO-grafana charts
 ./setup_tango_grafana.sh
-cd ..
-# Create an ska-low-mccs:latest docker image reflecting the repository
-make devimage
-# Set environment variable to prevent tango-base being deployed again
-export TANGO_BASE_ENABLED=false
-# Starts up mccs
-make deploy
-make watch # Patience is a virtue in the world of k8s
 ```
 
 Tidy-up resources:

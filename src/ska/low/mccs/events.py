@@ -16,6 +16,10 @@ from tango import EventType
 
 
 class EventManager:
+    """
+    Class EventManager is used to handle events from the tango subsystem.
+    """
+
     def __init__(
         self, fqdn, update_callback=None, event_names=["state", "healthState"]
     ):
@@ -36,7 +40,6 @@ class EventManager:
             self._deviceProxy = tango.DeviceProxy(fqdn)
             self._event_names = event_names
             for event_name in self._event_names:
-                print(f"subscribing to {fqdn} {event_name}")
                 id = self._deviceProxy.subscribe_event(
                     event_name, EventType.CHANGE_EVENT, self, stateless=True
                 )
@@ -59,11 +62,6 @@ class EventManager:
         :param ev: an object encapsulating the event data.
         """
         if ev.attr_value is not None and ev.attr_value.value is not None:
-            print("----------------------------")
-            print("Event @ ", ev.get_date())
-            print(self._deviceProxy.name())
-            print("in  push_event", ev.attr_value.name, ev.attr_value.value)
-            print(ev.attr_value.quality)
             if self.callback is not None:
                 self.callback(
                     self._fqdn,

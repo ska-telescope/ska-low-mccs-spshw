@@ -29,22 +29,6 @@ index f90bb9b..57d0cca 100644
 -]
 \ No newline at end of file
 +]
-diff --git a/charts/skampi/values.yaml b/charts/skampi/values.yaml
-index 02aad0e..acecb8b 100644
---- a/charts/skampi/values.yaml
-+++ b/charts/skampi/values.yaml
-@@ -12,9 +12,9 @@ tests:
- 
- archiver:
-   archiver:
--    enabled: false
-+    enabled: true
-   hdbppdb:
--    enabled: false
-+    enabled: true
- 
- minikube: true
- 
 diff --git a/values.yaml b/values.yaml
 index 93404b9..9af9801 100644
 --- a/values.yaml

@@ -12,7 +12,8 @@ __all__ = [
     "MccsTelState",
     "MccsTransientBuffer",
     "MccsClusterManager",
-    "MccsTpmDeviceSimulator" "control_model",
+    "MccsTpmDeviceSimulator",
+    "control_model",
 ]
 
 from .device import MccsDevice  # noqa: F401

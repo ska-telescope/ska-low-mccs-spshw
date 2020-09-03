@@ -2079,7 +2079,7 @@ class MccsTile(SKABaseDevice):
             :param argin: integration time. Default to 0.5 for values less than 0
             :type argin: DevDouble
 
-           :return: A tuple containing a return code and a string
+             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2128,7 +2128,7 @@ class MccsTile(SKABaseDevice):
             :param argin: integration time
             :type argin: DevDouble
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2176,7 +2176,7 @@ class MccsTile(SKABaseDevice):
 
             :param argin: json encoded string (see SendRawData for details)
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2234,7 +2234,7 @@ class MccsTile(SKABaseDevice):
 
             :param argin: json encoded string (see SendChannelisedData for details)
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2307,7 +2307,7 @@ class MccsTile(SKABaseDevice):
             :param argin: json encoded string
                           (see SendChannelisedDataContinuous for details)
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2375,7 +2375,7 @@ class MccsTile(SKABaseDevice):
 
             :param argin: json encoded string (see SendBeamData for details)
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2430,7 +2430,7 @@ class MccsTile(SKABaseDevice):
             """
             Implementation of StopDataTransmission() command functionality.
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
@@ -2467,7 +2467,7 @@ class MccsTile(SKABaseDevice):
             """
             Implementation of ComputeCalibrationCoefficients() command functionality.
 
-           :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)

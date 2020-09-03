@@ -12,8 +12,6 @@
 This module contains the tests for MccsTpmDeviceSimulator.
 """
 
-import pytest
-
 from ska.low.mccs import MccsTpmDeviceSimulator
 
 device_info = {"class": MccsTpmDeviceSimulator, "properties": {}}
@@ -29,9 +27,9 @@ class TestMccsTpmDeviceSimulator(object):
 
     def test_simulate(self, device_under_test):
         """Test for the simulate attribute."""
-        assert device_under_test.simulate == False
+        assert device_under_test.simulate is False
         device_under_test.simulate = True
-        assert device_under_test.simulate == True
+        assert device_under_test.simulate is True
 
     def test_voltage(self, device_under_test):
         """Test for the voltage attribute."""

@@ -63,7 +63,7 @@ class MccsTpmDeviceSimulator(Device):
     def simulate(self, value):
         """
         Toggle the simulate attribute.
-        
+
         :param value: true sets randomised attribute values
         """
         self._simulate = value

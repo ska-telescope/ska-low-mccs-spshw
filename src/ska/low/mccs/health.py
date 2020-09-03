@@ -164,7 +164,7 @@ class HealthRollupPolicy:
         Initialise the health rollup policy.
 
         :param update_healthstate_callback: a callback used to set the
-        healthstate attribute of the device
+            healthstate attribute of the device
         :type update_healthstate_callback: function
         """
         self._update_healthstate_callback = update_healthstate_callback

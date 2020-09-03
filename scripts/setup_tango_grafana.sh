@@ -31,7 +31,7 @@ kubectl wait -n integration --for=condition=ready --timeout=300s --all pods
 # Install the skampi archiver
 cd scripts/skampi
 git apply ../skampi.patch
-make deploy HELM_CHART=archiver
+make deploy HELM_CHART=archiver VALUES=../enableArchiver.yaml
 echo
 echo 3 of 3: Waiting for all pods to be created and ready to use
 kubectl wait -n integration --for=condition=complete --timeout=120s job.batch/attrconfig-archiver-test

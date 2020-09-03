@@ -1,7 +1,7 @@
 #!/bin/bash
 echo Tear down Tango Grafana elements
 cd skampi
-make delete HELM_CHART=archiver
+make deploy HELM_CHART=archiver VALUES=../enableArchiver.yaml
 cd ../..
 make delete
 cd scripts/TANGO-grafana/

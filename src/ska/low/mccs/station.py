@@ -28,7 +28,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 # from ska.low.mccs import MccsGroupDevice
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor, RollupPolicy
+from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
 
 
 class MccsStation(SKAObsDevice):
@@ -106,7 +106,7 @@ class MccsStation(SKAObsDevice):
             # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
             fqdns = device._tile_fqdns + device._antenna_fqdns  # + device._beam_fqdns
-            device._rollup_policy = RollupPolicy(device.update_healthstate)
+            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
             device._health_monitor = HealthMonitor(
                 fqdns, device._rollup_policy.rollup_health
             )
@@ -217,6 +217,10 @@ class MccsStation(SKAObsDevice):
 
     @isCalibrated.write
     def isCalibrated(self, value):
+        """
+        Set the isCalibrated attribute
+        Note: Added for the system demo only
+        """
         self._is_calibrated = value
 
     @attribute(
@@ -233,6 +237,10 @@ class MccsStation(SKAObsDevice):
 
     @isConfigured.write
     def isConfigured(self, value):
+        """
+        Set the isConfigured attribute
+        Note: Added for the system demo only
+        """
         self._is_configured = value
 
     @attribute(
@@ -350,6 +358,15 @@ class MccsStation(SKAObsDevice):
         """
 
         def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            Configure command
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             device = self.target
             for id, tile in enumerate(device.TileFQDNs):
                 proxy = tango.DeviceProxy(tile)
@@ -364,9 +381,6 @@ class MccsStation(SKAObsDevice):
             #                 self._beam.append(proxy)
             #                 proxy.stationId = self.StationId
             #                 proxy.logicalBeamId = id + 1
-            #                 print(proxy)
-            #                 print(f"beamId {proxy.beamId}")
-            #                 print(f"logicalBeamId {proxy.logicalBeamId}")
 
             device._is_configured = True
             return (ResultCode.OK, "Command succeeded")
@@ -389,10 +403,16 @@ class MccsStation(SKAObsDevice):
         return [[return_code], [message]]
 
     def update_healthstate(self, health_state):
+        """
+        Update and push a change event for the healthstate attribute
+
+        :param health_state: The new healthstate
+        :type health_state: enum (defined in ska.base.control_model)
+        """
         self.push_change_event("healthState", health_state)
         with self._lock:
             self._health_state = health_state
-        print("health state=", health_state)
+        self.logging.info(f"health state = {health_state}")
 
 
 # ----------

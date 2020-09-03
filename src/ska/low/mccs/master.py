@@ -29,7 +29,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor, RollupPolicy
+from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
 
 
 class MccsMaster(SKAMaster):
@@ -141,7 +141,7 @@ class MccsMaster(SKAMaster):
             # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
             fqdns = device._station_fqdns
-            device._rollup_policy = RollupPolicy(device.update_healthstate)
+            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
             device._health_monitor = HealthMonitor(
                 fqdns, device._rollup_policy.rollup_health
             )
@@ -882,10 +882,16 @@ class MccsMaster(SKAMaster):
         return [[return_code], [message]]
 
     def update_healthstate(self, health_state):
+        """
+        Update and push a change event for the healthstate attribute
+
+        :param health_state: The new healthstate
+        :type health_state: enum (defined in ska.base.control_model)
+        """
         self.push_change_event("healthState", health_state)
         with self._lock:
             self._health_state = health_state
-        print("health state=", health_state)
+        self.logging.info(f"health state = {health_state}")
 
 
 # ----------

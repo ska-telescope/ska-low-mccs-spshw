@@ -28,7 +28,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import TestMode
 
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import LocalHealthMonitor, RollupPolicy
+from ska.low.mccs.health import LocalHealthMonitor, HealthRollupPolicy
 
 
 class MccsAntenna(SKABaseDevice):
@@ -45,6 +45,11 @@ class MccsAntenna(SKABaseDevice):
     # General methods
     # ---------------
     class InitCommand(SKABaseDevice.InitCommand):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
+
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
@@ -96,7 +101,7 @@ class MccsAntenna(SKABaseDevice):
             ]
             device._eventManagerList = []
             fqdn = device.get_name()
-            device._rollup_policy = RollupPolicy(device.update_healthstate)
+            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
             device._health_monitor = LocalHealthMonitor(
                 [fqdn], device._rollup_policy.rollup_health, event_names
             )
@@ -132,6 +137,9 @@ class MccsAntenna(SKABaseDevice):
 
     @attribute(dtype="int", label="AntennaID", doc="Global antenna identifier")
     def antennaId(self):
+        """
+        Return the antenna ID attribute.
+        """
         return self._antennaId
 
     @attribute(
@@ -140,6 +148,9 @@ class MccsAntenna(SKABaseDevice):
         doc="Local within Tile identifier for the Antenna TPM\n",
     )
     def logicalTpmAntenna_id(self):
+        """
+        Return the logical antenna ID attribute.
+        """
         return self._logicalTpmAntenna_id
 
     @attribute(
@@ -148,28 +159,43 @@ class MccsAntenna(SKABaseDevice):
         doc="Local within Tile identifier for the Antenna APIU",
     )
     def logicalApiuAntenna_id(self):
+        """
+        Return the logical APIU antenna ID attribute.
+        """
         return self._logicalApiuAntenna_id
 
     @attribute(
         dtype="double",
         label="tpmId",
-        doc="Global Tile ID to which the atenna is connected",
+        doc="Global Tile ID to which the antenna is connected",
     )
     def tpmId(self):
+        """
+        Return the global tile ID attribute.
+        """
         return self._tpmId
 
     @attribute(dtype="double", label="apiuId")
     def apiuId(self):
+        """
+        Return the APIU ID attribute.
+        """
         return self._apiuId
 
     @attribute(dtype="float", label="gain", doc="The gain set for the antenna")
     def gain(self):
+        """
+        Return the gain attribute.
+        """
         return self._gain
 
     @attribute(
         dtype="float", label="rms", doc="The measured RMS of the antenna (monitored)"
     )
     def rms(self):
+        """
+        Return the measured RMS of the antenna.
+        """
         return self._rms
 
     @attribute(
@@ -184,23 +210,39 @@ class MccsAntenna(SKABaseDevice):
         polling_period=1000,
     )
     def voltage(self):
+        """
+        Return the voltage attribute.
+        """
         return self._voltage
 
     # added for demo only
     @voltage.write
     def voltage(self, value):
+        """
+        Set the voltage attribute.
+        Note: Only add to support demo
+        """
         self._voltage = value
 
     @attribute(dtype="float", label="temperature", unit="DegC")
     def temperature(self):
+        """
+        Return the temperature attribute.
+        """
         return self._temperature
 
     @attribute(dtype="bool", label="xPolarisationFaulty")
     def xPolarisationFaulty(self):
+        """
+        Return the xPolarisationFaulty attribute.
+        """
         return self._xPolarisationFaulty
 
     @attribute(dtype="bool", label="yPolarisationFaulty")
     def yPolarisationFaulty(self):
+        """
+        Return the yPolarisationFaulty attribute.
+        """
         return self._yPolarisationFaulty
 
     @attribute(
@@ -209,6 +251,9 @@ class MccsAntenna(SKABaseDevice):
         doc="Longitude of field node (centre) to which antenna is associated.",
     )
     def fieldNodeLongitude(self):
+        """
+        Return the fieldNodeLongitude attribute.
+        """
         return self._fieldNodeLongitude
 
     @attribute(
@@ -218,12 +263,18 @@ class MccsAntenna(SKABaseDevice):
         associated.""",
     )
     def fieldNodeLatitude(self):
+        """
+        Return the fieldNodeLatitude attribute.
+        """
         return self._fieldNodeLongitude
 
     @attribute(
         dtype="float", label="altitude", unit="meters", doc="Antenna altitude in meters"
     )
     def altitude(self):
+        """
+        Return the altitude attribute.
+        """
         return self._altitude
 
     @attribute(
@@ -233,6 +284,9 @@ class MccsAntenna(SKABaseDevice):
         doc="Horizontal displacement in meters from field node centre",
     )
     def xDisplacement(self):
+        """
+        Return the Horizontal displacement attribute.
+        """
         return self._xDisplacement
 
     @attribute(
@@ -242,10 +296,16 @@ class MccsAntenna(SKABaseDevice):
         doc="Vertical displacement in meters from field centre",
     )
     def yDisplacement(self):
+        """
+        Return the vertical displacement attribute.
+        """
         return self._yDisplacement
 
     @attribute(dtype="str", label="timestampOfLastSpectrum")
     def timestampOfLastSpectrum(self):
+        """
+        Return the timestampOfLastSpectrum attribute.
+        """
         return self._timestampOfLastSpectrum
 
     @attribute(
@@ -254,14 +314,23 @@ class MccsAntenna(SKABaseDevice):
         doc="Local (within Tile) antenna identifier",
     )
     def logicalAntennaId(self):
+        """
+        Return the logical antenna ID attribute.
+        """
         return self._logicalAntennaId
 
     @attribute(dtype=("int",), max_dim_x=100, label="xPolarisationScalingFactor")
     def xPolarisationScalingFactor(self):
+        """
+        Return the logical antenna ID attribute.
+        """
         return self._xPolarisationScalingFactor
 
     @attribute(dtype=("int",), max_dim_x=100, label="yPolarisationScalingFactor")
     def yPolarisationScalingFactor(self):
+        """
+        Return the yPolarisationScalingFactor attribute.
+        """
         return self._yPolarisationScalingFactor
 
     @attribute(
@@ -273,22 +342,38 @@ class MccsAntenna(SKABaseDevice):
         This is presented as a vector.""",
     )
     def calibrationCoefficient(self):
+        """
+        Return theCalibration coefficient to be applied for the next frequency
+        channel in the calibration cycle
+        """
         return self._calibrationCoefficient
 
     @attribute(dtype=("float",), max_dim_x=100, doc="This is presented as a vector.")
     def pointingCoefficient(self):
+        """
+        Return the pointingCoefficient attribute.
+        """
         return self._pointingCoefficient
 
     @attribute(dtype=("float",), max_dim_x=100, label="spectrumX")
     def spectrumX(self):
+        """
+        Return the spectrumX attribute.
+        """
         return self._spectrumX
 
     @attribute(dtype=("float",), max_dim_x=100, label="spectrumY")
     def spectrumY(self):
+        """
+        Return the spectrumY attribute.
+        """
         return self._spectrumY
 
     @attribute(dtype=("float",), max_dim_x=100, label="position")
     def position(self):
+        """
+        Return the position attribute.
+        """
         return self._position
 
     @attribute(
@@ -299,6 +384,9 @@ class MccsAntenna(SKABaseDevice):
         "update (archived)",
     )
     def delays(self):
+        """
+        Return the delays attribute.
+        """
         return self._delays
 
     @attribute(
@@ -309,6 +397,9 @@ class MccsAntenna(SKABaseDevice):
         "pointing update (archived)",
     )
     def delayRates(self):
+        """
+        Return the delayRates attribute.
+        """
         return self._delayRates
 
     @attribute(
@@ -319,6 +410,9 @@ class MccsAntenna(SKABaseDevice):
         "flatten the antenna's bandpass (archived)",
     )
     def bandpassCoefficient(self):
+        """
+        Return the bandpassCoefficient attribute.
+        """
         return self._bandpassCoefficient
 
     # --------
@@ -351,7 +445,6 @@ class MccsAntenna(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
             :rtype: (ResultCode, str)
             """
 
@@ -360,10 +453,19 @@ class MccsAntenna(SKABaseDevice):
             return (result_code, message)
 
     class PowerOnCommand(ResponseCommand):
+        """
+        Class for handling the PowerOn command.
+        """
+
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of PowerOn()
             command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -373,15 +475,32 @@ class MccsAntenna(SKABaseDevice):
     )
     @DebugIt()
     def PowerOn(self):
+        """
+        Turn power On.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
         handler = self.get_command_object("PowerOn")
         (return_code, message) = handler()
         return [[return_code], [message]]
 
     class PowerOffCommand(ResponseCommand):
+        """
+        Class for handling the PowerOff command.
+        """
+
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of PowerOff()
             command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -391,15 +510,29 @@ class MccsAntenna(SKABaseDevice):
     )
     @DebugIt()
     def PowerOff(self):
+        """
+        Turn power Off.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
         handler = self.get_command_object("PowerOff")
         (return_code, message) = handler()
         return [[return_code], [message]]
 
     def update_healthstate(self, health_state):
+        """
+        Update and push a change event for the healthstate attribute
+
+        :param health_state: The new healthstate
+        :type health_state: enum (defined in ska.base.control_model)
+        """
         self.push_change_event("healthState", health_state)
         with self._lock:
             self._health_state = health_state
-        print("health state=", health_state)
+        self.logging.info(f"health state = {health_state}")
 
 
 # ----------
@@ -408,6 +541,7 @@ class MccsAntenna(SKABaseDevice):
 
 
 def main(args=None, **kwargs):
+    """Main function of the MccsAntenna module."""
 
     return MccsAntenna.run_server(args=args, **kwargs)
 

@@ -32,8 +32,12 @@ class HealthMonitor:
         self._initialise_table(fqdns)
 
     def _initialise_table(self, fqdns):
-        # Initialise a table of State and Health with FQDN keys
-        print("initialise default table")
+        """
+        Initialise a table of State and Health with FQDN keys
+
+        :param fqdns: Fully qualified device names of the monitored Tango devices
+        :type fqdns: list of str
+        """
         for fqdn in fqdns:
             self._healthstate_table.update(
                 {fqdn: {"State": DevState.UNKNOWN, "healthstate": HealthState.OK}}
@@ -58,9 +62,16 @@ class HealthMonitor:
         elif event == "healthstate":
             event_dict[event] = HealthState(value)
 
-        print(self._healthstate_table)
         if self._rollup_callback is not None:
             self._rollup_callback(self._healthstate_table)
+
+    def get_healthstate_table(self):
+        """
+        Get the health table
+
+        :return: the health table
+        """
+        return self._healthstate_table
 
 
 class LocalHealthMonitor(HealthMonitor):
@@ -70,6 +81,20 @@ class LocalHealthMonitor(HealthMonitor):
     """
 
     def __init__(self, fqdns, rollup_callback, event_names):
+        """
+        Initialise a new LocalHealthMonitor object. Should be used
+        to obtain the healthstate of devices whose attributes constitute
+        the healthstate.
+
+        :param fqdns: a list of fully qualified device names
+        :type fqdns: list of str
+        :param rollup_callback: a function to aggregate healthstate
+        :type rollup_callback: function
+        :param event_names: attribute names generating events used that
+                            constitute the device healthstate
+        :type event_names: list of str
+
+        """
         super().__init__(fqdns, rollup_callback, event_names)
 
     def _initialise_table(self, fqdns):
@@ -79,13 +104,11 @@ class LocalHealthMonitor(HealthMonitor):
         :param fqdns: a list of fully qualified device names
         :type fqdns: list of str
         """
-        print("initialise hardware healthstate table")
         for fqdn in fqdns:
             event_dict = {}
             for name in self._event_names:
                 event_dict.update({name: HealthState.OK})
             self._healthstate_table.update({fqdn: event_dict})
-        print(self._healthstate_table)
 
     def update_health_table(self, fqdn, event, value, quality):
         """
@@ -107,26 +130,52 @@ class LocalHealthMonitor(HealthMonitor):
         :type quality: AttrQuality enum (defined in tango)
         """
         event_dict = self._healthstate_table[fqdn]
-        if quality == AttrQuality.ATTR_ALARM:
-            event_dict[event] = HealthState.FAILED
-        elif quality == AttrQuality.ATTR_WARNING:
-            event_dict[event] = HealthState.DEGRADED
-        elif quality == AttrQuality.ATTR_VALID:
-            event_dict[event] = HealthState.OK
-        else:
-            event_dict[event] = HealthState.UNKNOWN
+        event_dict[event] = self.quality_to_healthstate(quality)
 
-        self._rollup_callback(self._healthstate_table)
+        if self._rollup_callback is not None:
+            self._rollup_callback(self._healthstate_table)
+
+    def quality_to_healthstate(self, quality):
+        """
+        Helper function to translate attribute quality to healthstate.
+
+        :param quality: attribute quality
+        :type quality: AttrQuality
+
+        :return: HealthState
+        """
+        quality_healthstate_map = {
+            AttrQuality.ATTR_ALARM: HealthState.FAILED,
+            AttrQuality.ATTR_WARNING: HealthState.DEGRADED,
+            AttrQuality.ATTR_VALID: HealthState.OK,
+            AttrQuality.ATTR_CHANGING: HealthState.UNKNOWN,
+            AttrQuality.ATTR_INVALID: HealthState.UNKNOWN,
+        }
+        return quality_healthstate_map[quality]
 
 
-class RollupPolicy:
+class HealthRollupPolicy:
+    """
+    HealthRollupPolicy is a class to aggregate different device healthstates.
+    """
+
     def __init__(self, update_healthstate_callback):
+        """
+        Initialise the health rollup policy.
+
+        :param update_healthstate_callback: a callback used to set the
+        healthstate attribute of the device
+        :type update_healthstate_callback: function
+        """
         self._update_healthstate_callback = update_healthstate_callback
 
     def rollup_health(self, healthstate_table):
         """
         Rollup the health states of an element and its constituent sub-elements
         and push the resultant health state to the enclosing element.
+
+        :param healthstate_table: a table containing healthstates to be aggregated.
+        :type healthstate_table: dict
         """
         health_state = HealthState.OK
         for fqdn, event_dict in healthstate_table.items():
@@ -146,4 +195,6 @@ class RollupPolicy:
                     health_state = HealthState.UNKNOWN
             if health_state == HealthState.FAILED:
                 break
-        self._update_healthstate_callback(health_state)
+        if self._update_healthstate_callback is not None:
+            self._update_healthstate_callback(health_state)
+        return health_state

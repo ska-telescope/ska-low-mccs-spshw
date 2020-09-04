@@ -5,6 +5,7 @@
 
 import sys
 import os
+
 # Do we need this
 # import sphinx_rtd_theme
 
@@ -32,13 +33,12 @@ _MockObject.__call__ = call_mock
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../../src'))
+sys.path.insert(0, os.path.abspath("../../src"))
 
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
-autodoc_mock_imports = ["tango", "PyTango", "PyTango.server",
-                        "ska.base"]
+autodoc_mock_imports = ["tango", "PyTango", "PyTango.server", "ska.base"]
 
 
 def setup(app):
@@ -111,6 +111,7 @@ pygments_style = "sphinx"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
+add_module_names = False
 
 # -- Options for HTML output ----------------------------------------------
 

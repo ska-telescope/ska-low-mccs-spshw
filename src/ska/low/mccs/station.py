@@ -146,9 +146,6 @@ class MccsStation(SKAObsDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        for event_manager in self._eventManagerList:
-            event_manager.unsubscribe()
-        self._eventManagerList = None
 
     # ----------
     # Attributes

@@ -47,6 +47,12 @@ class EventManager:
         except Exception as df:
             print(f"device probably not started for {fqdn}", df)
 
+    def __del__(self):
+        """
+        Attempt unsubscribe before destroying
+        """
+        self.unsubscribe()
+
     def unsubscribe(self):
         """
         Unsubscribe all events

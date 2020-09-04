@@ -1,0 +1,10 @@
+[
+    {
+        "attributes": 
+                [
+                "low/elt/station_1/isConfigured"
+                ],
+        "polling_period": 1000,
+        "period_event": 3000
+    }
+]

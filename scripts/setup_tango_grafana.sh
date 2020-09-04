@@ -29,8 +29,9 @@ echo 2 of 3: Waiting for all pods to be created and ready to use
 kubectl wait -n integration --for=condition=ready --timeout=300s --all pods
 
 # Install the skampi archiver
-cd scripts/skampi
-git apply ../skampi.patch
+cd scripts
+cp attribute2archive.json skampi/charts/skampi/charts/archiver/data/
+cd skampi
 make deploy HELM_CHART=archiver VALUES=../enable_archiver.yaml
 echo
 echo 3 of 3: Waiting for all pods to be created and ready to use

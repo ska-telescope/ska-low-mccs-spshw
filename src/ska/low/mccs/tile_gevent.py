@@ -894,11 +894,12 @@ class MccsTile(SKABaseDevice):
         :rtype: DevVarUlongArray
 
         :example:
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
-                    "Offset": offset, "Device":device}
-        >>> jstr = json.dumps(dict)
-        >>> values = dp.command_inout("ReadRegister", jstr)
+            >>> dp = tango.DeviceProxy("mccs/tile/01")
+            >>> dict = {"RegisterName": "test-reg1", "NbRead": nb_read,
+                        "Offset": offset, "Device":device}
+            >>> jstr = json.dumps(dict)
+            >>> values = dp.command_inout("ReadRegister", jstr)
+
         """
         handler = self.get_command_object("ReadRegister")
         return handler(argin)

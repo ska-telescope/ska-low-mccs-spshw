@@ -101,7 +101,7 @@ def we_have_master(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the master device
+    :returns: a DeviceProxy to the master device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/master")
@@ -119,7 +119,7 @@ def we_have_subarray_1(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the subarray_1 device
+    :returns: a DeviceProxy to the subarray_1 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/subarray_1")
@@ -137,7 +137,7 @@ def we_have_subarray_2(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the subarray_2 device
+    :returns: a DeviceProxy to the subarray_2 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/subarray_2")
@@ -155,7 +155,7 @@ def we_have_station_1(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the station_2 device
+    :returns: a DeviceProxy to the station_2 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/station_1")
@@ -173,7 +173,7 @@ def we_have_station_2(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the station_2 device
+    :returns: a DeviceProxy to the station_2 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/station_2")
@@ -191,7 +191,7 @@ def we_have_tile_1(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the tile_1 device
+    :returns: a DeviceProxy to the tile_1 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/tile_1")
@@ -209,7 +209,7 @@ def we_have_tile_2(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the tile_2 device
+    :returns: a DeviceProxy to the tile_2 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/tile_2")
@@ -227,7 +227,7 @@ def we_have_tile_3(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the tile_3 device
+    :returns: a DeviceProxy to the tile_3 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/tile_3")
@@ -245,7 +245,7 @@ def we_have_tile_4(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the tile_4 device
+    :returns: a DeviceProxy to the tile_4 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/tile_4")
@@ -263,7 +263,7 @@ def we_have_tile_5(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the tile_5 device
+    :returns: a DeviceProxy to the tile_5 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/tile_5")
@@ -281,7 +281,7 @@ def we_have_tile_6(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :return a DeviceProxy to the tile_6 device
+    :returns: a DeviceProxy to the tile_6 device
     :rtype: DeviceProxy
     """
     return tango_context.get_device("low/elt/tile_6")

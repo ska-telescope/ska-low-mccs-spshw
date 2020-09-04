@@ -150,9 +150,9 @@ class json_input:
         :param origin: the origin of this check; used to construct a
             helpful DevFailed exception.
         :type origin: str
-        :raises json.JSONDecodeError if the string cannot be decoded as
+        :raises json.JSONDecodeError: if the string cannot be decoded as
             a JSON string
-        :raises jsonschema.ValidationError if the decoded JSON object
+        :raises jsonschema.ValidationError: if the decoded JSON object
             does not validate against a schema
 
         """

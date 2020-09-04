@@ -168,191 +168,137 @@ class MccsClusterManager(MccsGroupDevice):
     # Attributes methods
     # ------------------
 
-    @attribute(
-        dtype="DevShort", label="jobsError",
-    )
+    @attribute(dtype="DevShort", label="jobsError")
     def jobsError(self):
         """Return the jobsError attribute."""
         return self._jobs_error
 
-    @attribute(
-        dtype="DevShort", label="jobsFailed", max_alarm=1,
-    )
+    @attribute(dtype="DevShort", label="jobsFailed", max_alarm=1)
     def jobsFailed(self):
         """Return the jobsFailed attribute."""
         return self._jobs_failed
 
-    @attribute(
-        dtype="DevShort", label="jobsFinished",
-    )
+    @attribute(dtype="DevShort", label="jobsFinished")
     def jobsFinished(self):
         """Return the jobsFinished attribute."""
         return self._jobs_finished
 
-    @attribute(
-        dtype="DevShort", label="jobsKilled",
-    )
+    @attribute(dtype="DevShort", label="jobsKilled")
     def jobsKilled(self):
         """Return the jobsKilled attribute."""
         return self._jobs_killed
 
-    @attribute(
-        dtype="DevShort", label="jobsKilling",
-    )
+    @attribute(dtype="DevShort", label="jobsKilling")
     def jobsKilling(self):
         """Return the jobsKilling attribute."""
         return self._jobs_killing
 
-    @attribute(
-        dtype="DevShort", label="jobsLost",
-    )
+    @attribute(dtype="DevShort", label="jobsLost")
     def jobsLost(self):
         """Return the jobsLost attribute."""
         return self._jobs_lost
 
-    @attribute(
-        dtype="DevShort", label="jobsRunning",
-    )
+    @attribute(dtype="DevShort", label="jobsRunning")
     def jobsRunning(self):
         """Return the jobsRunning attribute."""
         return self._jobs_running
 
-    @attribute(
-        dtype="DevShort", label="jobsStaging",
-    )
+    @attribute(dtype="DevShort", label="jobsStaging")
     def jobsStaging(self):
         """Return the jobsStaging attribute."""
         return self._jobs_staging
 
-    @attribute(
-        dtype="DevShort", label="jobsStarting",
-    )
+    @attribute(dtype="DevShort", label="jobsStarting")
     def jobsStarting(self):
         """Return the jobsStarting attribute."""
         return self._jobs_starting
 
-    @attribute(
-        dtype="DevShort", max_alarm=1,
-    )
+    @attribute(dtype="DevShort", max_alarm=1)
     def jobsUnreachable(self):
         """Return the jobsUnreachable attribute."""
         return self._jobs_unreachable
 
-    @attribute(
-        dtype="DevFloat", label="memoryTotal",
-    )
+    @attribute(dtype="DevFloat", label="memoryTotal")
     def memoryTotal(self):
         """Return the memoryTotal attribute."""
         return self._memory_total
 
-    @attribute(
-        dtype="DevFloat", label="memoryAvail",
-    )
+    @attribute(dtype="DevFloat", label="memoryAvail")
     def memoryAvail(self):
         """Return the memoryAvail attribute."""
         return self._memory_avail
 
-    @attribute(
-        dtype="DevFloat", label="memoryUsed",
-    )
+    @attribute(dtype="DevFloat", label="memoryUsed")
     def memoryUsed(self):
         """Return the memoryUsed attribute."""
         return self._memory_used
 
-    @attribute(
-        dtype="DevShort", label="nodesInUse",
-    )
+    @attribute(dtype="DevShort", label="nodesInUse")
     def nodesInUse(self):
         """Return the nodesInUse attribute."""
         return self._nodes_in_use
 
-    @attribute(
-        dtype="DevShort", label="nodesTotal",
-    )
+    @attribute(dtype="DevShort", label="nodesTotal")
     def nodesTotal(self):
         """Return the nodesTotal attribute."""
         return self._nodes_total
 
-    @attribute(
-        dtype="DevShort", label="masterNodeId",
-    )
+    @attribute(dtype="DevShort", label="masterNodeId")
     def masterNodeId(self):
         """Return the masterNodeId attribute."""
         return self._master_node_id
 
-    @attribute(
-        dtype="DevFloat", label="masterCpusAllocatedPercent",
-    )
+    @attribute(dtype="DevFloat", label="masterCpusAllocatedPercent")
     def masterCpusAllocatedPercent(self):
         """Return the masterCpusAllocatedPercent attribute."""
         return self._master_cpus_allocated_percent
 
-    @attribute(
-        dtype="DevShort", label="masterCpusUsed",
-    )
+    @attribute(dtype="DevShort", label="masterCpusUsed")
     def masterCpusUsed(self):
         """Return the masterCpusUsed attribute."""
         return self._master_cpus_used
 
-    @attribute(
-        dtype="DevShort", label="masterCpusTotal",
-    )
+    @attribute(dtype="DevShort", label="masterCpusTotal")
     def masterCpusTotal(self):
         """Return the masterCpusTotal attribute."""
         return self._master_cpus_total
 
-    @attribute(
-        dtype="DevFloat", label="masterDiskPercent",
-    )
+    @attribute(dtype="DevFloat", label="masterDiskPercent")
     def masterDiskPercent(self):
         """Return the masterDiskPercent attribute."""
         return self._master_disk_percent
 
-    @attribute(
-        dtype="DevDouble", label="masterDiskUsed",
-    )
+    @attribute(dtype="DevDouble", label="masterDiskUsed")
     def masterDiskUsed(self):
         """Return the masterDiskUsed attribute."""
         return self._master_disk_used
 
-    @attribute(
-        dtype="DevFloat", label="masterDiskTotal",
-    )
+    @attribute(dtype="DevFloat", label="masterDiskTotal")
     def masterDiskTotal(self):
         """Return the masterDiskTotal attribute."""
         return self._master_disk_total
 
-    @attribute(
-        dtype="DevFloat", label="masterMemPercent",
-    )
+    @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemPercent(self):
         """Return the masterMemPercent attribute."""
         return self._master_mem_percent
 
-    @attribute(
-        dtype="DevFloat", label="masterMemPercent",
-    )
+    @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemUsed(self):
         """Return the masterMemUsed attribute."""
         return self._master_mem_used
 
-    @attribute(
-        dtype="DevFloat", label="masterMemTotal",
-    )
+    @attribute(dtype="DevFloat", label="masterMemTotal")
     def masterMemTotal(self):
         """Return the masterMemTotal attribute."""
         return self._master_mem_total
 
-    @attribute(
-        dtype=("DevShort",), max_dim_x=100, label="shadowMasterPoolNodeIds",
-    )
+    @attribute(dtype=("DevShort",), max_dim_x=100, label="shadowMasterPoolNodeIds")
     def shadowMasterPoolNodeIds(self):
         """Return the shadowMasterPoolNodeIds attribute."""
         return self._shadow_master_pool_node_ids
 
-    @attribute(
-        dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus",
-    )
+    @attribute(dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus")
     def shadowMasterPoolStatus(self):
         """Return the shadowMasterPoolStatus attribute."""
         return self._shadow_master_pool_status
@@ -366,9 +312,8 @@ class MccsClusterManager(MccsGroupDevice):
             """
             Stateless do hook for the StartJob command
 
-            :param argin: 'DevShort'
-            jobId
-
+            :param argin: the job id
+            :type argin: 'DevShort'
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -390,9 +335,8 @@ class MccsClusterManager(MccsGroupDevice):
         """
         Command to start a particular job
 
-        :param argin: 'DevShort'
-        jobId
-
+        :param argin: the job id
+        :type argin: 'DevShort'
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -407,9 +351,8 @@ class MccsClusterManager(MccsGroupDevice):
             """
             Stateless do hook for the StopJob command
 
-            :param argin: 'DevShort'
-            jobId
-
+            :param argin: the job id
+            :type argin: 'DevShort'
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -431,9 +374,8 @@ class MccsClusterManager(MccsGroupDevice):
         """
         Command to stop a particular job
 
-        :param argin: 'DevShort'
-        jobId
-
+        :param argin: the job id
+        :type argin: 'DevShort'
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -448,9 +390,8 @@ class MccsClusterManager(MccsGroupDevice):
             """
             Stateless do hook for the SubmitJob command
 
-            :param argin: 'DevShort'
-            jobConfig
-
+            :param argin: the job configuration
+            :type argin: 'DevShort'
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -472,9 +413,8 @@ class MccsClusterManager(MccsGroupDevice):
         """
         Command to submit a job to the queue
 
-        :param argin: 'DevShort'
-        jobConfig
-
+        :param argin: the job configuration
+        :type argin: 'DevShort'
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -489,9 +429,8 @@ class MccsClusterManager(MccsGroupDevice):
             """
             Stateless do hook for the GetJobStatus command
 
-            :param argin: 'DevShort'
-            jobId
-
+            :param argin: the job id
+            :type argin: 'DevShort'
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -513,9 +452,8 @@ class MccsClusterManager(MccsGroupDevice):
         """
         Poll the current status for a job
 
-        :param argin: 'DevShort'
-        jobId
-
+        :param argin: the job id
+        :type argin: 'DevShort'
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.

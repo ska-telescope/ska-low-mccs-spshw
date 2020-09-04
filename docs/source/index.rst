@@ -26,13 +26,16 @@ prototype for the `Square Kilometre Array`_.
    apiu
    cluster_manager
    device
+   events
    group_device
+   health
    master
    station
    station_beam
    subarray
    tel_state
    tile
+   tpm_device_simulator
    tpm_simulator
    utils
    

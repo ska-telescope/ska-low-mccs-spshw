@@ -22,12 +22,18 @@ prototype for the `Square Kilometre Array`_.
    :maxdepth: 1
    :caption: API
 
-   MccsMaster
-   MccsSubarray
-   MccsStation
-   MccsStationBeam
-   MccsTile
-   MccsAntenna
+   antenna
+   apiu
+   cluster_manager
+   device
+   group_device
+   master
+   station
+   station_beam
+   subarray
+   tel_state
+   tile
+   tpm_simulator
    utils
    
 Indices and tables

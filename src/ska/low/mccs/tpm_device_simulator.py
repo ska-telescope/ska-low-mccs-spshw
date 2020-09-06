@@ -185,7 +185,7 @@ class MccsTpmDeviceSimulator(Device):
         Return the fpga2_temperature attribute which will be either a fixed
         value or a random value dependent upon the value of the simulate
         attribute
-        
+
         :return: the fpga2 temperature
         :rtype: double
         """

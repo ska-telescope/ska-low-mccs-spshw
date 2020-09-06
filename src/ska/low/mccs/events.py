@@ -33,7 +33,8 @@ class EventManager:
             is the fully qulified device name, name is the event_name, value is the
             data value and quality is a Tango AttrQuality enum.
         :type update_callback: function, optional
-        :param event_names: name of events to subscribe to, defaults to ["state", "healthState"]
+        :param event_names: name of events to subscribe to,
+            defaults to ["state", "healthState"]
         :type event_names: list of strings
         """
         self._eventIds = []

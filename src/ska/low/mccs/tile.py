@@ -25,7 +25,7 @@ from tango.server import device_property
 # Additional import
 
 from ska.base import SKABaseDevice
-from ska.base.control_model import SimulationMode, TestMode, HealthState
+from ska.base.control_model import SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska.low.mccs.tpm_simulator import TpmSimulator

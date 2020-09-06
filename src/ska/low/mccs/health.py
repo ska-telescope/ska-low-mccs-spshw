@@ -25,6 +25,13 @@ class HealthMonitor:
     def __init__(self, fqdns, rollup_callback, event_names=None):
         """
         Initialise a new HealthMonitor object
+
+        :param fqdns: Fully qualified device names of the monitored Tango devices
+        :type fqdns: list of str
+        :param rollup_callback: a callback to rollup the health states of many devices
+        :type rollup_callback: function
+        :param event_names: name of events to build the healthstate table
+        :type event_names: list of strings
         """
         self._healthstate_table = {}
         self._rollup_callback = rollup_callback
@@ -55,15 +62,21 @@ class HealthMonitor:
         :type value: object
         :param quality: the quality of the event
         :type quality: AttrQuality enum (defined in tango)
+
+        :raises ValueError: Unknown event
+        
+        :return: rolled up healthstate (primarily for testing)
         """
         event_dict = self._healthstate_table[fqdn]
         if event == "State":
             event_dict[event] = value
         elif event == "healthstate":
             event_dict[event] = HealthState(value)
+        else:
+            raise ValueError(f"Unexpected event {event}")
 
         if self._rollup_callback is not None:
-            self._rollup_callback(self._healthstate_table)
+            return self._rollup_callback(self._healthstate_table)
 
     def get_healthstate_table(self):
         """
@@ -130,12 +143,12 @@ class LocalHealthMonitor(HealthMonitor):
         :type quality: AttrQuality enum (defined in tango)
         """
         event_dict = self._healthstate_table[fqdn]
-        event_dict[event] = self.quality_to_healthstate(quality)
+        event_dict[event] = self._quality_to_healthstate(quality)
 
         if self._rollup_callback is not None:
             self._rollup_callback(self._healthstate_table)
 
-    def quality_to_healthstate(self, quality):
+    def _quality_to_healthstate(self, quality):
         """
         Helper function to translate attribute quality to healthstate.
 
@@ -176,6 +189,9 @@ class HealthRollupPolicy:
 
         :param healthstate_table: a table containing healthstates to be aggregated.
         :type healthstate_table: dict
+
+        :return: rolled up health state
+        :rtype: HealthState
         """
         health_state = HealthState.OK
         for fqdn, event_dict in healthstate_table.items():
@@ -184,8 +200,6 @@ class HealthRollupPolicy:
                     health == DevState.FAULT or health == DevState.ALARM
                 ):
                     health_state = HealthState.FAILED
-                elif event == "State":
-                    health_state = HealthState.OK
                 elif health == HealthState.FAILED:
                     health_state = HealthState.FAILED
                     break

@@ -64,7 +64,7 @@ class HealthMonitor:
         :type quality: AttrQuality enum (defined in tango)
 
         :raises ValueError: Unknown event
-        
+
         :return: rolled up healthstate (primarily for testing)
         """
         event_dict = self._healthstate_table[fqdn]

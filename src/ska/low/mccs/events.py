@@ -28,8 +28,13 @@ class EventManager:
 
         :param fqdn: the fully qualified device name of the device publishing events
         :type fqdn: string
-        :param update_callback: a callback to update the devices health state
-        :type update_callback: function
+        :param update_callback: a callback function to update the devices health state
+            and is of the form ``callback(fqdn, name, value, quality)``, where fqdn
+            is the fully qulified device name, name is the event_name, value is the
+            data value and quality is a Tango AttrQuality enum.
+        :type update_callback: function, optional
+        :param event_names: name of events to subscribe to, defaults to ["state", "healthState"]
+        :type event_names: list of strings
         """
         self._eventIds = []
         self._fqdn = fqdn

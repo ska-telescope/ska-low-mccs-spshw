@@ -45,7 +45,6 @@ class MccsTpmDeviceSimulator(Device):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        pass
 
     # ----------
     # Attributes
@@ -56,6 +55,9 @@ class MccsTpmDeviceSimulator(Device):
         Return the simulate attribute. If True the value
         of the attributes within this class return is randomly
         generated values.
+
+        :return: the simulate flag
+        :rtype: boolean
         """
         return self._simulate
 
@@ -65,6 +67,7 @@ class MccsTpmDeviceSimulator(Device):
         Toggle the simulate attribute.
 
         :param value: true sets randomised attribute values
+        :type value: boolean
         """
         self._simulate = value
 
@@ -74,9 +77,12 @@ class MccsTpmDeviceSimulator(Device):
         Return the voltage attribute which will be either a fixed
         value or a random value dependent upon the value of the simulate
         attribute
+
+        :return: the current
+        :rtype: double
         """
         if self._simulate:
-            return random.uniform(4.5, 5.5)
+            return random.uniform(4.8, 5.5)
         else:
             return self._voltage
 
@@ -85,6 +91,9 @@ class MccsTpmDeviceSimulator(Device):
         """
         Set the fixed voltage attribute value.
         It has no effect if the device is in simulate mode
+
+        :param value: the voltage to set
+        :type value: double
         """
         if not self._simulate:
             self._voltage = value
@@ -95,9 +104,12 @@ class MccsTpmDeviceSimulator(Device):
         Return the current attribute which will be either a fixed
         value or a random value dependent upon the value of the simulate
         attribute
+
+        :return: the current
+        :rtype: double
         """
         if self._simulate:
-            return random.uniform(0.0, 3.0)
+            return random.uniform(0.5, 3.0)
         else:
             return self._current
 
@@ -106,8 +118,10 @@ class MccsTpmDeviceSimulator(Device):
         """
         Set the fixed current attribute value.
         It has no effect if the device is in simulate mode
+
+        :param value: the current to set
+        :type value: double
         """
-        """Set the current attribute."""
         if not self._simulate:
             self._current = value
 
@@ -117,9 +131,12 @@ class MccsTpmDeviceSimulator(Device):
         Return the temperature attribute which will be either a fixed
         value or a random value dependent upon the value of the simulate
         attribute
+
+        :return: the board temperature
+        :rtype: double
         """
         if self._simulate:
-            return random.uniform(25.0, 40.0)
+            return random.uniform(25.0, 35.0)
         else:
             return self._temperature
 
@@ -128,6 +145,9 @@ class MccsTpmDeviceSimulator(Device):
         """
         Set the fixed temperature attribute value.
         It has no effect if the device is in simulate mode
+
+        :param value: the temperature to set
+        :type value: double
         """
         if not self._simulate:
             self._temperature = value
@@ -138,9 +158,12 @@ class MccsTpmDeviceSimulator(Device):
         Return the fpga1_temperature attribute which will be either a fixed
         value or a random value dependent upon the value of the simulate
         attribute
+
+        :return: the fpga1 temperature
+        :rtype: double
         """
         if self._simulate:
-            return random.uniform(25.0, 40.0)
+            return random.uniform(25.0, 35.0)
         else:
             return self._fpga1_temperature
 
@@ -149,6 +172,9 @@ class MccsTpmDeviceSimulator(Device):
         """
         Set the fixed fpga1_temperature attribute value.
         It has no effect if the device is in simulate mode
+
+        :param value: the temperature to set
+        :type value: double
         """
         if not self._simulate:
             self._fpga1_temperature = value
@@ -159,9 +185,12 @@ class MccsTpmDeviceSimulator(Device):
         Return the fpga2_temperature attribute which will be either a fixed
         value or a random value dependent upon the value of the simulate
         attribute
+        
+        :return: the fpga2 temperature
+        :rtype: double
         """
         if self._simulate:
-            return random.uniform(25.0, 40.0)
+            return random.uniform(25.0, 35.0)
         else:
             return self._fpga2_temperature
 
@@ -170,6 +199,9 @@ class MccsTpmDeviceSimulator(Device):
         """
         Set the fixed fpga2_temperature attribute value.
         It has no effect if the device is in simulate mode
+
+        :param value: the temperature to set
+        :type value: double
         """
         if not self._simulate:
             self._fpga2_temperature = value
@@ -185,7 +217,14 @@ class MccsTpmDeviceSimulator(Device):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsTpmDeviceSimulator module."""
+    """
+    Main function of the MccsTpmDeviceSimulator module.
+
+    :param args: command line arguments
+    :param kwargs: command line keyword arguments
+
+    :return: device server instance
+    """
 
     return MccsTpmDeviceSimulator.run_server(args=args, **kwargs)
 

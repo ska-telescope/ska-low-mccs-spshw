@@ -54,6 +54,11 @@ class MccsAntenna(SKABaseDevice):
             """
             Stateless hook for device initialisation: initialises the
             attributes and properties of the MccsDevice.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
             """
             super().do()
 
@@ -110,6 +115,10 @@ class MccsAntenna(SKABaseDevice):
                     fqdn, device._health_monitor.update_health_table, event_names
                 )
             )
+            for name in event_names:
+                device.set_change_event(name, True, True)
+                device.set_archive_event(name, True, True)
+
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
@@ -139,6 +148,9 @@ class MccsAntenna(SKABaseDevice):
     def antennaId(self):
         """
         Return the antenna ID attribute.
+
+        :return: antenna ID
+        :rtype: int
         """
         return self._antennaId
 
@@ -150,6 +162,9 @@ class MccsAntenna(SKABaseDevice):
     def logicalTpmAntenna_id(self):
         """
         Return the logical antenna ID attribute.
+
+        :return: logical antenna ID within the tpm
+        :rtype: int
         """
         return self._logicalTpmAntenna_id
 
@@ -161,6 +176,9 @@ class MccsAntenna(SKABaseDevice):
     def logicalApiuAntenna_id(self):
         """
         Return the logical APIU antenna ID attribute.
+
+        :return: logical APIU antenna ID
+        :rtype: int
         """
         return self._logicalApiuAntenna_id
 
@@ -172,6 +190,9 @@ class MccsAntenna(SKABaseDevice):
     def tpmId(self):
         """
         Return the global tile ID attribute.
+
+        :return: tpm ID
+        :rtype: int
         """
         return self._tpmId
 
@@ -179,6 +200,9 @@ class MccsAntenna(SKABaseDevice):
     def apiuId(self):
         """
         Return the APIU ID attribute.
+
+        :return: tpm ID
+        :rtype: int
         """
         return self._apiuId
 
@@ -186,6 +210,9 @@ class MccsAntenna(SKABaseDevice):
     def gain(self):
         """
         Return the gain attribute.
+
+        :return: the gain
+        :rtype: float
         """
         return self._gain
 
@@ -195,6 +222,9 @@ class MccsAntenna(SKABaseDevice):
     def rms(self):
         """
         Return the measured RMS of the antenna.
+
+        :return: the measured rms
+        :rtype: float
         """
         return self._rms
 
@@ -212,6 +242,9 @@ class MccsAntenna(SKABaseDevice):
     def voltage(self):
         """
         Return the voltage attribute.
+
+        :return: the voltage
+        :rtype: float
         """
         return self._voltage
 
@@ -221,6 +254,9 @@ class MccsAntenna(SKABaseDevice):
         """
         Set the voltage attribute.
         Note: Only add to support demo
+
+        :param value: the new voltage
+        :type value: float
         """
         self._voltage = value
 
@@ -228,6 +264,9 @@ class MccsAntenna(SKABaseDevice):
     def temperature(self):
         """
         Return the temperature attribute.
+
+        :return: the temperature
+        :rtype: float
         """
         return self._temperature
 
@@ -235,6 +274,9 @@ class MccsAntenna(SKABaseDevice):
     def xPolarisationFaulty(self):
         """
         Return the xPolarisationFaulty attribute.
+
+        :return: the x-polarisation faulty flag
+        :rtype: boolean
         """
         return self._xPolarisationFaulty
 
@@ -242,6 +284,9 @@ class MccsAntenna(SKABaseDevice):
     def yPolarisationFaulty(self):
         """
         Return the yPolarisationFaulty attribute.
+
+        :return: the y-polarisation faulty flag
+        :rtype: boolean
         """
         return self._yPolarisationFaulty
 
@@ -253,6 +298,9 @@ class MccsAntenna(SKABaseDevice):
     def fieldNodeLongitude(self):
         """
         Return the fieldNodeLongitude attribute.
+
+        :return: the Longitude of field node centre
+        :rtype: float
         """
         return self._fieldNodeLongitude
 
@@ -265,6 +313,9 @@ class MccsAntenna(SKABaseDevice):
     def fieldNodeLatitude(self):
         """
         Return the fieldNodeLatitude attribute.
+
+        :return: the Latitude of field node centre
+        :rtype: float
         """
         return self._fieldNodeLongitude
 
@@ -274,6 +325,9 @@ class MccsAntenna(SKABaseDevice):
     def altitude(self):
         """
         Return the altitude attribute.
+
+        :return: the altitude of the antenna
+        :rtype: float
         """
         return self._altitude
 
@@ -286,6 +340,9 @@ class MccsAntenna(SKABaseDevice):
     def xDisplacement(self):
         """
         Return the Horizontal displacement attribute.
+
+        :return: the horizontal displacement from field node centre
+        :rtype: float
         """
         return self._xDisplacement
 
@@ -298,6 +355,9 @@ class MccsAntenna(SKABaseDevice):
     def yDisplacement(self):
         """
         Return the vertical displacement attribute.
+
+        :return: the vertical displacement from field node centre
+        :rtype: float
         """
         return self._yDisplacement
 
@@ -305,6 +365,9 @@ class MccsAntenna(SKABaseDevice):
     def timestampOfLastSpectrum(self):
         """
         Return the timestampOfLastSpectrum attribute.
+
+        :return: the timestamp of the last spectrum
+        :rtype: str
         """
         return self._timestampOfLastSpectrum
 
@@ -316,6 +379,9 @@ class MccsAntenna(SKABaseDevice):
     def logicalAntennaId(self):
         """
         Return the logical antenna ID attribute.
+
+        :return: the logical antenna ID
+        :rtype: float
         """
         return self._logicalAntennaId
 
@@ -323,6 +389,9 @@ class MccsAntenna(SKABaseDevice):
     def xPolarisationScalingFactor(self):
         """
         Return the logical antenna ID attribute.
+
+        :return: the x polarisation scaling factor
+        :rtype: array of int
         """
         return self._xPolarisationScalingFactor
 
@@ -330,6 +399,9 @@ class MccsAntenna(SKABaseDevice):
     def yPolarisationScalingFactor(self):
         """
         Return the yPolarisationScalingFactor attribute.
+
+        :return: the y polarisation scaling factor
+        :rtype: array of int
         """
         return self._yPolarisationScalingFactor
 
@@ -345,6 +417,9 @@ class MccsAntenna(SKABaseDevice):
         """
         Return theCalibration coefficient to be applied for the next frequency
         channel in the calibration cycle
+
+        :return: the calibration coefficients
+        :rtype: array of float
         """
         return self._calibrationCoefficient
 
@@ -352,6 +427,9 @@ class MccsAntenna(SKABaseDevice):
     def pointingCoefficient(self):
         """
         Return the pointingCoefficient attribute.
+
+        :return: the pointing coefficients
+        :rtype: array of float
         """
         return self._pointingCoefficient
 
@@ -359,6 +437,9 @@ class MccsAntenna(SKABaseDevice):
     def spectrumX(self):
         """
         Return the spectrumX attribute.
+
+        :return: x spectrum
+        :rtype: array of float
         """
         return self._spectrumX
 
@@ -366,6 +447,9 @@ class MccsAntenna(SKABaseDevice):
     def spectrumY(self):
         """
         Return the spectrumY attribute.
+
+        :return: y spectrum
+        :rtype: array of float
         """
         return self._spectrumY
 
@@ -373,6 +457,9 @@ class MccsAntenna(SKABaseDevice):
     def position(self):
         """
         Return the position attribute.
+
+        :return: positions
+        :rtype: array of float
         """
         return self._position
 
@@ -386,6 +473,9 @@ class MccsAntenna(SKABaseDevice):
     def delays(self):
         """
         Return the delays attribute.
+
+        :return: delay for each beam
+        :rtype: array of float
         """
         return self._delays
 
@@ -399,6 +489,9 @@ class MccsAntenna(SKABaseDevice):
     def delayRates(self):
         """
         Return the delayRates attribute.
+
+        :return: delay rate for each beam
+        :rtype: array of float
         """
         return self._delayRates
 
@@ -412,6 +505,9 @@ class MccsAntenna(SKABaseDevice):
     def bandpassCoefficient(self):
         """
         Return the bandpassCoefficient attribute.
+
+        :return: bandpass coefficients
+        :rtype: array of float
         """
         return self._bandpassCoefficient
 
@@ -532,7 +628,7 @@ class MccsAntenna(SKABaseDevice):
         self.push_change_event("healthState", health_state)
         with self._lock:
             self._health_state = health_state
-        self.logging.info(f"health state = {health_state}")
+        self.logger.info(f"health state = {health_state}")
 
 
 # ----------
@@ -541,7 +637,14 @@ class MccsAntenna(SKABaseDevice):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsAntenna module."""
+    """
+    Main function of the MccsAntenna module.
+
+    :param args: command line arguments
+    :param kwargs: command line keyword arguments
+
+    :return: device server instance
+    """
 
     return MccsAntenna.run_server(args=args, **kwargs)
 

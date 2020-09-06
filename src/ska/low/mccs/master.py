@@ -204,8 +204,7 @@ class MccsMaster(SKAMaster):
         """
         Return the commandDelayExpected attribute.
 
-        :return: number of seconds it is expected to take to complete
-           the command
+        :return: number of seconds it is expected to take to complete the command
         :rtype: int
         """
         return 0
@@ -415,6 +414,9 @@ class MccsMaster(SKAMaster):
         def do(self, argin):
             """
             Stateless do hook for the EnableSubarray() command
+
+            :param argin: the subarray id
+            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -891,7 +893,7 @@ class MccsMaster(SKAMaster):
         self.push_change_event("healthState", health_state)
         with self._lock:
             self._health_state = health_state
-        self.logging.info(f"health state = {health_state}")
+        self.logger.info(f"health state = {health_state}")
 
 
 # ----------
@@ -900,7 +902,14 @@ class MccsMaster(SKAMaster):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsMaster module."""
+    """
+    Main function of the MccsMaster module.
+
+    :param args: command line arguments
+    :param kwargs: command line keyword arguments
+
+    :return: device server instance
+    """
 
     return MccsMaster.run_server(args=args, **kwargs)
 

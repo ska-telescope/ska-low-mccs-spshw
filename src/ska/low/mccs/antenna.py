@@ -628,7 +628,7 @@ class MccsAntenna(SKABaseDevice):
         self.push_change_event("healthState", health_state)
         with self._lock:
             self._health_state = health_state
-        self.logger.info(f"health state = {health_state}")
+        self.logger.info("health state = " + str(health_state))
 
 
 # ----------

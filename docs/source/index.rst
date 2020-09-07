@@ -11,33 +11,32 @@ prototype for the `Square Kilometre Array`_.
    :maxdepth: 1
    :caption: Getting started
 
-   getting_started
-   setup_development_environment
-   setup_vscode
-   setup_deployment_environment
-   use_mccs
-
+   getting_started/getting_started
+   getting_started/setup_development_environment
+   getting_started/setup_vscode
+   getting_started/setup_deployment_environment
+   getting_started/use_mccs
 
 .. toctree::
    :maxdepth: 1
    :caption: API
 
-   antenna
-   apiu
-   cluster_manager
-   device
-   events
-   group_device
-   health
-   master
-   station
-   station_beam
-   subarray
-   tel_state
-   tile
-   tpm_device_simulator
-   tpm_simulator
-   utils
+   api/antenna
+   api/apiu
+   api/cluster_manager
+   api/device
+   api/events
+   api/group_device
+   api/health
+   api/master
+   api/station
+   api/station_beam
+   api/subarray
+   api/tel_state
+   api/tile
+   api/tpm_device_simulator
+   api/tpm_simulator
+   api/utils
    
 Indices and tables
 ------------------

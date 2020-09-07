@@ -28,6 +28,7 @@ from ska.base.commands import ResultCode
 device_info = {"class": MccsTile, "properties": {"TileId": 1, "AntennasPerTile": "16"}}
 
 
+@pytest.mark.mock_device_proxy
 class TestMccsTile(object):
     """
     Test class for MccsTile tests.

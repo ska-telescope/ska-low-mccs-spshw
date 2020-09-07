@@ -14,6 +14,9 @@ __all__ = [
     "MccsClusterManager",
     "MccsTpmDeviceSimulator",
     "control_model",
+    "events",
+    "health",
+    "tpm_simulator",
 ]
 
 from .device import MccsDevice  # noqa: F401

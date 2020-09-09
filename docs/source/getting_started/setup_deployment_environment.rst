@@ -183,14 +183,6 @@ To start up a TANGO-grafana cluster:
    # Run setup script - installs tango-base, webjive, Traefik and
    # TANGO-grafana charts
    ./setup_tango_grafana.sh
-   cd ..
-   # Create an ska-low-mccs:latest docker image reflecting the repository
-   make devimage
-   # Set environment variable to prevent tango-base being deployed again
-   export TANGO_BASE_ENABLED=false
-   # Starts up mccs
-   make deploy
-   make watch # Patience is a virtue in the world of k8s
 
 
 Tidy-up resources:

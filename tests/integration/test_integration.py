@@ -6,7 +6,7 @@ particularly tango devices.
 from tango import DevSource, DevState
 
 from ska.base.commands import ResultCode
-from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile
+from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile, MccsAntenna
 from ska.low.mccs.utils import call_with_json
 
 devices_info = [
@@ -46,21 +46,36 @@ devices_info = [
         "devices": [
             {
                 "name": "low/elt/station_1",
-                "properties": {"TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
+                "properties": {
+                    "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"],
+                    "AntennaFQDNs": ["low/elt/antenna_1", "low/elt/antenna_2"],
+                },
             },
             {
                 "name": "low/elt/station_2",
-                "properties": {"TileFQDNs": ["low/elt/tile_3", "low/elt/tile_4"]},
+                "properties": {
+                    "TileFQDNs": ["low/elt/tile_3", "low/elt/tile_4"],
+                    "AntennaFQDNs": ["low/elt/antenna_3", "low/elt/antenna_4"],
+                },
             },
         ],
     },
     {
         "class": MccsTile,
         "devices": [
-            {"name": "low/elt/tile_1", "properties": {"AntennasPerTile": "16"}},
-            {"name": "low/elt/tile_2", "properties": {"AntennasPerTile": "16"}},
-            {"name": "low/elt/tile_3", "properties": {"AntennasPerTile": "16"}},
-            {"name": "low/elt/tile_4", "properties": {"AntennasPerTile": "16"}},
+            {"name": "low/elt/tile_1", "properties": {"AntennasPerTile": "1"}},
+            {"name": "low/elt/tile_2", "properties": {"AntennasPerTile": "1"}},
+            {"name": "low/elt/tile_3", "properties": {"AntennasPerTile": "1"}},
+            {"name": "low/elt/tile_4", "properties": {"AntennasPerTile": "1"}},
+        ],
+    },
+    {
+        "class": MccsAntenna,
+        "devices": [
+            {"name": "low/elt/antenna_1", "properties": {}},
+            {"name": "low/elt/antenna_2", "properties": {}},
+            {"name": "low/elt/antenna_3", "properties": {}},
+            {"name": "low/elt/antenna_4", "properties": {}},
         ],
     },
 ]

@@ -15,6 +15,7 @@ __all__ = ["MccsMaster", "main"]
 
 import numpy
 import json
+import threading
 
 # PyTango imports
 import tango
@@ -25,37 +26,10 @@ from tango.server import attribute, command, device_property
 from ska.base import SKAMaster, SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.low.mccs.utils import call_with_json, tango_raise
 import ska.low.mccs.release as release
-from ska.low.mccs.utils import EventManager
-from ska.base.control_model import HealthState
-
-
-class MasterHealthMonitor:
-    def __init__(self, device):
-        self._health_state_table = {}
-        self._device = device
-
-    def initialise(self, fqdn):
-        self._health_state_table.update({fqdn: (DevState.OFF, HealthState.OK)})
-        print(self._health_state_table)
-
-    def update_health(self, fqdn, event, value):
-        state, health = self._health_state_table[fqdn]
-        if event == "State":
-            self._health_state_table.update({fqdn: (value, health)})
-        elif event == "healthstate":
-            self._health_state_table.update({fqdn: (state, HealthState(value))})
-
-        health_state = HealthState.OK
-        for key, (state, health) in self._health_state_table.items():
-            if health == HealthState.DEGRADED or health == HealthState.UNKNOWN:
-                health_state = HealthState.DEGRADED
-            elif health == HealthState.FAILED:
-                health_state = HealthState.FAILED
-
-        self._device.push_change_event("HealthState", health_state)
-        print("master health =", health_state)
+from ska.low.mccs.utils import call_with_json, tango_raise
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
 
 
 class MccsMaster(SKAMaster):
@@ -162,12 +136,18 @@ class MccsMaster(SKAMaster):
                 len(device.MccsStations), dtype=numpy.ubyte
             )
 
+            device._lock = threading.Lock()
+            # initialise the health table using the FQDN as the key.
+            # Create and event manager per FQDN and subscribe to events from it
             device._eventManagerList = []
-            device._health_monitor = MasterHealthMonitor(device)
+            fqdns = device._station_fqdns
+            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
+            device._health_monitor = HealthMonitor(
+                fqdns, device._rollup_policy.rollup_health
+            )
             for fqdn in device._station_fqdns:
-                device._health_monitor.initialise(fqdn)
                 device._eventManagerList.append(
-                    EventManager(fqdn, device._health_monitor.update_health)
+                    EventManager(fqdn, device._health_monitor.update_health_table)
                 )
 
             message = "MccsMaster Init command completed OK"
@@ -224,8 +204,7 @@ class MccsMaster(SKAMaster):
         """
         Return the commandDelayExpected attribute.
 
-        :return: number of seconds it is expected to take to complete
-           the command
+        :return: number of seconds it is expected to take to complete the command
         :rtype: int
         """
         return 0
@@ -435,6 +414,9 @@ class MccsMaster(SKAMaster):
         def do(self, argin):
             """
             Stateless do hook for the EnableSubarray() command
+
+            :param argin: the subarray id
+            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -901,6 +883,18 @@ class MccsMaster(SKAMaster):
         (return_code, message) = handler()
         return [[return_code], [message]]
 
+    def update_healthstate(self, health_state):
+        """
+        Update and push a change event for the healthstate attribute
+
+        :param health_state: The new healthstate
+        :type health_state: enum (defined in ska.base.control_model)
+        """
+        self.push_change_event("healthState", health_state)
+        with self._lock:
+            self._health_state = health_state
+        self.logger.info("health state = " + str(health_state))
+
 
 # ----------
 # Run server
@@ -908,7 +902,14 @@ class MccsMaster(SKAMaster):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsMaster module."""
+    """
+    Main function of the MccsMaster module.
+
+    :param args: command line arguments
+    :param kwargs: command line keyword arguments
+
+    :return: device server instance
+    """
 
     return MccsMaster.run_server(args=args, **kwargs)
 

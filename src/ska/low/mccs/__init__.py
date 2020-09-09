@@ -12,7 +12,11 @@ __all__ = [
     "MccsTelState",
     "MccsTransientBuffer",
     "MccsClusterManager",
+    "MccsTpmDeviceSimulator",
     "control_model",
+    "events",
+    "health",
+    "tpm_simulator",
 ]
 
 from .device import MccsDevice  # noqa: F401
@@ -27,3 +31,4 @@ from .antenna import MccsAntenna
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer
 from .cluster_manager import MccsClusterManager
+from .tpm_device_simulator import MccsTpmDeviceSimulator

@@ -12,6 +12,7 @@ from ska.low.mccs import (
     MccsStation,
     MccsStationBeam,
     MccsTile,
+    MccsAntenna,
 )
 
 # from ska.low.mccs.utils import call_with_json
@@ -20,7 +21,8 @@ from ska.low.mccs import (
 _NUM_SUBARRAYS = 2
 _NUM_STATIONS = 2
 _NUM_BEAMS = 1
-_NUM_TILES = 6
+_NUM_TILES = 4
+_NUM_ANTENNAS = 4
 
 
 devices_info = [
@@ -56,14 +58,16 @@ devices_info = [
             {
                 "name": "low/elt/station_1",
                 "properties": {
-                    "TileFQDNs": [f"low/elt/tile_{id}" for id in range(1, 4)],
+                    "TileFQDNs": [f"low/elt/tile_{id}" for id in range(1, 3)],
+                    "AntennaFQDNs": [f"low/elt/antenna_{id}" for id in range(1, 3)],
                     "LoggingLevelDefault": 3,
                 },
             },
             {
                 "name": "low/elt/station_2",
                 "properties": {
-                    "TileFQDNs": [f"low/elt/tile_{id}" for id in range(4, 7)],
+                    "TileFQDNs": [f"low/elt/tile_{id}" for id in range(3, 5)],
+                    "AntennaFQDNs": [f"low/elt/antenna_{id}" for id in range(3, 5)],
                     "LoggingLevelDefault": 3,
                 },
             },
@@ -84,6 +88,13 @@ devices_info = [
                 "properties": {"TileId": id, "LoggingLevelDefault": 3},
             }
             for id in range(1, _NUM_TILES + 1)
+        ],
+    },
+    {
+        "class": MccsAntenna,
+        "devices": [
+            {"name": f"low/elt/antenna_{id}", "properties": {"LoggingLevelDefault": 3}}
+            for id in range(1, _NUM_ANTENNAS + 1)
         ],
     },
 ]

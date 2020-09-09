@@ -48,14 +48,13 @@ deviceServers:
   stations:
     name: station
     instances: [1, 2]
-  beams:
-    name: beam
-    serverName: StationBeam
-    instances: [1]
   tiles:
     name: tile
-    instances: [1, 2, 3, 4, 5, 6]
-
+    instances: [1, 2, 3, 4]
+  antennas:
+    name: antenna
+    instances: [1, 2, 3, 4]
+  
 nodeSelector: {}
 
 affinity: {}

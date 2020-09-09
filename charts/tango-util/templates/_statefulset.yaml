@@ -21,14 +21,25 @@ spec:
         deviceServer: {{ include "tango-util.deviceInstance" . }}
     spec:
       initContainers:
-      - name: "init-{{ template "tango-util.deviceName" . }}"
+      - name: "waitdb-{{ template "tango-util.deviceName" . }}"
         image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
         imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
-        command:
-          - /usr/local/bin/wait-for-it.sh
-          - {{ include "tango-util.databaseds" .global }}
-          - --timeout=30
-          - --strict
+        command: ['sh', '-c']
+        args:
+          - /usr/local/bin/retry --tries=6 -- 
+            /usr/local/bin/wait-for-it.sh
+            {{ include "tango-util.databaseds" .global }}
+            --timeout=15 --strict
+        env:
+{{ include "tango-util.dbenv" .global |indent 8 }}
+      - name: "waitconfig-{{ template "tango-util.deviceName" . }}"
+        image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
+        imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
+        command: ['sh', '-c']
+        args:
+          - "/usr/local/bin/retry --tries=6 -- tango_admin --check-device low/elt/master && exit 0"
+        env:
+{{ include "tango-util.dbenv" .global |indent 8 }}
       containers:
       - name: {{ template "tango-util.deviceName" . }}
         image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"

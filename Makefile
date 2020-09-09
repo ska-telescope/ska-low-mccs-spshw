@@ -27,7 +27,7 @@ HELM_CHART ?= mccs
 INGRESS_HOST ?= $(HELM_RELEASE).$(HELM_CHART).local
 
 # Optional creation of the tango-base dependency
-ENABLE_TANGO_BASE ?= true
+TANGO_BASE_ENABLED ?= true
 
 # Fixed variables
 # Timeout for gitlab-runner when run locally

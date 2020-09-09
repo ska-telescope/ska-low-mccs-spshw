@@ -12,6 +12,12 @@
                             "MccsStations": [
                                 "low/elt/station_1",
                                 "low/elt/station_2"
+                            ],
+                            "MccsTiles": [
+                                "low/elt/tile_1",
+                                "low/elt/tile_2",
+                                "low/elt/tile_3",
+                                "low/elt/tile_4"
                             ]
                         }
                     }
@@ -22,14 +28,24 @@
             "subarray1": {
                 "MccsSubarray": {
                     "low/elt/subarray_1": {
-                        "properties": {}
+                        "properties": {
+                            "CapabilityTypes": [
+                                "BAND1",
+                                "BAND2"
+                            ]                            
+                        }
                     }
                 }
             },
             "subarray2": {
                 "MccsSubarray": {
                     "low/elt/subarray_2": {
-                        "properties": {}
+                        "properties": {
+                            "CapabilityTypes": [
+                                "BAND1",
+                                "BAND2"
+                            ]                            
+                        }
                     }
                 }
             }
@@ -39,13 +55,19 @@
                 "MccsStation": {
                     "low/elt/station_1": {
                         "properties": {
-                            "StationID": [
+                            "StationId": [
                                 "1"
                             ],
-                            "TileFQDNS": [
+                            "TileFQDNs": [
                                 "low/elt/tile_1",
-                                "low/elt/tile_2",
-                                "low/elt/tile_3"
+                                "low/elt/tile_2"
+                            ],
+                            "AntennaFQDNs": [
+                                "low/elt/antenna_1",
+                                "low/elt/antenna_2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -55,13 +77,19 @@
                 "MccsStation": {
                     "low/elt/station_2": {
                         "properties": {
-                            "StationID": [
+                            "StationId": [
                                 "2"
                             ],
-                            "TileFQDNS": [
-                                "low/elt/tile_4",
-                                "low/elt/tile_5",
-                                "low/elt/tile_6"
+                            "TileFQDNs": [
+                                "low/elt/tile_3",
+                                "low/elt/tile_4"
+                            ],
+                            "AntennaFQDNs": [
+                                "low/elt/antenna_3",
+                                "low/elt/antenna_4"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -121,6 +149,9 @@
                         "properties": {
                             "TileId": [
                                 "1"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
                             ]
                         }
                     }
@@ -132,6 +163,9 @@
                         "properties": {
                             "TileId": [
                                 "2"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
                             ]
                         }
                     }
@@ -143,6 +177,9 @@
                         "properties": {
                             "TileId": [
                                 "3"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
                             ]
                         }
                     }
@@ -154,30 +191,41 @@
                         "properties": {
                             "TileId": [
                                 "4"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
                             ]
                         }
                     }
                 }
-            },
-            "tile5": {
-                "MccsTile": {
-                    "low/elt/tile_5": {
-                        "properties": {
-                            "TileId": [
-                                "5"
-                            ]
-                        }
+            }
+        },
+        "MccsAntenna": {
+            "antenna1": {
+                "MccsAntenna": {
+                    "low/elt/antenna_1": {
+                        "properties": {}
                     }
                 }
             },
-            "tile6": {
-                "MccsTile": {
-                    "low/elt/tile_6": {
-                        "properties": {
-                            "TileId": [
-                                "6"
-                            ]
-                        }
+            "antenna2": {
+                "MccsAntenna": {
+                    "low/elt/antenna_2": {
+                        "properties": {}
+                    }
+                }
+            },
+            "antenna3": {
+                "MccsAntenna": {
+                    "low/elt/antenna_3": {
+                        "properties": {}
+                    }
+                }
+            },
+            "antenna4": {
+                "MccsAntenna": {
+                    "low/elt/antenna_4": {
+                        "properties": {}
                     }
                 }
             }

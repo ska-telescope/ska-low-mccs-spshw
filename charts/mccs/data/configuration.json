@@ -229,6 +229,15 @@
                     }
                 }
             }
+        },
+        "MccsTpmDeviceSimulator": {
+            "tpmsimulator": {
+                "MccsTpmDeviceSimulator": {
+                    "low/elt/tpmsimulator": {
+                        "properties": {}
+                    }
+                }
+            }
         }
     }
 }

@@ -15,27 +15,11 @@ def pytest_itemcollected(item):
     tests that use the `device_context` fixture, causing them to be
     sandboxed in their own process
 
-    param item: the collected test for which this hook is called
-    type item: a collected test
+    :param item: the collected test for which this hook is called
+    :type item: a collected test
     """
     if "device_context" in item.fixturenames:
         item.add_marker("forked")
-
-
-@pytest.fixture(scope="module")
-def devices_info(request):
-    """
-    Pytest fixture that retrieves the `devices_info` (note plural
-    "devices") attribute from the module under test. The `devices_info`
-    attribute contains information about the multiple devices, necessary
-    to stand up those devices in a tango.MultiDeviceTestContext for
-    integration testing.
-
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: _pytest.fixtures.SubRequest
-    """
-    yield getattr(request.module, "devices_info")
 
 
 @pytest.fixture(scope="function")
@@ -51,11 +35,19 @@ def device_context(mocker, devices_info):
         are needed to stand the device up in a DeviceTestContext, such
         as the device classes and properties
     :type devices_info: dict
+    :yield: a tango testing context
     """
 
     def _get_open_port():
         """
         Helper function that returns an available port on the local machine
+
+        Note the possibility of a race condition here. By the time the
+        calling method tries to make use of this port, it might already
+        have been taken by another process.
+
+        :return: An open port
+        :rtype: int
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("", 0))

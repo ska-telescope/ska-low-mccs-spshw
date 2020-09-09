@@ -6,82 +6,29 @@ particularly tango devices.
 from tango import DevSource, DevState
 
 from ska.base.commands import ResultCode
-from ska.low.mccs import MccsMaster, MccsSubarray, MccsStation, MccsTile, MccsAntenna
 from ska.low.mccs.utils import call_with_json
 
-devices_info = [
-    {
-        "class": MccsMaster,
-        "devices": (
-            {
-                "name": "low/elt/master",
-                "properties": {
-                    "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
-                    "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
-                    "MccsTiles": [
-                        "low/elt/tile_1",
-                        "low/elt/tile_2",
-                        "low/elt/tile_3",
-                        "low/elt/tile_4",
-                    ],
-                },
-            },
-        ),
-    },
-    {
-        "class": MccsSubarray,
-        "devices": [
-            {
-                "name": "low/elt/subarray_1",
-                "properties": {"CapabilityTypes": ["BAND1", "BAND2"]},
-            },
-            {
-                "name": "low/elt/subarray_2",
-                "properties": {"CapabilityTypes": ["BAND1", "BAND2"]},
-            },
-        ],
-    },
-    {
-        "class": MccsStation,
-        "devices": [
-            {
-                "name": "low/elt/station_1",
-                "properties": {
-                    "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"],
-                    "AntennaFQDNs": ["low/elt/antenna_1", "low/elt/antenna_2"],
-                },
-            },
-            {
-                "name": "low/elt/station_2",
-                "properties": {
-                    "TileFQDNs": ["low/elt/tile_3", "low/elt/tile_4"],
-                    "AntennaFQDNs": ["low/elt/antenna_3", "low/elt/antenna_4"],
-                },
-            },
-        ],
-    },
-    {
-        "class": MccsTile,
-        "devices": [
-            {"name": "low/elt/tile_1", "properties": {"AntennasPerTile": "1"}},
-            {"name": "low/elt/tile_2", "properties": {"AntennasPerTile": "1"}},
-            {"name": "low/elt/tile_3", "properties": {"AntennasPerTile": "1"}},
-            {"name": "low/elt/tile_4", "properties": {"AntennasPerTile": "1"}},
-        ],
-    },
-    {
-        "class": MccsAntenna,
-        "devices": [
-            {"name": "low/elt/antenna_1", "properties": {}},
-            {"name": "low/elt/antenna_2", "properties": {}},
-            {"name": "low/elt/antenna_3", "properties": {}},
-            {"name": "low/elt/antenna_4", "properties": {}},
-        ],
-    },
-]
+devices_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "devices": [
+        "master",
+        "subarray1",
+        "subarray2",
+        "station1",
+        "station2",
+        "tile1",
+        "tile2",
+        "tile3",
+        "tile4",
+        "antenna1",
+        "antenna2",
+        "antenna3",
+        "antenna4",
+    ],
+}
 
 
-# @pytest.mark.skip("Triggering bug in base classes implementation")
 class TestMccsIntegration:
     """
     Integration test cases for the Mccs device classes
@@ -90,6 +37,9 @@ class TestMccsIntegration:
     def test_master_enable_subarray(self, device_context):
         """
         Test that a MccsMaster device can enable an MccsSubarray device.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: tango.MultiDeviceTestContext
         """
         master = device_context.get_device("low/elt/master")
         subarray_1 = device_context.get_device("low/elt/subarray_1")
@@ -128,6 +78,9 @@ class TestMccsIntegration:
         """
         Test that an MccsMaster device can disable an MccsSubarray
         device.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: tango.MultiDeviceTestContext
         """
         master = device_context.get_device("low/elt/master")
         subarray_1 = device_context.get_device("low/elt/subarray_1")
@@ -170,6 +123,9 @@ class TestMccsIntegration:
         """
         Test that an MccsMaster device can allocate resources to an
         MccsSubarray device.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: tango.MultiDeviceTestContext
         """
         master = device_context.get_device("low/elt/master")
         subarray_1 = device_context.get_device("low/elt/subarray_1")
@@ -335,6 +291,9 @@ class TestMccsIntegration:
         """
         Test that an MccsMaster device can release the resources of an
         MccsSubarray device.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: tango.MultiDeviceTestContext
         """
         master = device_context.get_device("low/elt/master")
         subarray_1 = device_context.get_device("low/elt/subarray_1")
@@ -428,6 +387,9 @@ class TestMccsIntegration:
         Test that a write to attribute subarrayId on an MccsStation
         device also results in an update to attribute subarrayId on its
         MccsTiles.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: tango.MultiDeviceTestContext
         """
         station = device_context.get_device("low/elt/station_1")
         tile_1 = device_context.get_device("low/elt/tile_1")
@@ -441,7 +403,6 @@ class TestMccsIntegration:
         tile_2.set_source(DevSource.DEV)
 
         # check initial state
-        assert list(station.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
         assert station.subarrayId == 0
         assert tile_1.subarrayId == 0
         assert tile_2.subarrayId == 0
@@ -450,7 +411,6 @@ class TestMccsIntegration:
         station.subarrayId = 1
 
         # check state
-        assert list(station.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
         assert station.subarrayId == 1
         assert tile_1.subarrayId == 1
         assert tile_2.subarrayId == 1

@@ -13,19 +13,13 @@ This module contains the tests for MccsAPIU.
 """
 from tango import DevState
 
-from ska.base.control_model import (
-    LoggingLevel,
-    ControlMode,
-    HealthState,
-    SimulationMode,
-    TestMode,
-)
-from ska.low.mccs import MccsAPIU
+from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
 
-device_info = {
-    "class": MccsAPIU,
-    "properties": {"SkaLevel": "4", "LoggingLevelDefault": "4"},
+device_to_load = {
+    "path": "charts/mccs/data/extra.json",
+    "package": "ska.low.mccs",
+    "device": "apiu1",
 }
 
 
@@ -34,11 +28,6 @@ class TestMccsAPIU(object):
     Test class for MccsAPIU tests.
     """
 
-    def test_properties(self, device_under_test):
-        """Test the properties """
-        assert device_under_test.loggingLevel == LoggingLevel.INFO
-
-    # general methods
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.

@@ -72,8 +72,8 @@ build-image:
     paths:
       - current_tag.txt
 
-# integration testing on new kubernetes runners
-integration_test:
+# functional testing on new kubernetes runners
+functional_test:
   stage: integration
   tags:
     - auto-k8sv2
@@ -96,7 +96,7 @@ integration_test:
     - make deploy
     - make show
     - make wait
-    - make integration_test
+    - make functional_test
   after_script:
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
     - make delete

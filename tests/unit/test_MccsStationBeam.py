@@ -11,22 +11,16 @@
 """
 This module contains the tests for MccsStationBeam.
 """
-import pytest
 
-# import tango
 from tango import DevSource
 from ska.base.control_model import ControlMode, SimulationMode, TestMode
-from ska.low.mccs import MccsStationBeam, release
+from ska.low.mccs import release
 
 
-device_info = {
-    "class": MccsStationBeam,
-    "properties": {
-        "SkaLevel": "2",
-        # "GroupDefinitions": [],
-        "LoggingLevelDefault": 4,
-        # "LoggingTargetsDefault": [],
-    },
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "beam1",
 }
 
 
@@ -36,14 +30,6 @@ class TestMccsStationBeam:
     Test class for MccsStationBeam tests
     """
 
-    @pytest.mark.skip(reason="Not implemented.")
-    def test_properties(self, device_under_test):
-        """
-        Test the properties. Not implemented.
-        """
-        pass
-
-    # general methods
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.

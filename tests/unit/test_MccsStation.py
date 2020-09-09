@@ -16,16 +16,13 @@ import time
 import tango
 
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.low.mccs import MccsStation, release
+from ska.low.mccs import release
 
 
-device_info = {
-    "class": MccsStation,
-    "properties": {
-        "StationId": 1,
-        "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"],
-        "AntennaFQDNs": ["low/elt/antenna_1", "low/elt/antenna_2"],
-    },
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "station1",
 }
 
 
@@ -34,13 +31,6 @@ class TestMccsStation:
     """
     Test class for MccsStation tests
     """
-
-    def test_properties(self, device_under_test):
-        """
-        Test the properties.
-        """
-        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
-        assert device_under_test.StationId == 1
 
     def test_InitDevice(self, device_under_test):
         """
@@ -61,7 +51,6 @@ class TestMccsStation:
         assert device_under_test.calibrationJobId == 0
         assert device_under_test.daqJobId == 0
         assert device_under_test.dataDirectory == ""
-        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
         assert device_under_test.beamFQDNs is None
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
@@ -110,10 +99,6 @@ class TestMccsStation:
         assert station.subarrayId == 1
         assert mock_tile_1.subarrayId == 1
         assert mock_tile_2.subarrayId == 1
-
-    def test_tileFQDNs(self, device_under_test):
-        """Test for tileFQDNs attribute"""
-        assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
 
     def test_beamFQDNs(self, device_under_test):
         """Test for beamFQDNs attribute"""

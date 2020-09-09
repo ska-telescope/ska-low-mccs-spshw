@@ -32,22 +32,6 @@ def pytest_configure(config):
     )
 
 
-@pytest.fixture(scope="module")
-def device_info(request):
-    """
-    Pytest fixture that retrieves the `device_info` (note singular
-    "device") attribute from the module under test. The `device_info`
-    attribute contains information about the device under test, such as
-    property values, necessary to stand up that device in a
-    tango.DeviceTestContext for unit testing.
-
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: _pytest.fixtures.SubRequest
-    """
-    yield getattr(request.module, "device_info")
-
-
 @pytest.fixture(scope="function")
 def device_under_test(request, device_info, mocker):
     """

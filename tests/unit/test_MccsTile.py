@@ -21,11 +21,14 @@ import numpy as np
 from contextlib import redirect_stdout
 from tango import DevFailed
 
-from ska.low.mccs import MccsTile
 from ska.base.control_model import TestMode
 from ska.base.commands import ResultCode
 
-device_info = {"class": MccsTile, "properties": {"TileId": 1, "AntennasPerTile": "16"}}
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "tile1",
+}
 
 
 @pytest.mark.mock_device_proxy

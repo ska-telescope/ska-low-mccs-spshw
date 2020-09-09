@@ -6,98 +6,25 @@ tests for the SKA Low MCCS prototype
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState
 
-from ska.low.mccs import (
-    MccsMaster,
-    MccsSubarray,
-    MccsStation,
-    MccsStationBeam,
-    MccsTile,
-    MccsAntenna,
-)
-
-# from ska.low.mccs.utils import call_with_json
-
-
-_NUM_SUBARRAYS = 2
-_NUM_STATIONS = 2
-_NUM_BEAMS = 1
-_NUM_TILES = 4
-_NUM_ANTENNAS = 4
-
-
-devices_info = [
-    {
-        "class": MccsMaster,
-        "devices": (
-            {
-                "name": "low/elt/master",
-                "properties": {
-                    "MccsSubarrays": [
-                        f"low/elt/subarray_{id}" for id in range(1, _NUM_SUBARRAYS + 1)
-                    ],
-                    "MccsStations": [
-                        f"low/elt/station_{id}" for id in range(1, _NUM_STATIONS + 1)
-                    ],
-                },
-            },
-        ),
-    },
-    {
-        "class": MccsSubarray,
-        "devices": [
-            {
-                "name": f"low/elt/subarray_{id}",
-                "properties": {"CapabilityTypes": ["BAND1", "BAND2"]},
-            }
-            for id in range(1, _NUM_SUBARRAYS + 1)
-        ],
-    },
-    {
-        "class": MccsStation,
-        "devices": [
-            {
-                "name": "low/elt/station_1",
-                "properties": {
-                    "TileFQDNs": [f"low/elt/tile_{id}" for id in range(1, 3)],
-                    "AntennaFQDNs": [f"low/elt/antenna_{id}" for id in range(1, 3)],
-                    "LoggingLevelDefault": 3,
-                },
-            },
-            {
-                "name": "low/elt/station_2",
-                "properties": {
-                    "TileFQDNs": [f"low/elt/tile_{id}" for id in range(3, 5)],
-                    "AntennaFQDNs": [f"low/elt/antenna_{id}" for id in range(3, 5)],
-                    "LoggingLevelDefault": 3,
-                },
-            },
-        ],
-    },
-    {
-        "class": MccsStationBeam,
-        "devices": [
-            {"name": f"low/elt/beam_{id}", "properties": {"BeamId": id}}
-            for id in range(1, _NUM_BEAMS + 1)
-        ],
-    },
-    {
-        "class": MccsTile,
-        "devices": [
-            {
-                "name": f"low/elt/tile_{id}",
-                "properties": {"TileId": id, "LoggingLevelDefault": 3},
-            }
-            for id in range(1, _NUM_TILES + 1)
-        ],
-    },
-    {
-        "class": MccsAntenna,
-        "devices": [
-            {"name": f"low/elt/antenna_{id}", "properties": {"LoggingLevelDefault": 3}}
-            for id in range(1, _NUM_ANTENNAS + 1)
-        ],
-    },
-]
+devices_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "devices": [
+        "master",
+        "subarray1",
+        "subarray2",
+        "station1",
+        "station2",
+        "tile1",
+        "tile2",
+        "tile3",
+        "tile4",
+        "antenna1",
+        "antenna2",
+        "antenna3",
+        "antenna4",
+    ],
+}
 
 
 @given("we have master", target_fixture="master")
@@ -262,42 +189,6 @@ def we_have_tile_4(tango_context):
     return tango_context.get_device("low/elt/tile_4")
 
 
-@given("we have tile 5", target_fixture="tile_5")
-def we_have_tile_5(tango_context):
-    """
-    Returns a DeviceProxy to the tile_5 device; accessible as
-    "tile_5" fixture
-
-    :param tango_context: fixture that provides a tango context of some
-        sort
-    :type tango_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
-    :returns: a DeviceProxy to the tile_5 device
-    :rtype: DeviceProxy
-    """
-    return tango_context.get_device("low/elt/tile_5")
-
-
-@given("we have tile 6", target_fixture="tile_6")
-def we_have_tile_6(tango_context):
-    """
-    Returns a DeviceProxy to the tile_6 device; accessible as
-    "tile_6" fixture
-
-    :param tango_context: fixture that provides a tango context of some
-        sort
-    :type tango_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
-    :returns: a DeviceProxy to the tile_6 device
-    :rtype: DeviceProxy
-    """
-    return tango_context.get_device("low/elt/tile_6")
-
-
 @scenario("master_subarray_interactions.feature", "Master is turned on")
 def test_master_is_turned_on():
     """
@@ -326,7 +217,7 @@ def station_1_is_off(station_1):
 
     :param station_1: fixture that provides a DeviceProxy to the station_1
         device
-    :type master: DeviceProxy
+    :type station_1: DeviceProxy
     """
     assert station_1.state() == DevState.OFF
 
@@ -338,7 +229,7 @@ def station_2_is_off(station_2):
 
     :param station_2: fixture that provides a DeviceProxy to the station_2
         device
-    :type master: DeviceProxy
+    :type station_2: DeviceProxy
     """
     assert station_2.state() == DevState.OFF
 
@@ -350,7 +241,7 @@ def tile_1_is_off(tile_1):
 
     :param tile_1: fixture that provides a DeviceProxy to the tile_1
         device
-    :type master: DeviceProxy
+    :type tile_1: DeviceProxy
     """
     assert tile_1.state() == DevState.OFF
 
@@ -362,7 +253,7 @@ def tile_2_is_off(tile_2):
 
     :param tile_2: fixture that provides a DeviceProxy to the tile_2
         device
-    :type master: DeviceProxy
+    :type tile_2: DeviceProxy
     """
     assert tile_2.state() == DevState.OFF
 
@@ -374,7 +265,7 @@ def tile_3_is_off(tile_3):
 
     :param tile_3: fixture that provides a DeviceProxy to the tile_3
         device
-    :type master: DeviceProxy
+    :type tile_3: DeviceProxy
     """
     assert tile_3.state() == DevState.OFF
 
@@ -386,7 +277,7 @@ def tile_4_is_off(tile_4):
 
     :param tile_4: fixture that provides a DeviceProxy to the tile_4
         device
-    :type master: DeviceProxy
+    :type tile_4: DeviceProxy
     """
     assert tile_4.state() == DevState.OFF
 
@@ -398,7 +289,7 @@ def tile_5_is_off(tile_5):
 
     :param tile_5: fixture that provides a DeviceProxy to the tile_5
         device
-    :type master: DeviceProxy
+    :type tile_5: DeviceProxy
     """
     assert tile_5.state() == DevState.OFF
 
@@ -410,7 +301,7 @@ def tile_6_is_off(tile_6):
 
     :param tile_6: fixture that provides a DeviceProxy to the tile_6
         device
-    :type master: DeviceProxy
+    :type tile_6: DeviceProxy
     """
     assert tile_6.state() == DevState.OFF
 
@@ -446,7 +337,7 @@ def station_1_should_be_on(station_1):
 
     :param station_1: fixture that provides a DeviceProxy to the station_1
         device
-    :type master: DeviceProxy
+    :type station_1: DeviceProxy
     """
     assert station_1.state() == DevState.ON
 
@@ -458,7 +349,7 @@ def station_2_should_be_on(station_2):
 
     :param station_2: fixture that provides a DeviceProxy to the station_2
         device
-    :type master: DeviceProxy
+    :type station_2: DeviceProxy
     """
     assert station_2.state() == DevState.ON
 

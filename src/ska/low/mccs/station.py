@@ -92,8 +92,6 @@ class MccsStation(SKAObsDevice):
 
             device.set_change_event("subarrayId", True, True)
             device.set_archive_event("subarrayId", True, True)
-            device.set_change_event("tileFQDNs", True, True)
-            device.set_archive_event("tileFQDNs", True, True)
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
             device.set_change_event("transientBufferFQDN", True, False)
@@ -150,19 +148,6 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        max_value=512,
-        min_value=0,
-        doc="The ID of this Station",
-    )
-    def stationId(self):
-        """
-        Return the stationId attribute.
-        """
-        return self._station_id
-
     @attribute(
         dtype="DevLong",
         format="%i",
@@ -275,19 +260,6 @@ class MccsStation(SKAObsDevice):
 
     @attribute(
         dtype=("DevString",),
-        max_dim_x=16,
-        format="%s",
-        doc="Array of fully-qualified device names of the Tile devices that "
-        "are associated with the Station",
-    )
-    def tileFQDNs(self):
-        """
-        Return the tileFQDNs attribute.
-        """
-        return self._tile_fqdns
-
-    @attribute(
-        dtype=("DevString",),
         max_dim_x=8,
         format="%s",
         doc="Array of full-qualified device names for the Station Beams "
@@ -344,9 +316,7 @@ class MccsStation(SKAObsDevice):
         Set up the handler objects for Commands
         """
         super().init_command_objects()
-
         args = (self, self.state_model, self.logger)
-
         self.register_command_object("Configure", self.ConfigureCommand(*args))
 
     class ConfigureCommand(ResponseCommand):

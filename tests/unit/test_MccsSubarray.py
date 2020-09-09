@@ -14,13 +14,14 @@ import tango
 from tango import DevSource
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
-from ska.low.mccs import MccsSubarray, release
+from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
 
 
-device_info = {
-    "class": MccsSubarray,
-    "properties": {"CapabilityTypes": ["BAND1", "BAND2"]},
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "subarray1",
 }
 
 

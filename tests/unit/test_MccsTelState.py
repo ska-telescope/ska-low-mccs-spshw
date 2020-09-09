@@ -15,11 +15,12 @@ import tango
 import pytest
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.control_model import LoggingLevel
-from ska.low.mccs import MccsTelState, release
+from ska.low.mccs import release
 
-device_info = {
-    "class": MccsTelState,
-    "properties": {"SkaLevel": "4", "LoggingLevelDefault": "4"},
+device_to_load = {
+    "path": "charts/mccs/data/extra.json",
+    "package": "ska.low.mccs",
+    "device": "telstate1",
 }
 
 
@@ -32,11 +33,6 @@ class TestMccsTelState(object):
         """Mock external libraries."""
         # Example : Mock numpy
         # cls.numpy = MccsTelState.numpy = MagicMock()
-
-    @pytest.mark.skip(reason="Not implemented")
-    def test_properties(self, device_under_test):
-        # Test the properties
-        pass
 
     def test_InitDevice(self, device_under_test):
         """

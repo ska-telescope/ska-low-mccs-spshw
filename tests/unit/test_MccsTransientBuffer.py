@@ -11,12 +11,11 @@
 """
 This module contains the tests for MccsTransientBuffer.
 """
-from ska.base.control_model import LoggingLevel
-from ska.low.mccs import MccsTransientBuffer
 
-device_info = {
-    "class": MccsTransientBuffer,
-    "properties": {"SkaLevel": "4", "LoggingLevelDefault": "4"},
+device_to_load = {
+    "path": "charts/mccs/data/extra.json",
+    "package": "ska.low.mccs",
+    "device": "transientbuffer1",
 }
 
 
@@ -24,10 +23,6 @@ class TestMccsTransientBuffer(object):
     """
     Test class for MccsTransientBuffer tests.
     """
-
-    def test_properties(self, device_under_test):
-        """Test the properties """
-        assert device_under_test.loggingLevel == LoggingLevel.INFO
 
     def test_stationId(self, device_under_test):
         """Test for stationId"""

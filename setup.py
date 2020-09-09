@@ -35,6 +35,7 @@ setuptools.setup(
     keywords="lmc mccs tango ska",
     entry_points={
         "console_scripts": [
+            "MccsAntenna=ska.low.mccs.antenna:main",
             "MccsMaster=ska.low.mccs.master:main",
             "MccsSubarray=ska.low.mccs.subarray:main",
             "MccsStation=ska.low.mccs.station:main",

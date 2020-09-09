@@ -14,24 +14,23 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 __all__ = ["MccsTile", "main"]
 
 import json
-import numpy as np
 import threading
-import time
+import numpy as np
 
 # PyTango imports
 from tango import DebugIt, DevState
-from tango import GreenMode
 from tango.server import attribute, command
 from tango.server import device_property
-from tango import futures_executor
 
 # Additional import
 
-# from ska.low.mccs import MccsGroupDevice
-from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.base import SKABaseDevice
-from ska.base.control_model import HealthState, SimulationMode, TestMode, LoggingLevel
+from ska.base.control_model import SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
+
+from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import LocalHealthMonitor, HealthRollupPolicy
 
 
 class MccsTile(SKABaseDevice):
@@ -42,8 +41,6 @@ class MccsTile(SKABaseDevice):
 
     - Device Property
     """
-
-    green_mode = GreenMode.Futures
 
     # -----------------
     # Device Properties
@@ -75,7 +72,6 @@ class MccsTile(SKABaseDevice):
             """Initialises the attributes and properties of the Mccs Tile."""
             (result_code, message) = super().do()
             device = self.target
-            device.logger.LoggingLevel = LoggingLevel.ERROR
             device._ip_address = device.TileIP
             device._port = device.TpmCpldPort
             device._lmc_ip = device.LmcIp
@@ -104,36 +100,50 @@ class MccsTile(SKABaseDevice):
             device._adc_power = []
             device._sampling_rate = 0.0
             device._tpm = None
-            device._simulationMode = SimulationMode.TRUE
+            device._simulation_mode = SimulationMode.TRUE
             device._default_tapering_coeffs = [
                 float(1) for i in range(device.AntennasPerTile)
             ]
-            device._event_names = [
-                "voltage",
+            device._is_connected = False
+            device.set_change_event("healthState", True, True)
+            device.set_archive_event("healthState", True, True)
+            device._lock = threading.Lock()
+
+            # make this device listen to its own events so that it can
+            # push a health state to station
+            event_names = [
                 "current",
+                "voltage",
                 "board_temperature",
                 "fpga1_temperature",
                 "fpga2_temperature",
-                "healthState",
             ]
-            for name in device._event_names:
-                device.set_change_event(name, True, True)
+            device._eventManagerList = []
+            fqdn = device.get_name()
+            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
+            device._health_monitor = LocalHealthMonitor(
+                [fqdn], device._rollup_policy.rollup_health, event_names
+            )
+            device._eventManagerList.append(
+                EventManager(
+                    fqdn, device._health_monitor.update_health_table, event_names
+                )
+            )
+            for name in event_names:
                 device.set_archive_event(name, True, True)
-            # TestMode is used in this server to denote
-            # unit testing when TestMode = TEST
-            device._test_mode = TestMode.NONE
-            device._is_connected = False
-            device._streaming = False
-            device._update_frequency = 1
-            device._read_task = None
-            device._lock = threading.Lock()
-            device._create_long_running_task()
 
+            device.set_state(DevState.OFF)
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
+        if self._tpm is not None:
+            self._voltage = self._tpm.voltage()
+            self._current = self._tpm.current()
+            self._board_temperature = self._tpm.temperature()
+            self._fpga1_temperature = self._tpm.get_fpga1_temperature()
+            self._fpga2_temperature = self._tpm.get_fpga2_temperature()
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -142,10 +152,6 @@ class MccsTile(SKABaseDevice):
         init_device method to be released.  This method is called by the device
         destructor and by the device Init command.
         """
-        if self._read_task is not None:
-            with self._lock:
-                self._streaming = False
-            self._read_task = None
 
     # ----------
     # Attributes
@@ -302,6 +308,7 @@ class MccsTile(SKABaseDevice):
         max_value=5.5,
         min_alarm=4.55,
         max_alarm=5.45,
+        polling_period=1000,
     )
     def voltage(self):
         """Return the voltage attribute."""
@@ -313,8 +320,11 @@ class MccsTile(SKABaseDevice):
         abs_change=0.05,
         min_value=0.0,
         max_value=3.0,
+        min_warning=0.1,
+        max_warning=2.85,
         min_alarm=0.05,
         max_alarm=2.95,
+        polling_period=1000,
     )
     def current(self):
         """Return the current attribute."""
@@ -337,6 +347,7 @@ class MccsTile(SKABaseDevice):
         max_value=40.0,
         min_alarm=26.0,
         max_alarm=39.0,
+        polling_period=1000,
     )
     def board_temperature(self):
         """Return the board_temperature attribute."""
@@ -350,6 +361,7 @@ class MccsTile(SKABaseDevice):
         max_value=40.0,
         min_alarm=26.0,
         max_alarm=39.0,
+        polling_period=1000,
     )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
@@ -363,6 +375,7 @@ class MccsTile(SKABaseDevice):
         max_value=40.0,
         min_alarm=26.0,
         max_alarm=39.0,
+        polling_period=1000,
     )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
@@ -451,7 +464,10 @@ class MccsTile(SKABaseDevice):
         fisallowed=is_connected,
     )
     def adcPower(self):
-        # Get RMS values from board
+        """
+        Return the RMS power of every ADC signal (so a TPM processes
+        16 antennas, this should return 32 RMS value
+        """
         return self._tpm.get_adc_rms()
 
     @attribute(
@@ -460,33 +476,36 @@ class MccsTile(SKABaseDevice):
         fisallowed=is_connected,
     )
     def currentTileBeamformerFrame(self):
-        # Currently this is required, not sure if it will remain so
+        """
+        Return current frame, in units of 256 ADC frames (276,48 us)
+        Currently this is required, not sure if it will remain so
+        """
         return self._tpm.current_tile_beamformer_frame()
 
     @attribute(dtype="DevBoolean", fisallowed=is_connected)
     def checkPendingDataRequests(self):
+        """ Check for pending data requests """
         return self._tpm.check_pending_data_requests()
 
     @attribute(dtype="DevBoolean", fisallowed=is_connected)
     def isBeamformerRunning(self):
+        """ Check if beamformer is running """
         return self._tpm.beamformer_is_running()
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def phaseTerminalCount(self):
+        """ get phase terminal count """
         return self._tpm.get_phase_terminal_count()
 
     @phaseTerminalCount.write
     def phaseTerminalCount(self, value):
+        """ set the phase terminal count """
         self._tpm.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def ppsDelay(self):
+        """ return the pps delay """
         return self._tpm.get_pps_delay()
-
-    @attribute(dtype=["DevString"], max_dim_x=32)
-    def event_names(self):
-        """List of event names which push change events"""
-        return self._event_names
 
     # --------
     # Commands
@@ -616,6 +635,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of Initialise() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.initialise()
             return (ResultCode.OK, "Command succeeded")
 
@@ -649,9 +676,20 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of Connect() command functionality.
+
+            :param argin: Flag to request tpm initialisation
+            :type argin: boolean
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             initialise_tpm = argin
             device = self.target
-            if device._simulation_mode == SimulationMode.FALSE:
+            if device._simulation_mode == SimulationMode.TRUE:
                 device._tpm = TpmSimulator(self.logger)
             else:
                 device._tpm = Tpm(  # noqa: F821
@@ -711,9 +749,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of Disonnect() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             device = self.target
-            with device._lock:
-                device._is_connected = False
+            device._is_connected = False
             device._tpm.disconnect()
             return (ResultCode.OK, "Command succeeded")
 
@@ -743,6 +788,12 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of GetFirmwareList() command functionality.
+
+            :return: json encoded string containing list of dictionaries
+            :rtype: str
+            """
             firmware_list = self.target._tpm.get_firmware_list()
             return json.dumps(firmware_list)
 
@@ -782,6 +833,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of DownloadFirmware() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             bitfile = argin
             device = self.target
             if device._tpm is not None:
@@ -823,6 +882,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of ProgramCPLD() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             bitfile = argin
             device = self.target
             if device._tpm is not None:
@@ -862,6 +929,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of WaitPPSEvent() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             device = self.target
             if device._tpm is not None:
                 t0 = device._tpm.get_fpga1_time()
@@ -895,6 +970,12 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of GetRegisterList() command functionality.
+
+            :return:a list of firmware & cpld registers
+            :rtype: list of str
+            """
             return self.target._tpm.get_register_list()
 
     @command(dtype_out="DevVarStringArray")
@@ -921,6 +1002,12 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of ReadRegister() command functionality.
+
+            :return: list of register values
+            :rtype: array of long
+            """
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
@@ -983,6 +1070,13 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of WriteRegister() command functionality.
+
+            :param argin: register name, values
+
+            :return: [values, ]
+            """
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
@@ -1045,6 +1139,13 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of ReadAddress() command functionality.
+
+            :param argin: address, nvalues
+
+            :return: [values, ]
+            """
             if len(argin) < 2:
                 self.logger.error("Two parameters are required")
                 raise ValueError("Two parameters are required")
@@ -1083,6 +1184,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of WriteAddress() command functionality.
+
+            :param argin: [(address, value),]
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             if len(argin) < 2:
                 self.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
@@ -1123,6 +1234,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of Configure40GCore() command functionality.
+
+            :param argin: src_mac, src_ip, src_port, dest_mac, dest_ip, dest_port
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             core_id = params.get("CoreID", None)
             if core_id is None:
@@ -1202,6 +1323,12 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of Get40GCoreConfiguration() command functionality.
+
+            :return: json string with configuration
+            :rtype: str
+            """
             core_id = argin
             item = self.target._tpm.get_40G_configuration(core_id)
             if item is not None:
@@ -1241,6 +1368,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetLmcDownload() command functionality.
+
+            :param argin: Mode,PayloadLength,DstIP,SrcPort,DstPort, LmcMac
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
@@ -1248,7 +1385,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("Mode is a mandatory parameter")
             payload_length = params.get("PayloadLength", 1024)
             dst_ip = params.get("DstIP", None)
-            src_port = params.get("SrcPort", 0xf0d0)
+            src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
             self.target._tpm.set_lmc_download(
@@ -1299,6 +1436,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetChanneliserTruncation() command functionality.
+
+            :param argin: truncation array
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             if len(argin) < 3:
                 self.logger.error("Insufficient values supplied")
                 raise ValueError("Insufficient values supplied")
@@ -1350,6 +1497,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetBeamFormerRegions() command functionality.
+
+            :param argin: region array
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             if len(argin) < 3:
                 self.logger.error("Insufficient parameters specified")
                 raise ValueError("Insufficient parameters specified")
@@ -1422,6 +1579,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of ConfigureStationBeamformer() command functionality.
+
+            :param argin: startchannel, ntiles, isfirst, islast
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             start_channel = params.get("StartChannel", None)
             if start_channel is None:
@@ -1484,6 +1651,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of LoadCalibrationCoefficients() command functionality.
+
+            :param argin: [calibration coefficients,]
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             if len(argin) < 9:
                 self.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
@@ -1562,6 +1739,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of LoadBeamAngle() command functionality.
+
+            :param argin: see LoadBeamAngle()
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.load_beam_angle(argin)
             return (ResultCode.OK, "Command succeeded")
 
@@ -1602,6 +1789,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of LoadAntennaTapering() command functionality.
+
+            :param argin: tapering coefficients
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             if len(argin) < self.target.AntennasPerTile:
                 self.logger.error(
                     f"Insufficient coefficients should be {self.AntennasPerTile}"
@@ -1645,6 +1842,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SwitchCalibrationBank() command functionality.
+
+            :param argin: switch time
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             switch_time = argin
             self.target._tpm.switch_calibration_bank(switch_time)
             return (ResultCode.OK, "Command succeeded")
@@ -1680,6 +1887,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetPointingDelay() command functionality.
+
+            :param argin: [(delay-rate, beam index),]
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             if len(argin) != self.target.AntennasPerTile * 2 + 1:
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
@@ -1718,6 +1935,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of LoadPointingDelay() command functionality.
+
+            :param argin: load time
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             load_time = argin
             self.target._tpm.load_pointing_delay(load_time)
             return (ResultCode.OK, "Command succeeded")
@@ -1753,6 +1980,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of StartBeamformer() command functionality.
+
+            :param argin: [0] start time
+                          [1] duration
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             start_time = params.get("StartTime", 0)
             duration = params.get("Duration", -1)
@@ -1795,6 +2033,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of StopBeamformer() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.stop_beamformer()
             return (ResultCode.OK, "Command succeeded")
 
@@ -1824,6 +2070,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of ConfigureIntegratedChannelData() command functionality.
+
+            :param argin: integration time. Default to 0.5 for values less than 0
+            :type argin: DevDouble
+
+             :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             integration_time = argin
             if integration_time <= 0:
                 integration_time = 0.5
@@ -1862,6 +2119,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of ConfigureIntegratedBeamData() command functionality.
+
+            :param argin: integration time
+            :type argin: DevDouble
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             integration_time = argin
             if integration_time <= 0:
                 integration_time = 0.5
@@ -1900,6 +2168,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SendRawData() command functionality.
+
+            :param argin: json encoded string (see SendRawData for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             sync = params.get("Sync", False)
             period = params.get("Period", 0)
@@ -1948,6 +2226,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SendChannelisedData() command functionality.
+
+            :param argin: json encoded string (see SendChannelisedData for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             number_of_samples = params.get("NSamples", 1024)
             first_channel = params.get("FirstChannel", 0)
@@ -2010,6 +2298,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SendChannelisedDataContinuous() command functionality.
+
+            :param argin: json encoded string
+                          (see SendChannelisedDataContinuous for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             channel_id = params.get("ChannelID")
             if channel_id is None:
@@ -2068,6 +2367,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SendBeamData() command functionality.
+
+            :param argin: json encoded string (see SendBeamData for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             period = params.get("Period", 0)
             timeout = params.get("Timeout", 0)
@@ -2115,6 +2424,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of StopDataTransmission() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.stop_data_transmission()
             return (ResultCode.OK, "Command succeeded")
 
@@ -2144,6 +2461,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of ComputeCalibrationCoefficients() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.compute_calibration_coefficients()
             return (ResultCode.OK, "Command succeeded")
 
@@ -2173,6 +2498,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of StartAcquisition() command functionality.
+
+            :param argin: json encoded string (see StartAcquisition for details)
+            :type argin: array DevDouble
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             start_time = params.get("StartTime", None)
             delay = params.get("Delay", 2)
@@ -2215,6 +2551,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetTimeDelays() command functionality.
+
+            :param argin: time delays
+            :type argin: array DevDouble
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             delays = argin
             self.target._tpm.set_time_delays(delays)
             return (ResultCode.OK, "Command succeeded")
@@ -2252,6 +2599,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetCspRounding() command functionality.
+
+            :param argin: csp rounding
+            :type argin: DevDouble
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             rounding = argin
             self.target._tpm.set_csp_rounding(rounding)
             return (ResultCode.OK, "Command succeeded")
@@ -2286,6 +2644,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SetLmcIntegratedDownload() command functionality.
+
+            :param argin: json encoded string (see SetLmcIntegratedDownload for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             mode = params.get("Mode", None)
             if mode is None:
@@ -2294,7 +2662,7 @@ class MccsTile(SKABaseDevice):
             channel_payload_length = params.get("ChannelPayloadLength", 2)
             beam_payload_length = params.get("BeamPayloadLength", 2)
             dst_ip = params.get("DstIP", None)
-            src_port = params.get("SrcPort", 0xf0d0)
+            src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
             self.target._tpm.set_lmc_integrated_download(
@@ -2352,6 +2720,16 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SendRawDataSynchronised() command functionality.
+
+            :param argin: json encoded string (see Send for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             period = params.get("Period", 0)
             timeout = params.get("Timeout", 0)
@@ -2399,6 +2777,17 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Implementation of SendChannelisedDataNarrowband() command functionality.
+
+            :param argin: json encoded string
+                          (see SendChannelisedDataNarrowband for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             frequency = params.get("Frequency", None)
             if frequency is None:
@@ -2473,6 +2862,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of TweakTransceivers() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.tweak_transceivers()
             return (ResultCode.OK, "Command succeeded")
 
@@ -2502,6 +2899,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of PostSynchronisation() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.post_synchronisation()
             return (ResultCode.OK, "Command succeeded")
 
@@ -2531,6 +2936,14 @@ class MccsTile(SKABaseDevice):
         """
 
         def do(self):
+            """
+            Implementation of SyncFpgas() command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             self.target._tpm.sync_fpgas()
             return (ResultCode.OK, "Command succeeded")
 
@@ -2556,10 +2969,20 @@ class MccsTile(SKABaseDevice):
 
     class CalculateDelayCommand(ResponseCommand):
         """
-        Class for handling the Configure() command.
+        Class for handling the CalculateDelay() command.
         """
 
         def do(self, argin):
+            """
+            Implementation of CalculateDelay() command functionality.
+
+            :param argin: json encoded string (see CalculateDelay for details)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
             params = json.loads(argin)
             current_delay = params.get("CurrentDelay", None)
             if current_delay is None:
@@ -2612,84 +3035,17 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    # --------------------
-    # Asynchronous routine
-    # --------------------
-    def _create_long_running_task(self):
-        self._streaming = True
-        self.logger.info("create task")
-        executor = futures_executor.get_global_executor()
-        self._read_task = executor.delegate(self.__do_read)
+    def update_healthstate(self, health_state):
+        """
+        Update and push a change event for the healthstate attribute
 
-    def __do_read(self):
-        while self._streaming:
-            try:
-                # if connected read the values from tpm
-                if self._tpm is not None and self._is_connected:
-                    self.logger.debug("stream on")
-                    volts = self._tpm.voltage()
-                    curr = self._tpm.current()
-                    temp = self._tpm.temperature()
-                    temp1 = self._tpm.get_fpga1_temperature()
-                    temp2 = self._tpm.get_fpga2_temperature()
-
-                    with self._lock:
-                        # now update the attribute using lock to prevent access conflict
-                        state = self.get_state()
-                        if state != DevState.ALARM:
-                            saved_state = state
-                        self._voltage = volts
-                        self._current = curr
-                        self._board_temperature = temp
-                        self._fpga1_temperature = temp1
-                        self._fpga2_temperature = temp2
-                        self.push_change_event("voltage", volts)
-                        self.push_change_event("current", curr)
-                        self.push_change_event("board_temperature", temp)
-                        self.push_change_event("fpga1_temperature", temp1)
-                        self.push_change_event("fpga2_temperature", temp2)
-                        self.push_archive_event("voltage", volts)
-                        self.push_archive_event("current", curr)
-                        self.push_archive_event("board_temperature", temp)
-                        self.push_archive_event("fpga1_temperature", temp1)
-                        self.push_archive_event("fpga2_temperature", temp2)
-                        if (
-                            self._voltage < self.voltage.get_min_alarm()
-                            or self._voltage > self.voltage.get_max_alarm()
-                            or self._current < self.current.get_min_alarm()
-                            or self._current > self.current.get_max_alarm()
-                            or self._board_temperature
-                            < self.board_temperature.get_min_alarm()
-                            or self._board_temperature
-                            > self.board_temperature.get_max_alarm()
-                            or self._fpga1_temperature
-                            < self.fpga1_temperature.get_min_alarm()
-                            or self._fpga1_temperature
-                            > self.fpga1_temperature.get_max_alarm()
-                            or self._fpga2_temperature
-                            < self.fpga2_temperature.get_min_alarm()
-                            or self._fpga2_temperature
-                            > self.fpga2_temperature.get_max_alarm()
-                        ):
-                            self.set_state(DevState.ALARM)
-                            self._healthState = HealthState.DEGRADED
-                        else:
-                            self.set_state(saved_state)
-                            self._healthState = HealthState.OK
-                else:
-                    self._healthState = HealthState.UNKNOWN
-            except Exception as exc:
-                self._healthState = HealthState.FAILED
-                self.set_state(DevState.FAULT)
-                self.logger.error(exc.what())
-
-            #  update every second (should be settable?)
-            self.push_change_event("healthState", self._healthState)
-            self.push_archive_event("healthState", self._healthState)
-            self.logger.debug(f"sleep {self._update_frequency}")
-            time.sleep(self._update_frequency)
-            if not self._streaming:
-                break
+        :param health_state: The new healthstate
+        :type health_state: enum (defined in ska.base.control_model)
+        """
+        self.push_change_event("healthState", health_state)
+        with self._lock:
+            self._health_state = health_state
+        self.logger.info("health state = " + str(health_state))
 
 
 # ----------

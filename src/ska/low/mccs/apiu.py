@@ -18,7 +18,8 @@ from tango import DebugIt
 
 # Additional imports
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.low.mccs import MccsGroupDevice
+
+# from ska.low.mccs import MccsGroupDevice
 
 # from ska.low.mccs import MccsDevice
 from ska.base import SKABaseDevice
@@ -26,7 +27,7 @@ from ska.base import SKABaseDevice
 __all__ = ["MccsAPIU", "main"]
 
 
-class MccsAPIU(MccsGroupDevice):
+class MccsAPIU(SKABaseDevice):
     """
     An implementation of MCCS APIU device
 
@@ -34,9 +35,6 @@ class MccsAPIU(MccsGroupDevice):
 
     - Device Property
     """
-
-    # PROTECTED REGION ID(MccsAPIU.class_variable) ENABLED START #
-    # PROTECTED REGION END #    //  MccsAPIU.class_variable
 
     # -----------------
     # Device Properties
@@ -86,9 +84,7 @@ class MccsAPIU(MccsGroupDevice):
     # Attributes
     # ----------
 
-    @attribute(
-        dtype="DevDouble", label="Voltage", unit="Volts",
-    )
+    @attribute(dtype="DevDouble", label="Voltage", unit="Volts")
     def voltage(self):
         """Return the voltage attribute."""
         return self._voltage
@@ -98,9 +94,7 @@ class MccsAPIU(MccsGroupDevice):
         """Set the voltage attribute."""
         self._voltage = value
 
-    @attribute(
-        dtype="DevDouble", label="Current", unit="Amps",
-    )
+    @attribute(dtype="DevDouble", label="Current", unit="Amps")
     def current(self):
         """Return the current attribute."""
         return self._current
@@ -110,9 +104,7 @@ class MccsAPIU(MccsGroupDevice):
         """Set the current attribute."""
         self._current = value
 
-    @attribute(
-        dtype="DevDouble", label="Temperature", unit="degC",
-    )
+    @attribute(dtype="DevDouble", label="Temperature", unit="degC")
     def temperature(self):
         """Return the temperature attribute."""
         return self._temperature
@@ -138,16 +130,12 @@ class MccsAPIU(MccsGroupDevice):
         """Set the humidity attribute."""
         self._humidity = value
 
-    @attribute(
-        dtype="DevBoolean", label="Is alive?",
-    )
+    @attribute(dtype="DevBoolean", label="Is alive?")
     def isAlive(self):
         """Return the isAlive attribute"""
         return self._isAlive
 
-    @attribute(
-        dtype="DevDouble", label="Over current threshold", unit="Amp",
-    )
+    @attribute(dtype="DevDouble", label="Over current threshold", unit="Amp")
     def overCurrentThreshold(self):
         """Return the overCurrentThreshold attribute"""
         return self._overCurrentThreshold
@@ -157,9 +145,7 @@ class MccsAPIU(MccsGroupDevice):
         """Set the overCurrentThreshold attribute."""
         self._overCurrentThreshold = value
 
-    @attribute(
-        dtype="DevDouble", label="Over Voltage threshold", unit="Volt",
-    )
+    @attribute(dtype="DevDouble", label="Over Voltage threshold", unit="Volt")
     def overVoltageThreshold(self):
         """Return the overVoltageThreshold attribute"""
         return self._overVoltageThreshold
@@ -169,9 +155,7 @@ class MccsAPIU(MccsGroupDevice):
         """Set the overVoltageThreshold attribute."""
         self._overVoltageThreshold = value
 
-    @attribute(
-        dtype="DevDouble", label="Humidity threshold", unit="percent",
-    )
+    @attribute(dtype="DevDouble", label="Humidity threshold", unit="percent")
     def humidityThreshold(self):
         """Return the humidityThreshold attribute"""
         return self._humidityThreshold
@@ -181,9 +165,7 @@ class MccsAPIU(MccsGroupDevice):
         """Set the humidity attribute."""
         self._humidityThreshold = value
 
-    @attribute(
-        dtype="DevULong", max_dim_x=100,
-    )
+    @attribute(dtype="DevULong", max_dim_x=100)
     def logicalAntennaId(self):
         """Return the logicalAntennaId attribute"""
         return self._logicalAntennaId

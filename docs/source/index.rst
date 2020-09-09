@@ -25,13 +25,16 @@ prototype for the `Square Kilometre Array`_.
    api/apiu
    api/cluster_manager
    api/device
+   api/events
    api/group_device
+   api/health
    api/master
    api/station
    api/station_beam
    api/subarray
    api/tel_state
    api/tile
+   api/tpm_device_simulator
    api/tpm_simulator
    api/utils
    

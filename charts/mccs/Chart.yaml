@@ -8,6 +8,6 @@ dependencies:
   version: 0.0.1
   repository: file://../tango-util
 - name: tango-base
-  version: 0.1.1
+  version: 0.1.2
   repository: https://gitlab.com/ska-telescope/skampi/-/raw/master/repository
   condition: tango-base.enabled

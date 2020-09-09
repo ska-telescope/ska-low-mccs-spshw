@@ -21,7 +21,11 @@ from ska.low.mccs import MccsStation, release
 
 device_info = {
     "class": MccsStation,
-    "properties": {"StationId": 1, "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"]},
+    "properties": {
+        "StationId": 1,
+        "TileFQDNs": ["low/elt/tile_1", "low/elt/tile_2"],
+        "AntennaFQDNs": ["low/elt/antenna_1", "low/elt/antenna_2"],
+    },
 }
 
 
@@ -33,7 +37,7 @@ class TestMccsStation:
 
     def test_properties(self, device_under_test):
         """
-        Test the properties. Not implemented.
+        Test the properties.
         """
         assert list(device_under_test.tileFQDNs) == ["low/elt/tile_1", "low/elt/tile_2"]
         assert device_under_test.StationId == 1

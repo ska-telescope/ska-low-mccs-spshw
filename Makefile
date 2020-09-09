@@ -41,7 +41,7 @@ KUBERNETES_VERSION = v1.18.2
 # user/group 1000. This will require sudo access in "make create_tmp"
 MINIKUBE_TMP = /tmp/minikube-tango
 
-# where to put the output of "make integration_test"
+# where to put the output of "make functional_test"
 TEST_RESULTS_DIR = test-results
 
 # Docker, K8s and Gitlab CI variables

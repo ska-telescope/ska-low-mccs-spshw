@@ -16,18 +16,13 @@ import pytest
 import tango
 
 from ska.base.control_model import ControlMode, SimulationMode, HealthState
-from ska.low.mccs import MccsAntenna
 from ska.base.commands import ResultCode
 
 
-device_info = {
-    "class": MccsAntenna,
-    "properties": {
-        "SkaLevel": "4",
-        "GroupDefinitions": "",
-        "LoggingLevelDefault": "4",
-        # "LoggingTargetsDefault": "",
-    },
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "antenna1",
 }
 
 

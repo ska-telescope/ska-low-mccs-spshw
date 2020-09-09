@@ -12,21 +12,16 @@
 This module contains the tests for MccsDevice.
 """
 
-import pytest
 from tango import DevState
 from ska.base.commands import ResultCode
 from ska.base.control_model import AdminMode, LoggingLevel
-from ska.low.mccs import MccsDevice, release
+from ska.low.mccs import release
 
 
-device_info = {
-    "class": MccsDevice,
-    "properties": {
-        "SkaLevel": "4",
-        "GroupDefinitions": "",
-        "LoggingLevelDefault": "4",
-        # "LoggingTargetsDefault": "",
-    },
+device_to_load = {
+    "path": "charts/mccs/data/extra.json",
+    "package": "ska.low.mccs",
+    "device": "device1",
 }
 
 
@@ -34,13 +29,6 @@ class TestMccsDevice(object):
     """
     Test class for MccsDevice tests.
     """
-
-    @pytest.mark.skip(reason="Not implemented")
-    def test_properties(self, device_under_test):
-        """
-        Test for device properties. Not implemented.
-        """
-        pass
 
     def test_State(self, device_under_test):
         """Test for State"""

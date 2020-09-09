@@ -13,11 +13,15 @@ This module contains the tests for MccsGroupDevice.
 """
 
 from tango import DevState
-from ska.low.mccs import MccsGroupDevice
 from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState, ControlMode, SimulationMode, TestMode
 
-device_info = {"class": MccsGroupDevice, "properties": {}}
+
+device_to_load = {
+    "path": "charts/mccs/data/extra.json",
+    "package": "ska.low.mccs",
+    "device": "groupdevice1",
+}
 
 
 class TestMccsGroupDevice(object):

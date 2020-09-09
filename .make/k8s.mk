@@ -111,10 +111,10 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 	echo -e "\n\n# base64 encoded from: kubectl config view --flatten\nKUBE_CONFIG_BASE64 = $${KUBE_CONFIG_BASE64}" >> PrivateRules.mak
 
 # run helm  test 
-integration_test: ## test the application on K8s
+functional_test: ## test the application on K8s
 	@helm test $(HELM_RELEASE) --namespace $(KUBE_NAMESPACE); \
 	retcode=$$?; \
-	test -n $(RDEBUG) && kubectl -n $(KUBE_NAMESPACE) describe pod integration-$(HELM_CHART)-$(HELM_RELEASE); \
+	test -n $(RDEBUG) && kubectl -n $(KUBE_NAMESPACE) describe pod functional-$(HELM_CHART)-$(HELM_RELEASE); \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(HELM_RELEASE)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \

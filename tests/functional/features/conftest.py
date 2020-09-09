@@ -9,28 +9,15 @@ import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 
-@pytest.fixture(scope="module")
-def devices_info(request):
-    """
-    Pytest fixture that retrieves the `devices_info` (note plural
-    "devices") attribute from the module under test. The `devices_info`
-    attribute contains information about the multiple devices, necessary
-    to stand up those devices in a tango.MultiDeviceTestContext for
-    integration testing.
-
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: _pytest.fixtures.SubRequest
-    """
-    yield getattr(request.module, "devices_info")
-
-
 @contextmanager
 def _tango_true_context():
     """
     Returns a context manager that provides access to a true TANGO
     environment through an interface like that of
     tango.MultiDeviceTestContext.
+
+    :yield: A tango.MultiDeviceTestContext-like interface to a true
+        Tango system
     """
 
     class _TangoTrueContext:
@@ -45,6 +32,9 @@ def _tango_true_context():
 
             :param fqdn: the fully qualified domain name of the server
             :type fqdn: string
+
+            :return: a DeviceProxy to the device with the given fqdn
+            :rtype: tango.DeviceProxy
             """
             return tango.DeviceProxy(fqdn)
 
@@ -56,18 +46,29 @@ def _tango_test_context(_devices_info, _module_mocker):
     Creates and returns a TANGO MultiDeviceTestContext object, with a
     tango.DeviceProxy patched to a work around a name resolving issue.
 
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
-        `unittest.mock` package
-    :type mocker: pytest wrapper
-    :param devices_info: Information about the devices under test that
+    :param _devices_info: Information about the devices under test that
         are needed to stand the device up in a DeviceTestContext, such
         as the device classes and properties
-    :type devices_info: dict
+    :type _devices_info: dict
+    :param _module_mocker: module_scoped fixture that provides a thin
+        wrapper around the `unittest.mock` package
+    :type _module_mocker: pytest wrapper
+
+    :return: a test contest set up as specified by the _devices_info
+        argument
+    :rtype: tango.MultiDeviceTestContext
     """
 
     def _get_open_port():
         """
         Helper function that returns an available port on the local machine
+
+        Note the possibility of a race condition here. By the time the
+        calling method tries to make use of this port, it might already
+        have been taken by another process.
+
+        :return: An open port
+        :rtype: int
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("", 0))
@@ -110,9 +111,10 @@ def tango_context(request, devices_info, module_mocker):
         are needed to stand the device up in a DeviceTestContext, such
         as the device classes and properties
     :type devices_info: dict
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
+    :param module_mocker: a module-scope thin wrapper for the
         `unittest.mock` package
-    :type mocker: pytest wrapper
+    :type module_mocker: wrapper
+    :yield: a tango context
     """
     try:
         true_context = request.config.getoption("--true-context")

@@ -15,32 +15,20 @@ import pytest
 import tango
 
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.low.mccs import MccsMaster, release
+from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.base.commands import ResultCode
 
-device_info = {
-    "class": MccsMaster,
-    "properties": {
-        "MccsSubarrays": ["low/elt/subarray_1", "low/elt/subarray_2"],
-        "MccsStations": ["low/elt/station_1", "low/elt/station_2"],
-        "MccsTiles": [
-            "low/elt/tile_1",
-            "low/elt/tile_2",
-            "low/elt/tile_3",
-            "low/elt/tile_4",
-        ],
-    },
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "master",
 }
 
 
 # pylint: disable=invalid-name
 class TestMccsMaster:
     """Test case for packet generation."""
-
-    @pytest.mark.skip(reason="Not implemented")
-    def test_properties(self, device_under_test):
-        """ Test the properties """
 
     def test_State(self, device_under_test):
         """Test for State"""

@@ -31,7 +31,7 @@ metadata:
     chart: {{ template "tango-util.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-    transient: "integration-test"
+    transient: "functional-test"
 spec:
 {{ if .Values.minikube }}
   storageClassName: standard
@@ -50,22 +50,22 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: integration-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  name: functional-{{ template "tango-util.name" . }}-{{ .Release.Name }}
   labels:
-    transient: "integration-test"
+    transient: "functional-test"
   annotations:
     "helm.sh/hook": test-success
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   initContainers:
-  - name:  integration-permission-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  - name:  functional-permission-{{ template "tango-util.name" . }}-{{ .Release.Name }}
     image: busybox
     command: ["/bin/chown","1000:1000", "/data"]
     volumeMounts:
     - name: testdata
       mountPath: /data
   containers:
-  - name: integration-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  - name: functional-{{ template "tango-util.name" . }}-{{ .Release.Name }}
     image: "{{ .Values.project.image.registry }}/{{ .Values.project.image.image }}:{{ .Values.project.image.tag }}"
     imagePullPolicy: {{ .Values.project.image.pullPolicy }}
     command:
@@ -73,7 +73,7 @@ spec:
       - "-ce"
       - |
         pip3 install -rrequirements-tst.txt  # TODO: should be part of image?
-        pytest --true-context tests -k functional --junitxml=/reports/integration-tests.xml
+        pytest --true-context tests -k functional --junitxml=/reports/functional-test.xml --cucumberjson=/reports/cucumber.json
     env:
 {{ include "tango-util.dbenv" . | indent 4 }}
     volumeMounts:

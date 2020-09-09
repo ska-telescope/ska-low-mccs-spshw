@@ -12,9 +12,11 @@
 This module contains the tests for MccsTpmDeviceSimulator.
 """
 
-from ska.low.mccs import MccsTpmDeviceSimulator
-
-device_info = {"class": MccsTpmDeviceSimulator, "properties": {}}
+device_to_load = {
+    "path": "charts/mccs/data/configuration.json",
+    "package": "ska.low.mccs",
+    "device": "tpmsimulator",
+}
 
 
 class TestMccsTpmDeviceSimulator(object):

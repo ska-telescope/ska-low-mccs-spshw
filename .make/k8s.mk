@@ -112,7 +112,8 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 
 # run helm  test 
 integration_test: ## test the application on K8s
-	@helm test $(HELM_RELEASE) --namespace $(KUBE_NAMESPACE) --logs; \
+	@helm test $(HELM_RELEASE) --namespace $(KUBE_NAMESPACE); \
+	retcode=$$?; \
 	test -n $(RDEBUG) && kubectl -n $(KUBE_NAMESPACE) describe pod integration-$(HELM_CHART)-$(HELM_RELEASE); \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(HELM_RELEASE)/" charts/test-fetcher.yaml >> $$yaml; \
@@ -122,13 +123,14 @@ integration_test: ## test the application on K8s
 	kubectl -n $(KUBE_NAMESPACE) delete pod -l transient > /dev/null; \
 	kubectl -n $(KUBE_NAMESPACE) delete -f $$yaml --now; rm $$yaml; \
 	echo "test report:"; \
-	cat $(TEST_RESULTS_DIR)/*; echo;
+	cat $(TEST_RESULTS_DIR)/*; echo; exit $$retcode
 
 wait:
 	@echo "Waiting for device servers to be ready"
 	@date
 	@kubectl -n $(KUBE_NAMESPACE) get pods -l deviceServer
-	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -l deviceServer pods
+	@jobs=$$(kubectl get job --output=jsonpath={.items..metadata.name} -n $(KUBE_NAMESPACE)); kubectl wait job --for=condition=complete --timeout=120s $$jobs -n $(KUBE_NAMESPACE)
+	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -l deviceServer pods || exit 1
 	@date
 
 bounce:

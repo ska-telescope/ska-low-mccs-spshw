@@ -19,15 +19,13 @@ prototype for the `Square Kilometre Array`_.
 
 .. toctree::
    :maxdepth: 1
-   :caption: API
+   :caption: Devices
 
    api/antenna
    api/apiu
    api/cluster_manager
    api/device
-   api/events
    api/group_device
-   api/health
    api/master
    api/station
    api/station_beam
@@ -35,9 +33,18 @@ prototype for the `Square Kilometre Array`_.
    api/tel_state
    api/tile
    api/tpm_device_simulator
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Other modules
+
+   api/events
+   api/health
+   api/power
    api/tpm_simulator
    api/utils
-   
+
+
 Indices and tables
 ------------------
 * :ref:`genindex`

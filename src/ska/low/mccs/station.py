@@ -22,13 +22,64 @@ from tango.server import device_property
 from tango.server import attribute, command
 
 # additional imports
-from ska.base import SKAObsDevice
+from ska.base import SKABaseDevice, SKAObsDevice
 from ska.base.commands import ResponseCommand, ResultCode
 
-# from ska.low.mccs import MccsGroupDevice
+from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
+from ska.low.mccs.utils import LazyInstance
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
+
+
+class StationHardwareManager:
+    """
+    Stub class encapsulating the hardware of the MCCS station device.
+
+    So far, all we know about this hardware is we need to be able to
+    turn it on and off.
+    """
+
+    def Off(self):
+        """
+        Turn the station hardware off
+
+        :return: whether successful
+        :rtype: boolean
+        """
+        return True
+
+    def On(self):
+        """
+        Turn the station hardware on
+
+        :return: whether successful
+        :rtype: boolean
+        """
+        return True
+
+
+class StationPowerManager(PowerManager):
+    """
+    This class that implements the power manager for the MCCS Station
+    device.
+    """
+
+    def __init__(self, station_hardware_manager, tile_fqdns):
+        """
+        Initialise a new StationPowerManager
+
+        :param station_hardware_manager: an object that manages this
+            station's hardware
+        :type station_hardware_manager: object
+        :param tile_fqdns: the FQDNs of the tiles that this master
+            device manages
+        :type tile_fqdns: list of string
+        """
+        super().__init__(
+            station_hardware_manager,
+            [LazyInstance(tango.DeviceProxy, fqdn) for fqdn in tile_fqdns],
+        )
 
 
 class MccsStation(SKAObsDevice):
@@ -121,6 +172,11 @@ class MccsStation(SKAObsDevice):
             #     device._eventManagerList.append(
             #         EventManager(fqdn, device._health_monitor.update_health_table)
             #     )
+
+            device.hardware_manager = StationHardwareManager()
+            device.power_manager = StationPowerManager(
+                device.hardware_manager, device._tile_fqdns
+            )
 
             return (ResultCode.OK, "Station Init complete")
 
@@ -317,7 +373,57 @@ class MccsStation(SKAObsDevice):
         """
         super().init_command_objects()
         args = (self, self.state_model, self.logger)
+        power_args = (self.power_manager, self.state_model, self.logger)
+
+        self.register_command_object("Off", self.OffCommand(*power_args))
+        self.register_command_object("On", self.OnCommand(*power_args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On command.
+        """
+
+        def do(self):
+            """
+            Implementation hook for turning the MCCS system on.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            power_manager = self.target
+            try:
+                if power_manager.on():
+                    return (ResultCode.OK, "On command completed OK")
+                else:
+                    return (ResultCode.FAILED, "On command failed")
+            except PowerManagerError as pme:
+                return (ResultCode.FAILED, f"On command failed: {pme}")
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """
+        Class for handling the Off command.
+        """
+
+        def do(self):
+            """
+            Turn the MCCS system off.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            power_manager = self.target
+            try:
+                if power_manager.off():
+                    return (ResultCode.OK, "Off command completed OK")
+                else:
+                    return (ResultCode.FAILED, "Off command failed")
+            except PowerManagerError as pme:
+                return (ResultCode.FAILED, f"Off command failed: {pme}")
 
     class ConfigureCommand(ResponseCommand):
         """

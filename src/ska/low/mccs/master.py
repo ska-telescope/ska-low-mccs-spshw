@@ -26,10 +26,30 @@ from tango.server import attribute, command, device_property
 from ska.base import SKAMaster, SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 
+from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
-from ska.low.mccs.utils import call_with_json, tango_raise
+from ska.low.mccs.utils import call_with_json, LazyInstance, tango_raise
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
+
+
+class MasterPowerManager(PowerManager):
+    """
+    This class that implements the power manager for the MCCS Master
+    device.
+    """
+
+    def __init__(self, station_fqdns):
+        """
+        Initialise a new MasterPowerManager
+
+        :param station_fqdns: the FQDNs of the stations that this master
+            device manages
+        :type station_fqdns: list of string
+        """
+        super().__init__(
+            None, [LazyInstance(tango.DeviceProxy, fqdn) for fqdn in station_fqdns]
+        )
 
 
 class MccsMaster(SKAMaster):
@@ -75,11 +95,12 @@ class MccsMaster(SKAMaster):
 
         super().init_command_objects()
 
+        power_args = (self.power_manager, self.state_model, self.logger)
         args = (self, self.state_model, self.logger)
 
         self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Off", self.OffCommand(*args))
+        self.register_command_object("On", self.OnCommand(*power_args))
+        self.register_command_object("Off", self.OffCommand(*power_args))
         self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
         self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
         self.register_command_object("Operate", self.OperateCommand(*args))
@@ -150,6 +171,8 @@ class MccsMaster(SKAMaster):
                     EventManager(fqdn, device._health_monitor.update_health_table)
                 )
 
+            device.power_manager = MasterPowerManager(device._station_fqdns)
+
             message = "MccsMaster Init command completed OK"
             self.logger.info(message)
             return (ResultCode.OK, message)
@@ -212,6 +235,53 @@ class MccsMaster(SKAMaster):
     # --------
     # Commands
     # --------
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On command.
+        """
+
+        def do(self):
+            """
+            Implementation hook for turning the MCCS system on.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            power_manager = self.target
+            try:
+                if power_manager.on():
+                    return (ResultCode.OK, "On command completed OK")
+                else:
+                    return (ResultCode.FAILED, "On command failed")
+            except PowerManagerError as pme:
+                return (ResultCode.FAILED, f"On command failed: {pme}")
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """
+        Class for handling the Off command.
+        """
+
+        def do(self):
+            """
+            Turn the MCCS system off.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            power_manager = self.target
+            try:
+                if power_manager.off():
+                    return (ResultCode.OK, "Off command completed OK")
+                else:
+                    return (ResultCode.FAILED, "Off command failed")
+            except PowerManagerError as pme:
+                return (ResultCode.FAILED, f"Off command failed: {pme}")
+
     class StandbyLowCommand(ResponseCommand):
         """
         Class for handling the StandbyLow command.

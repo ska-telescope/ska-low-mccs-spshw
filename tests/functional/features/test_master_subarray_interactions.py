@@ -339,7 +339,7 @@ def station_1_should_be_on(station_1):
         device
     :type station_1: DeviceProxy
     """
-    assert station_1.state() == DevState.ON
+    assert station_1.state() in (DevState.ON, DevState.ALARM)
 
 
 @then("station 2 should be on")
@@ -351,7 +351,55 @@ def station_2_should_be_on(station_2):
         device
     :type station_2: DeviceProxy
     """
-    assert station_2.state() == DevState.ON
+    assert station_2.state() in (DevState.ON, DevState.ALARM)
+
+
+@then("tile 1 should be on")
+def tile_1_should_be_on(tile_1):
+    """
+    Asserts that the tile_1 device is on
+
+    :param tile_1: fixture that provides a DeviceProxy to the tile_1
+        device
+    :type master: DeviceProxy
+    """
+    assert tile_1.state() == DevState.ON
+
+
+@then("tile 2 should be on")
+def tile_2_should_be_on(tile_2):
+    """
+    Asserts that the tile_2 device is on
+
+    :param tile_2: fixture that provides a DeviceProxy to the tile_2
+        device
+    :type master: DeviceProxy
+    """
+    assert tile_2.state() == DevState.ON
+
+
+@then("tile 3 should be on")
+def tile_3_should_be_on(tile_3):
+    """
+    Asserts that the tile_3 device is on
+
+    :param tile_3: fixture that provides a DeviceProxy to the tile_3
+        device
+    :type master: DeviceProxy
+    """
+    assert tile_3.state() == DevState.ON
+
+
+@then("tile 4 should be on")
+def tile_4_should_be_on(tile_4):
+    """
+    Asserts that the tile_4 device is on
+
+    :param tile_4: fixture that provides a DeviceProxy to the tile_4
+        device
+    :type master: DeviceProxy
+    """
+    assert tile_4.state() == DevState.ON
 
 
 @scenario("master_subarray_interactions.feature", "Master enables subarray")

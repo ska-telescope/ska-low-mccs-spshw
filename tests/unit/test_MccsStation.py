@@ -11,12 +11,16 @@
 """
 This module contains the tests for MccsStation.
 """
+import logging
 import pytest
 import time
 import tango
 
+from ska.base import SKABaseDeviceStateModel
+from ska.base.commands import CommandError, ResultCode
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.low.mccs import release
+from ska.low.mccs import MccsStation, release
+from ska.low.mccs.station import StationHardwareManager, StationPowerManager
 
 
 device_to_load = {
@@ -26,7 +30,7 @@ device_to_load = {
 }
 
 
-# pylint: disable=invalid-name
+@pytest.mark.mock_device_proxy
 class TestMccsStation:
     """
     Test class for MccsStation tests
@@ -62,7 +66,6 @@ class TestMccsStation:
         assert device_under_test.buildState == build_info
 
     # overridden base class commands
-    @pytest.mark.mock_device_proxy
     def test_GetVersionInfo(self, device_under_test):
         """Test for GetVersionInfo"""
         version_info = release.get_release_info(device_under_test.info().dev_class)
@@ -73,7 +76,6 @@ class TestMccsStation:
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
-    @pytest.mark.mock_device_proxy
     def test_subarrayId(self, device_under_test):
         """
         Test for subarrayId attribute
@@ -163,3 +165,141 @@ class TestMccsStation:
     def test_dataDirectory(self, device_under_test):
         """Test for dataDirectory attribute"""
         assert device_under_test.dataDirectory == ""
+
+
+class TestStationPowerManager:
+    """
+    This class contains tests of the ska.low.mccs.station.StationPowerManager
+    class
+    """
+
+    @pytest.fixture
+    def logger(self):
+        """
+        Fixture that returns a logger for the power manager under test
+        (or its components) to use
+        """
+        return logging.getLogger()
+
+    @pytest.fixture
+    def hardware_manager(self):
+        """
+        Fixture that returns a hardware manager for the power manager
+        under test to use
+        """
+        return StationHardwareManager()
+
+    @pytest.fixture
+    def power_manager(self, hardware_manager):
+        """
+        Fixture that returns a power manager with no subservient devices
+
+        :param hardware_manager: fixture that returns a hardware manager:
+            something that can be turned off and on.
+        """
+        return StationPowerManager(hardware_manager, [])
+
+    @pytest.fixture
+    def state_model(self, logger):
+        """
+        Fixture that returns a state model for the power manager under
+        test to use
+
+        :param logger: a logger for the state model to use
+        """
+        return SKABaseDeviceStateModel(logger)
+
+    def test_OnCommand(self, power_manager, state_model, logger):
+        """
+        Test the working of the On command.
+
+        Because the PowerManager and SKABaseDeviceStateModel are thoroughly
+        unit-tested elsewhere, here we just need to check that the On
+        command drives them correctly. The scope of this test is: check
+        that the On command is not allowed to run the state model is
+        not in the OFF state; check that such attempts fail with no
+        side-effects; check that On() command IS allowed to run when
+        the state model is in the OFF state; check that running the
+        On() command succeeds, and that the result is the state model
+        moves to state ON, and the power manager thinks it is on.
+        """
+        on_command = MccsStation.OnCommand(power_manager, state_model, logger)
+        assert not power_manager.is_on()
+
+        all_states = {
+            "UNINITIALISED",
+            "FAULT_ENABLED",
+            "FAULT_DISABLED",
+            "INIT_ENABLED",
+            "INIT_DISABLED",
+            "DISABLED",
+            "OFF",
+            "ON",
+        }
+
+        # in all states except OFF, the on command is not permitted,
+        # should not be allowed, should fail, should have no side-effect
+        for state in all_states - {"OFF"}:
+            state_model._straight_to_state(state)
+
+            assert not on_command.is_allowed()
+            with pytest.raises(CommandError):
+                on_command()
+
+            assert not power_manager.is_on()
+            assert state_model._state == state
+
+        # now push to OFF, the state in which the On command IS allowed
+        state_model._straight_to_state("OFF")
+        assert on_command.is_allowed()
+        assert on_command() == (ResultCode.OK, "On command completed OK")
+        assert power_manager.is_on()
+        assert state_model._state == "ON"
+
+    def test_OffCommand(self, power_manager, state_model):
+        """
+        Test the working of the Off command.
+
+        Because the PowerManager and BaseDeviceStateModel are thoroughly
+        unit-tested elsewhere, here we just need to check that the Off
+        command drives them correctly. The scope of this test is: check
+        that the Off command is not allowed to run if the state model is
+        not in the ON state; check that such attempts fail with no
+        side-effects; check that Off() command IS allowed to run when
+        the state model is in the ON state; check that running the
+        Off() command succeeds, and that the result is the state model
+        moves to state OFF, and the power manager thinks it is off.
+        """
+        off_command = MccsStation.OffCommand(power_manager, state_model)
+        power_manager.on()
+        assert power_manager.is_on()
+
+        all_states = {
+            "UNINITIALISED",
+            "FAULT_ENABLED",
+            "FAULT_DISABLED",
+            "INIT_ENABLED",
+            "INIT_DISABLED",
+            "DISABLED",
+            "OFF",
+            "ON",
+        }
+
+        # in all states except ON, the off command is not permitted,
+        # should not be allowed, should fail, should have no side-effect
+        for state in all_states - {"ON"}:
+            state_model._straight_to_state(state)
+
+            assert not off_command.is_allowed()
+            with pytest.raises(CommandError):
+                off_command()
+
+            assert power_manager.is_on()
+            assert state_model._state == state
+
+        # now push to ON, the state in which the Off command IS allowed
+        state_model._straight_to_state("ON")
+        assert off_command.is_allowed()
+        assert off_command() == (ResultCode.OK, "Off command completed OK")
+        assert not power_manager.is_on()
+        assert state_model._state == "OFF"

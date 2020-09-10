@@ -23,12 +23,11 @@ Scenario: Master is turned on
     When we turn master on
 
     Then master should be on
-    # And station 1 should be on
-    # And station 2 should be on
-    # And tile 1 should be on
-    # And tile 2 should be on
-    # And tile 3 should be on
-    # And tile 4 should be on
+    And station 2 should be on
+    And tile 1 should be on
+    And tile 2 should be on
+    And tile 3 should be on
+    And tile 4 should be on
 
 Scenario: Master enables subarray
     Given master is on

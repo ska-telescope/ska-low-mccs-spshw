@@ -11,13 +11,15 @@
 """Contains the tests for the MccsMaster Tango device_under_test prototype."""
 
 import json
+import logging
 import pytest
 import tango
 
+from ska.base import SKABaseDeviceStateModel
+from ska.base.commands import CommandError, ResultCode
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.low.mccs import release
+from ska.low.mccs import MccsMaster, MasterPowerManager, release
 from ska.low.mccs.utils import call_with_json, tango_raise
-from ska.base.commands import ResultCode
 
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
@@ -26,7 +28,7 @@ device_to_load = {
 }
 
 
-# pylint: disable=invalid-name
+@pytest.mark.mock_device_proxy
 class TestMccsMaster:
     """Test case for packet generation."""
 
@@ -95,7 +97,6 @@ class TestMccsMaster:
         assert result_code == ResultCode.OK
         assert message == "Stub implementation of Maintenance(), does nothing"
 
-    @pytest.mark.mock_device_proxy
     def test_EnableSubarray(self, device_under_test):
         """
         Test that master can enable a subarray
@@ -136,7 +137,6 @@ class TestMccsMaster:
         mock_subarray_1.On.assert_not_called()
         mock_subarray_2.On.assert_called_once_with()
 
-    @pytest.mark.mock_device_proxy
     def test_DisableSubarray(self, device_under_test):
         """
         Test that master can disable a subarray
@@ -177,7 +177,6 @@ class TestMccsMaster:
         mock_subarray_1.Off.assert_not_called()
         mock_subarray_2.Off.assert_not_called()
 
-    @pytest.mark.mock_device_proxy
     def test_Allocate(self, device_under_test):
         """
         Test the Allocate command.
@@ -341,7 +340,6 @@ class TestMccsMaster:
         assert mock_station_1.subarrayId == 2
         assert mock_station_2.subarrayId == 2
 
-    @pytest.mark.mock_device_proxy
     def test_Release(self, device_under_test):
         """
         Test Release command.
@@ -466,3 +464,131 @@ class TestMccsMaster:
     def test_availableCapabilities(self, device_under_test):
         """Test for availableCapabilities"""
         assert device_under_test.availableCapabilities is None
+
+
+class TestMasterPowerManager:
+    """
+    This class contains tests of the ska.low.mccs.master.MasterPowerManager
+    class
+    """
+
+    @pytest.fixture
+    def logger(self):
+        """
+        Fixture that returns a logger for the power manager under test
+        (or its components) to use
+        """
+        return logging.getLogger()
+
+    @pytest.fixture
+    def power_manager(self):
+        """
+        Fixture that returns a power manager with no hardware manager
+        and no subservient devices
+        """
+        return MasterPowerManager([])
+
+    @pytest.fixture
+    def state_model(self, logger):
+        """
+        Fixture that returns a state model for the power manager under
+        test to use
+
+        :param logger: a logger for the state model to use
+        """
+        return SKABaseDeviceStateModel(logger)
+
+    def test_OnCommand(self, power_manager, state_model, logger):
+        """
+        Test the working of the On command.
+
+        Because the PowerManager and SKABaseDeviceStateModel are thoroughly
+        unit-tested elsewhere, here we just need to check that the On
+        command drives them correctly. The scope of this test is: check
+        that the On command is not allowed to run the state model is
+        not in the OFF state; check that such attempts fail with no
+        side-effects; check that On() command IS allowed to run when
+        the state model is in the OFF state; check that running the
+        On() command succeeds, and that the result is the state model
+        moves to state ON, and the power manager thinks it is on.
+        """
+        on_command = MccsMaster.OnCommand(power_manager, state_model, logger)
+        assert not power_manager.is_on()
+
+        all_states = {
+            "UNINITIALISED",
+            "FAULT_ENABLED",
+            "FAULT_DISABLED",
+            "INIT_ENABLED",
+            "INIT_DISABLED",
+            "DISABLED",
+            "OFF",
+            "ON",
+        }
+
+        # in all states except OFF, the on command is not permitted,
+        # should not be allowed, should fail, should have no side-effect
+        for state in all_states - {"OFF"}:
+            state_model._straight_to_state(state)
+
+            assert not on_command.is_allowed()
+            with pytest.raises(CommandError):
+                on_command()
+
+            assert not power_manager.is_on()
+            assert state_model._state == state
+
+        # now push to OFF, the state in which the On command IS allowed
+        state_model._straight_to_state("OFF")
+        assert on_command.is_allowed()
+        assert on_command() == (ResultCode.OK, "On command completed OK")
+        assert power_manager.is_on()
+        assert state_model._state == "ON"
+
+    def test_OffCommand(self, power_manager, state_model):
+        """
+        Test the working of the Off command.
+
+        Because the PowerManager and BaseDeviceStateModel are thoroughly
+        unit-tested elsewhere, here we just need to check that the Off
+        command drives them correctly. The scope of this test is: check
+        that the Off command is not allowed to run if the state model is
+        not in the ON state; check that such attempts fail with no
+        side-effects; check that Off() command IS allowed to run when
+        the state model is in the ON state; check that running the
+        Off() command succeeds, and that the result is the state model
+        moves to state OFF, and the power manager thinks it is off.
+        """
+        off_command = MccsMaster.OffCommand(power_manager, state_model)
+        power_manager.on()
+        assert power_manager.is_on()
+
+        all_states = {
+            "UNINITIALISED",
+            "FAULT_ENABLED",
+            "FAULT_DISABLED",
+            "INIT_ENABLED",
+            "INIT_DISABLED",
+            "DISABLED",
+            "OFF",
+            "ON",
+        }
+
+        # in all states except ON, the off command is not permitted,
+        # should not be allowed, should fail, should have no side-effect
+        for state in all_states - {"ON"}:
+            state_model._straight_to_state(state)
+
+            assert not off_command.is_allowed()
+            with pytest.raises(CommandError):
+                off_command()
+
+            assert power_manager.is_on()
+            assert state_model._state == state
+
+        # now push to ON, the state in which the Off command IS allowed
+        state_model._straight_to_state("ON")
+        assert off_command.is_allowed()
+        assert off_command() == (ResultCode.OK, "Off command completed OK")
+        assert not power_manager.is_on()
+        assert state_model._state == "OFF"

@@ -269,6 +269,12 @@ class TestMccsTile(object):
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: initialise"
 
+    def test_On(self, device_under_test):
+        """Test for On"""
+        [[result_code], [message]] = device_under_test.On()
+        assert result_code == ResultCode.OK
+        assert message == "On command completed OK"
+
     def test_Connect(self, device_under_test):
         """Test for Connect"""
         ss = io.StringIO()
@@ -426,7 +432,7 @@ class TestMccsTile(object):
     def test_ReadAndWriteAddress(self, device_under_test):
         """Test for ReadAddress and WriteAddress"""
         device_under_test.Connect(True)
-        address = 0xf
+        address = 0xF
         nvalues = 10
         expected = [0 for i in range(nvalues)]
         assert (device_under_test.ReadAddress([address, nvalues]) == expected).all()

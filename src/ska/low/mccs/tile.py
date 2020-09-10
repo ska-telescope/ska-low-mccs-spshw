@@ -18,7 +18,7 @@ import threading
 import numpy as np
 
 # PyTango imports
-from tango import DebugIt, DevState
+from tango import DebugIt
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -27,10 +27,72 @@ from tango.server import device_property
 from ska.base import SKABaseDevice
 from ska.base.control_model import SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-
 from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.low.mccs.power import PowerManager, PowerManagerError
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import LocalHealthMonitor, HealthRollupPolicy
+
+
+class TileHardwareManager:
+    """
+    Stub class encapsulating the hardware of the MCCS tile device.
+
+    :todo: A lot of hardware management functionality is currently
+        implemented in the tile device itself. We should look at
+        gradually moving that functionality into this manager.
+    """
+
+    def __init__(self):
+        """
+        Initialise a new tile hardware manager
+        """
+        self._is_on = False
+
+    def Off(self):
+        """
+        Turn the tile hardware off
+
+        :return: whether successful
+        :rtype: boolean
+        """
+        self._is_on = False
+        return True
+
+    def On(self):
+        """
+        Turn the tile hardware on
+
+        :return: whether successful
+        :rtype: boolean
+        """
+        self._is_on = True
+        return True
+
+    def is_on(self):
+        """
+        Returns whether the hardware is on
+
+        :return: whether the hardware is on or not
+        :rtype: boolean
+        """
+        return self._is_on
+
+
+class TilePowerManager(PowerManager):
+    """
+    This class that implements the power manager for the MCCS Station
+    device.
+    """
+
+    def __init__(self, tile_hardware_manager):
+        """
+        Initialise a new StationPowerManager
+
+        :param tile_hardware_manager: an object that manages this tile's
+            hardware
+        :type tile_hardware_manager: object
+        """
+        super().__init__(tile_hardware_manager, None)
 
 
 class MccsTile(SKABaseDevice):
@@ -132,9 +194,60 @@ class MccsTile(SKABaseDevice):
             for name in event_names:
                 device.set_archive_event(name, True, True)
 
-            device.set_state(DevState.OFF)
+            device.hardware_manager = TileHardwareManager()
+            device.power_manager = TilePowerManager(device.hardware_manager)
+
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On command.
+
+        :todo: What is this command supposed to do? It takes no
+            argument, and returns nothing.
+        """
+
+        def do(self):
+            """
+            Stateless hook for implementation of the Power-on command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            power_manager = self.target
+            try:
+                if power_manager.on():
+                    return (ResultCode.OK, "On command completed OK")
+                else:
+                    return (ResultCode.FAILED, "On command failed")
+            except PowerManagerError as pme:
+                return (ResultCode.FAILED, f"On command failed: {pme}")
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """
+        Class for handling the Off command.
+        """
+
+        def do(self):
+            """
+            Turn the MCCS system off.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            power_manager = self.target
+            try:
+                if power_manager.off():
+                    return (ResultCode.OK, "Off command completed OK")
+                else:
+                    return (ResultCode.FAILED, "Off command failed")
+            except PowerManagerError as pme:
+                return (ResultCode.FAILED, f"Off command failed: {pme}")
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -517,6 +630,10 @@ class MccsTile(SKABaseDevice):
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
+        power_args = (self.power_manager, self.state_model, self.logger)
+
+        self.register_command_object("Off", self.OffCommand(*power_args))
+        self.register_command_object("On", self.OnCommand(*power_args))
 
         self.register_command_object("Initialise", self.InitialiseCommand(*args))
         self.register_command_object("Connect", self.ConnectCommand(*args))

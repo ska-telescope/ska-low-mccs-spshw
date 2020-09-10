@@ -11,6 +11,66 @@ from tango import Except, ErrSeverity
 from tango.server import Device
 
 
+class LazyInstance:
+    """
+    Wrapper for lazy object instantiation. The MCCS use case is device
+    initialisation that requires the creation of device proxies to other
+    devices, which themselves might not have been initialised yet. This
+    causes connection errors, thus forcing us to refactor to ensure that
+    devices can initialise in isolation -- they do not rely on other
+    devices being ready before them.
+
+    Through the use of this class, we can create a lazy device proxy: an
+    object that looks and behaves like a tango.DeviceProxy, but that
+    won't actually do the work to become one until the first time it is
+    used.
+
+    Example::
+
+        device = LazyInstance(tango.DeviceProxy, fqdn)
+        # we can now use this like tango.DeviceProxy, even though the
+        # DeviceProxy hasn't actually been created yet
+
+        device.On()
+        # Calling the On() command on the device forces the deferred
+        # creation of the tango.DeviceProxy object, so that the On()
+        # command can be called
+
+    """
+
+    def __init__(self, cls, *args, **kwargs):
+        """
+        Initialise a new LazyInstance wrapper for a provided class
+        instantiation
+
+        :param cls: the class of the instantiation to be wrapped
+        :param args: the positional args to pass to the class
+            initialisation
+        :param kwargs: the named args to pass to the class
+            initialisation
+        """
+        self.__cls = cls
+        self.__args = args
+        self.__kwargs = kwargs
+
+        self.__wrapped = None
+
+    def __getattr__(self, attr):
+        """
+        Called if an attribute in this class is not found in the usual
+        way. This is implemented to assume that the desired attribute
+        is an attribute on the wrapped instance. It triggers
+        instantiation of the wrapped instance if necessary, then passes
+        the call to it.
+
+        :param attr: name of the attribute sought
+        :type attr: str
+        """
+        if self.__wrapped is None:
+            self.__wrapped = self.__cls(*self.__args, **self.__kwargs)
+        return getattr(self.__wrapped, attr)
+
+
 def tango_raise(
     msg, reason="API_CommandFailed", severity=ErrSeverity.ERR, _origin=None
 ):

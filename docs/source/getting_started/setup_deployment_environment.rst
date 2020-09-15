@@ -184,8 +184,25 @@ To start up a TANGO-grafana cluster:
    # TANGO-grafana charts
    ./setup_tango_grafana.sh
 
+Instantiate WebJive
+-------------------
+To start up WebJive in the cluster (continuing on from the previous instructions):
 
-Tidy-up resources:
+.. code-block:: bash
+
+   # Navigate to the SKAMPI folder
+   cd skampi
+   # Deploy the WebJive Helm chart
+   make deploy HELM_CHART=webjive
+
+When the pod has been created and is ready, on the local machine navigate to:
+http://integration.engageska-portugal.pt/testdb/devices
+
+Login with credentials found here: https://github.com/ska-telescope/ska-engineering-ui-compose-utils
+
+
+Tidy-up resources
+-----------------
 
 .. code-block:: bash
 

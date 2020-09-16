@@ -21,17 +21,6 @@ endif
 #
 .DEFAULT_GOAL := help
 
-#
-# defines a function to copy the ./test-harness directory into the container
-# and then runs the requested make target in the container. The container is:
-#
-#   1. attached to the network of the docker-compose test system
-#   2. uses a persistent volume to cache Python eggs and wheels so that fewer
-#      downloads are required
-#   3. uses a transient volume as a working directory, in which untarred files
-#      and test output can be written in the container and subsequently copied
-#      to the host
-#
 test lint:
 	@echo "Disabled - use native tox build"
 

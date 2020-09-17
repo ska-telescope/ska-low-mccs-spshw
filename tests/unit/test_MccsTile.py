@@ -460,7 +460,11 @@ class TestMccsTile(object):
         assert result == "TpmSimulator: initialise"
 
     def test_On(self, device_under_test):
-        """Test for On"""
+        """Test for On
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"

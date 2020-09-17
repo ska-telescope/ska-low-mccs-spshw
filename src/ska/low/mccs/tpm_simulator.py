@@ -384,7 +384,6 @@ class TpmSimulator:
 
     def set_csp_rounding(self, rounding):
         self.logger.debug("TpmSimulator: set_csp_rounding")
-        print(rounding)
 
     def set_lmc_integrated_download(
         self,
@@ -463,7 +462,6 @@ class TpmSimulator:
     #
     def tweak_transceivers(self):
         self.logger.debug("TpmSimulator: tweak_transceivers")
-        print("TpmSimulator: tweak_transceivers")
 
     def get_phase_terminal_count(self):
         self.logger.debug("TpmSimulator: get_phase_terminal_count")
@@ -479,11 +477,9 @@ class TpmSimulator:
 
     def post_synchronisation(self):
         self.logger.debug("TpmSimulator: post_synchronisation")
-        print("TpmSimulator: post_synchronisation")
 
     def sync_fpgas(self):
         self.logger.debug("TpmSimulator: sync_fpgas")
-        print("TpmSimulator: sync_fpgas")
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):

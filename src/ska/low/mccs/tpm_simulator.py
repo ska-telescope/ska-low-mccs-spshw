@@ -38,10 +38,13 @@ class TpmSimulator:
     ):
         self.logger.debug("TpmSimulator: connect")
         self._test_mode = testmode
-        try:
-            self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
-            self._tpm_proxy.simulate = False
-        except tango.DevFailed:
+        if not self._test_mode:
+            try:
+                self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
+                self._tpm_proxy.simulate = False
+            except tango.DevFailed:
+                self._tpm_proxy = None
+        else:
             self._tpm_proxy = None
         print("TpmSimulator: connect")
 
@@ -113,7 +116,7 @@ class TpmSimulator:
         self.logger.debug("TpmSimulator: get_adc_rms")
         rms = []
         for i in range(0, 32, 2):
-            if self._test_mode:  # for unit testing
+            if self._tpm_proxy is None:  # for unit testing
                 x = float(i)
                 y = float(i + 1)
             else:  # simulate real adc

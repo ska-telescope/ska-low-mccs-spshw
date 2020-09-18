@@ -36,15 +36,17 @@ class TpmSimulator:
     def connect(
         self, initialise=None, simulation=True, enable_ada=None, testmode=False
     ):
-        self.logger.debug("TpmSimulator: connect")
+        self.logger.info(f"TpmSimulator: connect: testmode={testmode}")
         self._test_mode = testmode
         if not self._test_mode:
             try:
+                self.logger.info("TpmSimulator: connect: trying DeviceProxy")
                 self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
                 self._tpm_proxy.simulate = False
             except tango.DevFailed:
                 self._tpm_proxy = None
         else:
+            self.logger.info("setting tpm_proxy to None")
             self._tpm_proxy = None
         print("TpmSimulator: connect")
 

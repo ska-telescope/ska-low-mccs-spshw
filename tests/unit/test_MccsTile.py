@@ -19,6 +19,7 @@ import pytest
 import itertools
 import numpy as np
 from contextlib import redirect_stdout
+from tango import DevSource
 from tango import DevFailed
 
 from ska.base.control_model import TestMode
@@ -173,6 +174,7 @@ class TestMccsTile(object):
         device_under_test.firmwareVersion = "01-beta"
         assert device_under_test.firmwareVersion == "01-beta"
 
+    @pytest.mark.mock_device_proxy
     def test_voltage(self, device_under_test):
         """
         Test for the voltage attribute.
@@ -181,10 +183,12 @@ class TestMccsTile(object):
         :type device_under_test: DeviceProxy
         """
         device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         assert device_under_test.voltage == 4.7
 
+    @pytest.mark.mock_device_proxy
     def test_current(self, device_under_test):
         """
         Test for the current attribute.
@@ -193,6 +197,7 @@ class TestMccsTile(object):
         :type device_under_test: DeviceProxy
         """
         device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         device_under_test.current == 0.4
@@ -209,6 +214,7 @@ class TestMccsTile(object):
         assert result_code == ResultCode.OK
         assert device_under_test.isProgrammed is True
 
+    @pytest.mark.mock_device_proxy
     def test_board_temperature(self, device_under_test):
         """
         Test for the board_temperature attribute.
@@ -217,10 +223,12 @@ class TestMccsTile(object):
         :type device_under_test: DeviceProxy
         """
         device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         assert device_under_test.board_temperature == 36.0
 
+    @pytest.mark.mock_device_proxy
     def test_fpga1_temperature(self, device_under_test):
         """
         Test for the fpga1_temperature attribute.
@@ -229,10 +237,12 @@ class TestMccsTile(object):
         :type device_under_test: DeviceProxy
         """
         device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         assert device_under_test.fpga1_temperature == 38.0
 
+    @pytest.mark.mock_device_proxy
     def test_fpga2_temperature(self, device_under_test):
         """
         Test for the fpga2_temperature attribute.
@@ -241,6 +251,7 @@ class TestMccsTile(object):
         :type device_under_test: DeviceProxy
         """
         device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         assert device_under_test.fpga2_temperature == 37.5

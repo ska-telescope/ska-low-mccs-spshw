@@ -19,6 +19,7 @@ import pytest
 import itertools
 import numpy as np
 from contextlib import redirect_stdout
+from tango import DevSource
 from tango import DevFailed
 
 from ska.base.control_model import TestMode
@@ -42,107 +43,267 @@ class TestMccsTile(object):
     """
 
     def test_tileId(self, device_under_test):
-        """Test for the tileId attribute."""
+        """
+        Test for the tileId attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.tileID == 1
         device_under_test.tileID = 9
         assert device_under_test.tileID == 9
 
     def test_logicalTileId(self, device_under_test):
-        """Test for the logicalTpmId attribute."""
+        """
+        Test for the logicalTpmId attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.logicalTileId == 0
         device_under_test.logicalTileId = 7
         assert device_under_test.logicalTileId == 7
 
     def test_subarrayId(self, device_under_test):
-        """Test for the subarrayId attribute."""
+        """
+        Test for the subarrayId attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.subarrayId == 0
         device_under_test.subarrayId = 3
         assert device_under_test.subarrayId == 3
 
     def test_stationId(self, device_under_test):
-        """Test for the stationId attribute."""
+        """
+        Test for the stationId attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.stationId == 0
         device_under_test.stationId = 5
         assert device_under_test.stationId == 5
 
     def test_ipAddress(self, device_under_test):
-        """Test for the ipAddress attribute."""
+        """
+        Test for the ipAddress attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.ipAddress == "0.0.0.0"
         device_under_test.ipAddress = "10.0.23.99"
         assert device_under_test.ipAddress == "10.0.23.99"
 
     def test_lmcIp(self, device_under_test):
-        """Test for the lmcIp attribute"""
+        """
+        Test for the lmcIp attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.lmcIp == "0.0.0.0"
         device_under_test.lmcIp = "10.0.23.50"
         assert device_under_test.lmcIp == "10.0.23.50"
 
     def test_lmcPort(self, device_under_test):
-        """Test for the lmcPort attribute"""
+        """
+        Test for the lmcPort attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.lmcPort == 30000
         device_under_test.lmcPort = 40000
         assert device_under_test.lmcPort == 40000
 
     def test_cspDestinationIp(self, device_under_test):
-        """Test for the cspDestinationIp attribute."""
+        """
+        Test for the cspDestinationIp attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.cspDestinationIp == ""
         device_under_test.cspDestinationIp = "10.0.23.56"
         assert device_under_test.cspDestinationIp == "10.0.23.56"
 
     def test_cspDestinationMac(self, device_under_test):
-        """Test for the cspDestinationMac attribute."""
+        """
+        Test for the cspDestinationMac attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.cspDestinationMac == ""
         device_under_test.cspDestinationMac = "10:fe:fa:06:0b:99"
         assert device_under_test.cspDestinationMac == "10:fe:fa:06:0b:99"
 
     def test_cspDestinationPort(self, device_under_test):
-        """Test for the cspDestinationPort attribute."""
+        """
+        Test for the cspDestinationPort attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.cspDestinationPort == 0
         device_under_test.cspDestinationPort = 4567
         assert device_under_test.cspDestinationPort == 4567
 
     def test_firmwareName(self, device_under_test):
-        """Test for the firmwareName attribute."""
+        """
+        Test for the firmwareName attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.firmwareName == ""
         device_under_test.firmwareName = "test_firmware"
         assert device_under_test.firmwareName == "test_firmware"
 
     def test_firmwareVersion(self, device_under_test):
-        """Test for the firmwareVersion attribute."""
+        """
+        Test for the firmwareVersion attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert device_under_test.firmwareVersion == ""
         device_under_test.firmwareVersion = "01-beta"
         assert device_under_test.firmwareVersion == "01-beta"
 
+    @pytest.mark.mock_device_proxy
+    def test_voltage(self, device_under_test):
+        """
+        Test for the voltage attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        assert device_under_test.voltage == 4.7
+
+    @pytest.mark.mock_device_proxy
+    def test_current(self, device_under_test):
+        """
+        Test for the current attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        device_under_test.current == 0.4
+
     def test_isProgrammed(self, device_under_test):
-        """Test for isProgrammed"""
+        """
+        Test for the isProgrammed attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         device_under_test.Connect(True)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.isProgrammed is True
 
+    @pytest.mark.mock_device_proxy
+    def test_board_temperature(self, device_under_test):
+        """
+        Test for the board_temperature attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        assert device_under_test.board_temperature == 36.0
+
+    @pytest.mark.mock_device_proxy
+    def test_fpga1_temperature(self, device_under_test):
+        """
+        Test for the fpga1_temperature attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        assert device_under_test.fpga1_temperature == 38.0
+
+    @pytest.mark.mock_device_proxy
+    def test_fpga2_temperature(self, device_under_test):
+        """
+        Test for the fpga2_temperature attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        device_under_test.testMode = TestMode.TEST
+        device_under_test.set_source(DevSource.DEV)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        assert device_under_test.fpga2_temperature == 37.5
+
     def test_fpga1_time(self, device_under_test):
-        """Test for the fpga1_time attribute."""
-        device_under_test.Connect(True)
+        """
+        Test for the fpga1_time attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.fpga1_time == 0
         sec = int(time.time())
         device_under_test.fpga1_time = sec
         assert device_under_test.fpga1_time == sec
 
     def test_fpga2_time(self, device_under_test):
-        """Test the fpga2_time attribute."""
-        device_under_test.Connect(True)
+        """
+        Test for the fpga2_time attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.fpga2_time == 0
         device_under_test.fpga2_time = 1535
         assert device_under_test.fpga2_time == 1535
 
     def test_antennaIds(self, device_under_test):
-        """Test for the antennaIds attribute."""
+        """
+        Test for the antennaIds attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         assert (device_under_test.AntennaIds == []).all()
         new_ids = [i for i in range(8)]
         device_under_test.AntennaIds = new_ids
         assert (device_under_test.AntennaIds == new_ids).all()
 
     def test_fortyGbDestinationIps(self, device_under_test):
-        """Test for fortyGbDestinationIps"""
-        device_under_test.Connect(True)
+        """
+        Test for the fortyGbDestinationIps attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -168,8 +329,14 @@ class TestMccsTile(object):
         assert device_under_test.fortyGbDestinationIps == ("10.0.98.3", "10.0.98.4")
 
     def test_fortyGbDestinationMacs(self, device_under_test):
-        """Test for fortyGbDestinationMacs"""
-        device_under_test.Connect(True)
+        """
+        Test for the fortyGbDestinationMacs attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -198,8 +365,14 @@ class TestMccsTile(object):
         )
 
     def test_fortyGbDestinationPorts(self, device_under_test):
-        """Test for fortyGbDestinationPorts"""
-        device_under_test.Connect(True)
+        """
+        Test for the fortyGbDestinationPorts attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -225,34 +398,75 @@ class TestMccsTile(object):
         assert (device_under_test.fortyGbDestinationPorts == (5000, 5001)).all()
 
     def test_adcPower(self, device_under_test):
-        """ Test if board is not programmed, return None"""
+        """
+        Test for the adcPowerattribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         device_under_test.testMode = TestMode.TEST
-        device_under_test.Connect(False)
+        [[result_code], [message]] = device_under_test.Connect(False)
+        assert result_code == ResultCode.OK
         expected = [float(i) for i in range(32)]
         assert (device_under_test.adcPower == expected).all()
 
     def test_currentTileBeamformerFrame(self, device_under_test):
-        device_under_test.Connect(True)
+        """
+        Test for the currentTileBeamformerFrame attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.CurrentTileBeamformerFrame == 23
 
     def test_checkPendingDataRequests(self, device_under_test):
-        device_under_test.Connect(True)
+        """
+        Test for the checkPendingDataRequests attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.CheckPendingDataRequests is False
 
     def test_isBeamformerRunning(self, device_under_test):
-        device_under_test.Connect(True)
+        """
+        Test for the isBeamformerRunning attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.isBeamformerRunning is False
         device_under_test.StartBeamformer("{}")
         assert device_under_test.isBeamformerRunning is True
 
     def test_phaseTerminalCount(self, device_under_test):
-        device_under_test.Connect(True)
+        """
+        Test for the phaseTerminalCount attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.PhaseTerminalCount == 0
         device_under_test.PhaseTerminalCount = 45
         assert device_under_test.PhaseTerminalCount == 45
 
     def test_ppsDelay(self, device_under_test):
-        device_under_test.Connect(True)
+        """
+        Test for the ppsDelay attribute.
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.ppsDelay == 12
 
     # ------------------------------------------------------
@@ -261,8 +475,14 @@ class TestMccsTile(object):
     # ------------------------------------------------------
 
     def test_Initialise(self, device_under_test):
-        """Test for Initialise"""
-        device_under_test.Connect(False)
+        """
+        Test for Initialise
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(False)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.Initialise()
@@ -270,22 +490,38 @@ class TestMccsTile(object):
         assert result == "TpmSimulator: initialise"
 
     def test_On(self, device_under_test):
-        """Test for On"""
+        """Test for On
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
 
     def test_Connect(self, device_under_test):
-        """Test for Connect"""
+        """
+        Test for Connect
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         ss = io.StringIO()
         with redirect_stdout(ss):
-            device_under_test.Connect(False)
+            [[result_code], [message]] = device_under_test.Connect(False)
+            assert result_code == ResultCode.OK
         result = ss.getvalue().strip()
         assert result == "TpmSimulator: connect"
 
     def test_Disconnect(self, device_under_test):
-        """ Test for Disconnect from the board"""
-        device_under_test.Connect(True)
+        """
+        Test for Disconnect from the board
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(False)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.disconnect()
@@ -293,8 +529,14 @@ class TestMccsTile(object):
         assert result == "TpmSimulator: disconnect"
 
     def test_GetFirmwareList(self, device_under_test):
-        """ Test for GetFirmwareList """
-        device_under_test.Connect(True)
+        """
+        Test for GetFirmwareList
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         firmware_str = device_under_test.GetFirmwareList()
         firmware_list = json.loads(firmware_str)
         assert firmware_list == {
@@ -304,8 +546,14 @@ class TestMccsTile(object):
         }
 
     def test_DownloadFirmware(self, device_under_test):
-        """Test for DownloadFirmware"""
-        device_under_test.Connect(False)
+        """
+        Test for DownloadFirmware
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(False)
+        assert result_code == ResultCode.OK
         bitfile = "test_bitload_firmware"
         ss = io.StringIO()
         with redirect_stdout(ss):
@@ -314,8 +562,14 @@ class TestMccsTile(object):
         assert result == bitfile
 
     def test_ProgramCPLD(self, device_under_test):
-        """Test for ProgramCPLD"""
-        device_under_test.Connect(True)
+        """
+        Test for ProgramCPLD
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         bitfile = "test_bitload_cpld"
         ss = io.StringIO()
         with redirect_stdout(ss):
@@ -324,15 +578,27 @@ class TestMccsTile(object):
         assert result == bitfile
 
     def test_WaitPPSEvent(self, device_under_test):
-        """Test for WaitPPSEvent"""
-        device_under_test.Connect(True)
+        """
+        Test for WaitPPSEvent
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         device_under_test.fpga1_time = int(time.time())
         (result, info) = device_under_test.WaitPPSEvent()
         assert result == ResultCode.OK
 
     def test_GetRegisterList(self, device_under_test):
-        """Test for GetRegisterList"""
-        device_under_test.Connect(True)
+        """
+        Test for GetRegisterList
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         assert device_under_test.GetRegisterList() == [
             "test-reg1",
             "test-reg2",
@@ -341,8 +607,14 @@ class TestMccsTile(object):
         ]
 
     def test_ReadAndWriteRegister(self, device_under_test):
-        """Test for ReadRegister & WriteRegister"""
-        device_under_test.Connect(True)
+        """
+        Test for ReadRegister & WriteRegister
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         nb_read = 4
         offset = 1
         device = 0
@@ -430,8 +702,14 @@ class TestMccsTile(object):
             device_under_test.WriteRegister(jstr)
 
     def test_ReadAndWriteAddress(self, device_under_test):
-        """Test for ReadAddress and WriteAddress"""
-        device_under_test.Connect(True)
+        """
+        Test for ReadAddress and WriteAddress
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         address = 0xF
         nvalues = 10
         expected = [0 for i in range(nvalues)]
@@ -446,8 +724,14 @@ class TestMccsTile(object):
             device_under_test.WriteAddress([address])
 
     def test_Configure40GCore(self, device_under_test):
-        """Test for Configure40GCore"""
-        device_under_test.Connect(True)
+        """
+        Test for Configure40GCore
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         dict1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
@@ -513,8 +797,14 @@ class TestMccsTile(object):
             device_under_test.Configure40GCore(jstr)
 
     def test_SetLmcDownload(self, device_under_test):
-        """Test for SetLMCDownload"""
-        device_under_test.Connect(True)
+        """
+        Test for SetLMCDownload
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {
             "Mode": "1G",
             "PayloadLength": 4,
@@ -536,8 +826,14 @@ class TestMccsTile(object):
             device_under_test.SetLmcDownload(jstr)
 
     def test_SetChanneliserTruncation(self, device_under_test):
-        """Test for SetChanneliserTruncation"""
-        device_under_test.Connect(True)
+        """
+        Test for SetChanneliserTruncation
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         trunc = [
             [0, 1, 2, 3, 4, 5],
             [6, 7, 8, 9, 10, 11],
@@ -562,8 +858,14 @@ class TestMccsTile(object):
             device_under_test.SetChanneliserTruncation(argin)
 
     def test_SetBeamFormerRegions(self, device_under_test):
-        """Test for SetBeamFormerRegions"""
-        device_under_test.Connect(True)
+        """
+        Test for SetBeamFormerRegions
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         regions = [[5, 16, 1], [25, 32, 2], [45, 48, 3]]
         input = list(itertools.chain.from_iterable(regions))
         ss = io.StringIO()
@@ -595,8 +897,14 @@ class TestMccsTile(object):
             device_under_test.SetBeamformerRegions(input)
 
     def test_ConfigureStationBeamformer(self, device_under_test):
-        """Test for ConfigureStationBeamformer"""
-        device_under_test.Connect(True)
+        """
+        Test for ConfigureStationBeamformer
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         dict = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
         jstr = json.dumps(dict)
         ss = io.StringIO()
@@ -622,8 +930,14 @@ class TestMccsTile(object):
             device_under_test.ConfigureStationBeamformer(jstr)
 
     def test_LoadCalibrationCoefficients(self, device_under_test):
-        """Test for LoadCalibrationCoefficients"""
-        device_under_test.Connect(True)
+        """
+        Test for LoadCalibrationCoefficients
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         antenna = 2
         complex_coeffs = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
@@ -644,8 +958,14 @@ class TestMccsTile(object):
             device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
 
     def test_LoadBeamAngle(self, device_under_test):
-        """Test for LoadBeamAngle"""
-        device_under_test.Connect(True)
+        """
+        Test for LoadBeamAngle
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         angle_coeffs = [float(i) for i in range(16)]
         ss = io.StringIO()
         with redirect_stdout(ss):
@@ -655,8 +975,14 @@ class TestMccsTile(object):
         assert result == angle_coeffs
 
     def test_LoadAntennaTapering(self, device_under_test):
-        """Test for LoadAntennaTapering"""
-        device_under_test.Connect(True)
+        """
+        Test for LoadAntennaTapering
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         tapering_coeffs = [float(i) for i in range(16)]
         ss = io.StringIO()
         with redirect_stdout(ss):
@@ -668,8 +994,14 @@ class TestMccsTile(object):
             device_under_test.LoadAntennaTapering(tapering_coeffs[:12])
 
     def test_SwitchCalibrationBank(self, device_under_test):
-        """Test for SwitchCalibrationBank"""
-        device_under_test.Connect(True)
+        """
+        Test for SwitchCalibrationBank
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SwitchCalibrationBank(19)
@@ -677,11 +1009,17 @@ class TestMccsTile(object):
         assert result == "19"
 
     def test_SetPointingDelay(self, device_under_test):
-        """Test for SetPointingDelay"""
+        """
+        Test for SetPointingDelay
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         delays = [3]
         for i in range(32):
             delays.append(float(i))
-        device_under_test.Connect(True)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SetPointingDelay(delays)
@@ -695,8 +1033,14 @@ class TestMccsTile(object):
             device_under_test.SetPointingDelay(delays)
 
     def test_LoadPointingDelay(self, device_under_test):
-        """Test for LoadPointingDelay"""
-        device_under_test.Connect(True)
+        """
+        Test for LoadPointingDelay
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         delay = 11
         ss = io.StringIO()
         with redirect_stdout(ss):
@@ -705,8 +1049,14 @@ class TestMccsTile(object):
         assert int(result) == delay
 
     def test_StartBeamformer(self, device_under_test):
-        """Test for StartBeamformer"""
-        device_under_test.Connect(True)
+        """
+        Test for StartBeamformer
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {"StartTime": 0, "Duration": 5}
         dict = {"Duration": 5}
         jstr = json.dumps(dict)
@@ -717,8 +1067,14 @@ class TestMccsTile(object):
         assert result == expected
 
     def test_StopBeamformer(self, device_under_test):
-        """Test for StopBeamformer"""
-        device_under_test.Connect(True)
+        """
+        Test for StopBeamformer
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.StopBeamformer()
@@ -726,8 +1082,14 @@ class TestMccsTile(object):
         assert result == "TpmSimulator: stop_beamformer"
 
     def test_ConfigureIntegratedChannelData(self, device_under_test):
-        """Test for ConfigureIntegratedChannelData"""
-        device_under_test.Connect(True)
+        """
+        Test for ConfigureIntegratedChannelData
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.ConfigureIntegratedChannelData(6.284)
@@ -740,8 +1102,14 @@ class TestMccsTile(object):
         assert result == "0.5"
 
     def test_ConfigureIntegratedBeamData(self, device_under_test):
-        """Test for ConfigureIntegratedBeamData"""
-        device_under_test.Connect(True)
+        """
+        Test for ConfigureIntegratedBeamData
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.ConfigureIntegratedBeamData(3.142)
@@ -754,8 +1122,14 @@ class TestMccsTile(object):
         assert result == "0.5"
 
     def test_SendRawData(self, device_under_test):
-        """Test for SendRawData"""
-        device_under_test.Connect(True)
+        """
+        Test for SendRawData
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {
             "Sync": True,
             "Period": 5,
@@ -772,8 +1146,14 @@ class TestMccsTile(object):
         assert result == expected
 
     def test_SendChannelisedData(self, device_under_test):
-        """Test for SendChannelisedData"""
-        device_under_test.Connect(True)
+        """
+        Test for SendChannelisedData
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {
             "NSamples": 4,
             "FirstChannel": 7,
@@ -792,8 +1172,14 @@ class TestMccsTile(object):
         assert result == expected
 
     def test_SendChannelisedDataContinuous(self, device_under_test):
-        """Test for SendChannelisedDataContinuous"""
-        device_under_test.Connect(True)
+        """
+        Test for SendChannelisedDataContinuous
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {
             "ChannelID": 2,
             "NSamples": 4,
@@ -815,8 +1201,14 @@ class TestMccsTile(object):
             device_under_test.SendChannelisedDataContinuous(jstr)
 
     def test_SendBeamData(self, device_under_test):
-        """Test for SendBeamData"""
-        device_under_test.Connect(True)
+        """
+        Test for SendBeamData
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
         dict = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
         jstr = json.dumps(dict)
@@ -827,8 +1219,14 @@ class TestMccsTile(object):
         assert result == expected
 
     def test_StopDataTransmission(self, device_under_test):
-        """Test for StopDataTransmission"""
-        device_under_test.Connect(True)
+        """
+        Test for StopDataTransmission
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.StopDataTransmission()
@@ -836,8 +1234,14 @@ class TestMccsTile(object):
         assert result == "TpmSimulator: stop_data_transmission"
 
     def test_ComputeCalibrationCoefficients(self, device_under_test):
-        """Test for ComputeCalibrationCoefficients"""
-        device_under_test.Connect(True)
+        """
+        Test for ComputeCalibrationCoefficients
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.ComputeCalibrationCoefficients()
@@ -845,8 +1249,14 @@ class TestMccsTile(object):
         assert result == "TpmSimulator: compute_calibration_coefficients"
 
     def test_StartAcquisition(self, device_under_test):
-        """ Test for StartAcquisition"""
-        device_under_test.Connect(True)
+        """
+        Test for StartAcquisition
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {"StartTime": 5, "Delay": 2}
         dict = {"StartTime": 5}
         jstr = json.dumps(dict)
@@ -857,11 +1267,17 @@ class TestMccsTile(object):
         assert result == expected
 
     def test_SetTimeDelays(self, device_under_test):
-        """Test for SetTimeDelays"""
+        """
+        Test for SetTimeDelays
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
         delays = []
         for i in range(32):
             delays.append(float(i))
-        device_under_test.Connect(True)
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SetTimeDelays(delays)
@@ -870,17 +1286,27 @@ class TestMccsTile(object):
         assert result == delays
 
     def test_SetCspRounding(self, device_under_test):
-        """ Test for SetCspRounding"""
-        device_under_test.Connect(True)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetCspRounding(6.284)
-        result = ss.getvalue().strip()
-        assert result == "6.284"
+        """
+        Test for SetCspRounding
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        [[result_code], [message]] = device_under_test.SetCspRounding(6.284)
+        assert result_code == ResultCode.OK
+        assert message == "SetCspRounding command succeeded"
 
     def test_SetLmcIntegratedDownload(self, device_under_test):
-        """ Test for SetLmcIntegratedDownload """
-        device_under_test.Connect(True)
+        """
+        Test for SetLmcIntegratedDownload
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {
             "Mode": "1G",
             "ChannelPayloadLength": 4,
@@ -908,8 +1334,14 @@ class TestMccsTile(object):
             device_under_test.SetLmcIntegratedDownload(jstr)
 
     def test_SendRawDataSynchronised(self, device_under_test):
-        """ Test for SendRawDataSynchronised """
-        device_under_test.Connect(True)
+        """
+        Test for SendRawDataSynchronised
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
         dict = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
         jstr = json.dumps(dict)
@@ -920,8 +1352,14 @@ class TestMccsTile(object):
         assert result == expected
 
     def test_SendChannelisedDataNarrowband(self, device_under_test):
-        """ Test for SendChannelisedDataNarrowband"""
-        device_under_test.Connect(True)
+        """
+        Test for SendChannelisedDataNarrowband
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         expected = {
             "Frequency": 4000,
             "RoundBits": 256,
@@ -954,35 +1392,53 @@ class TestMccsTile(object):
             device_under_test.SendChannelisedDataNarrowband(jstr)
 
     def test_TweakTransceivers(self, device_under_test):
-        """ Test for TweakTransceivers"""
-        device_under_test.Connect(False)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.TweakTransceivers()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: tweak_transceivers"
+        """
+        Test for TweakTransceivers
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        [[result_code], [message]] = device_under_test.TweakTransceivers()
+        assert result_code == ResultCode.OK
+        assert message == "TweakTransceivers command succeeded"
 
     def test_PostSynchronisation(self, device_under_test):
-        """ Test for PostSynchronisation"""
-        device_under_test.Connect(False)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.PostSynchronisation()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: post_synchronisation"
+        """
+        Test for PostSynchronisation
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
+        [[result_code], [message]] = device_under_test.PostSynchronisation()
+        assert result_code == ResultCode.OK
+        assert message == "PostSynchronisation command succeeded"
 
     def test_SyncFpgas(self, device_under_test):
-        """ Test for SyncFpgas"""
-        device_under_test.Connect(False)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SyncFpgas()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: sync_fpgas"
+        """
+        Test for SyncFpgas
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(False)
+        assert result_code == ResultCode.OK
+        [[result_code], [message]] = device_under_test.SyncFpgas()
+        assert result_code == ResultCode.OK
+        assert message == "SyncFpgas command succeeded"
 
     def test_CalculateDelay(self, device_under_test):
-        """ Test for CalculateDelay"""
-        device_under_test.Connect(True)
+        """
+        Test for CalculateDelay
+
+        :param device_under_test: a DeviceProxy under a DeviceTestContext
+        :type device_under_test: DeviceProxy
+        """
+        [[result_code], [message]] = device_under_test.Connect(True)
+        assert result_code == ResultCode.OK
         dict = expected = {
             "CurrentDelay": 5.0,
             "CurrentTC": 2,

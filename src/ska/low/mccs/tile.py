@@ -2729,7 +2729,7 @@ class MccsTile(SKABaseDevice):
             """
             rounding = argin
             self.target._tpm.set_csp_rounding(rounding)
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SetCspRounding command succeeded")
 
     @command(
         dtype_in="DevDouble",
@@ -2988,7 +2988,7 @@ class MccsTile(SKABaseDevice):
             :rtype: (ResultCode, str)
             """
             self.target._tpm.tweak_transceivers()
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "TweakTransceivers command succeeded")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3025,7 +3025,7 @@ class MccsTile(SKABaseDevice):
             :rtype: (ResultCode, str)
             """
             self.target._tpm.post_synchronisation()
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "PostSynchronisation command succeeded")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3062,7 +3062,7 @@ class MccsTile(SKABaseDevice):
             :rtype: (ResultCode, str)
             """
             self.target._tpm.sync_fpgas()
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SyncFpgas command succeeded")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3118,7 +3118,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("RefHi is a mandatory parameter")
                 raise ValueError("RefHi is a mandatory parameter")
             self.target._tpm.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "CalculateDelay command succeeded")
 
     @command(
         dtype_in="DevString",

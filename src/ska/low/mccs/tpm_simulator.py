@@ -36,12 +36,17 @@ class TpmSimulator:
     def connect(
         self, initialise=None, simulation=True, enable_ada=None, testmode=False
     ):
-        self.logger.debug("TpmSimulator: connect")
+        self.logger.info(f"TpmSimulator: connect: testmode={testmode}")
         self._test_mode = testmode
-        try:
-            self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
-            self._tpm_proxy.simulate = False
-        except tango.DevFailed:
+        if not self._test_mode:
+            try:
+                self.logger.info("TpmSimulator: connect: trying DeviceProxy")
+                self._tpm_proxy = tango.DeviceProxy("low/elt/tpmsimulator")
+                self._tpm_proxy.simulate = False
+            except tango.DevFailed:
+                self._tpm_proxy = None
+        else:
+            self.logger.info("setting tpm_proxy to None")
             self._tpm_proxy = None
         print("TpmSimulator: connect")
 
@@ -113,7 +118,7 @@ class TpmSimulator:
         self.logger.debug("TpmSimulator: get_adc_rms")
         rms = []
         for i in range(0, 32, 2):
-            if self._test_mode:  # for unit testing
+            if self._tpm_proxy is None:  # for unit testing
                 x = float(i)
                 y = float(i + 1)
             else:  # simulate real adc
@@ -381,7 +386,6 @@ class TpmSimulator:
 
     def set_csp_rounding(self, rounding):
         self.logger.debug("TpmSimulator: set_csp_rounding")
-        print(rounding)
 
     def set_lmc_integrated_download(
         self,
@@ -460,7 +464,6 @@ class TpmSimulator:
     #
     def tweak_transceivers(self):
         self.logger.debug("TpmSimulator: tweak_transceivers")
-        print("TpmSimulator: tweak_transceivers")
 
     def get_phase_terminal_count(self):
         self.logger.debug("TpmSimulator: get_phase_terminal_count")
@@ -476,11 +479,9 @@ class TpmSimulator:
 
     def post_synchronisation(self):
         self.logger.debug("TpmSimulator: post_synchronisation")
-        print("TpmSimulator: post_synchronisation")
 
     def sync_fpgas(self):
         self.logger.debug("TpmSimulator: sync_fpgas")
-        print("TpmSimulator: sync_fpgas")
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):

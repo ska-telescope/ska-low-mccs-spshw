@@ -6,6 +6,7 @@ display: ":0"
 xauthority: "~/.Xauthority"
 minikube: true
 
+enabled: true
 
 # Turn these off
 tango-base:

@@ -1,0 +1,62 @@
+# Default values for mccs (ska-low-mccs)
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+display: ":0"
+xauthority: "~/.Xauthority"
+minikube: true
+
+
+# Turn these off
+tango-base:
+  vnc:
+    enabled: false
+  tangorest:
+    enabled: false
+  tangotest:
+    enabled: false
+  ingress:
+    enabled: false
+  tangodb:
+    use_pv: false
+
+mccs:
+  enabled: true
+
+project:
+  name: mccs-mvp
+  image:
+    registry: nexus.engageska-portugal.pt/ska-docker
+    image: ska-low-mccs
+    tag: latest
+    pullPolicy: IfNotPresent
+
+cli:
+  enabled: false
+
+deviceServers:
+  master:
+    name: master
+    #override as master only has a single instance
+    args:
+      - -c
+      - "MccsMaster master"
+    instances: [0]
+  subarrays:
+    name: subarray
+    instances: [1, 2]
+  stations:
+    name: station
+    instances: [1, 2]
+  tiles:
+    name: tile
+    instances: [1, 2, 3, 4]
+  antennas:
+    name: antenna
+    instances: [1, 2, 3, 4]
+  
+nodeSelector: {}
+
+affinity: {}
+
+tolerations: []

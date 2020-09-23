@@ -238,7 +238,7 @@ class MccsMaster(SKAMaster):
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
-        Class for handling the On command.
+        Class for handling the On() command.
         """
 
         def do(self):
@@ -261,7 +261,7 @@ class MccsMaster(SKAMaster):
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
-        Class for handling the Off command.
+        Class for handling the Off() command.
         """
 
         def do(self):
@@ -284,7 +284,7 @@ class MccsMaster(SKAMaster):
 
     class StandbyLowCommand(ResponseCommand):
         """
-        Class for handling the StandbyLow command.
+        Class for handling the StandbyLow() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -326,7 +326,7 @@ class MccsMaster(SKAMaster):
 
     class StandbyFullCommand(ResponseCommand):
         """
-        Class for handling the StandbyFull command.
+        Class for handling the StandbyFull() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -367,7 +367,7 @@ class MccsMaster(SKAMaster):
 
     class OperateCommand(ResponseCommand):
         """
-        Class for handling the Operate command.
+        Class for handling the Operate() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -436,7 +436,7 @@ class MccsMaster(SKAMaster):
 
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
-        Command class for the Reset() command.
+        Class for handling the Reset() command.
         """
 
         def do(self):
@@ -917,7 +917,7 @@ class MccsMaster(SKAMaster):
 
     class MaintenanceCommand(ResponseCommand):
         """
-        Class for handling the Maintenance command.
+        Class for handling the Maintenance() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.

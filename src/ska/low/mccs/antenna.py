@@ -65,9 +65,9 @@ class MccsAntenna(SKABaseDevice):
             device = self.target
             device._antennaId = 0
             device._logicalTpmAntenna_id = 0
-            device._logicalApiuAntenna_id = 0.0
-            device._tpmId = 0.0
-            device._apiuId = 0.0
+            device._logicalApiuAntenna_id = 0
+            device._tpmId = 0
+            device._apiuId = 0
             device._gain = 0.0
             device._rms = 0.0
             device._voltage = 0.0
@@ -169,7 +169,7 @@ class MccsAntenna(SKABaseDevice):
         return self._logicalTpmAntenna_id
 
     @attribute(
-        dtype="double",
+        dtype="int",
         label="logicalApiuAntenna_id",
         doc="Local within Tile identifier for the Antenna APIU",
     )
@@ -183,7 +183,7 @@ class MccsAntenna(SKABaseDevice):
         return self._logicalApiuAntenna_id
 
     @attribute(
-        dtype="double",
+        dtype="int",
         label="tpmId",
         doc="Global Tile ID to which the antenna is connected",
     )
@@ -196,7 +196,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._tpmId
 
-    @attribute(dtype="double", label="apiuId")
+    @attribute(dtype="int", label="apiuId")
     def apiuId(self):
         """
         Return the APIU ID attribute.
@@ -381,7 +381,7 @@ class MccsAntenna(SKABaseDevice):
         Return the logical antenna ID attribute.
 
         :return: the logical antenna ID
-        :rtype: float
+        :rtype: int
         """
         return self._logicalAntennaId
 
@@ -528,7 +528,7 @@ class MccsAntenna(SKABaseDevice):
 
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
-        Command class for the Reset() command.
+        Class for handling the Reset() command.
         """
 
         def do(self):
@@ -550,7 +550,7 @@ class MccsAntenna(SKABaseDevice):
 
     class PowerOnCommand(ResponseCommand):
         """
-        Class for handling the PowerOn command.
+        Class for handling the PowerOn() command.
         """
 
         def do(self):
@@ -585,7 +585,7 @@ class MccsAntenna(SKABaseDevice):
 
     class PowerOffCommand(ResponseCommand):
         """
-        Class for handling the PowerOff command.
+        Class for handling the PowerOff() command.
         """
 
         def do(self):

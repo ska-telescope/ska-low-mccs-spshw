@@ -239,7 +239,7 @@ class MccsAPIU(SKABaseDevice):
 
     class PowerUpCommand(ResponseCommand):
         """
-        Class for handling the PowerUp command.
+        Class for handling the PowerUp() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -264,7 +264,7 @@ class MccsAPIU(SKABaseDevice):
 
     class PowerDownCommand(ResponseCommand):
         """
-        Class for handling the PowerDown command.
+        Class for handling the PowerDown() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.

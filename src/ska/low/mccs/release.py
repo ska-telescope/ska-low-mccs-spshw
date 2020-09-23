@@ -19,7 +19,7 @@ copyright = "CSIRO and STFC Daresbury Laboratory and University of Manchester"
 
 
 def get_release_info(clsname=None):
-    """Return a formatyed release info string.
+    """Return a formatted release info string.
 
     :param clsname: optional name of class to add to the info
     :type clsname: string

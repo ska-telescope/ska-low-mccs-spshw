@@ -80,13 +80,13 @@ class TileHardwareManager:
 
 class TilePowerManager(PowerManager):
     """
-    This class that implements the power manager for the MCCS Station
+    This class that implements the power manager for the MCCS Tile
     device.
     """
 
     def __init__(self, tile_hardware_manager):
         """
-        Initialise a new StationPowerManager
+        Initialise a new TilePowerManager
 
         :param tile_hardware_manager: an object that manages this tile's
             hardware
@@ -202,7 +202,7 @@ class MccsTile(SKABaseDevice):
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
-        Class for handling the On command.
+        Class for handling the On() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -228,7 +228,7 @@ class MccsTile(SKABaseDevice):
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
-        Class for handling the Off command.
+        Class for handling the Off() command.
         """
 
         def do(self):
@@ -789,7 +789,7 @@ class MccsTile(SKABaseDevice):
 
     class ConnectCommand(ResponseCommand):
         """
-        Class for handling the Connect() command.
+        Class for handling the Connect(argin) command.
         """
 
         def do(self, argin):
@@ -946,7 +946,7 @@ class MccsTile(SKABaseDevice):
 
     class DownloadFirmwareCommand(ResponseCommand):
         """
-        Class for handling the DownloadFirmware() command.
+        Class for handling the DownloadFirmware(argin) command.
         """
 
         def do(self, argin):
@@ -995,7 +995,7 @@ class MccsTile(SKABaseDevice):
 
     class ProgramCPLDCommand(ResponseCommand):
         """
-        Class for handling the ProgramCPLD() command.
+        Class for handling the ProgramCPLD(argin) command.
         """
 
         def do(self, argin):
@@ -1115,7 +1115,7 @@ class MccsTile(SKABaseDevice):
 
     class ReadRegisterCommand(BaseCommand):
         """
-        Class for handling the ReadRegister() command.
+        Class for handling the ReadRegister(argin) command.
         """
 
         def do(self, argin):
@@ -1183,7 +1183,7 @@ class MccsTile(SKABaseDevice):
 
     class WriteRegisterCommand(ResponseCommand):
         """
-        Class for handling the WriteRegister() command.
+        Class for handling the WriteRegister(argin) command.
         """
 
         def do(self, argin):
@@ -1252,7 +1252,7 @@ class MccsTile(SKABaseDevice):
 
     class ReadAddressCommand(BaseCommand):
         """
-        Class for handling the ReadAddress() command.
+        Class for handling the ReadAddress(argin) command.
         """
 
         def do(self, argin):
@@ -1297,7 +1297,7 @@ class MccsTile(SKABaseDevice):
 
     class WriteAddressCommand(ResponseCommand):
         """
-        Class for handling the WriteAddress() command.
+        Class for handling the WriteAddress(argin) command.
         """
 
         def do(self, argin):
@@ -1347,7 +1347,7 @@ class MccsTile(SKABaseDevice):
 
     class Configure40GCoreCommand(ResponseCommand):
         """
-        Class for handling the Configure40GCore() command.
+        Class for handling the Configure40GCore(argin) command.
         """
 
         def do(self, argin):
@@ -1436,7 +1436,7 @@ class MccsTile(SKABaseDevice):
 
     class Get40GCoreConfigurationCommand(BaseCommand):
         """
-        Class for handling the Get40GCoreConfiguration() command.
+        Class for handling the Get40GCoreConfiguration(argin) command.
         """
 
         def do(self, argin):
@@ -1481,7 +1481,7 @@ class MccsTile(SKABaseDevice):
 
     class SetLmcDownloadCommand(ResponseCommand):
         """
-        Class for handling the SetLmcDownload() command.
+        Class for handling the SetLmcDownload(argin) command.
         """
 
         def do(self, argin):
@@ -1549,7 +1549,7 @@ class MccsTile(SKABaseDevice):
 
     class SetChanneliserTruncationCommand(ResponseCommand):
         """
-        Class for handling the SetChanneliserTruncation() command.
+        Class for handling the SetChanneliserTruncation(argin) command.
         """
 
         def do(self, argin):
@@ -1610,7 +1610,7 @@ class MccsTile(SKABaseDevice):
 
     class SetBeamFormerRegionsCommand(ResponseCommand):
         """
-        Class for handling the SetBeamFormerRegions() command.
+        Class for handling the SetBeamFormerRegions(argin) command.
         """
 
         def do(self, argin):
@@ -1692,7 +1692,7 @@ class MccsTile(SKABaseDevice):
 
     class ConfigureStationBeamformerCommand(ResponseCommand):
         """
-        Class for handling the ConfigureStationBeamformer() command.
+        Class for handling the ConfigureStationBeamformer(argin) command.
         """
 
         def do(self, argin):
@@ -1764,7 +1764,7 @@ class MccsTile(SKABaseDevice):
 
     class LoadCalibrationCoefficientsCommand(ResponseCommand):
         """
-        Class for handling the LoadCalibrationCoefficients() command.
+        Class for handling the LoadCalibrationCoefficients(argin) command.
         """
 
         def do(self, argin):
@@ -1852,7 +1852,7 @@ class MccsTile(SKABaseDevice):
 
     class LoadBeamAngleCommand(ResponseCommand):
         """
-        Class for handling the LoadBeamAngle() command.
+        Class for handling the LoadBeamAngle(argin) command.
         """
 
         def do(self, argin):
@@ -1902,7 +1902,7 @@ class MccsTile(SKABaseDevice):
 
     class LoadAntennaTaperingCommand(ResponseCommand):
         """
-        Class for handling the LoadAntennaTapering() command.
+        Class for handling the LoadAntennaTapering(argin) command.
         """
 
         def do(self, argin):
@@ -1955,7 +1955,7 @@ class MccsTile(SKABaseDevice):
 
     class SwitchCalibrationBankCommand(ResponseCommand):
         """
-        Class for handling the SwitchCalibrationBank() command.
+        Class for handling the SwitchCalibrationBank(argin) command.
         """
 
         def do(self, argin):
@@ -2000,7 +2000,7 @@ class MccsTile(SKABaseDevice):
 
     class SetPointingDelayCommand(ResponseCommand):
         """
-        Class for handling the SetPointingDelay() command.
+        Class for handling the SetPointingDelay(argin) command.
         """
 
         def do(self, argin):
@@ -2048,7 +2048,7 @@ class MccsTile(SKABaseDevice):
 
     class LoadPointingDelayCommand(ResponseCommand):
         """
-        Class for handling the LoadPointingDelay() command.
+        Class for handling the LoadPointingDelay(argin) command.
         """
 
         def do(self, argin):
@@ -2093,7 +2093,7 @@ class MccsTile(SKABaseDevice):
 
     class StartBeamformerCommand(ResponseCommand):
         """
-        Class for handling the StartBeamformer() command.
+        Class for handling the StartBeamformer(argin) command.
         """
 
         def do(self, argin):
@@ -2183,7 +2183,7 @@ class MccsTile(SKABaseDevice):
 
     class ConfigureIntegratedChannelDataCommand(ResponseCommand):
         """
-        Class for handling the ConfigureIntegratedChannelData() command.
+        Class for handling the ConfigureIntegratedChannelData(argin) command.
         """
 
         def do(self, argin):
@@ -2232,7 +2232,7 @@ class MccsTile(SKABaseDevice):
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
         """
-        Class for handling the ConfigureIntegratedBeamData() command.
+        Class for handling the ConfigureIntegratedBeamData(argin) command.
         """
 
         def do(self, argin):
@@ -2281,7 +2281,7 @@ class MccsTile(SKABaseDevice):
 
     class SendRawDataCommand(ResponseCommand):
         """
-        Class for handling the SendRawData() command.
+        Class for handling the SendRawData(argin) command.
         """
 
         def do(self, argin):
@@ -2339,7 +2339,7 @@ class MccsTile(SKABaseDevice):
 
     class SendChannelisedDataCommand(ResponseCommand):
         """
-        Class for handling the SendChannelisedData() command.
+        Class for handling the SendChannelisedData(argin) command.
         """
 
         def do(self, argin):
@@ -2411,7 +2411,7 @@ class MccsTile(SKABaseDevice):
 
     class SendChannelisedDataContinuousCommand(ResponseCommand):
         """
-        Class for handling the SendChannelisedDataContinuous() command.
+        Class for handling the SendChannelisedDataContinuous(argin) command.
         """
 
         def do(self, argin):
@@ -2480,7 +2480,7 @@ class MccsTile(SKABaseDevice):
 
     class SendBeamDataCommand(ResponseCommand):
         """
-        Class for handling the SendBeamData() command.
+        Class for handling the SendBeamData(argin) command.
         """
 
         def do(self, argin):
@@ -2611,7 +2611,7 @@ class MccsTile(SKABaseDevice):
 
     class StartAcquisitionCommand(ResponseCommand):
         """
-        Class for handling the StartAcquisition() command.
+        Class for handling the StartAcquisition(argin) command.
         """
 
         def do(self, argin):
@@ -2664,7 +2664,7 @@ class MccsTile(SKABaseDevice):
 
     class SetTimeDelaysCommand(ResponseCommand):
         """
-        Class for handling the SetTimeDelays() command.
+        Class for handling the SetTimeDelays(argin) command.
         """
 
         def do(self, argin):
@@ -2712,7 +2712,7 @@ class MccsTile(SKABaseDevice):
 
     class SetCspRoundingCommand(ResponseCommand):
         """
-        Class for handling the SetCspRounding() command.
+        Class for handling the SetCspRounding(argin) command.
         """
 
         def do(self, argin):
@@ -2757,7 +2757,7 @@ class MccsTile(SKABaseDevice):
 
     class SetLmcIntegratedDownloadCommand(ResponseCommand):
         """
-        Class for handling the SetLmcIntegratedDownload() command.
+        Class for handling the SetLmcIntegratedDownload(argin) command.
         """
 
         def do(self, argin):
@@ -2833,7 +2833,7 @@ class MccsTile(SKABaseDevice):
 
     class SendRawDataSynchronisedCommand(ResponseCommand):
         """
-        Class for handling the SendRawDataSynchronised() command.
+        Class for handling the SendRawDataSynchronised(argin) command.
         """
 
         def do(self, argin):
@@ -2890,7 +2890,7 @@ class MccsTile(SKABaseDevice):
 
     class SendChannelisedDataNarrowbandCommand(ResponseCommand):
         """
-        Class for handling the SendChannelisedDataNarrowband() command.
+        Class for handling the SendChannelisedDataNarrowband(argin) command.
         """
 
         def do(self, argin):
@@ -3086,7 +3086,7 @@ class MccsTile(SKABaseDevice):
 
     class CalculateDelayCommand(ResponseCommand):
         """
-        Class for handling the CalculateDelay() command.
+        Class for handling the CalculateDelay(argin) command.
         """
 
         def do(self, argin):

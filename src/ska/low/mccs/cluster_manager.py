@@ -44,6 +44,10 @@ class MccsClusterManager(MccsGroupDevice):
     # ---------------
 
     class InitCommand(MccsGroupDevice.InitCommand):
+        """
+        Command class for device initialisation
+        """
+
         def do(self):
             """
             Initialises the attributes and properties of the class MccsClusterManager.
@@ -308,6 +312,10 @@ class MccsClusterManager(MccsGroupDevice):
     # --------
 
     class StartJobCommand(ResponseCommand):
+        """
+        Class for handling the StartJob(argin) command
+        """
+
         def do(self, argin):
             """
             Stateless do hook for the StartJob command
@@ -347,6 +355,10 @@ class MccsClusterManager(MccsGroupDevice):
         return [[return_code], [message]]
 
     class StopJobCommand(ResponseCommand):
+        """
+        Class for handling the StopJob(argin) command
+        """
+
         def do(self, argin):
             """
             Stateless do hook for the StopJob command
@@ -386,6 +398,10 @@ class MccsClusterManager(MccsGroupDevice):
         return [[return_code], [message]]
 
     class SubmitJobCommand(ResponseCommand):
+        """
+        Class for handling the SubmitJob(argin) command
+        """
+
         def do(self, argin):
             """
             Stateless do hook for the SubmitJob command
@@ -425,6 +441,10 @@ class MccsClusterManager(MccsGroupDevice):
         return [[return_code], [message]]
 
     class GetJobStatusCommand(ResponseCommand):
+        """
+        Class for handling the GetJobStatus(argin) command
+        """
+
         def do(self, argin):
             """
             Stateless do hook for the GetJobStatus command
@@ -464,6 +484,10 @@ class MccsClusterManager(MccsGroupDevice):
         return [[return_code], [message]]
 
     class ClearJobStatsCommand(ResponseCommand):
+        """
+        Class for handling the ClearJobStats() command
+        """
+
         def do(self):
             """
             Stateless do hook for the ClearJobStats command
@@ -497,6 +521,10 @@ class MccsClusterManager(MccsGroupDevice):
         return [[return_code], [message]]
 
     class PingMasterPoolCommand(ResponseCommand):
+        """
+        Class for handling the PingMasterPool() command
+        """
+
         def do(self):
             """
             Stateless do hook for the PingMasterPool command

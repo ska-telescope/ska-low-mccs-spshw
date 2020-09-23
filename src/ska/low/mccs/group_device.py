@@ -108,7 +108,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     class AddMemberCommand(ResponseCommand):
         """
-        Class for handling the AddMember command.
+        Class for handling the AddMember(argin) command.
         """
 
         def do(self, argin):
@@ -136,7 +136,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     class RemoveMemberCommand(ResponseCommand):
         """
-        Class for handling the RemoveMember command
+        Class for handling the RemoveMember(argin) command
         """
 
         def do(self, argin):
@@ -164,7 +164,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     class RunCommand(ResponseCommand):
         """
-        Class for handling the Run command
+        Class for handling the Run(argin) command
         """
 
         def do(self, argin):

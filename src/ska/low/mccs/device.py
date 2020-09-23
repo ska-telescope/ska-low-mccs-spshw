@@ -48,6 +48,7 @@ class MccsDevice(SKABaseDevice):
            usually off
 
         """
+
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
@@ -85,32 +86,24 @@ class MccsDevice(SKABaseDevice):
         args = (self, self.state_model, self.logger)
 
         self.register_command_object(
-            "ExceptionCallback",
-            self.ExceptionCallbackCommand(*args)
+            "ExceptionCallback", self.ExceptionCallbackCommand(*args)
         )
         self.register_command_object(
-            "DefaultAlarmOffCallback",
-            self.DefaultAlarmOffCallbackCommand(*args)
+            "DefaultAlarmOffCallback", self.DefaultAlarmOffCallbackCommand(*args)
         )
         self.register_command_object(
-            "DefaultAlarmOnCallback",
-            self.DefaultAlarmOnCallbackCommand(*args)
+            "DefaultAlarmOnCallback", self.DefaultAlarmOnCallbackCommand(*args)
         )
         self.register_command_object(
             "ConstructDeviceProxyAddress",
-            self.ConstructDeviceProxyAddressCommand(*args)
+            self.ConstructDeviceProxyAddressCommand(*args),
+        )
+        self.register_command_object("GetFullReport", self.GetFullReportCommand(*args))
+        self.register_command_object(
+            "GetCommandReport", self.GetCommandReportCommand(*args)
         )
         self.register_command_object(
-            "GetFullReport",
-            self.GetFullReportCommand(*args)
-        )
-        self.register_command_object(
-            "GetCommandReport",
-            self.GetCommandReportCommand(*args)
-        )
-        self.register_command_object(
-            "GetAttributeReport",
-            self.GetAttributeReportCommand(*args)
+            "GetAttributeReport", self.GetAttributeReportCommand(*args)
         )
 
     def always_executed_hook(self):
@@ -214,11 +207,12 @@ class MccsDevice(SKABaseDevice):
 
     class ExceptionCallbackCommand(ResponseCommand):
         """
-        Class for handling the ExceptionCallback command.
+        Class for handling the ExceptionCallback() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Stateless hook for implementation of ExceptionCallback()
@@ -241,11 +235,12 @@ class MccsDevice(SKABaseDevice):
 
     class DefaultAlarmOnCallbackCommand(ResponseCommand):
         """
-        Class for handling the DefaultAlarmOnCallback command.
+        Class for handling the DefaultAlarmOnCallback() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Stateless hook for implementation of
@@ -268,11 +263,12 @@ class MccsDevice(SKABaseDevice):
 
     class DefaultAlarmOffCallbackCommand(ResponseCommand):
         """
-        Class for handling the DefaultAlarmOffCallback command.
+        Class for handling the DefaultAlarmOffCallback() command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
         def do(self):
             """
             Stateless hook for implementation of
@@ -297,6 +293,7 @@ class MccsDevice(SKABaseDevice):
         """
         Class for handling the GetFullReport() command.
         """
+
         def do(self):
             """
             Stateless hook for implementation of GetFullReport()
@@ -319,6 +316,7 @@ class MccsDevice(SKABaseDevice):
         """
         Class for handling the GetCommandReport() command.
         """
+
         def do(self):
             """
             Stateless hook for implementation of GetCommandReport()
@@ -341,6 +339,7 @@ class MccsDevice(SKABaseDevice):
         """
         Class for handling the GetAttributeReport() command.
         """
+
         def do(self):
             """
             Stateless hook for implementation of GetAttributeReport()
@@ -361,11 +360,12 @@ class MccsDevice(SKABaseDevice):
 
     class ConstructDeviceProxyAddressCommand(ResponseCommand):
         """
-        Class for handling the ConstructDeviceProxyAddress() command.
+        Class for handling the ConstructDeviceProxyAddress(argin) command.
 
         :todo: What does this command do? It sounds like it constructs
             an address, but if so it doesn't return it.
         """
+
         def do(self, argin):
             """
             Stateless hook for implementation of

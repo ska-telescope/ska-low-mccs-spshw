@@ -9,7 +9,7 @@ This module implements infrastructure for health management in the MCCS
 subsystem.
 
 """
-__all__ = ["HealthMonitor"]
+__all__ = ["LocalHealthMonitor", "HealthRollupPolicy"]
 
 from tango import DevState
 from tango import AttrQuality

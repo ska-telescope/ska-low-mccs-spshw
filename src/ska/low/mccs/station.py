@@ -381,7 +381,7 @@ class MccsStation(SKAObsDevice):
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
-        Class for handling the On command.
+        Class for handling the On() command.
         """
 
         def do(self):
@@ -404,7 +404,7 @@ class MccsStation(SKAObsDevice):
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
-        Class for handling the Off command.
+        Class for handling the Off() command.
         """
 
         def do(self):

@@ -35,6 +35,6 @@ mccs-mvp:
 
 webjive:
   ingress:
-    enabled: true
+    enabled: false
     nginx: false
     hostname: integration.engageska-portugal.pt

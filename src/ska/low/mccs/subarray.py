@@ -248,7 +248,7 @@ class MccsSubarray(SKASubarray):
 
     class OnCommand(SKASubarray.OnCommand):
         """
-        Command class for the On() command
+        Class for handling the On() command
         """
 
         def do(self):
@@ -268,7 +268,7 @@ class MccsSubarray(SKASubarray):
 
     class OffCommand(SKASubarray.OffCommand):
         """
-        Command class for the Off() command
+        Class for handling the Off() command
         """
 
         def do(self):
@@ -288,7 +288,7 @@ class MccsSubarray(SKASubarray):
 
     class AssignResourcesCommand(SKASubarray.AssignResourcesCommand):
         """
-        Command class for the AssignResources() command
+        Class for handling the AssignResources(argin) command
         """
 
         def do(self, argin):
@@ -312,7 +312,7 @@ class MccsSubarray(SKASubarray):
 
     class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):
         """
-        Command class for the ReleaseResources() command
+        Class for handling the ReleaseResources(argin) command
         """
 
         def do(self, argin):
@@ -336,7 +336,7 @@ class MccsSubarray(SKASubarray):
 
     class ReleaseAllResourcesCommand(SKASubarray.ReleaseAllResourcesCommand):
         """
-        Command class for the ReleaseAllResources() command
+        Class for handling the ReleaseAllResources() command
         """
 
         def do(self):
@@ -358,7 +358,7 @@ class MccsSubarray(SKASubarray):
 
     class ConfigureCommand(SKASubarray.ConfigureCommand):
         """
-        Command class for the Configure() command
+        Class for handling the Configure(argin) command
         """
 
         def do(self, argin):
@@ -380,7 +380,7 @@ class MccsSubarray(SKASubarray):
 
     class ScanCommand(SKASubarray.ScanCommand):
         """
-        Command class for the Scan() command
+        Class for handling the Scan(argin) command
         """
 
         def do(self, argin):
@@ -402,7 +402,7 @@ class MccsSubarray(SKASubarray):
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """
-        Command class for the EndScan() command
+        Class for handling the EndScan() command
         """
 
         def do(self):
@@ -422,7 +422,7 @@ class MccsSubarray(SKASubarray):
 
     class EndCommand(SKASubarray.EndCommand):
         """
-        Command class for the End() command
+        Class for handling the End() command
         """
 
         def do(self):
@@ -442,7 +442,7 @@ class MccsSubarray(SKASubarray):
 
     class AbortCommand(SKASubarray.AbortCommand):
         """
-        Command class for the Abort() command
+        Class for handling the Abort() command
         """
 
         def do(self):
@@ -462,7 +462,7 @@ class MccsSubarray(SKASubarray):
 
     class ObsResetCommand(SKASubarray.ObsResetCommand):
         """
-        Command class for the ObsReset() command
+        Class for handling the ObsReset() command
         """
 
         def do(self):
@@ -482,7 +482,7 @@ class MccsSubarray(SKASubarray):
 
     class RestartCommand(SKASubarray.RestartCommand):
         """
-        Command class for the Restart() command
+        Class for handling the Restart() command
         """
 
         def do(self):
@@ -505,6 +505,10 @@ class MccsSubarray(SKASubarray):
     # ---------------------
 
     class SendTransientBufferCommand(ResponseCommand):
+        """
+        Class for handling the SendTransientBuffer(argin) command
+        """
+
         def do(self, argin):
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)

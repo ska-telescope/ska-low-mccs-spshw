@@ -41,6 +41,10 @@ class MccsTransientBuffer(MccsDevice):
     # ---------------
 
     class InitCommand(MccsDevice.InitCommand):
+        """
+        Command class for device initialisation
+        """
+
         def do(self):
             """Initialises the attributes and properties of the MccsTransientBuffer."""
             super().do()
@@ -82,44 +86,32 @@ class MccsTransientBuffer(MccsDevice):
     # Attributes
     # ----------
 
-    @attribute(
-        dtype="DevString", label="stationId",
-    )
+    @attribute(dtype="DevString", label="stationId")
     def stationId(self):
         """Return the stationId attribute."""
         return self._station_id
 
-    @attribute(
-        dtype="DevString", label="transientBufferJobId",
-    )
+    @attribute(dtype="DevString", label="transientBufferJobId")
     def transientBufferJobId(self):
         """Return the transientBufferJobId attribute."""
         return self._transient_buffer_job_id
 
-    @attribute(
-        dtype="DevLong", label="resamplingBits",
-    )
+    @attribute(dtype="DevLong", label="resamplingBits")
     def resamplingBits(self):
         """Return the resamplingBits attribute."""
         return self._resampling_bits
 
-    @attribute(
-        dtype="DevShort", label="nStations",
-    )
+    @attribute(dtype="DevShort", label="nStations")
     def nStations(self):
         """Return the nStations attribute."""
         return self._n_stations
 
-    @attribute(
-        dtype=("DevDouble",), max_dim_x=100, label="transientFrequencyWindow",
-    )
+    @attribute(dtype=("DevDouble",), max_dim_x=100, label="transientFrequencyWindow")
     def transientFrequencyWindow(self):
         """Return the transientFrequencyWindow attribute."""
         return self._transient_frequency_window
 
-    @attribute(
-        dtype=("DevString",), max_dim_x=100, label="stationIds",
-    )
+    @attribute(dtype=("DevString",), max_dim_x=100, label="stationIds")
     def stationIds(self):
         """Return the stationIds attribute."""
         return self._station_ids

@@ -9,7 +9,7 @@ dependencies:
 - name: tango-base
   version: 0.1.2
   repository: https://nexus.engageska-portugal.pt/repository/helm-chart
-- name: mccs-mvp
+- name: mccs
   version: 0.0.2
   repository: https://nexus.engageska-portugal.pt/repository/helm-chart
 - name: webjive

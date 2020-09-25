@@ -2,14 +2,9 @@ Feature: Master-subarray interactions
 
 Background:
     Given we have master
-    And we have subarray 1
-    And we have subarray 2
-    And we have station 1
-    And we have station 2
-    And we have tile 1
-    And we have tile 2
-    And we have tile 3
-    And we have tile 4
+    And we have 2 subarrays
+    And we have 2 stations
+    And we have 4 tiles
 
 Scenario: Master is turned on
     Given master is off

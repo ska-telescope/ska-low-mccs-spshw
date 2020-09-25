@@ -8,7 +8,7 @@ import time
 devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "devices": ["tile1", "tpmsimulator"],
+    "devices": ["tile0001", "tpmsimulator"],
 }
 
 

@@ -3,6 +3,7 @@ This module contains the pytest-bdd implementation of the Gherkin BDD
 tests for the SKA Low MCCS prototype
 """
 
+import pytest
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState
 
@@ -11,27 +12,30 @@ devices_to_load = {
     "package": "ska.low.mccs",
     "devices": [
         "master",
-        "subarray1",
-        "subarray2",
-        "station1",
-        "station2",
-        "tile1",
-        "tile2",
-        "tile3",
-        "tile4",
-        "antenna1",
-        "antenna2",
-        "antenna3",
-        "antenna4",
+        "subarray01",
+        "subarray02",
+        "station001",
+        "station002",
+        "tile0001",
+        "tile0002",
+        "tile0003",
+        "tile0004",
+        "antenna000001",
+        "antenna000002",
+        "antenna000003",
+        "antenna000004",
     ],
 }
 
 
-@given("we have master", target_fixture="master")
-def we_have_master(tango_context):
+@pytest.fixture()
+def devices(tango_context):
     """
-    Returns a DeviceProxy to the master device; accessible as "master"
-    fixture
+    Fixture that provides access to devices via their names.
+
+    :todo: For now the purpose of this fixture is to isolate FQDNs in a
+        single place in this module. In future this will be changed to
+        extract the device FQDNs straight from the configuration file.
 
     :param tango_context: fixture that provides a tango context of some
         sort
@@ -39,245 +43,115 @@ def we_have_master(tango_context):
         MultiDeviceTestContext, possibly the real thing. The only
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
-    :returns: a DeviceProxy to the master device
-    :rtype: DeviceProxy
+
+    :return: a dictionary of devices keyed by their name
+    :rtype: dict<string, DeviceProxy>
     """
-    return tango_context.get_device("low/elt/master")
+    return {
+        "master": tango_context.get_device("low/elt/master"),
+        "subarray_01": tango_context.get_device("low/elt/subarray_1"),
+        "subarray_02": tango_context.get_device("low/elt/subarray_2"),
+        "station_001": tango_context.get_device("low/elt/station_1"),
+        "station_002": tango_context.get_device("low/elt/station_2"),
+        "tile_0001": tango_context.get_device("low/elt/tile_1"),
+        "tile_0002": tango_context.get_device("low/elt/tile_2"),
+        "tile_0003": tango_context.get_device("low/elt/tile_3"),
+        "tile_0004": tango_context.get_device("low/elt/tile_4"),
+    }
 
 
-@given(
-    parsers.parse("we have {subarray_count:d} subarrays"), target_fixture="subarrays"
-)
-def we_have_n_subarrays(tango_context, subarray_count):
+@given(parsers.parse("we have {device_name}"))
+def we_have_device(devices, device_name):
     """
-    Returns device proxies to the subarray devices; accessible as "subarrays" fixture
+    Asserts that existence/availability of a device
 
-    :param tango_context: fixture that provides a tango context of some
-        sort
-    :type tango_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
-    :param subarray_count: number of subarrays we have
-    :type subarray_count: int
-    :returns: a sequence of subarrays
-    :rtype: list of DeviceProxy
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, DeviceProxy>
+    :param device_name: name of the device
+    :type device_name: str
     """
-    return [
-        tango_context.get_device(f"low/elt/subarray_{i+1}")
-        for i in range(subarray_count)
-    ]
-
-
-@given(parsers.parse("we have {station_count:d} stations"), target_fixture="stations")
-def we_have_n_stations(tango_context, station_count):
-    """
-    Returns device proxies to the station devices; accessible as "stations" fixture
-
-    :param tango_context: fixture that provides a tango context of some
-        sort
-    :type tango_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
-    :param station_count: number of stations we have
-    :type station_count: int
-    :returns: a sequence of stations
-    :rtype: list of DeviceProxy
-    """
-    return [
-        tango_context.get_device(f"low/elt/station_{i+1}") for i in range(station_count)
-    ]
-
-
-@given(parsers.parse("we have {tile_count:d} tiles"), target_fixture="tiles")
-def we_have_n_tiles(tango_context, tile_count):
-    """
-    Returns device proxies to the tile devices; accessible as "tiles" fixture
-
-    :param tango_context: fixture that provides a tango context of some
-        sort
-    :type tango_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
-    :param tile_count: number of tiles we have
-    :type tile_count: int
-    :returns: a sequence of tiles
-    :rtype: list of DeviceProxy
-    """
-    return [tango_context.get_device(f"low/elt/tile_{i+1}") for i in range(tile_count)]
+    assert device_name in devices
 
 
 @scenario("master_subarray_interactions.feature", "Master is turned on")
 def test_master_is_turned_on():
     """
-    This is run at the end of the scenario; does nothing at present
-    because our assertions are captured in the THEN step.
+    This is run at the end of the scenario. It does nothing at present.
     """
     pass
 
 
-@given("master is off")
-def master_is_off(master):
+@given(parsers.parse("{device_name} is {device_state}"))
+def device_is_offon(devices, device_name, device_state):
     """
-    Asserts that the master device is off
+    Asserts that a device is off/on
 
-    :param master: fixture that provides a DeviceProxy to the master
-        device
-    :type master: DeviceProxy
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, DeviceProxy>
+    :param device_name: name of the device
+    :type device_name: str
+    :param device_state: asserted state of the device -- either "off" or
+        "on"
+    :type device_state: str
     """
-    assert master.state() == DevState.OFF
+    state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
+    assert devices[device_name].state() in state_map[device_state]
 
 
-@given(parsers.parse("station {station_id:d} is off"))
-def station_n_is_off(stations, station_id):
+@when(parsers.parse("we turn {device_name} {device_state}"))
+def we_turn_device_onoff(devices, device_name, device_state):
     """
-    Asserts that the nth station device is off
+    Turn a device off/on
 
-    :param stations: sequence of stations
-    :type stations: list of DeviceProxy
-    :param station_id: id of the station to check
-    :type station_id: int
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, DeviceProxy>
+    :param device_name: name of the device
+    :type device_name: str
+    :param device_state: target state of the device -- either "off" or
+        "on"
+    :type device_state: str
     """
-    assert stations[station_id - 1].state() == DevState.OFF
+    {"off": lambda device: device.Off(), "on": lambda device: device.On()}[
+        device_state
+    ](devices[device_name])
 
 
-@given(parsers.parse("tile {tile_id:d} is off"))
-def tile_n_is_off(tiles, tile_id):
-    """
-    Asserts that the nth tile device is off
-
-    :param tiles: sequence of tiles
-    :type tiles: list of DeviceProxy
-    :param tile_id: id of the station to check
-    :type tile_id: int
-    """
-    assert tiles[tile_id - 1].state() == DevState.OFF
-
-
-@when("we turn master on")
-def we_turn_master_on(master):
-    """
-    Turns the master device on
-
-    :param master: fixture that provides a DeviceProxy to the master
-        device
-    :type master: DeviceProxy
-    """
-    master.On()
-
-
-@then("master should be on")
-def master_should_be_on(master):
+@then(parsers.parse("{device_name} should be {device_state}"))
+def device_should_be_onoff(devices, device_name, device_state):
     """
     Asserts that the master device is on
 
-    :param master: fixture that provides a DeviceProxy to the master
-        device
-    :type master: DeviceProxy
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, DeviceProxy>
+    :param device_name: name of the device
+    :type device_name: str
+    :param device_state: asserted state of the device -- either "off" or
+        "on"
+    :type device_state: str
     """
-    assert master.state() == DevState.ON
-
-
-@then(parsers.parse("station {station_id:d} should be on"))
-def station_n_should_be_on(stations, station_id):
-    """
-    Asserts that the nth station device is on
-
-    :param stations: sequence of stations
-    :type stations: list of DeviceProxy
-    :param station_id: id of the station to check
-    :type station_id: int
-    """
-    assert stations[station_id - 1].state() in (DevState.ON, DevState.ALARM)
-
-
-@then(parsers.parse("tile {tile_id:d} should be on"))
-def tile_n_should_be_on(tiles, tile_id):
-    """
-    Asserts that the nth tile device is on
-
-    :param tiles: sequence of tiles
-    :type tiles: list of DeviceProxy
-    :param tile_id: id of the tile to check
-    :type tile_id: int
-    """
-    assert tiles[tile_id - 1].state() in (DevState.ON, DevState.ALARM)
+    state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
+    assert devices[device_name].state() in state_map[device_state]
 
 
 @scenario("master_subarray_interactions.feature", "Master enables subarray")
 def test_master_enables_subarray():
     """
-    This is run at the end of the scenario; does nothing at present
-    because our assertions are captured in the THEN step.
+    This is run at the end of the scenario. It does nothing at present.
     """
     pass
 
 
-@given("master is on")
-def master_is_on(master):
-    """
-    Asserts that the master device is on
-
-    :param master: fixture that provides a DeviceProxy to the master
-        device
-    :type master: DeviceProxy
-    """
-    assert master.state() == DevState.ON
-
-
-@given(parsers.parse("subarray {subarray_id:d} is off"))
-def subarray_n_is_off(subarrays, subarray_id):
-    """
-    Asserts that the nth subarray device is off
-
-    :param subarrays: sequence of subarrays
-    :type subarrays: list of DeviceProxy
-    :param subarray_id: id of the subarray to check
-    :type subarray_id: int
-    """
-    assert subarrays[subarray_id - 1].state() == DevState.OFF
-
-
 @when(parsers.parse("we tell master to enable subarray {subarray_id:d}"))
-def master_enables_subarray(master, subarray_id):
+def master_enables_subarray(devices, subarray_id):
     """
-    Tells master to enable a given subarray
+    Tells master to enable the nth subarray
 
-    :param master: fixture that provides a DeviceProxy to the master
-        device
-    :type master: DeviceProxy
-    :param subarray_id: master's id for the subarray to be turned on
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, DeviceProxy>
+    :param subarray_id: master's id number for the subarray to be enabled
     :type subarray_id: int
     """
-    master.EnableSubarray(subarray_id)
-
-
-@then(parsers.parse("subarray {subarray_id:d} should be on"))
-def subarray_n_should_be_on(subarrays, subarray_id):
-    """
-    Asserts that the nth subarray device is on
-
-    :param subarrays: sequence of subarrays
-    :type subarrays: list of DeviceProxy
-    :param subarray_id: id of the subarrays to check
-    :type subarray_id: int
-    """
-    assert subarrays[subarray_id - 1].state() in (DevState.ON, DevState.ALARM)
-
-
-@then(parsers.parse("subarray {subarray_id:d} should be off"))
-def subarray_n_should_be_off(subarrays, subarray_id):
-    """
-    Asserts that the nth subarray device is off
-
-    :param subarrays: sequence of subarrays
-    :type subarrays: list of DeviceProxy
-    :param subarray_id: id of the subarrays to check
-    :type subarray_id: int
-    """
-    assert subarrays[subarray_id - 1].state() == DevState.OFF
+    devices["master"].EnableSubarray(subarray_id)
 
 
 # @scenario(

@@ -19,7 +19,7 @@ from ska.base.commands import ResultCode
 device_to_load = {
     "path": "charts/mccs/data/extra.json",
     "package": "ska.low.mccs",
-    "device": "apiu1",
+    "device": "apiu",
 }
 
 

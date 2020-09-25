@@ -26,7 +26,7 @@ from ska.low.mccs.station import StationHardwareManager, StationPowerManager
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "station1",
+    "device": "station001",
 }
 
 

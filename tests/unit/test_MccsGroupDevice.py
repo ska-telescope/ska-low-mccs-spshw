@@ -20,7 +20,7 @@ from ska.base.control_model import HealthState, ControlMode, SimulationMode, Tes
 device_to_load = {
     "path": "charts/mccs/data/extra.json",
     "package": "ska.low.mccs",
-    "device": "groupdevice1",
+    "device": "groupdevice",
 }
 
 

@@ -21,7 +21,7 @@ from ska.low.mccs.utils import call_with_json
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "subarray1",
+    "device": "subarray01",
 }
 
 

@@ -22,7 +22,7 @@ from ska.base.commands import ResultCode
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "antenna1",
+    "device": "antenna000001",
 }
 
 

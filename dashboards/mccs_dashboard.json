@@ -65,8 +65,8 @@
         "allValue": "",
         "current": {
           "selected": false,
-          "text": "low/elt/master",
-          "value": "low/elt/master"
+          "text": "low-mccs/master/1",
+          "value": "low-mccs/master/1"
         },
         "datasource": "Prometheus",
         "definition": "label_values(device_attribute, device)",

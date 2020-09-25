@@ -673,10 +673,19 @@ class MccsMaster(SKAMaster):
 
         :example:
 
-        >>> proxy = tango.DeviceProxy("low/elt/master")
+        >>> proxy = tango.DeviceProxy("low-mccs/master/1")
         >>> proxy.EnableSubarray(1)
-        >>> proxy.Allocate('{"subarray_id":1,
-                            "stations": ["mccs/station/01", "mccs/station/02",]}')
+        >>> proxy.Allocate(
+                json.dumps(
+                    {
+                        "subarray_id":1,
+                        "stations": [
+                            "low-mccs/station/001",
+                            "low-mccs/station/002"
+                        ]
+                    }
+                )
+            )
         """
 
         handler = self.get_command_object("Allocate")

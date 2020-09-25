@@ -45,13 +45,13 @@ class TestPowerManagement:
         """
         Test that a MccsMaster device can enable an MccsSubarray device.
         """
-        master = device_context.get_device("low/elt/master")
-        station_1 = device_context.get_device("low/elt/station_1")
-        station_2 = device_context.get_device("low/elt/station_2")
-        tile_1 = device_context.get_device("low/elt/tile_1")
-        tile_2 = device_context.get_device("low/elt/tile_2")
-        tile_3 = device_context.get_device("low/elt/tile_3")
-        tile_4 = device_context.get_device("low/elt/tile_4")
+        master = device_context.get_device("low-mccs/master/1")
+        station_1 = device_context.get_device("low-mccs/station/001")
+        station_2 = device_context.get_device("low-mccs/station/002")
+        tile_1 = device_context.get_device("low-mccs/tile/0001")
+        tile_2 = device_context.get_device("low-mccs/tile/0002")
+        tile_3 = device_context.get_device("low-mccs/tile/0003")
+        tile_4 = device_context.get_device("low-mccs/tile/0004")
 
         assert master.State() == DevState.OFF
         assert station_1.State() == DevState.OFF

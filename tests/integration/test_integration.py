@@ -41,9 +41,9 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low/elt/master")
-        subarray_1 = device_context.get_device("low/elt/subarray_1")
-        subarray_2 = device_context.get_device("low/elt/subarray_2")
+        master = device_context.get_device("low-mccs/master/1")
+        subarray_1 = device_context.get_device("low-mccs/subarray/01")
+        subarray_2 = device_context.get_device("low-mccs/subarray/02")
 
         master.On()
 
@@ -82,9 +82,9 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low/elt/master")
-        subarray_1 = device_context.get_device("low/elt/subarray_1")
-        subarray_2 = device_context.get_device("low/elt/subarray_2")
+        master = device_context.get_device("low-mccs/master/1")
+        subarray_1 = device_context.get_device("low-mccs/subarray/01")
+        subarray_2 = device_context.get_device("low-mccs/subarray/02")
 
         master.On()
 
@@ -127,15 +127,15 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low/elt/master")
-        subarray_1 = device_context.get_device("low/elt/subarray_1")
-        subarray_2 = device_context.get_device("low/elt/subarray_2")
-        station_1 = device_context.get_device("low/elt/station_1")
-        station_2 = device_context.get_device("low/elt/station_2")
-        tile_1 = device_context.get_device("low/elt/tile_1")
-        tile_2 = device_context.get_device("low/elt/tile_2")
-        tile_3 = device_context.get_device("low/elt/tile_3")
-        tile_4 = device_context.get_device("low/elt/tile_4")
+        master = device_context.get_device("low-mccs/master/1")
+        subarray_1 = device_context.get_device("low-mccs/subarray/01")
+        subarray_2 = device_context.get_device("low-mccs/subarray/02")
+        station_1 = device_context.get_device("low-mccs/station/001")
+        station_2 = device_context.get_device("low-mccs/station/002")
+        tile_1 = device_context.get_device("low-mccs/tile/0001")
+        tile_2 = device_context.get_device("low-mccs/tile/0002")
+        tile_3 = device_context.get_device("low-mccs/tile/0003")
+        tile_4 = device_context.get_device("low-mccs/tile/0004")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
@@ -164,7 +164,7 @@ class TestMccsIntegration:
 
         # Can't allocate to an array that hasn't been enabled
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -184,12 +184,12 @@ class TestMccsIntegration:
 
         # allocate station_1 to subarray_1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.OK
 
         # check that station_1 and only station_1 is allocated
-        assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
+        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -201,12 +201,12 @@ class TestMccsIntegration:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=2, stations=["low/elt/station_1"]
+            master.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
         # check no side-effects
-        assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
+        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -221,14 +221,14 @@ class TestMccsIntegration:
         (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=1,
-            stations=["low/elt/station_1", "low/elt/station_2"],
+            stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
         assert result_code == ResultCode.OK
 
         # check
         assert list(subarray_1.stationFQDNs) == [
-            "low/elt/station_1",
-            "low/elt/station_2",
+            "low-mccs/station/001",
+            "low-mccs/station/002",
         ]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
@@ -257,15 +257,15 @@ class TestMccsIntegration:
         (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=2,
-            stations=["low/elt/station_1", "low/elt/station_2"],
+            stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
         assert result_code == ResultCode.OK
 
         # check
         assert subarray_1.stationFQDNs is None
         assert list(subarray_2.stationFQDNs) == [
-            "low/elt/station_1",
-            "low/elt/station_2",
+            "low-mccs/station/001",
+            "low-mccs/station/002",
         ]
         assert station_1.subarrayId == 2
         assert station_2.subarrayId == 2
@@ -295,15 +295,15 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low/elt/master")
-        subarray_1 = device_context.get_device("low/elt/subarray_1")
-        subarray_2 = device_context.get_device("low/elt/subarray_2")
-        station_1 = device_context.get_device("low/elt/station_1")
-        station_2 = device_context.get_device("low/elt/station_2")
-        tile_1 = device_context.get_device("low/elt/tile_1")
-        tile_2 = device_context.get_device("low/elt/tile_2")
-        tile_3 = device_context.get_device("low/elt/tile_3")
-        tile_4 = device_context.get_device("low/elt/tile_4")
+        master = device_context.get_device("low-mccs/master/1")
+        subarray_1 = device_context.get_device("low-mccs/subarray/01")
+        subarray_2 = device_context.get_device("low-mccs/subarray/02")
+        station_1 = device_context.get_device("low-mccs/station/001")
+        station_2 = device_context.get_device("low-mccs/station/002")
+        tile_1 = device_context.get_device("low-mccs/tile/0001")
+        tile_2 = device_context.get_device("low-mccs/tile/0002")
+        tile_3 = device_context.get_device("low-mccs/tile/0003")
+        tile_4 = device_context.get_device("low-mccs/tile/0004")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
@@ -325,14 +325,18 @@ class TestMccsIntegration:
         master.EnableSubarray(2)
 
         # allocate stations 1 to subarray 1
-        call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
+        call_with_json(
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+        )
 
         # allocate station 2 to subarray 2
-        call_with_json(master.Allocate, subarray_id=2, stations=["low/elt/station_2"])
+        call_with_json(
+            master.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
+        )
 
         # check initial state
-        assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
-        assert list(subarray_2.stationFQDNs) == ["low/elt/station_2"]
+        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
+        assert list(subarray_2.stationFQDNs) == ["low-mccs/station/002"]
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 2
         assert tile_1.subarrayId == 1
@@ -345,7 +349,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.OK
 
         # check
-        assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
+        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -359,7 +363,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
-        assert list(subarray_1.stationFQDNs) == ["low/elt/station_1"]
+        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -391,9 +395,9 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        station = device_context.get_device("low/elt/station_1")
-        tile_1 = device_context.get_device("low/elt/tile_1")
-        tile_2 = device_context.get_device("low/elt/tile_2")
+        station = device_context.get_device("low-mccs/station/001")
+        tile_1 = device_context.get_device("low-mccs/tile/0001")
+        tile_2 = device_context.get_device("low-mccs/tile/0002")
 
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a

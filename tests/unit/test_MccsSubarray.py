@@ -68,7 +68,7 @@ class TestMccsSubarray:
         """
         device_under_test.set_source(DevSource.DEV)
 
-        station_fqdn = "low/elt/station_1"
+        station_fqdn = "low-mccs/station/001"
         mock_station = tango.DeviceProxy(station_fqdn)
 
         device_under_test.On()

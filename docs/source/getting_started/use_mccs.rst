@@ -189,6 +189,6 @@ An interactice itango session can be run using `make itango`:
 
    hint: Try typing: mydev = Device("<tab>
 
-   In [1]: tile = DeviceProxy("low/elt/tile_6")
+   In [1]: tile = DeviceProxy("low-mccs/tile/0006")
 
    In [2]: tile.adminMode

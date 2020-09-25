@@ -47,5 +47,5 @@ Scenario: Master enables subarray
 #     When we tell master to allocate station 1 to subarray 1
 
 #     Then subarray 1's list of allocated stations should be
-#         | low/elt/station_1 |
+#         | low-mccs/station/001 |
 #     And station 1's subarray id should be 1

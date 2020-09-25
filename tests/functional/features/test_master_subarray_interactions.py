@@ -48,15 +48,15 @@ def devices(tango_context):
     :rtype: dict<string, DeviceProxy>
     """
     return {
-        "master": tango_context.get_device("low/elt/master"),
-        "subarray_01": tango_context.get_device("low/elt/subarray_1"),
-        "subarray_02": tango_context.get_device("low/elt/subarray_2"),
-        "station_001": tango_context.get_device("low/elt/station_1"),
-        "station_002": tango_context.get_device("low/elt/station_2"),
-        "tile_0001": tango_context.get_device("low/elt/tile_1"),
-        "tile_0002": tango_context.get_device("low/elt/tile_2"),
-        "tile_0003": tango_context.get_device("low/elt/tile_3"),
-        "tile_0004": tango_context.get_device("low/elt/tile_4"),
+        "master": tango_context.get_device("low-mccs/master/1"),
+        "subarray_01": tango_context.get_device("low-mccs/subarray/01"),
+        "subarray_02": tango_context.get_device("low-mccs/subarray/02"),
+        "station_001": tango_context.get_device("low-mccs/station/001"),
+        "station_002": tango_context.get_device("low-mccs/station/002"),
+        "tile_0001": tango_context.get_device("low-mccs/tile/0001"),
+        "tile_0002": tango_context.get_device("low-mccs/tile/0002"),
+        "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
+        "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
     }
 
 
@@ -171,7 +171,7 @@ def master_enables_subarray(devices, subarray_id):
 #     call_with_json(
 #         master.Allocate,
 #         subarray_id=subarray_id,
-#         stations=[f"low/elt/station_{station_id}"],
+#         stations=[f"low-mccs/station/{station_id:03}"],
 #     )
 
 
@@ -182,7 +182,7 @@ def master_enables_subarray(devices, subarray_id):
 #     )
 # )
 # def subarray_allocation_includes_station(subarrays, subarray_id, station_id):
-#     assert f"low/elt/station_{station_id}" in subarrays[subarray_id].stationFQDNs
+#     assert f"low-mccs/station/{station_id:03}" in subarrays[subarray_id].stationFQDNs
 
 
 # @then(

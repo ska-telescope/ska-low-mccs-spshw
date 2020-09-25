@@ -31,8 +31,8 @@ class TestMccsGroupDevice(object):
 
     def test_InitDevice(self, device_under_test):
         """
-           Test for Initial state.
-           """
+        Test for Initial state.
+        """
         assert device_under_test.State() == DevState.OFF
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE

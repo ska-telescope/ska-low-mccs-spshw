@@ -2640,7 +2640,7 @@ class MccsTile(SKABaseDevice):
     )
     @DebugIt()
     def StartAcquisition(self, argin):
-        """ Start data acquisition
+        """Start data acquisition
 
         :param argin: json dictionary with optional keywords:
 
@@ -2691,7 +2691,7 @@ class MccsTile(SKABaseDevice):
     )
     @DebugIt()
     def SetTimeDelays(self, argin):
-        """ Set coarse zenith delay for input ADC streams
+        """Set coarse zenith delay for input ADC streams
             Delay specified in nanoseconds, nominal is 0.
 
         :param argin: the delay in samples, positive delay adds delay
@@ -2739,7 +2739,7 @@ class MccsTile(SKABaseDevice):
     )
     @DebugIt()
     def SetCspRounding(self, argin):
-        """ Set output rounding for CSP
+        """Set output rounding for CSP
 
         :param rounding: the rounding
         :type rounding: DevDouble
@@ -2803,7 +2803,7 @@ class MccsTile(SKABaseDevice):
     )
     @DebugIt()
     def SetLmcIntegratedDownload(self, argin):
-        """ Configure link and size of control data
+        """Configure link and size of control data
 
         :param argin: json dictionary with optional keywords:
 
@@ -2864,7 +2864,7 @@ class MccsTile(SKABaseDevice):
         doc_out="(ResultCode, 'informational message')",
     )
     def SendRawDataSynchronised(self, argin):
-        """  Send synchronised raw data
+        """Send synchronised raw data
 
         :param argin: json dictionary with optional keywords:
 
@@ -3128,7 +3128,7 @@ class MccsTile(SKABaseDevice):
     )
     @DebugIt()
     def CalculateDelay(self, argin):
-        """ Calculate delay
+        """Calculate delay
 
         :param argin: json dictionary with 4 mandatory keywords:
 

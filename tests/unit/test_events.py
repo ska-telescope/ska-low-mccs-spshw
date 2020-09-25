@@ -142,7 +142,7 @@ class TestEventManager:
         if trigger == "unsubscribe":
             event_manager.unsubscribe()
         elif trigger == "delete":
-            del (event_manager)
+            del event_manager
 
         # check that the device received an unsubscribe_event call for
         # each event name

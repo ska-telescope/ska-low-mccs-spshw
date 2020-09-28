@@ -67,11 +67,12 @@ class MccsMasterCli(metaclass=CliMeta):
 
     Command-line tool to access the MCCS master tango device
 
-        :param fqdn: the FQDN of the master device, defaults to "low-mccs/master/1"
+        :param fqdn: the FQDN of the master device, defaults to
+            "low-mccs/control/control"
         :type fqdn: str, optional
     """
 
-    def __init__(self, fqdn="low-mccs/master/1"):
+    def __init__(self, fqdn="low-mccs/control/control"):
         self._dp = tango.DeviceProxy(fqdn)
         self._log_levels = [
             lvl for lvl in dir(self._dp.logginglevel.__class__) if lvl.isupper()

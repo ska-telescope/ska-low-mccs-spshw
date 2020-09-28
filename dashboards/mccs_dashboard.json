@@ -65,8 +65,8 @@
         "allValue": "",
         "current": {
           "selected": false,
-          "text": "low-mccs/master/1",
-          "value": "low-mccs/master/1"
+          "text": "low-mccs/control/control",
+          "value": "low-mccs/control/control"
         },
         "datasource": "Prometheus",
         "definition": "label_values(device_attribute, device)",

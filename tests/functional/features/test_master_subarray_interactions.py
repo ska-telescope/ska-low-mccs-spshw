@@ -48,7 +48,7 @@ def devices(tango_context):
     :rtype: dict<string, DeviceProxy>
     """
     return {
-        "master": tango_context.get_device("low-mccs/master/1"),
+        "master": tango_context.get_device("low-mccs/control/control"),
         "subarray_01": tango_context.get_device("low-mccs/subarray/01"),
         "subarray_02": tango_context.get_device("low-mccs/subarray/02"),
         "station_001": tango_context.get_device("low-mccs/station/001"),

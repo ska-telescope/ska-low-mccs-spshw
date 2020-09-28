@@ -45,7 +45,7 @@ class TestPowerManagement:
         """
         Test that a MccsMaster device can enable an MccsSubarray device.
         """
-        master = device_context.get_device("low-mccs/master/1")
+        master = device_context.get_device("low-mccs/control/control")
         station_1 = device_context.get_device("low-mccs/station/001")
         station_2 = device_context.get_device("low-mccs/station/002")
         tile_1 = device_context.get_device("low-mccs/tile/0001")

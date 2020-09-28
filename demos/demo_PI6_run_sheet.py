@@ -4,7 +4,7 @@ Basic order of proceedings for an iTango demo in Malte's k8s environment
 """
 
 # Test master enabling and disabling subarray
-master = DeviceProxy("low-mccs/master/1")
+master = DeviceProxy("low-mccs/control/control")
 subarray = DeviceProxy("low-mccs/subarray/01")
 station_1 = DeviceProxy("low-mccs/station/001")
 station_2 = DeviceProxy("low-mccs/station/002")

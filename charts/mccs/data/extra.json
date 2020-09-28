@@ -1,54 +1,54 @@
 {
     "servers": {
         "MccsAPIU": {
-            "apiu1": {
+            "apiu": {
                 "MccsAPIU": {
-                    "low/elt/apiu_1": {
+                    "low-mccs/apiu/1": {
                         "properties": {}
                     }
                 }
             }
         },
         "MccsClusterManager": {
-            "clustermanager1": {
+            "clustermanager": {
                 "MccsClusterManager": {
-                    "low/elt/clustermanager_1": {
+                    "low-mccs/clustermanager/1": {
                         "properties": {}
                     }
                 }
             }
         },
         "MccsDevice": {
-            "device1": {
+            "device": {
                 "MccsDevice": {
-                    "low/elt/device": {
+                    "low-mccs/device/1": {
                         "properties": {}
                     }
                 }
             }
         },
         "MccsGroupDevice": {
-            "groupdevice1": {
+            "groupdevice": {
                 "MccsGroupDevice": {
-                    "low/elt/groupdevice_1": {
+                    "low-mccs/groupdevice/1": {
                         "properties": {}
                     }
                 }
             }
         },
         "MccsTelState": {
-            "telstate1": {
+            "telstate": {
                 "MccsTelState": {
-                    "low/elt/telstate_1": {
+                    "low-mccs/telstate/1": {
                         "properties": {}
                     }
                 }
             }
         },
         "MccsTransientBuffer": {
-            "transientbuffer1": {
+            "transientbuffer": {
                 "MccsTransientBuffer": {
-                    "low/elt/transientbuffer_1": {
+                    "low-mccs/transientbuffer/1": {
                         "properties": {}
                     }
                 }

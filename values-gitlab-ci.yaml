@@ -1,13 +1,13 @@
 # static overrides for gitlab ci job
 deviceServers:
   subarrays:
-    instances: [1, 2]
+    instances: ["01", "02"]
   stations:
-    instances: [1, 2]
+    instances: ["001", "002"]
   tiles:
-    instances: [1, 2, 3, 4]
+    instances: ["0001", "0002", "0003", "0004"]
   antennas:
-    instances: [1, 2, 3, 4]
+    instances: ["000001", "000002", "000003", "000004"]
   
 minikube: false
 

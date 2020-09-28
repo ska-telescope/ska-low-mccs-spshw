@@ -102,8 +102,8 @@ class TestMccsMaster:
         Test that master can enable a subarray
         """
         master = device_under_test  # to make test clearer to read
-        mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
-        mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
+        mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
+        mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
 
         master.On()
 
@@ -142,8 +142,8 @@ class TestMccsMaster:
         Test that master can disable a subarray
         """
         master = device_under_test  # to make test clearer to read
-        mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
-        mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
+        mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
+        mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
 
         master.On()
 
@@ -182,10 +182,10 @@ class TestMccsMaster:
         Test the Allocate command.
         """
         master = device_under_test  # for readability
-        mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
-        mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
-        mock_station_1 = tango.DeviceProxy("low/elt/station_1")
-        mock_station_2 = tango.DeviceProxy("low/elt/station_2")
+        mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
+        mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
+        mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
+        mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
         # Subarrays and stations are mock devices so we have to manually
         # set any relevant initial state
@@ -196,7 +196,7 @@ class TestMccsMaster:
 
         # Can't allocate to an array that hasn't been enabled
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -221,14 +221,14 @@ class TestMccsMaster:
 
         # allocate station_1 to subarray_1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_1"]
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.OK
 
         # check that the mock subarray_1 was told to assign that resource
         mock_subarray_1.ReleaseResources.assert_not_called()
         mock_subarray_1.AssignResources.assert_called_once_with(
-            json.dumps({"stations": ["low/elt/station_1"]})
+            json.dumps({"stations": ["low-mccs/station/001"]})
         )
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_not_called()
@@ -241,7 +241,7 @@ class TestMccsMaster:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=2, stations=["low/elt/station_1"]
+            master.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -263,14 +263,14 @@ class TestMccsMaster:
         (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=1,
-            stations=["low/elt/station_1", "low/elt/station_2"],
+            stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
         assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseResources.assert_not_called()
         mock_subarray_1.AssignResources.assert_called_once_with(
-            json.dumps({"stations": ["low/elt/station_2"]})
+            json.dumps({"stations": ["low-mccs/station/002"]})
         )
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_not_called()
@@ -287,13 +287,13 @@ class TestMccsMaster:
         # allocating station 2 to subarray 1 should succeed, because the
         # it only requires resource release
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low/elt/station_2"]
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/002"]
         )
         assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseResources.assert_called_once_with(
-            json.dumps({"stations": ["low/elt/station_1"]})
+            json.dumps({"stations": ["low-mccs/station/001"]})
         )
         mock_subarray_1.AssignResources.assert_not_called()
         mock_subarray_2.ReleaseResources.assert_not_called()
@@ -326,7 +326,7 @@ class TestMccsMaster:
         (result_code, message) = call_with_json(
             master.Allocate,
             subarray_id=2,
-            stations=["low/elt/station_1", "low/elt/station_2"],
+            stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
         assert result_code == ResultCode.OK
 
@@ -335,7 +335,7 @@ class TestMccsMaster:
         mock_subarray_1.AssignResources.assert_not_called()
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_called_once_with(
-            json.dumps({"stations": ["low/elt/station_1", "low/elt/station_2"]})
+            json.dumps({"stations": ["low-mccs/station/001", "low-mccs/station/002"]})
         )
         assert mock_station_1.subarrayId == 2
         assert mock_station_2.subarrayId == 2
@@ -345,10 +345,10 @@ class TestMccsMaster:
         Test Release command.
         """
         master = device_under_test  # for readability
-        mock_subarray_1 = tango.DeviceProxy("low/elt/subarray_1")
-        mock_subarray_2 = tango.DeviceProxy("low/elt/subarray_2")
-        mock_station_1 = tango.DeviceProxy("low/elt/station_1")
-        mock_station_2 = tango.DeviceProxy("low/elt/station_2")
+        mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
+        mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
+        mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
+        mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
         master.On()
 
@@ -362,13 +362,17 @@ class TestMccsMaster:
         mock_subarray_1.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
-        call_with_json(master.Allocate, subarray_id=1, stations=["low/elt/station_1"])
+        call_with_json(
+            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+        )
 
         # allocate station 2 to subarray 2
         mock_subarray_2.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
-        call_with_json(master.Allocate, subarray_id=2, stations=["low/elt/station_2"])
+        call_with_json(
+            master.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
+        )
 
         # check initial state
         assert mock_station_1.subarrayId == 1

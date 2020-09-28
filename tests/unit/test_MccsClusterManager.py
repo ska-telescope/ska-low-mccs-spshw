@@ -17,7 +17,7 @@ from tango import DevState
 device_to_load = {
     "path": "charts/mccs/data/extra.json",
     "package": "ska.low.mccs",
-    "device": "clustermanager1",
+    "device": "clustermanager",
 }
 
 

@@ -3,21 +3,21 @@
         "MccsMaster": {
             "master": {
                 "MccsMaster": {
-                    "low/elt/master": {
+                    "low-mccs/master/1": {
                         "properties": {
                             "MccsSubarrays": [
-                                "low/elt/subarray_1",
-                                "low/elt/subarray_2"
+                                "low-mccs/subarray/01",
+                                "low-mccs/subarray/02"
                             ],
                             "MccsStations": [
-                                "low/elt/station_1",
-                                "low/elt/station_2"
+                                "low-mccs/station/001",
+                                "low-mccs/station/002"
                             ],
                             "MccsTiles": [
-                                "low/elt/tile_1",
-                                "low/elt/tile_2",
-                                "low/elt/tile_3",
-                                "low/elt/tile_4"
+                                "low-mccs/tile/0001",
+                                "low-mccs/tile/0002",
+                                "low-mccs/tile/0003",
+                                "low-mccs/tile/0004"
                             ]
                         }
                     }
@@ -25,9 +25,9 @@
             }
         },
         "MccsSubarray": {
-            "subarray1": {
+            "subarray_01": {
                 "MccsSubarray": {
-                    "low/elt/subarray_1": {
+                    "low-mccs/subarray/01": {
                         "properties": {
                             "CapabilityTypes": [
                                 "BAND1",
@@ -37,9 +37,9 @@
                     }
                 }
             },
-            "subarray2": {
+            "subarray_02": {
                 "MccsSubarray": {
-                    "low/elt/subarray_2": {
+                    "low-mccs/subarray/02": {
                         "properties": {
                             "CapabilityTypes": [
                                 "BAND1",
@@ -51,20 +51,20 @@
             }
         },
         "MccsStation": {
-            "station1": {
+            "station_001": {
                 "MccsStation": {
-                    "low/elt/station_1": {
+                    "low-mccs/station/001": {
                         "properties": {
                             "StationId": [
                                 "1"
                             ],
                             "TileFQDNs": [
-                                "low/elt/tile_1",
-                                "low/elt/tile_2"
+                                "low-mccs/tile/0001",
+                                "low-mccs/tile/0002"
                             ],
                             "AntennaFQDNs": [
-                                "low/elt/antenna_1",
-                                "low/elt/antenna_2"
+                                "low-mccs/antenna/000001",
+                                "low-mccs/antenna/000002"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -73,20 +73,20 @@
                     }
                 }
             },
-            "station2": {
+            "station_002": {
                 "MccsStation": {
-                    "low/elt/station_2": {
+                    "low-mccs/station/002": {
                         "properties": {
                             "StationId": [
                                 "2"
                             ],
                             "TileFQDNs": [
-                                "low/elt/tile_3",
-                                "low/elt/tile_4"
+                                "low-mccs/tile/0003",
+                                "low-mccs/tile/0004"
                             ],
                             "AntennaFQDNs": [
-                                "low/elt/antenna_3",
-                                "low/elt/antenna_4"
+                                "low-mccs/antenna/000003",
+                                "low-mccs/antenna/000004"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -97,9 +97,9 @@
             }
         },
         "MccsStationBeam": {
-            "beam1": {
+            "beam_01": {
                 "MccsStationBeam": {
-                    "low/elt/beam_1": {
+                    "low-mccs/beam/01": {
                         "properties": {
                             "BeamId": [
                                 "1"
@@ -108,9 +108,9 @@
                     }
                 }
             },
-            "beam2": {
+            "beam_02": {
                 "MccsStationBeam": {
-                    "low/elt/beam_2": {
+                    "low-mccs/beam/02": {
                         "properties": {
                             "BeamId": [
                                 "2"
@@ -119,9 +119,9 @@
                     }
                 }
             },
-            "beam3": {
+            "beam_03": {
                 "MccsStationBeam": {
-                    "low/elt/beam_3": {
+                    "low-mccs/beam/03": {
                         "properties": {
                             "BeamId": [
                                 "3"
@@ -130,9 +130,9 @@
                     }
                 }
             },
-            "beam4": {
+            "beam_04": {
                 "MccsStationBeam": {
-                    "low/elt/beam_4": {
+                    "low-mccs/beam/04": {
                         "properties": {
                             "BeamId": [
                                 "4"
@@ -143,9 +143,9 @@
             }
         },
         "MccsTile": {
-            "tile1": {
+            "tile_0001": {
                 "MccsTile": {
-                    "low/elt/tile_1": {
+                    "low-mccs/tile/0001": {
                         "properties": {
                             "TileId": [
                                 "1"
@@ -157,9 +157,9 @@
                     }
                 }
             },
-            "tile2": {
+            "tile_0002": {
                 "MccsTile": {
-                    "low/elt/tile_2": {
+                    "low-mccs/tile/0002": {
                         "properties": {
                             "TileId": [
                                 "2"
@@ -171,9 +171,9 @@
                     }
                 }
             },
-            "tile3": {
+            "tile_0003": {
                 "MccsTile": {
-                    "low/elt/tile_3": {
+                    "low-mccs/tile/0003": {
                         "properties": {
                             "TileId": [
                                 "3"
@@ -185,9 +185,9 @@
                     }
                 }
             },
-            "tile4": {
+            "tile_0004": {
                 "MccsTile": {
-                    "low/elt/tile_4": {
+                    "low-mccs/tile/0004": {
                         "properties": {
                             "TileId": [
                                 "4"
@@ -201,30 +201,30 @@
             }
         },
         "MccsAntenna": {
-            "antenna1": {
+            "antenna_000001": {
                 "MccsAntenna": {
-                    "low/elt/antenna_1": {
+                    "low-mccs/antenna/000001": {
                         "properties": {}
                     }
                 }
             },
-            "antenna2": {
+            "antenna_000002": {
                 "MccsAntenna": {
-                    "low/elt/antenna_2": {
+                    "low-mccs/antenna/000002": {
                         "properties": {}
                     }
                 }
             },
-            "antenna3": {
+            "antenna_000003": {
                 "MccsAntenna": {
-                    "low/elt/antenna_3": {
+                    "low-mccs/antenna/000003": {
                         "properties": {}
                     }
                 }
             },
-            "antenna4": {
+            "antenna_000004": {
                 "MccsAntenna": {
-                    "low/elt/antenna_4": {
+                    "low-mccs/antenna/000004": {
                         "properties": {}
                     }
                 }
@@ -233,7 +233,7 @@
         "MccsTpmDeviceSimulator": {
             "tpmsimulator": {
                 "MccsTpmDeviceSimulator": {
-                    "low/elt/tpmsimulator": {
+                    "low-mccs/tpmsimulator/1": {
                         "properties": {}
                     }
                 }

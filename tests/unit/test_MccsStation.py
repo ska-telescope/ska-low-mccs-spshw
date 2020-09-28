@@ -26,7 +26,7 @@ from ska.low.mccs.station import StationHardwareManager, StationPowerManager
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "station1",
+    "device": "station_001",
 }
 
 
@@ -81,8 +81,8 @@ class TestMccsStation:
         Test for subarrayId attribute
         """
         station = device_under_test  # to make test easier to read
-        mock_tile_1 = tango.DeviceProxy("low/elt/tile_1")
-        mock_tile_2 = tango.DeviceProxy("low/elt/tile_2")
+        mock_tile_1 = tango.DeviceProxy("low-mccs/tile/0001")
+        mock_tile_2 = tango.DeviceProxy("low-mccs/tile/0002")
 
         # These tiles are mock devices so we have to manually set their
         # initial states

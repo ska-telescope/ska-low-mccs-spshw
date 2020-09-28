@@ -59,7 +59,7 @@ def commandResultAsString(method):
 class MccsTileCli(metaclass=CliMeta):
     def __init__(self):
         self.tile_number = 1
-        self._dp = tango.DeviceProxy(f"low/elt/tile_{self.tile_number}")
+        self._dp = tango.DeviceProxy(f"low-mccs/tile/{self.tile_number:04}")
 
     @commandResultAsString
     def connect(self):

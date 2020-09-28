@@ -2,41 +2,42 @@ Feature: Master-subarray interactions
 
 Background:
     Given we have master
-    And we have subarray 1
-    And we have subarray 2
-    And we have station 1
-    And we have station 2
-    And we have tile 1
-    And we have tile 2
-    And we have tile 3
-    And we have tile 4
+    And we have subarray_01
+    And we have subarray_02
+    And we have station_001
+    And we have station_002
+    And we have tile_0001
+    And we have tile_0002
+    And we have tile_0003
+    And we have tile_0004
 
 Scenario: Master is turned on
     Given master is off
-    And station 1 is off
-    And station 2 is off
-    And tile 1 is off
-    And tile 2 is off
-    And tile 3 is off
-    And tile 4 is off
+    And station_001 is off
+    And station_002 is off
+    And tile_0001 is off
+    And tile_0002 is off
+    And tile_0003 is off
+    And tile_0004 is off
 
     When we turn master on
 
     Then master should be on
-    And station 2 should be on
-    And tile 1 should be on
-    And tile 2 should be on
-    And tile 3 should be on
-    And tile 4 should be on
+    And station_001 should be on
+    And station_002 should be on
+    And tile_0001 should be on
+    And tile_0002 should be on
+    And tile_0003 should be on
+    And tile_0004 should be on
 
 Scenario: Master enables subarray
     Given master is on
-    And subarray 1 is off
-    And subarray 2 is off
+    And subarray_01 is off
+    And subarray_02 is off
 
     When we tell master to enable subarray 1
-    Then subarray 1 should be on
-    And subarray 2 should be off
+    Then subarray_01 should be on
+    And subarray_02 should be off
 
 
 # Scenario: Master allocates stations to subarrays
@@ -46,5 +47,5 @@ Scenario: Master enables subarray
 #     When we tell master to allocate station 1 to subarray 1
 
 #     Then subarray 1's list of allocated stations should be
-#         | low/elt/station_1 |
+#         | low-mccs/station/001 |
 #     And station 1's subarray id should be 1

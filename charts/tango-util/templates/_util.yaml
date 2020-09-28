@@ -50,7 +50,7 @@ Create chart name and version as used by the chart label.
 Generate name for TANGO device server
 */ -}}
 {{- define "tango-util.deviceName" -}}
-{{- printf "%s-%s-%s" (include "tango-util.name" .global) (include "tango-util.deviceInstance" .) .global.Release.Name -}}
+{{- printf "%s-%s-%s" (include "tango-util.name" .global) (include "tango-util.deviceInstance" .) .global.Release.Name  | replace "_" "-" -}}
 {{- end -}}
 
 {{- /*
@@ -65,6 +65,6 @@ values of lists of ints seem to be float?!
 {{- if eq $instance "0" -}}
 {{- .device.name -}}
 {{- else -}}
-{{- printf "%s%s" .device.name $instance -}}
+{{- printf "%s_%s" .device.name $instance -}}
 {{- end -}}
 {{- end -}}

@@ -17,7 +17,7 @@ from tango import AttrQuality
 from ska.base.control_model import HealthState
 from ska.low.mccs.health import HealthMonitor, LocalHealthMonitor, HealthRollupPolicy
 
-fqdns = ["low/elt/station_1", "low/elt/station_2"]
+fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
 attrs = ["voltage", "current"]
 
 
@@ -33,11 +33,11 @@ class TestHealthMonitor:
         hm = HealthMonitor(fqdns, None)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {
+            "low-mccs/station/001": {
                 "State": DevState.UNKNOWN,
                 "healthstate": HealthState.OK,
             },
-            "low/elt/station_2": {
+            "low-mccs/station/002": {
                 "State": DevState.UNKNOWN,
                 "healthstate": HealthState.OK,
             },
@@ -56,37 +56,37 @@ class TestHealthMonitor:
         hm.update_health_table(fqdns[0], "healthstate", request, AttrQuality.ATTR_VALID)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {
+            "low-mccs/station/001": {
                 "State": DevState.UNKNOWN,
                 "healthstate": HealthState.OK,
             },
-            "low/elt/station_2": {
+            "low-mccs/station/002": {
                 "State": DevState.UNKNOWN,
                 "healthstate": HealthState.OK,
             },
         }
 
         hm.update_health_table(
-            "low/elt/station_2", "healthstate", request, AttrQuality.ATTR_VALID
+            "low-mccs/station/002", "healthstate", request, AttrQuality.ATTR_VALID
         )
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {"State": DevState.UNKNOWN, "healthstate": request},
-            "low/elt/station_2": {"State": DevState.UNKNOWN, "healthstate": request},
+            "low-mccs/station/001": {"State": DevState.UNKNOWN, "healthstate": request},
+            "low-mccs/station/002": {"State": DevState.UNKNOWN, "healthstate": request},
         }
 
     def test_health_with_rollup(self):
         rollup_policy = HealthRollupPolicy(None)
         hm = HealthMonitor(fqdns, rollup_policy.rollup_health)
         ret = hm.update_health_table(
-            "low/elt/station_1",
+            "low-mccs/station/001",
             "healthstate",
             HealthState.DEGRADED,
             AttrQuality.ATTR_VALID,
         )
         assert ret == HealthState.DEGRADED
         ret = hm.update_health_table(
-            "low/elt/station_2",
+            "low-mccs/station/002",
             "healthstate",
             HealthState.FAILED,
             AttrQuality.ATTR_VALID,
@@ -116,8 +116,8 @@ class TestHealthMonitor:
         hm.update_health_table(fqdns[0], "State", request, AttrQuality.ATTR_VALID)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {"State": request, "healthstate": HealthState.OK},
-            "low/elt/station_2": {
+            "low-mccs/station/001": {"State": request, "healthstate": HealthState.OK},
+            "low-mccs/station/002": {
                 "State": DevState.UNKNOWN,
                 "healthstate": HealthState.OK,
             },
@@ -126,19 +126,19 @@ class TestHealthMonitor:
         hm.update_health_table(fqdns[1], "State", request, AttrQuality.ATTR_VALID)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {"State": request, "healthstate": HealthState.OK},
-            "low/elt/station_2": {"State": request, "healthstate": HealthState.OK},
+            "low-mccs/station/001": {"State": request, "healthstate": HealthState.OK},
+            "low-mccs/station/002": {"State": request, "healthstate": HealthState.OK},
         }
 
     def test_state_with_rollup(self):
         rollup_policy = HealthRollupPolicy(None)
         hm = HealthMonitor(fqdns, rollup_policy.rollup_health)
         ret = hm.update_health_table(
-            "low/elt/station_1", "State", DevState.ALARM, AttrQuality.ATTR_VALID
+            "low-mccs/station/001", "State", DevState.ALARM, AttrQuality.ATTR_VALID
         )
         assert ret == HealthState.FAILED
         ret = hm.update_health_table(
-            "low/elt/station_2", "State", DevState.FAULT, AttrQuality.ATTR_VALID
+            "low-mccs/station/002", "State", DevState.FAULT, AttrQuality.ATTR_VALID
         )
         assert ret == HealthState.FAILED
 
@@ -146,8 +146,14 @@ class TestHealthMonitor:
         hm = LocalHealthMonitor(fqdns, None, event_names=attrs)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {"voltage": HealthState.OK, "current": HealthState.OK},
-            "low/elt/station_2": {"voltage": HealthState.OK, "current": HealthState.OK},
+            "low-mccs/station/001": {
+                "voltage": HealthState.OK,
+                "current": HealthState.OK,
+            },
+            "low-mccs/station/002": {
+                "voltage": HealthState.OK,
+                "current": HealthState.OK,
+            },
         }
 
     @pytest.fixture(
@@ -165,21 +171,24 @@ class TestHealthMonitor:
         dct = hm.get_healthstate_table()
         expected_health = hm.quality_to_healthstate(request)
         assert dct == {
-            "low/elt/station_1": {
+            "low-mccs/station/001": {
                 "voltage": expected_health,
                 "current": HealthState.OK,
             },
-            "low/elt/station_2": {"voltage": HealthState.OK, "current": HealthState.OK},
+            "low-mccs/station/002": {
+                "voltage": HealthState.OK,
+                "current": HealthState.OK,
+            },
         }
 
         hm.update_health_table(fqdns[1], "voltage", 12.0, request)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {
+            "low-mccs/station/001": {
                 "voltage": expected_health,
                 "current": HealthState.OK,
             },
-            "low/elt/station_2": {
+            "low-mccs/station/002": {
                 "voltage": expected_health,
                 "current": HealthState.OK,
             },
@@ -188,11 +197,11 @@ class TestHealthMonitor:
         hm.update_health_table(fqdns[0], "current", 2.0, request)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {
+            "low-mccs/station/001": {
                 "voltage": expected_health,
                 "current": expected_health,
             },
-            "low/elt/station_2": {
+            "low-mccs/station/002": {
                 "voltage": expected_health,
                 "current": HealthState.OK,
             },
@@ -201,11 +210,11 @@ class TestHealthMonitor:
         hm.update_health_table(fqdns[1], "current", 2.0, request)
         dct = hm.get_healthstate_table()
         assert dct == {
-            "low/elt/station_1": {
+            "low-mccs/station/001": {
                 "voltage": expected_health,
                 "current": expected_health,
             },
-            "low/elt/station_2": {
+            "low-mccs/station/002": {
                 "voltage": expected_health,
                 "current": expected_health,
             },

@@ -3,7 +3,7 @@
         "MccsAPIU": {
             "apiu": {
                 "MccsAPIU": {
-                    "low-mccs/apiu/1": {
+                    "low-mccs/apiu/apiu": {
                         "properties": {}
                     }
                 }
@@ -12,7 +12,7 @@
         "MccsClusterManager": {
             "clustermanager": {
                 "MccsClusterManager": {
-                    "low-mccs/clustermanager/1": {
+                    "low-mccs/clustermanager/clustermanager": {
                         "properties": {}
                     }
                 }
@@ -21,7 +21,7 @@
         "MccsDevice": {
             "device": {
                 "MccsDevice": {
-                    "low-mccs/device/1": {
+                    "low-mccs/device/device": {
                         "properties": {}
                     }
                 }
@@ -30,7 +30,7 @@
         "MccsGroupDevice": {
             "groupdevice": {
                 "MccsGroupDevice": {
-                    "low-mccs/groupdevice/1": {
+                    "low-mccs/groupdevice/groupdevice": {
                         "properties": {}
                     }
                 }
@@ -39,7 +39,7 @@
         "MccsTelState": {
             "telstate": {
                 "MccsTelState": {
-                    "low-mccs/telstate/1": {
+                    "low-mccs/telstate/telstate": {
                         "properties": {}
                     }
                 }
@@ -48,7 +48,7 @@
         "MccsTransientBuffer": {
             "transientbuffer": {
                 "MccsTransientBuffer": {
-                    "low-mccs/transientbuffer/1": {
+                    "low-mccs/transientbuffer/transientbuffer": {
                         "properties": {}
                     }
                 }

@@ -3,7 +3,7 @@
         "MccsMaster": {
             "master": {
                 "MccsMaster": {
-                    "low-mccs/master/1": {
+                    "low-mccs/control/control": {
                         "properties": {
                             "MccsSubarrays": [
                                 "low-mccs/subarray/01",
@@ -233,7 +233,7 @@
         "MccsTpmDeviceSimulator": {
             "tpmsimulator": {
                 "MccsTpmDeviceSimulator": {
-                    "low-mccs/tpmsimulator/1": {
+                    "low-mccs/tpmsimulator/tpmsimulator": {
                         "properties": {}
                     }
                 }

@@ -41,7 +41,7 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/master/1")
+        master = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
 
@@ -82,7 +82,7 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/master/1")
+        master = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
 
@@ -127,7 +127,7 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/master/1")
+        master = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
         station_1 = device_context.get_device("low-mccs/station/001")
@@ -295,7 +295,7 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/master/1")
+        master = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
         station_1 = device_context.get_device("low-mccs/station/001")

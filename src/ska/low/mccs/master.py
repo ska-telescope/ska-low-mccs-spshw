@@ -673,7 +673,7 @@ class MccsMaster(SKAMaster):
 
         :example:
 
-        >>> proxy = tango.DeviceProxy("low-mccs/master/1")
+        >>> proxy = tango.DeviceProxy("low-mccs/control/control")
         >>> proxy.EnableSubarray(1)
         >>> proxy.Allocate(
                 json.dumps(

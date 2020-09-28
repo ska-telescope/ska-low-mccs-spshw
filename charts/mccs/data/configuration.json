@@ -25,7 +25,7 @@
             }
         },
         "MccsSubarray": {
-            "subarray01": {
+            "subarray_01": {
                 "MccsSubarray": {
                     "low-mccs/subarray/01": {
                         "properties": {
@@ -37,7 +37,7 @@
                     }
                 }
             },
-            "subarray02": {
+            "subarray_02": {
                 "MccsSubarray": {
                     "low-mccs/subarray/02": {
                         "properties": {
@@ -51,7 +51,7 @@
             }
         },
         "MccsStation": {
-            "station001": {
+            "station_001": {
                 "MccsStation": {
                     "low-mccs/station/001": {
                         "properties": {
@@ -73,7 +73,7 @@
                     }
                 }
             },
-            "station002": {
+            "station_002": {
                 "MccsStation": {
                     "low-mccs/station/002": {
                         "properties": {
@@ -97,7 +97,7 @@
             }
         },
         "MccsStationBeam": {
-            "beam01": {
+            "beam_01": {
                 "MccsStationBeam": {
                     "low-mccs/beam/01": {
                         "properties": {
@@ -108,7 +108,7 @@
                     }
                 }
             },
-            "beam02": {
+            "beam_02": {
                 "MccsStationBeam": {
                     "low-mccs/beam/02": {
                         "properties": {
@@ -119,7 +119,7 @@
                     }
                 }
             },
-            "beam03": {
+            "beam_03": {
                 "MccsStationBeam": {
                     "low-mccs/beam/03": {
                         "properties": {
@@ -130,7 +130,7 @@
                     }
                 }
             },
-            "beam04": {
+            "beam_04": {
                 "MccsStationBeam": {
                     "low-mccs/beam/04": {
                         "properties": {
@@ -143,7 +143,7 @@
             }
         },
         "MccsTile": {
-            "tile0001": {
+            "tile_0001": {
                 "MccsTile": {
                     "low-mccs/tile/0001": {
                         "properties": {
@@ -157,7 +157,7 @@
                     }
                 }
             },
-            "tile0002": {
+            "tile_0002": {
                 "MccsTile": {
                     "low-mccs/tile/0002": {
                         "properties": {
@@ -171,7 +171,7 @@
                     }
                 }
             },
-            "tile0003": {
+            "tile_0003": {
                 "MccsTile": {
                     "low-mccs/tile/0003": {
                         "properties": {
@@ -185,7 +185,7 @@
                     }
                 }
             },
-            "tile0004": {
+            "tile_0004": {
                 "MccsTile": {
                     "low-mccs/tile/0004": {
                         "properties": {
@@ -201,28 +201,28 @@
             }
         },
         "MccsAntenna": {
-            "antenna000001": {
+            "antenna_000001": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000001": {
                         "properties": {}
                     }
                 }
             },
-            "antenna000002": {
+            "antenna_000002": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000002": {
                         "properties": {}
                     }
                 }
             },
-            "antenna000003": {
+            "antenna_000003": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000003": {
                         "properties": {}
                     }
                 }
             },
-            "antenna000004": {
+            "antenna_000004": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000004": {
                         "properties": {}

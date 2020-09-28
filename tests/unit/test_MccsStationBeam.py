@@ -20,7 +20,7 @@ from ska.low.mccs import release
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "beam01",
+    "device": "beam_01",
 }
 
 

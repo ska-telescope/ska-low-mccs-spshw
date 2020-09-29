@@ -1,8 +1,8 @@
 {
     "servers": {
-        "MccsMaster": {
-            "master": {
-                "MccsMaster": {
+        "MccsController": {
+            "controller": {
+                "MccsController": {
                     "low-mccs/control/control": {
                         "properties": {
                             "MccsSubarrays": [

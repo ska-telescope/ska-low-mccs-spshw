@@ -35,12 +35,12 @@ cli:
   enabled: true
 
 deviceServers:
-  master:
-    name: master
-    #override as master only has a single instance
+  controller:
+    name: controller
+    #override as controller only has a single instance
     args:
       - -c
-      - "MccsMaster master"
+      - "MccsController controller"
     instances: ["0"]
   subarrays:
     name: subarray

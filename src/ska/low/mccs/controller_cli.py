@@ -3,15 +3,15 @@
 # This file is part of the Mccs project.
 #
 # Used to drive the Command Line Interface for the
-# MCCS Master Device Server.
+# MCCS Controller Device Server.
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
 """
-The command line interface for the MCCS Master device server. Functionality
+The command line interface for the MCCS Controller device server. Functionality
 to handle passing variables to be added as functionality is added to the
-Master DS.
+Controller DS.
 """
 import types
 import functools
@@ -62,12 +62,12 @@ def format_wrapper(method):
     return wrapper
 
 
-class MccsMasterCli(metaclass=CliMeta):
+class MccsControllerCli(metaclass=CliMeta):
     """test
 
-    Command-line tool to access the MCCS master tango device
+    Command-line tool to access the MCCS controller tango device
 
-        :param fqdn: the FQDN of the master device, defaults to
+        :param fqdn: the FQDN of the controller device, defaults to
             "low-mccs/control/control"
         :type fqdn: str, optional
     """
@@ -202,7 +202,7 @@ class MccsMasterCli(metaclass=CliMeta):
 
 
 def main():
-    fire.Fire(MccsMasterCli)
+    fire.Fire(MccsControllerCli)
 
 
 if __name__ == "__main__":

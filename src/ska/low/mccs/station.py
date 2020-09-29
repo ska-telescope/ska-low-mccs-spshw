@@ -72,7 +72,7 @@ class StationPowerManager(PowerManager):
         :param station_hardware_manager: an object that manages this
             station's hardware
         :type station_hardware_manager: object
-        :param tile_fqdns: the FQDNs of the tiles that this master
+        :param tile_fqdns: the FQDNs of the tiles that this controller
             device manages
         :type tile_fqdns: list of string
         """

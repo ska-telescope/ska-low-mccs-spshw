@@ -11,7 +11,7 @@ devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "devices": [
-        "master",
+        "controller",
         "subarray_01",
         "subarray_02",
         "station_001",
@@ -48,7 +48,7 @@ def devices(tango_context):
     :rtype: dict<string, DeviceProxy>
     """
     return {
-        "master": tango_context.get_device("low-mccs/control/control"),
+        "controller": tango_context.get_device("low-mccs/control/control"),
         "subarray_01": tango_context.get_device("low-mccs/subarray/01"),
         "subarray_02": tango_context.get_device("low-mccs/subarray/02"),
         "station_001": tango_context.get_device("low-mccs/station/001"),
@@ -73,8 +73,8 @@ def we_have_device(devices, device_name):
     assert device_name in devices
 
 
-@scenario("master_subarray_interactions.feature", "Master is turned on")
-def test_master_is_turned_on():
+@scenario("controller_subarray_interactions.feature", "Controller is turned on")
+def test_controller_is_turned_on():
     """
     This is run at the end of the scenario. It does nothing at present.
     """
@@ -119,7 +119,7 @@ def we_turn_device_onoff(devices, device_name, device_state):
 @then(parsers.parse("{device_name} should be {device_state}"))
 def device_should_be_onoff(devices, device_name, device_state):
     """
-    Asserts that the master device is on
+    Asserts that the controller device is on
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, DeviceProxy>
@@ -133,29 +133,30 @@ def device_should_be_onoff(devices, device_name, device_state):
     assert devices[device_name].state() in state_map[device_state]
 
 
-@scenario("master_subarray_interactions.feature", "Master enables subarray")
-def test_master_enables_subarray():
+@scenario("controller_subarray_interactions.feature", "Controller enables subarray")
+def test_controller_enables_subarray():
     """
     This is run at the end of the scenario. It does nothing at present.
     """
     pass
 
 
-@when(parsers.parse("we tell master to enable subarray {subarray_id:d}"))
-def master_enables_subarray(devices, subarray_id):
+@when(parsers.parse("we tell controller to enable subarray {subarray_id:d}"))
+def controller_enables_subarray(devices, subarray_id):
     """
-    Tells master to enable the nth subarray
+    Tells controller to enable the nth subarray
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, DeviceProxy>
-    :param subarray_id: master's id number for the subarray to be enabled
+    :param subarray_id: controller's id number for the subarray to be enabled
     :type subarray_id: int
     """
-    devices["master"].EnableSubarray(subarray_id)
+    devices["controller"].EnableSubarray(subarray_id)
 
 
 # @scenario(
-#     "master_subarray_interactions.feature", "Master allocates stations to subarrays"
+#     "controller_subarray_interactions.feature",
+#     "Controller allocates stations to subarrays"
 # )
 # def test_subarray_allocation():
 #     pass
@@ -163,13 +164,13 @@ def master_enables_subarray(devices, subarray_id):
 
 # @when(
 #     parsers.parse(
-#         "we tell master to allocate station {station_id:d} to subarray "
+#         "we tell controller to allocate station {station_id:d} to subarray "
 #         "{subarray_id:d}"
 #     )
 # )
-# def master_allocates_station_to_subarray(master, subarray_id, station_id):
+# def controller_allocates_station_to_subarray(controller, subarray_id, station_id):
 #     call_with_json(
-#         master.Allocate,
+#         controller.Allocate,
 #         subarray_id=subarray_id,
 #         stations=[f"low-mccs/station/{station_id:03}"],
 #     )

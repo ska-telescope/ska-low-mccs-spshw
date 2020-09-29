@@ -84,8 +84,8 @@ def devices_to_load(request):
       information in dsconfig format
     * "package": the package from which classes will be loaded; for
       example, if the package is "ska.low.mccs", then if the JSON
-      configuration file refers to a class named "MccsMaster", then this
-      will be interpretated as the ska.low.mccs.MccsMaster class
+      configuration file refers to a class named "MccsController", then this
+      will be interpretated as the ska.low.mccs.MccsController class
     * "devices": a list of names of the devices that are to be loaded.
 
     """
@@ -102,8 +102,8 @@ def device_to_load(request):
       information in dsconfig format
     * "package": the package from which classes will be loaded; for
       example, if the package is "ska.low.mccs", then if the JSON
-      configuration file refers to a class named "MccsMaster", then this
-      will be interpretated as the ska.low.mccs.MccsMaster class
+      configuration file refers to a class named "MccsController", then this
+      will be interpretated as the ska.low.mccs.MccsController class
     * "device": the name of the devices that is to be loaded.
 
     """

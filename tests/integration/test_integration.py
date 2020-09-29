@@ -12,7 +12,7 @@ devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "devices": [
-        "master",
+        "controller",
         "subarray_01",
         "subarray_02",
         "station_001",
@@ -34,25 +34,25 @@ class TestMccsIntegration:
     Integration test cases for the Mccs device classes
     """
 
-    def test_master_enable_subarray(self, device_context):
+    def test_controller_enable_subarray(self, device_context):
         """
-        Test that a MccsMaster device can enable an MccsSubarray device.
+        Test that a MccsController device can enable an MccsSubarray device.
 
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/control/control")
+        controller = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
 
-        master.On()
+        controller.On()
 
         # check both subarrays are off
         assert subarray_1.State() == DevState.OFF
         assert subarray_2.State() == DevState.OFF
 
         # enable subarray 1
-        (result_code, message) = master.EnableSubarray(1)
+        (result_code, message) = controller.EnableSubarray(1)
         assert result_code == ResultCode.OK
 
         # check only subarray 1 is enabled.
@@ -60,7 +60,7 @@ class TestMccsIntegration:
         assert subarray_2.State() == DevState.OFF
 
         # try to enable subarray 1 again -- this should fail
-        (result_code, message) = master.EnableSubarray(1)
+        (result_code, message) = controller.EnableSubarray(1)
         assert result_code == ResultCode.FAILED
 
         # check failure has no side-effect
@@ -68,35 +68,35 @@ class TestMccsIntegration:
         assert subarray_2.State() == DevState.OFF
 
         # enable subarray 2
-        master.EnableSubarray(2)
+        controller.EnableSubarray(2)
 
         # check both subarrays now on
         assert subarray_1.State() == DevState.ON
         assert subarray_2.State() == DevState.ON
 
-    def test_master_disable_subarray(self, device_context):
+    def test_controller_disable_subarray(self, device_context):
         """
-        Test that an MccsMaster device can disable an MccsSubarray
+        Test that an MccsController device can disable an MccsSubarray
         device.
 
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/control/control")
+        controller = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
 
-        master.On()
+        controller.On()
 
-        master.EnableSubarray(1)
-        master.EnableSubarray(2)
+        controller.EnableSubarray(1)
+        controller.EnableSubarray(2)
 
         # check both subarrays are enabled
         assert subarray_1.State() == DevState.ON
         assert subarray_2.State() == DevState.ON
 
         # disable subarray 1
-        (result_code, message) = master.DisableSubarray(1)
+        (result_code, message) = controller.DisableSubarray(1)
         assert result_code == ResultCode.OK
 
         # check only subarray 1 is disabled.
@@ -104,7 +104,7 @@ class TestMccsIntegration:
         assert subarray_2.State() == DevState.ON
 
         # try to disable subarray 1 again -- this should fail
-        (result_code, message) = master.DisableSubarray(1)
+        (result_code, message) = controller.DisableSubarray(1)
         assert result_code == ResultCode.FAILED
 
         # check failure has no side-effect
@@ -112,22 +112,22 @@ class TestMccsIntegration:
         assert subarray_2.State() == DevState.ON
 
         # disable subarray 2
-        (result_code, message) = master.DisableSubarray(2)
+        (result_code, message) = controller.DisableSubarray(2)
         assert result_code == ResultCode.OK
 
         # check both subarrays now disabled
         assert subarray_1.State() == DevState.OFF
         assert subarray_2.State() == DevState.OFF
 
-    def test_master_allocate_subarray(self, device_context):
+    def test_controller_allocate_subarray(self, device_context):
         """
-        Test that an MccsMaster device can allocate resources to an
+        Test that an MccsController device can allocate resources to an
         MccsSubarray device.
 
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/control/control")
+        controller = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
         station_1 = device_context.get_device("low-mccs/station/001")
@@ -140,7 +140,7 @@ class TestMccsIntegration:
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
         # polling period to test that the write has stuck.
-        master.set_source(DevSource.DEV)
+        controller.set_source(DevSource.DEV)
         subarray_1.set_source(DevSource.DEV)
         subarray_2.set_source(DevSource.DEV)
         station_1.set_source(DevSource.DEV)
@@ -160,11 +160,11 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-        master.On()
+        controller.On()
 
         # Can't allocate to an array that hasn't been enabled
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -179,12 +179,12 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # now enable subarrays
-        master.EnableSubarray(1)
-        master.EnableSubarray(2)
+        controller.EnableSubarray(1)
+        controller.EnableSubarray(2)
 
         # allocate station_1 to subarray_1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.OK
 
@@ -201,7 +201,7 @@ class TestMccsIntegration:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -219,7 +219,7 @@ class TestMccsIntegration:
         # because the already allocated station is allocated to the same
         # subarray
         (result_code, message) = call_with_json(
-            master.Allocate,
+            controller.Allocate,
             subarray_id=1,
             stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
@@ -239,7 +239,7 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 1
 
         # now disable subarray 1
-        master.DisableSubarray(1)
+        controller.DisableSubarray(1)
 
         # check that subarray 1's resources have been released
         assert subarray_1.stationFQDNs is None
@@ -255,7 +255,7 @@ class TestMccsIntegration:
         # been released and it should be possible to allocate them to
         # subarray 2
         (result_code, message) = call_with_json(
-            master.Allocate,
+            controller.Allocate,
             subarray_id=2,
             stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
@@ -275,7 +275,7 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 2
 
         # disable the other subarray
-        master.DisableSubarray(2)
+        controller.DisableSubarray(2)
 
         # check all resources released
         assert subarray_1.stationFQDNs is None
@@ -287,15 +287,15 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-    def test_master_release_subarray(self, device_context):
+    def test_controller_release_subarray(self, device_context):
         """
-        Test that an MccsMaster device can release the resources of an
+        Test that an MccsController device can release the resources of an
         MccsSubarray device.
 
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        master = device_context.get_device("low-mccs/control/control")
+        controller = device_context.get_device("low-mccs/control/control")
         subarray_1 = device_context.get_device("low-mccs/subarray/01")
         subarray_2 = device_context.get_device("low-mccs/subarray/02")
         station_1 = device_context.get_device("low-mccs/station/001")
@@ -308,7 +308,7 @@ class TestMccsIntegration:
         # Bypass the cache because stationFQDNs etc are polled attributes,
         # and having written to them, we don't want to have to wait a
         # polling period so test that the write has stuck.
-        master.set_source(DevSource.DEV)
+        controller.set_source(DevSource.DEV)
         subarray_1.set_source(DevSource.DEV)
         subarray_2.set_source(DevSource.DEV)
         station_1.set_source(DevSource.DEV)
@@ -318,20 +318,20 @@ class TestMccsIntegration:
         tile_3.set_source(DevSource.DEV)
         tile_4.set_source(DevSource.DEV)
 
-        master.On()
+        controller.On()
 
         # enable subarrays
-        master.EnableSubarray(1)
-        master.EnableSubarray(2)
+        controller.EnableSubarray(1)
+        controller.EnableSubarray(2)
 
         # allocate stations 1 to subarray 1
         call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
 
         # allocate station 2 to subarray 2
         call_with_json(
-            master.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
+            controller.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
         )
 
         # check initial state
@@ -345,7 +345,7 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 2
 
         # release resources of subarray_2
-        (result_code, message) = master.Release(2)
+        (result_code, message) = controller.Release(2)
         assert result_code == ResultCode.OK
 
         # check
@@ -359,7 +359,7 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should fail
-        (result_code, message) = master.Release(2)
+        (result_code, message) = controller.Release(2)
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
@@ -373,7 +373,7 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # release resources of subarray_1
-        (result_code, message) = master.Release(1)
+        (result_code, message) = controller.Release(1)
         assert result_code == ResultCode.OK
 
         # check all released

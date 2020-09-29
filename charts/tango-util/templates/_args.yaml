@@ -8,7 +8,7 @@ Default can be changed via 'deviceServers.<server>.args'
 {{- else -}}
 {{- $prefix := (.global.Values.project.name |camelcase) -}}
 {{- $serverName := printf "%s%s" $prefix (default ( .device.name | camelcase) .device.serverName) -}}
-{{- $waitDevice := default "low-mccs/control/control" .global.Values.deviceServers.master.fqdn -}}
+{{- $waitDevice := default "low-mccs/control/control" .global.Values.deviceServers.controller.fqdn -}}
 - -c
 - "retry --max=10 -- tango_admin --ping-device {{ $waitDevice }} &&
 {{- printf " %s %s\"" $serverName (include "tango-util.deviceInstance" .) }}

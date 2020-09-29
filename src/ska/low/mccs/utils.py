@@ -120,18 +120,18 @@ def call_with_json(func, **kwargs):
     :param kwargs: parameters to be jsonified and passed to func
     :ptype kwargs: any
     :return: the return value of func
-    :example: Suppose you need to use MccsMaster.Allocate() to command
-        a master device to allocate certain stations and tiles to a
+    :example: Suppose you need to use MccsController.Allocate() to command
+        a controller device to allocate certain stations and tiles to a
         subarray. Allocate() accepts a single JSON string argument.
         Instead of
 
             parameters={"id": id, "stations": stations, "tiles": tiles}
             json_string=json.dumps(parameters)
-            master.Allocate(json_string)
+            controller.Allocate(json_string)
 
         save yourself the trouble and
 
-            call_with_json(master.Allocate,
+            call_with_json(controller.Allocate,
                            id=id, stations=stations, tiles=tiles)
 
     """
@@ -155,14 +155,14 @@ class json_input:
     :raises json.JSONDecodeError: if the file at the specified schema
         path is not valid JSON
 
-    :example: Conceptually, MccsMaster.Allocate() takes as arguments a
+    :example: Conceptually, MccsController.Allocate() takes as arguments a
         subarray id, an array of stations, and an array of tiles. In
         practice, however, these arguments are encoded into a JSON
         string. Implement the function with its conceptual parameters,
         then wrap it in this decorator:
 
             @json_input
-            def MccsMaster.Allocate(id, stations, tiles):
+            def MccsController.Allocate(id, stations, tiles):
 
         The decorator will provide the JSON interface and handle the
         decoding for you.

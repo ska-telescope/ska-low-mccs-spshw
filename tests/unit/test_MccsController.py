@@ -1,14 +1,14 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsMaster project
+# This file is part of the MccsController project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""Contains the tests for the MccsMaster Tango device_under_test prototype."""
+"""Contains the tests for the MccsController Tango device_under_test prototype."""
 
 import json
 import logging
@@ -18,18 +18,18 @@ import tango
 from ska.base import SKABaseDeviceStateModel
 from ska.base.commands import CommandError, ResultCode
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.low.mccs import MccsMaster, MasterPowerManager, release
+from ska.low.mccs import MccsController, ControllerPowerManager, release
 from ska.low.mccs.utils import call_with_json, tango_raise
 
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "master",
+    "device": "controller",
 }
 
 
 @pytest.mark.mock_device_proxy
-class TestMccsMaster:
+class TestMccsController:
     """Test case for packet generation."""
 
     def test_State(self, device_under_test):
@@ -99,19 +99,19 @@ class TestMccsMaster:
 
     def test_EnableSubarray(self, device_under_test):
         """
-        Test that master can enable a subarray
+        Test that controller can enable a subarray
         """
-        master = device_under_test  # to make test clearer to read
+        controller = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
         mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
 
-        master.On()
+        controller.On()
 
         mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
         mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
 
-        # Tell master to enable subarray 1
-        (result_code, message) = master.EnableSubarray(1)
+        # Tell controller to enable subarray 1
+        (result_code, message) = controller.EnableSubarray(1)
         assert result_code == ResultCode.OK
 
         # Check that subarray 1 was turned on, and subarray 2 was not
@@ -121,16 +121,16 @@ class TestMccsMaster:
         mock_subarray_1.reset_mock()
         mock_subarray_1.On.side_effect = ((ResultCode.FAILED, "Subarray already on."),)
 
-        # Telling master to enable an enabled subarray should fail
-        (result_code, message) = master.EnableSubarray(1)
+        # Telling controller to enable an enabled subarray should fail
+        (result_code, message) = controller.EnableSubarray(1)
         assert result_code == ResultCode.FAILED
 
         # Check no side-effect of failed call
         mock_subarray_1.On.assert_not_called()
         mock_subarray_2.On.assert_not_called()
 
-        # Tell master to enable subarray 2
-        (result_code, message) = master.EnableSubarray(2)
+        # Tell controller to enable subarray 2
+        (result_code, message) = controller.EnableSubarray(2)
         assert result_code == ResultCode.OK
 
         # Check that the subarray 2 was turned on and subarray 1 wasn't.
@@ -139,28 +139,28 @@ class TestMccsMaster:
 
     def test_DisableSubarray(self, device_under_test):
         """
-        Test that master can disable a subarray
+        Test that controller can disable a subarray
         """
-        master = device_under_test  # to make test clearer to read
+        controller = device_under_test  # to make test clearer to read
         mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
         mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
 
-        master.On()
+        controller.On()
 
         mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
         mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
 
-        # setup by telling master to enable subarrays 1 and 2
-        master.EnableSubarray(1)
-        master.EnableSubarray(2)
+        # setup by telling controller to enable subarrays 1 and 2
+        controller.EnableSubarray(1)
+        controller.EnableSubarray(2)
 
         mock_subarray_1.ReleaseAllResources.side_effect = (
             (ResultCode.FAILED, "No resources to release"),
         )
         mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Subarray is off."),)
 
-        # now tell master to disable subarray 1
-        (result_code, message) = master.DisableSubarray(1)
+        # now tell controller to disable subarray 1
+        (result_code, message) = controller.DisableSubarray(1)
         assert result_code == ResultCode.OK
 
         # Check that the subarray 1 only was turned off.
@@ -170,7 +170,7 @@ class TestMccsMaster:
         mock_subarray_1.reset_mock()
 
         # Disabling a subarray that is already disabled should fail
-        (result_code, message) = master.DisableSubarray(1)
+        (result_code, message) = controller.DisableSubarray(1)
         assert result_code == ResultCode.FAILED
 
         # check no side-effect of failed command.
@@ -181,7 +181,7 @@ class TestMccsMaster:
         """
         Test the Allocate command.
         """
-        master = device_under_test  # for readability
+        controller = device_under_test  # for readability
         mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
         mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
         mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
@@ -192,11 +192,11 @@ class TestMccsMaster:
         mock_station_1.subarrayId = 0
         mock_station_2.subarrayId = 0
 
-        master.On()
+        controller.On()
 
         # Can't allocate to an array that hasn't been enabled
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -212,8 +212,8 @@ class TestMccsMaster:
         mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
 
         # now enable subarrays
-        master.EnableSubarray(1)
-        master.EnableSubarray(2)
+        controller.EnableSubarray(1)
+        controller.EnableSubarray(2)
 
         mock_subarray_1.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
@@ -221,7 +221,7 @@ class TestMccsMaster:
 
         # allocate station_1 to subarray_1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.OK
 
@@ -241,7 +241,7 @@ class TestMccsMaster:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
         )
         assert result_code == ResultCode.FAILED
 
@@ -261,7 +261,7 @@ class TestMccsMaster:
         )
 
         (result_code, message) = call_with_json(
-            master.Allocate,
+            controller.Allocate,
             subarray_id=1,
             stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
@@ -287,7 +287,7 @@ class TestMccsMaster:
         # allocating station 2 to subarray 1 should succeed, because the
         # it only requires resource release
         (result_code, message) = call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/002"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/002"]
         )
         assert result_code == ResultCode.OK
 
@@ -310,7 +310,7 @@ class TestMccsMaster:
         mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Resources assigned"),)
 
         # now disable subarray 1
-        master.DisableSubarray(1)
+        controller.DisableSubarray(1)
 
         # check
         assert mock_station_1.subarrayId == 0
@@ -324,7 +324,7 @@ class TestMccsMaster:
             (ResultCode.OK, "Resources assigned"),
         )
         (result_code, message) = call_with_json(
-            master.Allocate,
+            controller.Allocate,
             subarray_id=2,
             stations=["low-mccs/station/001", "low-mccs/station/002"],
         )
@@ -344,26 +344,26 @@ class TestMccsMaster:
         """
         Test Release command.
         """
-        master = device_under_test  # for readability
+        controller = device_under_test  # for readability
         mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
         mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
         mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
         mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
-        master.On()
+        controller.On()
 
         # enable subarrays
         mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
-        master.EnableSubarray(1)
+        controller.EnableSubarray(1)
         mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
-        master.EnableSubarray(2)
+        controller.EnableSubarray(2)
 
         # allocate stations 1 to subarray 1
         mock_subarray_1.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
         call_with_json(
-            master.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
         )
 
         # allocate station 2 to subarray 2
@@ -371,7 +371,7 @@ class TestMccsMaster:
             (ResultCode.OK, "Resources assigned"),
         )
         call_with_json(
-            master.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
+            controller.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
         )
 
         # check initial state
@@ -382,7 +382,7 @@ class TestMccsMaster:
         mock_subarray_2.ReleaseAllResources.side_effect = (
             (ResultCode.OK, "Resources released"),
         )
-        (result_code, message) = master.Release(2)
+        (result_code, message) = controller.Release(2)
         assert result_code == ResultCode.OK
 
         # check
@@ -403,7 +403,7 @@ class TestMccsMaster:
         )
 
         # releasing resources of unresourced subarray_2 should fail
-        (result_code, message) = master.Release(2)
+        (result_code, message) = controller.Release(2)
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
@@ -419,7 +419,7 @@ class TestMccsMaster:
         mock_subarray_1.ReleaseAllResources.side_effect = (
             (ResultCode.OK, "Resources released"),
         )
-        (result_code, message) = master.Release(1)
+        (result_code, message) = controller.Release(1)
         assert result_code == ResultCode.OK
 
         # check all released
@@ -470,9 +470,9 @@ class TestMccsMaster:
         assert device_under_test.availableCapabilities is None
 
 
-class TestMasterPowerManager:
+class TestControllerPowerManager:
     """
-    This class contains tests of the ska.low.mccs.master.MasterPowerManager
+    This class contains tests of the ska.low.mccs.controller.ControllerPowerManager
     class
     """
 
@@ -490,7 +490,7 @@ class TestMasterPowerManager:
         Fixture that returns a power manager with no hardware manager
         and no subservient devices
         """
-        return MasterPowerManager([])
+        return ControllerPowerManager([])
 
     @pytest.fixture
     def state_model(self, logger):
@@ -516,7 +516,7 @@ class TestMasterPowerManager:
         On() command succeeds, and that the result is the state model
         moves to state ON, and the power manager thinks it is on.
         """
-        on_command = MccsMaster.OnCommand(power_manager, state_model, logger)
+        on_command = MccsController.OnCommand(power_manager, state_model, logger)
         assert not power_manager.is_on()
 
         all_states = {
@@ -563,7 +563,7 @@ class TestMasterPowerManager:
         Off() command succeeds, and that the result is the state model
         moves to state OFF, and the power manager thinks it is off.
         """
-        off_command = MccsMaster.OffCommand(power_manager, state_model)
+        off_command = MccsController.OffCommand(power_manager, state_model)
         power_manager.on()
         assert power_manager.is_on()
 

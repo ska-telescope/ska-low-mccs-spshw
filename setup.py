@@ -37,13 +37,13 @@ setuptools.setup(
         "console_scripts": [
             "MccsAntenna=ska.low.mccs.antenna:main",
             "MccsAPIU=ska.low.mccs.apiu:main",
-            "MccsMaster=ska.low.mccs.master:main",
+            "MccsController=ska.low.mccs.controller:main",
             "MccsSubarray=ska.low.mccs.subarray:main",
             "MccsStation=ska.low.mccs.station:main",
             "MccsStationBeam=ska.low.mccs.station_beam:main",
             "MccsTile=ska.low.mccs.tile:main",
             "MccsTelState=ska.low.mccs.tel_state:main",
-            "mccs-master=ska.low.mccs.master_cli:main",
+            "mccs-controller=ska.low.mccs.controller_cli:main",
             "mccs-tile=ska.low.mccs.tile_cli:main",
         ]
     },

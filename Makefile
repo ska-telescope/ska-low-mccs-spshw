@@ -20,7 +20,7 @@ KUBE_NAMESPACE ?= integration
 HELM_RELEASE ?= test
 
 # HELM_CHART the chart name
-HELM_CHART ?= test
+HELM_CHART ?= mccs
 
 # INGRESS_HOST is the host name used in the Ingress resource definition for
 # publishing services via the Ingress Controller

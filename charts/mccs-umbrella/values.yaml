@@ -5,24 +5,20 @@ minikube: true
 
 tango-base:
   vnc:
-    enabled: true
+    enabled: false
   tangorest:
-    enabled: true
+    enabled: false
   tangotest:
-    enabled: true
+    enabled: false
   ingress:
-    enabled: true
+    enabled: false
   tangodb:
     use_pv: false
 
 mccs:
-  tango-base:
-    enabled: false
-  
-  cli:
-    enabled: false
-
   mccs:
+    enabled: true
+  cli:
     enabled: true
 
   project:
@@ -34,6 +30,7 @@ mccs:
       pullPolicy: IfNotPresent
 
 webjive:
+  enabled: false
   ingress:
     enabled: false
     nginx: false

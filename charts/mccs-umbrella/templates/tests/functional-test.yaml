@@ -66,8 +66,8 @@ spec:
       mountPath: /data
   containers:
   - name: functional-{{ template "tango-util.name" . }}-{{ .Release.Name }}
-    image: "{{ .Values.project.image.registry }}/{{ .Values.project.image.image }}:{{ .Values.project.image.tag }}"
-    imagePullPolicy: {{ .Values.project.image.pullPolicy }}
+    image: "{{ .Values.mccs.project.image.registry }}/{{ .Values.mccs.project.image.image }}:{{ .Values.mccs.project.image.tag }}"
+    imagePullPolicy: {{ .Values.mccs.project.image.pullPolicy }}
     command:
       - /bin/bash
       - "-ce"

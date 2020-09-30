@@ -7,19 +7,6 @@ xauthority: "~/.Xauthority"
 minikube: true
 
 
-# Turn these off
-tango-base:
-  vnc:
-    enabled: false
-  tangorest:
-    enabled: false
-  tangotest:
-    enabled: false
-  ingress:
-    enabled: false
-  tangodb:
-    use_pv: false
-
 mccs:
   enabled: true
 

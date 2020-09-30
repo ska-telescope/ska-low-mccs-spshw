@@ -26,9 +26,6 @@ HELM_CHART ?= mccs-umbrella
 # publishing services via the Ingress Controller
 INGRESS_HOST ?= $(HELM_RELEASE).$(HELM_CHART).local
 
-# Optional creation of the tango-base dependency
-TANGO_BASE_ENABLED ?= true
-
 # Fixed variables
 # Timeout for gitlab-runner when run locally
 TIMEOUT = 86400
@@ -61,12 +58,12 @@ KUBE_CONFIG_BASE64 ?=  ## base64 encoded kubectl credentials for KUBECONFIG
 KUBECONFIG ?= /etc/deploy/config ## KUBECONFIG location
 
 # Run from local image only, requires either a pulled or local image 
-CUSTOM_VALUES ?= --set project.image.pullPolicy=Never
+CUSTOM_VALUES ?= --set mccs.project.image.pullPolicy=Never
 
 ifneq ($(CI_JOB_ID),)
 CI_PROJECT_IMAGE := 
-CUSTOM_VALUES = --set project.image.registry=$(CI_REGISTRY)/ska-telescope \
-	--set project.image.tag=$(CI_COMMIT_SHORT_SHA) \
+CUSTOM_VALUES = --set mccs.project.image.registry=$(CI_REGISTRY)/ska-telescope \
+	--set mccs.project.image.tag=$(CI_COMMIT_SHORT_SHA) \
 	-f values-gitlab-ci.yaml
 else
 endif

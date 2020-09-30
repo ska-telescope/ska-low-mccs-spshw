@@ -113,15 +113,15 @@ then
 
 .. code-block:: shell-session
 
-   tango@mccs-mccs-test:/app$ mccs-master 
+   tango@mccs-mccs-test:/app$ mccs-controller 
    NAME
-       mccs-master - test
+       mccs-controller - test
 
    SYNOPSIS
-       mccs-master - COMMAND
+       mccs-controller - COMMAND
 
    DESCRIPTION
-       Command-line tool to access the MCCS master tango device
+       Command-line tool to access the MCCS controller tango device
 
    COMMANDS
        COMMAND is one of the following:
@@ -166,7 +166,7 @@ then
 
         standbylow
 
-   tango@mccs-mccs-test:/app$ mccs-master adminmode
+   tango@mccs-mccs-test:/app$ mccs-controller adminmode
    ONLINE
 
 
@@ -189,6 +189,6 @@ An interactice itango session can be run using `make itango`:
 
    hint: Try typing: mydev = Device("<tab>
 
-   In [1]: tile = DeviceProxy("low/elt/tile_6")
+   In [1]: tile = DeviceProxy("low-mccs/tile/0006")
 
    In [2]: tile.adminMode

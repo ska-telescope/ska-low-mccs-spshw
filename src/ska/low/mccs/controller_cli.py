@@ -3,15 +3,15 @@
 # This file is part of the Mccs project.
 #
 # Used to drive the Command Line Interface for the
-# MCCS Master Device Server.
+# MCCS Controller Device Server.
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
 """
-The command line interface for the MCCS Master device server. Functionality
+The command line interface for the MCCS Controller device server. Functionality
 to handle passing variables to be added as functionality is added to the
-Master DS.
+Controller DS.
 """
 import types
 import functools
@@ -62,16 +62,17 @@ def format_wrapper(method):
     return wrapper
 
 
-class MccsMasterCli(metaclass=CliMeta):
+class MccsControllerCli(metaclass=CliMeta):
     """test
 
-    Command-line tool to access the MCCS master tango device
+    Command-line tool to access the MCCS controller tango device
 
-        :param fqdn: the FQDN of the master device, defaults to "low/elt/master"
+        :param fqdn: the FQDN of the controller device, defaults to
+            "low-mccs/control/control"
         :type fqdn: str, optional
     """
 
-    def __init__(self, fqdn="low/elt/master"):
+    def __init__(self, fqdn="low-mccs/control/control"):
         self._dp = tango.DeviceProxy(fqdn)
         self._log_levels = [
             lvl for lvl in dir(self._dp.logginglevel.__class__) if lvl.isupper()
@@ -175,13 +176,11 @@ class MccsMasterCli(metaclass=CliMeta):
         station_fqdns = []
         station_proxies = []
         for station in stations:
-            fqdn = "low/elt/station_{}".format(station)
+            fqdn = f"low-mccs/station/{station:03}"
             station_fqdns.append(fqdn)
             station_proxies.append(tango.DeviceProxy(fqdn))
         message = self._dp.Allocate
-        call_with_json(
-            message, subarray_id=subarray_id, stations=station_fqdns,
-        )
+        call_with_json(message, subarray_id=subarray_id, stations=station_fqdns)
         for proxy in station_proxies:
             status = proxy.adminmode.name
             name = proxy.name()
@@ -203,7 +202,7 @@ class MccsMasterCli(metaclass=CliMeta):
 
 
 def main():
-    fire.Fire(MccsMasterCli)
+    fire.Fire(MccsControllerCli)
 
 
 if __name__ == "__main__":

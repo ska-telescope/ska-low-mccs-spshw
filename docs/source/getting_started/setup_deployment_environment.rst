@@ -239,13 +239,13 @@ To monitor MCCS with Grafana:
 1. Navigate to http://grafana.integration.engageska-portugal.pt
    (admin:admin).
 2. Open Dashboards -> Manage -> examples -> MCCS Device Dashboard
-3. Select device: low/elt/master (default)
+3. Select device: low-mccs/control/control (default)
 4. Change dashboard time-span: From: now-5s To: now
-5. You can then open the CLI to interact with master and observe changes
+5. You can then open the CLI to interact with the controller and observe changes
    in Grafana dashboard
 
    .. code-block:: bash
 
       make cli
-      mccs-master on
-      mccs-master off
+      mccs-controller on
+      mccs-controller off

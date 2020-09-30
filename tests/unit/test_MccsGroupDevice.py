@@ -20,7 +20,7 @@ from ska.base.control_model import HealthState, ControlMode, SimulationMode, Tes
 device_to_load = {
     "path": "charts/mccs/data/extra.json",
     "package": "ska.low.mccs",
-    "device": "groupdevice1",
+    "device": "groupdevice",
 }
 
 
@@ -31,8 +31,8 @@ class TestMccsGroupDevice(object):
 
     def test_InitDevice(self, device_under_test):
         """
-           Test for Initial state.
-           """
+        Test for Initial state.
+        """
         assert device_under_test.State() == DevState.OFF
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE

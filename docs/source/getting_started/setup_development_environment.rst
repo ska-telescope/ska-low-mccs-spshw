@@ -275,10 +275,10 @@ Tox commands you may find useful:
 
 * ``tox -e lint`` - lint the code (with flake8)
 
-* ``tox -e py37 -- -k MccsMaster`` - run the tests for just the
-  MccsMaster device (the ``--`` argument tells tox to pass all
-  subsequent arguments to pytest, and the ``-k MccsMaster`` tells pytest
-  to run only commands that match the string ``MccsMaster``.
+* ``tox -e py37 -- -k MccsController`` - run the tests for just the
+  MccsController device (the ``--`` argument tells tox to pass all
+  subsequent arguments to pytest, and the ``-k MccsController`` tells pytest
+  to run only commands that match the string ``MccsController``.
 
 
 Since the repository is mounted in the container, it is possible to edit

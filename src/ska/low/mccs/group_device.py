@@ -116,7 +116,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="The device name to register eg. sys/tg_test/1",
+        doc_in="The device name to register eg. low-mccs/station/001",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
@@ -125,7 +125,7 @@ class MccsGroupDevice(SKABaseDevice):
         """
         Registers this device as a member of this composite group
 
-        :param argin: The device name to register eg. sys/tg_test/1
+        :param argin: The device name to register eg. low-mccs/station/001
         :type argin: 'DevString'
 
         :return: (ResultCode, 'informational message')

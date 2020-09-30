@@ -1,7 +1,7 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsMaster project
+# This file is part of the MccsController project
 #
 #
 #
@@ -19,19 +19,19 @@ devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "devices": [
-        "master",
-        "subarray1",
-        "subarray2",
-        "station1",
-        "station2",
-        "tile1",
-        "tile2",
-        "tile3",
-        "tile4",
-        "antenna1",
-        "antenna2",
-        "antenna3",
-        "antenna4",
+        "controller",
+        "subarray_01",
+        "subarray_02",
+        "station_001",
+        "station_002",
+        "tile_0001",
+        "tile_0002",
+        "tile_0003",
+        "tile_0004",
+        "antenna_000001",
+        "antenna_000002",
+        "antenna_000003",
+        "antenna_000004",
     ],
 }
 
@@ -43,17 +43,17 @@ class TestPowerManagement:
 
     def test_power_on_off(self, device_context):
         """
-        Test that a MccsMaster device can enable an MccsSubarray device.
+        Test that a MccsController device can enable an MccsSubarray device.
         """
-        master = device_context.get_device("low/elt/master")
-        station_1 = device_context.get_device("low/elt/station_1")
-        station_2 = device_context.get_device("low/elt/station_2")
-        tile_1 = device_context.get_device("low/elt/tile_1")
-        tile_2 = device_context.get_device("low/elt/tile_2")
-        tile_3 = device_context.get_device("low/elt/tile_3")
-        tile_4 = device_context.get_device("low/elt/tile_4")
+        controller = device_context.get_device("low-mccs/control/control")
+        station_1 = device_context.get_device("low-mccs/station/001")
+        station_2 = device_context.get_device("low-mccs/station/002")
+        tile_1 = device_context.get_device("low-mccs/tile/0001")
+        tile_2 = device_context.get_device("low-mccs/tile/0002")
+        tile_3 = device_context.get_device("low-mccs/tile/0003")
+        tile_4 = device_context.get_device("low-mccs/tile/0004")
 
-        assert master.State() == DevState.OFF
+        assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF
         assert station_2.State() == DevState.OFF
         assert tile_1.State() == DevState.OFF
@@ -61,9 +61,9 @@ class TestPowerManagement:
         assert tile_3.State() == DevState.OFF
         assert tile_4.State() == DevState.OFF
 
-        master.On()
+        controller.On()
 
-        assert master.State() == DevState.ON
+        assert controller.State() == DevState.ON
         assert station_1.State() in [DevState.ON, DevState.ALARM]
         assert station_2.State() in [DevState.ON, DevState.ALARM]
         assert tile_1.State() == DevState.ON
@@ -71,9 +71,9 @@ class TestPowerManagement:
         assert tile_3.State() == DevState.ON
         assert tile_4.State() == DevState.ON
 
-        master.Off()
+        controller.Off()
 
-        assert master.State() == DevState.OFF
+        assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF
         assert station_2.State() == DevState.OFF
         assert tile_1.State() == DevState.OFF

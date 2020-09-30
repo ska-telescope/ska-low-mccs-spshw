@@ -8,7 +8,7 @@ import time
 devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "devices": ["tile1", "tpmsimulator"],
+    "devices": ["tile_0001", "tpmsimulator"],
 }
 
 
@@ -24,7 +24,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        tile = device_context.get_device("low/elt/tile_1")
+        tile = device_context.get_device("low-mccs/tile/0001")
         tile.Connect(True)
         time.sleep(1)
         assert tile.voltage == 4.7
@@ -36,7 +36,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        tile = device_context.get_device("low/elt/tile_1")
+        tile = device_context.get_device("low-mccs/tile/0001")
         tile.Connect(True)
         time.sleep(1)
         tile.current == 0.4
@@ -48,7 +48,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        tile = device_context.get_device("low/elt/tile_1")
+        tile = device_context.get_device("low-mccs/tile/0001")
         tile.Connect(True)
         time.sleep(1)
         assert tile.board_temperature == 36.0
@@ -60,7 +60,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        tile = device_context.get_device("low/elt/tile_1")
+        tile = device_context.get_device("low-mccs/tile/0001")
         tile.Connect(True)
         time.sleep(1)
         assert tile.fpga1_temperature == 38.0
@@ -72,7 +72,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :param device_context: a test context for a set of tango devices
         :type device_context: tango.MultiDeviceTestContext
         """
-        tile = device_context.get_device("low/elt/tile_1")
+        tile = device_context.get_device("low-mccs/tile/0001")
         tile.Connect(True)
         time.sleep(1)
         assert tile.fpga2_temperature == 37.5

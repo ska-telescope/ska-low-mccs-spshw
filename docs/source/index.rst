@@ -24,9 +24,9 @@ prototype for the `Square Kilometre Array`_.
    api/antenna
    api/apiu
    api/cluster_manager
+   api/controller
    api/device
    api/group_device
-   api/master
    api/station
    api/station_beam
    api/subarray

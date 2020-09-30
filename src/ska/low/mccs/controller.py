@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsMaster project
+# This file is part of the MccsController project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MccsMaster Tango device prototype
+""" MccsController Tango device prototype
 
-MccsMaster TANGO device class for the MccsMaster prototype
+MccsController TANGO device class for the MccsController prototype
 """
-__all__ = ["MccsMaster", "main"]
+__all__ = ["MccsController", "main"]
 
 import numpy
 import json
@@ -33,17 +33,17 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
 
 
-class MasterPowerManager(PowerManager):
+class ControllerPowerManager(PowerManager):
     """
-    This class that implements the power manager for the MCCS Master
+    This class that implements the power manager for the MCCS Controller
     device.
     """
 
     def __init__(self, station_fqdns):
         """
-        Initialise a new MasterPowerManager
+        Initialise a new ControllerPowerManager
 
-        :param station_fqdns: the FQDNs of the stations that this master
+        :param station_fqdns: the FQDNs of the stations that this controller
             device manages
         :type station_fqdns: list of string
         """
@@ -52,9 +52,9 @@ class MasterPowerManager(PowerManager):
         )
 
 
-class MccsMaster(SKAMaster):
+class MccsController(SKAMaster):
     """
-    MccsMaster TANGO device class for the MCCS prototype
+    MccsController TANGO device class for the MCCS prototype
 
     **Properties:**
 
@@ -116,12 +116,12 @@ class MccsMaster(SKAMaster):
 
     class InitCommand(SKAMaster.InitCommand):
         """
-        A class for MccsMaster's init_device() "command".
+        A class for MccsController's init_device() "command".
         """
 
         def do(self):
             """
-            Initialises the attributes and properties of the MccsMaster.
+            Initialises the attributes and properties of the MccsController.
             State is managed under the hood; the basic sequence is:
 
             1. Device state is set to INIT
@@ -171,9 +171,9 @@ class MccsMaster(SKAMaster):
                     EventManager(fqdn, device._health_monitor.update_health_table)
                 )
 
-            device.power_manager = MasterPowerManager(device._station_fqdns)
+            device.power_manager = ControllerPowerManager(device._station_fqdns)
 
-            message = "MccsMaster Init command completed OK"
+            message = "MccsController Init command completed OK"
             self.logger.info(message)
             return (ResultCode.OK, message)
 
@@ -673,10 +673,19 @@ class MccsMaster(SKAMaster):
 
         :example:
 
-        >>> proxy = tango.DeviceProxy("low/elt/master")
+        >>> proxy = tango.DeviceProxy("low-mccs/control/control")
         >>> proxy.EnableSubarray(1)
-        >>> proxy.Allocate('{"subarray_id":1,
-                            "stations": ["mccs/station/01", "mccs/station/02",]}')
+        >>> proxy.Allocate(
+                json.dumps(
+                    {
+                        "subarray_id":1,
+                        "stations": [
+                            "low-mccs/station/001",
+                            "low-mccs/station/002"
+                        ]
+                    }
+                )
+            )
         """
 
         handler = self.get_command_object("Allocate")
@@ -711,12 +720,12 @@ class MccsMaster(SKAMaster):
             args = json.loads(argin)
             subarray_id = args["subarray_id"]
             stations = args["stations"]
-            masterdevice = self.target
+            controllerdevice = self.target
 
-            assert 1 <= subarray_id <= len(masterdevice._subarray_fqdns)
-            subarray_fqdn = masterdevice._subarray_fqdns[subarray_id - 1]
+            assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
+            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
 
-            if not masterdevice._subarray_enabled[subarray_id - 1]:
+            if not controllerdevice._subarray_enabled[subarray_id - 1]:
                 return (
                     ResultCode.FAILED,
                     "Cannot allocate resources to disabled subarray {}".format(
@@ -724,19 +733,19 @@ class MccsMaster(SKAMaster):
                     ),
                 )
             station_allocation = numpy.isin(
-                masterdevice._station_fqdns, stations, assume_unique=True
+                controllerdevice._station_fqdns, stations, assume_unique=True
             )
             already_allocated = numpy.logical_and.reduce(
                 (
-                    masterdevice._station_allocated != 0,
-                    masterdevice._station_allocated != subarray_id,
+                    controllerdevice._station_allocated != 0,
+                    controllerdevice._station_allocated != subarray_id,
                     station_allocation,
                 )
             )
 
             if numpy.any(already_allocated):
                 already_allocated_fqdns = list(
-                    masterdevice._station_fqdns[already_allocated]
+                    controllerdevice._station_fqdns[already_allocated]
                 )
                 return (
                     ResultCode.FAILED,
@@ -747,11 +756,13 @@ class MccsMaster(SKAMaster):
             subarray_device = tango.DeviceProxy(subarray_fqdn)
 
             release_mask = numpy.logical_and(
-                masterdevice._station_allocated == subarray_id,
+                controllerdevice._station_allocated == subarray_id,
                 numpy.logical_not(station_allocation),
             )
             if numpy.any(release_mask):
-                stations_to_release = list(masterdevice._station_fqdns[release_mask])
+                stations_to_release = list(
+                    controllerdevice._station_fqdns[release_mask]
+                )
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
                 )
@@ -766,10 +777,10 @@ class MccsMaster(SKAMaster):
                     device.subarrayId = 0
 
             assign_mask = numpy.logical_and(
-                masterdevice._station_allocated == 0, station_allocation
+                controllerdevice._station_allocated == 0, station_allocation
             )
             if numpy.any(assign_mask):
-                stations_to_assign = list(masterdevice._station_fqdns[assign_mask])
+                stations_to_assign = list(controllerdevice._station_fqdns[assign_mask])
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources, stations=stations_to_assign
                 )
@@ -783,8 +794,8 @@ class MccsMaster(SKAMaster):
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
 
-            masterdevice._station_allocated[release_mask] = 0
-            masterdevice._station_allocated[assign_mask] = subarray_id
+            controllerdevice._station_allocated[release_mask] = 0
+            controllerdevice._station_allocated[assign_mask] = subarray_id
             return (ResultCode.OK, "Allocate command successful")
 
         def check_allowed(self):
@@ -973,7 +984,7 @@ class MccsMaster(SKAMaster):
 
 def main(args=None, **kwargs):
     """
-    Main function of the MccsMaster module.
+    Main function of the MccsController module.
 
     :param args: command line arguments
     :param kwargs: command line keyword arguments
@@ -981,7 +992,7 @@ def main(args=None, **kwargs):
     :return: device server instance
     """
 
-    return MccsMaster.run_server(args=args, **kwargs)
+    return MccsController.run_server(args=args, **kwargs)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 pytest
-pytest-bdd
+pytest-bdd >= 4.0.0
 pytest-cov
 pytest-json-report
 pytest-mock

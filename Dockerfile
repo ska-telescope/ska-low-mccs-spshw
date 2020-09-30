@@ -5,4 +5,4 @@ FROM nexus.engageska-portugal.pt/ska-docker/ska-python-runtime:9.3.2 AS runtime
 RUN ipython profile create
 ENV PATH=/home/tango/.local/bin:$PATH
 RUN python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple -rrequirements.txt .
-#CMD ["MccsMaster", "01"]
+#CMD ["MccsController", "01"]

@@ -8,12 +8,3 @@ tango-base:
 mccs:
   cli:
     enabled: false
-#  deviceServers:
-#    subarrays:
-#      instances: [1, 2]
-#    stations:
-#      instances: [1, 2]
-#    tiles:
-#      instances: [1, 2, 3, 4]
-#    antennas:
-#      instances: [1, 2, 3, 4]

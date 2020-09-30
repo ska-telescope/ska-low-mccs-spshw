@@ -36,7 +36,6 @@ deploy: minikube_setup namespace mkcerts depends  ## deploy the helm chart
 	@helm install $(HELM_RELEASE) charts/$(HELM_CHART)/ \
 		--namespace $(KUBE_NAMESPACE) \
 		--set ingress.hostname=$(INGRESS_HOST) \
-		--set tango-base.enabled=$(TANGO_BASE_ENABLED) \
 		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) 
 
 show: mkcerts ## show the helm chart

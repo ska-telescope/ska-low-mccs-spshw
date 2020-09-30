@@ -1,19 +1,10 @@
 # static overrides for gitlab ci job
-deviceServers:
-  subarrays:
-    instances: ["01", "02"]
-  stations:
-    instances: ["001", "002"]
-  tiles:
-    instances: ["0001", "0002", "0003", "0004"]
-  antennas:
-    instances: ["000001", "000002", "000003", "000004"]
-  
 minikube: false
-
-cli:
-  enabled: false
 
 tango-base:
   itango:
+    enabled: false
+
+mccs:
+  cli:
     enabled: false

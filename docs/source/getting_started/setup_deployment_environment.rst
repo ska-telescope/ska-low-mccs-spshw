@@ -178,6 +178,21 @@ To start up a TANGO-grafana cluster:
    # In this case, tear-down and restart minikube
    # Export Docker environment variables to Bash
    eval $(minikube docker-env)
+
+Currently, to start up TANGO-grafana with the changes to the MCCS
+Helm charts, need to run up the mccs pods first, if not running:
+
+.. code-block:: bash
+
+  cd ska-low-mccs
+  make devimage
+  make deploy
+  make watch
+
+After which, continue with the grafana setup:
+
+.. code-block:: bash
+
    # Navigate to the MCCS scripts folder
    cd ska-low-mccs/scripts
    # Run setup script - installs tango-base, webjive, Traefik and

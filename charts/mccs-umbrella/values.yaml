@@ -31,7 +31,3 @@ mccs:
 
 webjive:
   enabled: false
-  ingress:
-    enabled: false
-    nginx: false
-    hostname: integration.engageska-portugal.pt

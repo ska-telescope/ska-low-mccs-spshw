@@ -50,6 +50,300 @@ class ControllerPowerManager(PowerManager):
         super().__init__(None, station_fqdns)
 
 
+class ControllerResourceManager:
+    """
+    This class implements a resource manger for the MCCS controller device
+    """
+
+    def __init__(self, fqdns):
+        """Initialize new ControllerResourceManager instance
+
+        Args:
+            fqdns (list): A list of device FQDNs
+        """
+        # Array holding all registered FQDNs of managed devices
+        self._fqdns = numpy.array(
+            [] if fqdns is None else fqdns
+        )
+        # Array holding the assignments to owners of the devices
+        self._allocation = numpy.zeros(
+            0 if fqdns is None else len(fqdns), dtype=numpy.uint8
+        )
+
+    def GetAllFqdns(self):
+        """
+        Get all FQDNs managed by this resource manager
+
+        Returns:
+            list: List of FQDNs managed
+        """
+        return list(self._fqdns)
+
+    def GetAssignedFqdns(self, owner_id):
+        """Get the FQDNs assigned to a given owner id
+
+        Args:
+            owner_id (int): 1-based device id that we check for ownership
+
+        Returns:
+            list: List of FQDNs assigned to owner_id
+        """
+
+        mask = (self._allocation == owner_id)
+
+        return list(self._fqdns[mask])
+
+    def QueryAllocation(self, fqdns, new_owner_id):
+        """Test if a (re)allocation is allowed, and if so, return lists of FQDNs
+        to assign and to release. If the allocation is not permitted due to some
+        FQDNs being allocated to another owner already, the list of blocking
+        FQDNs is returned as the ReleaseList.
+
+        Args:
+            fqdns (list): The list of FQDNs we would like to assign
+            new_owner_id (int): 1-based device id that would take ownership
+
+        Returns: tuple (Allowed, AssignList, ReleaseList)
+            WHERE
+            Allowed (bool): True if this (re)allocation is allowed
+            AssignList (list): The list of FQDNs to allocate, or None
+            ReleaseList (list): The list of FQDNs to release, or None
+        """
+
+        # TODO Check no FQDNs missing from the list of managed ones
+        # Create mask of FQDNs present in the wanted list
+        wanted_allocation = numpy.isin(
+            self._fqdns, fqdns, assume_unique=True
+        )
+        # Examine the allocation ids for these entries
+        already_allocated = numpy.logical_and.reduce(
+            (
+                self._allocation != 0,
+                self._allocation != new_owner_id,
+                wanted_allocation,
+            )
+        )
+
+        if numpy.any(already_allocated):
+            # Some of the requested FQDNs are already allocated
+            # Which ones?
+            already_allocated_fqdns = list(
+                self._fqdns[already_allocated]
+            )
+            # Return False (we can't allocate) and the list of FQDNs
+            # that would have to be freed
+            return (False, None, already_allocated_fqdns)
+
+        # Generate mask of devices already allocated to the new owner
+        # but no longer wanted
+        release_mask = numpy.logical_and(
+            self._allocation == new_owner_id,
+            numpy.logical_not(wanted_allocation),
+        )
+        if numpy.any(release_mask):
+            fqdns_to_release = list(
+                self._fqdns[release_mask]
+            )
+        else:
+            fqdns_to_release = None
+
+        # Generate mask of devices not yet allocated to any owner
+        # which we now want
+        assign_mask = numpy.logical_and(
+            self._allocation == 0,
+            wanted_allocation
+        )
+        if numpy.any(assign_mask):
+            fqdns_to_assign = list(self._fqdns[assign_mask])
+        else:
+            fqdns_to_assign = None
+
+        return (True, fqdns_to_assign, fqdns_to_release)
+
+    def Assign(self, fqdns, owner_id):
+        """Take a list of device FQDNs and assign them to a new owner id.
+
+        Args:
+            fqdns (list): The list of device FQDNs to assign
+            owner_id (int): 1-based id of the new owner
+        """
+        mask = numpy.isin(
+            self._fqdns, fqdns, assume_unique=True
+        )
+        safe_to_allocate = numpy.logical_or.reduce(
+            (
+                self._allocation == 0,          # Not allocated
+                self._allocation == owner_id,   # Already satisfied
+                numpy.invert(mask)              # Not wanted
+            )
+        ).all()
+
+        if not safe_to_allocate:
+            raise TypeError(
+                'Assign failed. Some requested devices are already otherwise assigned.'
+            )
+
+        self._allocation[mask] = owner_id
+
+    def Release(self, fqdns):
+        """Take a list of device FQDNs and flag them as unassigned.
+
+        Args:
+            fqdns (list): The list of device FQDNs to release.
+        """
+        mask = numpy.isin(
+            self._fqdns, fqdns, assume_unique=True
+        )
+        self._allocation[mask] = 0
+
+
+class ControllerResourceManager:
+    """
+    This class implements a resource manger for the MCCS controller device
+    """
+
+    def __init__(self, fqdns):
+        """Initialize new ControllerResourceManager instance
+
+        Args:
+            fqdns (list): A list of device FQDNs
+        """
+        # Array holding all registered FQDNs of managed devices
+        self._fqdns = numpy.array(
+            [] if fqdns is None else fqdns
+        )
+        # Array holding the assignments to owners of the devices
+        self._allocation = numpy.zeros(
+            0 if fqdns is None else len(fqdns), dtype=numpy.uint8
+        )
+
+    def GetAllFqdns(self):
+        """
+        Get all FQDNs managed by this resource manager
+
+        Returns:
+            list: List of FQDNs managed
+        """
+        return list(self._fqdns)
+
+    def GetAssignedFqdns(self, owner_id):
+        """Get the FQDNs assigned to a given owner id
+
+        Args:
+            owner_id (int): 1-based device id that we check for ownership
+
+        Returns:
+            list: List of FQDNs assigned to owner_id
+        """
+
+        mask = (self._allocation == owner_id)
+
+        return list(self._fqdns[mask])
+
+    def QueryAllocation(self, fqdns, new_owner_id):
+        """Test if a (re)allocation is allowed, and if so, return lists of FQDNs
+        to assign and to release. If the allocation is not permitted due to some
+        FQDNs being allocated to another owner already, the list of blocking
+        FQDNs is returned as the ReleaseList.
+
+        Args:
+            fqdns (list): The list of FQDNs we would like to assign
+            new_owner_id (int): 1-based device id that would take ownership
+
+        Returns: tuple (Allowed, AssignList, ReleaseList)
+            WHERE
+            Allowed (bool): True if this (re)allocation is allowed
+            AssignList (list): The list of FQDNs to allocate, or None
+            ReleaseList (list): The list of FQDNs to release, or None
+        """
+
+        # TODO Check no FQDNs missing from the list of managed ones
+        # Create mask of FQDNs present in the wanted list
+        wanted_allocation = numpy.isin(
+            self._fqdns, fqdns, assume_unique=True
+        )
+        # Examine the allocation ids for these entries
+        already_allocated = numpy.logical_and.reduce(
+            (
+                self._allocation != 0,
+                self._allocation != new_owner_id,
+                wanted_allocation,
+            )
+        )
+
+        if numpy.any(already_allocated):
+            # Some of the requested FQDNs are already allocated
+            # Which ones?
+            already_allocated_fqdns = list(
+                self._fqdns[already_allocated]
+            )
+            # Return False (we can't allocate) and the list of FQDNs
+            # that would have to be freed
+            return (False, None, already_allocated_fqdns)
+
+        # Generate mask of devices already allocated to the new owner
+        # but no longer wanted
+        release_mask = numpy.logical_and(
+            self._allocation == new_owner_id,
+            numpy.logical_not(wanted_allocation),
+        )
+        if numpy.any(release_mask):
+            fqdns_to_release = list(
+                self._fqdns[release_mask]
+            )
+        else:
+            fqdns_to_release = None
+
+        # Generate mask of devices not yet allocated to any owner
+        # which we now want
+        assign_mask = numpy.logical_and(
+            self._allocation == 0,
+            wanted_allocation
+        )
+        if numpy.any(assign_mask):
+            fqdns_to_assign = list(self._fqdns[assign_mask])
+        else:
+            fqdns_to_assign = None
+
+        return (True, fqdns_to_assign, fqdns_to_release)
+
+    def Assign(self, fqdns, owner_id):
+        """Take a list of device FQDNs and assign them to a new owner id.
+
+        Args:
+            fqdns (list): The list of device FQDNs to assign
+            owner_id (int): 1-based id of the new owner
+        """
+        mask = numpy.isin(
+            self._fqdns, fqdns, assume_unique=True
+        )
+        safe_to_allocate = numpy.logical_or.reduce(
+            (
+                self._allocation == 0,          # Not allocated
+                self._allocation == owner_id,   # Already satisfied
+                numpy.invert(mask)              # Not wanted
+            )
+        ).all()
+
+        if not safe_to_allocate:
+            raise TypeError(
+                'Assign failed. Some requested devices are already otherwise assigned.'
+            )
+
+        self._allocation[mask] = owner_id
+
+    def Release(self, fqdns):
+        """Take a list of device FQDNs and flag them as unassigned.
+
+        Args:
+            fqdns (list): The list of device FQDNs to release.
+        """
+        mask = numpy.isin(
+            self._fqdns, fqdns, assume_unique=True
+        )
+        self._allocation[mask] = 0
+
+
 class MccsController(SKAMaster):
     """
     MccsController TANGO device class for the MCCS prototype.
@@ -172,14 +466,18 @@ class MccsController(SKAMaster):
                 len(device.MccsSubarrays), dtype=bool
             )
 
-            device._station_fqdns = numpy.array(
-                [] if device.MccsStations is None else device.MccsStations, dtype=str
-            )
+            # # MCCS-156 pass _station_fqdns to resource manager too
+            # device._station_fqdns = numpy.array(
+            #     [] if device.MccsStations is None else device.MccsStations, dtype=str
+            # )
 
-            # id of subarray that station is allocated to, zero if unallocated
-            device._station_allocated = numpy.zeros(
-                len(device.MccsStations), dtype=numpy.ubyte
-            )
+            # # id of subarray that station is allocated to, zero if unallocated
+            # device._station_allocated = numpy.zeros(
+            #     len(device.MccsStations), dtype=numpy.ubyte
+            # )
+
+            device._stations_manager = ControllerResourceManager(device.MccsStations)
+            station_fqdns = device._stations_manager.GetAllFqdns()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections,
@@ -235,6 +533,14 @@ class MccsController(SKAMaster):
                 None, fqdns, device.event_manager, device._update_health_state
             )
 
+            # # id of subarray that station is allocated to, zero if unallocated
+            # device._station_allocated = numpy.zeros(
+            #     len(device.MccsStations), dtype=numpy.ubyte
+            # )
+
+            device._stations_manager = ControllerResourceManager(device.MccsStations)
+            station_fqdns = device._stations_manager.GetAllFqdns()
+
         def _initialise_power_management(self, device, fqdns):
             """
             Initialise power management for this device.
@@ -247,6 +553,21 @@ class MccsController(SKAMaster):
             :type: list of str
             """
             device.power_manager = ControllerPowerManager(device._station_fqdns)
+            device._lock = threading.Lock()
+            # initialise the health table using the FQDN as the key.
+            # Create and event manager per FQDN and subscribe to events from it
+            device._eventManagerList = []
+            fqdns = station_fqdns
+            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
+            device._health_monitor = HealthMonitor(
+                fqdns, device._rollup_policy.rollup_health
+            )
+            for fqdn in station_fqdns:
+                device._eventManagerList.append(
+                    EventManager(fqdn, device._health_monitor.update_health_table)
+                )
+
+            device.power_manager = ControllerPowerManager(station_fqdns)
 
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
@@ -562,6 +883,209 @@ class MccsController(SKAMaster):
             return (result_code, message)
 
     @command(
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    def EnableSubarray(self, argin):
+        """
+        Activate an MCCS Sub-Array
+
+        :param argin: Sub-Array ID
+        :type argin: DevVarLongArray
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
+        handler = self.get_command_object("EnableSubarray")
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
+
+    class EnableSubarrayCommand(ResponseCommand):
+        """
+        Activate an MCCS Sub-Array
+        """
+
+        def do(self, argin):
+            """
+            Stateless do hook for the EnableSubarray() command
+
+            :param argin: the subarray id
+            :type argin: int
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            device = self.target
+            subarray_id = argin
+
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
+
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
+
+            if device._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already enabled".format(subarray_fqdn),
+                )
+            else:
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                (result_code, message) = subarray_device.On()
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Failed to enable subarray {subarray_fqdn}: {message}",
+                    )
+                device._subarray_enabled[subarray_id - 1] = True
+                return (ResultCode.OK, "EnableSubarray command successful")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.op_state == DevState.ON
+
+    def is_EnableSubarray_allowed(self):
+        """
+        Whether this command is allowed to be run in current device
+        state
+
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("EnableSubarray")
+        if not handler.check_allowed():
+            tango_raise("EnableSubarray() is not allowed in current state")
+        return True
+
+    @command(
+        dtype_in="DevLong",
+        doc_in="Sub-Array ID",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'information-only string')",
+    )
+    def DisableSubarray(self, argin):
+        """
+        De-activate an MCCS Sub-Array
+
+        :param argin: Sub-Array ID
+        :type argin: DevVarLongArray
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (ResultCode, str)
+        """
+        handler = self.get_command_object("DisableSubarray")
+        (resultcode, message) = handler(argin)
+        return [[resultcode], [message]]
+
+    class DisableSubarrayCommand(ResponseCommand):
+        """
+        De-activate an MCCS Sub-Array
+        """
+
+        def do(self, argin):
+            """
+            Stateless do hook for the DisableSubarray command
+
+            :param argin: Sub-Array ID
+            :type argin: DevVarLongArray
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            device = self.target
+            subarray_id = argin
+
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
+
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
+
+            if not device._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already disabled".format(subarray_fqdn),
+                )
+            else:
+                # MCCS-156
+                fqdns = device._stations_manager.GetAssignedFqdns(subarray_id)
+                for fqdn in fqdns:
+                    station = tango.DeviceProxy(fqdn)
+                    station.subarrayId = 0
+                device._stations_manager.Release(fqdns)
+
+                # mask = device._station_allocated == subarray_id
+                # fqdns = device._station_fqdns[mask]
+                # fqdns = list(fqdns)
+                # for fqdn in fqdns:
+                #     station = tango.DeviceProxy(fqdn)
+                #     station.subarrayId = 0
+                # device._station_allocated[mask] = 0
+
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                try:
+                    (result_code, message) = subarray_device.ReleaseAllResources()
+                except DevFailed:
+                    pass  # it probably has no resources to release
+
+                (result_code, message) = subarray_device.Off()
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Subarray failed to turn off: {message}",
+                    )
+                device._subarray_enabled[subarray_id - 1] = False
+                return (ResultCode.OK, "DisableSubarray command successful")
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state
+
+            :return: True if this command is allowed to be run in
+                current device state
+            :rtype: boolean
+            """
+            return self.state_model.op_state == DevState.ON
+
+    def is_DisableSubarray_allowed(self):
+        """
+        Whether this command is allowed to be run in current device
+        state
+
+        :return: True if this command is allowed to be run in
+            current device state
+        :rtype: boolean
+        :raises: DevFailed if this command is not allowed to be run
+            in current device state
+        """
+        handler = self.get_command_object("DisableSubarray")
+        if not handler.check_allowed():
+            tango_raise("DisableSubarray() is not allowed in current state")
+        return True
+
+    @command(
         dtype_in="DevString",
         doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
@@ -634,7 +1158,6 @@ class MccsController(SKAMaster):
 
             # Allocation request checks
             station_fqdns = []
-            for station_id in station_ids:
                 station_fqdns.append(f"low-mccs/station/{station_id:03}")
 
             station_allocation = numpy.isin(
@@ -668,9 +1191,106 @@ class MccsController(SKAMaster):
                 stations_to_release = list(
                     controllerdevice._station_fqdns[release_mask]
                 )
+            if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                return (
+                    "Cannot allocate resources to disabled subarray {}".format(
+                        subarray_fqdn
+                    ),
+                )
+            # station_allocation = numpy.isin(
+            #     controllerdevice._station_fqdns, stations, assume_unique=True
+            # )
+            # already_allocated = numpy.logical_and.reduce(
+            #     (
+            #         controllerdevice._station_allocated != 0,
+            #         controllerdevice._station_allocated != subarray_id,
+            #         station_allocation,
+            #     )
+            # )
+
+            # if numpy.any(already_allocated):
+            #     already_allocated_fqdns = list(
+            #         controllerdevice._station_fqdns[already_allocated]
+            #     )
+            #     return (
+            #         ResultCode.FAILED,
+            #         "Cannot allocate stations already allocated: {}".format(
+            #             ", ".join(already_allocated_fqdns)
+            #         ),
+            #     )
+
+            (
+                alloc_allowed,
+                stations_to_assign,
+                stations_to_release
+            ) = controllerdevice._stations_manager.QueryAllocation(
+                stations, subarray_id)
+            if not alloc_allowed:
+                return (
+                    ResultCode.FAILED,
+                    "Cannot allocate stations already allocated: {}".format(
+                        ", ".join(stations_to_release)
+                    ),
+                )
+
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
+
+            if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Cannot allocate resources to disabled subarray {}".format(
+                        subarray_fqdn
+                    ),
+                )
+            # station_allocation = numpy.isin(
+            #     controllerdevice._station_fqdns, stations, assume_unique=True
+            # )
+            # already_allocated = numpy.logical_and.reduce(
+            #     (
+            #         controllerdevice._station_allocated != 0,
+            #         controllerdevice._station_allocated != subarray_id,
+            #         station_allocation,
+            #     )
+            # )
+
+            # if numpy.any(already_allocated):
+            #     already_allocated_fqdns = list(
+            #         controllerdevice._station_fqdns[already_allocated]
+            #     )
+            #     return (
+            #         ResultCode.FAILED,
+            #         "Cannot allocate stations already allocated: {}".format(
+            #             ", ".join(already_allocated_fqdns)
+            #         ),
+            #     )
+
+            (
+                alloc_allowed,
+                stations_to_assign,
+                stations_to_release
+            ) = controllerdevice._stations_manager.QueryAllocation(
+                stations, subarray_id)
+            if not alloc_allowed:
+                return (
+                    ResultCode.FAILED,
+                    "Cannot allocate stations already allocated: {}".format(
+                        ", ".join(stations_to_release)
+                    ),
+                )
+
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
+
+            # release_mask = numpy.logical_and(
+            #     controllerdevice._station_allocated == subarray_id,
+            #     numpy.logical_not(station_allocation),
+            # )
+            # if numpy.any(release_mask):
+            #     stations_to_release = list(
+            #         controllerdevice._station_fqdns[release_mask]
+            #     )
+            if stations_to_release is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
-                )
                 if result_code == ResultCode.FAILED:
                     return (
                         ResultCode.FAILED,
@@ -695,8 +1315,11 @@ class MccsController(SKAMaster):
 
             if numpy.any(assign_mask):
                 stations_to_assign = list(controllerdevice._station_fqdns[assign_mask])
-                (result_code, message) = call_with_json(
-                    subarray_device.AssignResources, stations=stations_to_assign
+            # assign_mask = numpy.logical_and(
+            #     controllerdevice._station_allocated == 0, station_allocation
+            # )
+            # if numpy.any(assign_mask):
+            if stations_to_assign is not None:
                 )
                 if result_code == ResultCode.FAILED:
                     return (
@@ -708,8 +1331,8 @@ class MccsController(SKAMaster):
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
 
-            controllerdevice._station_allocated[release_mask] = 0
-            controllerdevice._station_allocated[assign_mask] = subarray_id
+            # controllerdevice._station_allocated[release_mask] = 0
+            # controllerdevice._station_allocated[assign_mask] = subarray_id
             return (ResultCode.OK, "Allocate command successful")
 
         def check_allowed(self):
@@ -860,6 +1483,20 @@ class MccsController(SKAMaster):
                     ResultCode.FAILED,
                     "Release() command failed - partial release currently unsupported",
                 )
+
+            # MCCS-156
+            fqdns = self.target._stations_manager.GetAssignedFqdns(subarray_id)
+            for fqdn in fqdns:
+                station = tango.DeviceProxy(fqdn)
+                station.subarrayId = 0
+            self.target._stations_manager.Release(fqdns)
+
+            # mask = self.target._station_allocated == subarray_id
+            # fqdns = list(self.target._station_fqdns[mask])
+            # for fqdn in fqdns:
+            #     device = tango.DeviceProxy(fqdn)
+            #     device.subarrayId = 0
+            # self.target._station_allocated[mask] = 0
             return (ResultCode.OK, "Release() command successful")
 
         def check_allowed(self):

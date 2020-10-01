@@ -62,13 +62,24 @@ class ControllerResourceManager:
             fqdns (list): A list of device FQDNs
         """
         # Array holding all registered FQDNs of managed devices
-        self._fqdns = numpy.array(
-            [] if fqdns is None else fqdns
-        )
+        self._fqdns = numpy.array([] if fqdns is None else fqdns)
         # Array holding the assignments to owners of the devices
         self._allocation = numpy.zeros(
             0 if fqdns is None else len(fqdns), dtype=numpy.uint8
         )
+
+    def CheckManaged(self, fqdns):
+        """Test if the given FQDNs are being managed
+
+        Args:
+            fqdns (list): The FQDNs to check
+
+        Returns:
+            bool: True if all FQDNs are being managed
+        """
+        tocheck = numpy.array(fqdns)
+
+        return numpy.isin(tocheck, self._fqdns).all()
 
     def GetAllFqdns(self):
         """
@@ -89,7 +100,7 @@ class ControllerResourceManager:
             list: List of FQDNs assigned to owner_id
         """
 
-        mask = (self._allocation == owner_id)
+        mask = self._allocation == owner_id
 
         return list(self._fqdns[mask])
 
@@ -110,11 +121,11 @@ class ControllerResourceManager:
             ReleaseList (list): The list of FQDNs to release, or None
         """
 
-        # TODO Check no FQDNs missing from the list of managed ones
+        if not self.CheckManaged(fqdns):
+            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+
         # Create mask of FQDNs present in the wanted list
-        wanted_allocation = numpy.isin(
-            self._fqdns, fqdns, assume_unique=True
-        )
+        wanted_allocation = numpy.isin(self._fqdns, fqdns, assume_unique=True)
         # Examine the allocation ids for these entries
         already_allocated = numpy.logical_and.reduce(
             (
@@ -127,9 +138,7 @@ class ControllerResourceManager:
         if numpy.any(already_allocated):
             # Some of the requested FQDNs are already allocated
             # Which ones?
-            already_allocated_fqdns = list(
-                self._fqdns[already_allocated]
-            )
+            already_allocated_fqdns = list(self._fqdns[already_allocated])
             # Return False (we can't allocate) and the list of FQDNs
             # that would have to be freed
             return (False, None, already_allocated_fqdns)
@@ -141,23 +150,19 @@ class ControllerResourceManager:
             numpy.logical_not(wanted_allocation),
         )
         if numpy.any(release_mask):
-            fqdns_to_release = list(
-                self._fqdns[release_mask]
-            )
+            fqdns_to_release = list(self._fqdns[release_mask])
         else:
             fqdns_to_release = None
 
         # Generate mask of devices not yet allocated to any owner
         # which we now want
-        assign_mask = numpy.logical_and(
-            self._allocation == 0,
-            wanted_allocation
-        )
+        assign_mask = numpy.logical_and(self._allocation == 0, wanted_allocation)
         if numpy.any(assign_mask):
             fqdns_to_assign = list(self._fqdns[assign_mask])
         else:
             fqdns_to_assign = None
 
+        print(f"#### Asign ###\n{fqdns_to_assign}", file=sys.stderr)
         return (True, fqdns_to_assign, fqdns_to_release)
 
     def Assign(self, fqdns, owner_id):
@@ -167,20 +172,22 @@ class ControllerResourceManager:
             fqdns (list): The list of device FQDNs to assign
             owner_id (int): 1-based id of the new owner
         """
-        mask = numpy.isin(
-            self._fqdns, fqdns, assume_unique=True
-        )
+
+        if not self.CheckManaged(fqdns):
+            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+
+        mask = numpy.isin(self._fqdns, fqdns, assume_unique=True)
         safe_to_allocate = numpy.logical_or.reduce(
             (
-                self._allocation == 0,          # Not allocated
-                self._allocation == owner_id,   # Already satisfied
-                numpy.invert(mask)              # Not wanted
+                self._allocation == 0,  # Not allocated
+                self._allocation == owner_id,  # Already satisfied
+                numpy.invert(mask),  # Not wanted
             )
         ).all()
 
         if not safe_to_allocate:
             raise TypeError(
-                'Assign failed. Some requested devices are already otherwise assigned.'
+                "Assign failed. Some requested devices are already otherwise assigned."
             )
 
         self._allocation[mask] = owner_id
@@ -191,52 +198,70 @@ class ControllerResourceManager:
         Args:
             fqdns (list): The list of device FQDNs to release.
         """
-        mask = numpy.isin(
-            self._fqdns, fqdns, assume_unique=True
-        )
+        if not self.CheckManaged(fqdns):
+            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+
+        mask = numpy.isin(self._fqdns, fqdns, assume_unique=True)
         self._allocation[mask] = 0
 
 
 class ControllerResourceManager:
     """
     This class implements a resource manger for the MCCS controller device
+
+    Initialize with a list of FQDNs of devices to be managed.
+    The ControllerResourceManager holds the FQDN and the (1-based) ID
+    of the device that owns each managed device.
     """
 
     def __init__(self, fqdns):
-        """Initialize new ControllerResourceManager instance
+        """
+        Initialize new ControllerResourceManager instance
 
-        Args:
-            fqdns (list): A list of device FQDNs
+        :param fqdns: A list of device FQDNs
+        :type fqdns: list of string
         """
         # Array holding all registered FQDNs of managed devices
-        self._fqdns = numpy.array(
-            [] if fqdns is None else fqdns
-        )
+        self._fqdns = numpy.array([] if fqdns is None else fqdns)
         # Array holding the assignments to owners of the devices
         self._allocation = numpy.zeros(
             0 if fqdns is None else len(fqdns), dtype=numpy.uint8
         )
 
+    def CheckManaged(self, fqdns):
+        """
+        Test if the given FQDNs are being managed
+
+        :param fqdns: The FQDNs to check
+        :type fqdns: list of string
+
+        :return: True if all FQDNs are being managed
+        :rtype: bool
+        """
+        tocheck = numpy.array(fqdns)
+
+        return numpy.isin(tocheck, self._fqdns).all()
+
     def GetAllFqdns(self):
         """
         Get all FQDNs managed by this resource manager
 
-        Returns:
-            list: List of FQDNs managed
+        :return: List of FQDNs managed
+        :rtype: list of strings
         """
         return list(self._fqdns)
 
     def GetAssignedFqdns(self, owner_id):
         """Get the FQDNs assigned to a given owner id
 
-        Args:
-            owner_id (int): 1-based device id that we check for ownership
+        :param owner_id: 1-based device id that we check for ownership
+        :type owner_id: int
 
-        Returns:
-            list: List of FQDNs assigned to owner_id
+        :return: List of FQDNs assigned to owner_id
+        :rtype: list of strings
         """
 
-        mask = (self._allocation == owner_id)
+        mask = self._allocation == owner_id
 
         return list(self._fqdns[mask])
 
@@ -246,22 +271,24 @@ class ControllerResourceManager:
         FQDNs being allocated to another owner already, the list of blocking
         FQDNs is returned as the ReleaseList.
 
-        Args:
-            fqdns (list): The list of FQDNs we would like to assign
-            new_owner_id (int): 1-based device id that would take ownership
+        :param fqdns: The list of FQDNs we would like to assign
+        :type fqdns: list of string
+        :param new_owner_id: 1-based device id that would take ownership
+        :type new_owner_id: int
 
-        Returns: tuple (Allowed, AssignList, ReleaseList)
+        :return: tuple (Allowed, AssignList, ReleaseList)
             WHERE
             Allowed (bool): True if this (re)allocation is allowed
             AssignList (list): The list of FQDNs to allocate, or None
             ReleaseList (list): The list of FQDNs to release, or None
+        :rtype: tuple (bool, list of strings, list of strings)
         """
 
-        # TODO Check no FQDNs missing from the list of managed ones
+        if not self.CheckManaged(fqdns):
+            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+
         # Create mask of FQDNs present in the wanted list
-        wanted_allocation = numpy.isin(
-            self._fqdns, fqdns, assume_unique=True
-        )
+        wanted_allocation = numpy.isin(self._fqdns, fqdns, assume_unique=True)
         # Examine the allocation ids for these entries
         already_allocated = numpy.logical_and.reduce(
             (
@@ -274,9 +301,7 @@ class ControllerResourceManager:
         if numpy.any(already_allocated):
             # Some of the requested FQDNs are already allocated
             # Which ones?
-            already_allocated_fqdns = list(
-                self._fqdns[already_allocated]
-            )
+            already_allocated_fqdns = list(self._fqdns[already_allocated])
             # Return False (we can't allocate) and the list of FQDNs
             # that would have to be freed
             return (False, None, already_allocated_fqdns)
@@ -287,60 +312,62 @@ class ControllerResourceManager:
             self._allocation == new_owner_id,
             numpy.logical_not(wanted_allocation),
         )
-        if numpy.any(release_mask):
-            fqdns_to_release = list(
-                self._fqdns[release_mask]
-            )
-        else:
-            fqdns_to_release = None
+        fqdns_to_release = (
+            list(self._fqdns[release_mask]) if numpy.any(release_mask) else None
+        )
 
         # Generate mask of devices not yet allocated to any owner
         # which we now want
-        assign_mask = numpy.logical_and(
-            self._allocation == 0,
-            wanted_allocation
+        assign_mask = numpy.logical_and(self._allocation == 0, wanted_allocation)
+        fqdns_to_assign = (
+            list(self._fqdns[assign_mask]) if numpy.any(assign_mask) else None
         )
-        if numpy.any(assign_mask):
-            fqdns_to_assign = list(self._fqdns[assign_mask])
-        else:
-            fqdns_to_assign = None
 
         return (True, fqdns_to_assign, fqdns_to_release)
 
-    def Assign(self, fqdns, owner_id):
-        """Take a list of device FQDNs and assign them to a new owner id.
-
-        Args:
-            fqdns (list): The list of device FQDNs to assign
-            owner_id (int): 1-based id of the new owner
+    def Assign(self, fqdns, new_owner_id):
         """
-        mask = numpy.isin(
-            self._fqdns, fqdns, assume_unique=True
-        )
+        Take a list of device FQDNs and assign them to a new owner id.
+
+        :param fqdns: The list of device FQDNs to assign
+        :type fqdns: list of string
+        :param new_owner_id: 1-based id of the new owner
+        :type new_owner_id: int
+        :raises: TypeError if any of the FQDNs are not being managed
+            or are otherwise assigned
+        """
+
+        if not self.CheckManaged(fqdns):
+            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+
+        mask = numpy.isin(self._fqdns, fqdns, assume_unique=True)
         safe_to_allocate = numpy.logical_or.reduce(
             (
-                self._allocation == 0,          # Not allocated
-                self._allocation == owner_id,   # Already satisfied
-                numpy.invert(mask)              # Not wanted
+                self._allocation == 0,  # Not allocated
+                self._allocation == new_owner_id,  # Already satisfied
+                numpy.invert(mask),  # Not wanted
             )
         ).all()
 
         if not safe_to_allocate:
             raise TypeError(
-                'Assign failed. Some requested devices are already otherwise assigned.'
+                "Assign failed. Some requested devices are already otherwise assigned."
             )
 
-        self._allocation[mask] = owner_id
+        self._allocation[mask] = new_owner_id
 
     def Release(self, fqdns):
-        """Take a list of device FQDNs and flag them as unassigned.
-
-        Args:
-            fqdns (list): The list of device FQDNs to release.
         """
-        mask = numpy.isin(
-            self._fqdns, fqdns, assume_unique=True
-        )
+        Take a list of device FQDNs and flag them as unassigned.
+
+        :param fqdns: The list of device FQDNs to release
+        :type fqdns: list of string
+        :raises: TypeError if any of the FQDNs are not being managed
+        """
+        if not self.CheckManaged(fqdns):
+            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+
+        mask = numpy.isin(self._fqdns, fqdns, assume_unique=True)
         self._allocation[mask] = 0
 
 
@@ -466,16 +493,7 @@ class MccsController(SKAMaster):
                 len(device.MccsSubarrays), dtype=bool
             )
 
-            # # MCCS-156 pass _station_fqdns to resource manager too
-            # device._station_fqdns = numpy.array(
-            #     [] if device.MccsStations is None else device.MccsStations, dtype=str
-            # )
-
-            # # id of subarray that station is allocated to, zero if unallocated
-            # device._station_allocated = numpy.zeros(
-            #     len(device.MccsStations), dtype=numpy.ubyte
-            # )
-
+            # Instantiate a resource manager for the Stations
             device._stations_manager = ControllerResourceManager(device.MccsStations)
             station_fqdns = device._stations_manager.GetAllFqdns()
 
@@ -1028,20 +1046,12 @@ class MccsController(SKAMaster):
                     "Subarray {} is already disabled".format(subarray_fqdn),
                 )
             else:
-                # MCCS-156
+                # Query stations resource manager for FQDNs assigned to this subarray
                 fqdns = device._stations_manager.GetAssignedFqdns(subarray_id)
                 for fqdn in fqdns:
                     station = tango.DeviceProxy(fqdn)
                     station.subarrayId = 0
                 device._stations_manager.Release(fqdns)
-
-                # mask = device._station_allocated == subarray_id
-                # fqdns = device._station_fqdns[mask]
-                # fqdns = list(fqdns)
-                # for fqdn in fqdns:
-                #     station = tango.DeviceProxy(fqdn)
-                #     station.subarrayId = 0
-                # device._station_allocated[mask] = 0
 
                 subarray_device = tango.DeviceProxy(subarray_fqdn)
                 try:
@@ -1222,9 +1232,10 @@ class MccsController(SKAMaster):
             (
                 alloc_allowed,
                 stations_to_assign,
-                stations_to_release
+                stations_to_release,
             ) = controllerdevice._stations_manager.QueryAllocation(
-                stations, subarray_id)
+                stations, subarray_id
+            )
             if not alloc_allowed:
                 return (
                     ResultCode.FAILED,
@@ -1242,35 +1253,20 @@ class MccsController(SKAMaster):
                         subarray_fqdn
                     ),
                 )
-            # station_allocation = numpy.isin(
-            #     controllerdevice._station_fqdns, stations, assume_unique=True
-            # )
-            # already_allocated = numpy.logical_and.reduce(
-            #     (
-            #         controllerdevice._station_allocated != 0,
-            #         controllerdevice._station_allocated != subarray_id,
-            #         station_allocation,
-            #     )
-            # )
 
-            # if numpy.any(already_allocated):
-            #     already_allocated_fqdns = list(
-            #         controllerdevice._station_fqdns[already_allocated]
-            #     )
-            #     return (
-            #         ResultCode.FAILED,
-            #         "Cannot allocate stations already allocated: {}".format(
-            #             ", ".join(already_allocated_fqdns)
-            #         ),
-            #     )
-
+            # Query stations resource manager
+            # Are we allowed to make this allocation?
+            # Which FQDNs need to be assigned and released?
             (
                 alloc_allowed,
                 stations_to_assign,
-                stations_to_release
+                stations_to_release,
             ) = controllerdevice._stations_manager.QueryAllocation(
-                stations, subarray_id)
+                stations, subarray_id
+            )
             if not alloc_allowed:
+                # If manager returns False (not allowed) stations_to_release
+                # gives the list of FQDNs blocking the allocation.
                 return (
                     ResultCode.FAILED,
                     "Cannot allocate stations already allocated: {}".format(
@@ -1280,14 +1276,7 @@ class MccsController(SKAMaster):
 
             subarray_device = tango.DeviceProxy(subarray_fqdn)
 
-            # release_mask = numpy.logical_and(
-            #     controllerdevice._station_allocated == subarray_id,
-            #     numpy.logical_not(station_allocation),
-            # )
-            # if numpy.any(release_mask):
-            #     stations_to_release = list(
-            #         controllerdevice._station_fqdns[release_mask]
-            #     )
+            # Manager gave this list of stations to release (no longer required)
             if stations_to_release is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
@@ -1297,9 +1286,12 @@ class MccsController(SKAMaster):
                         f"Failed to release resources from subarray {subarray_fqdn}:"
                         f"{message}",
                     )
-                for station_fqdn in stations_to_release:
-                    station = tango.DeviceProxy(station_fqdn)
-                    station.subarrayId = 0
+                for fqdn in stations_to_release:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = 0
+
+                # Inform manager that we made the releases
+                controllerdevice._stations_manager.Release(stations_to_release)
 
             # Enable the subarray specified by the caller (if required)
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
@@ -1319,6 +1311,7 @@ class MccsController(SKAMaster):
             #     controllerdevice._station_allocated == 0, station_allocation
             # )
             # if numpy.any(assign_mask):
+            print(f"^^^^ ASSIGN ^^^^\n{stations_to_assign}", file=sys.stderr)
             if stations_to_assign is not None:
                 )
                 if result_code == ResultCode.FAILED:
@@ -1331,8 +1324,11 @@ class MccsController(SKAMaster):
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
 
-            # controllerdevice._station_allocated[release_mask] = 0
-            # controllerdevice._station_allocated[assign_mask] = subarray_id
+                # Inform manager that we made the assignments
+                controllerdevice._stations_manager.Assign(
+                    stations_to_assign, subarray_id
+                )
+
             return (ResultCode.OK, "Allocate command successful")
 
         def check_allowed(self):
@@ -1484,19 +1480,13 @@ class MccsController(SKAMaster):
                     "Release() command failed - partial release currently unsupported",
                 )
 
-            # MCCS-156
+            # Query stations resouce manager for stations assigned tp subarray
             fqdns = self.target._stations_manager.GetAssignedFqdns(subarray_id)
             for fqdn in fqdns:
                 station = tango.DeviceProxy(fqdn)
                 station.subarrayId = 0
             self.target._stations_manager.Release(fqdns)
 
-            # mask = self.target._station_allocated == subarray_id
-            # fqdns = list(self.target._station_fqdns[mask])
-            # for fqdn in fqdns:
-            #     device = tango.DeviceProxy(fqdn)
-            #     device.subarrayId = 0
-            # self.target._station_allocated[mask] = 0
             return (ResultCode.OK, "Release() command successful")
 
         def check_allowed(self):

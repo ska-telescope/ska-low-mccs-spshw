@@ -19,7 +19,7 @@ from ska.base import SKABaseDeviceStateModel
 from ska.base.commands import CommandError, ResultCode
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import MccsController, ControllerPowerManager, release
-from ska.low.mccs.utils import call_with_json, tango_raise
+from ska.low.mccs.utils import call_with_json
 
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
@@ -96,86 +96,6 @@ class TestMccsController:
         assert result_code == ResultCode.OK
         assert message == "Stub implementation of Maintenance(), does nothing"
 
-    def test_EnableSubarray(self, device_under_test):
-        """
-        Test that controller can enable a subarray
-        """
-        controller = device_under_test  # to make test clearer to read
-        mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
-        mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
-
-        controller.On()
-
-        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
-        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
-
-        # Tell controller to enable subarray 1
-        (result_code, message) = controller.EnableSubarray(1)
-        assert result_code == ResultCode.OK
-
-        # Check that subarray 1 was turned on, and subarray 2 was not
-        mock_subarray_1.On.assert_called_once_with()
-        mock_subarray_2.On.assert_not_called()
-
-        mock_subarray_1.reset_mock()
-        mock_subarray_1.On.side_effect = ((ResultCode.FAILED, "Subarray already on."),)
-
-        # Telling controller to enable an enabled subarray should fail
-        (result_code, message) = controller.EnableSubarray(1)
-        assert result_code == ResultCode.FAILED
-
-        # Check no side-effect of failed call
-        mock_subarray_1.On.assert_not_called()
-        mock_subarray_2.On.assert_not_called()
-
-        # Tell controller to enable subarray 2
-        (result_code, message) = controller.EnableSubarray(2)
-        assert result_code == ResultCode.OK
-
-        # Check that the subarray 2 was turned on and subarray 1 wasn't.
-        mock_subarray_1.On.assert_not_called()
-        mock_subarray_2.On.assert_called_once_with()
-
-    def test_DisableSubarray(self, device_under_test):
-        """
-        Test that controller can disable a subarray
-        """
-        controller = device_under_test  # to make test clearer to read
-        mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
-        mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
-
-        controller.On()
-
-        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
-        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
-
-        # setup by telling controller to enable subarrays 1 and 2
-        controller.EnableSubarray(1)
-        controller.EnableSubarray(2)
-
-        mock_subarray_1.ReleaseAllResources.side_effect = (
-            (ResultCode.FAILED, "No resources to release"),
-        )
-        mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Subarray is off."),)
-
-        # now tell controller to disable subarray 1
-        (result_code, message) = controller.DisableSubarray(1)
-        assert result_code == ResultCode.OK
-
-        # Check that the subarray 1 only was turned off.
-        mock_subarray_1.Off.assert_called_once_with()
-        mock_subarray_2.Off.assert_not_called()
-
-        mock_subarray_1.reset_mock()
-
-        # Disabling a subarray that is already disabled should fail
-        (result_code, message) = controller.DisableSubarray(1)
-        assert result_code == ResultCode.FAILED
-
-        # check no side-effect of failed command.
-        mock_subarray_1.Off.assert_not_called()
-        mock_subarray_2.Off.assert_not_called()
-
     def test_Allocate(self, device_under_test):
         """
         Test the Allocate command.
@@ -193,42 +113,26 @@ class TestMccsController:
 
         controller.On()
 
-        # Can't allocate to an array that hasn't been enabled
-        (result_code, message) = call_with_json(
-            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+        mock_subarray_1.On.side_effect = (
+            (ResultCode.OK, "On command completed successfully"),
         )
-        assert result_code == ResultCode.FAILED
-
-        # check no side-effect to failure
-        mock_subarray_1.ReleaseResources.assert_not_called()
-        mock_subarray_1.AssignResources.assert_not_called()
-        mock_subarray_2.ReleaseResources.assert_not_called()
-        mock_subarray_2.AssignResources.assert_not_called()
-        assert mock_station_1.subarrayId == 0
-        assert mock_station_2.subarrayId == 0
-
-        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
-        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on."),)
-
-        # now enable subarrays
-        controller.EnableSubarray(1)
-        controller.EnableSubarray(2)
-
         mock_subarray_1.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
 
         # allocate station_1 to subarray_1
         (result_code, message) = call_with_json(
-            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=1, station_ids=[1]
         )
         assert result_code == ResultCode.OK
 
         # check that the mock subarray_1 was told to assign that resource
+        mock_subarray_1.On.assert_called_once_with()
         mock_subarray_1.ReleaseResources.assert_not_called()
         mock_subarray_1.AssignResources.assert_called_once_with(
             json.dumps({"stations": ["low-mccs/station/001"]})
         )
+        mock_subarray_2.On.assert_not_called()
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_not_called()
         assert mock_station_1.subarrayId == 1
@@ -240,13 +144,15 @@ class TestMccsController:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         (result_code, message) = call_with_json(
-            controller.Allocate, subarray_id=2, stations=["low-mccs/station/001"]
+            controller.Allocate, subarray_id=2, station_ids=[1]
         )
         assert result_code == ResultCode.FAILED
 
         # check no side-effects
+        mock_subarray_1.On.assert_not_called()
         mock_subarray_1.ReleaseResources.assert_not_called()
         mock_subarray_1.AssignResources.assert_not_called()
+        mock_subarray_2.On.assert_not_called()
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_not_called()
         assert mock_station_1.subarrayId == 1
@@ -260,17 +166,17 @@ class TestMccsController:
         )
 
         (result_code, message) = call_with_json(
-            controller.Allocate,
-            subarray_id=1,
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            controller.Allocate, subarray_id=1, station_ids=[1, 2]
         )
         assert result_code == ResultCode.OK
 
         # check
+        mock_subarray_1.On.assert_not_called()
         mock_subarray_1.ReleaseResources.assert_not_called()
         mock_subarray_1.AssignResources.assert_called_once_with(
             json.dumps({"stations": ["low-mccs/station/002"]})
         )
+        mock_subarray_2.On.assert_not_called()
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_not_called()
         assert mock_station_1.subarrayId == 1
@@ -280,21 +186,23 @@ class TestMccsController:
         mock_subarray_2.reset_mock()
 
         mock_subarray_1.ReleaseResources.side_effect = (
-            (ResultCode.OK, "Resources assigned"),
+            (ResultCode.OK, "Resources released"),
         )
 
-        # allocating station 2 to subarray 1 should succeed, because the
+        # allocating station 2 to subarray 1 should succeed, because
         # it only requires resource release
         (result_code, message) = call_with_json(
-            controller.Allocate, subarray_id=1, stations=["low-mccs/station/002"]
+            controller.Allocate, subarray_id=1, station_ids=[2]
         )
         assert result_code == ResultCode.OK
 
         # check
+        mock_subarray_1.On.assert_not_called()
         mock_subarray_1.ReleaseResources.assert_called_once_with(
             json.dumps({"stations": ["low-mccs/station/001"]})
         )
         mock_subarray_1.AssignResources.assert_not_called()
+        mock_subarray_2.On.assert_not_called()
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_not_called()
         assert mock_station_1.subarrayId == 0
@@ -304,12 +212,23 @@ class TestMccsController:
         mock_subarray_2.reset_mock()
 
         mock_subarray_1.ReleaseAllResources.side_effect = (
-            (ResultCode.FAILED, "No resources to release"),
+            (ResultCode.OK, "Resources released"),
         )
-        mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Resources assigned"),)
+        mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Subarray switched off"),)
 
-        # now disable subarray 1
-        controller.DisableSubarray(1)
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=1, release_all=True
+        )
+        assert result_code == ResultCode.OK
+
+        mock_subarray_1.On.assert_not_called()
+        mock_subarray_1.Off.assert_called_once_with()
+        mock_subarray_1.ReleaseAllResources.assert_called_once_with()
+        mock_subarray_2.AssignResources.assert_not_called()
+        mock_subarray_2.On.assert_not_called()
+        mock_subarray_2.Off.assert_not_called()
+        mock_subarray_2.ReleaseResources.assert_not_called()
+        mock_subarray_2.AssignResources.assert_not_called()
 
         # check
         assert mock_station_1.subarrayId == 0
@@ -319,19 +238,22 @@ class TestMccsController:
         # have been released so we should be able to allocate them to
         # subarray 2
 
+        mock_subarray_2.On.side_effect = (
+            (ResultCode.OK, "On command completed successfully"),
+        )
         mock_subarray_2.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
         (result_code, message) = call_with_json(
-            controller.Allocate,
-            subarray_id=2,
-            stations=["low-mccs/station/001", "low-mccs/station/002"],
+            controller.Allocate, subarray_id=2, station_ids=[1, 2]
         )
         assert result_code == ResultCode.OK
 
         # check
+        mock_subarray_1.On.assert_not_called()
         mock_subarray_1.ReleaseResources.assert_not_called()
         mock_subarray_1.AssignResources.assert_not_called()
+        mock_subarray_2.On.assert_called_once_with()
         mock_subarray_2.ReleaseResources.assert_not_called()
         mock_subarray_2.AssignResources.assert_called_once_with(
             json.dumps({"stations": ["low-mccs/station/001", "low-mccs/station/002"]})
@@ -351,63 +273,61 @@ class TestMccsController:
 
         controller.On()
 
-        # enable subarrays
-        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
-        controller.EnableSubarray(1)
-        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
-        controller.EnableSubarray(2)
-
         # allocate stations 1 to subarray 1
+        mock_subarray_1.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
         mock_subarray_1.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
-        call_with_json(
-            controller.Allocate, subarray_id=1, stations=["low-mccs/station/001"]
-        )
+        call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
+        mock_subarray_1.On.assert_called_once_with()
+        # check state
+        assert mock_station_1.subarrayId == 1
 
         # allocate station 2 to subarray 2
+        mock_subarray_2.On.side_effect = ((ResultCode.OK, "Subarray is on"),)
         mock_subarray_2.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
-        call_with_json(
-            controller.Allocate, subarray_id=2, stations=["low-mccs/station/002"]
-        )
-
-        # check initial state
+        call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
+        mock_subarray_2.On.assert_called_once_with()
+        # check state
         assert mock_station_1.subarrayId == 1
         assert mock_station_2.subarrayId == 2
 
-        # release resources of subarray_2
+        # release all resources from subarray_2
         mock_subarray_2.ReleaseAllResources.side_effect = (
             (ResultCode.OK, "Resources released"),
         )
-        (result_code, message) = controller.Release(2)
+        mock_subarray_2.Off.side_effect = ((ResultCode.OK, "Subarray switched off"),)
+
+        # release all resources from subarray_2
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=2, release_all=True
+        )
         assert result_code == ResultCode.OK
 
         # check
         mock_subarray_1.ReleaseAllResources.assert_not_called()
+        mock_subarray_1.Off.assert_not_called()
         mock_subarray_2.ReleaseAllResources.assert_called_once_with()
+        mock_subarray_2.Off.assert_called_once_with()
         assert mock_station_1.subarrayId == 1
         assert mock_station_2.subarrayId == 0
 
         mock_subarray_1.reset_mock()
         mock_subarray_2.reset_mock()
 
-        # tell mock_subarray_2 that it is an empty subarray that should
-        # raise an exception if ReleaseAllResources is called on it.
-        mock_subarray_2.ReleaseAllResources.side_effect = lambda: tango_raise(
-            "Command disallowed when obsState==IDLE",
-            _origin="Subarray.ReleaseAllResources()",
-            reason="MockException",
+        # releasing all resources of unresourced subarray_2 should fail
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=2, release_all=True
         )
-
-        # releasing resources of unresourced subarray_2 should fail
-        (result_code, message) = controller.Release(2)
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
         mock_subarray_1.ReleaseAllResources.assert_not_called()
-        mock_subarray_2.ReleaseAllResources.assert_called_once_with()
+        mock_subarray_1.Off.assert_not_called()
+        mock_subarray_2.ReleaseAllResources.assert_not_called()
+        mock_subarray_2.Off.assert_not_called()
         assert mock_station_1.subarrayId == 1
         assert mock_station_2.subarrayId == 0
 
@@ -418,11 +338,18 @@ class TestMccsController:
         mock_subarray_1.ReleaseAllResources.side_effect = (
             (ResultCode.OK, "Resources released"),
         )
-        (result_code, message) = controller.Release(1)
+        mock_subarray_1.Off.side_effect = ((ResultCode.OK, "Subarray switched off"),)
+
+        # release all resources from subarray_1
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=1, release_all=True
+        )
         assert result_code == ResultCode.OK
 
         # check all released
+        mock_subarray_1.Off.assert_called_once_with()
         mock_subarray_1.ReleaseAllResources.assert_called_once_with()
+        mock_subarray_2.Off.assert_not_called()
         mock_subarray_2.ReleaseAllResources.assert_not_called()
         assert mock_station_1.subarrayId == 0
         assert mock_station_2.subarrayId == 0

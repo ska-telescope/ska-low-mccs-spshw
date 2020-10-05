@@ -104,12 +104,10 @@ class MccsController(SKAMaster):
         self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
         self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
         self.register_command_object("Operate", self.OperateCommand(*args))
-        self.register_command_object(
-            "EnableSubarray", self.EnableSubarrayCommand(*args)
-        )
-        self.register_command_object(
-            "DisableSubarray", self.DisableSubarrayCommand(*args)
-        )
+        # TODO: Deprecate
+        # self.register_command_object(
+        #    "DisableSubarray", self.DisableSubarrayCommand(*args)
+        # )
         self.register_command_object("Allocate", self.AllocateCommand(*args))
         self.register_command_object("Release", self.ReleaseCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
@@ -461,98 +459,6 @@ class MccsController(SKAMaster):
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
     )
-    def EnableSubarray(self, argin):
-        """
-        Activate an MCCS Sub-Array
-
-        :param argin: Sub-Array ID
-        :type argin: DevVarLongArray
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (ResultCode, str)
-        """
-        handler = self.get_command_object("EnableSubarray")
-        (resultcode, message) = handler(argin)
-        return [[resultcode], [message]]
-
-    class EnableSubarrayCommand(ResponseCommand):
-        """
-        Activate an MCCS Sub-Array
-        """
-
-        def do(self, argin):
-            """
-            Stateless do hook for the EnableSubarray() command
-
-            :param argin: the subarray id
-            :type argin: int
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (ResultCode, str)
-            """
-            device = self.target
-            subarray_id = argin
-
-            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
-                return (
-                    ResultCode.FAILED,
-                    "Subarray index {} is out of range".format(subarray_id),
-                )
-
-            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
-
-            if device._subarray_enabled[subarray_id - 1]:
-                return (
-                    ResultCode.FAILED,
-                    "Subarray {} is already enabled".format(subarray_fqdn),
-                )
-            else:
-                subarray_device = tango.DeviceProxy(subarray_fqdn)
-                (result_code, message) = subarray_device.On()
-                if result_code == ResultCode.FAILED:
-                    return (
-                        ResultCode.FAILED,
-                        f"Failed to enable subarray {subarray_fqdn}: {message}",
-                    )
-                device._subarray_enabled[subarray_id - 1] = True
-                return (ResultCode.OK, "EnableSubarray command successful")
-
-        def check_allowed(self):
-            """
-            Whether this command is allowed to be run in current device
-            state
-
-            :return: True if this command is allowed to be run in
-                current device state
-            :rtype: boolean
-            """
-            return self.state_model.op_state == DevState.ON
-
-    def is_EnableSubarray_allowed(self):
-        """
-        Whether this command is allowed to be run in current device
-        state
-
-        :return: True if this command is allowed to be run in
-            current device state
-        :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
-        """
-        handler = self.get_command_object("EnableSubarray")
-        if not handler.check_allowed():
-            tango_raise("EnableSubarray() is not allowed in current state")
-        return True
-
-    @command(
-        dtype_in="DevLong",
-        doc_in="Sub-Array ID",
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
-    )
     def DisableSubarray(self, argin):
         """
         De-activate an MCCS Sub-Array
@@ -709,7 +615,7 @@ class MccsController(SKAMaster):
             terms of which stations should be allocated to the specified Sub-Array.
 
             :param argin: JSON-formatted string containing an integer
-                subarray_id, and arrays of station fqdns.
+                subarray_id, station ids, channels and station beam ids.
             :type argin: str
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -719,21 +625,21 @@ class MccsController(SKAMaster):
 
             args = json.loads(argin)
             subarray_id = args["subarray_id"]
-            stations = args["stations"]
+            station_ids = args["station_ids"]
             controllerdevice = self.target
-
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
-            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
 
+            # First, enable the subarray specified by the caller
+            result = self.enableSubarray(subarray_id)
+            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
                 return (
                     ResultCode.FAILED,
-                    "Cannot allocate resources to disabled subarray {}".format(
-                        subarray_fqdn
-                    ),
+                    "Cannot enable subarray {}".format(subarray_fqdn),
                 )
+
             station_allocation = numpy.isin(
-                controllerdevice._station_fqdns, stations, assume_unique=True
+                controllerdevice._station_fqdns, station_ids, assume_unique=True
             )
             already_allocated = numpy.logical_and.reduce(
                 (
@@ -742,7 +648,6 @@ class MccsController(SKAMaster):
                     station_allocation,
                 )
             )
-
             if numpy.any(already_allocated):
                 already_allocated_fqdns = list(
                     controllerdevice._station_fqdns[already_allocated]
@@ -755,6 +660,7 @@ class MccsController(SKAMaster):
                 )
             subarray_device = tango.DeviceProxy(subarray_fqdn)
 
+            # Check to see if we need to release resources before allocating
             release_mask = numpy.logical_and(
                 controllerdevice._station_allocated == subarray_id,
                 numpy.logical_not(station_allocation),
@@ -776,6 +682,7 @@ class MccsController(SKAMaster):
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = 0
 
+            # Now, assign resources
             assign_mask = numpy.logical_and(
                 controllerdevice._station_allocated == 0, station_allocation
             )
@@ -800,14 +707,52 @@ class MccsController(SKAMaster):
 
         def check_allowed(self):
             """
-            Whether this command is allowed to be run in current device
-            state
+            Whether this command is allowed to be run in current device state
 
             :return: True if this command is allowed to be run in
                 current device state
             :rtype: boolean
             """
             return self.state_model.op_state == DevState.ON
+
+        def enableSubarray(self, argin):
+            """
+            Stateless do hook for the EnableSubarray() command
+
+            :param argin: the subarray id
+            :type argin: int
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (ResultCode, str)
+            """
+            device = self.target
+            subarray_id = argin
+
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+                return (
+                    ResultCode.FAILED,
+                    "Subarray index {} is out of range".format(subarray_id),
+                )
+
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
+
+            if device._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Subarray {} is already enabled".format(subarray_fqdn),
+                )
+            else:
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                (result_code, message) = subarray_device.On()
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Failed to enable subarray {subarray_fqdn}: {message}",
+                    )
+                device._subarray_enabled[subarray_id - 1] = True
+                return (ResultCode.OK, "EnableSubarray command successful")
 
     def is_Allocate_allowed(self):
         """
@@ -826,17 +771,18 @@ class MccsController(SKAMaster):
         return True
 
     @command(
-        dtype_in="DevLong",
-        doc_in="Sub-Array ID",
+        dtype_in="DevString",
+        doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'information-only string')",
     )
     def Release(self, argin):
         """
-        De-activate an MCCS Sub-Array
+        Release resources from an MCCS Sub-Array
 
-        :param argin: Sub-Array ID
-        :type argin: DevVarLongArray
+        :param argin: JSON-formatted string containing an integer
+            subarray_id, a release all flag and an array of receptor ids.
+        :type argin: str
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -857,46 +803,56 @@ class MccsController(SKAMaster):
             """
             Stateless do hook for the Release command
 
-            :param argin: Sub-Array ID
-            :type argin: DevVarLongArray
+            :param argin: JSON-formatted string containing an integer
+                subarray_id, a release all flag and an array of receptor ids.
+            :type argin: str
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
             """
-            subarray_id = argin
-            assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
+            args = json.loads(argin)
+            subarray_id = args["subarray_id"]
+            release_all = args["release_all"]
 
-            subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]
+            if release_all:
+                assert 1 <= subarray_id <= len(self.target._subarray_fqdns)
 
-            if not self.target._subarray_enabled[subarray_id - 1]:
+                subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]
+
+                if not self.target._subarray_enabled[subarray_id - 1]:
+                    return (
+                        ResultCode.FAILED,
+                        "Cannot release resources from disabled subarray {}".format(
+                            subarray_fqdn
+                        ),
+                    )
+                subarray_device = tango.DeviceProxy(subarray_fqdn)
+                try:
+                    (result_code, message) = subarray_device.ReleaseAllResources()
+                except DevFailed:
+                    return (
+                        ResultCode.FAILED,
+                        "Subarray errored on release resources: it probably has "
+                        "no resources to release.",
+                    )
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        "Subarray failed to release resources: {message}",
+                    )
+
+                mask = self.target._station_allocated == subarray_id
+                fqdns = list(self.target._station_fqdns[mask])
+                for fqdn in fqdns:
+                    device = tango.DeviceProxy(fqdn)
+                    device.subarrayId = 0
+                self.target._station_allocated[mask] = 0
+            else:
                 return (
                     ResultCode.FAILED,
-                    "Cannot release resources from disabled subarray {}".format(
-                        subarray_fqdn
-                    ),
+                    "Release() command failed - partial release unsupported",
                 )
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
-            try:
-                (result_code, message) = subarray_device.ReleaseAllResources()
-            except DevFailed:
-                return (
-                    ResultCode.FAILED,
-                    "Subarray errored on release resources: it probably has "
-                    "no resources to release.",
-                )
-            if result_code == ResultCode.FAILED:
-                return (
-                    ResultCode.FAILED,
-                    "Subarray failed to release resources: {message}",
-                )
-
-            mask = self.target._station_allocated == subarray_id
-            fqdns = list(self.target._station_fqdns[mask])
-            for fqdn in fqdns:
-                device = tango.DeviceProxy(fqdn)
-                device.subarrayId = 0
-            self.target._station_allocated[mask] = 0
             return (ResultCode.OK, "Release() command successful")
 
         def check_allowed(self):

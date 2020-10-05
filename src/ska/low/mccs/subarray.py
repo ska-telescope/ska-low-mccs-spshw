@@ -22,6 +22,7 @@ from tango.server import attribute, command
 # Additional import
 from ska.base import SKASubarray
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import ObsState
 import ska.low.mccs.release as release
 
 
@@ -377,6 +378,16 @@ class MccsSubarray(SKASubarray):
 
             # MCCS-specific stuff goes here
             return (result_code, message)
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device state
+
+            :return: True if this command is allowed to be run in
+                current device obsstates
+            :rtype: boolean
+            """
+            return self.state_model.obs_state in [ObsState.IDLE, ObsState.READY]
 
     class ScanCommand(SKASubarray.ScanCommand):
         """

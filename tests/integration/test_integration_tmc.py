@@ -2,7 +2,7 @@
 This module contains tests of interactions between the TMC and ska.low.mccs classes.
 """
 from concurrent.futures import Future
-from tango import DevState
+from tango import DevState, DevSource
 from ska.base.commands import ResultCode
 from ska.base.control_model import ObsState
 import tango
@@ -138,6 +138,16 @@ class TestMccsIntegrationTmc:
         self.async_init()
         controller = device_context.get_device("low-mccs/control/control")
         subarray = device_context.get_device("low-mccs/subarray/01")
+        station_001 = device_context.get_device("low-mccs/station/001")
+        station_002 = device_context.get_device("low-mccs/station/002")
+
+        # Bypass the cache because stationFQDNs etc are polled attributes,
+        # and having written to them, we don't want to have to wait a
+        # polling period to test that the write has stuck.
+        controller.set_source(DevSource.DEV)
+        subarray.set_source(DevSource.DEV)
+        station_001.set_source(DevSource.DEV)
+        station_002.set_source(DevSource.DEV)
 
         # Turn on controller and stations
         self.async_command(device=controller, command="On")
@@ -150,11 +160,14 @@ class TestMccsIntegrationTmc:
         json_string = json.dumps(parameters)
         assert subarray.State() == DevState.OFF
         assert subarray.obsState == ObsState.EMPTY
+        assert station_001.subarrayId == 0
+        assert station_002.subarrayId == 0
 
         # Allocate stations to a subarray
         self.async_command(device=controller, command="Allocate", argin=json_string)
+        assert station_001.subarrayId == 1
+        assert station_002.subarrayId == 1
         assert subarray.State() == DevState.ON
-        # TODO: Why has the obsState not changed according to ADR-8? It's still EMPTY
         assert subarray.obsState == ObsState.IDLE
 
         # Configure the subarray
@@ -190,7 +203,12 @@ class TestMccsIntegrationTmc:
         # Perform a scan on the subarray
         scan_config = {"id": 1}
         json_string = json.dumps(scan_config)
-        self.async_command(device=subarray, command="Scan", argin=json_string)
+        self.async_command(
+            device=subarray,
+            command="Scan",
+            argin=json_string,
+            expected_result=ResultCode.STARTED,
+        )
         assert subarray.obsState == ObsState.SCANNING
 
         # End a scan
@@ -202,5 +220,6 @@ class TestMccsIntegrationTmc:
         assert subarray.obsState == ObsState.IDLE
         release_config = {"subarray_id": 1, "release_all": True}
         json_string = json.dumps(release_config)
-        self.async_command(device=subarray, command="Release", argin=json_string)
+        self.async_command(device=controller, command="Release", argin=json_string)
         assert subarray.obsState == ObsState.EMPTY
+        assert subarray.State() == DevState.OFF

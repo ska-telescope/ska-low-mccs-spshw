@@ -16,6 +16,7 @@ __all__ = ["MccsController", "main"]
 import numpy
 import json
 import threading
+from enum import Enum
 
 # PyTango imports
 import tango
@@ -214,6 +215,56 @@ class ControllerResourceManager:
     of the device that owns each managed device.
     """
 
+    class resource_state(Enum):
+        UNAVAILABLE = 0  # Fault state
+        AVAILABLE = 1  # Healthy, not assigned
+        ASSIGNED = 2  # Healthy, assigned
+
+    class resource:
+        """
+        This inner class implements state recording for a managed resource.
+
+        Initialize with a device id number.
+        """
+
+        def __init__(self, id):
+            self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+            self._assignedTo = 0
+            self.devid = id
+
+        def assignedTo(self):
+            return self._assignedTo
+
+        def isAssigned(self):
+            return self._assignedTo != 0
+
+        def isAvailable(self):
+            return (
+                self._resourceState
+                == ControllerResourceManager.resource_state.AVAILABLE
+            )
+
+        def isUnavailable(self):
+            return (
+                self._resourceState
+                == ControllerResourceManager.resource_state.UNAVAILABLE
+            )
+
+        def Assign(self, owner):
+            # Don't allow assign if already assigned to another owner
+            if self.isAssigned() and self.assignedTo() != owner:
+                raise TypeError(f"Resource already assigned to {self._assignedTo}")
+            self._assignedTo = owner
+            self._resourceState = ControllerResourceManager.resource_state.ASSIGNED
+
+        def Release(self):
+            self._assignedTo = 0
+            self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+
+        def MakeUnavailable(self):
+            # Change resource state to unavailable
+            self._resourceState = ControllerResourceManager.resource_state.UNAVAILABLE
+
     def __init__(self, fqdns):
         """
         Initialize new ControllerResourceManager instance
@@ -221,26 +272,17 @@ class ControllerResourceManager:
         :param fqdns: A list of device FQDNs
         :type fqdns: list of string
         """
-        # Array holding all registered FQDNs of managed devices
-        self._fqdns = numpy.array([] if fqdns is None else fqdns)
-        # Array holding the assignments to owners of the devices
-        self._allocation = numpy.zeros(
-            0 if fqdns is None else len(fqdns), dtype=numpy.uint8
-        )
+        self._resources = dict()
+        # For each resource, identified by FQDN, create an object
+        for i, fqdn in enumerate(fqdns, start=1):
+            self._resources[fqdn] = self.resource(i)
 
-    def CheckManaged(self, fqdns):
-        """
-        Test if the given FQDNs are being managed
-
-        :param fqdns: The FQDNs to check
-        :type fqdns: list of string
-
-        :return: True if all FQDNs are being managed
-        :rtype: bool
-        """
-        tocheck = numpy.array(fqdns)
-
-        return numpy.isin(tocheck, self._fqdns).all()
+    def exceptOnUnmanaged(self, fqdns):
+        # Are these keys all managed?
+        # return any FQDNs not in our list of managed FQDNs
+        bad = [fqdn for fqdn in fqdns if fqdn not in self._resources]
+        if any(bad):
+            raise TypeError(f"These FQDNs are not being managed: {bad}")
 
     def GetAllFqdns(self):
         """
@@ -249,10 +291,11 @@ class ControllerResourceManager:
         :return: List of FQDNs managed
         :rtype: list of strings
         """
-        return list(self._fqdns)
+        return self._resources.keys()
 
     def GetAssignedFqdns(self, owner_id):
-        """Get the FQDNs assigned to a given owner id
+        """
+        Get the FQDNs assigned to a given owner id
 
         :param owner_id: 1-based device id that we check for ownership
         :type owner_id: int
@@ -261,12 +304,15 @@ class ControllerResourceManager:
         :rtype: list of strings
         """
 
-        mask = self._allocation == owner_id
+        return [
+            fqdn
+            for fqdn, res in self._resources.items()
+            if (res.isAssigned() and res.assignedTo() == owner_id)
+        ]
 
-        return list(self._fqdns[mask])
-
-    def QueryAllocation(self, fqdns, new_owner_id):
-        """Test if a (re)allocation is allowed, and if so, return lists of FQDNs
+    def QueryAllocation(self, fqdns, new_owner):
+        """
+        Test if a (re)allocation is allowed, and if so, return lists of FQDNs
         to assign and to release. If the allocation is not permitted due to some
         FQDNs being allocated to another owner already, the list of blocking
         FQDNs is returned as the ReleaseList.
@@ -284,48 +330,45 @@ class ControllerResourceManager:
         :rtype: tuple (bool, list of strings, list of strings)
         """
 
-        if not self.CheckManaged(fqdns):
-            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
+        self.exceptOnUnmanaged(fqdns)
 
-        # Create mask of FQDNs present in the wanted list
-        wanted_allocation = numpy.isin(self._fqdns, fqdns, assume_unique=True)
-        # Examine the allocation ids for these entries
-        already_allocated = numpy.logical_and.reduce(
-            (
-                self._allocation != 0,
-                self._allocation != new_owner_id,
-                wanted_allocation,
+        # Make a list of any FQDNs which are blocking this allocation
+        blocking = [
+            fqdn
+            for fqdn in fqdns
+            if (
+                (self._resources[fqdn].isUnavailable())
+                or (
+                    self._resources[fqdn].isAssigned()
+                    and self._resources[fqdn].assignedTo() != new_owner
+                )
             )
-        )
+        ]
 
-        if numpy.any(already_allocated):
-            # Some of the requested FQDNs are already allocated
-            # Which ones?
-            already_allocated_fqdns = list(self._fqdns[already_allocated])
-            # Return False (we can't allocate) and the list of FQDNs
-            # that would have to be freed
-            return (False, None, already_allocated_fqdns)
+        if any(blocking):
+            # Return False to indicate we are blocked, with the list
+            return (False, None, blocking)
 
-        # Generate mask of devices already allocated to the new owner
-        # but no longer wanted
-        release_mask = numpy.logical_and(
-            self._allocation == new_owner_id,
-            numpy.logical_not(wanted_allocation),
-        )
-        fqdns_to_release = (
-            list(self._fqdns[release_mask]) if numpy.any(release_mask) else None
-        )
+        # Make a list of wanted FQDNs not already assigned
+        needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].isAssigned())]
+        if len(needed) == 0:
+            needed = None
 
-        # Generate mask of devices not yet allocated to any owner
-        # which we now want
-        assign_mask = numpy.logical_and(self._allocation == 0, wanted_allocation)
-        fqdns_to_assign = (
-            list(self._fqdns[assign_mask]) if numpy.any(assign_mask) else None
-        )
+        # Make a list of already-assigned FQDNs no longer wanted
+        to_release = [
+            fqdn
+            for (fqdn, res) in self._resources.items()
+            if (
+                res.isAssigned() and res.assignedTo() == new_owner and fqdn not in fqdns
+            )
+        ]
+        if len(to_release) == 0:
+            to_release = None
 
-        return (True, fqdns_to_assign, fqdns_to_release)
+        # Return True (ok to proceed), with the lists
+        return (True, needed, to_release)
 
-    def Assign(self, fqdns, new_owner_id):
+    def Assign(self, fqdns, new_owner):
         """
         Take a list of device FQDNs and assign them to a new owner id.
 
@@ -337,24 +380,9 @@ class ControllerResourceManager:
             or are otherwise assigned
         """
 
-        if not self.CheckManaged(fqdns):
-            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
-
-        mask = numpy.isin(self._fqdns, fqdns, assume_unique=True)
-        safe_to_allocate = numpy.logical_or.reduce(
-            (
-                self._allocation == 0,  # Not allocated
-                self._allocation == new_owner_id,  # Already satisfied
-                numpy.invert(mask),  # Not wanted
-            )
-        ).all()
-
-        if not safe_to_allocate:
-            raise TypeError(
-                "Assign failed. Some requested devices are already otherwise assigned."
-            )
-
-        self._allocation[mask] = new_owner_id
+        self.exceptOnUnmanaged(fqdns)
+        for fqdn in fqdns:
+            self._resources[fqdn].Assign(new_owner)
 
     def Release(self, fqdns):
         """
@@ -364,11 +392,15 @@ class ControllerResourceManager:
         :type fqdns: list of string
         :raises: TypeError if any of the FQDNs are not being managed
         """
-        if not self.CheckManaged(fqdns):
-            raise TypeError(f"Some of these FQDNs are not being managed: {fqdns}")
 
-        mask = numpy.isin(self._fqdns, fqdns, assume_unique=True)
-        self._allocation[mask] = 0
+        self.exceptOnUnmanaged(fqdns)
+        for fqdn in fqdns:
+            self._resources[fqdn].Release()
+
+    def MakeUnavailable(self, fqdns):
+        self.exceptOnUnmanaged(fqdns)
+        for fqdn in fqdns:
+            self._resources[fqdn].MakeUnavailable()
 
 
 class MccsController(SKAMaster):

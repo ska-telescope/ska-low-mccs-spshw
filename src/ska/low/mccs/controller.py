@@ -227,7 +227,8 @@ class ControllerResourceManager:
         Initialize with a device id number.
         """
 
-        def __init__(self, id):
+        def __init__(self, manager, id):
+            self._manager = manager
             self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
             self._assignedTo = 0
             self.devid = id
@@ -253,7 +254,10 @@ class ControllerResourceManager:
         def Assign(self, owner):
             # Don't allow assign if already assigned to another owner
             if self.isAssigned() and self.assignedTo() != owner:
-                raise TypeError(f"Resource already assigned to {self._assignedTo}")
+                raise TypeError(
+                    f"{self._manager._managername}: "
+                    f"Resource already assigned to {self._assignedTo}"
+                )
             self._assignedTo = owner
             self._resourceState = ControllerResourceManager.resource_state.ASSIGNED
 
@@ -265,24 +269,29 @@ class ControllerResourceManager:
             # Change resource state to unavailable
             self._resourceState = ControllerResourceManager.resource_state.UNAVAILABLE
 
-    def __init__(self, fqdns):
+    def __init__(self, managername, fqdns):
         """
         Initialize new ControllerResourceManager instance
 
+        :param managername: Name for this manager (imformation only)
+        :type managername: string
         :param fqdns: A list of device FQDNs
         :type fqdns: list of string
         """
+        self._managername = managername
         self._resources = dict()
         # For each resource, identified by FQDN, create an object
         for i, fqdn in enumerate(fqdns, start=1):
-            self._resources[fqdn] = self.resource(i)
+            self._resources[fqdn] = self.resource(self, i)
 
     def exceptOnUnmanaged(self, fqdns):
         # Are these keys all managed?
         # return any FQDNs not in our list of managed FQDNs
         bad = [fqdn for fqdn in fqdns if fqdn not in self._resources]
         if any(bad):
-            raise TypeError(f"These FQDNs are not being managed: {bad}")
+            raise TypeError(
+                f"These FQDNs are not managed by {self._managername}: {bad}"
+            )
 
     def GetAllFqdns(self):
         """
@@ -401,6 +410,22 @@ class ControllerResourceManager:
         self.exceptOnUnmanaged(fqdns)
         for fqdn in fqdns:
             self._resources[fqdn].MakeUnavailable()
+
+    def FqdnFromId(self, devid):
+        """
+        Find a device id number by searching on its FQDN
+
+        :param devid: The device ID to find
+        :type fqdn: int
+
+        :return: fqdn
+        :rtype: string
+        """
+
+        for fqdn, res in self._resources.items():
+            if res.devid == devid:
+                return fqdn
+        raise TypeError(f"Device ID {devid} is not managed by {self._managername}")
 
 
 class MccsController(SKAMaster):
@@ -526,7 +551,9 @@ class MccsController(SKAMaster):
             )
 
             # Instantiate a resource manager for the Stations
-            device._stations_manager = ControllerResourceManager(device.MccsStations)
+            device._stations_manager = ControllerResourceManager(
+                "StationsMnager", device.MccsStations
+            )
             station_fqdns = device._stations_manager.GetAllFqdns()
 
             self._thread = threading.Thread(

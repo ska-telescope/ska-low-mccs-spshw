@@ -13,8 +13,6 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 """
 __all__ = ["MccsStation", "main"]
 
-import threading
-
 # PyTango imports
 import tango
 from tango import DebugIt, DevState
@@ -24,39 +22,164 @@ from tango.server import attribute, command
 # additional imports
 from ska.base import SKABaseDevice, SKAObsDevice
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import HealthState
 
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import LazyInstance
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
+from ska.low.mccs.health import HealthModel
+
+
+class StationHardware:
+    """
+    A stub class to take the place of actual station hardware
+    """
+
+    VOLTAGE = 3.5
+    TEMPERATURE = 20.6
+
+    def __init__(self):
+        """
+        Initialise a new StationHardware instance
+        """
+        self._is_on = False
+
+    def off(self):
+        """
+        Turn me off
+        """
+        self._is_on = False
+
+    def on(self):
+        """
+        Turn me on
+        """
+        self._is_on = True
+
+    @property
+    def is_on(self):
+        """
+        Return whether I am on or off
+
+        :return: whether I am on or off
+        :rtype: bool
+        """
+        return self._is_on
 
 
 class StationHardwareManager:
     """
-    Stub class encapsulating the hardware of the MCCS station device.
+    This class manages station hardware.
 
-    So far, all we know about this hardware is we need to be able to
-    turn it on and off.
+    :todo: So far all we can do with station hardware is turn it off and
+        on. We need to implement monitoring.
     """
 
-    def Off(self):
+    def __init__(self, hardware=None):
         """
-        Turn the station hardware off
+        Initialise a new StationHardwareManager instance
+
+        At present, hardware is simulated by stub software, and so the
+        only argument is an optional "hardware" instance. In future, its
+        arguments will allow connection to the actual hardware
+
+        :param hardware: the hardware itself, defaults to None. This only
+            exists to facilitate testing.
+        :type hardware: StationHardware
+        """
+        self._hardware = StationHardware() if hardware is None else hardware
+
+        # polled attributes
+        self._is_on = None
+        self._health = None
+        self._health_callbacks = []
+
+    def off(self):
+        """
+        Turn the hardware off
 
         :return: whether successful
-        :rtype: boolean
+        :rtype: boolean, or None if there was nothing to do.
         """
-        return True
+        if not self._hardware.is_on:
+            return None
+        self._hardware.off()
+        return not self._hardware.is_on
 
-    def On(self):
+    def on(self):
         """
-        Turn the station hardware on
+        Turn the hardware on
 
         :return: whether successful
+        :rtype: boolean, or None if there was nothing to do.
+        """
+        if self._hardware.is_on:
+            return None
+        self._hardware.on()
+        return self._hardware.is_on
+
+    def poll_hardware(self):
+        """
+        Poll the hardware and update local attributes with values
+        reported by the hardware.
+        """
+        self._is_on = self._hardware.is_on
+        if self._is_on:
+            self._evaluate_health()
+
+    @property
+    def is_on(self):
+        """
+        Whether the hardware is on or not
+
+        :return: whether the hardware is on or not
         :rtype: boolean
         """
-        return True
+        return self._is_on
+
+    @property
+    def health(self):
+        """
+        The health of the hardware, as evaluated by this manager
+
+        :return: the health of the hardware
+        :rtype: HealthState
+        """
+        return self._health
+
+    def _evaluate_health(self):
+        """
+        Evaluate the health of the hardware
+        """
+        # look at the polled hardware values and maybe further poke the
+        # hardware to check that it is okay
+        self._update_health(HealthState.OK)
+
+    def _update_health(self, health):
+        """
+        Update the health of this hardware, ensuring that any registered
+        callbacks are called
+
+        :param health: the new health value
+        :type health: HealthState
+        """
+        if self._health == health:
+            return
+        self._health = health
+        for callback in self._health_callbacks:
+            callback(health)
+
+    def register_health_callback(self, callback):
+        """
+        Register a callback to be called when the health of the hardware
+        changes
+
+        :param callback: A callback to be called when the health of the
+            hardware changes
+        :type callback: callable
+        """
+        self._health_callbacks.append(callback)
 
 
 class StationPowerManager(PowerManager):
@@ -65,20 +188,19 @@ class StationPowerManager(PowerManager):
     device.
     """
 
-    def __init__(self, station_hardware_manager, tile_fqdns):
+    def __init__(self, hardware_manager, fqdns):
         """
         Initialise a new StationPowerManager
 
-        :param station_hardware_manager: an object that manages this
-            station's hardware
-        :type station_hardware_manager: object
-        :param tile_fqdns: the FQDNs of the tiles that this controller
+        :param hardware_manager: an object that manages this station's
+            hardware
+        :type hardware_manager: object
+        :param fqdns: the FQDNs of the devices that this controller
             device manages
-        :type tile_fqdns: list of string
+        :type fqdns: list of string
         """
         super().__init__(
-            station_hardware_manager,
-            [LazyInstance(tango.DeviceProxy, fqdn) for fqdn in tile_fqdns],
+            hardware_manager, [LazyInstance(tango.DeviceProxy, fqdn) for fqdn in fqdns]
         )
 
 
@@ -149,34 +271,18 @@ class MccsStation(SKAObsDevice):
             device.set_archive_event("transientBufferFQDN", True, False)
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
-            device._lock = threading.Lock()
 
-            # initialise the health table using the FQDN as the key.
-            # Create and event manager per FQDN and subscribe to events from it
-            device._eventManagerList = []
             fqdns = device._tile_fqdns + device._antenna_fqdns  # + device._beam_fqdns
-            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
-            device._health_monitor = HealthMonitor(
-                fqdns, device._rollup_policy.rollup_health
-            )
-
-            for fqdn in device._tile_fqdns:
-                device._eventManagerList.append(
-                    EventManager(fqdn, device._health_monitor.update_health_table)
-                )
-            for fqdn in device._antenna_fqdns:
-                device._eventManagerList.append(
-                    EventManager(fqdn, device._health_monitor.update_health_table)
-                )
-            # for fqdn in device._beam_fqdns:
-            #     device._eventManagerList.append(
-            #         EventManager(fqdn, device._health_monitor.update_health_table)
-            #     )
-
             device.hardware_manager = StationHardwareManager()
-            device.power_manager = StationPowerManager(
-                device.hardware_manager, device._tile_fqdns
+            device.event_manager = EventManager()
+            device.health_model = HealthModel(
+                device.hardware_manager,
+                fqdns,
+                device.event_manager,
+                device._update_health_state,
             )
+
+            device.power_manager = StationPowerManager(device.hardware_manager, fqdns)
 
             return (ResultCode.OK, "Station Init complete")
 
@@ -184,6 +290,8 @@ class MccsStation(SKAObsDevice):
         """
         Method always executed before any TANGO command is executed.
         """
+        self.hardware_manager.poll_hardware()
+
         state = self.get_state()
         if self._is_calibrated and self._is_configured:
             if state == DevState.ALARM:
@@ -475,16 +583,15 @@ class MccsStation(SKAObsDevice):
         (return_code, message) = handler()
         return [[return_code], [message]]
 
-    def update_healthstate(self, health_state):
+    def _update_health_state(self, health_state):
         """
         Update and push a change event for the healthstate attribute
 
         :param health_state: The new healthstate
         :type health_state: enum (defined in ska.base.control_model)
         """
+        self._health_state = health_state
         self.push_change_event("healthState", health_state)
-        with self._lock:
-            self._health_state = health_state
         self.logger.info("health state = " + str(health_state))
 
 

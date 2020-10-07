@@ -62,7 +62,7 @@ class PowerManager:
         if not self._is_on:
             raise PowerManagerError("Off() called when already Off")
         if self.hardware is not None:
-            self.hardware.Off()
+            self.hardware.off()
         if self.devices is not None:
             for device in self.devices:
                 device.Off()
@@ -85,7 +85,7 @@ class PowerManager:
             for device in self.devices:
                 device.On()
         if self.hardware is not None:
-            self.hardware.On()
+            self.hardware.on()
         self._is_on = True
         return True
 

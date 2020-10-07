@@ -12,10 +12,7 @@
 An implementation of the Antenna Device Server for the MCCS based upon
 architecture in SKA-TEL-LFAA-06000052-02.
 """
-__all__ = ["MccsAntenna", "main"]
-
-import random
-import threading
+__all__ = ["AntennaHardware", "AntennaHardwareManager", "MccsAntenna", "main"]
 
 # tango imports
 from tango import DebugIt
@@ -25,10 +22,212 @@ from tango.server import attribute, command
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.base.control_model import TestMode
+from ska.base.control_model import HealthState
 
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import LocalHealthMonitor, HealthRollupPolicy
+from ska.low.mccs.health import HealthModel
+
+
+class AntennaHardware:
+    """
+    A stub class to take the place of actual antenna hardware
+    """
+
+    VOLTAGE = 3.5
+    TEMPERATURE = 20.6
+
+    def __init__(self):
+        """
+        Initialise a new AntennaHardware instance
+        """
+        self._is_on = False
+        self._voltage = None
+        self._temperature = None
+
+    def off(self):
+        """
+        Turn me off
+        """
+        self._is_on = False
+        self._voltage = None
+        self._temperature = None
+
+    def on(self):
+        """
+        Turn me on
+        """
+        self._is_on = True
+        self._voltage = AntennaHardware.VOLTAGE  # for testing purposes
+        self._temperature = AntennaHardware.TEMPERATURE  # for testing purposes
+
+    @property
+    def is_on(self):
+        """
+        Return whether I am on or off
+
+        :return: whether I am on or off
+        :rtype: bool
+        """
+        return self._is_on
+
+    @property
+    def voltage(self):
+        """
+        Return my voltage
+
+        :return: my voltage
+        :rtype: float
+        """
+        return self._voltage
+
+    @property
+    def temperature(self):
+        """
+        Return my temperature
+
+        :return: my temperature
+        :rtype: float
+        """
+        return self._temperature
+
+
+class AntennaHardwareManager:
+    """
+    This class manages antenna hardware.
+
+    :todo: So far only voltage and temperature have been moved in here.
+        There are lots of other attributes that should be.
+    """
+
+    def __init__(self, hardware=None):
+        """
+        Initialise a new AntennaHardwareManager instance
+
+        At present, hardware is simulated by stub software, and so the
+        only argument is an optional "hardware" instance. In future, its
+        arguments will allow connection to the actual hardware
+
+        :param hardware: the hardware itself, defaults to None. This only
+            exists to facilitate testing.
+        :type hardware: AntennaHardware
+        """
+        self._hardware = AntennaHardware() if hardware is None else hardware
+
+        # polled attributes
+        self._is_on = None
+        self._voltage = None
+        self._temperature = None
+
+        self._health = None
+        self._health_callbacks = []
+
+    def off(self):
+        """
+        Turn the hardware off
+
+        :return: whether successful
+        :rtype: boolean, or None if there was nothing to do.
+        """
+        if not self._hardware.is_on:
+            return None
+        self._hardware.off()
+        return not self._hardware.is_on
+
+    def on(self):
+        """
+        Turn the hardware on
+
+        :return: whether successful
+        :rtype: boolean, or None if there was nothing to do.
+        """
+        if self._hardware.is_on:
+            return None
+        self._hardware.on()
+        return self._hardware.is_on
+
+    def poll_hardware(self):
+        """
+        Poll the hardware and update local attributes with values
+        reported by the hardware.
+        """
+        self._is_on = self._hardware.is_on
+        if self._is_on:
+            self._voltage = self._hardware.voltage
+            self._temperature = self._hardware.temperature
+            self._evaluate_health()
+
+    @property
+    def is_on(self):
+        """
+        Whether the hardware is on or not
+
+        :return: whether the hardware is on or not
+        :rtype: boolean
+        """
+        return self._is_on
+
+    @property
+    def voltage(self):
+        """
+        The voltage of the hardware
+
+        :return: the voltage of the hardware
+        :rtype: float
+        """
+        return self._voltage
+
+    @property
+    def temperature(self):
+        """
+        Return the temperature of the hardware
+
+        :return: the temperature of the hardware
+        :rtype: float
+        """
+        return self._temperature
+
+    @property
+    def health(self):
+        """
+        The health of the hardware, as evaluated by this manager
+
+        :return: the health of the hardware
+        :rtype: HealthState
+        """
+        return self._health
+
+    def _evaluate_health(self):
+        """
+        Evaluate the health of the hardware
+        """
+        # look at the polled hardware values and maybe further poke the
+        # hardware to check that it is okay
+        self._update_health(HealthState.OK)
+
+    def _update_health(self, health):
+        """
+        Update the health of this hardware, ensuring that any registered
+        callbacks are called
+
+        :param health: the new health value
+        :type health: HealthState
+        """
+        if self._health == health:
+            return
+        self._health = health
+        for callback in self._health_callbacks:
+            callback(health)
+
+    def register_health_callback(self, callback):
+        """
+        Register a callback to be called when the health of the hardware
+        changes
+
+        :param callback: A callback to be called when the health of the
+            hardware changes
+        :type callback: callable
+        """
+        self._health_callbacks.append(callback)
 
 
 class MccsAntenna(SKABaseDevice):
@@ -70,8 +269,6 @@ class MccsAntenna(SKABaseDevice):
             device._apiuId = 0
             device._gain = 0.0
             device._rms = 0.0
-            device._voltage = 0.0
-            device._temperature = 0.0
             device._xPolarisationFaulty = False
             device._yPolarisationFaulty = False
             device._fieldNodeLongitude = 0.0
@@ -94,27 +291,22 @@ class MccsAntenna(SKABaseDevice):
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
             device._first = True
-            device._lock = threading.Lock()
 
-            # make this device listen to its own events so that it can
-            # push a health state to station
+            device.hardware_manager = AntennaHardwareManager()
+            device.event_manager = EventManager()
+            device.health_model = HealthModel(
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device._update_health_state,
+            )
+
             event_names = [
                 "voltage",
                 "temperature",
                 "xPolarisationFaulty",
                 "yPolarisationFaulty",
             ]
-            device._eventManagerList = []
-            fqdn = device.get_name()
-            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
-            device._health_monitor = LocalHealthMonitor(
-                [fqdn], device._rollup_policy.rollup_health, event_names
-            )
-            device._eventManagerList.append(
-                EventManager(
-                    fqdn, device._health_monitor.update_health_table, event_names
-                )
-            )
             for name in event_names:
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
@@ -123,14 +315,7 @@ class MccsAntenna(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        if self._test_mode == TestMode.TEST:
-            self._voltage = random.uniform(4.5, 5.5)
-            self._temperature = random.uniform(30.0, 35.0)
-        else:
-            if self._first:
-                self._voltage = 3.5
-                self._temperature = 20.6
-                self._first = False
+        self.hardware_manager.poll_hardware()
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -246,19 +431,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the voltage
         :rtype: float
         """
-        return self._voltage
-
-    # added for demo only
-    @voltage.write
-    def voltage(self, value):
-        """
-        Set the voltage attribute.
-        Note: Only add to support demo
-
-        :param value: the new voltage
-        :type value: float
-        """
-        self._voltage = value
+        return self.hardware_manager.voltage
 
     @attribute(dtype="float", label="temperature", unit="DegC")
     def temperature(self):
@@ -268,7 +441,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the temperature
         :rtype: float
         """
-        return self._temperature
+        return self.hardware_manager.temperature
 
     @attribute(dtype="bool", label="xPolarisationFaulty")
     def xPolarisationFaulty(self):
@@ -520,11 +693,11 @@ class MccsAntenna(SKABaseDevice):
         """
         super().init_command_objects()
 
-        args = (self, self.state_model, self.logger)
+        hardware_args = (self.hardware_manager, self.state_model, self.logger)
 
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object("PowerOn", self.PowerOnCommand(*args))
-        self.register_command_object("PowerOff", self.PowerOffCommand(*args))
+        self.register_command_object("Reset", self.ResetCommand(*hardware_args))
+        self.register_command_object("PowerOn", self.PowerOnCommand(*hardware_args))
+        self.register_command_object("PowerOff", self.PowerOffCommand(*hardware_args))
 
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
@@ -563,6 +736,8 @@ class MccsAntenna(SKABaseDevice):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
+            hardware_manager = self.target
+            hardware_manager.on()
             return (ResultCode.OK, "Stub implementation, does nothing")
 
     @command(
@@ -598,6 +773,8 @@ class MccsAntenna(SKABaseDevice):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
+            hardware_manager = self.target
+            hardware_manager.off()
             return (ResultCode.OK, "Stub implementation, does nothing")
 
     @command(
@@ -618,7 +795,7 @@ class MccsAntenna(SKABaseDevice):
         (return_code, message) = handler()
         return [[return_code], [message]]
 
-    def update_healthstate(self, health_state):
+    def _update_health_state(self, health_state):
         """
         Update and push a change event for the healthstate attribute
 
@@ -626,8 +803,7 @@ class MccsAntenna(SKABaseDevice):
         :type health_state: enum (defined in ska.base.control_model)
         """
         self.push_change_event("healthState", health_state)
-        with self._lock:
-            self._health_state = health_state
+        self._health_state = health_state
         self.logger.info("health state = " + str(health_state))
 
 

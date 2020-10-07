@@ -28,7 +28,6 @@ device_to_load = {
 }
 
 
-@pytest.mark.mock_device_proxy
 class TestMccsController:
     """Test case for packet generation."""
 

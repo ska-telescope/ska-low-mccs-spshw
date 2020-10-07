@@ -9,75 +9,260 @@ This module implements infrastructure for event management in the MCCS
 subsystem.
 
 """
-__all__ = ["EventManager"]
+__all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
+from functools import partial
 import tango
 from tango import EventType
+
+
+class EventSubscriptionHandler:
+    """
+    This class handles subscription to change events on a single
+    attribute from a single device. It allows registration of multiple
+    callbacks.
+    """
+
+    def __init__(self, device_proxy, event_name):
+        """
+        Initialise a new EventHandler
+
+        :param device_proxy: proxy to the device upon which the change
+            event is subscribed
+        :type device_proxy: tango.DeviceProxy
+        :param event_name: name of the event; that is, the name of the
+            attribute for which change events are subscribed.
+        :type event_name: str
+        """
+        self._device = device_proxy
+        self._callbacks = []
+        self._subscription_id = None
+
+        self._subscribe(event_name)
+
+    def _subscribe(self, event_name):
+        """
+        Subscribe to a change event
+
+        :param event_name: name of the event; that is, the name of the
+            attribute for which change events are subscribed.
+        :type event_name: str
+        """
+        # HACK to make tests pass until we can resolve device initialisation
+        # race condition
+        if self._device is None:
+            return
+
+        self._subscription_id = self._device.subscribe_event(
+            event_name, EventType.CHANGE_EVENT, self, stateless=True
+        )
+
+    def register_callback(self, callback):
+        """
+        Register a callback for events handled by this handler
+
+        :param callback: callable to be called when an event is received
+            by this event handler. The callable will be called with
+            three positional arguments: event name, value and quality.
+        :type callback: callable
+        """
+        self._callbacks.append(callback)
+
+    def push_event(self, event):
+        """
+        Callback called by the tango system when a subscribed event
+        occurs. It in turn invokes all its own callbacks.
+
+        :param event: an object encapsulating the event data.
+        :type event: tango.EventData
+        """
+        if event.attr_value is not None and event.attr_value.value is not None:
+            for callback in self._callbacks:
+                callback(
+                    event.attr_value.name,
+                    event.attr_value.value,
+                    event.attr_value.quality,
+                )
+
+    def _unsubscribe(self):
+        """
+        Unsubscribe from the event
+        """
+        if self._subscription_id is not None:
+            self._device.unsubscribe_event(self._subscription_id)
+            self._subscription_id = None
+
+    def __del__(self):
+        """
+        Cleanup before destruction
+        """
+        self._unsubscribe()
+
+
+class DeviceEventManager:
+    """
+    Class DeviceEventManager is used to handle multiple events from a
+    single device.
+    """
+
+    def __init__(self, fqdn, events=None):
+        """
+        Initialise a new DeviceEventManager object
+
+        :param fqdn: the fully qualified device name of the device for
+            which this DeviceEventManager will manage change events
+        :type fqdn: string
+        :param events: Names of events handled by this instance. If
+            provided, this instance will reject attempts to subscribe
+            to events not in this list
+        :type events: list, optional
+        """
+        # HACK: Allowing silent failure until we can sort out our device
+        # initialisation race conditions
+        try:
+            self._device = tango.DeviceProxy(fqdn)
+        except Exception as exception:
+            print(f"device probably not started for {fqdn}", exception)
+            self._device = None
+
+        self._allowed_events = events
+        self._handlers = {}
+
+    def register_callback(self, callback, event_spec=None):
+        """
+        Register a callback for an event (or events) handled by this
+        handler
+
+        :param callback: callable to be called when an event is received
+            by this event handler. The callable will be called with
+            three positional arguments: event name, value and quality.
+        :type callback: callable
+        :param event_spec: a specification of the event or events for
+            which change events are subscribed. This may be the name of
+            a single event, or a list of such names, or None, in which
+            case the events provided at initialisation are used
+        :type event_spec: str or list of str or None
+
+        :raises ValueError: if the event is not in the list of allowed
+            events
+        """
+        if event_spec is None:
+            if self._allowed_events is None:
+                raise ValueError("No events specified for callback")
+            events = self._allowed_events
+        elif isinstance(event_spec, str):
+            events = [event_spec]
+        else:
+            events = event_spec
+
+        for event in events:
+            self._register_callback_for_event(event, callback)
+
+    def _register_callback_for_event(self, event, callback):
+        """
+        Register a callback for an event handled by this handler
+
+        :param event: name of the event; that is, the name of the
+            attribute for which change events are subscribed
+        :type event: str
+        :param callback: callable to be called when an event is received
+            by this event handler. The callable will be called with
+            three positional arguments: event name, value and quality.
+        :type callback: callable
+
+        :raises ValueError: if the event is not in the list of allowed
+            events
+        """
+        if self._allowed_events is not None and event not in self._allowed_events:
+            raise ValueError(f"Unknown event name {event}.")
+
+        if event not in self._handlers:
+            self._handlers[event] = EventSubscriptionHandler(self._device, event)
+        self._handlers[event].register_callback(callback)
 
 
 class EventManager:
     """
     Class EventManager is used to handle events from the tango subsystem.
+    It supports and manages multiple event types from multiple devices.
     """
 
-    def __init__(
-        self, fqdn, update_callback=None, event_names=["state", "healthState"]
-    ):
+    def __init__(self, fqdns=None, events=None):
         """
         Initialise a new EventManager object
 
-        :param fqdn: the fully qualified device name of the device publishing events
-        :type fqdn: string
-        :param update_callback: a callback function to update the devices health state
-            and is of the form ``callback(fqdn, name, value, quality)``, where fqdn
-            is the fully qulified device name, name is the event_name, value is the
-            data value and quality is a Tango AttrQuality enum.
-        :type update_callback: function, optional
-        :param event_names: name of events to subscribe to,
-            defaults to ["state", "healthState"]
-        :type event_names: list of strings
+        :param fqdns: FQDNs of devices handled by this instance. If
+            provided, this instance will reject attempts to subscribe
+            to events from devices whose FQDN is not in this list
+        :type fqdns: list, optional
+        :param events: Names of events handled by this instance. If
+            provided, this instance will reject attempts to subscribe
+            to events not in this list
+        :type events: list, optional
         """
-        self._eventIds = []
-        self._fqdn = fqdn
-        self.callback = update_callback
-        # Always subscribe to state change, it's pushed by the base classes
-        # stateless=True is needed to deal with device not running or device restart
-        try:
-            self._deviceProxy = tango.DeviceProxy(fqdn)
-            self._event_names = event_names
-            for event_name in self._event_names:
-                id = self._deviceProxy.subscribe_event(
-                    event_name, EventType.CHANGE_EVENT, self, stateless=True
-                )
-                self._eventIds.append(id)
-        except Exception as df:
-            print(f"device probably not started for {fqdn}", df)
+        self._allowed_fqdns = fqdns
+        self._allowed_events = events
+        self._handlers = {}
 
-    def __del__(self):
+    def register_callback(self, callback, fqdn_spec=None, event_spec=None):
         """
-        Attempt unsubscribe before destroying
-        """
-        self.unsubscribe()
+        Register a callback for a particular event from a particularly
+        device
 
-    def unsubscribe(self):
-        """
-        Unsubscribe all events
-        """
-        for eventId in self._eventIds:
-            self._deviceProxy.unsubscribe_event(eventId)
+        :param callback: callable to be called with args (fqdn, name,
+            value, quality) whenever the event is received
+        :type callback: callable
+        :param fqdn_spec: specification of the devices upon which the
+            callback is registered. This specification may be the FQDN
+            of a device, or a list of such FQDNs, or None, in which case
+            the FQDNs provided at initialisation are used.
+        :type fqdn_spec: str, or list of str, or None
+        :param event_spec: a specification of the event or events for
+            which change events are subscribed. This may be the name of
+            a single event, or a list of such names, or None, in which
+            case the events provided at initialisation are used
+        :type event_spec: str, or list of str, or None
 
-    def push_event(self, ev):
+        :raises ValueError: if the FQDN and event are not in the lists
+            of allowed FQDNs and allowed events respectively
         """
-        A consumer callback used to inform the device of events from the subscribed
-        publishers
+        if fqdn_spec is None:
+            if self._allowed_fqdns is None:
+                raise ValueError("No FQDNs specified for callback")
+            fqdns = self._allowed_fqdns
+        elif isinstance(fqdn_spec, str):
+            fqdns = [fqdn_spec]
+        else:
+            fqdns = fqdn_spec
 
-        :param ev: an object encapsulating the event data.
+        for fqdn in fqdns:
+            self._register_callback_for_device(callback, fqdn, event_spec)
+
+    def _register_callback_for_device(self, callback, fqdn, event_spec):
         """
-        if ev.attr_value is not None and ev.attr_value.value is not None:
-            if self.callback is not None:
-                self.callback(
-                    self._fqdn,
-                    ev.attr_value.name,
-                    ev.attr_value.value,
-                    ev.attr_value.quality,
-                )
+        Register a callback for a particular event from a particularly
+        device
+
+        :param callback: callable to be called with args (fqdn, name,
+            value, quality) whenever the event is received
+        :type callback: callable
+        :param fqdn: FQDN of the devices upon which the callback is
+            to be registered.
+        :type fqdn: str
+        :param event_spec: a specification of the event or events for
+            which change events are subscribed. This may be the name of
+            a single event, or a list of such names, or None, in which
+            case the events provided at initialisation are used
+        :type event_spec: str, or list of str, or None
+
+        :raises ValueError: if the FQDN is not in the list of allowed
+            FQDNs
+        """
+        if self._allowed_fqdns is not None and fqdn not in self._allowed_fqdns:
+            raise ValueError(f"Unknown FQDN {fqdn}.")
+
+        if fqdn not in self._handlers:
+            self._handlers[fqdn] = DeviceEventManager(fqdn, self._allowed_events)
+        self._handlers[fqdn].register_callback(
+            partial(callback, fqdn), event_spec=event_spec
+        )

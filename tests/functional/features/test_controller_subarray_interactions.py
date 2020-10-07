@@ -134,29 +134,6 @@ def device_should_be_onoff(devices, device_name, device_state):
     assert devices[device_name].state() in state_map[device_state]
 
 
-@scenario("controller_subarray_interactions.feature", "Controller enables subarray")
-def test_controller_enables_subarray():
-    """
-    This is run at the end of the scenario. It does nothing at present.
-    """
-    pass
-
-
-@when(parsers.parse("we tell controller to allocate subarray {subarray_id:d}"))
-def controller_enables_subarray(devices, subarray_id):
-    """
-    Tells controller to allocate the nth subarray
-
-    :param devices: fixture that provides access to devices by their name
-    :type devices: dict<string, DeviceProxy>
-    :param subarray_id: controller's id number for the subarray to be enabled
-    :type subarray_id: int
-    """
-    parameters = {"subarray_id": subarray_id, "station_ids": [1, 2]}
-    json_str = json.dumps(parameters)
-    devices["controller"].Allocate(json_str)
-
-
 # @scenario(
 #     "controller_subarray_interactions.feature",
 #     "Controller allocates stations to subarrays"

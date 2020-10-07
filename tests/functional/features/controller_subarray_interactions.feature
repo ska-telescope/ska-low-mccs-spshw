@@ -30,16 +30,6 @@ Scenario: Controller is turned on
     And tile_0003 should be on
     And tile_0004 should be on
 
-Scenario: Controller enables subarray
-    Given controller is on
-    And subarray_01 is off
-    And subarray_02 is off
-
-    When we tell controller to allocate subarray 1
-    Then subarray_01 should be on
-    And subarray_02 should be off
-
-
 # Scenario: Controller allocates stations to subarrays
 #     Given controller is on
 #     And subarray 1 is on

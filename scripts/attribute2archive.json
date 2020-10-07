@@ -1,0 +1,10 @@
+[
+    {
+        "attributes": 
+                [
+                "low-mccs/station/001/isConfigured"
+                ],
+        "polling_period": 1000,
+        "period_event": 3000
+    }
+]

@@ -4,7 +4,6 @@ tests for the SKA Low MCCS prototype
 """
 
 import pytest
-import json
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState
 

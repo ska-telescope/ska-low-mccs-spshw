@@ -32,7 +32,6 @@ Scenario: Controller is turned on
 
 # Scenario: Controller allocates stations to subarrays
 #     Given controller is on
-#     And subarray 1 is on
 
 #     When we tell controller to allocate station 1 to subarray 1
 

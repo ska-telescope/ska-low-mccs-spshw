@@ -159,7 +159,7 @@ class MccsControllerCli(metaclass=CliMeta):
         station_proxies = []
         for station in stations:
             fqdn = f"low-mccs/station/{station:03}"
-            station_fqdns.append(fqdn)
+            station_ids.append(fqdn)
             station_proxies.append(tango.DeviceProxy(fqdn))
         message = self._dp.Allocate
         call_with_json(message, subarray_id=subarray_id, station_ids=station_ids)

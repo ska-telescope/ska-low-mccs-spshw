@@ -741,7 +741,7 @@ class MccsController(SKAMaster):
                 if result[0] is not ResultCode.OK:
                     return (
                         ResultCode.FAILED,
-                        "_disableSubarray() failed - unable to release all resources or disable subarray",
+                        "_disableSubarray() release all or disable subarray failed",
                     )
             else:
                 return (

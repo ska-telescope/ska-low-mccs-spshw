@@ -56,7 +56,7 @@ class TestMccsIntegrationTmc:
         """
         future = Future()
         # Call the specified command asynchronously
-        if argin == None:
+        if argin is None:
             device.command_inout_asynch(command, future.set_result)
         else:
             device.command_inout_asynch(command, argin, future.set_result)
@@ -175,10 +175,12 @@ class TestMccsIntegrationTmc:
             "stations": [{"station_id": 1}, {"station_id": 2}],
             "station_beam_pointings": [
                 {
-                    "station_beam_id": 1,  # should correspond to one in the station_beam_ids in the resources
+                    "station_beam_id": 1,  # should correspond to one in the
+                    # station_beam_ids in the resources
                     "target": {
                         "system": "HORIZON",  # Target coordinate system
-                        "name": "DriftScan",  # Source name - metadata only, does not need to be resolved
+                        "name": "DriftScan",  # Source name - metadata only,
+                        # does not need to be resolved
                         "Az": 180.0,  # This is in degrees
                         "El": 45.0,  # Ditto
                     },

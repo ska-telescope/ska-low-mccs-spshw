@@ -19,7 +19,7 @@ from ska.base import SKABaseDeviceStateModel
 from ska.base.commands import CommandError, ResultCode
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import MccsController, ControllerPowerManager, release
-from ska.low.mccs.utils import call_with_json, tango_raise
+from ska.low.mccs.utils import call_with_json
 
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",

@@ -181,7 +181,9 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 2
 
         # release resources of subarray_2
-        (result_code, message) = controller.Release(2)
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=2, release_all=True
+        )
         assert result_code == ResultCode.OK
 
         # check
@@ -195,7 +197,9 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should fail
-        (result_code, message) = controller.Release(2)
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=2, release_all=True
+        )
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
@@ -209,7 +213,9 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # release resources of subarray_1
-        (result_code, message) = controller.Release(1)
+        (result_code, message) = call_with_json(
+            controller.Release, subarray_id=1, release_all=True
+        )
         assert result_code == ResultCode.OK
 
         # check all released

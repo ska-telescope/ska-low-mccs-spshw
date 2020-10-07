@@ -35,7 +35,7 @@ Scenario: Controller enables subarray
     And subarray_01 is off
     And subarray_02 is off
 
-    When we tell controller to enable subarray 1
+    When we tell controller to allocate subarray 1
     Then subarray_01 should be on
     And subarray_02 should be off
 

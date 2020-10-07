@@ -147,24 +147,6 @@ class MccsControllerCli(metaclass=CliMeta):
         return self._dp.command_inout("Reset")
 
     @format_wrapper
-    def enablesubarray(self, subarray_id):
-        """Enable given subarray
-
-        :param subarray_id: the id of the subarray
-        :type subarray_id: int
-        """
-        return self._dp.command_inout("EnableSubarray", subarray_id)
-
-    @format_wrapper
-    def disablesubarray(self, subarray_id):
-        """Disable given subarray
-
-        :param subarray_id: the id of the subarray
-        :type subarray_id: int
-        """
-        return self._dp.command_inout("DisableSubarray", subarray_id)
-
-    @format_wrapper
     def allocate(self, subarray_id=0, stations=None):
         """
         Args:
@@ -173,14 +155,14 @@ class MccsControllerCli(metaclass=CliMeta):
         """
         if stations is None:
             stations = []
-        station_fqdns = []
+        station_ids = []
         station_proxies = []
         for station in stations:
             fqdn = f"low-mccs/station/{station:03}"
             station_fqdns.append(fqdn)
             station_proxies.append(tango.DeviceProxy(fqdn))
         message = self._dp.Allocate
-        call_with_json(message, subarray_id=subarray_id, stations=station_fqdns)
+        call_with_json(message, subarray_id=subarray_id, station_ids=station_ids)
         for proxy in station_proxies:
             status = proxy.adminmode.name
             name = proxy.name()

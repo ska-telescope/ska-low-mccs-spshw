@@ -4,6 +4,7 @@ tests for the SKA Low MCCS prototype
 """
 
 import pytest
+import json
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState
 
@@ -141,17 +142,19 @@ def test_controller_enables_subarray():
     pass
 
 
-@when(parsers.parse("we tell controller to enable subarray {subarray_id:d}"))
+@when(parsers.parse("we tell controller to allocate subarray {subarray_id:d}"))
 def controller_enables_subarray(devices, subarray_id):
     """
-    Tells controller to enable the nth subarray
+    Tells controller to allocate the nth subarray
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, DeviceProxy>
     :param subarray_id: controller's id number for the subarray to be enabled
     :type subarray_id: int
     """
-    devices["controller"].EnableSubarray(subarray_id)
+    parameters = {"subarray_id": subarray_id, "station_ids": [1, 2]}
+    json_str = json.dumps(parameters)
+    devices["controller"].Allocate(json_str)
 
 
 # @scenario(

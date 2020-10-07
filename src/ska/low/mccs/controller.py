@@ -518,21 +518,12 @@ class MccsController(SKAMaster):
             controllerdevice = self.target
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
-            # First, enable the subarray specified by the caller
-            result = self._enableSubarray(subarray_id)
-            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
-            if (
-                result[0] is not ResultCode.OK
-                or not controllerdevice._subarray_enabled[subarray_id - 1]
-            ):
-                return (
-                    ResultCode.FAILED,
-                    "Cannot enable subarray {}".format(subarray_fqdn),
-                )
+            # Allocation request checks
             station_fqdns = []
             for station_id in station_ids:
                 station_id_str = str(station_id).zfill(3)
                 station_fqdns.append("low-mccs/station/{}".format(station_id_str))
+
             station_allocation = numpy.isin(
                 controllerdevice._station_fqdns, station_fqdns, assume_unique=True
             )
@@ -553,9 +544,10 @@ class MccsController(SKAMaster):
                         ", ".join(already_allocated_fqdns)
                     ),
                 )
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
 
             # Check to see if we need to release resources before allocating
+            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
+            subarray_device = tango.DeviceProxy(subarray_fqdn)
             release_mask = numpy.logical_and(
                 controllerdevice._station_allocated == subarray_id,
                 numpy.logical_not(station_allocation),
@@ -573,9 +565,19 @@ class MccsController(SKAMaster):
                         f"Failed to release resources from subarray {subarray_fqdn}:"
                         f"{message}",
                     )
-                for fqdn in stations_to_release:
-                    device = tango.DeviceProxy(fqdn)
-                    device.subarrayId = 0
+                for station_fqdn in stations_to_release:
+                    station = tango.DeviceProxy(station_fqdn)
+                    station.subarrayId = 0
+
+            # Enable the subarray specified by the caller (if required)
+            if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                self._enableSubarray(subarray_id)
+
+            if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                return (
+                    ResultCode.FAILED,
+                    "Cannot enable subarray {}".format(subarray_fqdn),
+                )
 
             # Now, assign resources
             assign_mask = numpy.logical_and(
@@ -641,14 +643,16 @@ class MccsController(SKAMaster):
                 )
 
             subarray_device = tango.DeviceProxy(subarray_fqdn)
-            (result_code, message) = subarray_device.On()
-            if result_code == ResultCode.FAILED:
-                return (
-                    ResultCode.FAILED,
-                    f"Failed to enable subarray {subarray_fqdn}: {message}",
-                )
+            if not subarray_device.State() == DevState.ON:
+                (result_code, message) = subarray_device.On()
+                if result_code == ResultCode.FAILED:
+                    return (
+                        ResultCode.FAILED,
+                        f"Failed to enable subarray {subarray_fqdn}: {message}",
+                    )
+
             device._subarray_enabled[subarray_id - 1] = True
-            return (ResultCode.OK, "EnableSubarray command successful")
+            return (ResultCode.OK, "_enableSubarray was successful")
 
     def is_Allocate_allowed(self):
         """

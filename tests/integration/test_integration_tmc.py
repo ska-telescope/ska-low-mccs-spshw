@@ -91,8 +91,8 @@ class TestMccsIntegrationTmc:
         assert subarray01.State() == DevState.OFF
         assert subarray02.State() == DevState.OFF
         # TODO: The stations are in alarm state - but why?
-        assert station001.State() == DevState.ON
-        assert station002.State() == DevState.ON
+        assert station001.State() == DevState.ALARM
+        assert station002.State() == DevState.ALARM
 
         # A second call to On should have no side-effects
         self.async_command(device=controller, command="On", expected_result=None)
@@ -100,8 +100,8 @@ class TestMccsIntegrationTmc:
         assert subarray01.State() == DevState.OFF
         assert subarray02.State() == DevState.OFF
         # TODO: The stations are in alarm state - but why?
-        assert station001.State() == DevState.ON
-        assert station002.State() == DevState.ON
+        assert station001.State() == DevState.ALARM
+        assert station002.State() == DevState.ALARM
 
     def test_controller_off(self, device_context):
         """
@@ -120,8 +120,8 @@ class TestMccsIntegrationTmc:
         self.async_command(device=controller, command="On")
         assert controller.State() == DevState.ON
         # TODO: The stations are in alarm state - but why?
-        assert station001.State() == DevState.ON
-        assert station002.State() == DevState.ON
+        assert station001.State() == DevState.ALARM
+        assert station002.State() == DevState.ALARM
         self.async_command(device=controller, command="Off")
         assert controller.State() == DevState.OFF
         assert station001.State() == DevState.OFF

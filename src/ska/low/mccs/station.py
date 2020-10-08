@@ -83,7 +83,7 @@ class StationHardwareManager:
 
         :param hardware: the hardware itself, defaults to None. This only
             exists to facilitate testing.
-        :type hardware: StationHardware
+        :type hardware: :py:class:`StationHardware`
         """
         self._hardware = StationHardware() if hardware is None else hardware
 
@@ -103,7 +103,7 @@ class StationHardwareManager:
         :rtype: boolean, or None if there was nothing to do.
         """
         if not self._hardware.is_on:
-            return None
+            return
         self._hardware.off()
         self.poll_hardware()
         return not self.is_on
@@ -116,7 +116,7 @@ class StationHardwareManager:
         :rtype: boolean, or None if there was nothing to do.
         """
         if self._hardware.is_on:
-            return None
+            return
         self._hardware.on()
         self.poll_hardware()
         return self.is_on
@@ -145,7 +145,7 @@ class StationHardwareManager:
         The health of the hardware, as evaluated by this manager
 
         :return: the health of the hardware
-        :rtype: HealthState
+        :rtype: :py:class:`ska.base.control_model.HealthState`
         """
         return self._health
 
@@ -165,7 +165,7 @@ class StationHardwareManager:
         callbacks are called
 
         :param health: the new health value
-        :type health: HealthState
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
         if self._health == health:
             return

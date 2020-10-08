@@ -38,12 +38,13 @@ class DeviceHealthPolicy:
         and self-reported health state.
 
         :param admin_mode: the value of the adminMode attribute of the device
-        :type admin_mode: AdminMode
+        :type admin_mode: :py:class:`ska.base.control_model.AdminMode`
         :param health_state: the value of the healthState attribute of
             the device
-        :type health_state: HealthState
+        :type health_state: :py:class:`ska.base.control_model.HealthState`
         :return: the evaluated health of the device
-        :rtype: HealthState, or None if the health should be ignored.
+        :rtype: :py:class:`ska.base.control_model.HealthState`, or None
+            if the health should be ignored.
         """
         if admin_mode is None:
             return HealthState.UNKNOWN
@@ -52,7 +53,7 @@ class DeviceHealthPolicy:
             AdminMode.RESERVED,
             AdminMode.OFFLINE,
         ):
-            return None
+            return
         elif health_state is None:
             return HealthState.UNKNOWN
         else:
@@ -78,14 +79,16 @@ class DeviceHealthRollupPolicy:
         supervised devices, where UNKNOWN > FAILED > DEGRADED > OK.
 
         :param hardware_health: the health of the hardware, if any
-        :type hardware_health: HealthState (or None if no hardware)
+        :type hardware_health: :py:class:`ska.base.control_model.HealthState`
+            (or None if no hardware)
         :param device_healths: the healths of supervised devices
         :type device_healths: list of device health values, or None if
             the device does not supervise devices. If a list if provided,
-            each value must be either a HealthState, or None if the
-            device's health should be ignored.
+            each value must be either a
+            :py:class:`ska.base.control_model.HealthState`, or None if
+            the device's health should be ignored.
         :return: the health of this device
-        :rtype: HealthState
+        :rtype: :py:class:`ska.base.control_model.HealthState`
         """
         if device_healths is None:
             rolled_up_device_health = HealthState.OK
@@ -117,7 +120,7 @@ class DeviceHealthMonitor:
 
         :param event_manager: the event_manager to be used for device
             health event subscriptions
-        :type event_manager: EventManager
+        :type event_manager: :py:class:`ska.low.mccs.events.EventManager`
         :param fqdn: the name of the device for which health is to be
             monitored
         :type fqdn: str
@@ -163,9 +166,9 @@ class DeviceHealthMonitor:
         :type event_name: str; will always be "healthState" for this
             callback
         :param event_value: the new healthState value
-        :type event_value: HealthState
+        :type event_value: :py:class:`ska.base.control_model.HealthState`
         :param event_quality: the quality of the change event
-        :type event_quality: tango.AttrQuality
+        :type event_quality: :py:class:`tango.AttrQuality`
         """
         assert event_name == "healthState"
         self._device_health_state = event_value
@@ -184,9 +187,9 @@ class DeviceHealthMonitor:
         :type event_name: str; will always be "adminMode" for this
             callback
         :param event_value: the new adminMode value
-        :type event_value: AdminMode
+        :type event_value: :py:class:`ska.base.control_model.AdminMode`
         :param event_quality: the quality of the change event
-        :type event_quality: tango.AttrQuality
+        :type event_quality: :py:class:`tango.AttrQuality`
         :raises AssertionError: if the event name is not "adminMode"
         """
         assert event_name == "adminMode"
@@ -209,8 +212,8 @@ class DeviceHealthMonitor:
         callbacks are called
 
         :param interpreted_health: the interpreted health of the device
-        :type interpreted_health: HealthState, or None if the device's health should
-            be ignored
+        :type interpreted_health: :py:class:`ska.base.control_model.HealthState`,
+            or None if the device's health should be ignored
         """
         if self._interpreted_health == interpreted_health:
             return
@@ -233,7 +236,7 @@ class HealthMonitor:
         :type fqdns: list of str
         :param event_manager: the event_manager to be used to capture
             health events.
-        :type event_manager: EventManager
+        :type event_manager: :py:class:`ska.low.mccs.events.EventManager`
         :param initial_callback: An initial callback, to be called if the
             health of any device changes
         :type initial_callback: callable, optional
@@ -291,7 +294,7 @@ class HealthModel:
             any other devices
         :param event_manager: the event_manager to be used for keeping
             device health updated
-        :type event_manager: EventManager
+        :type event_manager: :py:class:`ska.low.mccs.events.EventManager`
         :param initial_callback: An initial callback, to be called if the
             health of this device changes
         :type initial_callback: callable, optional
@@ -332,7 +335,7 @@ class HealthModel:
         the hardware health changes
 
         :param health: the health of the hardware
-        :type health: HealthState
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
         self._hardware_health = health
         self._compute_health()
@@ -345,8 +348,8 @@ class HealthModel:
         :param fqdn: FQDN of the device whose health has changed
         :type fqdn: str
         :param health: The device's new healthState attribute value
-        :type health: HealthState, or None if the device's health is to
-            be ignored
+        :type health: :py:class:`ska.base.control_model.HealthState`, or
+            None if the device's health is to be ignored
         """
         self._device_health[fqdn] = health
         self._compute_health()
@@ -354,8 +357,8 @@ class HealthModel:
     def _compute_health(self):
         """
         Re-evaluate health of this device, by applying the
-        DeviceHealthRollupPolicy to the current health of the hardware
-        (if any) and subservient devices (if any)
+        :py:class:`DeviceHealthRollupPolicy` to the current health of
+        the hardware (if any) and subservient devices (if any)
         """
         try:
             health = DeviceHealthRollupPolicy.compute_health(
@@ -374,7 +377,7 @@ class HealthModel:
         callbacks are called
 
         :param health: the new healthState of this device
-        :type health: HealthState
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
         if self.health == health:
             return

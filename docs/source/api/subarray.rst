@@ -7,4 +7,3 @@ Subarray module (ska.low.mccs.subarray)
 
 .. automodule:: ska.low.mccs.subarray
    :members:
-

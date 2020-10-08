@@ -28,11 +28,13 @@ def _parse_spec(spec, allowed):
     :param allowed: specification of the full set of allowed items
         from which the specification specifies items
     :type allowed: list of str, or None
+
     :return: a list of items (events or fqdns)
     :rtype: list of str
-    :raises ValueError: if nothing was specified by the specification,
-        or if an item was specified that is not in the list of allowed
-        items
+
+    :raises :py:class:`ValueError`: if nothing was specified by the
+        specification, or if an item was specified that is not in the
+        list of allowed items
     """
     if spec is None:
         if allowed is None:
@@ -61,11 +63,11 @@ class EventSubscriptionHandler:
 
     def __init__(self, device_proxy, event_name):
         """
-        Initialise a new EventHandler
+        Initialise a new EventSubscriptionHandler
 
         :param device_proxy: proxy to the device upon which the change
             event is subscribed
-        :type device_proxy: tango.DeviceProxy
+        :type device_proxy: :py:class:`tango.DeviceProxy`
         :param event_name: name of the event; that is, the name of the
             attribute for which change events are subscribed.
         :type event_name: str
@@ -110,7 +112,7 @@ class EventSubscriptionHandler:
         occurs. It in turn invokes all its own callbacks.
 
         :param event: an object encapsulating the event data.
-        :type event: tango.EventData
+        :type event: :py:class:`tango.EventData`
         """
         if event.attr_value is not None and event.attr_value.value is not None:
             for callback in self._callbacks:
@@ -147,7 +149,7 @@ class DeviceEventManager:
 
         :param fqdn: the fully qualified device name of the device for
             which this DeviceEventManager will manage change events
-        :type fqdn: string
+        :type fqdn: str
         :param events: Names of events handled by this instance. If
             provided, this instance will reject attempts to subscribe
             to events not in this list
@@ -179,8 +181,8 @@ class DeviceEventManager:
             case the events provided at initialisation are used
         :type event_spec: str or list of str or None
 
-        :raises ValueError: if the event is not in the list of allowed
-            events
+        :raises :py:class:`ValueError`: if the event is not in the list
+            of allowed events
         """
         try:
             events = _parse_spec(event_spec, self._allowed_events)
@@ -235,8 +237,8 @@ class EventManager:
             case the events provided at initialisation are used
         :type event_spec: str, or list of str, or None
 
-        :raises ValueError: if the FQDN and event are not in the lists
-            of allowed FQDNs and allowed events respectively
+        :raises :py:class:`ValueError`: if the FQDN and event are not in
+            the lists of allowed FQDNs and allowed events respectively
         """
         try:
             fqdns = _parse_spec(fqdn_spec, self._allowed_fqdns)

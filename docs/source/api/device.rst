@@ -7,4 +7,3 @@ Device module (ska.low.mccs.device)
 
 .. automodule:: ska.low.mccs.device
    :members:
-

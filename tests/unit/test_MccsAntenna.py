@@ -129,6 +129,7 @@ class TestMccsAntenna:
 
     def test_voltage(self, device_under_test):
         """Test for voltage"""
+        device_under_test.set_source(tango.DevSource.DEV)
         device_under_test.PowerOn()
         assert device_under_test.voltage == AntennaHardware.VOLTAGE
 

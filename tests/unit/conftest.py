@@ -55,7 +55,10 @@ def device_under_test(request, device_info, mock_device_proxies):
     :type mock_device_proxies: a dictionary (but don't access it
         directly, access it through :class:`tango.DeviceProxy` calls)
     """
-    with DeviceTestContext(
-        device_info["class"], properties=device_info["properties"]
-    ) as device_under_test:
-        yield device_under_test
+    try:
+        with DeviceTestContext(
+            device_info["class"], properties=device_info["properties"]
+        ) as device_under_test:
+            yield device_under_test
+    except Exception as e:
+        print(e)

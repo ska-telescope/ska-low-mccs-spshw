@@ -56,9 +56,11 @@ class AntennaHardware:
         """
         Turn me on
         """
+        print("IN hardware on")
         self._is_on = True
         self._voltage = AntennaHardware.VOLTAGE  # for testing purposes
         self._temperature = AntennaHardware.TEMPERATURE  # for testing purposes
+        print(f"OUT hardware on {self._voltage}")
 
     @property
     def is_on(self):
@@ -109,7 +111,7 @@ class AntennaHardwareManager:
 
         :param hardware: the hardware itself, defaults to None. This only
             exists to facilitate testing.
-        :type hardware: AntennaHardware
+        :type hardware: :py:class:`AntennaHardware`
         """
         self._hardware = AntennaHardware() if hardware is None else hardware
 
@@ -131,7 +133,7 @@ class AntennaHardwareManager:
         :rtype: boolean, or None if there was nothing to do.
         """
         if not self._hardware.is_on:
-            return None
+            return
         self._hardware.off()
         self.poll_hardware()
         return not self.is_on
@@ -143,10 +145,12 @@ class AntennaHardwareManager:
         :return: whether successful
         :rtype: boolean, or None if there was nothing to do.
         """
+        print("IN antennahardwaremanager on")
         if self._hardware.is_on:
-            return None
+            return
         self._hardware.on()
         self.poll_hardware()
+        print(f"OUT antennahardwaremanager on: {self.voltage}")
         return self.is_on
 
     def poll_hardware(self):
@@ -154,6 +158,7 @@ class AntennaHardwareManager:
         Poll the hardware and update local attributes with values
         reported by the hardware.
         """
+        print("IN antennahardwaremanager poll")
         self._is_on = self._hardware.is_on
         if self._is_on:
             self._voltage = self._hardware.voltage
@@ -162,6 +167,7 @@ class AntennaHardwareManager:
             self._voltage = None
             self._temperature = None
         self._evaluate_health()
+        print(f"OUT antennahardwaremanager poll: {self.voltage}")
 
     @property
     def is_on(self):
@@ -219,7 +225,7 @@ class AntennaHardwareManager:
         callbacks are called
 
         :param health: the new health value
-        :type health: HealthState
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
         if self._health == health:
             return
@@ -747,9 +753,11 @@ class MccsAntenna(SKABaseDevice):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
+            print("IN poweroncommand do")
             hardware_manager = self.target
             hardware_manager.on()
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            print(f"OUT poweroncommand do {hardware_manager.voltage}")
+            return (ResultCode.OK, "Hardware got turned on")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -765,8 +773,10 @@ class MccsAntenna(SKABaseDevice):
             information purpose only.
         :rtype: (ResultCode, str)
         """
+        print("IN antenna PowerOn")
         handler = self.get_command_object("PowerOn")
         (return_code, message) = handler()
+        print("OUT antenna PowerOn")
         return [[return_code], [message]]
 
     class PowerOffCommand(ResponseCommand):

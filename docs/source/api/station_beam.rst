@@ -7,4 +7,3 @@ Station Beam module (ska.low.mccs.station_beam)
 
 .. automodule:: ska.low.mccs.station_beam
    :members:
-

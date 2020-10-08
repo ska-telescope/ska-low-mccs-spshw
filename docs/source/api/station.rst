@@ -7,4 +7,3 @@ Station module (ska.low.mccs.station)
 
 .. automodule:: ska.low.mccs.station
    :members:
-   :private-members:

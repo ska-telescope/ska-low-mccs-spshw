@@ -158,7 +158,7 @@ class TileHardwareManager:
 
         :param hardware: the hardware itself, defaults to None. This only
             exists to facilitate testing.
-        :type hardware: TileHardware
+        :type hardware: :py:class:`TileHardware`
         """
         self._hardware = TileHardware() if hardware is None else hardware
 
@@ -183,7 +183,7 @@ class TileHardwareManager:
         :rtype: boolean, or None if there was nothing to do.
         """
         if not self._hardware.is_on:
-            return None
+            return
         self._hardware.off()
         self.poll_hardware()
         return not self.is_on
@@ -196,7 +196,7 @@ class TileHardwareManager:
         :rtype: boolean, or None if there was nothing to do.
         """
         if self._hardware.is_on:
-            return None
+            return
         self._hardware.on()
         self.poll_hardware()
         return self.is_on
@@ -287,7 +287,7 @@ class TileHardwareManager:
         The health of the hardware, as evaluated by this manager
 
         :return: the health of the hardware
-        :rtype: HealthState
+        :rtype: :py:class:`ska.base.control_model.HealthState`
         """
         return self._health
 
@@ -307,7 +307,7 @@ class TileHardwareManager:
         callbacks are called
 
         :param health: the new health value
-        :type health: HealthState
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
         if self._health == health:
             return

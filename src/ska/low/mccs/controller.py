@@ -267,7 +267,35 @@ class ControllerResourceManager:
 
         def MakeUnavailable(self):
             # Change resource state to unavailable
-            self._resourceState = ControllerResourceManager.resource_state.UNAVAILABLE
+            # If it was previously AVAILABLE (not ASSIGNED) we can just switch
+            if (
+                self._resourceState
+                == ControllerResourceManager.resource_state.AVAILABLE
+            ):
+                self._resourceState = (
+                    ControllerResourceManager.resource_state.UNAVAILABLE
+                )
+            elif (
+                self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
+            ):
+                # TODO
+                # We must decide what to do with rescources that were assigned already
+                pass
+
+        def MakeAvailable(self):
+            # Change resource state to available
+            # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
+            if (
+                self._resourceState
+                == ControllerResourceManager.resource_state.UNAVAILABLE
+            ):
+                self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+            elif (
+                self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
+            ):
+                # TODO
+                # We must decide what to do with rescources that were assigned already
+                pass
 
     def __init__(self, managername, fqdns):
         """
@@ -407,9 +435,28 @@ class ControllerResourceManager:
             self._resources[fqdn].Release()
 
     def MakeUnavailable(self, fqdns):
+        """
+        For each resource in the given list of FQDNs make its availability state
+        unavailable
+
+        :param fqdns: The list of device FQDNs to make unavailable
+        :type fqdns: list of string
+        """
         self.exceptOnUnmanaged(fqdns)
         for fqdn in fqdns:
             self._resources[fqdn].MakeUnavailable()
+
+    def MakeAvailable(self, fqdns):
+        """
+        For each resource in the given list of FQDNs make its availability state
+        available
+
+        :param fqdns: The list of device FQDNs to make unavailable
+        :type fqdns: list of string
+        """
+        self.exceptOnUnmanaged(fqdns)
+        for fqdn in fqdns:
+            self._resources[fqdn].MakeAvailable()
 
     def FqdnFromId(self, devid):
         """

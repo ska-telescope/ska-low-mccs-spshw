@@ -227,45 +227,116 @@ class ControllerResourceManager:
         Initialize with a device id number.
         """
 
-        def __init__(self, manager, id):
+        def __init__(self, manager, fqdn, id):
             self._manager = manager
+            self._fqdn = fqdn
+            self._devid = id
             self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
             self._assignedTo = 0
-            self.devid = id
 
         def assignedTo(self):
+            """Get the ID to which this resource is assigned
+
+            Returns:
+                int: Device ID
+            """
             return self._assignedTo
 
         def isAssigned(self):
-            return self._assignedTo != 0
+            """Check if this resource is assigned
+
+            Returns:
+                bool: True if assigned
+            """
+            return (
+                self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
+                and self._assignedTo != 0
+            )
 
         def isAvailable(self):
+            """Check if this resource is AVAILABLE (for assignment)
+
+            Returns:
+                bool: True if available
+            """
             return (
                 self._resourceState
                 == ControllerResourceManager.resource_state.AVAILABLE
             )
 
         def isUnavailable(self):
+            """Check if this resource is UNAVAILABLE
+
+            Returns:
+                bool: True if unavailable
+            """
             return (
                 self._resourceState
                 == ControllerResourceManager.resource_state.UNAVAILABLE
             )
 
+        def isNotAvailable(self):
+            """Check if this resource is not available
+            A resource is not available if it is ASSIGNED or UNAVAILABLE
+
+            Returns:
+                bool: True if not available
+            """
+            return (
+                self._resourceState
+                == ControllerResourceManager.resource_state.UNAVAILABLE
+                or self._resourceState
+                == ControllerResourceManager.resource_state.ASSIGNED
+            )
+
         def Assign(self, owner):
+            """Assign a resource to an owner
+
+            Args:
+                owner (int): Device ID of the owner
+
+            Raises:
+                TypeError: Inidcating if the resource is already assigned
+                TypeError: Indicating if the resource is unavailable
+            """
             # Don't allow assign if already assigned to another owner
-            if self.isAssigned() and self.assignedTo() != owner:
+            if self.isAssigned():
+                if self._assignedTo != owner:
+                    # Trying to assign to new owner not allowed
+                    raise TypeError(
+                        f"{self._manager._managername}: "
+                        f"{self._fqdn} already assigned to {self._assignedTo}"
+                    )
+                # No action if repeating the existing assignment
+                return
+
+            if self.isAvailable():
+                self._assignedTo = owner
+                self._resourceState = ControllerResourceManager.resource_state.ASSIGNED
+            else:
                 raise TypeError(
-                    f"{self._manager._managername}: "
-                    f"Resource already assigned to {self._assignedTo}"
+                    f"{self._manager._managername}: " f"{self._fqdn} is unavailable"
                 )
-            self._assignedTo = owner
-            self._resourceState = ControllerResourceManager.resource_state.ASSIGNED
 
         def Release(self):
+            """Release the resource from assignment
+
+            Raises:
+                TypeError: Indicate if the resource was unassigned
+            """
+            if self._assignedTo == 0:
+                raise TypeError(
+                    f"{self._manager._managername}: "
+                    f"Attempt to release unassigned resource, {self._fqdn}"
+                )
             self._assignedTo = 0
-            self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+            if self._resourceState == ControllerResourceManager.resource_state.ASSIGNED:
+                # Previously assigned resource becomes available
+                self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+            # Unassigned or unavailable resource does not change state
 
         def MakeUnavailable(self):
+            """Mark the resource as unavailable for assignment"""
             # Change resource state to unavailable
             # If it was previously AVAILABLE (not ASSIGNED) we can just switch
             if (
@@ -283,6 +354,7 @@ class ControllerResourceManager:
                 pass
 
         def MakeAvailable(self):
+            """Mark the resource as available for assignment"""
             # Change resource state to available
             # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
             if (
@@ -294,7 +366,7 @@ class ControllerResourceManager:
                 self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
             ):
                 # TODO
-                # We must decide what to do with rescources that were assigned already
+                # We must decide what to do with resources that were assigned already
                 pass
 
     def __init__(self, managername, fqdns):
@@ -310,7 +382,7 @@ class ControllerResourceManager:
         self._resources = dict()
         # For each resource, identified by FQDN, create an object
         for i, fqdn in enumerate(fqdns, start=1):
-            self._resources[fqdn] = self.resource(self, i)
+            self._resources[fqdn] = self.resource(self, fqdn, i)
 
     def exceptOnUnmanaged(self, fqdns):
         # Are these keys all managed?

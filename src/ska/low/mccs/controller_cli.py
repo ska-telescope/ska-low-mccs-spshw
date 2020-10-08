@@ -147,19 +147,17 @@ class MccsControllerCli(metaclass=CliMeta):
         return self._dp.command_inout("Reset")
 
     @format_wrapper
-    def allocate(self, subarray_id=0, stations=None):
+    def allocate(self, subarray_id=0, station_ids=None):
         """
         Args:
             subarray_id (int, optional): [description]. Defaults to 0.
-            stations (int, optional): [description]. Defaults to None.
+            station_ids (list, optional): [description]. Defaults to None.
         """
-        if stations is None:
-            stations = []
-        station_ids = []
+        if station_ids is None:
+            station_ids = []
         station_proxies = []
-        for station in stations:
+        for station in station_ids:
             fqdn = f"low-mccs/station/{station:03}"
-            station_ids.append(fqdn)
             station_proxies.append(tango.DeviceProxy(fqdn))
         message = self._dp.Allocate
         call_with_json(message, subarray_id=subarray_id, station_ids=station_ids)

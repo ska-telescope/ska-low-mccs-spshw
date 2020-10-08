@@ -90,7 +90,7 @@ class TestMccsIntegrationTmc:
         assert controller.State() == DevState.ON
         assert subarray01.State() == DevState.OFF
         assert subarray02.State() == DevState.OFF
-        # TODO: The stations are in alarm state - but why?
+        # TODO: The stations are in alarm state because MCCS-212
         assert station001.State() == DevState.ALARM
         assert station002.State() == DevState.ALARM
 
@@ -99,7 +99,7 @@ class TestMccsIntegrationTmc:
         assert controller.State() == DevState.ON
         assert subarray01.State() == DevState.OFF
         assert subarray02.State() == DevState.OFF
-        # TODO: The stations are in alarm state - but why?
+        # TODO: The stations are in alarm state because MCCS-212
         assert station001.State() == DevState.ALARM
         assert station002.State() == DevState.ALARM
 
@@ -119,7 +119,7 @@ class TestMccsIntegrationTmc:
         assert station002.State() == DevState.OFF
         self.async_command(device=controller, command="On")
         assert controller.State() == DevState.ON
-        # TODO: The stations are in alarm state - but why?
+        # TODO: The stations are in alarm state because MCCS-212
         assert station001.State() == DevState.ALARM
         assert station002.State() == DevState.ALARM
         self.async_command(device=controller, command="Off")

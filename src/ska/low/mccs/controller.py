@@ -571,7 +571,7 @@ class MccsController(SKAMaster):
 
             # Enable the subarray specified by the caller (if required)
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
-                self._enableSubarray(subarray_id)
+                self._enable_subarray(subarray_id)
 
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
                 return (
@@ -613,7 +613,7 @@ class MccsController(SKAMaster):
             """
             return self.state_model.op_state == DevState.ON
 
-        def _enableSubarray(self, argin):
+        def _enable_subarray(self, argin):
             """
             Method to enable the specified subarray
 
@@ -645,14 +645,17 @@ class MccsController(SKAMaster):
             subarray_device = tango.DeviceProxy(subarray_fqdn)
             if not subarray_device.State() == DevState.ON:
                 (result_code, message) = subarray_device.On()
+
+                # TODO: After MCCS-212, this code should be:
+                # if result_code is not ResultCode.OK:
                 if result_code == ResultCode.FAILED:
                     return (
-                        ResultCode.FAILED,
+                        result_code,
                         f"Failed to enable subarray {subarray_fqdn}: {message}",
                     )
 
             device._subarray_enabled[subarray_id - 1] = True
-            return (ResultCode.OK, "_enableSubarray was successful")
+            return (ResultCode.OK, "_enable_subarray was successful")
 
     def is_Allocate_allowed(self):
         """
@@ -737,11 +740,11 @@ class MccsController(SKAMaster):
                     station.subarrayId = 0
                 self.target._station_allocated[mask] = 0
 
-                result = self._disableSubarray(subarray_id)
+                result = self._disable_subarray(subarray_id)
                 if result[0] is not ResultCode.OK:
                     return (
-                        ResultCode.FAILED,
-                        "_disableSubarray() release all or disable subarray failed",
+                        result[0],
+                        "_disable_subarray() release all or disable subarray failed",
                     )
             else:
                 return (
@@ -761,7 +764,7 @@ class MccsController(SKAMaster):
             """
             return self.state_model.op_state == DevState.ON
 
-        def _disableSubarray(self, argin):
+        def _disable_subarray(self, argin):
             """
             Method to disable the specified subarray
 
@@ -787,7 +790,7 @@ class MccsController(SKAMaster):
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
             device._subarray_enabled[subarray_id - 1] = False
-            return (ResultCode.OK, "_disableSubarray was successful")
+            return (ResultCode.OK, "_disable_subarray was successful")
 
     def is_Release_allowed(self):
         """

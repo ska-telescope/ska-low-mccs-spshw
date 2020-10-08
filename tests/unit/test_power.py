@@ -11,7 +11,7 @@ This module contains the tests for the ska.low.mccs.power module
 """
 import pytest
 
-from ska.low.mccs.power import PowerManager, PowerManagerError
+from ska.low.mccs.power import PowerManager
 
 
 class TestPowerManager:
@@ -133,16 +133,12 @@ class TestPowerManager:
 
         assert_on(False)
 
-        with pytest.raises(PowerManagerError):
-            power_manager.off()
-        assert_on(False)
-
         assert power_manager.on()
         assert_on(True)
-
-        with pytest.raises(PowerManagerError):
-            power_manager.on()
+        assert power_manager.on() is None
         assert_on(True)
 
         assert power_manager.off()
+        assert_on(False)
+        assert power_manager.off() is None
         assert_on(False)

@@ -47,11 +47,11 @@ class DeviceHealthPolicy:
         """
         if admin_mode is None:
             return HealthState.UNKNOWN
-        elif admin_mode in [
+        elif admin_mode in (
             AdminMode.NOT_FITTED,
             AdminMode.RESERVED,
             AdminMode.OFFLINE,
-        ]:
+        ):
             return None
         elif health_state is None:
             return HealthState.UNKNOWN
@@ -187,6 +187,7 @@ class DeviceHealthMonitor:
         :type event_value: AdminMode
         :param event_quality: the quality of the change event
         :type event_quality: tango.AttrQuality
+        :raises AssertionError: if the event name is not "adminMode"
         """
         assert event_name == "adminMode"
         self._device_admin_mode = event_value
@@ -264,26 +265,13 @@ class HealthMonitor:
             fqdns = fqdn_spec
 
         for fqdn in fqdns:
-            self._register_callback_for_device(callback, fqdn)
+            if fqdn not in self._device_health_monitors:
+                raise ValueError(f"Unknown FQDN {fqdn}.")
 
-    def _register_callback_for_device(self, callback, fqdn):
-        """
-        Register a callback for a particular event from a particularly
-        device
-
-        :param callback: callable to be called with args (fqdn, name,
-            value, quality) whenever the event is received
-        :type callback: callable
-        :param fqdn: FQDN of the devices upon which the callback is
-            to be registered.
-        :type fqdn: str
-        :raises ValueError: if the FQDN is not in the list of allowed
-            FQDNs
-        """
-        if fqdn not in self._device_health_monitors:
-            raise ValueError(f"Unknown FQDN {fqdn}.")
-
-        self._device_health_monitors[fqdn].register_callback(partial(callback, fqdn))
+        for fqdn in fqdns:
+            self._device_health_monitors[fqdn].register_callback(
+                partial(callback, fqdn)
+            )
 
 
 class HealthModel:

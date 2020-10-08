@@ -54,13 +54,11 @@ class PowerManager:
         Turn this device off, by first turning off own hardware, and
         then telling all subservient devices to turn off
 
-        :raises PowerManagerError: if trying to turn off when already
-            off
         :return: Whether the command succeeded or not
-        :rtype: boolean
+        :rtype: boolean, or None if there was nothing to do
         """
         if not self._is_on:
-            raise PowerManagerError("Off() called when already Off")
+            return
         if self.hardware is not None:
             self.hardware.off()
         if self.devices is not None:
@@ -74,13 +72,11 @@ class PowerManager:
         Turn this device on, by first telling all subservient devices to
         turn on, and then turning on own hardware
 
-        :raises PowerManagerError: if trying to turn on when already
-            on
         :return: Whether the command succeeded or not
-        :rtype: boolean
+        :rtype: boolean, or None if there was nothing to do
         """
         if self._is_on:
-            raise PowerManagerError("On() called when already On")
+            return
         if self.devices is not None:
             for device in self.devices:
                 device.On()

@@ -521,8 +521,7 @@ class MccsController(SKAMaster):
             # Allocation request checks
             station_fqdns = []
             for station_id in station_ids:
-                station_id_str = str(station_id).zfill(3)
-                station_fqdns.append("low-mccs/station/{}".format(station_id_str))
+                station_fqdns.append(f"low-mccs/station/{station_id:03}")
 
             station_allocation = numpy.isin(
                 controllerdevice._station_fqdns, station_fqdns, assume_unique=True
@@ -714,17 +713,18 @@ class MccsController(SKAMaster):
                 information purpose only.
             :rtype: (ResultCode, str)
             """
+            device = self.target
             args = json.loads(argin)
             subarray_id = args["subarray_id"]
             release_all = args["release_all"]
-            if not (1 <= subarray_id <= len(self.target._subarray_fqdns)):
+            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
                 return (
                     ResultCode.FAILED,
                     "Subarray index {} is out of range".format(subarray_id),
                 )
 
-            subarray_fqdn = self.target._subarray_fqdns[subarray_id - 1]
-            if not self.target._subarray_enabled[subarray_id - 1]:
+            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
+            if not device._subarray_enabled[subarray_id - 1]:
                 return (
                     ResultCode.FAILED,
                     "Cannot release resources from disabled subarray {}".format(
@@ -733,12 +733,12 @@ class MccsController(SKAMaster):
                 )
 
             if release_all:
-                mask = self.target._station_allocated == subarray_id
-                active_station_fqdns = list(self.target._station_fqdns[mask])
+                mask = device._station_allocated == subarray_id
+                active_station_fqdns = list(device._station_fqdns[mask])
                 for station_fqdn in active_station_fqdns:
                     station = tango.DeviceProxy(station_fqdn)
                     station.subarrayId = 0
-                self.target._station_allocated[mask] = 0
+                device._station_allocated[mask] = 0
 
                 result = self._disable_subarray(subarray_id)
                 if result[0] is not ResultCode.OK:

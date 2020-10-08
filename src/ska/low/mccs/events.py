@@ -16,6 +16,42 @@ import tango
 from tango import EventType
 
 
+def _parse_spec(spec, allowed):
+    """
+    Helper function that implements parsing of a specification (of
+    events or fqdns) against which to register a callback
+
+    :param spec: specification (of events or fqdns) against which to
+        register a callback. This is either a list of items, or a single
+        item, or None. If None, it means all allowed items
+    :type spec: list of str, or str, or None
+    :param allowed: specification of the full set of allowed items
+        from which the specification specifies items
+    :type allowed: list of str, or None
+    :return: a list of items (events or fqdns)
+    :rtype: list of str
+    :raises ValueError: if nothing was specified by the specification,
+        or if an item was specified that is not in the list of allowed
+        items
+    """
+    if spec is None:
+        if allowed is None:
+            raise ValueError("Nothing specified")
+        return allowed
+
+    if isinstance(spec, str):
+        items = [spec]
+    else:
+        items = spec
+
+    if allowed is not None:
+        for item in items:
+            if item not in allowed:
+                raise ValueError(f"Unknown item {spec}")
+
+    return items
+
+
 class EventSubscriptionHandler:
     """
     This class handles subscription to change events on a single
@@ -146,39 +182,15 @@ class DeviceEventManager:
         :raises ValueError: if the event is not in the list of allowed
             events
         """
-        if event_spec is None:
-            if self._allowed_events is None:
-                raise ValueError("No events specified for callback")
-            events = self._allowed_events
-        elif isinstance(event_spec, str):
-            events = [event_spec]
-        else:
-            events = event_spec
+        try:
+            events = _parse_spec(event_spec, self._allowed_events)
+        except ValueError as value_error:
+            raise ValueError("Error parsing event specification") from value_error
 
         for event in events:
-            self._register_callback_for_event(event, callback)
-
-    def _register_callback_for_event(self, event, callback):
-        """
-        Register a callback for an event handled by this handler
-
-        :param event: name of the event; that is, the name of the
-            attribute for which change events are subscribed
-        :type event: str
-        :param callback: callable to be called when an event is received
-            by this event handler. The callable will be called with
-            three positional arguments: event name, value and quality.
-        :type callback: callable
-
-        :raises ValueError: if the event is not in the list of allowed
-            events
-        """
-        if self._allowed_events is not None and event not in self._allowed_events:
-            raise ValueError(f"Unknown event name {event}.")
-
-        if event not in self._handlers:
-            self._handlers[event] = EventSubscriptionHandler(self._device, event)
-        self._handlers[event].register_callback(callback)
+            if event not in self._handlers:
+                self._handlers[event] = EventSubscriptionHandler(self._device, event)
+            self._handlers[event].register_callback(callback)
 
 
 class EventManager:
@@ -226,43 +238,14 @@ class EventManager:
         :raises ValueError: if the FQDN and event are not in the lists
             of allowed FQDNs and allowed events respectively
         """
-        if fqdn_spec is None:
-            if self._allowed_fqdns is None:
-                raise ValueError("No FQDNs specified for callback")
-            fqdns = self._allowed_fqdns
-        elif isinstance(fqdn_spec, str):
-            fqdns = [fqdn_spec]
-        else:
-            fqdns = fqdn_spec
+        try:
+            fqdns = _parse_spec(fqdn_spec, self._allowed_fqdns)
+        except ValueError as value_error:
+            raise ValueError("Error parsing FQDN specification") from value_error
 
         for fqdn in fqdns:
-            self._register_callback_for_device(callback, fqdn, event_spec)
-
-    def _register_callback_for_device(self, callback, fqdn, event_spec):
-        """
-        Register a callback for a particular event from a particularly
-        device
-
-        :param callback: callable to be called with args (fqdn, name,
-            value, quality) whenever the event is received
-        :type callback: callable
-        :param fqdn: FQDN of the devices upon which the callback is
-            to be registered.
-        :type fqdn: str
-        :param event_spec: a specification of the event or events for
-            which change events are subscribed. This may be the name of
-            a single event, or a list of such names, or None, in which
-            case the events provided at initialisation are used
-        :type event_spec: str, or list of str, or None
-
-        :raises ValueError: if the FQDN is not in the list of allowed
-            FQDNs
-        """
-        if self._allowed_fqdns is not None and fqdn not in self._allowed_fqdns:
-            raise ValueError(f"Unknown FQDN {fqdn}.")
-
-        if fqdn not in self._handlers:
-            self._handlers[fqdn] = DeviceEventManager(fqdn, self._allowed_events)
-        self._handlers[fqdn].register_callback(
-            partial(callback, fqdn), event_spec=event_spec
-        )
+            if fqdn not in self._handlers:
+                self._handlers[fqdn] = DeviceEventManager(fqdn, self._allowed_events)
+            self._handlers[fqdn].register_callback(
+                partial(callback, fqdn), event_spec=event_spec
+            )

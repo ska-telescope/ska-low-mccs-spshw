@@ -162,16 +162,18 @@ class TileHardwareManager:
         """
         self._hardware = TileHardware() if hardware is None else hardware
 
-        # polled attributes
+        # polled hardware attributes
         self._is_on = None
         self._voltage = None
         self._current = None
         self._board_temperature = None
         self._fpga1_temperature = None
         self._fpga2_temperature = None
-        self._health = None
 
+        self._health = None
         self._health_callbacks = []
+
+        self.poll_hardware()
 
     def off(self):
         """
@@ -183,7 +185,8 @@ class TileHardwareManager:
         if not self._hardware.is_on:
             return None
         self._hardware.off()
-        return not self._hardware.is_on
+        self.poll_hardware()
+        return not self.is_on
 
     def on(self):
         """
@@ -195,7 +198,8 @@ class TileHardwareManager:
         if self._hardware.is_on:
             return None
         self._hardware.on()
-        return self._hardware.is_on
+        self.poll_hardware()
+        return self.is_on
 
     def poll_hardware(self):
         """
@@ -209,7 +213,13 @@ class TileHardwareManager:
             self._board_temperature = self._hardware.board_temperature
             self._fpga1_temperature = self._hardware.fpga1_temperature
             self._fpga2_temperature = self._hardware.fpga2_temperature
-            self._evaluate_health()
+        else:
+            self._voltage = None
+            self._current = None
+            self._board_temperature = None
+            self._fpga1_temperature = None
+            self._fpga2_temperature = None
+        self._evaluate_health()
 
     @property
     def is_on(self):
@@ -285,9 +295,11 @@ class TileHardwareManager:
         """
         Evaluate the health of the hardware
         """
-        # look at the polled hardware values and maybe further poke the
-        # hardware to check that it is okay
-        self._update_health(HealthState.OK)
+        # TODO: look at the polled hardware values and maybe further
+        # poke the hardware to check that it is okay. But for now:
+        evaluated_health = HealthState.OK
+
+        self._update_health(evaluated_health)
 
     def _update_health(self, health):
         """
@@ -313,6 +325,7 @@ class TileHardwareManager:
         :type callback: callable
         """
         self._health_callbacks.append(callback)
+        callback(self._health)
 
 
 class TilePowerManager(PowerManager):

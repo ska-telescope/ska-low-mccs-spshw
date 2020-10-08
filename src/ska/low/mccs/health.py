@@ -357,11 +357,16 @@ class HealthModel:
         DeviceHealthRollupPolicy to the current health of the hardware
         (if any) and subservient devices (if any)
         """
-        health = DeviceHealthRollupPolicy.compute_health(
-            self._hardware_health,
-            None if self._device_health is None else self._device_health.values(),
-        )
-        self._update_health(health)
+        try:
+            health = DeviceHealthRollupPolicy.compute_health(
+                self._hardware_health,
+                None if self._device_health is None else self._device_health.values(),
+            )
+            self._update_health(health)
+        except AttributeError:
+            # callbacks may trigger a call to this before init_device has
+            # even created the health attributes
+            pass
 
     def _update_health(self, health):
         """

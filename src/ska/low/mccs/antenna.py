@@ -113,13 +113,15 @@ class AntennaHardwareManager:
         """
         self._hardware = AntennaHardware() if hardware is None else hardware
 
-        # polled attributes
+        # polled hardware attributes
         self._is_on = None
         self._voltage = None
         self._temperature = None
 
         self._health = None
         self._health_callbacks = []
+
+        self.poll_hardware()
 
     def off(self):
         """
@@ -131,7 +133,8 @@ class AntennaHardwareManager:
         if not self._hardware.is_on:
             return None
         self._hardware.off()
-        return not self._hardware.is_on
+        self.poll_hardware()
+        return not self.is_on
 
     def on(self):
         """
@@ -143,7 +146,8 @@ class AntennaHardwareManager:
         if self._hardware.is_on:
             return None
         self._hardware.on()
-        return self._hardware.is_on
+        self.poll_hardware()
+        return self.is_on
 
     def poll_hardware(self):
         """
@@ -154,7 +158,10 @@ class AntennaHardwareManager:
         if self._is_on:
             self._voltage = self._hardware.voltage
             self._temperature = self._hardware.temperature
-            self._evaluate_health()
+        else:
+            self._voltage = None
+            self._temperature = None
+        self._evaluate_health()
 
     @property
     def is_on(self):
@@ -200,9 +207,11 @@ class AntennaHardwareManager:
         """
         Evaluate the health of the hardware
         """
-        # look at the polled hardware values and maybe further poke the
-        # hardware to check that it is okay
-        self._update_health(HealthState.OK)
+        # TODO: look at the polled hardware values and maybe further
+        # poke the hardware to check that it is okay. But for now:
+        evaluated_health = HealthState.OK
+
+        self._update_health(evaluated_health)
 
     def _update_health(self, health):
         """
@@ -221,13 +230,15 @@ class AntennaHardwareManager:
     def register_health_callback(self, callback):
         """
         Register a callback to be called when the health of the hardware
-        changes
+        changes. The callback will be called immediately upon
+        registration.
 
         :param callback: A callback to be called when the health of the
             hardware changes
         :type callback: callable
         """
         self._health_callbacks.append(callback)
+        callback(self._health)
 
 
 class MccsAntenna(SKABaseDevice):

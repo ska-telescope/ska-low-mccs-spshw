@@ -32,7 +32,7 @@ class TestAntennaHardwareManager:
     Contains the tests of the AntennaHardwareManager
     """
 
-    def test(self, mocker):
+    def test_on_off(self, mocker):
         """
         Test that the AntennaHardwareManager receives updated values,
         and re-evaluates device health, each time it polls the hardware
@@ -46,21 +46,34 @@ class TestAntennaHardwareManager:
         hardware = AntennaHardware()
         antenna_hardware_manager = AntennaHardwareManager(hardware)
 
+        assert not antenna_hardware_manager.is_on
+        assert antenna_hardware_manager.voltage is None
+        assert antenna_hardware_manager.temperature is None
+        assert antenna_hardware_manager.health == HealthState.OK
+
         mock_health_callback = mocker.Mock()
         antenna_hardware_manager.register_health_callback(mock_health_callback)
+        mock_health_callback.assert_called_once_with(HealthState.OK)
+        mock_health_callback.reset_mock()
 
         antenna_hardware_manager.on()
-
         hardware._voltage = voltage
         hardware._temperature = temperature
-
         antenna_hardware_manager.poll_hardware()
 
         assert antenna_hardware_manager.is_on
         assert antenna_hardware_manager.voltage == voltage
         assert antenna_hardware_manager.temperature == temperature
         assert antenna_hardware_manager.health == HealthState.OK
-        assert mock_health_callback.called_once_with(HealthState.OK)
+        mock_health_callback.assert_not_called()
+
+        antenna_hardware_manager.off()
+
+        assert not antenna_hardware_manager.is_on
+        assert antenna_hardware_manager.voltage is None
+        assert antenna_hardware_manager.temperature is None
+        assert antenna_hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
 
 
 class TestMccsAntenna:

@@ -36,9 +36,6 @@ class StationHardware:
     A stub class to take the place of actual station hardware
     """
 
-    VOLTAGE = 3.5
-    TEMPERATURE = 20.6
-
     def __init__(self):
         """
         Initialise a new StationHardware instance
@@ -90,10 +87,13 @@ class StationHardwareManager:
         """
         self._hardware = StationHardware() if hardware is None else hardware
 
-        # polled attributes
+        # polled hardware attributes
         self._is_on = None
+
         self._health = None
         self._health_callbacks = []
+
+        self.poll_hardware()
 
     def off(self):
         """
@@ -105,7 +105,8 @@ class StationHardwareManager:
         if not self._hardware.is_on:
             return None
         self._hardware.off()
-        return not self._hardware.is_on
+        self.poll_hardware()
+        return not self.is_on
 
     def on(self):
         """
@@ -117,7 +118,8 @@ class StationHardwareManager:
         if self._hardware.is_on:
             return None
         self._hardware.on()
-        return self._hardware.is_on
+        self.poll_hardware()
+        return self.is_on
 
     def poll_hardware(self):
         """
@@ -125,8 +127,7 @@ class StationHardwareManager:
         reported by the hardware.
         """
         self._is_on = self._hardware.is_on
-        if self._is_on:
-            self._evaluate_health()
+        self._evaluate_health()
 
     @property
     def is_on(self):
@@ -152,9 +153,11 @@ class StationHardwareManager:
         """
         Evaluate the health of the hardware
         """
-        # look at the polled hardware values and maybe further poke the
-        # hardware to check that it is okay
-        self._update_health(HealthState.OK)
+        # TODO: look at the polled hardware values and maybe further
+        # poke the hardware to check that it is okay. But for now:
+        evaluated_health = HealthState.OK
+
+        self._update_health(evaluated_health)
 
     def _update_health(self, health):
         """
@@ -180,6 +183,7 @@ class StationHardwareManager:
         :type callback: callable
         """
         self._health_callbacks.append(callback)
+        callback(self._health)
 
 
 class StationPowerManager(PowerManager):

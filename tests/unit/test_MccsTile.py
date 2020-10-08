@@ -55,8 +55,18 @@ class TestTileHardwareManager:
         hardware = TileHardware()
         tile_hardware_manager = TileHardwareManager(hardware)
 
+        assert not tile_hardware_manager.is_on
+        assert tile_hardware_manager.voltage is None
+        assert tile_hardware_manager.current is None
+        assert tile_hardware_manager.board_temperature is None
+        assert tile_hardware_manager.fpga1_temperature is None
+        assert tile_hardware_manager.fpga2_temperature is None
+        assert tile_hardware_manager.health == HealthState.OK
+
         mock_health_callback = mocker.Mock()
         tile_hardware_manager.register_health_callback(mock_health_callback)
+        mock_health_callback.assert_called_once_with(HealthState.OK)
+        mock_health_callback.reset_mock()
 
         tile_hardware_manager.on()
         hardware._voltage = voltage
@@ -73,7 +83,18 @@ class TestTileHardwareManager:
         assert tile_hardware_manager.fpga1_temperature == fpga1_temperature
         assert tile_hardware_manager.fpga2_temperature == fpga2_temperature
         assert tile_hardware_manager.health == HealthState.OK
-        assert mock_health_callback.called_once_with(HealthState.OK)
+        mock_health_callback.assert_not_called()
+
+        tile_hardware_manager.off()
+
+        assert not tile_hardware_manager.is_on
+        assert tile_hardware_manager.voltage is None
+        assert tile_hardware_manager.current is None
+        assert tile_hardware_manager.board_temperature is None
+        assert tile_hardware_manager.fpga1_temperature is None
+        assert tile_hardware_manager.fpga2_temperature is None
+        assert tile_hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
 
 
 class TestMccsTile(object):

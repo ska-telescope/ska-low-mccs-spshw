@@ -11,7 +11,7 @@ This module contains the tests for the ska.low.mccs.power module
 """
 import pytest
 
-from ska.low.mccs.power import PowerManager, PowerManagerError
+from ska.low.mccs.power import PowerManager
 
 
 class TestPowerManager:
@@ -37,7 +37,19 @@ class TestPowerManager:
             """
             self._is_on = True
 
+        def on(self):
+            """
+            Turn the mock object on
+            """
+            self._is_on = True
+
         def Off(self):
+            """
+            Turn the mock object off
+            """
+            self._is_on = False
+
+        def off(self):
             """
             Turn the mock object off
             """
@@ -72,6 +84,9 @@ class TestPowerManager:
         paramerised to return three results: None, 0 and 2. Thus it
         covers the cases of a power manager with or without subservient
         devices
+
+        :return: a list of devices that can be turned on and off
+        :rtype: list of objects, or None if no devices are provided
         """
         num_devices = request.param
         return None if num_devices is None else [self._OnOffMock()] * num_devices
@@ -85,6 +100,9 @@ class TestPowerManager:
             something that can be turned off and on.
         :param devices: fixture that returns a list of devices that are
             subservient to the device under test.
+
+        :return: a power manager instances
+        :rtype: PowerManager
         """
         return PowerManager(hardware_manager, devices)
 
@@ -104,7 +122,7 @@ class TestPowerManager:
             :param is_on: the off/on status being asserted. If true, we
                 are asserting that the power manager is on; if false, we
                 are asserting that it is off
-            :ptype is_on: boolean
+            :type is_on: boolean
             """
             assert power_manager.is_on() == is_on
             if power_manager.hardware is not None:
@@ -115,16 +133,12 @@ class TestPowerManager:
 
         assert_on(False)
 
-        with pytest.raises(PowerManagerError):
-            power_manager.off()
-        assert_on(False)
-
         assert power_manager.on()
         assert_on(True)
-
-        with pytest.raises(PowerManagerError):
-            power_manager.on()
+        assert power_manager.on() is None
         assert_on(True)
 
         assert power_manager.off()
+        assert_on(False)
+        assert power_manager.off() is None
         assert_on(False)

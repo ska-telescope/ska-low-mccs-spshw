@@ -41,6 +41,9 @@ sys.path.insert(0, os.path.abspath("../../src"))
 autodoc_mock_imports = ["tango", "PyTango", "PyTango.server", "ska.base"]
 
 
+autodoc_default_options = {"special-members": "__init__"}
+
+
 def setup(app):
     """ initialise app """
     app.add_css_file("css/custom.css")

@@ -20,7 +20,11 @@ from ska.base import SKABaseDeviceStateModel
 from ska.base.commands import CommandError, ResultCode
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import MccsStation, release
-from ska.low.mccs.station import StationHardwareManager, StationPowerManager
+from ska.low.mccs.station import (
+    StationHardware,
+    StationHardwareManager,
+    StationPowerManager,
+)
 
 
 device_to_load = {
@@ -30,7 +34,43 @@ device_to_load = {
 }
 
 
-@pytest.mark.mock_device_proxy
+class TestStationHardwareManager:
+    """
+    Contains the tests of the StationHardwareManager
+    """
+
+    def test_on_off(self, mocker):
+        """
+        Test that the StationHardwareManager receives updated values,
+        and re-evaluates device health, each time it polls the hardware
+
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: fixture
+        """
+        hardware = StationHardware()
+        station_hardware_manager = StationHardwareManager(hardware)
+
+        assert not station_hardware_manager.is_on
+        assert station_hardware_manager.health == HealthState.OK
+
+        mock_health_callback = mocker.Mock()
+        station_hardware_manager.register_health_callback(mock_health_callback)
+        mock_health_callback.assert_called_once_with(HealthState.OK)
+        mock_health_callback.reset_mock()
+
+        station_hardware_manager.on()
+
+        assert station_hardware_manager.is_on
+        assert station_hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
+
+        station_hardware_manager.off()
+
+        assert not station_hardware_manager.is_on
+        assert station_hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
+
+
 class TestMccsStation:
     """
     Test class for MccsStation tests

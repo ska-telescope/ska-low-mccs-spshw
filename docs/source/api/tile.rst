@@ -7,4 +7,3 @@ Tile module (ska.low.mccs.tile)
 
 .. automodule:: ska.low.mccs.tile
    :members:
-

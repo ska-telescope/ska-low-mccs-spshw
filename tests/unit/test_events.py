@@ -33,10 +33,10 @@ class TestEventSubscriptionHandler:
         event.
 
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         fqdn = "mock/mock/1"
         mock_device_proxy = tango.DeviceProxy(fqdn)
@@ -60,10 +60,10 @@ class TestEventSubscriptionHandler:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: fixture
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         fqdn = "mock/mock/1"
         event_name = "mock_event"
@@ -110,10 +110,10 @@ class TestEventSubscriptionHandler:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: unittest.Mock wrapper
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         fqdn = "mock/mock/1"
         event_name = "mock_event"
@@ -172,10 +172,10 @@ class TestDeviceEventManager:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: unittest.Mock wrapper
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         device_event_manager = DeviceEventManager("mock/mock/1", allowed_events)
 
@@ -192,10 +192,10 @@ class TestDeviceEventManager:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: unittest.Mock wrapper
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         fqdn = "mock/mock/1"
         device_event_manager = DeviceEventManager(fqdn)
@@ -227,10 +227,10 @@ class TestDeviceEventManager:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: fixture
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
 
         event_count = 2  # test should pass for any positive number
@@ -314,10 +314,10 @@ class TestEventManager:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: unittest.Mock wrapper
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         event_manager = EventManager(fqdns=allowed_fqdns)
 
@@ -336,10 +336,10 @@ class TestEventManager:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: unittest.Mock wrapper
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number
@@ -374,10 +374,10 @@ class TestEventManager:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: fixture
         :param mock_device_proxies: fixture that patches
-            :class:`tango.DeviceProxy` to always return the same mock
+            :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
-            access it through :class:`tango.DeviceProxy` calls)
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number

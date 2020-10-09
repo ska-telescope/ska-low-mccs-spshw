@@ -87,17 +87,20 @@ def tango_raise(
                     tango_throw("Condition not true")
 
 
-    :param msg: [description]
-    :type msg: [type]
+    :param msg: message
+    :type msg: str
     :param reason: the tango api DevError description string, defaults to
-                     "API_CommandFailed"
+        "API_CommandFailed"
     :type reason: str, optional
     :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
     :type severity: `tango.ErrSeverity`, optional
     :param _origin: the calling object name, defaults to None (autodetected)
-                   Note that autodetection only works for class methods not e.g.
-                   decorators
+        Note that autodetection only works for class methods not e.g.
+        decorators
     :type _origin: str, optional
+
+    :raises TypeError: if used from an object that is not a tango device
+        instance
     """
     if _origin is None:
         frame = inspect.currentframe().f_back
@@ -115,25 +118,29 @@ def call_with_json(func, **kwargs):
     Allows the calling of a command that accepts a JSON string as input,
     with the actual unserialised parameters.
 
+    For example, suppose you need to use `MccsController.Allocate()` to
+    command a controller device to allocate certain stations and tiles
+    to a subarray. Allocate() accepts a single JSON string argument.
+    Instead of
+
+    Example::
+
+        parameters={"id": id, "stations": stations, "tiles": tiles}
+        json_string=json.dumps(parameters)
+        controller.Allocate(json_string)
+
+    save yourself the trouble and
+
+    Example::
+
+        call_with_json(controller.Allocate, id=id, stations=stations, tiles=tiles)
+
     :param func: the function to call
-    :ptype func: callable
+    :type func: callable
     :param kwargs: parameters to be jsonified and passed to func
-    :ptype kwargs: any
+    :type kwargs: any
+
     :return: the return value of func
-    :example: Suppose you need to use MccsController.Allocate() to command
-        a controller device to allocate certain stations and tiles to a
-        subarray. Allocate() accepts a single JSON string argument.
-        Instead of
-
-            parameters={"id": id, "stations": stations, "tiles": tiles}
-            json_string=json.dumps(parameters)
-            controller.Allocate(json_string)
-
-        save yourself the trouble and
-
-            call_with_json(controller.Allocate,
-                           id=id, stations=stations, tiles=tiles)
-
     """
     return func(json.dumps(kwargs))
 
@@ -141,31 +148,35 @@ def call_with_json(func, **kwargs):
 class json_input:
     """
     Method decorator that parses and validates JSON input into a python
-    object. The wrapped method is thus called with a JSON string, but
-    can be implemented as if it had been passed an object.
+    dictionary, which is then passed to the method as kwargs. The
+    wrapped method is thus called with a JSON string, but can be
+    implemented as if it had been passed a sequence of named arguments.
 
     If the string cannot be parsed as JSON, an exception is raised.
+
+    For example, conceptually, MccsController.Allocate() takes as
+    arguments a subarray id, an array of stations, and an array of
+    tiles. In practice, however, these arguments are encoded into a JSON
+    string. Implement the function with its conceptual parameters, then
+    wrap it in this decorator:
+
+    Example::
+
+        @json_input
+        def MccsController.Allocate(id, stations, tiles):
+
+    The decorator will provide the JSON interface and handle the
+    decoding for you.
 
     :param schema_path: an optional path to a schema against which the
         JSON should be validated. Not working at the moment, so leave it
         None.
-    :ptype: string
+    :type schema_path: string
+
     :raises FileNotFoundException: if no file is found at the schema
         path provided
     :raises json.JSONDecodeError: if the file at the specified schema
         path is not valid JSON
-
-    :example: Conceptually, MccsController.Allocate() takes as arguments a
-        subarray id, an array of stations, and an array of tiles. In
-        practice, however, these arguments are encoded into a JSON
-        string. Implement the function with its conceptual parameters,
-        then wrap it in this decorator:
-
-            @json_input
-            def MccsController.Allocate(id, stations, tiles):
-
-        The decorator will provide the JSON interface and handle the
-        decoding for you.
     """
 
     def __init__(self, schema_path=None):
@@ -194,25 +205,17 @@ class json_input:
 
         @wraps(func)
         def wrapped(cls, json_string):
-            json_object = self._parse(json_string, func.__name__)
+            json_object = self._parse(json_string)
             return func(cls, **json_object)
 
         return wrapped
 
-    def _parse(self, json_string, origin):
+    def _parse(self, json_string):
         """
         Parses and validates the JSON string input.
 
         :param json_string: a string, purportedly a JSON-encoded object
         :type json_string: str
-        :param origin: the origin of this check; used to construct a
-            helpful DevFailed exception.
-        :type origin: str
-        :raises json.JSONDecodeError: if the string cannot be decoded as
-            a JSON string
-        :raises jsonschema.ValidationError: if the decoded JSON object
-            does not validate against a schema
-
         """
         json_object = json.loads(json_string)
 

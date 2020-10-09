@@ -60,19 +60,19 @@ class MccsController(SKAMaster):
     - Device Property
         MccsSubarrays
             - The FQDNs of the Mccs sub-arrays
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsStations
             - List of MCCS station  TANGO Device names
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsStationBeams
             - List of MCCS station beam TANGO Device names
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsTiles
             - List of MCCS Tile TANGO Device names.
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsAntenna
             - List of MCCS Antenna TANGO Device names
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
     """
 
     # -----------------
@@ -412,8 +412,6 @@ class MccsController(SKAMaster):
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
         """
         handler = self.get_command_object("Operate")
         if not handler.check_allowed():
@@ -529,11 +527,10 @@ class MccsController(SKAMaster):
                 already_allocated_fqdns = list(
                     controllerdevice._station_fqdns[already_allocated]
                 )
+                fqdns_string = ", ".join(already_allocated_fqdns)
                 return (
                     ResultCode.FAILED,
-                    "Cannot allocate stations already allocated: {}".format(
-                        ", ".join(already_allocated_fqdns)
-                    ),
+                    f"Cannot allocate stations already allocated: {fqdns_string}",
                 )
 
             # Check to see if we need to release resources before allocating
@@ -565,10 +562,7 @@ class MccsController(SKAMaster):
                 self._enable_subarray(subarray_id)
 
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
-                return (
-                    ResultCode.FAILED,
-                    "Cannot enable subarray {}".format(subarray_fqdn),
-                )
+                return (ResultCode.FAILED, f"Cannot enable subarray {subarray_fqdn}")
 
             # Now, assign resources
             assign_mask = numpy.logical_and(
@@ -622,7 +616,7 @@ class MccsController(SKAMaster):
             if not (1 <= subarray_id <= len(device._subarray_fqdns)):
                 return (
                     ResultCode.FAILED,
-                    "Subarray index {} is out of range".format(subarray_id),
+                    f"Subarray index {subarray_id} is out of range",
                 )
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
@@ -630,7 +624,7 @@ class MccsController(SKAMaster):
             if device._subarray_enabled[subarray_id - 1]:
                 return (
                     ResultCode.FAILED,
-                    "Subarray {} is already enabled".format(subarray_fqdn),
+                    f"Subarray {subarray_fqdn} is already enabled",
                 )
 
             subarray_device = tango.DeviceProxy(subarray_fqdn)
@@ -656,8 +650,6 @@ class MccsController(SKAMaster):
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
         """
         handler = self.get_command_object("Allocate")
         if not handler.check_allowed():
@@ -712,16 +704,14 @@ class MccsController(SKAMaster):
             if not (1 <= subarray_id <= len(device._subarray_fqdns)):
                 return (
                     ResultCode.FAILED,
-                    "Subarray index {} is out of range".format(subarray_id),
+                    f"Subarray index {subarray_id} is out of range",
                 )
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
             if not device._subarray_enabled[subarray_id - 1]:
                 return (
                     ResultCode.FAILED,
-                    "Cannot release resources from disabled subarray {}".format(
-                        subarray_fqdn
-                    ),
+                    f"Cannot release resources from disabled subarray {subarray_fqdn}",
                 )
 
             if release_all:
@@ -792,8 +782,6 @@ class MccsController(SKAMaster):
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
         """
         handler = self.get_command_object("Release")
         if not handler.check_allowed():

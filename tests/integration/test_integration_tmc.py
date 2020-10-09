@@ -45,13 +45,13 @@ class TestMccsIntegrationTmc:
         """
         Method to simplfy the TMC calls for asynchronous commands
 
-        :device: The MCCS device to send command to
+        :param device: The MCCS device to send command to
         :type device: device from the device context
-        :command: The command to send to the device
+        :param command: The command to send to the device
         :type command: str
-        :argin: Optional argument to send to the command
+        :param argin: Optional argument to send to the command
         :type argin: str
-        :expected_result: The expected return code from the command
+        :param expected_result: The expected return code from the command
         :type expected_result: ResultCode
         """
         future = Future()

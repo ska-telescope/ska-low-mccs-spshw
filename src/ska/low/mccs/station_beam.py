@@ -129,8 +129,8 @@ class MccsStationBeam(SKAObsDevice):
         return self._station_id
 
     @stationId.write
-    def stationId(self, id):
-        self._station_id = id
+    def stationId(self, station_id):
+        self._station_id = station_id
 
     @attribute(
         dtype="DevLong",
@@ -146,8 +146,8 @@ class MccsStationBeam(SKAObsDevice):
         return self._logical_beam_id
 
     @logicalBeamId.write
-    def logicalBeamId(self, id):
-        self._logical_beam_id = id
+    def logicalBeamId(self, logical_beam_id):
+        self._logical_beam_id = logical_beam_id
 
     @attribute(
         dtype="DevDouble",

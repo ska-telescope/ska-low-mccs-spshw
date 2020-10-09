@@ -25,13 +25,13 @@ def pytest_itemcollected(item):
 @pytest.fixture
 def mock_device_proxies(mocker):
     """
-    Fixture that patches :class:`tango.DeviceProxy` to always return the
-    same mock for each fqdn
+    Fixture that patches :py:class:`tango.DeviceProxy` to always return
+    the same mock for each fqdn
 
     :param mocker: fixture that wraps unittest.Mock
     :type mocker: unittest.Mock wrapper
     :yield: a dictionary (but don't access it directly, access it
-        through :class:`tango.DeviceProxy` calls)
+        through :py:class:`tango.DeviceProxy` calls)
     """
     device_proxy_mocks = defaultdict(mocker.Mock)
     mocker.patch("tango.DeviceProxy", side_effect=lambda fqdn: device_proxy_mocks[fqdn])
@@ -53,7 +53,9 @@ def device_under_test(request, device_info, mock_device_proxies):
     :param mock_device_proxies: fixture that mocks out tango.DeviceProxy.
         Since these are unit tests, we will always want to mock this out.
     :type mock_device_proxies: a dictionary (but don't access it
-        directly, access it through :class:`tango.DeviceProxy` calls)
+        directly, access it through :py:class:`tango.DeviceProxy` calls)
+
+    :yields: a DeviceProxy under a DeviceTestContext
     """
     try:
         with DeviceTestContext(

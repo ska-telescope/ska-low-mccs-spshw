@@ -31,7 +31,7 @@ def _load_data_from_json(path):
 
     :param path: path to the JSON file from which the dataset is to be
         loaded.
-    :type name: string
+    :type path: string
     """
     with open(path, "r") as json_file:
         return json.load(json_file)
@@ -89,7 +89,7 @@ def devices_to_load(request):
     * "devices": a list of names of the devices that are to be loaded.
 
     """
-    return getattr(request.module, "devices_to_load")
+    return request.module.devices_to_load
 
 
 @pytest.fixture(scope="module")

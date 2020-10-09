@@ -190,7 +190,9 @@ class DeviceHealthMonitor:
         :type event_value: :py:class:`ska.base.control_model.AdminMode`
         :param event_quality: the quality of the change event
         :type event_quality: :py:class:`tango.AttrQuality`
-        :raises AssertionError: if the event name is not "adminMode"
+
+        :raises AssertionError: if the event name is not
+            "adminMode"
         """
         assert event_name == "adminMode"
         self._device_admin_mode = event_value
@@ -259,6 +261,8 @@ class HealthMonitor:
             of a device, or a list of such FQDNs, or None, in which case
             the FQDNs provided at initialisation are used.
         :type fqdn_spec: str, or list of str, or None
+
+        :raises ValueError: if an unknown FQDN is passes
         """
         if fqdn_spec is None:
             fqdns = self._device_health_monitors.keys()

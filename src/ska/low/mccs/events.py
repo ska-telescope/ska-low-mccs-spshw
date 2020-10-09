@@ -32,7 +32,7 @@ def _parse_spec(spec, allowed):
     :return: a list of items (events or fqdns)
     :rtype: list of str
 
-    :raises :py:class:`ValueError`: if nothing was specified by the
+    :raises ValueError: if nothing was specified by the
         specification, or if an item was specified that is not in the
         list of allowed items
     """
@@ -86,8 +86,9 @@ class EventSubscriptionHandler:
             attribute for which change events are subscribed.
         :type event_name: str
         """
+        # TODO: this is MCCS-212
         # HACK to make tests pass until we can resolve device initialisation
-        # race condition
+        # race condition.
         if self._device is None:
             return
 
@@ -181,7 +182,7 @@ class DeviceEventManager:
             case the events provided at initialisation are used
         :type event_spec: str or list of str or None
 
-        :raises :py:class:`ValueError`: if the event is not in the list
+        :raises ValueError: if the event is not in the list
             of allowed events
         """
         try:
@@ -237,7 +238,7 @@ class EventManager:
             case the events provided at initialisation are used
         :type event_spec: str, or list of str, or None
 
-        :raises :py:class:`ValueError`: if the FQDN and event are not in
+        :raises ValueError: if the FQDN and event are not in
             the lists of allowed FQDNs and allowed events respectively
         """
         try:

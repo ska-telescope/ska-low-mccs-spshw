@@ -26,6 +26,7 @@ from tango.server import attribute, command, device_property
 # Additional import
 from ska.base import SKAMaster, SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import HealthState
 
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
@@ -220,6 +221,28 @@ class ControllerResourceManager:
         AVAILABLE = 1  # Healthy, not assigned
         ASSIGNED = 2  # Healthy, assigned
 
+    class ResourceAvailabilityPolicy:
+        """
+        This inner class implements the resource allocation policy for the resources
+        belonging to the parent.
+
+        Initialise with a list of allocatable health states:
+        (OK = 0, DEGRADED = 1, FAILED = 2, UNKNOWN = 3).
+        Defaults to [OK]
+        """
+
+        def __init__(self, allocatable_health_states=[HealthState.OK]):
+            self._allocatableHealthStates = allocatable_health_states
+
+        def is_allocatable(self, health_state):
+            return health_state in self._allocatableHealthStates
+
+        def assign_allocatable_health_states(self, health_states):
+            self._allocatableHealthStates = health_states
+
+        def reset(self):
+            self._allocatableHealthStates = [HealthState.OK]
+
     class resource:
         """
         This inner class implements state recording for a managed resource.
@@ -289,6 +312,17 @@ class ControllerResourceManager:
                 == ControllerResourceManager.resource_state.ASSIGNED
             )
 
+        def isHealthy(self):
+            health_state_table = (
+                self._manager._controller._health_monitor.get_healthstate_table()
+            )
+            fqdn = self._manager.FqdnFromId(self._devid)
+            health = health_state_table[fqdn]
+            health_state = health["healthstate"]
+            return self._manager.resource_availability_policy.is_allocatable(
+                health_state
+            )
+
         def Assign(self, owner):
             """Assign a resource to an owner
 
@@ -309,6 +343,12 @@ class ControllerResourceManager:
                     )
                 # No action if repeating the existing assignment
                 return
+            # Don't allow assign if resource is not healthy
+            if not self.isHealthy():
+                raise TypeError(
+                    f"{self._manager._managername}: "
+                    f"{self._fqdn} does not pass health check for assignment"
+                )
 
             if self.isAvailable():
                 self._assignedTo = owner
@@ -330,12 +370,19 @@ class ControllerResourceManager:
                     f"Attempt to release unassigned resource, {self._fqdn}"
                 )
             self._assignedTo = 0
+
             if self._resourceState == ControllerResourceManager.resource_state.ASSIGNED:
                 # Previously assigned resource becomes available
-                self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+                if not self.isHealthy():
+                    self.MakeUnavailable()
+                else:
+                    self._resourceState = (
+                        ControllerResourceManager.resource_state.AVAILABLE
+                    )
             # Unassigned or unavailable resource does not change state
 
         def MakeUnavailable(self):
+            # Change resource state to unavailable
             """Mark the resource as unavailable for assignment"""
             # Change resource state to unavailable
             # If it was previously AVAILABLE (not ASSIGNED) we can just switch
@@ -369,17 +416,23 @@ class ControllerResourceManager:
                 # We must decide what to do with resources that were assigned already
                 pass
 
-    def __init__(self, managername, fqdns):
+    def __init__(self, controller, managername, fqdns):
         """
         Initialize new ControllerResourceManager instance
 
+        :param controller: Parent Controller object (for access to Health State)
+        :type controller: MccsController object
         :param managername: Name for this manager (imformation only)
         :type managername: string
         :param fqdns: A list of device FQDNs
         :type fqdns: list of string
         """
+        self._controller = controller
         self._managername = managername
         self._resources = dict()
+        self.resource_availability_policy = self.ResourceAvailabilityPolicy(
+            [HealthState.OK]
+        )
         # For each resource, identified by FQDN, create an object
         for i, fqdn in enumerate(fqdns, start=1):
             self._resources[fqdn] = self.resource(self, fqdn, i)
@@ -532,19 +585,27 @@ class ControllerResourceManager:
 
     def FqdnFromId(self, devid):
         """
-        Find a device id number by searching on its FQDN
+        Find a device FQDN by searching on its id number
 
         :param devid: The device ID to find
-        :type fqdn: int
+        :type devid: int
 
         :return: fqdn
         :rtype: string
         """
 
         for fqdn, res in self._resources.items():
-            if res.devid == devid:
+            if res._devid == devid:
                 return fqdn
         raise TypeError(f"Device ID {devid} is not managed by {self._managername}")
+
+    def AssignAllocatableHealthStates(self, health_states):
+        self.resource_availability_policy.assign_allocatable_health_states = (
+            health_states
+        )
+
+    def ResetResourceAvailabilityPolicy(self):
+        self.resource_availability_policy.reset()
 
 
 class MccsController(SKAMaster):
@@ -671,7 +732,7 @@ class MccsController(SKAMaster):
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = ControllerResourceManager(
-                "StationsMnager", device.MccsStations
+                device, "StationsManager", device.MccsStations
             )
             station_fqdns = device._stations_manager.GetAllFqdns()
 

@@ -7,4 +7,3 @@ Cluster Manager module (ska.low.mccs.cluster_manager)
 
 .. automodule:: ska.low.mccs.cluster_manager
    :members:
-

@@ -40,7 +40,11 @@
             "telstate": {
                 "MccsTelState": {
                     "low-mccs/telstate/telstate": {
-                        "properties": {}
+                        "properties": {
+                            "TelStateConfigFile": "",
+                            "SkaLevel": "4",
+                            "GroupDefinitions": ""
+                        }
                     }
                 }
             }

@@ -4,6 +4,7 @@ MccsTpmDeviceSimulator interactions between ska.low.mccs classes,
 particularly tango devices.
 """
 import time
+from ska.low.mccs.tile import TileHardware
 
 devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
@@ -25,9 +26,10 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :type device_context: tango.MultiDeviceTestContext
         """
         tile = device_context.get_device("low-mccs/tile/0001")
+        tile.On()
         tile.Connect(True)
         time.sleep(1)
-        assert tile.voltage == 4.7
+        assert tile.voltage == TileHardware.VOLTAGE
 
     def test_current(self, device_context):
         """
@@ -37,9 +39,10 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :type device_context: tango.MultiDeviceTestContext
         """
         tile = device_context.get_device("low-mccs/tile/0001")
+        tile.On()
         tile.Connect(True)
         time.sleep(1)
-        tile.current == 0.4
+        tile.current == TileHardware.CURRENT
 
     def test_board_temperature(self, device_context):
         """
@@ -49,9 +52,10 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :type device_context: tango.MultiDeviceTestContext
         """
         tile = device_context.get_device("low-mccs/tile/0001")
+        tile.On()
         tile.Connect(True)
         time.sleep(1)
-        assert tile.board_temperature == 36.0
+        assert tile.board_temperature == TileHardware.BOARD_TEMPERATURE
 
     def test_fpga1_temperature(self, device_context):
         """
@@ -61,9 +65,10 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :type device_context: tango.MultiDeviceTestContext
         """
         tile = device_context.get_device("low-mccs/tile/0001")
+        tile.On()
         tile.Connect(True)
         time.sleep(1)
-        assert tile.fpga1_temperature == 38.0
+        assert tile.fpga1_temperature == TileHardware.FPGA1_TEMPERATURE
 
     def test_fpga2_temperature(self, device_context):
         """
@@ -73,6 +78,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         :type device_context: tango.MultiDeviceTestContext
         """
         tile = device_context.get_device("low-mccs/tile/0001")
+        tile.On()
         tile.Connect(True)
         time.sleep(1)
-        assert tile.fpga2_temperature == 37.5
+        assert tile.fpga2_temperature == TileHardware.FPGA2_TEMPERATURE

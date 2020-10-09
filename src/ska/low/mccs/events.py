@@ -9,75 +9,246 @@ This module implements infrastructure for event management in the MCCS
 subsystem.
 
 """
-__all__ = ["EventManager"]
+__all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
+from functools import partial
 import tango
 from tango import EventType
+
+
+def _parse_spec(spec, allowed):
+    """
+    Helper function that implements parsing of a specification (of
+    events or fqdns) against which to register a callback
+
+    :param spec: specification (of events or fqdns) against which to
+        register a callback. This is either a list of items, or a single
+        item, or None. If None, it means all allowed items
+    :type spec: list of str, or str, or None
+    :param allowed: specification of the full set of allowed items
+        from which the specification specifies items
+    :type allowed: list of str, or None
+
+    :return: a list of items (events or fqdns)
+    :rtype: list of str
+
+    :raises ValueError: if nothing was specified by the
+        specification, or if an item was specified that is not in the
+        list of allowed items
+    """
+    if spec is None:
+        if allowed is None:
+            raise ValueError("Nothing specified")
+        return allowed
+
+    if isinstance(spec, str):
+        items = [spec]
+    else:
+        items = spec
+
+    if allowed is not None:
+        for item in items:
+            if item not in allowed:
+                raise ValueError(f"Unknown item {spec}")
+
+    return items
+
+
+class EventSubscriptionHandler:
+    """
+    This class handles subscription to change events on a single
+    attribute from a single device. It allows registration of multiple
+    callbacks.
+    """
+
+    def __init__(self, device_proxy, event_name):
+        """
+        Initialise a new EventSubscriptionHandler
+
+        :param device_proxy: proxy to the device upon which the change
+            event is subscribed
+        :type device_proxy: :py:class:`tango.DeviceProxy`
+        :param event_name: name of the event; that is, the name of the
+            attribute for which change events are subscribed.
+        :type event_name: str
+        """
+        self._device = device_proxy
+        self._callbacks = []
+        self._subscription_id = None
+
+        self._subscribe(event_name)
+
+    def _subscribe(self, event_name):
+        """
+        Subscribe to a change event
+
+        :param event_name: name of the event; that is, the name of the
+            attribute for which change events are subscribed.
+        :type event_name: str
+        """
+        # TODO: this is MCCS-212
+        # HACK to make tests pass until we can resolve device initialisation
+        # race condition.
+        if self._device is None:
+            return
+
+        self._subscription_id = self._device.subscribe_event(
+            event_name, EventType.CHANGE_EVENT, self, stateless=True
+        )
+
+    def register_callback(self, callback):
+        """
+        Register a callback for events handled by this handler
+
+        :param callback: callable to be called when an event is received
+            by this event handler. The callable will be called with
+            three positional arguments: event name, value and quality.
+        :type callback: callable
+        """
+        self._callbacks.append(callback)
+
+    def push_event(self, event):
+        """
+        Callback called by the tango system when a subscribed event
+        occurs. It in turn invokes all its own callbacks.
+
+        :param event: an object encapsulating the event data.
+        :type event: :py:class:`tango.EventData`
+        """
+        if event.attr_value is not None and event.attr_value.value is not None:
+            for callback in self._callbacks:
+                callback(
+                    event.attr_value.name,
+                    event.attr_value.value,
+                    event.attr_value.quality,
+                )
+
+    def _unsubscribe(self):
+        """
+        Unsubscribe from the event
+        """
+        if self._subscription_id is not None:
+            self._device.unsubscribe_event(self._subscription_id)
+            self._subscription_id = None
+
+    def __del__(self):
+        """
+        Cleanup before destruction
+        """
+        self._unsubscribe()
+
+
+class DeviceEventManager:
+    """
+    Class DeviceEventManager is used to handle multiple events from a
+    single device.
+    """
+
+    def __init__(self, fqdn, events=None):
+        """
+        Initialise a new DeviceEventManager object
+
+        :param fqdn: the fully qualified device name of the device for
+            which this DeviceEventManager will manage change events
+        :type fqdn: str
+        :param events: Names of events handled by this instance. If
+            provided, this instance will reject attempts to subscribe
+            to events not in this list
+        :type events: list, optional
+        """
+        # HACK: Allowing silent failure until we can sort out our device
+        # initialisation race conditions
+        try:
+            self._device = tango.DeviceProxy(fqdn)
+        except Exception as exception:
+            print(f"device probably not started for {fqdn}", exception)
+            self._device = None
+
+        self._allowed_events = events
+        self._handlers = {}
+
+    def register_callback(self, callback, event_spec=None):
+        """
+        Register a callback for an event (or events) handled by this
+        handler
+
+        :param callback: callable to be called when an event is received
+            by this event handler. The callable will be called with
+            three positional arguments: event name, value and quality.
+        :type callback: callable
+        :param event_spec: a specification of the event or events for
+            which change events are subscribed. This may be the name of
+            a single event, or a list of such names, or None, in which
+            case the events provided at initialisation are used
+        :type event_spec: str or list of str or None
+
+        :raises ValueError: if the event is not in the list
+            of allowed events
+        """
+        try:
+            events = _parse_spec(event_spec, self._allowed_events)
+        except ValueError as value_error:
+            raise ValueError("Error parsing event specification") from value_error
+
+        for event in events:
+            if event not in self._handlers:
+                self._handlers[event] = EventSubscriptionHandler(self._device, event)
+            self._handlers[event].register_callback(callback)
 
 
 class EventManager:
     """
     Class EventManager is used to handle events from the tango subsystem.
+    It supports and manages multiple event types from multiple devices.
     """
 
-    def __init__(
-        self, fqdn, update_callback=None, event_names=["state", "healthState"]
-    ):
+    def __init__(self, fqdns=None, events=None):
         """
         Initialise a new EventManager object
 
-        :param fqdn: the fully qualified device name of the device publishing events
-        :type fqdn: string
-        :param update_callback: a callback function to update the devices health state
-            and is of the form ``callback(fqdn, name, value, quality)``, where fqdn
-            is the fully qulified device name, name is the event_name, value is the
-            data value and quality is a Tango AttrQuality enum.
-        :type update_callback: function, optional
-        :param event_names: name of events to subscribe to,
-            defaults to ["state", "healthState"]
-        :type event_names: list of strings
+        :param fqdns: FQDNs of devices handled by this instance. If
+            provided, this instance will reject attempts to subscribe
+            to events from devices whose FQDN is not in this list
+        :type fqdns: list, optional
+        :param events: Names of events handled by this instance. If
+            provided, this instance will reject attempts to subscribe
+            to events not in this list
+        :type events: list, optional
         """
-        self._eventIds = []
-        self._fqdn = fqdn
-        self.callback = update_callback
-        # Always subscribe to state change, it's pushed by the base classes
-        # stateless=True is needed to deal with device not running or device restart
+        self._allowed_fqdns = fqdns
+        self._allowed_events = events
+        self._handlers = {}
+
+    def register_callback(self, callback, fqdn_spec=None, event_spec=None):
+        """
+        Register a callback for a particular event from a particularly
+        device
+
+        :param callback: callable to be called with args (fqdn, name,
+            value, quality) whenever the event is received
+        :type callback: callable
+        :param fqdn_spec: specification of the devices upon which the
+            callback is registered. This specification may be the FQDN
+            of a device, or a list of such FQDNs, or None, in which case
+            the FQDNs provided at initialisation are used.
+        :type fqdn_spec: str, or list of str, or None
+        :param event_spec: a specification of the event or events for
+            which change events are subscribed. This may be the name of
+            a single event, or a list of such names, or None, in which
+            case the events provided at initialisation are used
+        :type event_spec: str, or list of str, or None
+
+        :raises ValueError: if the FQDN and event are not in
+            the lists of allowed FQDNs and allowed events respectively
+        """
         try:
-            self._deviceProxy = tango.DeviceProxy(fqdn)
-            self._event_names = event_names
-            for event_name in self._event_names:
-                event_id = self._deviceProxy.subscribe_event(
-                    event_name, EventType.CHANGE_EVENT, self, stateless=True
-                )
-                self._eventIds.append(event_id)
-        except Exception as df:
-            print(f"device probably not started for {fqdn}", df)
+            fqdns = _parse_spec(fqdn_spec, self._allowed_fqdns)
+        except ValueError as value_error:
+            raise ValueError("Error parsing FQDN specification") from value_error
 
-    def __del__(self):
-        """
-        Attempt unsubscribe before destroying
-        """
-        self.unsubscribe()
-
-    def unsubscribe(self):
-        """
-        Unsubscribe all events
-        """
-        for eventId in self._eventIds:
-            self._deviceProxy.unsubscribe_event(eventId)
-
-    def push_event(self, ev):
-        """
-        A consumer callback used to inform the device of events from the subscribed
-        publishers
-
-        :param ev: an object encapsulating the event data.
-        """
-        if ev.attr_value is not None and ev.attr_value.value is not None:
-            if self.callback is not None:
-                self.callback(
-                    self._fqdn,
-                    ev.attr_value.name,
-                    ev.attr_value.value,
-                    ev.attr_value.quality,
-                )
+        for fqdn in fqdns:
+            if fqdn not in self._handlers:
+                self._handlers[fqdn] = DeviceEventManager(fqdn, self._allowed_events)
+            self._handlers[fqdn].register_callback(
+                partial(callback, fqdn), event_spec=event_spec
+            )

@@ -18,6 +18,7 @@ import tango
 from ska.base.control_model import ControlMode, SimulationMode, HealthState
 from ska.base.commands import ResultCode
 
+from ska.low.mccs.antenna import AntennaHardwareManager, AntennaHardware
 
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
@@ -26,7 +27,56 @@ device_to_load = {
 }
 
 
-class TestMccsAntenna(object):
+class TestAntennaHardwareManager:
+    """
+    Contains the tests of the AntennaHardwareManager
+    """
+
+    def test_on_off(self, mocker):
+        """
+        Test that the AntennaHardwareManager receives updated values,
+        and re-evaluates device health, each time it polls the hardware
+
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: fixture
+        """
+        voltage = 3.5
+        temperature = 120
+
+        hardware = AntennaHardware()
+        antenna_hardware_manager = AntennaHardwareManager(hardware)
+
+        assert not antenna_hardware_manager.is_on
+        assert antenna_hardware_manager.voltage is None
+        assert antenna_hardware_manager.temperature is None
+        assert antenna_hardware_manager.health == HealthState.OK
+
+        mock_health_callback = mocker.Mock()
+        antenna_hardware_manager.register_health_callback(mock_health_callback)
+        mock_health_callback.assert_called_once_with(HealthState.OK)
+        mock_health_callback.reset_mock()
+
+        antenna_hardware_manager.on()
+        hardware._voltage = voltage
+        hardware._temperature = temperature
+        antenna_hardware_manager.poll_hardware()
+
+        assert antenna_hardware_manager.is_on
+        assert antenna_hardware_manager.voltage == voltage
+        assert antenna_hardware_manager.temperature == temperature
+        assert antenna_hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
+
+        antenna_hardware_manager.off()
+
+        assert not antenna_hardware_manager.is_on
+        assert antenna_hardware_manager.voltage is None
+        assert antenna_hardware_manager.temperature is None
+        assert antenna_hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
+
+
+class TestMccsAntenna:
     """
     Test class for MccsAntenna tests.
     """
@@ -79,11 +129,14 @@ class TestMccsAntenna(object):
 
     def test_voltage(self, device_under_test):
         """Test for voltage"""
-        assert device_under_test.voltage == 3.5
+        device_under_test.set_source(tango.DevSource.DEV)
+        device_under_test.PowerOn()
+        assert device_under_test.voltage == AntennaHardware.VOLTAGE
 
     def test_temperature(self, device_under_test):
         """Test for temperature"""
-        assert device_under_test.temperature == 20.6
+        device_under_test.PowerOn()
+        assert device_under_test.temperature == AntennaHardware.TEMPERATURE
 
     def test_xPolarisationFaulty(self, device_under_test):
         """Test for xPolarisationFaulty"""

@@ -11,211 +11,301 @@ This module contains the tests for the ska.low.mccs.health module
 """
 import pytest
 
-from tango import DevState
+# from tango import DevState
 from tango import AttrQuality
 
-from ska.base.control_model import HealthState
-from ska.low.mccs.health import HealthMonitor, LocalHealthMonitor, HealthRollupPolicy
+from ska.base.control_model import AdminMode, HealthState
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import (
+    DeviceHealthPolicy,
+    DeviceHealthRollupPolicy,
+    DeviceHealthMonitor,
+    HealthMonitor,
+    HealthModel,
+)
 
-fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
-attrs = ["voltage", "current"]
+
+class TestDeviceHealthPolicy:
+    """
+    This class contains the tests for the DeviceHealthPolicy class.
+    (The DeviceHealthPolicy class implements a policy by which a
+    supervising device evaluates the health of a subservient device, on
+    the basis of its self-reported health state, and on its admin mode,
+    which determines whether its health should be taken into account or
+    ignored.)
+    """
+
+    @pytest.mark.parametrize(
+        "admin_mode, health_state, expected_health",
+        [
+            (None, None, HealthState.UNKNOWN),
+            (None, HealthState.UNKNOWN, HealthState.UNKNOWN),
+            (None, HealthState.FAILED, HealthState.UNKNOWN),
+            (None, HealthState.DEGRADED, HealthState.UNKNOWN),
+            (None, HealthState.OK, HealthState.UNKNOWN),
+            (AdminMode.NOT_FITTED, None, None),
+            (AdminMode.NOT_FITTED, HealthState.UNKNOWN, None),
+            (AdminMode.NOT_FITTED, HealthState.FAILED, None),
+            (AdminMode.NOT_FITTED, HealthState.DEGRADED, None),
+            (AdminMode.NOT_FITTED, HealthState.OK, None),
+            (AdminMode.RESERVED, None, None),
+            (AdminMode.RESERVED, HealthState.UNKNOWN, None),
+            (AdminMode.RESERVED, HealthState.FAILED, None),
+            (AdminMode.RESERVED, HealthState.DEGRADED, None),
+            (AdminMode.RESERVED, HealthState.OK, None),
+            (AdminMode.OFFLINE, None, None),
+            (AdminMode.OFFLINE, HealthState.UNKNOWN, None),
+            (AdminMode.OFFLINE, HealthState.FAILED, None),
+            (AdminMode.OFFLINE, HealthState.DEGRADED, None),
+            (AdminMode.OFFLINE, HealthState.OK, None),
+            (AdminMode.MAINTENANCE, None, HealthState.UNKNOWN),
+            (AdminMode.MAINTENANCE, HealthState.UNKNOWN, HealthState.UNKNOWN),
+            (AdminMode.MAINTENANCE, HealthState.FAILED, HealthState.FAILED),
+            (AdminMode.MAINTENANCE, HealthState.DEGRADED, HealthState.DEGRADED),
+            (AdminMode.MAINTENANCE, HealthState.OK, HealthState.OK),
+            (AdminMode.ONLINE, None, HealthState.UNKNOWN),
+            (AdminMode.ONLINE, HealthState.UNKNOWN, HealthState.UNKNOWN),
+            (AdminMode.ONLINE, HealthState.FAILED, HealthState.FAILED),
+            (AdminMode.ONLINE, HealthState.DEGRADED, HealthState.DEGRADED),
+            (AdminMode.ONLINE, HealthState.OK, HealthState.OK),
+        ],
+    )
+    def test_policy(self, admin_mode, health_state, expected_health):
+        """
+        Test that this policy computes health as expected
+
+        :param admin_mode: the adminMode of the device
+        :type admin_mode: AdminMode
+        :param health_state: the reported healthState of the device
+        :type health_state: HealthState
+        :param expected_health: the expected value for health, as
+            evaluated by the policy under test
+        :type expected_health: HealthState, or None if the policy should
+            determine that the health state of the device should be
+            ignored.
+        """
+        assert (
+            DeviceHealthPolicy.compute_health(admin_mode, health_state)
+            == expected_health
+        )
+
+
+class TestDeviceHealthRollupPolicy:
+    """
+    This class contains tests of the DeviceHealthRollupPolicy class.
+
+    (The DeviceHealthRollupPolicy class implements a policy by which a
+    device should determine its own health, on the basis of the health
+    of its hardware (if any) and of the devices that it supervises (if
+    any).
+    """
+
+    @pytest.mark.parametrize(
+        "hardware_health, device_healths, expected_health",
+        [
+            (None, None, HealthState.OK),
+            (None, [None, None], HealthState.OK),
+            (None, [None, HealthState.FAILED], HealthState.FAILED),
+            (None, [None, HealthState.OK], HealthState.OK),
+            (None, [HealthState.FAILED, HealthState.OK], HealthState.FAILED),
+            (HealthState.DEGRADED, None, HealthState.DEGRADED),
+            (HealthState.DEGRADED, [None, None], HealthState.DEGRADED),
+            (HealthState.DEGRADED, [None, HealthState.FAILED], HealthState.FAILED),
+            (HealthState.DEGRADED, [None, HealthState.OK], HealthState.DEGRADED),
+            (
+                HealthState.DEGRADED,
+                [HealthState.FAILED, HealthState.OK],
+                HealthState.FAILED,
+            ),
+            (
+                HealthState.DEGRADED,
+                [HealthState.OK, HealthState.OK],
+                HealthState.DEGRADED,
+            ),
+        ],
+    )
+    def test_policy(self, hardware_health, device_healths, expected_health):
+        """
+        Test that this policy computes health as expected
+
+        :param hardware_health: the health of the hardware managed under
+            this policy
+        :type hardware_health: HealthState, or None if no hardware is
+            managed under this policy
+        :param device_healths: the reported healthState values of the
+            devices managed by this policy
+        :type device_healths: list, or None if no
+            devices are managed under this policy. If a list is provided,
+            the elements must be health values, or None if the health of
+            a given device should be ignored
+        :param expected_health: the expected value for health, as
+            evaluated by the policy under test
+        :type expected_health: HealthState, or None if the policy should
+            determine that the health state of the device should be
+            ignored.
+        """
+        assert (
+            DeviceHealthRollupPolicy.compute_health(hardware_health, device_healths)
+            == expected_health
+        )
+
+
+class TestDeviceHealthMonitor:
+    """
+    This class contains the tests for the DeviceHealthMonitor class.
+
+    (The DeviceHealthMonitor monitors the health of a single device.)
+    """
+
+    def test(self, mocker, mock_device_proxies):
+        """
+        Test that a DeviceHealthMonitor registers a change in device
+        health when the device emits relevant events
+
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: fixture
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict (but don't access it directly,
+            access it through :py:class:`tango.DeviceProxy` calls)
+        """
+        fqdn = "mock/mock/1"
+        event_manager = EventManager()
+        mock_callback = mocker.Mock()
+        _ = DeviceHealthMonitor(event_manager, fqdn, mock_callback)
+
+        # This is an implementation-dependent hack by which we pretend that the
+        # device is emitting events
+        admin_mode_mock_event = mocker.Mock()
+        admin_mode_mock_event.attr_value.name = "adminMode"
+        admin_mode_mock_event.attr_value.value = AdminMode.ONLINE
+        admin_mode_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
+
+        # push the event
+        event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
+            admin_mode_mock_event
+        )
+        mock_callback.assert_called_once_with(HealthState.UNKNOWN)
+        mock_callback.reset_mock()
+
+        health_state_mock_event = mocker.Mock()
+        health_state_mock_event.attr_value.name = "healthState"
+        health_state_mock_event.attr_value.value = HealthState.DEGRADED
+        health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
+
+        # push the event
+        event_manager._handlers[fqdn]._handlers["healthState"].push_event(
+            health_state_mock_event
+        )
+        mock_callback.assert_called_once_with(HealthState.DEGRADED)
 
 
 class TestHealthMonitor:
     """
-    This class contains the tests the default ska.low.mccs.health.HealthMonitor
+    This class contains tests of the HealthMonitor class.
+
+    (The HealthMonitor class monitors the health of a collection of
+    subservient devices.)
     """
 
-    def test_initialise_table(self):
+    def test(self, mocker, mock_device_proxies):
         """
-        Test the healthmonitor table initialisation
+        Test that a HealthMonitor registers changes in device health
+        when devices emit relevant events
+
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: fixture
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict (but don't access it directly,
+            access it through :py:class:`tango.DeviceProxy` calls)
         """
-        hm = HealthMonitor(fqdns, None)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {
-                "State": DevState.UNKNOWN,
-                "healthstate": HealthState.OK,
-            },
-            "low-mccs/station/002": {
-                "State": DevState.UNKNOWN,
-                "healthstate": HealthState.OK,
-            },
-        }
+        fqdns = ["mock/mock/1", "mock/mock/2"]
+        event_manager = EventManager()
+        mock_callback = mocker.Mock()
+        _ = HealthMonitor(fqdns, event_manager, mock_callback)
 
-    @pytest.fixture(
-        params=[
-            HealthState.DEGRADED,
-            HealthState.FAILED,
-            HealthState.UNKNOWN,
-            HealthState.OK,
-        ]
+        # This is an implementation-dependent hack by which we pretend that the
+        # device is emitting events
+        admin_mode_mock_event = mocker.Mock()
+        admin_mode_mock_event.attr_value.name = "adminMode"
+        admin_mode_mock_event.attr_value.value = AdminMode.ONLINE
+        admin_mode_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
+
+        for fqdn in fqdns:
+            # push the event
+            mock_callback.reset_mock()
+            event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
+                admin_mode_mock_event
+            )
+            mock_callback.assert_called_once_with(fqdn, HealthState.UNKNOWN)
+
+        health_state_mock_event = mocker.Mock()
+        health_state_mock_event.attr_value.name = "healthState"
+        health_state_mock_event.attr_value.value = HealthState.DEGRADED
+        health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
+
+        for fqdn in fqdns:
+            # push the event
+            mock_callback.reset_mock()
+            event_manager._handlers[fqdn]._handlers["healthState"].push_event(
+                health_state_mock_event
+            )
+            mock_callback.assert_called_once_with(fqdn, HealthState.DEGRADED)
+
+
+class TestHealthModel:
+    """
+    This class contains tests of the HealthModel class.
+
+    (The HealthModel class represents and manages the health of a device.)
+    """
+
+    @pytest.mark.parametrize(
+        "with_hardware, with_devices",
+        [(False, False), (False, True), (True, False), (True, True)],
     )
-    def test_update_health(self, request):
-        hm = HealthMonitor(fqdns, None)
-        hm.update_health_table(fqdns[0], "healthstate", request, AttrQuality.ATTR_VALID)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {
-                "State": DevState.UNKNOWN,
-                "healthstate": HealthState.OK,
-            },
-            "low-mccs/station/002": {
-                "State": DevState.UNKNOWN,
-                "healthstate": HealthState.OK,
-            },
-        }
+    def test(self, with_hardware, with_devices, mocker, mock_device_proxies):
+        """
+        Test that the health of a HealthModel changes with changes to
+        hardware health and/or changes to the health of managed devices.
 
-        hm.update_health_table(
-            "low-mccs/station/002", "healthstate", request, AttrQuality.ATTR_VALID
-        )
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {"State": DevState.UNKNOWN, "healthstate": request},
-            "low-mccs/station/002": {"State": DevState.UNKNOWN, "healthstate": request},
-        }
+        :param with_hardware: [description]
+        :type with_hardware: [type]
+        :param with_devices: [description]
+        :type with_devices: [type]
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: fixture
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict (but don't access it directly,
+            access it through :py:class:`tango.DeviceProxy` calls)
+        """
+        hardware = mocker.Mock() if with_hardware else None
+        fqdns = ["mock/mock/1", "mock/mock/2"] if with_devices else None
+        event_manager = EventManager()
+        mock_callback = mocker.Mock()
 
-    def test_health_with_rollup(self):
-        rollup_policy = HealthRollupPolicy(None)
-        hm = HealthMonitor(fqdns, rollup_policy.rollup_health)
-        ret = hm.update_health_table(
-            "low-mccs/station/001",
-            "healthstate",
-            HealthState.DEGRADED,
-            AttrQuality.ATTR_VALID,
-        )
-        assert ret == HealthState.DEGRADED
-        ret = hm.update_health_table(
-            "low-mccs/station/002",
-            "healthstate",
-            HealthState.FAILED,
-            AttrQuality.ATTR_VALID,
-        )
-        assert ret == HealthState.FAILED
+        health_model = HealthModel(
+            hardware, fqdns, event_manager, mock_callback
+        )  # health initialises to UNKNOWN
 
-    @pytest.fixture(
-        params=[
-            DevState.ON,
-            DevState.OFF,
-            DevState.CLOSE,
-            DevState.OPEN,
-            DevState.INSERT,
-            DevState.EXTRACT,
-            DevState.MOVING,
-            DevState.STANDBY,
-            DevState.FAULT,
-            DevState.INIT,
-            DevState.RUNNING,
-            DevState.ALARM,
-            DevState.DISABLE,
-            DevState.UNKNOWN,
-        ]
-    )
-    def test_update_state(self, request):
-        hm = HealthMonitor(fqdns, None)
-        hm.update_health_table(fqdns[0], "State", request, AttrQuality.ATTR_VALID)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {"State": request, "healthstate": HealthState.OK},
-            "low-mccs/station/002": {
-                "State": DevState.UNKNOWN,
-                "healthstate": HealthState.OK,
-            },
-        }
+        mock_callback.assert_not_called()
 
-        hm.update_health_table(fqdns[1], "State", request, AttrQuality.ATTR_VALID)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {"State": request, "healthstate": HealthState.OK},
-            "low-mccs/station/002": {"State": request, "healthstate": HealthState.OK},
-        }
+        if with_hardware:
+            health_model._hardware_health_changed(HealthState.OK)
 
-    def test_state_with_rollup(self):
-        rollup_policy = HealthRollupPolicy(None)
-        hm = HealthMonitor(fqdns, rollup_policy.rollup_health)
-        ret = hm.update_health_table(
-            "low-mccs/station/001", "State", DevState.ALARM, AttrQuality.ATTR_VALID
-        )
-        assert ret == HealthState.FAILED
-        ret = hm.update_health_table(
-            "low-mccs/station/002", "State", DevState.FAULT, AttrQuality.ATTR_VALID
-        )
-        assert ret == HealthState.FAILED
+            if with_devices:
+                mock_callback.assert_not_called()  # health is still UNKNOWN
+            else:
+                mock_callback.assert_called_once_with(HealthState.OK)
 
-    def test_local_health_monitor(self):
-        hm = LocalHealthMonitor(fqdns, None, event_names=attrs)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {
-                "voltage": HealthState.OK,
-                "current": HealthState.OK,
-            },
-            "low-mccs/station/002": {
-                "voltage": HealthState.OK,
-                "current": HealthState.OK,
-            },
-        }
+        if with_devices:
+            health_model._device_health_changed("mock/mock/1", HealthState.OK)
+            mock_callback.assert_not_called()  # health is still UNKNOWN
 
-    @pytest.fixture(
-        params=[
-            AttrQuality.ATTR_VALID,
-            AttrQuality.ATTR_INVALID,
-            AttrQuality.ATTR_ALARM,
-            AttrQuality.ATTR_CHANGING,
-            AttrQuality.ATTR_WARNING,
-        ]
-    )
-    def test_update_local_table(self, request):
-        hm = LocalHealthMonitor(fqdns, None, event_names=attrs)
-        hm.update_health_table(fqdns[0], "voltage", 12.0, request)
-        dct = hm.get_healthstate_table()
-        expected_health = hm.quality_to_healthstate(request)
-        assert dct == {
-            "low-mccs/station/001": {
-                "voltage": expected_health,
-                "current": HealthState.OK,
-            },
-            "low-mccs/station/002": {
-                "voltage": HealthState.OK,
-                "current": HealthState.OK,
-            },
-        }
-
-        hm.update_health_table(fqdns[1], "voltage", 12.0, request)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {
-                "voltage": expected_health,
-                "current": HealthState.OK,
-            },
-            "low-mccs/station/002": {
-                "voltage": expected_health,
-                "current": HealthState.OK,
-            },
-        }
-
-        hm.update_health_table(fqdns[0], "current", 2.0, request)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {
-                "voltage": expected_health,
-                "current": expected_health,
-            },
-            "low-mccs/station/002": {
-                "voltage": expected_health,
-                "current": HealthState.OK,
-            },
-        }
-
-        hm.update_health_table(fqdns[1], "current", 2.0, request)
-        dct = hm.get_healthstate_table()
-        assert dct == {
-            "low-mccs/station/001": {
-                "voltage": expected_health,
-                "current": expected_health,
-            },
-            "low-mccs/station/002": {
-                "voltage": expected_health,
-                "current": expected_health,
-            },
-        }
+            health_model._device_health_changed("mock/mock/2", HealthState.OK)
+            mock_callback.assert_called_once_with(HealthState.OK)

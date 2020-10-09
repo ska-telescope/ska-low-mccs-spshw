@@ -15,7 +15,6 @@ __all__ = ["MccsController", "main"]
 
 import numpy
 import json
-import threading
 
 # PyTango imports
 import tango
@@ -30,7 +29,7 @@ from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, LazyInstance, tango_raise
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthMonitor, HealthRollupPolicy
+from ska.low.mccs.health import HealthModel
 
 
 class ControllerPowerManager(PowerManager):
@@ -61,19 +60,19 @@ class MccsController(SKAMaster):
     - Device Property
         MccsSubarrays
             - The FQDNs of the Mccs sub-arrays
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsStations
             - List of MCCS station  TANGO Device names
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsStationBeams
             - List of MCCS station beam TANGO Device names
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsTiles
             - List of MCCS Tile TANGO Device names.
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
         MccsAntenna
             - List of MCCS Antenna TANGO Device names
-            - Type: :class:`~tango.DevVarStringArray`
+            - Type: :py:class:`~tango.DevVarStringArray`
     """
 
     # -----------------
@@ -151,20 +150,13 @@ class MccsController(SKAMaster):
                 len(device.MccsStations), dtype=numpy.ubyte
             )
 
-            device._lock = threading.Lock()
-            # initialise the health table using the FQDN as the key.
-            # Create and event manager per FQDN and subscribe to events from it
-            device._eventManagerList = []
-            fqdns = device._station_fqdns
-            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
-            device._health_monitor = HealthMonitor(
-                fqdns, device._rollup_policy.rollup_health
+            device.event_manager = EventManager(device._station_fqdns)
+            device.health_model = HealthModel(
+                None,
+                device._station_fqdns,
+                device.event_manager,
+                device._update_health_state,
             )
-            for fqdn in device._station_fqdns:
-                device._eventManagerList.append(
-                    EventManager(fqdn, device._health_monitor.update_health_table)
-                )
-
             device.power_manager = ControllerPowerManager(device._station_fqdns)
 
             message = "MccsController Init command completed OK"
@@ -420,8 +412,6 @@ class MccsController(SKAMaster):
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
         """
         handler = self.get_command_object("Operate")
         if not handler.check_allowed():
@@ -660,8 +650,6 @@ class MccsController(SKAMaster):
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
         """
         handler = self.get_command_object("Allocate")
         if not handler.check_allowed():
@@ -794,8 +782,6 @@ class MccsController(SKAMaster):
         :return: True if this command is allowed to be run in
             current device state
         :rtype: boolean
-        :raises: DevFailed if this command is not allowed to be run
-            in current device state
         """
         handler = self.get_command_object("Release")
         if not handler.check_allowed():
@@ -840,7 +826,7 @@ class MccsController(SKAMaster):
         (return_code, message) = handler()
         return [[return_code], [message]]
 
-    def update_healthstate(self, health_state):
+    def _update_health_state(self, health_state):
         """
         Update and push a change event for the healthstate attribute
 
@@ -848,8 +834,7 @@ class MccsController(SKAMaster):
         :type health_state: enum (defined in ska.base.control_model)
         """
         self.push_change_event("healthState", health_state)
-        with self._lock:
-            self._health_state = health_state
+        self._health_state = health_state
         self.logger.info("health state = " + str(health_state))
 
 

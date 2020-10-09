@@ -209,7 +209,7 @@ class TpmSimulator:
         for item in self._forty_gb_core_list:
             if item.get("CoreID") == core_id:
                 return item
-        return None
+        return
 
     def set_lmc_download(
         self,

@@ -9,206 +9,382 @@ This module implements infrastructure for health management in the MCCS
 subsystem.
 
 """
-__all__ = ["LocalHealthMonitor", "HealthRollupPolicy"]
+__all__ = [
+    "DeviceHealthPolicy",
+    "DeviceHealthRollupPolicy",
+    "DeviceHealthMonitor",
+    "HealthMonitor",
+    "HealthModel",
+]
 
-from tango import DevState
-from tango import AttrQuality
+from functools import partial
 
-from ska.base.control_model import HealthState
+from ska.base.control_model import AdminMode, HealthState
+
+
+class DeviceHealthPolicy:
+    """
+    The DeviceHealthPolicy class implements a policy by which a
+    supervising device evaluates the health of a subservient device, on
+    the basis of its self-reported health state and on its admin mode
+    (a device's admin mode determines whether its health should be taken
+    into account or ignored).
+    """
+
+    @classmethod
+    def compute_health(cls, admin_mode, health_state):
+        """
+        Computes the health of the device, based on the device's admin mode
+        and self-reported health state.
+
+        :param admin_mode: the value of the adminMode attribute of the device
+        :type admin_mode: :py:class:`ska.base.control_model.AdminMode`
+        :param health_state: the value of the healthState attribute of
+            the device
+        :type health_state: :py:class:`ska.base.control_model.HealthState`
+        :return: the evaluated health of the device
+        :rtype: :py:class:`ska.base.control_model.HealthState`, or None
+            if the health should be ignored.
+        """
+        if admin_mode is None:
+            return HealthState.UNKNOWN
+        elif admin_mode in (
+            AdminMode.NOT_FITTED,
+            AdminMode.RESERVED,
+            AdminMode.OFFLINE,
+        ):
+            return
+        elif health_state is None:
+            return HealthState.UNKNOWN
+        else:
+            return health_state
+
+
+class DeviceHealthRollupPolicy:
+    """
+    The DeviceHealthRollupPolicy class implements a policy by which a
+    device should determine its own health, on the basis of the health
+    of its hardware (if any) and of the devices that it supervises (if
+    any).
+    """
+
+    @classmethod
+    def compute_health(cls, hardware_health, device_healths):
+        """
+        Compute this devices health, given the health of its hardware
+        and the health of the devices that it supervises.
+
+        This currently has a very simple implementation: the device
+        takes as its health the "maximum" health of its hardware and
+        supervised devices, where UNKNOWN > FAILED > DEGRADED > OK.
+
+        :param hardware_health: the health of the hardware, if any
+        :type hardware_health: :py:class:`ska.base.control_model.HealthState`
+            (or None if no hardware)
+        :param device_healths: the healths of supervised devices
+        :type device_healths: list of device health values, or None if
+            the device does not supervise devices. If a list if provided,
+            each value must be either a
+            :py:class:`ska.base.control_model.HealthState`, or None if
+            the device's health should be ignored.
+        :return: the health of this device
+        :rtype: :py:class:`ska.base.control_model.HealthState`
+        """
+        if device_healths is None:
+            rolled_up_device_health = HealthState.OK
+        else:
+            device_healths = [
+                device_health
+                for device_health in device_healths
+                if device_health is not None
+            ]
+            if device_healths:
+                rolled_up_device_health = max(device_healths)
+            else:
+                rolled_up_device_health = HealthState.OK
+
+        if hardware_health is None:
+            hardware_health = HealthState.OK
+
+        return max(hardware_health, rolled_up_device_health)
+
+
+class DeviceHealthMonitor:
+    """
+    Class that monitors the health of a single device.
+    """
+
+    def __init__(self, event_manager, fqdn, initial_callback=None):
+        """
+        Initialise a new DeviceHealthMonitor instance
+
+        :param event_manager: the event_manager to be used for device
+            health event subscriptions
+        :type event_manager: :py:class:`ska.low.mccs.events.EventManager`
+        :param fqdn: the name of the device for which health is to be
+            monitored
+        :type fqdn: str
+        :param initial_callback: an optional callback to be called if
+            device health changes, defaults to None
+        :type initial_callback: callable, optional
+        """
+        self._device_admin_mode = None
+        self._device_health_state = None
+        self._interpreted_health = None
+
+        self._callbacks = []
+
+        event_manager.register_callback(
+            self._health_state_changed, fqdn_spec=fqdn, event_spec="healthState"
+        )
+        event_manager.register_callback(
+            self._admin_mode_changed, fqdn_spec=fqdn, event_spec="adminMode"
+        )
+
+        if initial_callback is not None:
+            self.register_callback(initial_callback)
+
+    def register_callback(self, callback):
+        """
+        Register a callback to be called when device health changes
+
+        :param callback: callback to be called when device health changes
+        :type callback: callback
+        """
+        self._callbacks.append(callback)
+
+    def _health_state_changed(self, fqdn, event_name, event_value, event_quality):
+        """
+        Callback that this device registers with the event manager, so
+        that it is informed when the device's healthState attribute
+        changes
+
+        :param fqdn: the fqdn for which healthState has changed
+        :type fqdn: str
+        :param event_name: name of the event; will always be
+            "healthState" for this callback
+        :type event_name: str; will always be "healthState" for this
+            callback
+        :param event_value: the new healthState value
+        :type event_value: :py:class:`ska.base.control_model.HealthState`
+        :param event_quality: the quality of the change event
+        :type event_quality: :py:class:`tango.AttrQuality`
+        """
+        assert event_name == "healthState"
+        self._device_health_state = event_value
+        self._compute_health()
+
+    def _admin_mode_changed(self, fqdn, event_name, event_value, event_quality):
+        """
+        Callback that this device registers with the event manager, so
+        that it is informed when the device's adminMode attribute
+        changes
+
+        :param fqdn: the fqdn for which adminMode has changed
+        :type fqdn: str
+        :param event_name: name of the event; will always be "adminMode"
+            for this callback
+        :type event_name: str; will always be "adminMode" for this
+            callback
+        :param event_value: the new adminMode value
+        :type event_value: :py:class:`ska.base.control_model.AdminMode`
+        :param event_quality: the quality of the change event
+        :type event_quality: :py:class:`tango.AttrQuality`
+
+        :raises AssertionError: if the event name is not
+            "adminMode"
+        """
+        assert event_name == "adminMode"
+        self._device_admin_mode = event_value
+        self._compute_health()
+
+    def _compute_health(self):
+        """
+        Re-evaluate the health of this device, on the basis of a
+        DeviceHealthPolicy
+        """
+        interpreted_health = DeviceHealthPolicy.compute_health(
+            self._device_admin_mode, self._device_health_state
+        )
+        self._update_health(interpreted_health)
+
+    def _update_health(self, interpreted_health):
+        """
+        Update this instances health value, ensuring that any registered
+        callbacks are called
+
+        :param interpreted_health: the interpreted health of the device
+        :type interpreted_health: :py:class:`ska.base.control_model.HealthState`,
+            or None if the device's health should be ignored
+        """
+        if self._interpreted_health == interpreted_health:
+            return
+        self._interpreted_health = interpreted_health
+        for callback in self._callbacks:
+            callback(interpreted_health)
 
 
 class HealthMonitor:
     """
-    HealthMonitor is the health monitor for the MCCS prototype.
+    Monitors the health of a collection of subservient devices.
     """
 
-    def __init__(self, fqdns, rollup_callback, event_names=None):
+    def __init__(self, fqdns, event_manager, initial_callback=None):
         """
-        Initialise a new HealthMonitor object
+        Initialise a new HealthMonitor instance
 
-        :param fqdns: Fully qualified device names of the monitored Tango devices
+        :param fqdns: fqdns of the devices for which health is to be
+            monitored
         :type fqdns: list of str
-        :param rollup_callback: a callback to rollup the health states of many devices
-        :type rollup_callback: function
-        :param event_names: name of events to build the healthstate table
-        :type event_names: list of strings
+        :param event_manager: the event_manager to be used to capture
+            health events.
+        :type event_manager: :py:class:`ska.low.mccs.events.EventManager`
+        :param initial_callback: An initial callback, to be called if the
+            health of any device changes
+        :type initial_callback: callable, optional
         """
-        self._healthstate_table = {}
-        self._rollup_callback = rollup_callback
-        self._event_names = event_names
-        self._initialise_table(fqdns)
+        self._device_health_monitors = {
+            fqdn: DeviceHealthMonitor(event_manager, fqdn) for fqdn in fqdns
+        }
+        if initial_callback is not None:
+            self.register_callback(initial_callback)
 
-    def _initialise_table(self, fqdns):
+    def register_callback(self, callback, fqdn_spec=None):
         """
-        Initialise a table of State and Health with FQDN keys
+        Register a callback on change to health from one or more fqdns
 
-        :param fqdns: Fully qualified device names of the monitored Tango devices
-        :type fqdns: list of str
+        :param callback: callable to be called with args (fqdn, name,
+            value, quality) whenever the event is received
+        :type callback: callable
+        :param fqdn_spec: specification of the devices upon which the
+            callback is registered. This specification may be the FQDN
+            of a device, or a list of such FQDNs, or None, in which case
+            the FQDNs provided at initialisation are used.
+        :type fqdn_spec: str, or list of str, or None
+
+        :raises ValueError: if an unknown FQDN is passes
         """
+        if fqdn_spec is None:
+            fqdns = self._device_health_monitors.keys()
+        elif isinstance(fqdn_spec, str):
+            fqdns = [fqdn_spec]
+        else:
+            fqdns = fqdn_spec
+
         for fqdn in fqdns:
-            self._healthstate_table.update(
-                {fqdn: {"State": DevState.UNKNOWN, "healthstate": HealthState.OK}}
+            if fqdn not in self._device_health_monitors:
+                raise ValueError(f"Unknown FQDN {fqdn}.")
+
+        for fqdn in fqdns:
+            self._device_health_monitors[fqdn].register_callback(
+                partial(callback, fqdn)
             )
 
-    def update_health_table(self, fqdn, event, value, quality):
+
+class HealthModel:
+    """
+    Represents and manages the health of a device
+    """
+
+    def __init__(self, hardware, fqdns, event_manager, initial_callback=None):
         """
-        Callback routine for Event Manager push events
+        Initialise a new HealthModel instance
 
-        :param fqdn: fully qualified device name
-        :type fqdn: str
-        :param event: event name
-        :type event: str
-        :param value: the value of the attribute event name
-        :type value: object
-        :param quality: the quality of the event
-        :type quality: AttrQuality enum (defined in tango)
-
-        :raises ValueError: Unknown event
-
-        :return: rolled up healthstate (primarily for testing)
+        :param hardware: the hardware managed by this device
+        :type hardware: HardwareManager, or None if the device doesn't
+            manage any hardware
+        :param fqdns: fqdns of supervised devices
+        :type fqdns: list of str, or None if the device doesn't manage
+            any other devices
+        :param event_manager: the event_manager to be used for keeping
+            device health updated
+        :type event_manager: :py:class:`ska.low.mccs.events.EventManager`
+        :param initial_callback: An initial callback, to be called if the
+            health of this device changes
+        :type initial_callback: callable, optional
         """
-        event_dict = self._healthstate_table[fqdn]
-        if event == "State":
-            event_dict[event] = value
-        elif event == "healthstate":
-            event_dict[event] = HealthState(value)
+        self.health = HealthState.UNKNOWN
+
+        if hardware is None:
+            self._hardware_health = None
         else:
-            raise ValueError(f"Unexpected event {event}")
+            self._hardware_health = HealthState.UNKNOWN
+            hardware.register_health_callback(self._hardware_health_changed)
 
-        if self._rollup_callback is not None:
-            return self._rollup_callback(self._healthstate_table)
+        if fqdns is None:
+            self._device_health = None
+        else:
+            self._device_health = {fqdn: HealthState.UNKNOWN for fqdn in fqdns}
+            self._health_monitor = HealthMonitor(
+                fqdns, event_manager, initial_callback=self._device_health_changed
+            )
 
-    def get_healthstate_table(self):
+        self._callbacks = []
+        if initial_callback is not None:
+            self.register_callback(initial_callback)
+
+    def register_callback(self, callback):
         """
-        Get the health table
+        Register a callback for change of this device's health
 
-        :return: the health table
+        :param callback: callback to be called when this device's health
+            changes
+        :type callback: callable
         """
-        return self._healthstate_table
+        self._callbacks.append(callback)
 
-
-class LocalHealthMonitor(HealthMonitor):
-    """
-    LocalHealthMonitor is the health monitor specifically for ascertaining the
-    health state of the current device by aggregating the quality of its attributes.
-    """
-
-    def __init__(self, fqdns, rollup_callback, event_names):
+    def _hardware_health_changed(self, health):
         """
-        Initialise a new LocalHealthMonitor object. Should be used
-        to obtain the healthstate of devices whose attributes constitute
-        the healthstate.
+        Passed to the hardware manager as a callback to be called when
+        the hardware health changes
 
-        :param fqdns: a list of fully qualified device names
-        :type fqdns: list of str
-        :param rollup_callback: a function to aggregate healthstate
-        :type rollup_callback: function
-        :param event_names: attribute names generating events used that
-                            constitute the device healthstate
-        :type event_names: list of str
-
+        :param health: the health of the hardware
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
-        super().__init__(fqdns, rollup_callback, event_names)
+        self._hardware_health = health
+        self._compute_health()
 
-    def _initialise_table(self, fqdns):
+    def _device_health_changed(self, fqdn, health):
         """
-        Internal routine to initialise the healthstate table
+        Passed to the HealthMonitor as a callback to be called when a
+        device's health changes
 
-        :param fqdns: a list of fully qualified device names
-        :type fqdns: list of str
-        """
-        for fqdn in fqdns:
-            event_dict = {}
-            for name in self._event_names:
-                event_dict.update({name: HealthState.OK})
-            self._healthstate_table.update({fqdn: event_dict})
-
-    def update_health_table(self, fqdn, event, value, quality):
-        """
-        Callback routine for Event Manager push events which converts
-        attribute quality into health state according to:
-        ATTR_ALARM    -> HealthState.FAILED
-        ATTR_WARNING  -> HealthState.DEGRADED
-        ATTR_VALID    -> HealthState.OK
-        ATTR_CHANGING -> HealthState.UNKNOWN
-        ATTR_INVALID  -> HealthState.UNKNOWN
-
-        :param fqdn: fully qualified device name
+        :param fqdn: FQDN of the device whose health has changed
         :type fqdn: str
-        :param event: event name
-        :type event: str
-        :param value: the value of the attribute event name
-        :type value: object
-        :param quality: the quality of the event
-        :type quality: AttrQuality enum (defined in tango)
+        :param health: The device's new healthState attribute value
+        :type health: :py:class:`ska.base.control_model.HealthState`, or
+            None if the device's health is to be ignored
         """
-        event_dict = self._healthstate_table[fqdn]
-        event_dict[event] = self._quality_to_healthstate(quality)
+        self._device_health[fqdn] = health
+        self._compute_health()
 
-        if self._rollup_callback is not None:
-            self._rollup_callback(self._healthstate_table)
-
-    def _quality_to_healthstate(self, quality):
+    def _compute_health(self):
         """
-        Helper function to translate attribute quality to healthstate.
-
-        :param quality: attribute quality
-        :type quality: AttrQuality
-
-        :return: HealthState
+        Re-evaluate health of this device, by applying the
+        :py:class:`DeviceHealthRollupPolicy` to the current health of
+        the hardware (if any) and subservient devices (if any)
         """
-        quality_healthstate_map = {
-            AttrQuality.ATTR_ALARM: HealthState.FAILED,
-            AttrQuality.ATTR_WARNING: HealthState.DEGRADED,
-            AttrQuality.ATTR_VALID: HealthState.OK,
-            AttrQuality.ATTR_CHANGING: HealthState.UNKNOWN,
-            AttrQuality.ATTR_INVALID: HealthState.UNKNOWN,
-        }
-        return quality_healthstate_map[quality]
+        try:
+            health = DeviceHealthRollupPolicy.compute_health(
+                self._hardware_health,
+                None if self._device_health is None else self._device_health.values(),
+            )
+            self._update_health(health)
+        except AttributeError:
+            # callbacks may trigger a call to this before init_device has
+            # even created the health attributes
+            pass
 
-
-class HealthRollupPolicy:
-    """
-    HealthRollupPolicy is a class to aggregate different device healthstates.
-    """
-
-    def __init__(self, update_healthstate_callback):
+    def _update_health(self, health):
         """
-        Initialise the health rollup policy.
+        Update the health of this device, ensuring that any registered
+        callbacks are called
 
-        :param update_healthstate_callback: a callback used to set the
-            healthstate attribute of the device
-        :type update_healthstate_callback: function
+        :param health: the new healthState of this device
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
-        self._update_healthstate_callback = update_healthstate_callback
-
-    def rollup_health(self, healthstate_table):
-        """
-        Rollup the health states of an element and its constituent sub-elements
-        and push the resultant health state to the enclosing element.
-
-        :param healthstate_table: a table containing healthstates to be aggregated.
-        :type healthstate_table: dict
-
-        :return: rolled up health state
-        :rtype: HealthState
-        """
-        health_state = HealthState.OK
-        for fqdn, event_dict in healthstate_table.items():
-            for event, health in event_dict.items():
-                if event == "State" and (
-                    health == DevState.FAULT or health == DevState.ALARM
-                ):
-                    health_state = HealthState.FAILED
-                elif health == HealthState.FAILED:
-                    health_state = HealthState.FAILED
-                    break
-                elif health == HealthState.DEGRADED:
-                    health_state = HealthState.DEGRADED
-                elif health == HealthState.UNKNOWN and health != HealthState.DEGRADED:
-                    health_state = HealthState.UNKNOWN
-            if health_state == HealthState.FAILED:
-                break
-        if self._update_healthstate_callback is not None:
-            self._update_healthstate_callback(health_state)
-        return health_state
+        if self.health == health:
+            return
+        self.health = health
+        for callback in self._callbacks:
+            callback(health)

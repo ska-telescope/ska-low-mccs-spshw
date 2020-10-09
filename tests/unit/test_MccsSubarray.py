@@ -9,7 +9,6 @@
 """
 This module contains the tests for MccsSubarray.
 """
-import pytest
 import tango
 from tango import DevSource
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
@@ -61,7 +60,6 @@ class TestMccsSubarray:
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
-    @pytest.mark.mock_device_proxy
     def test_AssignResources(self, device_under_test):
         """
         Test for AssignResources

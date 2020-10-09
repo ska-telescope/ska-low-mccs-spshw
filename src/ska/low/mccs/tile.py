@@ -14,7 +14,6 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 __all__ = ["MccsTile", "main"]
 
 import json
-import threading
 import numpy as np
 
 # PyTango imports
@@ -25,57 +24,308 @@ from tango.server import device_property
 # Additional import
 
 from ska.base import SKABaseDevice
-from ska.base.control_model import SimulationMode, TestMode
+from ska.base.control_model import HealthState, SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.low.mccs.power import PowerManager, PowerManagerError
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import LocalHealthMonitor, HealthRollupPolicy
+from ska.low.mccs.health import HealthModel
+
+
+class TileHardware:
+    """
+    A stub class to take the place of actual antenna hardware
+    """
+
+    VOLTAGE = 3.5
+    CURRENT = 0.4
+    BOARD_TEMPERATURE = 36.0
+    FPGA1_TEMPERATURE = 38.0
+    FPGA2_TEMPERATURE = 37.5
+
+    def __init__(self):
+        """
+        Initialise a new AntennaHardware instance
+        """
+        self._is_on = False
+        self._voltage = None
+        self._current = None
+        self._board_temperature = None
+        self._fpga1_temperature = None
+        self._fpga2_temperature = None
+
+    def off(self):
+        """
+        Turn me off
+        """
+        self._is_on = False
+        self._voltage = None
+        self._current = None
+        self._board_temperature = None
+        self._fpga1_temperature = None
+        self._fpga2_temperature = None
+
+    def on(self):
+        """
+        Turn me on
+        """
+        self._is_on = True
+        self._voltage = TileHardware.VOLTAGE
+        self._current = TileHardware.CURRENT
+        self._board_temperature = TileHardware.BOARD_TEMPERATURE
+        self._fpga1_temperature = TileHardware.FPGA1_TEMPERATURE
+        self._fpga2_temperature = TileHardware.FPGA2_TEMPERATURE
+
+    @property
+    def is_on(self):
+        """
+        Return whether I am on or off
+
+        :return: whether I am on or off
+        :rtype: bool
+        """
+        return self._is_on
+
+    @property
+    def voltage(self):
+        """
+        Return my voltage
+
+        :return: my voltage
+        :rtype: float
+        """
+        return self._voltage
+
+    @property
+    def current(self):
+        """
+        Return my current
+
+        :return: my current
+        :rtype: float
+        """
+        return self._current
+
+    @property
+    def board_temperature(self):
+        """
+        Return the temperature of my board
+
+        :return: the temperature of my board
+        :rtype: float
+        """
+        return self._board_temperature
+
+    @property
+    def fpga1_temperature(self):
+        """
+        Return the temperature of my FPGA 1
+
+        :return: the temperature of my FPGA 1
+        :rtype: float
+        """
+        return self._fpga1_temperature
+
+    @property
+    def fpga2_temperature(self):
+        """
+        Return the temperature of my FPGA 2
+
+        :return: the temperature of my FPGA 2
+        :rtype: float
+        """
+        return self._fpga2_temperature
 
 
 class TileHardwareManager:
     """
-    Stub class encapsulating the hardware of the MCCS tile device.
+    This class manages tile hardware.
 
-    :todo: A lot of hardware management functionality is currently
-        implemented in the tile device itself. We should look at
-        gradually moving that functionality into this manager.
+    :todo: So far only voltage, current and the temperature attributes
+        have been moved in here. There are lots of other attributes that
+        should be.
+    :todo: Also, the device properties that deal with how to connect to
+        the hardware should be passed to the initialiser for this.
     """
 
-    def __init__(self):
+    def __init__(self, hardware=None):
         """
-        Initialise a new tile hardware manager
-        """
-        self._is_on = False
+        Initialise a new TileHardwareManager instance
 
-    def Off(self):
+        At present, hardware is simulated by stub software, and so the
+        only argument is an optional "hardware" instance. In future, its
+        arguments will allow connection to the actual hardware
+
+        :param hardware: the hardware itself, defaults to None. This only
+            exists to facilitate testing.
+        :type hardware: :py:class:`TileHardware`
         """
-        Turn the tile hardware off
+        self._hardware = TileHardware() if hardware is None else hardware
+
+        # polled hardware attributes
+        self._is_on = None
+        self._voltage = None
+        self._current = None
+        self._board_temperature = None
+        self._fpga1_temperature = None
+        self._fpga2_temperature = None
+
+        self._health = None
+        self._health_callbacks = []
+
+        self.poll_hardware()
+
+    def off(self):
+        """
+        Turn the hardware off
 
         :return: whether successful
-        :rtype: boolean
+        :rtype: boolean, or None if there was nothing to do.
         """
-        self._is_on = False
-        return True
+        if not self._hardware.is_on:
+            return
+        self._hardware.off()
+        self.poll_hardware()
+        return not self.is_on
 
-    def On(self):
+    def on(self):
         """
-        Turn the tile hardware on
+        Turn the hardware on
 
         :return: whether successful
-        :rtype: boolean
+        :rtype: boolean, or None if there was nothing to do.
         """
-        self._is_on = True
-        return True
+        if self._hardware.is_on:
+            return
+        self._hardware.on()
+        self.poll_hardware()
+        return self.is_on
 
+    def poll_hardware(self):
+        """
+        Poll the hardware and update local attributes with values
+        reported by the hardware.
+        """
+        self._is_on = self._hardware.is_on
+        if self._is_on:
+            self._voltage = self._hardware.voltage
+            self._current = self._hardware.current
+            self._board_temperature = self._hardware.board_temperature
+            self._fpga1_temperature = self._hardware.fpga1_temperature
+            self._fpga2_temperature = self._hardware.fpga2_temperature
+        else:
+            self._voltage = None
+            self._current = None
+            self._board_temperature = None
+            self._fpga1_temperature = None
+            self._fpga2_temperature = None
+        self._evaluate_health()
+
+    @property
     def is_on(self):
         """
-        Returns whether the hardware is on
+        Whether the hardware is on or not
 
         :return: whether the hardware is on or not
         :rtype: boolean
         """
         return self._is_on
+
+    @property
+    def voltage(self):
+        """
+        The voltage of the hardware
+
+        :return: the voltage of the hardware
+        :rtype: float
+        """
+        return self._voltage
+
+    @property
+    def current(self):
+        """
+        The current of the hardware
+
+        :return: the current of the hardware
+        :rtype: float
+        """
+        return self._current
+
+    @property
+    def board_temperature(self):
+        """
+        Return the temperature of the board
+
+        :return: the temperature of the board
+        :rtype: float
+        """
+        return self._board_temperature
+
+    @property
+    def fpga1_temperature(self):
+        """
+        Return the temperature of FPGA 1
+
+        :return: the temperature of FPGA 1
+        :rtype: float
+        """
+        return self._fpga1_temperature
+
+    @property
+    def fpga2_temperature(self):
+        """
+        Return the temperature of FPGA 2
+
+        :return: the temperature of FPGA 2
+        :rtype: float
+        """
+        return self._fpga2_temperature
+
+    @property
+    def health(self):
+        """
+        The health of the hardware, as evaluated by this manager
+
+        :return: the health of the hardware
+        :rtype: :py:class:`ska.base.control_model.HealthState`
+        """
+        return self._health
+
+    def _evaluate_health(self):
+        """
+        Evaluate the health of the hardware
+        """
+        # TODO: look at the polled hardware values and maybe further
+        # poke the hardware to check that it is okay. But for now:
+        evaluated_health = HealthState.OK
+
+        self._update_health(evaluated_health)
+
+    def _update_health(self, health):
+        """
+        Update the health of this hardware, ensuring that any registered
+        callbacks are called
+
+        :param health: the new health value
+        :type health: :py:class:`ska.base.control_model.HealthState`
+        """
+        if self._health == health:
+            return
+        self._health = health
+        for callback in self._health_callbacks:
+            callback(health)
+
+    def register_health_callback(self, callback):
+        """
+        Register a callback to be called when the health of the hardware
+        changes
+
+        :param callback: A callback to be called when the health of the
+            hardware changes
+        :type callback: callable
+        """
+        self._health_callbacks.append(callback)
+        callback(self._health)
 
 
 class TilePowerManager(PowerManager):
@@ -150,11 +400,6 @@ class MccsTile(SKABaseDevice):
             device._csp_destination_port = 0
             device._firmware_name = ""
             device._firmware_version = ""
-            device._voltage = 0.0
-            device._current = 0.0
-            device._board_temperature = 0.0
-            device._fpga1_temperature = 0.0
-            device._fpga2_temperature = 0.0
             device._antenna_ids = []
             device._forty_gb_destination_ips = []
             device._forty_gb_destination_macs = []
@@ -169,10 +414,17 @@ class MccsTile(SKABaseDevice):
             device._is_connected = False
             device.set_change_event("healthState", True, True)
             device.set_archive_event("healthState", True, True)
-            device._lock = threading.Lock()
 
-            # make this device listen to its own events so that it can
-            # push a health state to station
+            device.hardware_manager = TileHardwareManager()
+            device.power_manager = TilePowerManager(device.hardware_manager)
+            device.event_manager = EventManager()
+            device.health_model = HealthModel(
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device._update_health_state,
+            )
+
             event_names = [
                 "current",
                 "voltage",
@@ -180,22 +432,9 @@ class MccsTile(SKABaseDevice):
                 "fpga1_temperature",
                 "fpga2_temperature",
             ]
-            device._eventManagerList = []
-            fqdn = device.get_name()
-            device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
-            device._health_monitor = LocalHealthMonitor(
-                [fqdn], device._rollup_policy.rollup_health, event_names
-            )
-            device._eventManagerList.append(
-                EventManager(
-                    fqdn, device._health_monitor.update_health_table, event_names
-                )
-            )
+
             for name in event_names:
                 device.set_archive_event(name, True, True)
-
-            device.hardware_manager = TileHardwareManager()
-            device.power_manager = TilePowerManager(device.hardware_manager)
 
             device.logger.info("MccsTile init_device complete")
             return (ResultCode.OK, "Init command succeeded")
@@ -251,12 +490,7 @@ class MccsTile(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        if self._tpm is not None:
-            self._voltage = self._tpm.voltage()
-            self._current = self._tpm.current()
-            self._board_temperature = self._tpm.temperature()
-            self._fpga1_temperature = self._tpm.get_fpga1_temperature()
-            self._fpga2_temperature = self._tpm.get_fpga2_temperature()
+        self.hardware_manager.poll_hardware()
 
     def delete_device(self):
         """Hook to delete resources allocated in init_device.
@@ -425,7 +659,7 @@ class MccsTile(SKABaseDevice):
     )
     def voltage(self):
         """Return the voltage attribute."""
-        return self._voltage
+        return self.hardware_manager.voltage
 
     @attribute(
         dtype="DevDouble",
@@ -441,7 +675,7 @@ class MccsTile(SKABaseDevice):
     )
     def current(self):
         """Return the current attribute."""
-        return self._current
+        return self.hardware_manager.current
 
     @attribute(
         dtype="DevBoolean",
@@ -464,7 +698,7 @@ class MccsTile(SKABaseDevice):
     )
     def board_temperature(self):
         """Return the board_temperature attribute."""
-        return self._board_temperature
+        return self.hardware_manager.board_temperature
 
     @attribute(
         dtype="DevDouble",
@@ -478,7 +712,7 @@ class MccsTile(SKABaseDevice):
     )
     def fpga1_temperature(self):
         """Return the fpga1_temperature attribute."""
-        return self._fpga1_temperature
+        return self.hardware_manager.fpga1_temperature
 
     @attribute(
         dtype="DevDouble",
@@ -492,7 +726,7 @@ class MccsTile(SKABaseDevice):
     )
     def fpga2_temperature(self):
         """Return the fpga2_temperature attribute."""
-        return self._fpga2_temperature
+        return self.hardware_manager.fpga2_temperature
 
     @attribute(dtype="DevLong", fisallowed=is_connected)
     def fpga1_time(self):
@@ -1199,7 +1433,8 @@ class MccsTile(SKABaseDevice):
 
             :return: [values, ]
 
-            :raises ValueError: if the JSON input lacks mandatory parameters
+            :raises ValueError: if the JSON input lacks
+                mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
@@ -3161,7 +3396,8 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             :rtype: (ResultCode, str)
 
-            :raises ValueError: if the JSON input lacks mandatory parameters
+            :raises ValueError: if the JSON input lacks
+                mandatory parameters
 
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
@@ -3218,16 +3454,15 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    def update_healthstate(self, health_state):
+    def _update_health_state(self, health_state):
         """
         Update and push a change event for the healthstate attribute
 
         :param health_state: The new healthstate
         :type health_state: enum (defined in ska.base.control_model)
         """
+        self._health_state = health_state
         self.push_change_event("healthState", health_state)
-        with self._lock:
-            self._health_state = health_state
         self.logger.info("health state = " + str(health_state))
 
 

@@ -148,31 +148,35 @@ def call_with_json(func, **kwargs):
 class json_input:
     """
     Method decorator that parses and validates JSON input into a python
-    object. The wrapped method is thus called with a JSON string, but
-    can be implemented as if it had been passed an object.
+    dictionary, which is then passed to the method as kwargs. The
+    wrapped method is thus called with a JSON string, but can be
+    implemented as if it had been passed a sequence of named arguments.
 
     If the string cannot be parsed as JSON, an exception is raised.
+
+    For example, conceptually, MccsController.Allocate() takes as
+    arguments a subarray id, an array of stations, and an array of
+    tiles. In practice, however, these arguments are encoded into a JSON
+    string. Implement the function with its conceptual parameters, then
+    wrap it in this decorator:
+
+    Example::
+
+        @json_input
+        def MccsController.Allocate(id, stations, tiles):
+
+    The decorator will provide the JSON interface and handle the
+    decoding for you.
 
     :param schema_path: an optional path to a schema against which the
         JSON should be validated. Not working at the moment, so leave it
         None.
-    :ptype: string
+    :type schema_path: string
+
     :raises FileNotFoundException: if no file is found at the schema
         path provided
     :raises json.JSONDecodeError: if the file at the specified schema
         path is not valid JSON
-
-    :example: Conceptually, MccsController.Allocate() takes as arguments a
-        subarray id, an array of stations, and an array of tiles. In
-        practice, however, these arguments are encoded into a JSON
-        string. Implement the function with its conceptual parameters,
-        then wrap it in this decorator:
-
-            @json_input
-            def MccsController.Allocate(id, stations, tiles):
-
-        The decorator will provide the JSON interface and handle the
-        decoding for you.
     """
 
     def __init__(self, schema_path=None):

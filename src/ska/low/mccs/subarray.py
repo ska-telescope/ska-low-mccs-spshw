@@ -220,14 +220,14 @@ class MccsSubarray(SKASubarray):
         return self._scan_id
 
     @scanId.write
-    def scanId(self, id):
+    def scanId(self, scan_id):
         """
         Set the scanId attribute
 
-        :param id: the new scanId
-        :type id: int
+        :param scan_id: the new scanId
+        :type scan_id: int
         """
-        self._scan_id = id
+        self._scan_id = scan_id
 
     @attribute(
         dtype=("DevString",),

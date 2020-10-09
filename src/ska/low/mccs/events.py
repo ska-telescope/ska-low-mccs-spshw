@@ -46,10 +46,10 @@ class EventManager:
             self._deviceProxy = tango.DeviceProxy(fqdn)
             self._event_names = event_names
             for event_name in self._event_names:
-                id = self._deviceProxy.subscribe_event(
+                event_id = self._deviceProxy.subscribe_event(
                     event_name, EventType.CHANGE_EVENT, self, stateless=True
                 )
-                self._eventIds.append(id)
+                self._eventIds.append(event_id)
         except Exception as df:
             print(f"device probably not started for {fqdn}", df)
 

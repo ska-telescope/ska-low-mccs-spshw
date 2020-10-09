@@ -192,7 +192,7 @@ class TpmSimulator:
     def configure_40G_core(
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
-        dict = {
+        core_dict = {
             "CoreID": core_id,
             "SrcMac": src_mac,
             "SrcIP": src_ip,
@@ -201,7 +201,7 @@ class TpmSimulator:
             "DstIP": dst_ip,
             "DstPort": dst_port,
         }
-        self._forty_gb_core_list.append(dict)
+        self._forty_gb_core_list.append(core_dict)
 
     def get_40G_configuration(self, core_id=-1):
         if core_id == -1:
@@ -221,7 +221,7 @@ class TpmSimulator:
         lmc_mac=None,
     ):
         self.logger.debug("TpmSimulator: set_lmc_download")
-        dict = {
+        download_dict = {
             "Mode": mode,
             "PayloadLength": payload_length,
             "DstIP": dst_ip,
@@ -229,7 +229,7 @@ class TpmSimulator:
             "DstPort": dst_port,
             "LmcMac": lmc_mac,
         }
-        print(json.dumps(dict))
+        print(json.dumps(download_dict))
 
     def set_channeliser_truncation(self, array):
         self.logger.debug("TpmSimulator: set_channeliser_truncation")
@@ -242,13 +242,13 @@ class TpmSimulator:
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         self.logger.debug("TpmSimulator: initialise_beamformer")
-        dict = {
+        beamformer_dict = {
             "StartChannel": start_channel,
             "NumTiles": nof_channels,
             "IsFirst": is_first,
             "IsLast": is_last,
         }
-        print(json.dumps(dict))
+        print(json.dumps(beamformer_dict))
 
     def load_calibration_coefficients(self, antenna, calibration_coeffs):
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
@@ -287,8 +287,8 @@ class TpmSimulator:
     def start_beamformer(self, start_time=0, duration=-1):
         self.logger.debug("TpmSimulator: Start beamformer")
         self._beamformer_running = True
-        dict = {"StartTime": start_time, "Duration": duration}
-        print(json.dumps(dict))
+        beamformer_dict = {"StartTime": start_time, "Duration": duration}
+        print(json.dumps(beamformer_dict))
 
     def stop_beamformer(self):
         self.logger.debug("TpmSimulator: Stop beamformer")
@@ -307,14 +307,14 @@ class TpmSimulator:
         self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
     ):
         self.logger.debug("TpmSimulator: send_raw_data")
-        dict = {
+        data_dict = {
             "Sync": sync,
             "Period": period,
             "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        print(json.dumps(dict))
+        print(json.dumps(data_dict))
 
     def send_channelised_data(
         self,
@@ -327,7 +327,7 @@ class TpmSimulator:
         seconds=0.2,
     ):
         self.logger.debug("TpmSimulator: send_channelised_data")
-        dict = {
+        data_dict = {
             "NSamples": number_of_samples,
             "FirstChannel": first_channel,
             "LastChannel": last_channel,
@@ -336,7 +336,7 @@ class TpmSimulator:
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        print(json.dumps(dict))
+        print(json.dumps(data_dict))
 
     def send_channelised_data_continuous(
         self,
@@ -348,7 +348,7 @@ class TpmSimulator:
         seconds=0.2,
     ):
         self.logger.debug("TpmSimulator: send_channelised_data_continuous")
-        dict = {
+        data_dict = {
             "ChannelID": channel_id,
             "NSamples": number_of_samples,
             "WaitSeconds": wait_seconds,
@@ -356,17 +356,17 @@ class TpmSimulator:
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        print(json.dumps(dict))
+        print(json.dumps(data_dict))
 
     def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
         self.logger.debug("TpmSimulator: send_beam_data")
-        dict = {
+        data_dict = {
             "Period": period,
             "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        print(json.dumps(dict))
+        print(json.dumps(data_dict))
 
     def stop_data_transmission(self):
         self.logger.debug("TpmSimulator: stop_data_transmission")
@@ -378,8 +378,8 @@ class TpmSimulator:
 
     def start_acquisition(self, start_time=None, delay=2):
         self.logger.debug("TpmSimulator:Start acquisition")
-        dict = {"StartTime": start_time, "Delay": delay}
-        print(json.dumps(dict))
+        acquisition_dict = {"StartTime": start_time, "Delay": delay}
+        print(json.dumps(acquisition_dict))
 
     def set_time_delays(self, delays):
         self.logger.debug("TpmSimulator: set_time_delays")
@@ -400,7 +400,7 @@ class TpmSimulator:
         lmc_mac=None,
     ):
         self.logger.debug("TpmSimulator: set_lmc_integrated_download")
-        dict = {
+        download_dict = {
             "Mode": mode,
             "ChannelPayloadLength": channel_payload_length,
             "BeamPayloadLength": beam_payload_length,
@@ -409,19 +409,19 @@ class TpmSimulator:
             "DstPort": dst_port,
             "LmcMac": lmc_mac,
         }
-        print(json.dumps(dict))
+        print(json.dumps(download_dict))
 
     def send_raw_data_synchronised(
         self, period=0, timeout=0, timestamp=None, seconds=0.2
     ):
         self.logger.debug("TpmSimulator: send_raw_data_synchronised")
-        dict = {
+        data_dict = {
             "Period": period,
             "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        print(json.dumps(dict))
+        print(json.dumps(data_dict))
 
     def current_tile_beamformer_frame(self):
         # Currently this is required, not sure if it will remain so
@@ -447,7 +447,7 @@ class TpmSimulator:
         seconds=0.2,
     ):
         self.logger.debug("TpmSimulator: send_channelised_data_narrowband")
-        dict = {
+        data_dict = {
             "Frequency": frequency,
             "RoundBits": round_bits,
             "NSamples": number_of_samples,
@@ -456,7 +456,7 @@ class TpmSimulator:
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        print(json.dumps(dict))
+        print(json.dumps(data_dict))
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -487,10 +487,10 @@ class TpmSimulator:
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):
-        dict = {
+        delay_dict = {
             "CurrentDelay": current_delay,
             "CurrentTC": current_tc,
             "RefLo": ref_lo,
             "RefHi": ref_hi,
         }
-        print(json.dumps(dict))
+        print(json.dumps(delay_dict))

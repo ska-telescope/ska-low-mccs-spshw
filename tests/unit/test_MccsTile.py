@@ -618,13 +618,13 @@ class TestMccsTile(object):
         nb_read = 4
         offset = 1
         device = 0
-        dict = {
+        dict0 = {
             "RegisterName": "test-reg1",
             "NbRead": nb_read,
             "Offset": offset,
             "Device": device,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         values = device_under_test.ReadRegister(jstr)
         assert (values == [0 for i in range(nb_read)]).all()
         values = [i for i in range(9)]
@@ -637,46 +637,46 @@ class TestMccsTile(object):
         }
         jstr = json.dumps(dict1)
         device_under_test.WriteRegister(jstr)
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         values = device_under_test.ReadRegister(jstr)
         assert (values == [0, 0, 1, 2]).all()
-        dict2 = dict.copy()
+        dict2 = dict0.copy()
         dict2.pop("RegisterName")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
             device_under_test.ReadRegister(jstr)
-        dict2 = dict.copy()
+        dict2 = dict0.copy()
         dict2.pop("NbRead")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
             device_under_test.ReadRegister(jstr)
-        dict2 = dict.copy()
+        dict2 = dict0.copy()
         dict2.pop("Offset")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
             device_under_test.ReadRegister(jstr)
-        dict2 = dict.copy()
+        dict2 = dict0.copy()
         dict2.pop("Device")
         jstr = json.dumps(dict2)
         with pytest.raises(DevFailed):
             device_under_test.ReadRegister(jstr)
         device = 1
-        dict = {
+        dict0 = {
             "RegisterName": "test-reg1",
             "NbRead": nb_read,
             "Offset": offset,
             "Device": device,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         values = device_under_test.ReadRegister(jstr)
         assert (values == [0 for i in range(nb_read)]).all()
-        dict = {
+        dict0 = {
             "RegisterName": "test-reg5",
             "NbRead": nb_read,
             "Offset": offset,
             "Device": device,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         values = device_under_test.ReadRegister(jstr)
         assert len(values) == 0
 
@@ -760,39 +760,39 @@ class TestMccsTile(object):
         with pytest.raises(DevFailed):
             output = device_under_test.Get40GCoreConfiguration(3)
 
-        dict = dict2.copy()
-        dict.pop("CoreID")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("CoreID")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
-        dict = dict2.copy()
-        dict.pop("SrcMac")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("SrcMac")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
-        dict = dict2.copy()
-        dict.pop("SrcIP")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("SrcIP")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
-        dict = dict2.copy()
-        dict.pop("SrcPort")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("SrcPort")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
-        dict = dict2.copy()
-        dict.pop("DstMac")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("DstMac")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
-        dict = dict2.copy()
-        dict.pop("DstIP")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("DstIP")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
-        dict = dict2.copy()
-        dict.pop("DstPort")
-        jstr = json.dumps(dict)
+        dict0 = dict2.copy()
+        dict0.pop("DstPort")
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.Configure40GCore(jstr)
 
@@ -813,15 +813,15 @@ class TestMccsTile(object):
             "DstPort": 4660,
             "LmcMac": None,
         }
-        dict = {"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}
-        jstr = json.dumps(dict)
+        dict0 = {"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SetLmcDownload(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
-        dict = {"PayloadLength": 4, "DstIP": "10.0.1.23"}
-        jstr = json.dumps(dict)
+        dict0 = {"PayloadLength": 4, "DstIP": "10.0.1.23"}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.SetLmcDownload(jstr)
 
@@ -867,34 +867,34 @@ class TestMccsTile(object):
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         regions = [[5, 16, 1], [25, 32, 2], [45, 48, 3]]
-        input = list(itertools.chain.from_iterable(regions))
+        regions_input = list(itertools.chain.from_iterable(regions))
         ss = io.StringIO()
         with redirect_stdout(ss):
-            device_under_test.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(regions_input)
         out = ss.getvalue().strip()
         result = [int(x) for x in out[1:-1].split(",")]
-        assert input == result
-        input = [3, 8]
+        assert regions_input == result
+        regions_input = [3, 8]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
-        input = [i for i in range(49)]
+            device_under_test.SetBeamformerRegions(regions_input)
+        regions_input = [i for i in range(49)]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
-        input = [5, 16, 1, 25, 32, 2, 45, 48]
+            device_under_test.SetBeamformerRegions(regions_input)
+        regions_input = [5, 16, 1, 25, 32, 2, 45, 48]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
-        input = [5, 15, 1, 25, 32, 2, 45, 48, 3]
+            device_under_test.SetBeamformerRegions(regions_input)
+        regions_input = [5, 15, 1, 25, 32, 2, 45, 48, 3]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
-        input = [5, 16, -1, 25, 32, 2, 45, 48, 3]
+            device_under_test.SetBeamformerRegions(regions_input)
+        regions_input = [5, 16, -1, 25, 32, 2, 45, 48, 3]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
-        input = [5, 16, 1, 25, 32, 2, 45, 48, 8]
+            device_under_test.SetBeamformerRegions(regions_input)
+        regions_input = [5, 16, 1, 25, 32, 2, 45, 48, 8]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
-        input = [5, 160, 1, 25, 160, 2, 45, 72, 3]
+            device_under_test.SetBeamformerRegions(regions_input)
+        regions_input = [5, 160, 1, 25, 160, 2, 45, 72, 3]
         with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(input)
+            device_under_test.SetBeamformerRegions(regions_input)
 
     def test_ConfigureStationBeamformer(self, device_under_test):
         """
@@ -905,27 +905,27 @@ class TestMccsTile(object):
         """
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
-        dict = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
-        jstr = json.dumps(dict)
+        dict0 = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.ConfigureStationBeamformer(jstr)
         result = json.loads(ss.getvalue())
-        assert result == dict
-        dict = {"NumTiles": 4, "IsFirst": True, "IsLast": False}
-        jstr = json.dumps(dict)
+        assert result == dict0
+        dict0 = {"NumTiles": 4, "IsFirst": True, "IsLast": False}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.ConfigureStationBeamformer(jstr)
-        dict = {"StartChannel": 2, "IsFirst": True, "IsLast": False}
-        jstr = json.dumps(dict)
+        dict0 = {"StartChannel": 2, "IsFirst": True, "IsLast": False}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.ConfigureStationBeamformer(jstr)
-        dict = {"StartChannel": 2, "NumTiles": 4, "IsLast": False}
-        jstr = json.dumps(dict)
+        dict0 = {"StartChannel": 2, "NumTiles": 4, "IsLast": False}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.ConfigureStationBeamformer(jstr)
-        dict = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True}
-        jstr = json.dumps(dict)
+        dict0 = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.ConfigureStationBeamformer(jstr)
 
@@ -1058,8 +1058,8 @@ class TestMccsTile(object):
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         expected = {"StartTime": 0, "Duration": 5}
-        dict = {"Duration": 5}
-        jstr = json.dumps(dict)
+        dict0 = {"Duration": 5}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.StartBeamformer(jstr)
@@ -1137,8 +1137,8 @@ class TestMccsTile(object):
             "Timestamp": None,
             "Seconds": 6.7,
         }
-        dict = {"Sync": True, "Period": 5, "Seconds": 6.7}
-        jstr = json.dumps(dict)
+        dict0 = {"Sync": True, "Period": 5, "Seconds": 6.7}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SendRawData(jstr)
@@ -1163,8 +1163,8 @@ class TestMccsTile(object):
             "Timestamp": None,
             "Seconds": 0.2,
         }
-        dict = {"NSamples": 4, "FirstChannel": 7, "LastChannel": 234, "Period": 5}
-        jstr = json.dumps(dict)
+        dict0 = {"NSamples": 4, "FirstChannel": 7, "LastChannel": 234, "Period": 5}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SendChannelisedData(jstr)
@@ -1188,15 +1188,15 @@ class TestMccsTile(object):
             "Timestamp": None,
             "Seconds": 0.2,
         }
-        dict = {"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}
-        jstr = json.dumps(dict)
+        dict0 = {"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SendChannelisedDataContinuous(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
-        dict = {"NSamples": 4, "WaitSeconds": 3.5}
-        jstr = json.dumps(dict)
+        dict0 = {"NSamples": 4, "WaitSeconds": 3.5}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.SendChannelisedDataContinuous(jstr)
 
@@ -1210,8 +1210,8 @@ class TestMccsTile(object):
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
-        dict = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
-        jstr = json.dumps(dict)
+        dict0 = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SendBeamData(jstr)
@@ -1258,8 +1258,8 @@ class TestMccsTile(object):
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         expected = {"StartTime": 5, "Delay": 2}
-        dict = {"StartTime": 5}
-        jstr = json.dumps(dict)
+        dict0 = {"StartTime": 5}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.StartAcquisition(jstr)
@@ -1316,20 +1316,24 @@ class TestMccsTile(object):
             "DstPort": 4660,
             "LmcMac": None,
         }
-        dict = {
+        dict0 = {
             "Mode": "1G",
             "ChannelPayloadLength": 4,
             "BeamPayloadLength": 6,
             "DstIP": "10.0.1.23",
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SetLmcIntegratedDownload(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
-        dict = {"ChannelPayloadLength": 4, "BeamPayloadLength": 6, "DstIP": "10.0.1.23"}
-        jstr = json.dumps(dict)
+        dict0 = {
+            "ChannelPayloadLength": 4,
+            "BeamPayloadLength": 6,
+            "DstIP": "10.0.1.23",
+        }
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.SetLmcIntegratedDownload(jstr)
 
@@ -1343,8 +1347,8 @@ class TestMccsTile(object):
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
         expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
-        dict = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
-        jstr = json.dumps(dict)
+        dict0 = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SendRawDataSynchronised(jstr)
@@ -1369,25 +1373,25 @@ class TestMccsTile(object):
             "Timestamp": None,
             "Seconds": 0.5,
         }
-        dict = {
+        dict0 = {
             "Frequency": 4000,
             "RoundBits": 256,
             "NSamples": 48,
             "WaitSeconds": 10,
             "Seconds": 0.5,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.SendChannelisedDataNarrowband(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
-        dict = {"RoundBits": 256, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
-        jstr = json.dumps(dict)
+        dict0 = {"RoundBits": 256, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.SendChannelisedDataNarrowband(jstr)
-        dict = {"Frequency": 4000, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
-        jstr = json.dumps(dict)
+        dict0 = {"Frequency": 4000, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.SendChannelisedDataNarrowband(jstr)
 
@@ -1439,31 +1443,31 @@ class TestMccsTile(object):
         """
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
-        dict = expected = {
+        dict0 = expected = {
             "CurrentDelay": 5.0,
             "CurrentTC": 2,
             "RefLo": 3.0,
             "RefHi": 78.0,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(dict0)
         ss = io.StringIO()
         with redirect_stdout(ss):
             device_under_test.CalculateDelay(jstr)
         result = json.loads(ss.getvalue())
         assert result == expected
-        dict = {"CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
-        jstr = json.dumps(dict)
+        dict0 = {"CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.CalculateDelay(jstr)
-        dict = expected = {"CurrentDelay": 5.0, "RefLo": 3.0, "RefHi": 78.0}
-        jstr = json.dumps(dict)
+        dict0 = expected = {"CurrentDelay": 5.0, "RefLo": 3.0, "RefHi": 78.0}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.CalculateDelay(jstr)
-        dict = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefHi": 78.0}
-        jstr = json.dumps(dict)
+        dict0 = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefHi": 78.0}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.CalculateDelay(jstr)
-        dict = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0}
-        jstr = json.dumps(dict)
+        dict0 = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0}
+        jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.CalculateDelay(jstr)

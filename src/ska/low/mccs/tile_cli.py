@@ -85,13 +85,13 @@ class MccsTileCli(metaclass=CliMeta):
 
     @commandResultAsString
     def SendBeamData(self, period=0, timeout=0, timestamp=None, seconds=0.2):
-        dict = {
+        args = {
             "Period": period,
             "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(args)
         return self._dp.command_inout("SendBeamData", jstr)
 
     @commandResultAsString
@@ -105,7 +105,7 @@ class MccsTileCli(metaclass=CliMeta):
         seconds=0.2,
     ):
         try:
-            dict = {
+            args = {
                 "ChannelID": channelID,
                 "NSamples": nSamples,
                 "WaitSeconds": waitSeconds,
@@ -113,7 +113,7 @@ class MccsTileCli(metaclass=CliMeta):
                 "Timestamp": timestamp,
                 "Seconds": seconds,
             }
-            jstr = json.dumps(dict)
+            jstr = json.dumps(args)
             return self._dp.command_inout("SendChannelisedDataContinuous", jstr)
         except tango.DevFailed:
             raise RuntimeError("ChannelID mandatory argument...cannot be a NULL value")
@@ -129,7 +129,7 @@ class MccsTileCli(metaclass=CliMeta):
         timestamp=None,
         seconds=0.2,
     ):
-        dict = {
+        args = {
             "NSamples": nSamples,
             "FirstChannel": firstChannel,
             "LastChannel": lastChannel,
@@ -138,19 +138,19 @@ class MccsTileCli(metaclass=CliMeta):
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(args)
         return self._dp.command_inout("SendChannelisedData", jstr)
 
     @commandResultAsString
     def SendRawData(self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2):
-        dict = {
+        args = {
             "Sync": sync,
             "Period": period,
             "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
-        jstr = json.dumps(dict)
+        jstr = json.dumps(args)
         return self._dp.command_inout("SendRawData", jstr)
 
     @commandResultAsString
@@ -165,8 +165,8 @@ class MccsTileCli(metaclass=CliMeta):
 
     @commandResultAsString
     def StartBeamformer(self, startTime=0, duration=-1):
-        dict = {"StartTime": startTime, "Duration": duration}
-        jstr = json.dumps(dict)
+        args = {"StartTime": startTime, "Duration": duration}
+        jstr = json.dumps(args)
         return self._dp.command_inout("StartBeamformer", jstr)
 
     @commandResultAsString

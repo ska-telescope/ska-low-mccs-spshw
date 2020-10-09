@@ -14,8 +14,10 @@ description = """A set of Low MCCS tango devices for the SKA Telescope."""
 author = "Team MCCS"
 author_email = "malte.marquarding at csiro dot au"
 url = """https://www.skatelescope.org/"""
-license = """BSD-3-Clause"""
-copyright = "CSIRO and STFC Daresbury Laboratory and University of Manchester"
+license = """BSD-3-Clause"""  # noqa: A001
+copyright = (  # noqa: A001
+    "CSIRO and STFC Daresbury Laboratory and University of Manchester"
+)
 
 
 def get_release_info(clsname=None):

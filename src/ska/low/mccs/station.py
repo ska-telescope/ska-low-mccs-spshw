@@ -219,15 +219,15 @@ class MccsStation(SKAObsDevice):
 
     @subarrayId.write
     @DebugIt()
-    def subarrayId(self, id):
+    def subarrayId(self, subarray_id):
         """
         Set the ID of the Subarray to which this Station is allocated
         Note: ID propogates to each tile in this station too
         """
-        self._subarray_id = id
+        self._subarray_id = subarray_id
         for fqdn in self._tile_fqdns:
             tile = tango.DeviceProxy(fqdn)
-            tile.subarrayId = id
+            tile.subarrayId = subarray_id
 
     @attribute(
         dtype="DevString",
@@ -441,11 +441,11 @@ class MccsStation(SKAObsDevice):
             :rtype: (ResultCode, str)
             """
             device = self.target
-            for id, tile in enumerate(device.TileFQDNs):
+            for tile_id, tile in enumerate(device.TileFQDNs):
                 proxy = tango.DeviceProxy(tile)
                 proxy.subarrayId = device._subarray_id
                 proxy.stationId = device._station_id
-                proxy.logicalTileId = id + 1
+                proxy.logicalTileId = tile_id + 1
                 proxy.command_inout("Connect", True)
 
             #             self._beams = []

@@ -89,7 +89,7 @@ def devices_to_load(request):
     * "devices": a list of names of the devices that are to be loaded.
 
     """
-    return getattr(request.module, "devices_to_load")
+    return request.module.devices_to_load
 
 
 @pytest.fixture(scope="module")

@@ -45,6 +45,11 @@ def device_under_test(request, device_info, mocker):
         needed to stand the device up in a DeviceTestContext, such as
         the device class and properties
     :type device_info: dict
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: pytest wrapper
+
+    :yields: a DeviceProxy under a DeviceTestContext
     """
     mock_device_proxy = request.node.get_closest_marker("mock_device_proxy") is not None
     if mock_device_proxy:

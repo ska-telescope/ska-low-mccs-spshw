@@ -1124,6 +1124,11 @@ class MccsTile(SKABaseDevice):
 
             :return: list of register values
             :rtype: array of long
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             name = params.get("RegisterName", None)
@@ -1193,6 +1198,12 @@ class MccsTile(SKABaseDevice):
             :param argin: register name, values
 
             :return: [values, ]
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
+
             """
             params = json.loads(argin)
             name = params.get("RegisterName", None)
@@ -1262,6 +1273,9 @@ class MccsTile(SKABaseDevice):
             :param argin: address, nvalues
 
             :return: [values, ]
+
+            :raises ValueError: if the argin argument has the wrong length
+                or structure
             """
             if len(argin) < 2:
                 self.logger.error("Two parameters are required")
@@ -1310,6 +1324,8 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin has the wrong length/structure
             """
             if len(argin) < 2:
                 self.logger.error("A minimum of two parameters are required")
@@ -1360,6 +1376,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             core_id = params.get("CoreID", None)
@@ -1445,6 +1466,8 @@ class MccsTile(SKABaseDevice):
 
             :return: json string with configuration
             :rtype: str
+
+            :raises ValueError: if the argin is an invalid code id
             """
             core_id = argin
             item = self.target._tpm.get_40G_configuration(core_id)
@@ -1494,6 +1517,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             mode = params.get("Mode", None)
@@ -1562,6 +1590,9 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
             """
             if len(argin) < 3:
                 self.logger.error("Insufficient values supplied")
@@ -1623,6 +1654,9 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
             """
             if len(argin) < 3:
                 self.logger.error("Insufficient parameters specified")
@@ -1705,6 +1739,9 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
             """
             params = json.loads(argin)
             start_channel = params.get("StartChannel", None)
@@ -1777,6 +1814,9 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
             """
             if len(argin) < 9:
                 self.logger.error("Insufficient calibration coefficients")
@@ -1915,6 +1955,9 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
             """
             if len(argin) < self.target.AntennasPerTile:
                 self.logger.error(
@@ -2013,6 +2056,9 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
             """
             if len(argin) != self.target.AntennasPerTile * 2 + 1:
                 self.logger.error("Insufficient parameters")
@@ -2265,8 +2311,8 @@ class MccsTile(SKABaseDevice):
         Configure the transmission of integrated beam data with the provided
         integration time
 
-        :param integration_time: time in seconds (default = 0.5)
-        :type integration_time: DevDouble
+        :param argin: integration time in seconds (default = 0.5)
+        :type argin: DevDouble
 
         :return: (ResultCode, 'informational message')
 
@@ -2425,6 +2471,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             channel_id = params.get("ChannelID")
@@ -2741,8 +2792,8 @@ class MccsTile(SKABaseDevice):
     def SetCspRounding(self, argin):
         """Set output rounding for CSP
 
-        :param rounding: the rounding
-        :type rounding: DevDouble
+        :param argin: the rounding
+        :type argin: DevDouble
 
         :return: (ResultCode, 'informational message')
 
@@ -2770,6 +2821,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             mode = params.get("Mode", None)
@@ -2904,6 +2960,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             frequency = params.get("Frequency", None)
@@ -3099,6 +3160,11 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (ResultCode, str)
+
+            :raises ValueError: if the JSON input lacks mandatory parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                against a schema
             """
             params = json.loads(argin)
             current_delay = params.get("CurrentDelay", None)

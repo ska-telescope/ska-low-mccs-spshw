@@ -104,7 +104,7 @@ class TestPowerManager:
             :param is_on: the off/on status being asserted. If true, we
                 are asserting that the power manager is on; if false, we
                 are asserting that it is off
-            :ptype is_on: boolean
+            :type is_on: boolean
             """
             assert power_manager.is_on() == is_on
             if power_manager.hardware is not None:

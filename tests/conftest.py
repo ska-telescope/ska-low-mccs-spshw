@@ -31,7 +31,7 @@ def _load_data_from_json(path):
 
     :param path: path to the JSON file from which the dataset is to be
         loaded.
-    :type name: string
+    :type path: string
     """
     with open(path, "r") as json_file:
         return json.load(json_file)

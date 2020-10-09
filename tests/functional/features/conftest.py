@@ -84,7 +84,7 @@ def _tango_test_context(_devices_info, _module_mocker):
     _module_mocker.patch(
         "tango.DeviceProxy",
         wraps=lambda fqdn, *args, **kwargs: _DeviceProxy(
-            "tango://{0}:{1}/{2}#dbase=no".format(HOST, PORT, fqdn), *args, **kwargs
+            f"tango://{HOST}:{PORT}/{fqdn}#dbase=no", *args, **kwargs
         ),
     )
 

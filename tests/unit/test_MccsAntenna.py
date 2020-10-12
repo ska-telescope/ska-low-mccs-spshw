@@ -37,8 +37,9 @@ class TestAntennaHardwareManager:
         Test that the AntennaHardwareManager receives updated values,
         and re-evaluates device health, each time it polls the hardware
 
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: fixture
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
+            module
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         voltage = 3.5
         temperature = 120
@@ -82,12 +83,26 @@ class TestMccsAntenna:
     """
 
     def test_PowerOn(self, device_under_test):
-        """Test for PowerOn"""
+        """
+        Test for PowerOn
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         (result, info) = device_under_test.PowerOn()
         assert result == ResultCode.OK
 
     def test_PowerOff(self, device_under_test):
-        """Test for PowerOff"""
+        """
+        Test for PowerOff
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         (result, info) = device_under_test.PowerOff()
         assert result == ResultCode.OK
 
@@ -95,141 +110,377 @@ class TestMccsAntenna:
         """
         Test for Reset.
         Expected to fail as can't reset in the Off state
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         with pytest.raises(tango.DevFailed):
             device_under_test.Reset()
 
     def test_antennaId(self, device_under_test):
-        """Test for antennaId"""
+        """
+        Test for antennaId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.antennaId == 0
 
     def test_logicalTpmAntenna_id(self, device_under_test):
-        """Test for logicalTpmAntenna_id"""
+        """
+        Test for logicalTpmAntenna_id
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.logicalTpmAntenna_id == 0
 
     def test_logicalApiuAntenna_id(self, device_under_test):
-        """Test for logicalApiuAntenna_id"""
+        """
+        Test for logicalApiuAntenna_id
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.logicalApiuAntenna_id == 0.0
 
     def test_tpmId(self, device_under_test):
-        """Test for tpmId"""
+        """
+        Test for tpmId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.tpmId == 0.0
 
     def test_apiuId(self, device_under_test):
-        """Test for apiuId"""
+        """
+        Test for apiuId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.apiuId == 0.0
 
     def test_gain(self, device_under_test):
-        """Test for gain"""
+        """
+        Test for gain
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.gain == 0.0
 
     def test_rms(self, device_under_test):
-        """Test for rms"""
+        """
+        Test for rms
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.rms == 0.0
 
     def test_voltage(self, device_under_test):
-        """Test for voltage"""
+        """
+        Test for voltage
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         device_under_test.set_source(tango.DevSource.DEV)
         device_under_test.PowerOn()
         assert device_under_test.voltage == AntennaHardware.VOLTAGE
 
     def test_temperature(self, device_under_test):
-        """Test for temperature"""
+        """
+        Test for temperature
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         device_under_test.PowerOn()
         assert device_under_test.temperature == AntennaHardware.TEMPERATURE
 
     def test_xPolarisationFaulty(self, device_under_test):
-        """Test for xPolarisationFaulty"""
+        """
+        Test for xPolarisationFaulty
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.xPolarisationFaulty is False
 
     def test_yPolarisationFaulty(self, device_under_test):
-        """Test for yPolarisationFaulty"""
+        """
+        Test for yPolarisationFaulty
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.yPolarisationFaulty is False
 
     def test_fieldNodeLongitude(self, device_under_test):
-        """Test for fieldNodeLongitude"""
+        """
+        Test for fieldNodeLongitude
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.fieldNodeLongitude == 0.0
 
     def test_fieldNodeLatitude(self, device_under_test):
-        """Test for fieldNodeLatitude"""
+        """
+        Test for fieldNodeLatitude
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.fieldNodeLatitude == 0.0
 
     def test_altitude(self, device_under_test):
-        """Test for altitude"""
+        """
+        Test for altitude
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.altitude == 0.0
 
     def test_xDisplacement(self, device_under_test):
-        """Test for xDisplacement"""
+        """
+        Test for xDisplacement
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.xDisplacement == 0.0
 
     def test_yDisplacement(self, device_under_test):
-        """Test for yDisplacement"""
+        """
+        Test for yDisplacement
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.yDisplacement == 0.0
 
     def test_timestampOfLastSpectrum(self, device_under_test):
-        """Test for timestampOfLastSpectrum"""
+        """
+        Test for timestampOfLastSpectrum
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.timestampOfLastSpectrum == ""
 
     def test_loggingLevel(self, device_under_test):
-        """Test for loggingLevel"""
+        """
+        Test for loggingLevel
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.loggingLevel == 4
 
     def test_healthState(self, device_under_test):
-        """Test for healthState"""
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.healthState == HealthState.OK
 
     def test_controlMode(self, device_under_test):
-        """Test for controlMode"""
+        """
+        Test for controlMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.controlMode == ControlMode.REMOTE
 
     def test_simulationMode(self, device_under_test):
-        """Test for simulationMode"""
+        """
+        Test for simulationMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.SimulationMode == SimulationMode.FALSE
 
     def test_logicalAntennaId(self, device_under_test):
-        """Test for logicalAntennaId"""
+        """
+        Test for logicalAntennaId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.logicalAntennaId == 0
 
     def test_xPolarisationScalingFactor(self, device_under_test):
-        """Test for xPolarisationScalingFactor"""
+        """
+        Test for xPolarisationScalingFactor
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.xPolarisationScalingFactor) == [0]
 
     def test_yPolarisationScalingFactor(self, device_under_test):
-        """Test for yPolarisationScalingFactor"""
+        """
+        Test for yPolarisationScalingFactor
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.yPolarisationScalingFactor) == [0]
 
     def test_calibrationCoefficient(self, device_under_test):
-        """Test for calibrationCoefficient"""
+        """
+        Test for calibrationCoefficient
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.calibrationCoefficient) == [0.0]
 
     def test_pointingCoefficient(self, device_under_test):
-        """Test for pointingCoefficient"""
+        """
+        Test for pointingCoefficient
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.pointingCoefficient) == [0.0]
 
     def test_spectrumX(self, device_under_test):
-        """Test for spectrumX"""
+        """
+        Test for spectrumX
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.spectrumX) == [0.0]
 
     def test_spectrumY(self, device_under_test):
-        """Test for spectrumY"""
+        """
+        Test for spectrumY
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.spectrumY) == [0.0]
 
     def test_position(self, device_under_test):
-        """Test for position"""
+        """
+        Test for position
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.position) == [0.0]
 
     def test_loggingTargets(self, device_under_test):
-        """Test for loggingTargets"""
+        """
+        Test for loggingTargets
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.loggingTargets == ("tango::logger",)
 
     def test_delays(self, device_under_test):
-        """Test for delays"""
+        """
+        Test for delays
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.delays) == [0.0]
 
     def test_delayRates(self, device_under_test):
-        """Test for delayRates"""
+        """
+        Test for delayRates
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.delayRates) == [0.0]
 
     def test_bandpassCoefficient(self, device_under_test):
-        """Test for bandpassCoefficient"""
+        """
+        Test for bandpassCoefficient
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert list(device_under_test.bandpassCoefficient) == [0.0]

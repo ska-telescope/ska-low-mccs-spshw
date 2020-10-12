@@ -33,6 +33,11 @@ class TestMccsStationBeam:
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         # assert device_under_test.state() == tango.DevState.OFF
         assert device_under_test.status() == "The device is in OFF state."
@@ -55,42 +60,106 @@ class TestMccsStationBeam:
 
     # overridden base class commands
     def test_GetVersionInfo(self, device_under_test):
-        """Test for GetVersionInfo"""
+        """
+        Test for GetVersionInfo
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
     # overridden base class attributes
     def test_buildState(self, device_under_test):
-        """Test for buildState"""
+        """
+        Test for buildState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         build_info = release.get_release_info()
         assert device_under_test.buildState == build_info
 
     def test_versionId(self, device_under_test):
-        """Test for versionId"""
+        """
+        Test for versionId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.versionId == release.version
 
     # MccsStationBeam attributes
     def test_stationId(self, device_under_test):
-        """Test for stationId attribute"""
+        """
+        Test for stationId attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.stationId == 0
 
     def test_logicalBeamId(self, device_under_test):
-        """Test for logicalId attribute"""
+        """
+        Test for logicalId attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.logicalBeamId == 0
 
     def test_updateRate(self, device_under_test):
-        """Test for updateRate attribute"""
+        """
+        Test for updateRate attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.updateRate == 0.0
 
     def test_isBeamLocked(self, device_under_test):
-        """Test for isBeamLocked attribute"""
+        """
+        Test for isBeamLocked attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert not device_under_test.isBeamLocked
 
     def test_channels(self, device_under_test):
-        """Test for channels"""
+        """
+        Test for channels
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.channels is None
 
     def test_desiredPointing(self, device_under_test):
+        """
+        Test of desired pointing attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         dummy_sky_coordinate = [1585619550.0, 192.85948, 27.12825, 1.0]
         float_format = "{:3.4f}"
         self._test_readwrite_double_array(
@@ -98,12 +167,36 @@ class TestMccsStationBeam:
         )
 
     def test_pointingDelay(self, device_under_test):
+        """
+        Test of point delay attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.pointingDelay is None
 
     def test_pointingDelayRate(self, device_under_test):
+        """
+        Test of pointing delay rate attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.pointingDelayRate is None
 
     def test_antennaWeights(self, device_under_test):
+        """
+        test for antenna weights
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         dummy_weights = [0.1, 0.2, 0.3, 0.4, 0.5]
         float_format = "{:3.4f}"
         self._test_readwrite_double_array(
@@ -114,11 +207,25 @@ class TestMccsStationBeam:
         self, device_under_test, attribute_name, value_to_write, float_format
     ):
         """
-        Test for a READ-WRITE double array attribute. This is a messy
-        test because there can be some loss of floating-point precision
-        during transfer, so you have to check approximate equality when
-        reading back what you've written. This is done here by comparing
-        the values by their string representation.
+        Helper method for testing a READ-WRITE double array attribute.
+        This is a messy test because there can be some loss of
+        floating-point precision during transfer, so you have to check
+        approximate equality when reading back what you've written. This
+        is done here by comparing the values by their string
+        representation.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param attribute_name: name of the attribute to test
+        :type attribute_name: str
+        :param value_to_write: value to write to and read from the
+            attribute
+        :type: double
+        :param float_format: a pair of double values will be considered
+            equal if this string format yields the same string for both
+        :type float_format: str
         """
 
         # SETUP

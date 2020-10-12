@@ -9,8 +9,8 @@
 
 """ LFAA Cluster Manager Device Server
 
-An implementation of the Cluster Manager Device Server for the MCCS based upon
-architecture in SKA-TEL-LFAA-06000052-02.
+An implementation of the Cluster Manager Device Server for the MCCS
+based upon architecture in SKA-TEL-LFAA-06000052-02.
 """
 
 # PyTango imports
@@ -27,12 +27,8 @@ __all__ = ["MccsClusterManager", "main"]
 
 class MccsClusterManager(MccsGroupDevice):
     """
-    An implementation of the Cluster Manager Device Server for the MCCS based upon
-    architecture in SKA-TEL-LFAA-06000052-02.
-
-    **Properties:**
-
-    - Device Property
+    An implementation of the Cluster Manager Device Server for the MCCS
+    based upon architecture in SKA-TEL-LFAA-06000052-02.
     """
 
     # -----------------
@@ -50,7 +46,13 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self):
             """
-            Initialises the attributes and properties of the class MccsClusterManager.
+            Initialises the attributes and properties of the
+            :py:class:`MccsClusterManager`.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -174,137 +176,278 @@ class MccsClusterManager(MccsGroupDevice):
 
     @attribute(dtype="DevShort", label="jobsError")
     def jobsError(self):
-        """Return the jobsError attribute."""
+        """
+        Return the number of errored jobs.
+
+        :return: the number of errored jobs
+        :rtype: int
+        """
         return self._jobs_error
 
     @attribute(dtype="DevShort", label="jobsFailed", max_alarm=1)
     def jobsFailed(self):
-        """Return the jobsFailed attribute."""
+        """
+        Return the number of failed jobs
+
+        :return: the number of failed jobs
+        :rtype: int
+        """
         return self._jobs_failed
 
     @attribute(dtype="DevShort", label="jobsFinished")
     def jobsFinished(self):
-        """Return the jobsFinished attribute."""
+        """
+        Returns the number of finished jobs
+
+        :return: the number of finished jobs
+        :rtype: int
+        """
         return self._jobs_finished
 
     @attribute(dtype="DevShort", label="jobsKilled")
     def jobsKilled(self):
-        """Return the jobsKilled attribute."""
+        """
+        Return the number of killed jobs
+
+        :return: the number of killed jobs
+        :rtype: int
+        """
         return self._jobs_killed
 
     @attribute(dtype="DevShort", label="jobsKilling")
     def jobsKilling(self):
-        """Return the jobsKilling attribute."""
+        """
+        Return the number of jobs currently being killed
+
+        :return: the number of jobs currently being killed
+        :rtype: int
+        """
         return self._jobs_killing
 
     @attribute(dtype="DevShort", label="jobsLost")
     def jobsLost(self):
-        """Return the jobsLost attribute."""
+        """
+        Return the number of lost jobs
+
+        :return: the number of lost jobs
+        :rtype: int
+        """
         return self._jobs_lost
 
     @attribute(dtype="DevShort", label="jobsRunning")
     def jobsRunning(self):
-        """Return the jobsRunning attribute."""
+        """
+        Return the number of running jobs
+
+        :return: the number of running jobs
+        :rtype: int
+        """
         return self._jobs_running
 
     @attribute(dtype="DevShort", label="jobsStaging")
     def jobsStaging(self):
-        """Return the jobsStaging attribute."""
+        """
+        Return the number of staging jobs
+
+        :return: the number of staging jobs
+        :rtype: int
+        """
         return self._jobs_staging
 
     @attribute(dtype="DevShort", label="jobsStarting")
     def jobsStarting(self):
-        """Return the jobsStarting attribute."""
+        """
+        Return the number of starting jobs
+
+        :return: the number of starting jobs
+        :rtype: int
+        """
         return self._jobs_starting
 
     @attribute(dtype="DevShort", max_alarm=1)
     def jobsUnreachable(self):
-        """Return the jobsUnreachable attribute."""
+        """
+        Return the number of unreachable jobs
+
+        :return: the number of unreachable jobs
+        :rtype: int
+        """
         return self._jobs_unreachable
 
     @attribute(dtype="DevFloat", label="memoryTotal")
     def memoryTotal(self):
-        """Return the memoryTotal attribute."""
+        """
+        Return the total memory size
+
+        :return: the total memory size
+        :rtype: float
+        """
         return self._memory_total
 
     @attribute(dtype="DevFloat", label="memoryAvail")
     def memoryAvail(self):
-        """Return the memoryAvail attribute."""
+        """
+        Return the available memory
+
+        :return: the available memory
+        :rtype: float
+        """
         return self._memory_avail
 
     @attribute(dtype="DevFloat", label="memoryUsed")
     def memoryUsed(self):
-        """Return the memoryUsed attribute."""
+        """
+        Return the amount of memory in use
+
+        :return: the amount of memory in use
+        :rtype: float
+        """
         return self._memory_used
 
     @attribute(dtype="DevShort", label="nodesInUse")
     def nodesInUse(self):
-        """Return the nodesInUse attribute."""
+        """
+        Return the number of nodes in use
+
+        :return: the number of nodes in use
+        :rtype: int
+        """
         return self._nodes_in_use
 
     @attribute(dtype="DevShort", label="nodesTotal")
     def nodesTotal(self):
-        """Return the nodesTotal attribute."""
+        """
+        Return the total number of nodes
+
+        :return: the total number of notes
+        :rtype: int
+        """
         return self._nodes_total
 
     @attribute(dtype="DevShort", label="masterNodeId")
     def masterNodeId(self):
-        """Return the masterNodeId attribute."""
+        """
+        Return the id of the master node
+
+        :return: the id of the master node
+        :rtype: int
+        """
         return self._master_node_id
 
     @attribute(dtype="DevFloat", label="masterCpusAllocatedPercent")
     def masterCpusAllocatedPercent(self):
-        """Return the masterCpusAllocatedPercent attribute."""
+        """
+        Return the percent allocation of the CPUs
+
+        :return: the percent allocation of the CPUs
+        :rtype: float
+        """
         return self._master_cpus_allocated_percent
 
     @attribute(dtype="DevShort", label="masterCpusUsed")
     def masterCpusUsed(self):
-        """Return the masterCpusUsed attribute."""
+        """
+        Return the number of CPUs in use on the master node
+
+        :return: the number of CPUs in use on the master node
+        :rtype: int
+        """
         return self._master_cpus_used
 
     @attribute(dtype="DevShort", label="masterCpusTotal")
     def masterCpusTotal(self):
-        """Return the masterCpusTotal attribute."""
+        """
+        Return the number of CPUs that the master node has
+
+        :return: the number of CPUs that the master node has
+        :rtype: int
+        """
         return self._master_cpus_total
 
     @attribute(dtype="DevFloat", label="masterDiskPercent")
     def masterDiskPercent(self):
-        """Return the masterDiskPercent attribute."""
+        """
+        Return the proportion of the master node disk that has been used
+
+        :return: the proportion of the master node disk that has been
+            used, as a percentage
+        :rtype: float
+        """
         return self._master_disk_percent
 
     @attribute(dtype="DevDouble", label="masterDiskUsed")
     def masterDiskUsed(self):
-        """Return the masterDiskUsed attribute."""
+        """
+        Return the amount of the master node disk that has been used
+
+        :return: the amount of the master node disk that has been
+            used
+        :rtype: double
+        """
         return self._master_disk_used
 
     @attribute(dtype="DevFloat", label="masterDiskTotal")
     def masterDiskTotal(self):
-        """Return the masterDiskTotal attribute."""
+        """
+        The total disk size on the master node
+
+        :return: the total disk size on the master node
+        :rtype: float
+        """
         return self._master_disk_total
 
     @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemPercent(self):
-        """Return the masterMemPercent attribute."""
+        """
+        Return the proportion of memory that has been used on the master
+            node
+
+        :return:  the proportion of memory that has been used on the
+            master node
+        :rtype: float
+        """
         return self._master_mem_percent
 
     @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemUsed(self):
-        """Return the masterMemUsed attribute."""
+        """
+        Return the amount of memory that has been used on the master
+            node
+
+        :return:  the amount of memory that has been used on the master
+            node
+        :rtype: float
+        """
         return self._master_mem_used
 
     @attribute(dtype="DevFloat", label="masterMemTotal")
     def masterMemTotal(self):
-        """Return the masterMemTotal attribute."""
+        """
+        Return the total amount of memory on the master node
+
+        :return:  the total amount of memory on the master node
+        :rtype: float
+        """
         return self._master_mem_total
 
     @attribute(dtype=("DevShort",), max_dim_x=100, label="shadowMasterPoolNodeIds")
     def shadowMasterPoolNodeIds(self):
-        """Return the shadowMasterPoolNodeIds attribute."""
+        """
+        Return the ids of nodes in the shadow master pool
+
+        :return: the ids of nodes in the shadow master pool
+        :rtype: list of int
+        """
         return self._shadow_master_pool_node_ids
 
     @attribute(dtype=("DevState",), max_dim_x=100, label="shadowMasterPoolStatus")
     def shadowMasterPoolStatus(self):
-        """Return the shadowMasterPoolStatus attribute."""
+        """
+        Return the states of nodes in the shadow master pool
+
+        :return: the states of nodes in the shadow master pool
+        :rtype: list of :py:class:`tango.DevState`
+        """
         return self._shadow_master_pool_status
 
     # --------
@@ -318,14 +461,16 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the StartJob command
+            Stateless do hook for the
+            :py:meth:`MccsClusterManager.StartJob`
+            command
 
             :param argin: the job id
-            :type argin: 'DevShort'
+            :type argin: :py:class:`tango.DevShort`
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -344,11 +489,12 @@ class MccsClusterManager(MccsGroupDevice):
         Command to start a particular job
 
         :param argin: the job id
-        :type argin: 'DevShort'
+        :type argin: :py:class:`tango.DevShort`
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("StartJob")
         (return_code, message) = handler(argin)
@@ -361,14 +507,16 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the StopJob command
+            Stateless do hook for the
+            :py:meth:`MccsClusterManager.StopJob`
+            command
 
             :param argin: the job id
-            :type argin: 'DevShort'
+            :type argin: :py:class:`tango.DevShort`
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -387,11 +535,12 @@ class MccsClusterManager(MccsGroupDevice):
         Command to stop a particular job
 
         :param argin: the job id
-        :type argin: 'DevShort'
+        :type argin: :py:class:`tango.DevShort`
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("StopJob")
         (return_code, message) = handler(argin)
@@ -404,14 +553,16 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the SubmitJob command
+            Stateless do hook for the
+            :py:meth:`MccsClusterManager.SubmitJob`
+            command
 
             :param argin: the job configuration
-            :type argin: 'DevShort'
+            :type argin: :py:class:`tango.DevShort`
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -430,11 +581,12 @@ class MccsClusterManager(MccsGroupDevice):
         Command to submit a job to the queue
 
         :param argin: the job configuration
-        :type argin: 'DevShort'
+        :type argin: :py:class:`tango.DevShort`
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("SubmitJob")
         (return_code, message) = handler(argin)
@@ -447,14 +599,16 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self, argin):
             """
-            Stateless do hook for the GetJobStatus command
+            Stateless do hook for the
+            :py:meth:`MccsClusterManager.GetJobStatus`
+            command
 
             :param argin: the job id
-            :type argin: 'DevShort'
+            :type argin: :py:class:`tango.DevShort`
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -473,11 +627,12 @@ class MccsClusterManager(MccsGroupDevice):
         Poll the current status for a job
 
         :param argin: the job id
-        :type argin: 'DevShort'
+        :type argin: :py:class:`tango.DevShort`
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("GetJobStatus")
         (return_code, message) = handler(argin)
@@ -490,12 +645,14 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self):
             """
-            Stateless do hook for the ClearJobStats command
+            Stateless do hook for the
+            :py:meth:`MccsClusterManager.ClearJobStats`
+            command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -514,7 +671,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("ClearJobStats")
         (return_code, message) = handler()
@@ -527,12 +684,14 @@ class MccsClusterManager(MccsGroupDevice):
 
         def do(self):
             """
-            Stateless do hook for the PingMasterPool command
+            Stateless do hook for the
+            :py:meth:`MccsClusterManager.PingMasterPool`
+            command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -551,7 +710,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("PingMasterPool")
         (return_code, message) = handler()
@@ -564,7 +723,17 @@ class MccsClusterManager(MccsGroupDevice):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsClusterManager module."""
+    """
+    Main function of the :py:mod:`ska.low.mccs.cluster_manager` module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
     return MccsClusterManager.run_server(args=args, **kwargs)
 
 

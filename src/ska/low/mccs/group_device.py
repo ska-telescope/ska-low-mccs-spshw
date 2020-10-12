@@ -48,7 +48,15 @@ class MccsGroupDevice(SKABaseDevice):
         """
 
         def do(self):
-            """Initialises the attributes and properties of the MccsGroupDevice."""
+            """
+            Initialises the attributes and properties of the
+            `MccsGroupDevice`.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
             super().do()
             device = self.target
             device._member_states = (DevState.UNKNOWN,)
@@ -78,7 +86,12 @@ class MccsGroupDevice(SKABaseDevice):
         doc="An aggregated list of Tango states for each member in the group",
     )
     def memberStates(self):
-        """Return the memberStates attribute."""
+        """
+        Return the states of this device group
+
+        :return: states of members of this device group
+        :rtype: list of :py:class:`tango.DevState`
+        """
         return self._member_states
 
     @attribute(
@@ -87,7 +100,12 @@ class MccsGroupDevice(SKABaseDevice):
         doc="A list of Tango addresses to devices comprising this group",
     )
     def memberList(self):
-        """Return the memberList attribute."""
+        """
+        Return a list of members of this group
+
+        :return: FQDNs of members of this device group
+        :rtype: list of string
+        """
         return self._member_list
 
     # --------
@@ -112,6 +130,19 @@ class MccsGroupDevice(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`MccsGroupDevice.AddMember` command
+
+            :param argin: name of the device to add
+            :type argin: string
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
+
             return (ResultCode.OK, "AddMember command succeeded")
 
     @command(
@@ -126,9 +157,12 @@ class MccsGroupDevice(SKABaseDevice):
         Registers this device as a member of this composite group
 
         :param argin: The device name to register eg. low-mccs/station/001
-        :type argin: 'DevString'
+        :type argin: :py:class:`tango.DevString`
 
-        :return: (ResultCode, 'informational message')
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("AddMember")
         (return_code, message) = handler(argin)
@@ -140,6 +174,18 @@ class MccsGroupDevice(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`MccsGroupDevice.RemoveMember` command
+
+            :param argin: name of the device to remove
+            :type argin: string
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
             return (ResultCode.OK, "RemoveMember command succeeded")
 
     @command(
@@ -154,9 +200,12 @@ class MccsGroupDevice(SKABaseDevice):
         De-registers a device as a memnber of this composite group
 
         :param argin: The name of the device to de-register
-        :type argin: 'DevString'
+        :type argin: :py:class:`tango.DevString`
 
-        :return: (ResultCode, 'informational message')
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("RemoveMember")
         (return_code, message) = handler(argin)
@@ -168,6 +217,18 @@ class MccsGroupDevice(SKABaseDevice):
         """
 
         def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`MccsGroupDevice.Run` command
+
+            :param argin: the command to run
+            :type argin: string
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
             return (ResultCode.OK, "Run command succeeded")
 
     @command(
@@ -183,9 +244,12 @@ class MccsGroupDevice(SKABaseDevice):
         devices
 
         :param argin: The command to run
-        :type argin: 'DevString'
+        :type argin: :py:class:`tango.DevString`
 
-        :return: (ResultCode, 'informational message')
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("Run")
         (return_code, message) = handler(argin)
@@ -198,7 +262,17 @@ class MccsGroupDevice(SKABaseDevice):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsGroupDevice module."""
+    """
+    Main function of the :py:mod:`ska.low.mccs.group_device` module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
     return MccsGroupDevice.run_server(args=args, **kwargs)
 
 

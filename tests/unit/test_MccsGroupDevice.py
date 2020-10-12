@@ -32,6 +32,11 @@ class TestMccsGroupDevice(object):
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.State() == DevState.OFF
         assert device_under_test.healthState == HealthState.OK
@@ -40,27 +45,62 @@ class TestMccsGroupDevice(object):
         assert device_under_test.testMode == TestMode.NONE
 
     def test_AddMember(self, device_under_test):
-        """Test for AddMember"""
+        """
+        Test for AddMember
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.AddMember("")
         assert result_code == ResultCode.OK
         assert message == "AddMember command succeeded"
 
     def test_RemoveMember(self, device_under_test):
-        """Test for RemoveMember"""
+        """
+        Test for RemoveMember
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.RemoveMember("")
         assert result_code == ResultCode.OK
         assert message == "RemoveMember command succeeded"
 
     def test_RunCommand(self, device_under_test):
-        """Test for RunCommand"""
+        """
+        Test for RunCommand
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.Run("")
         assert result_code == ResultCode.OK
         assert message == "Run command succeeded"
 
     def test_memberStates(self, device_under_test):
-        """Test for memberStates"""
+        """
+        Test for memberStates
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.memberStates == (DevState.UNKNOWN,)
 
     def test_memberList(self, device_under_test):
-        """Test for memberList"""
+        """
+        Test for memberList
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.memberList == ("",)

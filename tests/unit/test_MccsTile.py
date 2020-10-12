@@ -42,8 +42,9 @@ class TestTileHardwareManager:
         Test that the TileHardwareManager receives updated values, and
         re-evaluates device health, each time it polls the hardware
 
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: fixture
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
+            module
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
 
         voltage = 3.5
@@ -106,23 +107,14 @@ class TestMccsTile(object):
     device server methods.
     """
 
-    def test_tileId(self, device_under_test):
-        """
-        Test for the tileId attribute.
-
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
-        """
-        assert device_under_test.tileID == 1
-        device_under_test.tileID = 9
-        assert device_under_test.tileID == 9
-
     def test_logicalTileId(self, device_under_test):
         """
         Test for the logicalTpmId attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.logicalTileId == 0
         device_under_test.logicalTileId = 7
@@ -132,8 +124,10 @@ class TestMccsTile(object):
         """
         Test for the subarrayId attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.subarrayId == 0
         device_under_test.subarrayId = 3
@@ -143,52 +137,23 @@ class TestMccsTile(object):
         """
         Test for the stationId attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.stationId == 0
         device_under_test.stationId = 5
         assert device_under_test.stationId == 5
 
-    def test_ipAddress(self, device_under_test):
-        """
-        Test for the ipAddress attribute.
-
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
-        """
-        assert device_under_test.ipAddress == "0.0.0.0"
-        device_under_test.ipAddress = "10.0.23.99"
-        assert device_under_test.ipAddress == "10.0.23.99"
-
-    def test_lmcIp(self, device_under_test):
-        """
-        Test for the lmcIp attribute.
-
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
-        """
-        assert device_under_test.lmcIp == "0.0.0.0"
-        device_under_test.lmcIp = "10.0.23.50"
-        assert device_under_test.lmcIp == "10.0.23.50"
-
-    def test_lmcPort(self, device_under_test):
-        """
-        Test for the lmcPort attribute.
-
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
-        """
-        assert device_under_test.lmcPort == 30000
-        device_under_test.lmcPort = 40000
-        assert device_under_test.lmcPort == 40000
-
     def test_cspDestinationIp(self, device_under_test):
         """
         Test for the cspDestinationIp attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.cspDestinationIp == ""
         device_under_test.cspDestinationIp = "10.0.23.56"
@@ -198,8 +163,10 @@ class TestMccsTile(object):
         """
         Test for the cspDestinationMac attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.cspDestinationMac == ""
         device_under_test.cspDestinationMac = "10:fe:fa:06:0b:99"
@@ -209,8 +176,10 @@ class TestMccsTile(object):
         """
         Test for the cspDestinationPort attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.cspDestinationPort == 0
         device_under_test.cspDestinationPort = 4567
@@ -220,8 +189,10 @@ class TestMccsTile(object):
         """
         Test for the firmwareName attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.firmwareName == ""
         device_under_test.firmwareName = "test_firmware"
@@ -231,8 +202,10 @@ class TestMccsTile(object):
         """
         Test for the firmwareVersion attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.firmwareVersion == ""
         device_under_test.firmwareVersion = "01-beta"
@@ -242,8 +215,10 @@ class TestMccsTile(object):
         """
         Test for the voltage attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
@@ -255,8 +230,10 @@ class TestMccsTile(object):
         """
         Test for the current attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
@@ -268,8 +245,10 @@ class TestMccsTile(object):
         """
         Test for the isProgrammed attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         device_under_test.Connect(True)
@@ -281,8 +260,10 @@ class TestMccsTile(object):
         """
         Test for the board_temperature attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
@@ -294,8 +275,10 @@ class TestMccsTile(object):
         """
         Test for the fpga1_temperature attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
@@ -307,8 +290,10 @@ class TestMccsTile(object):
         """
         Test for the fpga2_temperature attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
@@ -320,8 +305,10 @@ class TestMccsTile(object):
         """
         Test for the fpga1_time attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -335,8 +322,10 @@ class TestMccsTile(object):
         """
         Test for the fpga2_time attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -349,8 +338,10 @@ class TestMccsTile(object):
         """
         Test for the antennaIds attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert (device_under_test.AntennaIds == []).all()
         new_ids = [i for i in range(8)]
@@ -361,8 +352,10 @@ class TestMccsTile(object):
         """
         Test for the fortyGbDestinationIps attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -395,8 +388,10 @@ class TestMccsTile(object):
         """
         Test for the fortyGbDestinationMacs attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -432,8 +427,10 @@ class TestMccsTile(object):
         """
         Test for the fortyGbDestinationPorts attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -466,8 +463,10 @@ class TestMccsTile(object):
         """
         Test for the adcPowerattribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.testMode = TestMode.TEST
         device_under_test.On()
@@ -480,8 +479,10 @@ class TestMccsTile(object):
         """
         Test for the currentTileBeamformerFrame attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -492,8 +493,10 @@ class TestMccsTile(object):
         """
         Test for the checkPendingDataRequests attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -504,8 +507,10 @@ class TestMccsTile(object):
         """
         Test for the isBeamformerRunning attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -518,8 +523,10 @@ class TestMccsTile(object):
         """
         Test for the phaseTerminalCount attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -532,8 +539,10 @@ class TestMccsTile(object):
         """
         Test for the ppsDelay attribute.
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -549,8 +558,10 @@ class TestMccsTile(object):
         """
         Test for Initialise
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(False)
@@ -564,8 +575,10 @@ class TestMccsTile(object):
     def test_On(self, device_under_test):
         """Test for On
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
@@ -575,8 +588,10 @@ class TestMccsTile(object):
         """
         Test for Connect
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         ss = io.StringIO()
@@ -590,8 +605,10 @@ class TestMccsTile(object):
         """
         Test for Disconnect from the board
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(False)
@@ -606,8 +623,10 @@ class TestMccsTile(object):
         """
         Test for GetFirmwareList
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -624,8 +643,10 @@ class TestMccsTile(object):
         """
         Test for DownloadFirmware
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(False)
@@ -641,8 +662,10 @@ class TestMccsTile(object):
         """
         Test for ProgramCPLD
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -658,8 +681,10 @@ class TestMccsTile(object):
         """
         Test for WaitPPSEvent
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -672,8 +697,10 @@ class TestMccsTile(object):
         """
         Test for GetRegisterList
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -689,8 +716,10 @@ class TestMccsTile(object):
         """
         Test for ReadRegister & WriteRegister
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -785,8 +814,10 @@ class TestMccsTile(object):
         """
         Test for ReadAddress and WriteAddress
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -808,8 +839,10 @@ class TestMccsTile(object):
         """
         Test for Configure40GCore
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -882,8 +915,10 @@ class TestMccsTile(object):
         """
         Test for SetLMCDownload
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -912,8 +947,10 @@ class TestMccsTile(object):
         """
         Test for SetChanneliserTruncation
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -945,8 +982,10 @@ class TestMccsTile(object):
         """
         Test for SetBeamFormerRegions
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -985,8 +1024,10 @@ class TestMccsTile(object):
         """
         Test for ConfigureStationBeamformer
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1019,8 +1060,10 @@ class TestMccsTile(object):
         """
         Test for LoadCalibrationCoefficients
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1048,8 +1091,10 @@ class TestMccsTile(object):
         """
         Test for LoadBeamAngle
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1066,8 +1111,10 @@ class TestMccsTile(object):
         """
         Test for LoadAntennaTapering
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1086,8 +1133,10 @@ class TestMccsTile(object):
         """
         Test for SwitchCalibrationBank
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1102,8 +1151,10 @@ class TestMccsTile(object):
         """
         Test for SetPointingDelay
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         delays = [3]
         for i in range(32):
@@ -1127,8 +1178,10 @@ class TestMccsTile(object):
         """
         Test for LoadPointingDelay
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1144,8 +1197,10 @@ class TestMccsTile(object):
         """
         Test for StartBeamformer
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1163,8 +1218,10 @@ class TestMccsTile(object):
         """
         Test for StopBeamformer
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1179,8 +1236,10 @@ class TestMccsTile(object):
         """
         Test for ConfigureIntegratedChannelData
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1200,8 +1259,10 @@ class TestMccsTile(object):
         """
         Test for ConfigureIntegratedBeamData
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1221,8 +1282,10 @@ class TestMccsTile(object):
         """
         Test for SendRawData
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1246,8 +1309,10 @@ class TestMccsTile(object):
         """
         Test for SendChannelisedData
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1273,8 +1338,10 @@ class TestMccsTile(object):
         """
         Test for SendChannelisedDataContinuous
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1303,8 +1370,10 @@ class TestMccsTile(object):
         """
         Test for SendBeamData
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1322,8 +1391,10 @@ class TestMccsTile(object):
         """
         Test for StopDataTransmission
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1338,8 +1409,10 @@ class TestMccsTile(object):
         """
         Test for ComputeCalibrationCoefficients
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1354,8 +1427,10 @@ class TestMccsTile(object):
         """
         Test for StartAcquisition
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1373,8 +1448,10 @@ class TestMccsTile(object):
         """
         Test for SetTimeDelays
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         delays = []
@@ -1393,8 +1470,10 @@ class TestMccsTile(object):
         """
         Test for SetCspRounding
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1407,8 +1486,10 @@ class TestMccsTile(object):
         """
         Test for SetLmcIntegratedDownload
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1447,8 +1528,10 @@ class TestMccsTile(object):
         """
         Test for SendRawDataSynchronised
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1466,8 +1549,10 @@ class TestMccsTile(object):
         """
         Test for SendChannelisedDataNarrowband
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1507,8 +1592,10 @@ class TestMccsTile(object):
         """
         Test for TweakTransceivers
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1521,8 +1608,10 @@ class TestMccsTile(object):
         """
         Test for PostSynchronisation
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
@@ -1535,8 +1624,10 @@ class TestMccsTile(object):
         """
         Test for SyncFpgas
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(False)
@@ -1549,8 +1640,10 @@ class TestMccsTile(object):
         """
         Test for CalculateDelay
 
-        :param device_under_test: a DeviceProxy under a DeviceTestContext
-        :type device_under_test: DeviceProxy
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)

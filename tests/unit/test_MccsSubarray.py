@@ -36,6 +36,11 @@ class TestMccsSubarray:
         Test for Initial state.
 
         :todo: Test for different memorized values of adminMode.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -56,6 +61,11 @@ class TestMccsSubarray:
     def test_GetVersionInfo(self, device_under_test):
         """
         Test for GetVersionInfo
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
@@ -63,6 +73,11 @@ class TestMccsSubarray:
     def test_AssignResources(self, device_under_test):
         """
         Test for AssignResources
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.set_source(DevSource.DEV)
 
@@ -83,6 +98,11 @@ class TestMccsSubarray:
     def test_sendTransientBuffer(self, device_under_test):
         """
         Test for sendTransientBuffer
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         segment_spec = []
         returned = device_under_test.sendTransientBuffer(segment_spec)
@@ -95,6 +115,11 @@ class TestMccsSubarray:
     def test_buildState(self, device_under_test):
         """
         Test for buildState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         build_info = release.get_release_info()
         assert device_under_test.buildState == build_info
@@ -102,6 +127,11 @@ class TestMccsSubarray:
     def test_versionId(self, device_under_test):
         """
         Test for versionId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.versionId == release.version
 
@@ -109,11 +139,21 @@ class TestMccsSubarray:
     def test_scanId(self, device_under_test):
         """
         Test for scanID attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.scanId == -1
 
     def test_stationFQDNs(self, device_under_test):
         """
         Test for stationFQDNs attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.stationFQDNs is None

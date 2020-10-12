@@ -43,6 +43,12 @@ class CliMeta(type):
 def commandResultAsString(method):
     """
     Wrapper to format device command results as a two-line string
+
+    :param method: the method to wrap
+    :type method: callable
+
+    :return: the wrapped method
+    :rtype: callable
     """
 
     @functools.wraps(method)
@@ -63,18 +69,32 @@ class MccsTileCli(metaclass=CliMeta):
 
     @commandResultAsString
     def connect(self):
-        """Connect to the hardware"""
+        """
+        Connect to the hardware
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        """
         return self._dp.command_inout("connect", True)
 
     def subarrayid(self):
-        """return the id of the subarray the tike has been allocated to"""
+        """
+        Return the id of the subarray the tile has been allocated to
+
+        :return: subarray ID
+        :rtype: int
+        """
         return self._dp.subarrayId
 
     def logginglevel(self, level=None):
-        """Get and/or set the logging level of the device.
+        """
+        Get and/or set the logging level of the device.
 
         :param level: the logging level, defaults to None (only print the level)
         :type level: str, optional
+
         :return: logging level value
         :rtype: str
         """

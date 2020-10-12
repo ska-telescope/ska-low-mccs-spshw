@@ -13,8 +13,8 @@ This module contains the tests for MccsStation.
 """
 import logging
 import pytest
-import time
 import tango
+from tango import DevSource
 
 from ska.base import SKABaseDeviceStateModel
 from ska.base.commands import CommandError, ResultCode
@@ -44,8 +44,9 @@ class TestStationHardwareManager:
         Test that the StationHardwareManager receives updated values,
         and re-evaluates device health, each time it polls the hardware
 
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: fixture
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
+            module
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         hardware = StationHardware()
         station_hardware_manager = StationHardwareManager(hardware)
@@ -80,6 +81,11 @@ class TestMccsStation:
         """
         Test for Initial state.
         A freshly initialised station device has no assigned resources
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -101,24 +107,50 @@ class TestMccsStation:
 
     # overridden base class attributes
     def test_buildState(self, device_under_test):
-        """Test for buildState"""
+        """
+        Test for buildState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         build_info = release.get_release_info()
         assert device_under_test.buildState == build_info
 
     # overridden base class commands
     def test_GetVersionInfo(self, device_under_test):
-        """Test for GetVersionInfo"""
+        """
+        Test for GetVersionInfo
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
     def test_versionId(self, device_under_test):
-        """Test for versionId"""
+        """
+        Test for versionId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
     def test_subarrayId(self, device_under_test):
         """
         Test for subarrayId attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         station = device_under_test  # to make test easier to read
         mock_tile_1 = tango.DeviceProxy("low-mccs/tile/0001")
@@ -143,39 +175,49 @@ class TestMccsStation:
         assert mock_tile_2.subarrayId == 1
 
     def test_beamFQDNs(self, device_under_test):
-        """Test for beamFQDNs attribute"""
+        """
+        Test for beamFQDNs attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.beamFQDNs is None
 
     def test_transientBufferFQDN(self, device_under_test):
-        """Test for transientBufferFQDN attribute"""
+        """
+        Test for transientBufferFQDN attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.transientBufferFQDN == ""
 
     def test_delayCentre(self, device_under_test):
         """
-        Test for delayCentre attribute. This is a messy test because:
-        (a) it is a READWRITE attribute, so we want to test that we can write
-        to it AND read the value back;
-        (b) delayCentre is a polled attribute, so you have to wait a poll
-        period in order to read back what you've written; else you just read
-        back the cached value
-        (c) there is some loss of floating-point precision during transfer, so
-        you have to check approximate equality when reading back what you've
-        written.
+        Test for delayCentre attribute. This is a messy test because
+        there is some loss of floating-point precision during transfer,
+        so you have to check approximate equality when reading back what
+        you've written.
 
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.set_source(DevSource.DEV)
         assert list(device_under_test.delayCentre) == []
 
         # SETUP
         dummy_location = (-30.72113, 21.411128)
         float_format = "{:3.4f}"
         dummy_location_str = [float_format.format(x) for x in dummy_location]
-        sleep_seconds = (
-            device_under_test.get_attribute_poll_period("delayCentre") / 1000.0 * 1.2
-        )
 
         # RUN
         device_under_test.delayCentre = dummy_location
-        time.sleep(sleep_seconds)
         delay_centre = device_under_test.delayCentre
 
         # CHECK
@@ -183,27 +225,69 @@ class TestMccsStation:
         assert delay_centre_str == dummy_location_str
 
     def test_calibrationCoefficients(self, device_under_test):
-        """Test for calibrationCoefficients attribute"""
+        """
+        Test for calibrationCoefficients attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.calibrationCoefficients is None
 
     def test_isCalibrated(self, device_under_test):
-        """Test for isCalibrated attribute"""
+        """
+        Test for isCalibrated attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert not device_under_test.isCalibrated
 
     def test_isConfigured(self, device_under_test):
-        """Test for isConfigured attribute"""
+        """
+        Test for isConfigured attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert not device_under_test.isConfigured
 
     def test_calibrationJobId(self, device_under_test):
-        """Teset for calibrationJobId attribute"""
+        """
+        Test for calibrationJobId attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.calibrationJobId == 0
 
     def test_daqJobId(self, device_under_test):
-        """Test for daqJobId attributes"""
+        """
+        Test for daqJobId attributes
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.daqJobId == 0
 
     def test_dataDirectory(self, device_under_test):
-        """Test for dataDirectory attribute"""
+        """
+        Test for dataDirectory attribute
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.dataDirectory == ""
 
 
@@ -213,43 +297,61 @@ class TestStationPowerManager:
     class
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def logger(self):
         """
         Fixture that returns a logger for the power manager under test
         (or its components) to use
+
+        :return: a logger for the power manager under test to use
+        :rtype: :py:class:`logging.Logger` or something that implements
+            the same logging interface
         """
         return logging.getLogger()
 
-    @pytest.fixture
+    @pytest.fixture()
     def hardware_manager(self):
         """
         Fixture that returns a hardware manager for the power manager
         under test to use
+
+        :return: a hardware manager for power manager under test to use
+        :rtype: :py:class:`ska.low.mccs.station.StationHardwareManager`
         """
         return StationHardwareManager()
 
-    @pytest.fixture
+    @pytest.fixture()
     def power_manager(self, hardware_manager):
         """
         Fixture that returns a power manager with no subservient devices
 
-        :param hardware_manager: fixture that returns a hardware manager:
-            something that can be turned off and on.
+        :param hardware_manager: fixture that returns a mock that can
+            serve as a hardware manager for power management purposes;
+            that is, something that can be turned on and off
+        :type hardware_manager: object
+
+        :return: a power manager with no subservient devices
+        :rtype: :py:class:`ska.low.mccs.power.PowerManager`
+
         """
         return StationPowerManager(hardware_manager, [])
 
-    @pytest.fixture
+    @pytest.fixture()
     def state_model(self, logger):
         """
-        Fixture that returns a state model for the power manager under
-        test to use
+        Fixture that returns a state model for the command under test to
+        use
 
         :param logger: a logger for the state model to use
+        :type logger: an instance of :py:class:`logging.Logger`, or
+            an object that implements the same interface
+
+        :return: a state model for the command under test to use
+        :rtype: :py:class:`ska.base.DeviceStateModel`
         """
         return SKABaseDeviceStateModel(logger)
 
-    def test_OnCommand(self, power_manager, state_model, logger):
+    def test_OnCommand(self, power_manager, state_model):
         """
         Test the working of the On command.
 
@@ -262,8 +364,14 @@ class TestStationPowerManager:
         the state model is in the OFF state; check that running the
         On() command succeeds, and that the result is the state model
         moves to state ON, and the power manager thinks it is on.
+
+        :param power_manager: a power manager with no subservient
+            devices
+        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
+        :param state_model: the state model for the device
+        :type state_model: :py:class:`ska.base.DeviceStateModel`
         """
-        on_command = MccsStation.OnCommand(power_manager, state_model, logger)
+        on_command = MccsStation.OnCommand(power_manager, state_model)
         assert not power_manager.is_on()
 
         all_states = {
@@ -309,6 +417,12 @@ class TestStationPowerManager:
         the state model is in the ON state; check that running the
         Off() command succeeds, and that the result is the state model
         moves to state OFF, and the power manager thinks it is off.
+
+        :param power_manager: a power manager with no subservient
+            devices
+        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
+        :param state_model: the state model for the device
+        :type state_model: :py:class:`ska.base.DeviceStateModel`
         """
         off_command = MccsStation.OffCommand(power_manager, state_model)
         power_manager.on()

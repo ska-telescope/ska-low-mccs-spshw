@@ -45,7 +45,7 @@ def devices(tango_context):
         returns a DeviceProxy.
 
     :return: a dictionary of devices keyed by their name
-    :rtype: dict<string, DeviceProxy>
+    :rtype: dict<string, :py:class:`tango.DeviceProxy`>
     """
     return {
         "controller": tango_context.get_device("low-mccs/control/control"),
@@ -66,7 +66,7 @@ def we_have_device(devices, device_name):
     Asserts that existence/availability of a device
 
     :param devices: fixture that provides access to devices by their name
-    :type devices: dict<string, DeviceProxy>
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param device_name: name of the device
     :type device_name: str
     """
@@ -87,7 +87,7 @@ def device_is_offon(devices, device_name, device_state):
     Asserts that a device is off/on
 
     :param devices: fixture that provides access to devices by their name
-    :type devices: dict<string, DeviceProxy>
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param device_name: name of the device
     :type device_name: str
     :param device_state: asserted state of the device -- either "off" or
@@ -104,7 +104,7 @@ def we_turn_device_onoff(devices, device_name, device_state):
     Turn a device off/on
 
     :param devices: fixture that provides access to devices by their name
-    :type devices: dict<string, DeviceProxy>
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param device_name: name of the device
     :type device_name: str
     :param device_state: target state of the device -- either "off" or
@@ -122,7 +122,7 @@ def device_should_be_onoff(devices, device_name, device_state):
     Asserts that the controller device is on
 
     :param devices: fixture that provides access to devices by their name
-    :type devices: dict<string, DeviceProxy>
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param device_name: name of the device
     :type device_name: str
     :param device_state: asserted state of the device -- either "off" or

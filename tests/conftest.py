@@ -13,7 +13,7 @@ def pytest_addoption(parser):
     need for a MultiDeviceTestContext
 
     :param parser: the command line options parser
-    :type parser: an argparse parser
+    :type parser: :py:class:`argparse.ArgumentParser`
     """
     parser.addoption(
         "--true-context",
@@ -32,6 +32,9 @@ def _load_data_from_json(path):
     :param path: path to the JSON file from which the dataset is to be
         loaded.
     :type path: string
+
+    :return: data loaded and deserialised from a JSON data file
+    :rtype: anything JSON-serialisable
     """
     with open(path, "r") as json_file:
         return json.load(json_file)
@@ -47,6 +50,10 @@ def _load_devices(path, device_names):
     :param device_names: names of the devices for which configuration
         data should be loaded
     :type device_names: list of string
+
+    :return: a devices_info spec in a format suitable for use by as
+        input to a :py:class:`tango.test_context.MultiDeviceTestContext`
+    :rtype: dict
     """
     configuration = _load_data_from_json(path)
     devices_by_class = {}
@@ -88,6 +95,14 @@ def devices_to_load(request):
       will be interpretated as the ska.low.mccs.MccsController class
     * "devices": a list of names of the devices that are to be loaded.
 
+    :param request: A pytest object giving access to the requesting test
+        context.
+    :type request: :py:class:`_pytest.fixtures.SubRequest`
+
+    :return: the "device_to_load" global from the test module,
+        containing a specification of the device to be included in the
+        TANGO test context
+    :rtype: dict
     """
     return request.module.devices_to_load
 
@@ -106,6 +121,14 @@ def device_to_load(request):
       will be interpretated as the ska.low.mccs.MccsController class
     * "device": the name of the devices that is to be loaded.
 
+    :param request: A pytest object giving access to the requesting test
+        context.
+    :type request: :py:class:`_pytest.fixtures.SubRequest`
+
+    :return: the "device_to_load" global from the test module,
+        containing a specification of the device to be included in the
+        TANGO test context
+    :rtype: dict
     """
     return getattr(request.module, "device_to_load", None)
 
@@ -119,8 +142,10 @@ def device_info(device_to_load):
 
     :param device_to_load: fixture that provides a specification of the
         device that is to be included in the devices_info dictionary
-    :type device_to_load: specification of devices to be loaded
     :type device_to_load: dictionary
+
+    :return: a specification of devices
+    :rtype: dict
     """
     devices = _load_devices(
         path=device_to_load["path"], device_names=[device_to_load["device"]]
@@ -144,8 +169,10 @@ def devices_info(devices_to_load):
 
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
-    :type devices_to_load: specification of devices to be loaded
     :type devices_to_load: dictionary
+
+    :return: a specification of devices
+    :rtype: dict
     """
     devices = _load_devices(
         path=devices_to_load["path"], device_names=devices_to_load["devices"]

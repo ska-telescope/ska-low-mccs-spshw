@@ -34,7 +34,7 @@ def _tango_true_context():
             :type fqdn: string
 
             :return: a DeviceProxy to the device with the given fqdn
-            :rtype: tango.DeviceProxy
+            :rtype: :py:class:`tango.DeviceProxy`
             """
             return tango.DeviceProxy(fqdn)
 
@@ -56,7 +56,7 @@ def _tango_test_context(_devices_info, _module_mocker):
 
     :return: a test contest set up as specified by the _devices_info
         argument
-    :rtype: tango.MultiDeviceTestContext
+    :rtype: :py:class:`tango.MultiDeviceTestContext`
     """
 
     def _get_open_port():
@@ -106,13 +106,13 @@ def tango_context(request, devices_info, module_mocker):
 
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: _pytest.fixtures.SubRequest
+    :type request: :py:class:`_pytest.fixtures.SubRequest`
     :param devices_info: Information about the devices under test that
         are needed to stand the device up in a DeviceTestContext, such
         as the device classes and properties
     :type devices_info: dict
     :param module_mocker: a module-scope thin wrapper for the
-        `unittest.mock` package
+        :py:mod:`unittest.mock` package
     :type module_mocker: wrapper
     :yield: a tango context
     """

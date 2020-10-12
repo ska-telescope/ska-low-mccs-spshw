@@ -23,7 +23,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         Test for the voltage attribute.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
@@ -36,7 +36,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         Test for the current attribute.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
@@ -49,7 +49,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         Test for the board_temperature attribute.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
@@ -62,7 +62,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         Test for the fpga1_temperature attribute.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
@@ -75,7 +75,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         Test for the fpga2_temperature attribute.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()

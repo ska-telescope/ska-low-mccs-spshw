@@ -134,7 +134,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook for initialisation of the attributes and
-            properties of the MccsSubarray.
+            properties of the `MccsSubarray`.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -215,7 +220,10 @@ class MccsSubarray(SKASubarray):
     )
     def scanId(self):
         """
-        Return the scanId attribute.
+        Return the scan id
+
+        :return: the scan id
+        :rtype: int
         """
         return self._scan_id
 
@@ -239,7 +247,10 @@ class MccsSubarray(SKASubarray):
     )
     def stationFQDNs(self):
         """
-        Return the stationFQDNs attribute.
+        Return the FQDNs of stations assigned to this subarray
+
+        :return: FQDNs of stations assigned to this subarray
+        :rtype: list of str
         """
         return self.station_pool_manager.fqdns
 
@@ -255,12 +266,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            On command
+            :py:meth:`MccsSubarray.On` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -275,12 +286,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            Off command
+            :py:meth:`MccsSubarray.Off` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -295,14 +306,15 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            AssignResources command
+            :py:meth:`MccsSubarray.AssignResources` command
 
             :param argin: The resources to be assigned
             :type argin: list of str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -319,14 +331,16 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            ReleaseResources command
+            :py:meth:`MccsSubarray.ReleaseResources`
+            command
 
             :param argin: The resources to be released
             :type argin: list of str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -343,12 +357,13 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            ReleaseAllResources command
+            :py:meth:`MccsSubarray.ReleaseAllResources`
+            command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -365,14 +380,15 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            Configure command
+            :py:meth:`MccsSubarray.Configure` command
 
             :param argin: Configuration specification
             :type argin: JSON str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             result_code = ResultCode.OK
             message = "Configure command completed successfully"
@@ -398,14 +414,15 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            Scan command
+            :py:meth:`MccsSubarray.Scan` command
 
             :param argin: Scan specification
             :type argin: JSON string
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do(argin)
 
@@ -420,12 +437,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            EndScan command
+            :py:meth:`MccsSubarray.EndScan` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -440,12 +457,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            End command
+            :py:meth:`MccsSubarray.End` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -460,12 +477,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            Abort command
+            :py:meth:`MccsSubarray.Abort` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -480,12 +497,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            ObsReset command
+            :py:meth:`MccsSubarray.ObsReset` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -500,12 +517,12 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            Restart command
+            :py:meth:`MccsSubarray.Restart` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -522,6 +539,26 @@ class MccsSubarray(SKASubarray):
         """
 
         def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`MccsSubarray.SendTransientBuffer`
+            command
+
+            :param argin: specification of the segment of the transient
+                buffer to send, comprising:
+                1. Start time (timestamp: milliseconds since UNIX epoch)
+                2. End time (timestamp: milliseconds since UNIX epoch)
+                3. Dispersion measure
+                Together, these parameters narrow the selection of
+                transient buffer data to the period of time and
+                frequencies that are of interest.
+            :type argin: array of int
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)
             return (ResultCode.OK, "SendTransientBuffer command completed successfully")
@@ -563,12 +600,14 @@ class MccsSubarray(SKASubarray):
 
         :todo: This method is a stub that does nothing but return a
             dummy string.
+
         :param argin: Specification of the segment of the transient
             buffer to send
-        :type argin: DevVarLongArray
+        :type argin: :py:class:`tango.DevVarLongArray`
+
         :return: ASCII String that indicates status, for information
             purposes only
-        :rtype: DevString
+        :rtype: :py:class:`tango.DevString`
         """
         handler = self.get_command_object("SendTransientBuffer")
         (result_code, message) = handler(argin)
@@ -580,7 +619,15 @@ class MccsSubarray(SKASubarray):
 # ----------
 def main(args=None, **kwargs):
     """
-    Mainline for the MccsSubarray module.
+    Main function of the :py:mod:`ska.low.mccs.subarray` module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
     """
     return MccsSubarray.run_server(args=args, **kwargs)
 

@@ -32,38 +32,90 @@ class TestMccsController:
     """Test case for packet generation."""
 
     def test_State(self, device_under_test):
-        """Test for State"""
+        """
+        Test for State
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.State() == tango.DevState.OFF
 
     def test_Status(self, device_under_test):
-        """Test for Status"""
+        """
+        Test for Status
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.Status() == "The device is in OFF state."
 
     def test_GetVersionInfo(self, device_under_test):
-        """Test for GetVersionInfo"""
+        """
+        Test for GetVersionInfo
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         vinfo = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [vinfo]
 
     @pytest.mark.skip(reason="have to work out how this works")
     def test_isCapabilityAchievable(self, device_under_test):
-        """Test for isCapabilityAchievable"""
+        """
+        Test for isCapabilityAchievable
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.isCapabilityAchievable([[0], [""]]) is not False
 
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(self, device_under_test):
-        """Test for Reset"""
+        """
+        Test for Reset
 
-        with pytest.raises(Exception):
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+
+        with pytest.raises(
+            tango.DevFailed,
+            match="Command Reset not allowed when the device is in OFF state",
+        ):
             device_under_test.Reset()
 
     def test_On(self, device_under_test):
-        """Test for On"""
+        """
+        Test for On
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
 
     def test_Off(self, device_under_test):
-        """Test for Off"""
+        """
+        Test for Off
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         # Need to turn it on before we can turn it off
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Off()
@@ -71,26 +123,54 @@ class TestMccsController:
         assert message == "Off command completed OK"
 
     def test_StandbyLow(self, device_under_test):
-        """Test for StandbyLow"""
+        """
+        Test for StandbyLow
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.StandbyLow()
         assert result_code == ResultCode.OK
         assert message == "Stub implementation of StandbyLowCommand(), does nothing"
 
     def test_StandbyFull(self, device_under_test):
-        """Test for StandbyFull"""
+        """
+        Test for StandbyFull
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.StandbyFull()
         assert result_code == ResultCode.OK
         assert message == "Stub implementation of StandbyFullCommand(), does nothing"
 
     def test_Operate(self, device_under_test):
-        """Test for Operate"""
+        """
+        Test for Operate
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         # assert device_under_test.Operate() == 0
         [[result_code], [message]] = device_under_test.Operate()
         assert result_code == ResultCode.OK
         assert message == "Stub implementation of OperateCommand(), does nothing"
 
     def test_Maintenance(self, device_under_test):
-        """Test for Maintenance"""
+        """
+        Test for Maintenance
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         # assert device_under_test.Maintenance() is None
         [[result_code], [message]] = device_under_test.Maintenance()
         assert result_code == ResultCode.OK
@@ -99,6 +179,11 @@ class TestMccsController:
     def test_Allocate(self, device_under_test):
         """
         Test the Allocate command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         controller = device_under_test  # for readability
         mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -264,6 +349,11 @@ class TestMccsController:
     def test_Release(self, device_under_test):
         """
         Test Release command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         controller = device_under_test  # for readability
         mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -355,44 +445,114 @@ class TestMccsController:
         assert mock_station_2.subarrayId == 0
 
     def test_buildState(self, device_under_test):
-        """Test for buildState"""
+        """
+        Test for buildState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         binfo = ", ".join((release.name, release.version, release.description))
         assert device_under_test.buildState == binfo
 
     def test_versionId(self, device_under_test):
-        """Test for versionId"""
+        """
+        Test for versionId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.versionId == release.version
 
     def test_healthState(self, device_under_test):
-        """Test for healthState"""
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.healthState == HealthState.OK
 
     def test_controlMode(self, device_under_test):
-        """Test for controlMode"""
+        """
+        Test for controlMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.controlMode == ControlMode.REMOTE
 
     def test_simulationMode(self, device_under_test):
-        """Test for simulationMode"""
+        """
+        Test for simulationMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.simulationMode == SimulationMode.FALSE
 
     def test_testMode(self, device_under_test):
-        """Test for testMode"""
+        """
+        Test for testMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.testMode == TestMode.NONE
 
     def test_commandProgress(self, device_under_test):
-        """Test for commandProgress"""
+        """
+        Test for commandProgress
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.commandProgress == 0
 
     def test_commandDelayExpected(self, device_under_test):
-        """Test for commandDelayExpected"""
+        """
+        Test for commandDelayExpected
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.commandDelayExpected == 0
 
     def test_maxCapabilities(self, device_under_test):
-        """Test for maxCapabilities"""
+        """
+        Test for maxCapabilities
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.maxCapabilities is None
 
     def test_availableCapabilities(self, device_under_test):
-        """Test for availableCapabilities"""
+        """
+        Test for availableCapabilities
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.availableCapabilities is None
 
 
@@ -402,33 +562,46 @@ class TestControllerPowerManager:
     class
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def logger(self):
         """
         Fixture that returns a logger for the power manager under test
         (or its components) to use
+
+        :return: a logger for the power manager under test to use
+        :rtype: :py:class:`logging.Logger` or an object that implement
+           its logging interface
         """
         return logging.getLogger()
 
-    @pytest.fixture
+    @pytest.fixture()
     def power_manager(self):
         """
         Fixture that returns a power manager with no hardware manager
         and no subservient devices
+
+        :return: a power manager with no hardware manager and no
+            subservient devices
+        :rtype: :py:class:`ska.low.mccs.power.PowerManager`
         """
         return ControllerPowerManager([])
 
-    @pytest.fixture
+    @pytest.fixture()
     def state_model(self, logger):
         """
-        Fixture that returns a state model for the power manager under
-        test to use
+        Fixture that returns a state model for the command under test to
+        use
 
         :param logger: a logger for the state model to use
+        :type logger: an instance of :py:class:`logging.Logger`, or
+            an object that implements the same interface
+
+        :return: a state model for the command under test to use
+        :rtype: :py:class:`ska.base.DeviceStateModel`
         """
         return SKABaseDeviceStateModel(logger)
 
-    def test_OnCommand(self, power_manager, state_model, logger):
+    def test_OnCommand(self, power_manager, state_model):
         """
         Test the working of the On command.
 
@@ -441,8 +614,14 @@ class TestControllerPowerManager:
         the state model is in the OFF state; check that running the
         On() command succeeds, and that the result is the state model
         moves to state ON, and the power manager thinks it is on.
+
+        :param power_manager: a power manager with no subservient
+            devices
+        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
+        :param state_model: the state model for the device
+        :type state_model: :py:class:`ska.base.DeviceStateModel`
         """
-        on_command = MccsController.OnCommand(power_manager, state_model, logger)
+        on_command = MccsController.OnCommand(power_manager, state_model)
         assert not power_manager.is_on()
 
         all_states = {
@@ -488,6 +667,12 @@ class TestControllerPowerManager:
         the state model is in the ON state; check that running the
         Off() command succeeds, and that the result is the state model
         moves to state OFF, and the power manager thinks it is off.
+
+        :param power_manager: a power manager with no subservient
+            devices
+        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
+        :param state_model: the state model for the device
+        :type state_model: :py:class:`ska.base.DeviceStateModel`
         """
         off_command = MccsController.OffCommand(power_manager, state_model)
         power_manager.on()

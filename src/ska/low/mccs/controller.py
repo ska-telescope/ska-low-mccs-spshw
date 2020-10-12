@@ -114,7 +114,8 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
-            Initialises the attributes and properties of the MccsController.
+            Initialises the attributes and properties of the
+            `MccsController`.
             State is managed under the hood; the basic sequence is:
 
             1. Device state is set to INIT
@@ -124,7 +125,7 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             super().do()
 
@@ -229,12 +230,13 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
-            Implementation hook for turning the MCCS system on.
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`MccsController.On` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -252,12 +254,13 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
-            Turn the MCCS system off.
+            Stateless do-hook for implementing the functionality of the
+            :py:meth:`MccsController.Off` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -278,13 +281,16 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
-            Transition the MCCS system to the low-power STANDBY_LOW_POWER
+            Stateless do-hook for implementing the functionality of the
+            :py:meth:`MccsController.StandbyLow` command.
+
+            Transitions the MCCS system to the low-power STANDBY_LOW_POWER
             operating state.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -301,10 +307,11 @@ class MccsController(SKAMaster):
         StandbyLow Command
 
         :todo: What does this command do?
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyLow")
         (return_code, message) = handler()
@@ -320,12 +327,15 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
+            Stateless do-hook for implementing the functionality of the
+            :py:meth:`MccsController.StandbyFull` command.
+
             Transition the MCCS system to the STANDBY_FULL_POWER operating state.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -342,10 +352,11 @@ class MccsController(SKAMaster):
         StandbyFull Command
 
         :todo: What does this command do?
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyFull")
         (return_code, message) = handler()
@@ -361,13 +372,14 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
-            Stateless hook for implementation of Operate()
-            command functionality.
+            Stateless hook for implementation of
+            :py:meth:`MccsController.Operate` command
+            functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -395,10 +407,11 @@ class MccsController(SKAMaster):
         Transit to the OPERATE operating state, ready for signal processing.
 
         :todo: What does this command do?
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("Operate")
         (return_code, message) = handler()
@@ -426,14 +439,14 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            Reset command. This implementation resets the MCCS
-            system as a whole as an attempt to clear a FAULT
-            state.
+            :py:meth:`MccsController.Reset` command. This
+            implementation resets the MCCS system as a whole as an
+            attempt to clear a FAULT state.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
@@ -457,7 +470,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
 
         :example:
 
@@ -487,7 +500,8 @@ class MccsController(SKAMaster):
 
         def do(self, argin):
             """
-            Stateless hook implementing the functionality of the Allocate command
+            Stateless hook implementing the functionality of the
+            :py:meth:`MccsController.Allocate` command
 
             Allocate a set of unallocated MCCS resources to a sub-array.
             The JSON argument specifies the overall sub-array composition in
@@ -499,7 +513,7 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
 
             args = json.loads(argin)
@@ -608,7 +622,7 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -669,10 +683,11 @@ class MccsController(SKAMaster):
         :param argin: JSON-formatted string containing an integer
             subarray_id, a release all flag and array resources (TBD).
         :type argin: str
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("Release")
         (resultcode, message) = handler(argin)
@@ -687,7 +702,8 @@ class MccsController(SKAMaster):
 
         def do(self, argin):
             """
-            Stateless do hook for the Release command
+            Stateless do hook for the
+            :py:meth:`MccsController.Release` command
 
             :param argin: JSON-formatted string containing an integer
                 subarray_id, a release all flag and array resources (TBD).
@@ -695,7 +711,7 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             device = self.target
             args = json.loads(argin)
@@ -756,7 +772,7 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -790,7 +806,8 @@ class MccsController(SKAMaster):
 
     class MaintenanceCommand(ResponseCommand):
         """
-        Class for handling the Maintenance() command.
+        Class for handling the
+        :py:meth:`MccsController.Maintenance` command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -798,12 +815,13 @@ class MccsController(SKAMaster):
 
         def do(self):
             """
-            Power off the MCCS system.
+            Stateless do-hook for handling the
+            :py:meth:`MccsController.Maintenance` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 
@@ -817,10 +835,11 @@ class MccsController(SKAMaster):
         Transition the MCCS to a MAINTENANCE state.
 
         :todo: What does this command do?
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("Maintenance")
         (return_code, message) = handler()
@@ -831,7 +850,7 @@ class MccsController(SKAMaster):
         Update and push a change event for the healthstate attribute
 
         :param health_state: The new healthstate
-        :type health_state: enum (defined in ska.base.control_model)
+        :type health_state: :py:class:`ska.base.control_model.HealthState`
         """
         self.push_change_event("healthState", health_state)
         self._health_state = health_state
@@ -845,12 +864,15 @@ class MccsController(SKAMaster):
 
 def main(args=None, **kwargs):
     """
-    Main function of the MccsController module.
+    Main function of the :py:mod:`ska.low.mccs.controller` module.
 
-    :param args: command line arguments
-    :param kwargs: command line keyword arguments
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
 
-    :return: device server instance
+    :return: exit code
+    :rtype: int
     """
 
     return MccsController.run_server(args=args, **kwargs)

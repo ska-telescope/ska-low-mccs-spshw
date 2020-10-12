@@ -46,13 +46,13 @@ class TestMccsIntegrationTmc:
         Method to simplfy the TMC calls for asynchronous commands
 
         :param device: The MCCS device to send command to
-        :type device: device from the device context
+        :type device: :py:class:`tango.DeviceProxy`
         :param command: The command to send to the device
         :type command: str
         :param argin: Optional argument to send to the command
         :type argin: str
         :param expected_result: The expected return code from the command
-        :type expected_result: ResultCode
+        :type expected_result: :py:class:`ska.base.commands.ResultCode`
         """
         future = Future()
         # Call the specified command asynchronously
@@ -71,7 +71,7 @@ class TestMccsIntegrationTmc:
         Test that an asynchronous call to controller:On() works correctly
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         self.async_init()
         controller = device_context.get_device("low-mccs/control/control")
@@ -108,7 +108,7 @@ class TestMccsIntegrationTmc:
         Test that an asynchronous call to controller:Off() works correctly
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         self.async_init()
         controller = device_context.get_device("low-mccs/control/control")
@@ -133,7 +133,7 @@ class TestMccsIntegrationTmc:
         perform an observation (without pointing updates)
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: tango.MultiDeviceTestContext
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         self.async_init()
         controller = device_context.get_device("low-mccs/control/control")

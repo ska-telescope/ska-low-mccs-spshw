@@ -81,17 +81,25 @@ class TestUtils:
                 """
                 tango_raise("Never happens")
 
-        with pytest.raises(TypeError):
-            nondevice = NonDevice()
+        nondevice = NonDevice()
+        with pytest.raises(
+            TypeError, match="Can only be used in a tango device instance"
+        ):
             nondevice.illegal_use()
 
     @pytest.mark.parametrize(
-        "origin,severity", [("here()", ErrSeverity.ERR), ("there()", ErrSeverity.WARN)]
+        ("origin", "severity"),
+        [("here()", ErrSeverity.ERR), ("there()", ErrSeverity.WARN)],
     )
     def test_tango_raise_with_args(self, origin, severity):
         """
         Test for correct execution of `tango_raise` helper function when used
         with optional parameters
+
+        :param origin: the source of this exception
+        :type origin: string
+        :param severity: The severity of this error
+        :type severity: :py:class:`tango.ErrSeverity`
         """
         with pytest.raises(DevFailed) as ex:
             tango_raise("Raise Me", severity=severity, _origin=origin)
@@ -107,25 +115,44 @@ class TestUtils:
         Helper method, takes arguments `stations` and `tiles` but
         decorated to take them as a JSON string encoding of a dictionary
         containing these keys.
+
+        :param stations: value of "stations" key in JSON string
+        :type stations: could be anything JSON-serialisable
+        :param tiles: value of "tiles" key in JSON string
+        :type tiles: could be anything JSON-serialisable
+        :return: the args extracted from the json input string
+        :rtype: dict
         """
         return {"stations": stations, "tiles": tiles}
 
     @json_input()
-    def json_input_kwargs_tester(self, **args):
+    def json_input_kwargs_tester(self, **kwargs):
         """
         Helper method, takes any arguments but decorated to take them as
         a JSON string encoding of a dictionary.
+
+        :param kwargs: a dictionary of named arguments to this method
+        :type kwargs: dict
+
+        :return: the kwargs extracted from the json input string
+        :rtype: dict
         """
-        return args
+        return kwargs
 
     @json_input("MccsController_Allocate_lax.json")
-    def json_input_schema_tester(self, **args):
+    def json_input_schema_tester(self, **kwargs):
         """
         Helper method, takes any arguments but decorated to take them as
         a JSON string encoding of a dictionary. Additionally, this JSON
         string must validate against the specified schema.
+
+        :param kwargs: a dictionary of named arguments to this method
+        :type kwargs: dict
+
+        :return: the kwargs extracted from the json input string
+        :rtype: dict
         """
-        return args
+        return kwargs
 
     def test_call_with_json_posargs(self):
         """
@@ -157,6 +184,10 @@ class TestUtils:
     def test_json_input_posargs(self, json_arg_string):
         """
         Test for json_input decorator on a method defined with posargs.
+
+        :param json_arg_string: a JSON string to be passed to the
+            `json_input` decorator
+        :type json_arg_string: str
         """
         returned = self.json_input_posargs_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
@@ -165,6 +196,10 @@ class TestUtils:
     def test_json_input_kwargs(self, json_arg_string):
         """
         Test for json_input decorator on a method defined with kwargs.
+
+        :param json_arg_string: a JSON string to be passed to the
+            `json_input` decorator
+        :type json_arg_string: str
         """
         returned = self.json_input_kwargs_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
@@ -179,6 +214,10 @@ class TestUtils:
     def test_json_input_schema(self, json_arg_string):
         """
         Test for method decorated with json_input with a schema
+
+        :param json_arg_string: a JSON string to be passed to the
+            `json_input` decorator
+        :type json_arg_string: str
         """
         returned = self.json_input_schema_tester(json_arg_string)
         assert returned == json.loads(json_arg_string)
@@ -199,6 +238,10 @@ class TestUtils:
         :todo: test for FileNotFoundException on missing schema
         :todo: test for json.JSONDecodeError on bad schema
         :todo: test for json.JSONDecodeError on bad input
+
+        :param json_arg_string: a JSON string to be passed to the
+            `json_input` decorator
+        :type json_arg_string: str
         """
         with pytest.raises(jsonschema.ValidationError):
             self.json_input_schema_tester(json_arg_string)

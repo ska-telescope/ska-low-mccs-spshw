@@ -25,25 +25,67 @@ class TestMccsTransientBuffer(object):
     """
 
     def test_stationId(self, device_under_test):
-        """Test for stationId"""
+        """
+        Test for stationId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.stationId == ""
 
     def test_transientBufferJobId(self, device_under_test):
-        """Test for transientBufferJobId"""
+        """
+        Test for transientBufferJobId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.transientBufferJobId == ""
 
     def test_transientFrequencyWindow(self, device_under_test):
-        """Test for transientFrequencyWindow"""
+        """
+        Test for transientFrequencyWindow
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.transientFrequencyWindow == (0.0,)
 
     def test_resamplingBits(self, device_under_test):
-        """Test for resamplingBits"""
+        """
+        Test for resamplingBits
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.resamplingBits == 0
 
     def test_nStations(self, device_under_test):
-        """Test for test_nStations"""
+        """
+        Test for test_nStations
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.nStations == 0
 
     def test_stationIds(self, device_under_test):
-        """Test for stationIds"""
+        """
+        Test for stationIds
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.stationIds == ("",)

@@ -51,7 +51,9 @@ class MccsStationBeam(SKAObsDevice):
 
         def do(self):
             """
-            Initialises the attributes and properties of the MccsStationBeam.
+            Initialises the attributes and properties of the
+            `MccsStationBeam`.
+
             State is managed under the hood; the basic sequence is:
 
             1. Device state is set to INIT
@@ -61,7 +63,7 @@ class MccsStationBeam(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             super().do()
 
@@ -117,19 +119,31 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(dtype="DevLong", format="%i", polling_period=1000, doc="ID of the beam")
     def beamId(self):
         """
-        Return the beamId attribute.
+        Return the beam id
+
+        :return: the beam id
+        :rtype: int
         """
         return self._beam_id
 
     @attribute(dtype="DevLong", format="%i", doc="ID of the associated station")
     def stationId(self):
         """
-        Return the stationId attribute.
+        Return the station id
+
+        :return: the station id
+        :rtype: int
         """
         return self._station_id
 
     @stationId.write
     def stationId(self, station_id):
+        """
+        Set the station id
+
+        :param station_id: id of the station for this beam
+        :type station_id: int
+        """
         self._station_id = station_id
 
     @attribute(
@@ -141,12 +155,24 @@ class MccsStationBeam(SKAObsDevice):
     )
     def logicalBeamId(self):
         """
-        Return the logicalBeamId attribute.
+        Return the logical beam id
+
+        :todo: this documentation needs to differentiate logical beam id
+            from beam id
+
+        :return: the logical beam id
+        :rtype: int
         """
         return self._logical_beam_id
 
     @logicalBeamId.write
     def logicalBeamId(self, logical_beam_id):
+        """
+        Set the logical beam id
+
+        :param logical_beam_id: the logical beam id
+        :type logical_beam_id: int
+        """
         self._logical_beam_id = logical_beam_id
 
     @attribute(
@@ -159,7 +185,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def updateRate(self):
         """
-        Return the updateRate attribute.
+        Return the update rate (in hertz) for this station beam
+
+        :return: the update rate for this station beam
+        :rtype: double
         """
         return self._update_rate
 
@@ -170,12 +199,21 @@ class MccsStationBeam(SKAObsDevice):
     )
     def isBeamLocked(self):
         """
-        Return the isBeamLocked attribute.
+        Return a flag indicating whether the beam is locked or not
+
+        :return: whether the beam is locked or not
+        :rtype: bool
         """
         return self._is_beam_locked
 
     @isBeamLocked.write
     def isBeamLocked(self, value):
+        """
+        Set a flag indicating whether the beam is locked or not
+
+        :param value: whether the beam is locked or not
+        :type value: boolean
+        """
         self._is_beam_locked = value
 
     @attribute(
@@ -188,7 +226,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def channels(self):
         """
-        Return the channels attribute.
+        Return the ids of the channels configured for this beam.
+
+        :return: channel ids
+        :rtype: array of int
         """
         return self._channels
 
@@ -204,14 +245,22 @@ class MccsStationBeam(SKAObsDevice):
     )
     def desiredPointing(self):
         """
-        Return the desiredPointing attribute.
+        Return the desired pointing of this beam.
+
+        :return: the desired point of this beam
+        :rtype: array of doubles conforming to the Sky Coordinate Set
+            definition
         """
         return self._desired_pointing
 
     @desiredPointing.write
     def desiredPointing(self, value):
         """
-        Set the desiredPointing attribute.
+        Set the desired pointing of this beam
+
+        :param value: the desired pointing of this beam
+        :type value: array of doubles conforming to the Sky Coordinate
+            Set definition
         """
         self._desired_pointing = value
 
@@ -222,7 +271,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def pointingDelay(self):
         """
-        Return the pointingDelay attribute.
+        Return the pointing delay per antenna
+
+        :return: the pointing delay per antenna
+        :rtype: array of double
         """
         return self._pointing_delay
 
@@ -233,7 +285,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def pointingDelayRate(self):
         """
-        Return the pointingDelayRate attribute.
+        Return the pointing delay rate for each antenna
+
+        :return: the pointing delay rate per antenna
+        :rtype: array of double
         """
         return self._pointing_delay_rate
 
@@ -245,14 +300,20 @@ class MccsStationBeam(SKAObsDevice):
     )
     def antennaWeights(self):
         """
-        Return the antennaWeights attribute.
+        Return the antenna weights
+
+        :return: the antenna weights
+        :rtype: array of double
         """
         return self._antenna_weights
 
     @antennaWeights.write
     def antennaWeights(self, value):
         """
-        Set the antennaWeights attribute.
+        Set the antenna weights
+
+        :param value: the new antenna weights
+        :type value: array of double
         """
         self._antenna_weights = value
 
@@ -265,8 +326,17 @@ class MccsStationBeam(SKAObsDevice):
 # Run server
 # ----------
 def main(args=None, **kwargs):
-    """Main function of the MccsStationBeam module."""
+    """
+    Main function of the :py:mod:`ska.low.mccs.station_beam` module.
 
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
     return MccsStationBeam.run_server(args=args, **kwargs)
 
 

@@ -65,6 +65,9 @@ class LazyInstance:
 
         :param attr: name of the attribute sought
         :type attr: str
+
+        :return: the attribute with name given by the attr arg
+        :rtype: any
         """
         if self.__wrapped is None:
             self.__wrapped = self.__cls(*self.__args, **self.__kwargs)
@@ -167,22 +170,17 @@ class json_input:
 
     The decorator will provide the JSON interface and handle the
     decoding for you.
-
-    :param schema_path: an optional path to a schema against which the
-        JSON should be validated. Not working at the moment, so leave it
-        None.
-    :type schema_path: string
-
-    :raises FileNotFoundException: if no file is found at the schema
-        path provided
-    :raises json.JSONDecodeError: if the file at the specified schema
-        path is not valid JSON
     """
 
     def __init__(self, schema_path=None):
         """
         Initialises a callable json_input object, to function as a
         device method generator.
+
+        :param schema_path: an optional path to a schema against which
+            the JSON should be validated. Not working at the moment, so
+            leave it None.
+        :type schema_path: string
         """
         self.schema = None
 
@@ -201,6 +199,8 @@ class json_input:
         :param func: The target of the decorator
         :type func: function
 
+        :return: the wrapped method
+        :rtype: callable
         """
 
         @wraps(func)
@@ -216,6 +216,9 @@ class json_input:
 
         :param json_string: a string, purportedly a JSON-encoded object
         :type json_string: str
+
+        :return: an object parsed from the input JSON string
+        :rtype: anything JSON-serialisable
         """
         json_object = json.loads(json_string)
 

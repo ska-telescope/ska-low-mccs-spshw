@@ -36,7 +36,7 @@ class TestDeviceHealthPolicy:
     """
 
     @pytest.mark.parametrize(
-        "admin_mode, health_state, expected_health",
+        ("admin_mode", "health_state", "expected_health"),
         [
             (None, None, HealthState.UNKNOWN),
             (None, HealthState.UNKNOWN, HealthState.UNKNOWN),
@@ -101,7 +101,7 @@ class TestDeviceHealthRollupPolicy:
     """
 
     @pytest.mark.parametrize(
-        "hardware_health, device_healths, expected_health",
+        ("hardware_health", "device_healths", "expected_health"),
         [
             (None, None, HealthState.OK),
             (None, [None, None], HealthState.OK),
@@ -163,7 +163,7 @@ class TestDeviceHealthMonitor:
         health when the device emits relevant events
 
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: fixture
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -215,7 +215,7 @@ class TestHealthMonitor:
         when devices emit relevant events
 
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: fixture
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -264,7 +264,7 @@ class TestHealthModel:
     """
 
     @pytest.mark.parametrize(
-        "with_hardware, with_devices",
+        ("with_hardware", "with_devices"),
         [(False, False), (False, True), (True, False), (True, True)],
     )
     def test(self, with_hardware, with_devices, mocker, mock_device_proxies):
@@ -277,7 +277,7 @@ class TestHealthModel:
         :param with_devices: [description]
         :type with_devices: [type]
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: fixture
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn

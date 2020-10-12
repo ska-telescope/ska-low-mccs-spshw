@@ -26,17 +26,16 @@ device_to_load = {
 
 # Device test case
 class TestMccsTelState(object):
-    """Test case for packet generation."""
-
-    @classmethod
-    def mocking(cls):
-        """Mock external libraries."""
-        # Example : Mock numpy
-        # cls.numpy = MccsTelState.numpy = MagicMock()
+    """Tests for MccsTelState device."""
 
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -44,80 +43,196 @@ class TestMccsTelState(object):
         assert device_under_test.testMode == TestMode.NONE
 
     def test_State(self, device_under_test):
-        """Test for State"""
+        """
+        Test for State
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.State() == tango.DevState.OFF
 
     def test_Status(self, device_under_test):
-        """Test for Status"""
+        """
+        Test for Status
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.Status() == "The device is in OFF state."
 
     def test_GetVersionInfo(self, device_under_test):
+        """
+        The of GetVersionInfo
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [info]
 
     # @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(self, device_under_test):
-        """Test for Reset"""
-        with pytest.raises(Exception):
+        """
+        Test for Reset
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        with pytest.raises(
+            tango.DevFailed,
+            match="Command Reset not allowed when the device is in OFF state",
+        ):
             device_under_test.Reset()
 
     def test_buildState(self, device_under_test):
-        """Test for buildState"""
+        """
+        Test for buildState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         binfo = ", ".join((release.name, release.version, release.description))
         assert device_under_test.buildState == binfo
 
     def test_versionId(self, device_under_test):
-        """Test for versionId"""
+        """
+        Test for versionId
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.versionId == release.version
 
     def test_loggingLevel(self, device_under_test):
-        """Test for loggingLevel"""
+        """
+        Test for loggingLevel
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.loggingLevel == LoggingLevel.INFO
 
     def test_healthState(self, device_under_test):
-        """Test for healthState"""
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.healthState == HealthState.OK
 
     def test_controlMode(self, device_under_test):
-        """Test for controlMode"""
+        """
+        Test for controlMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.controlMode == ControlMode.REMOTE
 
     def test_simulationMode(self, device_under_test):
-        """Test for simulationMode"""
+        """
+        Test for simulationMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.simulationMode == SimulationMode.FALSE
 
     def test_testMode(self, device_under_test):
-        """Test for testMode"""
+        """
+        Test for testMode
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.testMode == TestMode.NONE
 
     def test_elementsStates(self, device_under_test):
-        """Test for elementsStates"""
+        """
+        Test for elementsStates
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.elementsStates == ""
         test_string = "This is my test string for elementsStates"
         device_under_test.elementsStates = test_string
         assert device_under_test.elementsStates == test_string
 
     def test_observationsStates(self, device_under_test):
-        """Test for observationsStates"""
+        """
+        Test for observationsStates
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.observationsStates == ""
         test_string = "This is my test string for observationsStates"
         device_under_test.observationsStates = test_string
         assert device_under_test.observationsStates == test_string
 
     def test_algorithms(self, device_under_test):
-        """Test for algorithms"""
+        """
+        Test for algorithms
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.algorithms == ""
         test_string = "This is my test string for algorithms"
         device_under_test.algorithms = test_string
         assert device_under_test.algorithms == test_string
 
     def test_algorithmsVersion(self, device_under_test):
-        """Test for algorithmsVersion"""
+        """
+        Test for algorithmsVersion
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.algorithmsVersion == ""
         test_string = "This is my test string for algorithmsVersion"
         device_under_test.algorithmsVersion = test_string
         assert device_under_test.algorithmsVersion == test_string
 
     def test_loggingTargets(self, device_under_test):
-        """Test for loggingTargets"""
+        """
+        Test for loggingTargets
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         assert device_under_test.loggingTargets == ("tango::logger",)

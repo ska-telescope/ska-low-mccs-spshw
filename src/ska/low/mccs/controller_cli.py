@@ -50,6 +50,12 @@ class CliMeta(type):
 def format_wrapper(method):
     """
     Wrapper to format device command results as a two-line string
+
+    :param method: the method to be wrapped
+    :type method: callable
+
+    :return: the wrapped method
+    :rtype: callable
     """
 
     @functools.wraps(method)
@@ -63,57 +69,73 @@ def format_wrapper(method):
 
 
 class MccsControllerCli(metaclass=CliMeta):
-    """test
+    """
+    Command-line tool to access the :py:class:`ska.low.mccs.MccsController`
+    tango device
+    """
 
-    Command-line tool to access the MCCS controller tango device
+    def __init__(self, fqdn="low-mccs/control/control"):
+        """
+        Initialise a new CLI instance
 
         :param fqdn: the FQDN of the controller device, defaults to
             "low-mccs/control/control"
         :type fqdn: str, optional
-    """
-
-    def __init__(self, fqdn="low-mccs/control/control"):
+        """
         self._dp = tango.DeviceProxy(fqdn)
         self._log_levels = [
             lvl for lvl in dir(self._dp.logginglevel.__class__) if lvl.isupper()
         ]
 
     def adminmode(self):
-        """show the admin mode
-        TODO: make writable
-        :return: adminmode
+        """
+        Show the admin mode
+
+        :todo: make writable
+
+        :return: the admin mode
         :rtype: str
         """
         return self._dp.adminmode.name
 
     def controlmode(self):
-        """show the control mode
-        TODO: make writable
-        :return: controlmode
+        """
+        Show the control mode
+
+        :todo: make writable
+
+        :return: control mode
         :rtype: str
         """
         return self._dp.controlmode.name
 
     def simulationmode(self):
-        """show the control mode
-        TODO: make writable
-        :return: simulationmode
+        """
+        Show the control mode
+
+        :todo: make writable
+
+        :return: simulation mode
         :rtype: str
         """
         return self._dp.simulationmode.name
 
     def healthstate(self):
-        """show the health state
-        :return: healtstate
+        """
+        Show the health state
+
+        :return: health state
         :rtype: str
         """
         return self._dp.healthstate.name
 
     def logginglevel(self, level=None):
-        """Get and/or set the logging level of the device.
+        """
+        Get and/or set the logging level of the device.
 
         :param level: the logging level, defaults to None (only print the level)
         :type level: str, optional
+
         :return: logging level value
         :rtype: str
         """
@@ -149,9 +171,15 @@ class MccsControllerCli(metaclass=CliMeta):
     @format_wrapper
     def allocate(self, subarray_id=0, station_ids=None):
         """
-        Args:
-            subarray_id (int, optional): [description]. Defaults to 0.
-            station_ids (list, optional): [description]. Defaults to None.
+        Allocate stations to a subarray
+
+        :param subarray_id: the subarray id, defaults to 0
+        :type subarray_id: int, optional
+        :param station_ids: the station ids, defaults to None
+        :type station_ids: list of int, optional
+
+        :return: a result message
+        :rtype: str
         """
         if station_ids is None:
             station_ids = []
@@ -169,10 +197,16 @@ class MccsControllerCli(metaclass=CliMeta):
 
     @format_wrapper
     def release(self, subarray_id):
-        """Release given subarray
+        """
+        Release resources from a a subarray
 
-        :param subarray_id: the id of the subarray
-        :type subarray_id: int
+        :param subarray_id: the subarray id, defaults to 0
+        :type subarray_id: int, optional
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         return self._dp.command_inout("Release", subarray_id)
 

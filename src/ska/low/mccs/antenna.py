@@ -205,7 +205,7 @@ class AntennaHardwareManager:
         The health of the hardware, as evaluated by this manager
 
         :return: the health of the hardware
-        :rtype: HealthState
+        :rtype: :py:class:`ska.base.control_model.HealthState`
         """
         return self._health
 
@@ -269,12 +269,12 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
-            attributes and properties of the MccsDevice.
+            attributes and properties of the :py:class:`MccsAntenna`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             super().do()
 
@@ -724,14 +724,14 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            Reset command. This implementation resets the MCCS
-            system as a whole as an attempt to clear a FAULT
-            state.
+            :py:meth:`MccsAntenna.Reset` command.
+            This implementation resets the MCCS system as a whole as an
+            attempt to clear a FAULT state.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
 
             (result_code, message) = super().do()
@@ -745,18 +745,17 @@ class MccsAntenna(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of PowerOn()
-            command functionality.
+            Stateless hook for implementation of the
+            :py:meth:`MccsAntenna.PowerOn` command
+            functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
-            print("IN poweroncommand do")
             hardware_manager = self.target
             hardware_manager.on()
-            print(f"OUT poweroncommand do {hardware_manager.voltage}")
             return (ResultCode.OK, "Hardware got turned on")
 
     @command(
@@ -771,12 +770,10 @@ class MccsAntenna(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
-        print("IN antenna PowerOn")
         handler = self.get_command_object("PowerOn")
         (return_code, message) = handler()
-        print("OUT antenna PowerOn")
         return [[return_code], [message]]
 
     class PowerOffCommand(ResponseCommand):
@@ -786,13 +783,14 @@ class MccsAntenna(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of PowerOff()
-            command functionality.
+            Stateless hook for implementation of the
+            :py:meth:`MccsAntenna.PowerOff` command
+            functionality.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (ResultCode, str)
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.off()
@@ -810,7 +808,7 @@ class MccsAntenna(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (ResultCode, str)
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOff")
         (return_code, message) = handler()
@@ -820,8 +818,8 @@ class MccsAntenna(SKABaseDevice):
         """
         Update and push a change event for the healthstate attribute
 
-        :param health_state: The new healthstate
-        :type health_state: enum (defined in ska.base.control_model)
+        :param health_state: The new healthstate value
+        :type health_state: :py:class:`ska.base.control_model.HealthState`
         """
         self.push_change_event("healthState", health_state)
         self._health_state = health_state
@@ -835,14 +833,16 @@ class MccsAntenna(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the MccsAntenna module.
+    Main function of the :py:mod:`ska.low.mccs.antenna` module.
 
-    :param args: command line arguments
-    :param kwargs: command line keyword arguments
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
 
-    :return: device server instance
+    :return: exit code
+    :rtype: int
     """
-
     return MccsAntenna.run_server(args=args, **kwargs)
 
 

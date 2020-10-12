@@ -42,7 +42,7 @@ class PowerManager:
         :type hardware: object
         :param devices: the devices that are subservient,
             for power-management purposes, to this manager
-        :type devices: a collection of DeviceProxy
+        :type devices: list of :py:class:`tango.DeviceProxy`
         """
         self._is_on = False
 

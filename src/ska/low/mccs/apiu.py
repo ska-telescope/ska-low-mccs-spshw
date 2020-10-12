@@ -7,9 +7,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MCCS MVP
-
-An implementation of MCCS APIU device
+"""
+This module contains an implementation of the MCCS APIU device and
+related classes.
 """
 
 # PyTango imports
@@ -30,28 +30,24 @@ __all__ = ["MccsAPIU", "main"]
 class MccsAPIU(SKABaseDevice):
     """
     An implementation of MCCS APIU device
-
-    **Properties:**
-
-    - Device Property
     """
-
-    # -----------------
-    # Device Properties
-    # -----------------
-
-    # ---------------
-    # General methods
-    # ---------------
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Group Device
-
+        Class that implements device initialisation for the MCCS APIU
+        device
         """
 
         def do(self):
-            """Initialises the attributes and properties of the MccsGroupDevice."""
+            """
+            Initialises the attributes and properties of the
+            :py:class:`MccsAPIU`.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
             super().do()
             device = self.target
             device._voltage = 0.0
@@ -86,33 +82,33 @@ class MccsAPIU(SKABaseDevice):
 
     @attribute(dtype="DevDouble", label="Voltage", unit="Volts")
     def voltage(self):
-        """Return the voltage attribute."""
-        return self._voltage
+        """
+        Return the voltage attribute.
 
-    @voltage.write
-    def voltage(self, value):
-        """Set the voltage attribute."""
-        self._voltage = value
+        :return: the voltage attribute
+        :rtype: double
+        """
+        return self._voltage
 
     @attribute(dtype="DevDouble", label="Current", unit="Amps")
     def current(self):
-        """Return the current attribute."""
-        return self._current
+        """
+        Return the current attribute.
 
-    @current.write
-    def current(self, value):
-        """Set the current attribute."""
-        self._current = value
+        :return: the current value of the current attribute
+        :rtype: double
+        """
+        return self._current
 
     @attribute(dtype="DevDouble", label="Temperature", unit="degC")
     def temperature(self):
-        """Return the temperature attribute."""
-        return self._temperature
+        """
+        Return the temperature attribute.
 
-    @temperature.write
-    def temperature(self, value):
-        """Set the temperature attribute."""
-        self._temperature = value
+        :return: the value of the temperature attribute
+        :rtype: double
+        """
+        return self._temperature
 
     @attribute(
         dtype="DevDouble",
@@ -122,52 +118,92 @@ class MccsAPIU(SKABaseDevice):
         # min_value=100.0,
     )
     def humidity(self):
-        """Return the humidity attribute."""
-        return self._humidity
+        """
+        Return the humidity attribute.
 
-    @humidity.write
-    def humidity(self, value):
-        """Set the humidity attribute."""
-        self._humidity = value
+        :return: the value of the humidity attribute
+        :rtype: double
+        """
+        return self._humidity
 
     @attribute(dtype="DevBoolean", label="Is alive?")
     def isAlive(self):
-        """Return the isAlive attribute"""
+        """
+        Return the isAlive attribute
+
+        :return: the value of the isAlive attribute
+        :rtype: boolean
+        """
         return self._isAlive
 
     @attribute(dtype="DevDouble", label="Over current threshold", unit="Amp")
     def overCurrentThreshold(self):
-        """Return the overCurrentThreshold attribute"""
+        """
+        Return the overCurrentThreshold attribute
+
+        :return: the value of the overCurrentThreshold attribute
+        :rtype: double
+        """
         return self._overCurrentThreshold
 
     @overCurrentThreshold.write
     def overCurrentThreshold(self, value):
-        """Set the overCurrentThreshold attribute."""
+        """
+        Set the overCurrentThreshold attribute.
+
+        :param value: new value for the overCurrentThreshold attribute
+        :type value: double
+        """
         self._overCurrentThreshold = value
 
     @attribute(dtype="DevDouble", label="Over Voltage threshold", unit="Volt")
     def overVoltageThreshold(self):
-        """Return the overVoltageThreshold attribute"""
+        """
+        Return the overVoltageThreshold attribute
+
+        :return: the value of the overVoltageThreshold attribute
+        :rtype: double
+        """
         return self._overVoltageThreshold
 
     @overVoltageThreshold.write
     def overVoltageThreshold(self, value):
-        """Set the overVoltageThreshold attribute."""
+        """
+        Set the overVoltageThreshold attribute.
+
+        :param value: new value for the overVoltageThreshold attribute
+        :type value: double
+        """
         self._overVoltageThreshold = value
 
     @attribute(dtype="DevDouble", label="Humidity threshold", unit="percent")
     def humidityThreshold(self):
-        """Return the humidityThreshold attribute"""
+        """
+        Return the humidity threshold
+
+        :return: the value of the humidityThreshold attribute
+        :rtype: double
+        """
         return self._humidityThreshold
 
     @humidityThreshold.write
     def humidityThreshold(self, value):
-        """Set the humidity attribute."""
+        """
+        Set the humidityThreshold attribute.
+
+        :param value: new value for the humidityThreshold attribute
+        :type value: double
+        """
         self._humidityThreshold = value
 
     @attribute(dtype="DevULong", max_dim_x=100)
     def logicalAntennaId(self):
-        """Return the logicalAntennaId attribute"""
+        """
+        Return the logicalAntennaId attribute
+
+        :return: the logical antenna id
+        :rtype: int
+        """
         return self._logicalAntennaId
 
     # --------
@@ -175,7 +211,6 @@ class MccsAPIU(SKABaseDevice):
     # --------
 
     def init_command_objects(self):
-
         """
         Initialises the command handlers for commands supported by this
         device.
@@ -196,8 +231,18 @@ class MccsAPIU(SKABaseDevice):
     class PowerUpAntennaCommand(ResponseCommand):
         def do(self, argin):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of
+            :py:meth:`MccsAPIU.PowerUpAntenna`
             command functionality.
+
+            :param argin: the logical antenna id of the antenna to power
+                up
+            :type argin: int
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             # device = self.target
             # logicalAntennaId = argin
@@ -211,6 +256,18 @@ class MccsAPIU(SKABaseDevice):
     )
     @DebugIt()
     def PowerUpAntenna(self, argin):
+        """
+        Power up the antenna
+
+        :param argin: the logical antenna id of the antenna to power
+            up
+        :type argin: int
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        """
         handler = self.get_command_object("PowerUpAntenna")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
@@ -218,8 +275,18 @@ class MccsAPIU(SKABaseDevice):
     class PowerDownAntennaCommand(ResponseCommand):
         def do(self, argin):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of
+            :py:meth:`MccsAPIU.PowerDownAntenna`
             command functionality.
+
+            :param argin: the logical antenna id of the antenna to power
+                down
+            :type argin: int
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             # device = self.target
             # logicalAntennaId = argin
@@ -233,6 +300,18 @@ class MccsAPIU(SKABaseDevice):
     )
     @DebugIt()
     def PowerDownAntenna(self, argin):
+        """
+        Power down the antenna
+
+        :param argin: the logical antenna id of the antenna to power
+            down
+        :type argin: int
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        """
         handler = self.get_command_object("PowerDownAntenna")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
@@ -247,8 +326,14 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
-            command functionality.
+            Stateless hook for implementation of
+            :py:meth:`MccsAPIU.PowerUp` command
+            functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -258,6 +343,14 @@ class MccsAPIU(SKABaseDevice):
     )
     @DebugIt()
     def PowerUp(self):
+        """
+        Power up
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        """
         handler = self.get_command_object("PowerUp")
         (return_code, message) = handler()
         return [[return_code], [message]]
@@ -272,8 +365,14 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of
+            :py:meth:`MccsAPIU.PowerDown`
             command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -283,6 +382,14 @@ class MccsAPIU(SKABaseDevice):
     )
     @DebugIt()
     def PowerDown(self):
+        """
+        Power down
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        """
         handler = self.get_command_object("PowerDown")
         (return_code, message) = handler()
         return [[return_code], [message]]
@@ -294,7 +401,17 @@ class MccsAPIU(SKABaseDevice):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsAPIU module."""
+    """
+    Main function of the :py:mod:`ska.low.mccs.apiu` module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
 
     return MccsAPIU.run_server(args=args, **kwargs)
 

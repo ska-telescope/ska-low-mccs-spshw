@@ -218,14 +218,17 @@ class MccsTpmDeviceSimulator(Device):
 
 def main(args=None, **kwargs):
     """
-    Main function of the MccsTpmDeviceSimulator module.
+    Main function of the :py:mod:`ska.low.mccs.tpm_device_simulator`
+    module.
 
-    :param args: command line arguments
-    :param kwargs: command line keyword arguments
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
 
-    :return: device server instance
+    :return: exit code
+    :rtype: int
     """
-
     return MccsTpmDeviceSimulator.run_server(args=args, **kwargs)
 
 

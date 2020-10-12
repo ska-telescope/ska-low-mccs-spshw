@@ -44,6 +44,9 @@ class TestPowerManagement:
     def test_power_on_off(self, device_context):
         """
         Test that a MccsController device can enable an MccsSubarray device.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
         controller = device_context.get_device("low-mccs/control/control")
         station_1 = device_context.get_device("low-mccs/station/001")

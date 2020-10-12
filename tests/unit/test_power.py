@@ -72,6 +72,15 @@ class TestPowerManager:
         two results: None, and a mock object that can be turned off and
         on. Thus it covers the cases of a power manager for a device
         with or without hardware.
+
+        :param request: A pytest object giving access to the requesting test
+            context.
+        :type request: :py:class:`_pytest.fixtures.SubRequest`
+
+        :return: a mock that can be treated for power management
+            purposes as a hardware manager i.e. something that can be
+            turned on and off
+        :rtype: object, or None
         """
         has_hardware = request.param
         return self._OnOffMock() if has_hardware else None
@@ -84,6 +93,10 @@ class TestPowerManager:
         paramerised to return three results: None, 0 and 2. Thus it
         covers the cases of a power manager with or without subservient
         devices
+
+        :param request: A pytest object giving access to the requesting test
+            context.
+        :type request: :py:class:`_pytest.fixtures.SubRequest`
 
         :return: a list of devices that can be turned on and off
         :rtype: list of objects, or None if no devices are provided
@@ -101,8 +114,8 @@ class TestPowerManager:
         :param devices: fixture that returns a list of devices that are
             subservient to the device under test.
 
-        :return: a power manager instances
-        :rtype: PowerManager
+        :return: a power manager instance
+        :rtype: :py:class:`ska.low.mccs.power.PowerManager`
         """
         return PowerManager(hardware_manager, devices)
 
@@ -110,8 +123,9 @@ class TestPowerManager:
         """
         Test the PowerManager class
 
-        :param power_manager: fixture that returns the power manager under
-            test
+        :param power_manager: fixture that returns the power manager
+            under test
+        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         """
 
         def assert_on(is_on):

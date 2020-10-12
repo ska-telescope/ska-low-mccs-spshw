@@ -31,6 +31,11 @@ class TestMccsAPIU(object):
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
         """
 
         print(f"Init state is {device_under_test.state()}")
@@ -41,8 +46,15 @@ class TestMccsAPIU(object):
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.NONE
 
-    def test_Attributes(self, device_under_test):
-        """Test of atributes"""
+    def test_attributes(self, device_under_test):
+        """
+        Test of attributes
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
 
         # Start-up values are zero - N.B. subject to change
         assert device_under_test.temperature == 0.0
@@ -57,15 +69,6 @@ class TestMccsAPIU(object):
         # print(f'logicalAntennaId -> {repr(device_under_test.logicalAntennaId)}')
         # assert device_under_test.logicalAntennaId == [0]
 
-        # Set some arbitrary values and read them back.
-        device_under_test.temperature = 20.0
-        assert device_under_test.temperature == 20.0
-        device_under_test.humidity = 50.0
-        assert device_under_test.humidity == 50.0
-        device_under_test.voltage = 5.0
-        assert device_under_test.voltage == 5.0
-        device_under_test.current = 10.0
-        assert device_under_test.current == 10.0
         device_under_test.overCurrentThreshold = 22.0
         assert device_under_test.overCurrentThreshold == 22.0
         device_under_test.overVoltageThreshold = 6.0
@@ -74,13 +77,27 @@ class TestMccsAPIU(object):
         assert device_under_test.humidityThreshold == 60.0
 
     def test_PowerUp(self, device_under_test):
-        """Test for PowerUp"""
+        """
+        Test for PowerUp
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
         # assert message == "On command completed OK"
 
     def test_PowerDown(self, device_under_test):
-        """Test for PowerDown"""
+        """
+        Test for PowerDown
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         # Need to turn it on before we can turn it off
         device_under_test.PowerUp()
         [[result_code], [message]] = device_under_test.PowerDown()
@@ -88,13 +105,27 @@ class TestMccsAPIU(object):
         # assert message == "Off command completed OK"
 
     def test_PowerUpAntenna(self, device_under_test):
-        """Test for PowerUpAntenna"""
+        """
+        Test for PowerUpAntenna
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         [[result_code], [message]] = device_under_test.PowerUpAntenna(0)
         assert result_code == ResultCode.OK
         # assert message == "On command completed OK"
 
     def test_PowerDownAntenna(self, device_under_test):
-        """Test for PowerDownAntenna"""
+        """
+        Test for PowerDownAntenna
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
         # Need to turn it on before we can turn it off
         device_under_test.PowerUpAntenna(0)
         [[result_code], [message]] = device_under_test.PowerDownAntenna(0)

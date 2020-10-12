@@ -52,7 +52,12 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
-            attributes and properties of the MccsDevice.
+            attributes and properties of the `MccsDevice`.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             super().do()
 
@@ -133,72 +138,167 @@ class MccsDevice(SKABaseDevice):
     # ----------
     @attribute(dtype="DevBoolean")
     def isHardwareDevice(self):
-        """Return the isHardwareDevice attribute."""
+        """
+        Return whether this device manages hardware
+
+        :return: whether this device mamages hardware
+        :rtype: bool
+        """
         return self._is_hardware_device
 
     @attribute(dtype="DevBoolean")
     def diagMode(self):
-        """Return the diagMode attribute."""
+        """
+        Return the diagMode attribute.
+
+        :todo: What does this mean?
+
+        :return: the value of the diagMode attribute
+        :rtype: boolean
+        """
         return self._diag_mode
 
     @attribute(dtype="DevBoolean")
     def calledUndefinedDevice(self):
-        """Return the calledUndefinedDevice attribute."""
+        """
+        Return a flag indicating whether this device has tried to call
+            a device that is not defined in the device database
+
+        :return: whether this device has tried to call a device that is
+            not defined in the device database
+        :rtype: boolean
+        """
         return self._called_undefined_device
 
     @attribute(dtype="DevBoolean")
     def calledDeadServer(self):
-        """Return the calledDeadServer attribute."""
+        """
+        Return a flag indicating whether this device has tried to call
+            a dead server
+
+        :return: whether this device has tried to call a dead server
+        :rtype: boolean
+        """
         return self._called_dead_server
 
     @attribute(dtype="DevBoolean")
     def detectedDeadServer(self):
-        """Return the detectedDeadServer attribute."""
+        """
+        Return a flag indicating whether this device has detected a dead
+            server
+
+        :return: whether this device has detected a dead server
+        :rtype: boolean
+        """
         return self._detected_dead_server
 
     @attribute(dtype="DevBoolean")
     def calledNonRunningDevice(self):
-        """Return the calledNonRunningDevice attribute."""
+        """
+        Return a flag indicating whether this device has tried to call
+            a device that is not running
+
+        :return: whether this device has tried to call a device that is
+            not running
+        :rtype: boolean
+        """
         return self._called_non_running_device
 
     @attribute(dtype="DevBoolean")
     def callTimeout(self):
-        """Return the callTimeout attribute."""
+        """
+        Return a flag indicating whether this device has experienced a
+            call timeout
+
+        :return: whether this device has had a call timeout
+        :rtype: boolean
+        """
         return self._call_timeout
 
     @attribute(dtype="DevBoolean")
     def callCommFailed(self):
-        """Return the callCommFailed attribute."""
+        """
+        Return a flag indicating whether this device has had a call fail
+            due to communications failure
+
+        :return: whether this device has had a call fail due to
+            communications failure
+        :rtype: boolean
+        """
         return self._call_comm_failed
 
     @attribute(dtype="DevBoolean")
     def invalidAsynId(self):
-        """Return the invalidAsynId attribute."""
+        """
+        Return a flag indicating whether this device has had a call fail
+            due to an invalid "asyn" id
+
+        :todo: what is an "asyn" id?
+
+        :return: whether this device has had a call fail due to an
+            invalid asyn id
+        :rtype: boolean
+        """
         return self._invalid_asyn_id
 
     @attribute(dtype="DevBoolean")
     def calledInexistentCallback(self):
-        """Return the calledInexistentCallback attribute."""
+        """
+        Return a flag indicating whether this device has tried to call
+            a nonexistent callback
+
+        :return: whether this device has tried to call a nonexistent
+            callback
+        :rtype: boolean
+        """
         return self._called_inexistent_callback
 
     @attribute(dtype="DevBoolean")
     def requestIdMismatch(self):
-        """Return the requestIdMismatch attribute."""
+        """
+        Return a flag indicating whether this device has experienced a
+            request id mismatch
+
+        :return: whether this device has experienced a request id
+            mismatch
+        :rtype: boolean
+        """
         return self._request_id_mismatch
 
     @attribute(dtype="DevBoolean")
     def expectedReplyNotReady(self):
-        """Return the expectedReplyNotReady attribute."""
+        """
+        Return a flag indicating whether this device has experienced an
+            expected reply not being ready
+
+        :return: whether this device has experienced an expected reply
+            not being ready
+        :rtype: boolean
+        """
         return self._expected_reply_not_ready
 
     @attribute(dtype="DevBoolean")
     def experiencedSubscriptionFailure(self):
-        """Return the experiencedSubscriptionFailure attribute."""
+        """
+        Return a flag indicating whether this device has experienced a
+            subscription failure
+
+        :return: whether this device has experienced a subscription
+            failure
+        :rtype: boolean
+        """
         return self._experienced_subscription_failure
 
     @attribute(dtype="DevBoolean")
     def invalidEventId(self):
-        """Return the invalidEventId attribute."""
+        """
+        Return a flag indicating whether this device has errored due to
+            an invalid event id
+
+        :return: whether this device has errored due to an invalid event
+            id
+        :rtype: boolean
+        """
         return self._invalid_event_id
 
     # --------
@@ -215,8 +315,14 @@ class MccsDevice(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of ExceptionCallback()
+            Stateless hook for implementation of
+            :py:meth:`MccsDevice.ExceptionCallback`
             command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -227,7 +333,11 @@ class MccsDevice(SKABaseDevice):
         ExceptionCallback Command
 
         :todo: What does this command do?
-        :return: None
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("ExceptionCallback")
         (return_code, message) = handler()
@@ -244,7 +354,13 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            DefaultAlarmOnCallback() command functionality.
+            :py:meth:`MccsDevice.DefaultAlarmOnCallback`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -255,7 +371,11 @@ class MccsDevice(SKABaseDevice):
         DefaultAlarmOnCallback Command
 
         :todo: What does this command do?
-        :return: None
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("DefaultAlarmOnCallback")
         (return_code, message) = handler()
@@ -272,7 +392,13 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            DefaultAlarmOffCallback() command functionality.
+            :py:meth:`MccsDevice.DefaultAlarmOffCallback`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -283,7 +409,11 @@ class MccsDevice(SKABaseDevice):
         DefaultAlarmOffCallback Command
 
         :todo: What does this command do?
-        :return: None
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("DefaultAlarmOffCallback")
         (return_code, message) = handler()
@@ -296,8 +426,14 @@ class MccsDevice(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of GetFullReport()
-            command functionality.
+            Stateless hook for implementation of
+            :py:meth:`MccsDevice.GetFullReport` command
+            functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return [""]
 
@@ -307,7 +443,10 @@ class MccsDevice(SKABaseDevice):
         """
         GetFullReport Command
 
-        :return: None
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("GetFullReport")
         return handler()
@@ -319,8 +458,12 @@ class MccsDevice(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of GetCommandReport()
+            Stateless hook for implementation of
+            :py:meth:`MccsDevice.GetCommandReport`
             command functionality.
+
+            :return: a command report
+            :rtype: array of str
             """
             return [""]
 
@@ -330,7 +473,8 @@ class MccsDevice(SKABaseDevice):
         """
         GetCommandReport Command
 
-        :return: 'DevVarStringArray'
+        :return: a command report
+        :rtype: array of string
         """
         handler = self.get_command_object("GetCommandReport")
         return handler()
@@ -342,8 +486,14 @@ class MccsDevice(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for implementation of GetAttributeReport()
+            Stateless hook for implementation of
+            :py:meth:`MccsDevice.GetAttributeReport`
             command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return [""]
 
@@ -353,7 +503,8 @@ class MccsDevice(SKABaseDevice):
         """
         GetAttributeReport Command
 
-        :return: 'DevVarStringArray'
+        :return: an attribute report
+        :rtype: array of string
         """
         handler = self.get_command_object("GetAttributeReport")
         return handler()
@@ -369,7 +520,16 @@ class MccsDevice(SKABaseDevice):
         def do(self, argin):
             """
             Stateless hook for implementation of
-            ConstructDeviceProxyAddress() command functionality.
+            :py:meth:`MccsDevice.ConstructDeviceProxyAddress`
+            command functionality.
+
+            :param argin: TODO: what argument does this take
+            :type argin: string
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, did nothing")
 
@@ -384,7 +544,11 @@ class MccsDevice(SKABaseDevice):
         ConstructDeviceProxyAddress Command
 
         :param argin: 'DevString'
-        :return: None
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
         handler = self.get_command_object("ConstructDeviceProxyAddress")
         (return_code, message) = handler(argin)
@@ -397,7 +561,17 @@ class MccsDevice(SKABaseDevice):
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsDevice module."""
+    """
+    Main function of the :py:mod:`ska.low.mccs.device` module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
     return MccsDevice.run_server(args=args, **kwargs)
 
 

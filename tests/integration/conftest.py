@@ -22,7 +22,7 @@ def pytest_itemcollected(item):
         item.add_marker("forked")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def device_context(mocker, devices_info):
     """
     Creates and returns a TANGO MultiDeviceTestContext object, with a
@@ -30,7 +30,7 @@ def device_context(mocker, devices_info):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: pytest wrapper
+        :type mocker: wrapper for :py:mod:`unittest.mock`
     :param devices_info: Information about the devices under test that
         are needed to stand the device up in a DeviceTestContext, such
         as the device classes and properties

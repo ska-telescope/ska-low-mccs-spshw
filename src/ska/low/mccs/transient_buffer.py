@@ -46,7 +46,15 @@ class MccsTransientBuffer(MccsDevice):
         """
 
         def do(self):
-            """Initialises the attributes and properties of the MccsTransientBuffer."""
+            """
+            Initialises the attributes and properties of the
+            `MccsTransientBuffer`.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
             super().do()
             device = self.target
             device._station_id = ""
@@ -88,50 +96,78 @@ class MccsTransientBuffer(MccsDevice):
 
     @attribute(dtype="DevString", label="stationId")
     def stationId(self):
-        """Return the stationId attribute."""
+        """
+        Return the station id
+
+        :return: the station id
+        :rtype: int
+        """
         return self._station_id
 
     @attribute(dtype="DevString", label="transientBufferJobId")
     def transientBufferJobId(self):
-        """Return the transientBufferJobId attribute."""
+        """
+        Return the transient buffer job id
+
+        :return: the transient buffer job id
+        :rtype: int
+        """
         return self._transient_buffer_job_id
 
     @attribute(dtype="DevLong", label="resamplingBits")
     def resamplingBits(self):
-        """Return the resamplingBits attribute."""
+        """
+        Return the resampling bit depth
+
+        :return: the resampling bit depth
+        :rtype: int
+        """
         return self._resampling_bits
 
     @attribute(dtype="DevShort", label="nStations")
     def nStations(self):
-        """Return the nStations attribute."""
+        """
+        Return the number of stations
+
+        :return: the number of stations
+        :rtype: int
+        """
         return self._n_stations
 
     @attribute(dtype=("DevDouble",), max_dim_x=100, label="transientFrequencyWindow")
     def transientFrequencyWindow(self):
-        """Return the transientFrequencyWindow attribute."""
+        """
+        Return the transient frequency window
+
+        :return: the transient frequency window
+        :rtype: array of double
+        """
         return self._transient_frequency_window
 
     @attribute(dtype=("DevString",), max_dim_x=100, label="stationIds")
     def stationIds(self):
-        """Return the stationIds attribute."""
+        """
+        Return the station ids
+
+        :return: the station ids
+        :rtype: array of str
+        """
         return self._station_ids
-
-    # ------------------
-    # Attributes methods
-    # ------------------
-
-    # --------
-    # Commands
-    # --------
-
-
-# ----------
-# Run server
-# ----------
 
 
 def main(args=None, **kwargs):
-    """Main function of the MccsTransientBuffer module."""
+    """
+    Main function of the :py:mod:`ska.low.mccs.transient_buffer`
+    module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
     return MccsTransientBuffer.run_server(args=args, **kwargs)
 
 

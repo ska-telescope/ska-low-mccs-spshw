@@ -25,7 +25,9 @@ __all__ = ["MccsTelState", "main"]
 
 class MccsTelState(SKATelState):
     """
-    MccsTelState TANGO device class for the MccsTelState prototype
+    MccsTelState TANGO device class for the MccsTelState prototype.
+
+    This is a subclass of :py:class:`ska.base.SKATelState`.
 
     **Properties:**
 
@@ -56,7 +58,7 @@ class MccsTelState(SKATelState):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -74,11 +76,15 @@ class MccsTelState(SKATelState):
         """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.tel_state.MccsTelState.InitCommand.do` method of the
+        nested :py:class:`~ska.low.mccs.tel_state.MccsTelState.InitCommand` class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.tel_state.MccsTelState.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by the Init
+        command when the Tango device server is re-initialised.
         """
 
     # ------------------

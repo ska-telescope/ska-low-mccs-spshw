@@ -22,7 +22,9 @@ from tango.server import attribute
 class MccsTpmDeviceSimulator(Device):
     """
     The Tpm Device simulator represents the TANGO interface to the hardware aspects
-    of a Tile (TPM) unit
+    of a Tile (TPM) unit.
+
+    This class is a subclass of :py:class:`tango.server.Device`.
     """
 
     def init_device(self):
@@ -39,11 +41,15 @@ class MccsTpmDeviceSimulator(Device):
         self._fpga2_temperature = 37.5
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in
+        :py:meth:`~ska.low.mccs.tpm_device_simulator.MccsTpmDeviceSimulator.init_device`.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.tpm_device_simulator.MccsTpmDeviceSimulator.init_device`
+        method to be released. This method is called by the device destructor, and by
+        :py:meth:`~ska.low.mccs.tpm_device_simulator.MccsTpmDeviceSimulator.init_device`
+        when the Tango device server is re-initialised.
         """
 
     # ----------

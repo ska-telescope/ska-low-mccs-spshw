@@ -29,7 +29,9 @@ import ska.low.mccs.release as release
 
 class MccsStationBeam(SKAObsDevice):
     """
-    Prototype TANGO device server for the MCSS Station Beam
+    Prototype TANGO device server for the MCCS Station Beam.
+
+    This class is a subclass of :py:class:`ska.base.SKAObsDevice`.
 
     **Properties:**
 
@@ -46,7 +48,11 @@ class MccsStationBeam(SKAObsDevice):
     # ---------------
     class InitCommand(SKAObsDevice.InitCommand):
         """
-        A class for the MccsStationBeam's init_device() "command".
+        A class for :py:class:`~ska.low.mccs.station_beam.MccsStationBeam`'s Init
+        command.
+        The :py:meth:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand.do` method
+        below is called upon :py:class:`~ska.low.mccs.station_beam.MccsStationBeam`'s
+        initialisation.
         """
 
         def do(self):
@@ -63,7 +69,8 @@ class MccsStationBeam(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -105,11 +112,15 @@ class MccsStationBeam(SKAObsDevice):
 
     def delete_device(self):
         """
-        Hook to delete resources allocated in init_device.
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand.do` method of
+        the nested :py:class:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand`
+        class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand.do` method to
+        be released. This method is called by the device destructor, and by the Init
+        command when the Tango device server is re-initialised.
         """
 
     # ----------

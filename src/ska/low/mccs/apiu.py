@@ -29,7 +29,13 @@ __all__ = ["MccsAPIU", "main"]
 
 class MccsAPIU(SKABaseDevice):
     """
-    An implementation of MCCS APIU device
+    An implementation of MCCS APIU device.
+
+    This class is a subclass of :py:class:`ska.base.SKABaseDevice`.
+
+    **Properties:**
+
+    - Device Property
     """
 
     class InitCommand(SKABaseDevice.InitCommand):
@@ -46,7 +52,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -69,11 +75,15 @@ class MccsAPIU(SKABaseDevice):
         """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.apiu.MccsAPIU.InitCommand.do` method of the
+        nested :py:class:`~ska.low.mccs.apiu.MccsAPIU.InitCommand` class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.apiu.MccsAPIU.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by the Init
+        command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -242,7 +252,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             # device = self.target
             # logicalAntennaId = argin
@@ -266,7 +276,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUpAntenna")
         (return_code, message) = handler(argin)
@@ -286,7 +296,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             # device = self.target
             # logicalAntennaId = argin
@@ -310,7 +320,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDownAntenna")
         (return_code, message) = handler(argin)
@@ -333,7 +343,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -349,7 +359,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUp")
         (return_code, message) = handler()
@@ -372,7 +382,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -388,7 +398,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDown")
         (return_code, message) = handler()

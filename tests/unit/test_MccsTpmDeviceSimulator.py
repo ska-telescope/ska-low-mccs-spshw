@@ -12,6 +12,11 @@
 This module contains the tests for MccsTpmDeviceSimulator.
 """
 
+from tango import AttrQuality, DevSource, EventType
+from ska.base.control_model import HealthState
+
+from ska.low.mccs.tpm_device_simulator import TpmHardware
+
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
@@ -26,6 +31,32 @@ class TestMccsTpmDeviceSimulator(object):
     The TpmDeviceSimulator device simulates te H/W TPM unit allowing changes
     to the values of key attributes.
     """
+
+    def test_healthState(self, device_under_test, mocker):
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        assert device_under_test.healthState == HealthState.OK
+
+        # Test that polling is turned on and subscription yields an
+        # event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.OK
+        assert event_data.quality == AttrQuality.ATTR_VALID
 
     def test_simulate(self, device_under_test):
         """
@@ -49,11 +80,11 @@ class TestMccsTpmDeviceSimulator(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.voltage == 4.7
-        device_under_test.voltage = 4.6
-        assert device_under_test.voltage == 4.6
+        device_under_test.set_source(DevSource.DEV)
+
+        assert device_under_test.voltage == TpmHardware.VOLTAGE
         device_under_test.simulate = True
-        assert device_under_test.voltage != 4.6
+        assert device_under_test.voltage != TpmHardware.VOLTAGE
 
     def test_current(self, device_under_test):
         """
@@ -64,26 +95,26 @@ class TestMccsTpmDeviceSimulator(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.current == 0.4
-        device_under_test.current = 0.2
-        assert device_under_test.current == 0.2
+        device_under_test.set_source(DevSource.DEV)
+
+        device_under_test.current == TpmHardware.CURRENT
         device_under_test.simulate = True
-        assert device_under_test.current != 0.2
+        assert device_under_test.current != TpmHardware.CURRENT
 
     def test_temperature(self, device_under_test):
         """
-        Test for the board_temperature attribute.
+        Test for the temperature attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.temperature == 36.0
-        device_under_test.temperature = 37.0
-        assert device_under_test.temperature == 37.0
+        device_under_test.set_source(DevSource.DEV)
+
+        assert device_under_test.temperature == TpmHardware.TEMPERATURE
         device_under_test.simulate = True
-        assert device_under_test.temperature != 37.0
+        assert device_under_test.temperature != TpmHardware.TEMPERATURE
 
     def test_fpga1_temperature(self, device_under_test):
         """
@@ -94,11 +125,11 @@ class TestMccsTpmDeviceSimulator(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.fpga1_temperature == 38.0
-        device_under_test.fpga1_temperature = 39.0
-        assert device_under_test.fpga1_temperature == 39.0
+        device_under_test.set_source(DevSource.DEV)
+
+        assert device_under_test.fpga1_temperature == TpmHardware.FPGA1_TEMPERATURE
         device_under_test.simulate = True
-        assert device_under_test.fpga1_temperature != 39.0
+        assert device_under_test.fpga1_temperature != TpmHardware.FPGA1_TEMPERATURE
 
     def test_fpga2_temperature(self, device_under_test):
         """
@@ -109,8 +140,8 @@ class TestMccsTpmDeviceSimulator(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.fpga2_temperature == 37.5
-        device_under_test.fpga2_temperature = 40.0
-        assert device_under_test.fpga2_temperature == 40.0
+        device_under_test.set_source(DevSource.DEV)
+
+        assert device_under_test.fpga2_temperature == TpmHardware.FPGA2_TEMPERATURE
         device_under_test.simulate = True
-        assert device_under_test.fpga2_temperature != 40.0
+        assert device_under_test.fpga2_temperature != TpmHardware.FPGA2_TEMPERATURE

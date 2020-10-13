@@ -96,7 +96,7 @@ class TestMccsStation:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.healthState == HealthState.OK
+        assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.NONE
@@ -113,6 +113,36 @@ class TestMccsStation:
         assert device_under_test.beamFQDNs is None
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
+
+    def test_healthState(self, device_under_test, mocker):
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        # The device has subscribed to healthState change events on
+        # its subsidiary, but hasn't heard from them (back in unit
+        # testing these devices are mocked out), so its healthState is
+        # UNKNOWN
+        assert device_under_test.healthState == HealthState.UNKNOWN
+
+        # Test that polling is turned on and subscription yields an
+        # event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", tango.EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.UNKNOWN
+        assert event_data.quality == tango.AttrQuality.ATTR_VALID
 
     # overridden base class attributes
     def test_buildState(self, device_under_test):
@@ -370,7 +400,7 @@ class TestStationPowerManager:
             an object that implements the same interface
 
         :return: a state model for the command under test to use
-        :rtype: :py:class:`ska.base.DeviceStateModel`
+        :rtype: :py:class:`~ska.base.DeviceStateModel`
         """
         return DeviceStateModel(logger)
 
@@ -392,7 +422,7 @@ class TestStationPowerManager:
             devices
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         :param state_model: the state model for the device
-        :type state_model: :py:class:`ska.base.DeviceStateModel`
+        :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         on_command = MccsStation.OnCommand(power_manager, state_model)
         assert not power_manager.is_on()
@@ -440,7 +470,7 @@ class TestStationPowerManager:
             devices
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         :param state_model: the state model for the device
-        :type state_model: :py:class:`ska.base.DeviceStateModel`
+        :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         off_command = MccsStation.OffCommand(power_manager, state_model)
         power_manager.on()

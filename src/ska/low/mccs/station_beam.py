@@ -27,6 +27,9 @@ from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
 
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthModel
+
 
 class MccsStationBeam(SKAObsDevice):
     """
@@ -71,7 +74,7 @@ class MccsStationBeam(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -91,6 +94,9 @@ class MccsStationBeam(SKAObsDevice):
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
+
+            device.event_manager = EventManager()
+            device.health_model = HealthModel(None, None, device.event_manager)
 
             message = "MccsStationBeam Init command completed OK"
             self.logger.info(message)
@@ -139,6 +145,25 @@ class MccsStationBeam(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+
+    # redefinition from base classes to turn polling on
+    @attribute(
+        dtype=HealthState,
+        polling_period=1000,
+        doc="The health state reported for this device. "
+        "It interprets the current device"
+        " condition and condition of all managed devices to set this. "
+        "Most possibly an aggregate attribute.",
+    )
+    def healthState(self):
+        """
+        returns the health of this device; which in this case means the
+        rolled-up health of the entire MCCS subsystem
+
+        :return: the rolled-up health of the MCCS subsystem
+        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        """
+        return self.health_model.health
 
     @attribute(dtype="DevLong", format="%i", polling_period=1000, doc="ID of the beam")
     def beamId(self):

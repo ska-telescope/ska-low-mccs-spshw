@@ -17,7 +17,11 @@ from tango.server import run, attribute
 
 # Additional import
 from ska.base import SKATelState
+from ska.base.control_model import HealthState
+
 import ska.low.mccs.release as release
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthModel
 
 
 __all__ = ["MccsTelState", "main"]
@@ -41,6 +45,24 @@ class MccsTelState(SKATelState):
     # ----------
     # Attributes
     # ----------
+    # redefinition from base classes to turn polling on
+    @attribute(
+        dtype=HealthState,
+        polling_period=1000,
+        doc="The health state reported for this device. "
+        "It interprets the current device"
+        " condition and condition of all managed devices to set this. "
+        "Most possibly an aggregate attribute.",
+    )
+    def healthState(self):
+        """
+        returns the health of this device; which in this case means the
+        rolled-up health of the entire MCCS subsystem
+
+        :return: the rolled-up health of the MCCS subsystem
+        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        """
+        return self.health_model.health
 
     # ---------------
     # General methods
@@ -58,7 +80,7 @@ class MccsTelState(SKATelState):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -69,6 +91,9 @@ class MccsTelState(SKATelState):
             device._algorithms_version = ""
             device._build_state = release.get_release_info()
             device._version_id = release.version
+
+            device.event_manager = EventManager()
+            device.health_model = HealthModel(None, None, device.event_manager)
 
             return (result_code, message)
 

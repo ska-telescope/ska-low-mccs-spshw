@@ -76,7 +76,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("connect", True)
 

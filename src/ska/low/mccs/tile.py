@@ -120,7 +120,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             device = self.target
@@ -348,7 +348,7 @@ class MccsTile(SKABaseDevice):
             device.set_archive_event("healthState", True, True)
 
             device.health_model = HealthModel(
-                device.hardware_manager, None, None, device._update_health_state
+                device.hardware_manager, None, device.event_manager
             )
 
         def _initialise_power_management(self, device):
@@ -394,7 +394,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -419,7 +419,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -947,7 +947,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.initialise()
@@ -968,7 +968,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1041,7 +1041,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             bitfile = argin
@@ -1068,7 +1068,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1097,7 +1097,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             bitfile = argin
@@ -1123,7 +1123,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1266,7 +1266,7 @@ class MccsTile(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks
                 mandatory parameters
@@ -1322,7 +1322,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1409,7 +1409,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin has the wrong length/structure
             """
@@ -1437,7 +1437,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1468,7 +1468,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -1538,7 +1538,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1626,7 +1626,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -1677,7 +1677,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1708,7 +1708,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
@@ -1747,7 +1747,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1781,7 +1781,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
@@ -1844,7 +1844,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1875,7 +1875,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
@@ -1928,7 +1928,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -1959,7 +1959,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
@@ -2022,7 +2022,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2059,7 +2059,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.load_beam_angle(argin)
@@ -2087,7 +2087,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2139,7 +2139,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
@@ -2174,7 +2174,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2204,7 +2204,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             switch_time = argin
             hardware_manager = self.target
@@ -2228,7 +2228,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2280,7 +2280,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the argin argument does not have the
                 right length / structure
@@ -2320,7 +2320,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("SetPointingDelay")
         (return_code, message) = handler(argin)
@@ -2344,7 +2344,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             load_time = argin
             hardware_manager = self.target
@@ -2368,7 +2368,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2398,7 +2398,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
 
@@ -2428,7 +2428,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2456,7 +2456,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.stop_beamformer()
@@ -2474,7 +2474,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2504,7 +2504,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             integration_time = argin
             if integration_time <= 0:
@@ -2535,7 +2535,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2564,7 +2564,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             integration_time = argin
             if integration_time <= 0:
@@ -2592,7 +2592,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2621,7 +2621,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             sync = params.get("Sync", False)
@@ -2657,7 +2657,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2688,7 +2688,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             number_of_samples = params.get("NSamples", 1024)
@@ -2738,7 +2738,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2769,7 +2769,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -2820,7 +2820,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2851,7 +2851,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             period = params.get("Period", 0)
@@ -2886,7 +2886,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2914,7 +2914,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.stop_data_transmission()
@@ -2932,7 +2932,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -2958,7 +2958,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.compute_calibration_coefficients()
@@ -2979,7 +2979,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3008,7 +3008,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             start_time = params.get("StartTime", None)
@@ -3038,7 +3038,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3069,7 +3069,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             delays = argin
             hardware_manager = self.target
@@ -3094,7 +3094,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3124,7 +3124,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             rounding = argin
             hardware_manager = self.target
@@ -3147,7 +3147,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3176,7 +3176,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -3234,7 +3234,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3266,7 +3266,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
             period = params.get("Period", 0)
@@ -3301,7 +3301,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3332,7 +3332,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -3397,7 +3397,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3426,7 +3426,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.tweak_transceivers()
@@ -3444,7 +3444,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3470,7 +3470,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.post_synchronisation()
@@ -3488,7 +3488,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3514,7 +3514,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             hardware_manager.sync_fpgas()
@@ -3532,7 +3532,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3561,7 +3561,7 @@ class MccsTile(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
 
             :raises ValueError: if the JSON input lacks
                 mandatory parameters
@@ -3613,7 +3613,7 @@ class MccsTile(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -3625,17 +3625,6 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("CalculateDelay")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
-
-    def _update_health_state(self, health_state):
-        """
-        Update and push a change event for the healthState attribute
-
-        :param health_state: The new health state
-        :type health_state: :py:class:`ska.base.control_model.HealthState`
-        """
-        self._health_state = health_state
-        self.push_change_event("healthState", health_state)
-        self.logger.info("health state = " + str(health_state))
 
 
 # ----------

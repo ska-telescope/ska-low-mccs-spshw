@@ -29,44 +29,17 @@ from ska.base.control_model import HealthState
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
+from ska.low.mccs.hardware import Hardware, HardwareManager
 from ska.low.mccs.health import HealthModel
 
 
-class StationHardware:
+class StationHardware(Hardware):
     """
     A stub class to take the place of actual station hardware
     """
 
-    def __init__(self):
-        """
-        Initialise a new StationHardware instance
-        """
-        self._is_on = False
 
-    def off(self):
-        """
-        Turn me off
-        """
-        self._is_on = False
-
-    def on(self):
-        """
-        Turn me on
-        """
-        self._is_on = True
-
-    @property
-    def is_on(self):
-        """
-        Return whether I am on or off
-
-        :return: whether I am on or off
-        :rtype: bool
-        """
-        return self._is_on
-
-
-class StationHardwareManager:
+class StationHardwareManager(HardwareManager):
     """
     This class manages station hardware.
 
@@ -86,105 +59,18 @@ class StationHardwareManager:
             exists to facilitate testing.
         :type hardware: :py:class:`StationHardware`
         """
-        self._hardware = StationHardware() if hardware is None else hardware
-
-        # polled hardware attributes
-        self._is_on = None
-
-        self._health = None
-        self._health_callbacks = []
-
-        self.poll_hardware()
-
-    def off(self):
-        """
-        Turn the hardware off
-
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
-        """
-        if not self._hardware.is_on:
-            return
-        self._hardware.off()
-        self.poll_hardware()
-        return not self.is_on
-
-    def on(self):
-        """
-        Turn the hardware on
-
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
-        """
-        if self._hardware.is_on:
-            return
-        self._hardware.on()
-        self.poll_hardware()
-        return self.is_on
-
-    def poll_hardware(self):
-        """
-        Poll the hardware and update local attributes with values
-        reported by the hardware.
-        """
-        self._is_on = self._hardware.is_on
-        self._evaluate_health()
-
-    @property
-    def is_on(self):
-        """
-        Whether the hardware is on or not
-
-        :return: whether the hardware is on or not
-        :rtype: boolean
-        """
-        return self._is_on
-
-    @property
-    def health(self):
-        """
-        The health of the hardware, as evaluated by this manager
-
-        :return: the health of the hardware
-        :rtype: :py:class:`ska.base.control_model.HealthState`
-        """
-        return self._health
+        super().__init__(hardware or StationHardware())
 
     def _evaluate_health(self):
         """
         Evaluate the health of the hardware
+
+        :return: an evaluation of the health of the managed hardware
+        :rtype: :py:class:`~ska.base.control_model.HealthState`
         """
         # TODO: look at the polled hardware values and maybe further
         # poke the hardware to check that it is okay. But for now:
-        evaluated_health = HealthState.OK
-
-        self._update_health(evaluated_health)
-
-    def _update_health(self, health):
-        """
-        Update the health of this hardware, ensuring that any registered
-        callbacks are called
-
-        :param health: the new health value
-        :type health: :py:class:`ska.base.control_model.HealthState`
-        """
-        if self._health == health:
-            return
-        self._health = health
-        for callback in self._health_callbacks:
-            callback(health)
-
-    def register_health_callback(self, callback):
-        """
-        Register a callback to be called when the health of the hardware
-        changes
-
-        :param callback: A callback to be called when the health of the
-            hardware changes
-        :type callback: callable
-        """
-        self._health_callbacks.append(callback)
-        callback(self._health)
+        return HealthState.OK
 
 
 class StationPowerManager(PowerManager):
@@ -277,7 +163,7 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -376,10 +262,7 @@ class MccsStation(SKAObsDevice):
 
             device.event_manager = EventManager()
             device.health_model = HealthModel(
-                device.hardware_manager,
-                fqdns,
-                device.event_manager,
-                device._update_health_state,
+                device.hardware_manager, fqdns, device.event_manager
             )
 
         def _initialise_power_management(self, device, fqdns):
@@ -441,6 +324,25 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+    # redefinition from base classes to turn polling on
+    @attribute(
+        dtype=HealthState,
+        polling_period=1000,
+        doc="The health state reported for this device. "
+        "It interprets the current device"
+        " condition and condition of all managed devices to set this. "
+        "Most possibly an aggregate attribute.",
+    )
+    def healthState(self):
+        """
+        returns the health of this device; which in this case means the
+        rolled-up health of the entire MCCS subsystem
+
+        :return: the rolled-up health of the MCCS subsystem
+        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        """
+        return self.health_model.health
+
     @attribute(
         dtype="DevLong",
         format="%i",
@@ -665,7 +567,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -690,7 +592,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -799,7 +701,7 @@ class MccsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -809,17 +711,6 @@ class MccsStation(SKAObsDevice):
         handler = self.get_command_object("InitialSetup")
         (return_code, message) = handler()
         return [[return_code], [message]]
-
-    def _update_health_state(self, health_state):
-        """
-        Update and push a change event for the healthState attribute
-
-        :param health_state: The new health state
-        :type health_state: :py:class:`ska.base.control_model.HealthState`
-        """
-        self._health_state = health_state
-        self.push_change_event("healthState", health_state)
-        self.logger.info("health state = " + str(health_state))
 
 
 # ----------

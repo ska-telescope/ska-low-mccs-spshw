@@ -21,9 +21,9 @@ class LazyInstance:
     devices being ready before them.
 
     Through the use of this class, we can create a lazy device proxy: an
-    object that looks and behaves like a tango.DeviceProxy, but that
-    won't actually do the work to become one until the first time it is
-    used.
+    object that looks and behaves like a :py:class:`tango.DeviceProxy`,
+    but that won't actually do the work to become one until the first time
+    it is used.
 
     Example::
 
@@ -77,7 +77,8 @@ class LazyInstance:
 def tango_raise(
     msg, reason="API_CommandFailed", severity=ErrSeverity.ERR, _origin=None
 ):
-    """Helper function to provide a concise way to throw `tango.Except.throw_exception`
+    """Helper function to provide a concise way to throw
+    :py:class:`tango.Except.throw_exception <pytango:tango.Except>`.
 
     Example::
 
@@ -92,11 +93,11 @@ def tango_raise(
 
     :param msg: message
     :type msg: str
-    :param reason: the tango api DevError description string, defaults to
-        "API_CommandFailed"
+    :param reason: the tango api :py:class:`tango.DevError`
+        description string, defaults to "API_CommandFailed"
     :type reason: str, optional
     :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
-    :type severity: `tango.ErrSeverity`, optional
+    :type severity: :py:class:`tango.ErrSeverity`, optional
     :param _origin: the calling object name, defaults to None (autodetected)
         Note that autodetection only works for class methods not e.g.
         decorators

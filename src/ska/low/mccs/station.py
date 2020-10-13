@@ -212,6 +212,8 @@ class MccsStation(SKAObsDevice):
     """
     MccsStation is the Tango device class for the MCCS Station prototype.
 
+    This is a subclass of :py:class:`ska.base.SKAObsDevice`.
+
     **Properties:**
 
     - Device Property
@@ -236,14 +238,13 @@ class MccsStation(SKAObsDevice):
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Tile
-        State is managed under the hood; the basic sequence is:
+        Class that implements device initialisation for the MCCS
+        Station is managed under the hood; the basic sequence is:
 
         1. Device state is set to INIT
         2. The do() method is run
         3. Device state is set to the appropriate outgoing state,
            usually off
-
         """
 
         def do(self):
@@ -254,7 +255,7 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -314,11 +315,14 @@ class MccsStation(SKAObsDevice):
 
     def delete_device(self):
         """
-        Hook to delete resources allocated in init_device.
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.station.MccsStation.InitCommand.do` method of the
+        nested :py:class:`~ska.low.mccs.station.MccsStation.InitCommand` class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.station.MccsStation.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by the Init
+        command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -542,7 +546,8 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -566,7 +571,8 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             power_manager = self.target
             try:
@@ -590,7 +596,8 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             device = self.target
             for tile_id, tile in enumerate(device.TileFQDNs):
@@ -621,7 +628,7 @@ class MccsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -634,9 +641,9 @@ class MccsStation(SKAObsDevice):
 
     def _update_health_state(self, health_state):
         """
-        Update and push a change event for the healthstate attribute
+        Update and push a change event for the healthState attribute
 
-        :param health_state: The new healthstate
+        :param health_state: The new health state
         :type health_state: :py:class:`ska.base.control_model.HealthState`
         """
         self._health_state = health_state

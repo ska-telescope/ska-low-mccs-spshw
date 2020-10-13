@@ -27,7 +27,9 @@ import ska.low.mccs.release as release
 
 class MccsDevice(SKABaseDevice):
     """
-    A base class for all Mccs Devices
+    A base class for all Mccs Devices.
+
+    This is a subclass of :py:class:`ska.base.SKABaseDevice`.
     """
 
     # -----------------
@@ -46,7 +48,6 @@ class MccsDevice(SKABaseDevice):
         2. The do() method is run
         3. Device state is set to the appropriate outgoing state,
            usually off
-
         """
 
         def do(self):
@@ -57,7 +58,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -115,11 +116,15 @@ class MccsDevice(SKABaseDevice):
         """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.device.MccsDevice.InitCommand.do` method of the
+        nested :py:class:`~ska.low.mccs.device.MccsDevice.InitCommand` class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.device.MccsDevice.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by the Init
+        command when the Tango device server is re-initialised.
         """
 
     # --------------------------------
@@ -307,7 +312,7 @@ class MccsDevice(SKABaseDevice):
 
     class ExceptionCallbackCommand(ResponseCommand):
         """
-        Class for handling the ExceptionCallback() command.
+        Class for handling the ExceptionCallback command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -322,7 +327,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -337,7 +342,7 @@ class MccsDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("ExceptionCallback")
         (return_code, message) = handler()
@@ -345,7 +350,7 @@ class MccsDevice(SKABaseDevice):
 
     class DefaultAlarmOnCallbackCommand(ResponseCommand):
         """
-        Class for handling the DefaultAlarmOnCallback() command.
+        Class for handling the DefaultAlarmOnCallback command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -360,7 +365,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -375,7 +380,7 @@ class MccsDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("DefaultAlarmOnCallback")
         (return_code, message) = handler()
@@ -383,7 +388,7 @@ class MccsDevice(SKABaseDevice):
 
     class DefaultAlarmOffCallbackCommand(ResponseCommand):
         """
-        Class for handling the DefaultAlarmOffCallback() command.
+        Class for handling the DefaultAlarmOffCallback command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -398,7 +403,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, does nothing")
 
@@ -413,7 +418,7 @@ class MccsDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("DefaultAlarmOffCallback")
         (return_code, message) = handler()
@@ -433,7 +438,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return [""]
 
@@ -446,7 +451,7 @@ class MccsDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("GetFullReport")
         return handler()
@@ -493,7 +498,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return [""]
 
@@ -529,7 +534,7 @@ class MccsDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation, did nothing")
 
@@ -548,7 +553,7 @@ class MccsDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("ConstructDeviceProxyAddress")
         (return_code, message) = handler(argin)

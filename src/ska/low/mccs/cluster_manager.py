@@ -29,6 +29,12 @@ class MccsClusterManager(MccsGroupDevice):
     """
     An implementation of the Cluster Manager Device Server for the MCCS
     based upon architecture in SKA-TEL-LFAA-06000052-02.
+
+    This class is a subclass of :py:class:`ska.low.mccs.group_device.MccsGroupDevice`.
+
+    **Properties:**
+
+    - Device Property
     """
 
     # -----------------
@@ -52,7 +58,7 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -163,11 +169,17 @@ class MccsClusterManager(MccsGroupDevice):
         """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.cluster_manager.MccsClusterManager.InitCommand.do`
+        method of the nested
+        :py:class:`~ska.low.mccs.cluster_manager.MccsClusterManager.InitCommand`
+        class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.cluster_manager.MccsClusterManager.InitCommand.do`
+        method to be released. This method is called by the device destructor,
+        and by the Init command when the Tango device server is re-initialised.
         """
 
     # ------------------
@@ -470,7 +482,8 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -494,7 +507,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StartJob")
         (return_code, message) = handler(argin)
@@ -516,7 +529,8 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -540,7 +554,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StopJob")
         (return_code, message) = handler(argin)
@@ -562,7 +576,8 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -586,7 +601,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("SubmitJob")
         (return_code, message) = handler(argin)
@@ -608,7 +623,8 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -632,7 +648,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("GetJobStatus")
         (return_code, message) = handler(argin)
@@ -652,7 +668,8 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -671,7 +688,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("ClearJobStats")
         (return_code, message) = handler()
@@ -691,7 +708,8 @@ class MccsClusterManager(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -710,7 +728,7 @@ class MccsClusterManager(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PingMasterPool")
         (return_code, message) = handler()

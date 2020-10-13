@@ -116,6 +116,8 @@ class MccsSubarray(SKASubarray):
     """
     MccsSubarray is the Tango device class for the MCCS Subarray
     prototype.
+
+    This is a subclass of :py:class:`ska.base.SKASubarray`.
     """
 
     # -----------------
@@ -139,7 +141,7 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -201,11 +203,14 @@ class MccsSubarray(SKASubarray):
 
     def delete_device(self):
         """
-        Hook to delete resources allocated in init_device.
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.subarray.MccsSubarray.InitCommand.do` method of the
+        nested :py:class:`~ska.low.mccs.subarray.MccsSubarray.InitCommand` class.
 
-        This method allows for any memory or other resources allocated
-        in the init_device() method to be released.  This method is
-        called by the device destructor and by the device Init command.
+        This method allows for any memory or other resources allocated in the
+        :py:meth:`~ska.low.mccs.subarray.MccsSubarray.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by the Init
+        command when the Tango device server is re-initialised.
         """
 
     # ------------------
@@ -271,7 +276,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -291,7 +297,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -314,7 +321,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -340,7 +348,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -363,7 +372,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -388,7 +398,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             result_code = ResultCode.OK
             message = "Configure command completed successfully"
@@ -422,7 +433,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do(argin)
 
@@ -442,7 +454,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -462,7 +475,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -482,7 +496,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -502,7 +517,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -522,7 +538,8 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -557,7 +574,7 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)

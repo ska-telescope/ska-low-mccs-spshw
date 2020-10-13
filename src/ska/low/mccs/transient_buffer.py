@@ -25,7 +25,9 @@ __all__ = ["MccsTransientBuffer", "main"]
 
 class MccsTransientBuffer(MccsDevice):
     """
-    MccsTelState TANGO device class for the MccsTransientBuffer prototype
+    MccsTelState TANGO device class for the MccsTransientBuffer prototype.
+
+    This is a subclass of :py:class:`ska.low.mccs.device.MccsDevice`.
 
     **Properties:**
 
@@ -53,7 +55,7 @@ class MccsTransientBuffer(MccsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -83,11 +85,17 @@ class MccsTransientBuffer(MccsDevice):
         """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
-        """Hook to delete resources allocated in init_device.
+        """
+        Hook to delete resources allocated in the
+        :py:meth:`~ska.low.mccs.transient_buffer.MccsTransientBuffer.InitCommand.do`
+        method of the nested
+        :py:class:`~ska.low.mccs.transient_buffer.MccsTransientBuffer.InitCommand`
+        class.
 
         This method allows for any memory or other resources allocated in the
-        init_device method to be released.  This method is called by the device
-        destructor and by the device Init command.
+        :py:meth:`~ska.low.mccs.transient_buffer.MccsTransientBuffer.InitCommand.do`
+        method to be released. This method is called by the device destructor,
+        and by the Init command when the Tango device server is re-initialised.
         """
 
     # ----------

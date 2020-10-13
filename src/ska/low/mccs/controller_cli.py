@@ -23,7 +23,8 @@ from ska.base.commands import ResultCode
 
 
 class CliMeta(type):
-    """Metaclass to catch and disect `PyTango.DevFailed` and other exceptions for
+    """Metaclass to catch and disect
+    :py:class:`tango.DevFailed` and other exceptions for
     all class methods. They get turned into `fire.core.FireError` exceptions.
     """
 
@@ -206,7 +207,7 @@ class MccsControllerCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("Release", subarray_id)
 

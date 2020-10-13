@@ -242,4 +242,11 @@ epub_exclude_files = ["search.html"]
 # -- Extension configuration -------------------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"https://docs.python.org/3/": None}
+intersphinx_mapping = {
+    "https://docs.python.org/3/": None,
+    "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
+    "ska-base": (
+        "https://developer.skatelescope.org/projects/lmc-base-classes/en/latest/",
+        None,
+    ),
+}

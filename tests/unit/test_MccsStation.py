@@ -14,11 +14,17 @@ This module contains the tests for MccsStation.
 import logging
 import pytest
 import tango
-from tango import DevSource
+from tango import DevSource, DevState
 
-from ska.base import SKABaseDeviceStateModel
+from ska.base import DeviceStateModel
 from ska.base.commands import CommandError, ResultCode
-from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
 from ska.low.mccs import MccsStation, release
 from ska.low.mccs.station import (
     StationHardware,
@@ -349,13 +355,13 @@ class TestStationPowerManager:
         :return: a state model for the command under test to use
         :rtype: :py:class:`ska.base.DeviceStateModel`
         """
-        return SKABaseDeviceStateModel(logger)
+        return DeviceStateModel(logger)
 
     def test_OnCommand(self, power_manager, state_model):
         """
         Test the working of the On command.
 
-        Because the PowerManager and SKABaseDeviceStateModel are thoroughly
+        Because the PowerManager and DeviceStateModel are thoroughly
         unit-tested elsewhere, here we just need to check that the On
         command drives them correctly. The scope of this test is: check
         that the On command is not allowed to run the state model is
@@ -374,41 +380,36 @@ class TestStationPowerManager:
         on_command = MccsStation.OnCommand(power_manager, state_model)
         assert not power_manager.is_on()
 
-        all_states = {
-            "UNINITIALISED",
-            "FAULT_ENABLED",
-            "FAULT_DISABLED",
-            "INIT_ENABLED",
-            "INIT_DISABLED",
-            "DISABLED",
-            "OFF",
-            "ON",
-        }
-
         # in all states except OFF, the on command is not permitted,
         # should not be allowed, should fail, should have no side-effect
-        for state in all_states - {"OFF"}:
-            state_model._straight_to_state(state)
+        # There's no need to check them all though, as that is done in
+        # the lmcbaseclasses testing. Let's just double-check DISABLE
+        state_model._straight_to_state(
+            admin_mode=AdminMode.ONLINE, op_state=DevState.DISABLE
+        )
 
-            assert not on_command.is_allowed()
-            with pytest.raises(CommandError):
-                on_command()
+        assert not on_command.is_allowed()
+        with pytest.raises(CommandError):
+            on_command()
 
-            assert not power_manager.is_on()
-            assert state_model._state == state
+        assert not power_manager.is_on()
+        assert state_model.op_state == DevState.DISABLE
 
         # now push to OFF, the state in which the On command IS allowed
-        state_model._straight_to_state("OFF")
+        state_model._straight_to_state(
+            admin_mode=AdminMode.ONLINE, op_state=DevState.OFF
+        )
+
         assert on_command.is_allowed()
         assert on_command() == (ResultCode.OK, "On command completed OK")
         assert power_manager.is_on()
-        assert state_model._state == "ON"
+        assert state_model.op_state == DevState.ON
 
     def test_OffCommand(self, power_manager, state_model):
         """
         Test the working of the Off command.
 
-        Because the PowerManager and BaseDeviceStateModel are thoroughly
+        Because the PowerManager and DeviceStateModel are thoroughly
         unit-tested elsewhere, here we just need to check that the Off
         command drives them correctly. The scope of this test is: check
         that the Off command is not allowed to run if the state model is
@@ -428,32 +429,31 @@ class TestStationPowerManager:
         power_manager.on()
         assert power_manager.is_on()
 
-        all_states = {
-            "UNINITIALISED",
-            "FAULT_ENABLED",
-            "FAULT_DISABLED",
-            "INIT_ENABLED",
-            "INIT_DISABLED",
-            "DISABLED",
-            "OFF",
-            "ON",
-        }
+        # The Off command is allowed in states DISABLE, STANDBY and ON.
+        # It is disallowed in states INIT and FAULT.
 
-        # in all states except ON, the off command is not permitted,
-        # should not be allowed, should fail, should have no side-effect
-        for state in all_states - {"ON"}:
-            state_model._straight_to_state(state)
+        # There's no need to check them all though, as that is done in
+        # the lmcbaseclasses testing. Let's just check that the command
+        # is disallowed from FAULT, and allowed from STANDBY
 
-            assert not off_command.is_allowed()
-            with pytest.raises(CommandError):
-                off_command()
+        state_model._straight_to_state(
+            admin_mode=AdminMode.ONLINE, op_state=DevState.FAULT
+        )
 
-            assert power_manager.is_on()
-            assert state_model._state == state
+        assert not off_command.is_allowed()
+        with pytest.raises(CommandError):
+            off_command()
 
-        # now push to ON, the state in which the Off command IS allowed
-        state_model._straight_to_state("ON")
+        assert power_manager.is_on()
+        assert state_model.op_state == DevState.FAULT
+
+        # now push to STANDBY, a state in which the Off command IS
+        # allowed
+        state_model._straight_to_state(
+            admin_mode=AdminMode.ONLINE, op_state=DevState.STANDBY
+        )
+
         assert off_command.is_allowed()
         assert off_command() == (ResultCode.OK, "Off command completed OK")
         assert not power_manager.is_on()
-        assert state_model._state == "OFF"
+        assert state_model.op_state == DevState.OFF

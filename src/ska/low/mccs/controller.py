@@ -829,6 +829,34 @@ class MccsController(SKAMaster):
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
             device.register_command_object("On", device.OnCommand(*power_args))
+            # # Ben
+            # device._lock = threading.Lock()
+            # # initialise the health table using the FQDN as the key.
+            # # Create and event manager per FQDN and subscribe to events from it
+            # device._eventManagerList = []
+            # fqdns = station_fqdns
+            # device._rollup_policy = HealthRollupPolicy(device.update_healthstate)
+            # device._health_monitor = HealthMonitor(
+            #     fqdns, device._rollup_policy.rollup_health
+            # )
+            # for fqdn in station_fqdns:
+            #     device._eventManagerList.append(
+            #         EventManager(fqdn, device._health_monitor.update_health_table)
+            #     )
+
+            # device.power_manager = ControllerPowerManager(station_fqdns)
+            # # /Ben
+
+            # Drew
+            device.event_manager = EventManager(station_fqdns)
+            device.health_model = HealthModel(
+                None,
+                station_fqdns,
+                device.event_manager,
+                device._update_health_state,
+            )
+            device.power_manager = ControllerPowerManager(station_fqdns)
+            # /Drew
 
         def interrupt(self):
             """
@@ -1484,14 +1512,21 @@ class MccsController(SKAMaster):
                 )
 
             subarray_device = tango.DeviceProxy(subarray_fqdn)
+            # Generate station FQDNs from IDs
+            station_fqdns = [
+                f"low-mccs/station/{station_id:03}" for station_id in station_ids
+            ]
 
-            if not controllerdevice._subarray_enabled[subarray_id - 1]:
-                return (
-                    ResultCode.FAILED,
-                    "Cannot allocate resources to disabled subarray {}".format(
-                        subarray_fqdn
-                    ),
-                )
+            # Generate subarray FQDN from ID
+            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
+
+            # if not controllerdevice._subarray_enabled[subarray_id - 1]:
+            #     return (
+            #         ResultCode.FAILED,
+            #         "Cannot allocate resources to disabled subarray {}".format(
+            #             subarray_fqdn
+            #         ),
+            #     )
 
             # Query stations resource manager
             # Are we allowed to make this allocation?

@@ -1,11 +1,11 @@
 {{- /*
-tango-util.merge will merge two YAML templates and output the result.
+mccs-util.merge will merge two YAML templates and output the result.
 This takes an array of three values:
 - the top context
 - the template name of the overrides (destination)
 - the template name of the base (source)
 */ -}}
-{{- define "tango-util.merge" -}}
+{{- define "mccs-util.merge" -}}
 {{- $top := first . -}}
 {{- $overrides := fromYaml (include (index . 1) $top) | default (dict ) -}}
 {{- $tpl := fromYaml (include (index . 2) $top) | default (dict ) -}}
@@ -16,7 +16,7 @@ This takes an array of three values:
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "tango-util.name" -}}
+{{- define "mccs-util.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -25,7 +25,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "tango-util.fullname" -}}
+{{- define "mccs-util.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -41,7 +41,7 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "tango-util.chart" -}}
+{{- define "mccs-util.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -49,15 +49,15 @@ Create chart name and version as used by the chart label.
 {{- /*
 Generate name for TANGO device server
 */ -}}
-{{- define "tango-util.deviceName" -}}
-{{- printf "%s-%s-%s" (include "tango-util.name" .global) (include "tango-util.deviceInstance" .) .global.Release.Name  | replace "_" "-" -}}
+{{- define "mccs-util.deviceName" -}}
+{{- printf "%s-%s-%s" (include "mccs-util.name" .global) (include "mccs-util.deviceInstance" .) .global.Release.Name  | replace "_" "-" -}}
 {{- end -}}
 
 {{- /*
 Generate name for deviceserver instance (numbered).
 A number of 0 indicates unnumbered instance  
 */ -}}
-{{- define "tango-util.deviceInstance" -}}
+{{- define "mccs-util.deviceInstance" -}}
 {{/*
 values of lists of ints seem to be float?!
 */}}

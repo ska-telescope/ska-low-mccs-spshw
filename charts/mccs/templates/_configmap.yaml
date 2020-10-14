@@ -1,5 +1,5 @@
 
-{{- define "tango-util.configmap.tpl" -}}
+{{- define "mccs-util.configmap.tpl" -}}
 {{- $cfgFile := default "data/configuration.json" .Values.dsconfigFile -}}
 {{- $reg := default "nexus.engageska-portugal.pt/ska-docker" (get .Values "dsconfig.image.registry") -}}
 {{- $ima := default "tango-dsconfig" (get .Values "dsconfig.image.image") -}}
@@ -9,13 +9,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ (printf "configuration-json-%s-%s"  (include "tango-util.name" .) .Release.Name) }}
+  name: {{ (printf "configuration-json-%s-%s"  (include "mccs-util.name" .) .Release.Name) }}
   namespace: {{ .Release.Namespace }}
 data: 
 {{ (tpl (.Files.Glob $cfgFile).AsConfig . ) | indent 2  }}
   bootstrap.sh: |
     #/bin/sh
-    /usr/local/bin/wait-for-it.sh {{ include "tango-util.databaseds" . }} \
+    /usr/local/bin/wait-for-it.sh {{ include "mccs-util.databaseds" . }} \
       --timeout=30 \
       --strict \
       -- json2tango -w -a -u {{ $cfgFile }}
@@ -37,7 +37,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "configurator-{{ template "tango-util.name" . }}-{{ .Release.Name }}"
+  name: "configurator-{{ template "mccs-util.name" . }}-{{ .Release.Name }}"
   namespace: {{ .Release.Namespace }}
 spec:
   ttlSecondsAfterFinished: 100
@@ -51,7 +51,7 @@ spec:
           - sh
           - data/bootstrap.sh
         env:
-{{ include "tango-util.dbenv" . | indent 8 }}
+{{ include "mccs-util.dbenv" . | indent 8 }}
         volumeMounts:
           - name: configuration
             mountPath: data
@@ -59,7 +59,7 @@ spec:
       volumes:
         - name: configuration
           configMap:
-            name: "configuration-json-{{ template "tango-util.name" . }}-{{ .Release.Name }}"
+            name: "configuration-json-{{ template "mccs-util.name" . }}-{{ .Release.Name }}"
       restartPolicy: Never
 
 {{- end -}}

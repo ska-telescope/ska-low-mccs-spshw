@@ -1,55 +1,55 @@
-{{- define "tango-util.statefulset.tpl" -}}
+{{- define "mccs-util.statefulset.tpl" -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ template "tango-util.deviceName" . }}
+  name: {{ template "mccs-util.deviceName" . }}
   namespace: {{ .global.Release.Namespace }}
   labels:
-{{ include "tango-util.metadata" . | indent 4 }}
+{{ include "mccs-util.metadata" . | indent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ template "tango-util.deviceName" . }}
-      chart: {{ template "tango-util.chart" .global }}
+      app: {{ template "mccs-util.deviceName" . }}
+      chart: {{ template "mccs-util.chart" .global }}
       release: {{ .global.Release.Name }}
-  serviceName: {{ template "tango-util.deviceName" . }}
+  serviceName: {{ template "mccs-util.deviceName" . }}
   replicas: 1
   template:
     metadata:
       labels:
-{{ include "tango-util.metadata" . | indent 8 }}
-        deviceServer: {{ include "tango-util.deviceInstance" . }}
+{{ include "mccs-util.metadata" . | indent 8 }}
+        deviceServer: {{ include "mccs-util.deviceInstance" . }}
     spec:
       initContainers:
-      - name: "waitdb-{{ template "tango-util.deviceName" . }}"
+      - name: "waitdb-{{ template "mccs-util.deviceName" . }}"
         image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
         imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
         command: ['sh', '-c']
         args:
           - /usr/local/bin/retry --tries=6 -- 
             /usr/local/bin/wait-for-it.sh
-            {{ include "tango-util.databaseds" .global }}
+            {{ include "mccs-util.databaseds" .global }}
             --timeout=15 --strict
         env:
-{{ include "tango-util.dbenv" .global |indent 8 }}
-      - name: "waitconfig-{{ template "tango-util.deviceName" . }}"
+{{ include "mccs-util.dbenv" .global |indent 8 }}
+      - name: "waitconfig-{{ template "mccs-util.deviceName" . }}"
         image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
         imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
         command: ['sh', '-c']
         args:
           - "/usr/local/bin/retry --tries=6 -- tango_admin --check-device low-mccs/control/control && exit 0"
         env:
-{{ include "tango-util.dbenv" .global |indent 8 }}
+{{ include "mccs-util.dbenv" .global |indent 8 }}
       containers:
-      - name: {{ template "tango-util.deviceName" . }}
+      - name: {{ template "mccs-util.deviceName" . }}
         image: "{{ .global.Values.project.image.registry }}/{{ .global.Values.project.image.image }}:{{ .global.Values.project.image.tag }}"
         imagePullPolicy: {{ .global.Values.project.image.pullPolicy }}
         command:
           - sh
         args:
-{{ include "tango-util.deviceArgs" . | indent 10 }}
+{{ include "mccs-util.deviceArgs" . | indent 10 }}
         env:
-{{ include "tango-util.dbenv" .global |indent 8 }}
+{{ include "mccs-util.dbenv" .global |indent 8 }}
         resources:
 {{ toYaml .global.Values.resources | indent 10 }}
 {{- with .global.Values.nodeSelector }}

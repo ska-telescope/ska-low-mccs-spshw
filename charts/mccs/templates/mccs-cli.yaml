@@ -18,7 +18,7 @@ spec:
     imagePullPolicy: {{ .Values.project.image.pullPolicy }}
     command:
       - /usr/local/bin/wait-for-it.sh
-      - {{ template "mccs-util.databaseds" . }}
+      - {{ .Values.global.tango_host }}
       - --timeout=30
       - --strict
       - --
@@ -26,7 +26,6 @@ spec:
       - infinity
     env:
 {{ include "mccs-util.dbenv" . | indent 4 }}
-
   restartPolicy: Always
 {{- with .Values.nodeSelector }}
   nodeSelector:

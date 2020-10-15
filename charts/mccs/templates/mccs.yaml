@@ -1,8 +1,7 @@
- {{ if .Values.mccs.enabled }}
+ {{ if .Values.project.enabled }}
 
-# load boilerplate configmap from template in mccs-util library chart
-# uses values.yaml override dsconfigFile: "data/configuration.json"
-{{ template "mccs-util.configmap.tpl" . }}
+# uses values.yaml override dsconfig.configuration_file: "data/configuration.json"
+{{ template "tango-util.configuration.tpl" . }}
 
 # memorise global scope as it isn't accessible inside range
 {{- $global := . }}

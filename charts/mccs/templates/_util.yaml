@@ -68,3 +68,8 @@ values of lists of ints seem to be float?!
 {{- printf "%s_%s" .device.name $instance -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "mccs-util.dbenv" -}}
+- name: TANGO_HOST
+  value: {{ .Values.global.tango_host }} 
+{{- end -}}

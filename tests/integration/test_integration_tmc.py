@@ -225,7 +225,7 @@ class TestMccsIntegrationTmc:
         self.async_command(device=controller, command="Release", argin=json_string)
         assert subarray.obsState == ObsState.EMPTY
         assert subarray.State() == DevState.OFF
-        assert subarray.stationFQDNs == None
+        assert subarray.stationFQDNs is None
         assert station_001.subarrayId == 0
         assert station_002.subarrayId == 0
 

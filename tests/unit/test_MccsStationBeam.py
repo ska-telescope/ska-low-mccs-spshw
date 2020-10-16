@@ -239,3 +239,24 @@ class TestMccsStationBeam:
         # CHECK
         read_as_string = [float_format.format(x) for x in value_as_read]
         assert read_as_string == write_as_string
+
+    def test_Configure(self, device_under_test):
+        """
+        Test for Configure
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        config_dict = {
+            "station_beam_id": 1,
+            "station_id": [1, 2],
+            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+            "update_rate": 3.14,
+            "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+        }
+        json_str = json.dumps(config_dict)
+        [[result_code], [message]] = device_under_test.Configure(json_str)
+        print(dir(device_under_test))
+        assert result_code != ResultCode.OK

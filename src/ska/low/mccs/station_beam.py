@@ -14,16 +14,18 @@ Prototype TANGO device server for the MCSS Station Beam
 __all__ = ["MccsStationBeam", "main"]
 
 # imports
+import json
 
 # PyTango imports
 from tango import DevState
-from tango.server import attribute
+from tango.server import attribute, command
 from tango.server import device_property
 
 # Additional imports
 from ska.base import SKAObsDevice
 from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState
+from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
 
 
@@ -72,11 +74,13 @@ class MccsStationBeam(SKAObsDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            super().do()
+            (result_code, message) = super().do()
 
             device = self.target
             device._beam_id = device.BeamId
-            device._station_id = 0
+            # Changed station_id to list.
+            # This is a divergance from the ICD
+            device._station_ids = []
             device._logical_beam_id = 0
             device._channels = []
             device._desired_pointing = []
@@ -92,6 +96,16 @@ class MccsStationBeam(SKAObsDevice):
             message = "MccsStationBeam Init command completed OK"
             self.logger.info(message)
             return (ResultCode.OK, message)
+
+    def init_command_objects(self):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
+        super().init_command_objects()
+
+        args = (self, self.state_model, self.logger)
+        self.register_command_object("Configure", self.ConfigureCommand(*args))
 
     def always_executed_hook(self):
         """
@@ -137,25 +151,30 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self._beam_id
 
-    @attribute(dtype="DevLong", format="%i", doc="ID of the associated station")
-    def stationId(self):
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=512,
+        format="%i",
+        doc="IDs of the associated stations",
+    )
+    def stationIds(self):
         """
-        Return the station id
+        Return the station ids
 
-        :return: the station id
-        :rtype: int
+        :return: the station ids
+        :rtype: List[int]
         """
-        return self._station_id
+        return self._station_ids
 
-    @stationId.write
-    def stationId(self, station_id):
+    @stationIds.write
+    def stationIds(self, station_ids):
         """
-        Set the station id
+        Set the station ids
 
-        :param station_id: id of the station for this beam
-        :type station_id: int
+        :param station_ids: ids of the stations for this beam
+        :type station_ids: List[int]
         """
-        self._station_id = station_id
+        self._station_ids = station_ids
 
     @attribute(
         dtype="DevLong",
@@ -251,8 +270,9 @@ class MccsStationBeam(SKAObsDevice):
         "definition. It comprises:"
         "* activation time (s) -- value range 0-10^37"
         "* azimuth position (deg) -- value range 0-360"
+        "* azimuth speed (deg/s) -- value range 0-10^37"
         "* elevation position (deg) -- value range 0-90"
-        "* azimuth speed (deg/s) -- value range 0-10^37",
+        "* elevation rate (deg/s) -- value range 0-10^37",
     )
     def desiredPointing(self):
         """
@@ -265,15 +285,19 @@ class MccsStationBeam(SKAObsDevice):
         return self._desired_pointing
 
     @desiredPointing.write
-    def desiredPointing(self, value):
+    def desiredPointing(self, values):
         """
         Set the desired pointing of this beam
+        * activation time (s) -- value range 0-10^37
+        * azimuth position (deg) -- value range 0-360
+        * azimuth speed (deg/s) -- value range 0-10^37
+        * elevation position (deg) -- value range 0-90
+        * elevation rate (deg/s) -- value range 0-10^37
 
         :param value: the desired pointing of this beam
-        :type value: array of doubles conforming to the Sky Coordinate
-            Set definition
+        :type value: array of doubles conforming to the Sky Coordinate set definition
         """
-        self._desired_pointing = value
+        self._desired_pointing = values
 
     @attribute(
         dtype=("DevDouble",),
@@ -331,6 +355,53 @@ class MccsStationBeam(SKAObsDevice):
     # --------
     # Commands
     # --------
+    class ConfigureCommand(ResponseCommand):
+        """
+        Class for handling the Configure(argin) command
+        """
+
+        def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`MccsStationBeam.Configure`
+            command
+
+            :param argin: Configuration specification dict as a json string
+                {
+                "station_beam_id":1,
+                "station_id": [1,2]
+                "channels": [1,2,3,4,5,6,7,8],
+                "update_rate": 0.0,
+                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
+                }
+            :type argin: json string
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            """
+            config_dict = json.loads(argin)
+            device = self.target
+            device._station_ids = config_dict.get("station_id")
+            device._channels = config_dict.get("channels")
+            device._update_rate = config_dict.get("update_rate")
+            device._desired_pointing = config_dict.get("sky_coordinates")
+            return (ResultCode.OK, "Configure command completed successfully")
+
+    @command(
+        dtype_in="DevString",
+        doc_in="Configuration parameters encoded in json string",
+        dtype_out="DevVarLongStringArray",
+        doc_out="[ReturnCode, information-only string]",
+    )
+    def Configure(self, argin):
+        """
+        """
+        argin = """{"station_beam_id":1,"station_id":[1,2],"channels":[1,2,3,4,5,6,7,8],"update_rate": 3.142,"sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}"""
+        handler = self.get_command_object("Configure")
+        (result_code, message) = handler(argin)
+        return [[result_code], [message]]
 
 
 # ----------

@@ -23,7 +23,6 @@ from tango.server import device_property
 
 # Additional imports
 from ska.base import SKAObsDevice
-from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
@@ -265,7 +264,7 @@ class MccsStationBeam(SKAObsDevice):
 
     @attribute(
         dtype=("DevDouble",),
-        max_dim_x=4,
+        max_dim_x=5,
         doc="An array of doubles conforming to the Sky Coordinate Set "
         "definition. It comprises:"
         "* activation time (s) -- value range 0-10^37"
@@ -294,8 +293,8 @@ class MccsStationBeam(SKAObsDevice):
         * elevation position (deg) -- value range 0-90
         * elevation rate (deg/s) -- value range 0-10^37
 
-        :param value: the desired pointing of this beam
-        :type value: array of doubles conforming to the Sky Coordinate set definition
+        :param values: the desired pointing of this beam
+        :type values: array of doubles conforming to the Sky Coordinate set definition
         """
         self._desired_pointing = values
 
@@ -367,13 +366,6 @@ class MccsStationBeam(SKAObsDevice):
             command
 
             :param argin: Configuration specification dict as a json string
-                {
-                "station_beam_id":1,
-                "station_id": [1,2]
-                "channels": [1,2,3,4,5,6,7,8],
-                "update_rate": 0.0,
-                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
-                }
             :type argin: json string
 
             :return: A tuple containing a return code and a string
@@ -397,8 +389,23 @@ class MccsStationBeam(SKAObsDevice):
     )
     def Configure(self, argin):
         """
+        Configure the station_beam with all relevant parameters.
+
+        :param argin: Configuration parameters encoded in a json string
+                {
+                "station_beam_id":1,
+                "station_id": [1,2]
+                "channels": [1,2,3,4,5,6,7,8],
+                "update_rate": 0.0,
+                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
+                }
+        :type argin: :py:class:`tango.DevString`
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
         """
-        argin = """{"station_beam_id":1,"station_id":[1,2],"channels":[1,2,3,4,5,6,7,8],"update_rate": 3.142,"sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}"""
         handler = self.get_command_object("Configure")
         (result_code, message) = handler(argin)
         return [[result_code], [message]]

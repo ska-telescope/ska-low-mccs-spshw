@@ -11,8 +11,11 @@
 """
 This module contains the tests for MccsStationBeam.
 """
+import json
 
 from tango import DevSource
+
+from ska.base.commands import ResultCode
 from ska.base.control_model import ControlMode, SimulationMode, TestMode
 from ska.low.mccs import release
 
@@ -48,7 +51,7 @@ class TestMccsStationBeam:
 
         # The following reads might not be allowed in this state once properly
         # implemented
-        assert device_under_test.stationId == 0
+        assert list(device_under_test.stationIds) == []
         assert device_under_test.logicalBeamId == 0
         assert device_under_test.channels is None
         assert list(device_under_test.desiredPointing) == []
@@ -105,7 +108,9 @@ class TestMccsStationBeam:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.stationId == 0
+        assert list(device_under_test.stationIds) == []
+        device_under_test.stationIds = [3, 4, 5, 6]
+        assert list(device_under_test.stationIds) == [3, 4, 5, 6]
 
     def test_logicalBeamId(self, device_under_test):
         """
@@ -160,7 +165,7 @@ class TestMccsStationBeam:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        dummy_sky_coordinate = [1585619550.0, 192.85948, 27.12825, 1.0]
+        dummy_sky_coordinate = [1585619550.0, 192.85948, 2.0, 27.12825, 1.0]
         float_format = "{:3.4f}"
         self._test_readwrite_double_array(
             device_under_test, "desiredPointing", dummy_sky_coordinate, float_format
@@ -254,9 +259,14 @@ class TestMccsStationBeam:
             "station_id": [1, 2],
             "channels": [1, 2, 3, 4, 5, 6, 7, 8],
             "update_rate": 3.14,
-            "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+            "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
         }
         json_str = json.dumps(config_dict)
         [[result_code], [message]] = device_under_test.Configure(json_str)
-        print(dir(device_under_test))
-        assert result_code != ResultCode.OK
+        assert result_code == ResultCode.OK
+        assert device_under_test.updateRate == 3.14
+        assert (device_under_test.stationIds == [1, 2]).all()
+        assert (device_under_test.channels == [1, 2, 3, 4, 5, 6, 7, 8]).all()
+        assert (
+            device_under_test.desiredPointing == [1585619550.0, 192.0, 2.0, 27.0, 1.0]
+        ).all()

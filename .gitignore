@@ -58,3 +58,4 @@ Chart.lock
 tls.crt
 tls.key
 /test-results/*
+charts/mccs-umbrella/charts/*

@@ -206,3 +206,9 @@ create ci metrics:
 include:
   - project: "ska-telescope/templates-repository"
     file: "gitlab-ci/includes/helm_publish.yml"
+
+publish-chart:
+  only:
+    refs:
+      - master
+      - tags

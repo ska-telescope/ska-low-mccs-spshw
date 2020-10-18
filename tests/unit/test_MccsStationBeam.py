@@ -11,10 +11,13 @@
 """
 This module contains the tests for MccsStationBeam.
 """
+import time
+
 import json
+from tango import AttrQuality, EventType
 
 from ska.base.commands import ResultCode
-from ska.base.control_model import ControlMode, SimulationMode, TestMode
+from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.low.mccs import release
 
 
@@ -70,7 +73,7 @@ class TestMccsStationBeam:
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
-        assert device_under_test.healthState == HealthState.UNKNOWN
+        assert device_under_test.healthState == HealthState.DEGRADED
 
         # Test that polling is turned on and subscription yields an
         # event as expected
@@ -81,8 +84,36 @@ class TestMccsStationBeam:
         mock_callback.assert_called_once()
 
         event_data = mock_callback.call_args[0][0].attr_value
-        assert event_data.name == "healthState"
-        assert event_data.value == HealthState.UNKNOWN
+        assert event_data.name.lower() == "healthstate"
+        assert event_data.value == HealthState.DEGRADED
+        assert event_data.quality == AttrQuality.ATTR_VALID
+
+        mock_callback.reset_mock()
+        device_under_test.isBeamLocked = True
+        assert device_under_test.healthState == HealthState.OK
+
+        # It seems that push_change_event isn't synchronous, so we have
+        # no choice but to sleep a polling period
+        time.sleep(1.1)
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name.lower() == "healthstate"
+        assert event_data.value == HealthState.OK
+        assert event_data.quality == AttrQuality.ATTR_VALID
+
+        mock_callback.reset_mock()
+        device_under_test.isBeamLocked = False
+        assert device_under_test.healthState == HealthState.DEGRADED
+
+        # It seems that push_change_event isn't synchronous, so we have
+        # no choice but to sleep a polling period
+        time.sleep(1.1)
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name.lower() == "healthstate"
+        assert event_data.value == HealthState.DEGRADED
         assert event_data.quality == AttrQuality.ATTR_VALID
 
     def test_GetVersionInfo(self, device_under_test):
@@ -250,7 +281,7 @@ class TestMccsStationBeam:
         :type attribute_name: str
         :param value_to_write: value to write to and read from the
             attribute
-        :type: double
+        :type value_to_write: double
         :param float_format: a pair of double values will be considered
             equal if this string format yields the same string for both
         :type float_format: str

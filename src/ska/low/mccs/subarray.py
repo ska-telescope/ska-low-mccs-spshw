@@ -160,8 +160,12 @@ class MccsSubarray(SKASubarray):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device._event_manager = EventManager()
-            device._health_model = MutableHealthModel(None, [], device._event_manager)
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
+            device.health_model = MutableHealthModel(
+                None, [], device.event_manager, device.health_changed
+            )
 
             return (result_code, message)
 
@@ -218,24 +222,19 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
-    # redefinition from base classes to turn polling on
-    @attribute(
-        dtype=HealthState,
-        polling_period=1000,
-        doc="The health state reported for this device. "
-        "It interprets the current device"
-        " condition and condition of all managed devices to set this. "
-        "Most possibly an aggregate attribute.",
-    )
-    def healthState(self):
+    def health_changed(self, health):
         """
-        returns the health of this device; which in this case means the
-        rolled-up health of the entire MCCS subsystem
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-        :return: the rolled-up health of the MCCS subsystem
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
         """
-        return self._health_model.health
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     @attribute(
         dtype="DevLong",
@@ -350,7 +349,7 @@ class MccsSubarray(SKASubarray):
             stations = json.loads(argin)["stations"]
             device = self.target
             device._station_pool_manager.assign(stations)
-            device._health_model.add_devices(stations)
+            device.health_model.add_devices(stations)
             return [ResultCode.OK, "AssignResources command completed successfully"]
 
         def succeeded(self):
@@ -389,7 +388,7 @@ class MccsSubarray(SKASubarray):
             stations = json.loads(argin)["stations"]
             device = self.target
             device._station_pool_manager.release(stations)
-            device._health_model.remove_devices(stations)
+            device.health_model.remove_devices(stations)
             return [ResultCode.OK, "ReleaseResources command completed successfully"]
 
         def succeeded(self):
@@ -424,7 +423,7 @@ class MccsSubarray(SKASubarray):
             # target object
             device = self.target
             device._station_pool_manager.release_all()
-            device._health_model.remove_all_devices()
+            device.health_model.remove_all_devices()
 
             return (ResultCode.OK, "ReleaseAllResources command completed successfully")
 

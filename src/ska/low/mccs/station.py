@@ -18,7 +18,7 @@ import json
 
 # PyTango imports
 import tango
-from tango import DebugIt, DevState, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # additional imports
@@ -29,48 +29,7 @@ from ska.base.control_model import HealthState
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.hardware import Hardware, HardwareManager
 from ska.low.mccs.health import HealthModel
-
-
-class StationHardware(Hardware):
-    """
-    A stub class to take the place of actual station hardware
-    """
-
-
-class StationHardwareManager(HardwareManager):
-    """
-    This class manages station hardware.
-
-    :todo: So far all we can do with station hardware is turn it off and
-        on. We need to implement monitoring.
-    """
-
-    def __init__(self, hardware=None):
-        """
-        Initialise a new StationHardwareManager instance
-
-        At present, hardware is simulated by stub software, and so the
-        only argument is an optional "hardware" instance. In future, its
-        arguments will allow connection to the actual hardware
-
-        :param hardware: the hardware itself, defaults to None. This only
-            exists to facilitate testing.
-        :type hardware: :py:class:`StationHardware`
-        """
-        super().__init__(hardware or StationHardware())
-
-    def _evaluate_health(self):
-        """
-        Evaluate the health of the hardware
-
-        :return: an evaluation of the health of the managed hardware
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
-        """
-        # TODO: look at the polled hardware values and maybe further
-        # poke the hardware to check that it is okay. But for now:
-        return HealthState.OK
 
 
 class StationPowerManager(PowerManager):
@@ -79,18 +38,15 @@ class StationPowerManager(PowerManager):
     device.
     """
 
-    def __init__(self, hardware_manager, fqdns):
+    def __init__(self, fqdns):
         """
         Initialise a new StationPowerManager
 
-        :param hardware_manager: an object that manages this station's
-            hardware
-        :type hardware_manager: object
         :param fqdns: the FQDNs of the devices that this controller
             device manages
         :type fqdns: list of string
         """
-        super().__init__(hardware_manager, fqdns)
+        super().__init__(None, fqdns)
 
 
 class MccsStation(SKAObsDevice):
@@ -167,7 +123,6 @@ class MccsStation(SKAObsDevice):
             """
             super().do()
             device = self.target
-            device.hardware_manager = None
 
             device._subarray_id = 0
             device._tile_fqdns = list(device.TileFQDNs)
@@ -216,11 +171,6 @@ class MccsStation(SKAObsDevice):
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_hardware_management(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
                 self._initialise_health_monitoring(device, fqdns)
                 if self._interrupt:
                     self._thread = None
@@ -234,18 +184,6 @@ class MccsStation(SKAObsDevice):
                 with self._lock:
                     self.succeeded()
 
-        def _initialise_hardware_management(self, device):
-            """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware
-
-            :param device: the device for which a connection to the
-                hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-            """
-            device.hardware_manager = StationHardwareManager()
-
         def _initialise_health_monitoring(self, device, fqdns):
             """
             Initialise the health model for this device.
@@ -257,12 +195,12 @@ class MccsStation(SKAObsDevice):
                 this device monitors health
             :type: list of str
             """
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
+            device.event_manager = EventManager(self.logger)
 
-            device.event_manager = EventManager()
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager, fqdns, device.event_manager
+                None, fqdns, device.event_manager, device.health_changed
             )
 
         def _initialise_power_management(self, device, fqdns):
@@ -276,7 +214,7 @@ class MccsStation(SKAObsDevice):
                 this device manages power
             :type: list of str
             """
-            device.power_manager = StationPowerManager(device.hardware_manager, fqdns)
+            device.power_manager = StationPowerManager(fqdns)
 
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
@@ -298,16 +236,6 @@ class MccsStation(SKAObsDevice):
         """
         Method always executed before any TANGO command is executed.
         """
-        if self.hardware_manager is not None:
-            self.hardware_manager.poll_hardware()
-
-            state = self.get_state()
-            if self._is_calibrated and self._is_configured:
-                if state == DevState.ALARM:
-                    self.set_state(DevState.ON)
-            else:
-                if state == DevState.ON:
-                    self.set_state(DevState.ALARM)
 
     def delete_device(self):
         """
@@ -324,24 +252,21 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
-    # redefinition from base classes to turn polling on
-    @attribute(
-        dtype=HealthState,
-        polling_period=1000,
-        doc="The health state reported for this device. "
-        "It interprets the current device"
-        " condition and condition of all managed devices to set this. "
-        "Most possibly an aggregate attribute.",
-    )
-    def healthState(self):
+    def health_changed(self, health):
         """
-        returns the health of this device; which in this case means the
-        rolled-up health of the entire MCCS subsystem
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-        :return: the rolled-up health of the MCCS subsystem
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
         """
-        return self.health_model.health
+        if self._health_state == health:
+            print(f"DEVICE: Station healthState is still {health.name}")
+            return
+        self._health_state = health
+        print(f"DEVICE: Station pushing change event healthState:{health.name}")
+        self.push_change_event("healthState", health)
 
     @attribute(
         dtype="DevLong",

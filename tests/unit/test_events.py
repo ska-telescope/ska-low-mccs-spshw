@@ -25,7 +25,7 @@ class TestEventSubscriptionHandler:
     class.
     """
 
-    def test_subscribe(self, mock_device_proxies):
+    def test_subscribe(self, mock_device_proxies, logger):
         """
         Test subscription: specifically, test that when an instance is
         initialised with a given fqdn and the name of an event, the
@@ -37,13 +37,16 @@ class TestEventSubscriptionHandler:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdn = "mock/mock/1"
         mock_device_proxy = tango.DeviceProxy(fqdn)
 
         event_name = "mock_event"
 
-        _ = EventSubscriptionHandler(mock_device_proxy, event_name)
+        _ = EventSubscriptionHandler(mock_device_proxy, fqdn, event_name, logger)
 
         # check that initialisation resulted in the device at the fqdn
         # receiving a subscription to the event
@@ -51,7 +54,7 @@ class TestEventSubscriptionHandler:
         args, kwargs = mock_device_proxy.subscribe_event.call_args
         assert args[0] == event_name
 
-    def test_event_pushing(self, mocker, mock_device_proxies):
+    def test_event_pushing(self, mocker, mock_device_proxies, logger):
         """
         Test that when an instance's push_event subscription callback
         method is called, it passes the event on by invoking its own
@@ -64,6 +67,9 @@ class TestEventSubscriptionHandler:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdn = "mock/mock/1"
         event_name = "mock_event"
@@ -73,12 +79,14 @@ class TestEventSubscriptionHandler:
 
         mock_device_proxy = tango.DeviceProxy(fqdn)
         event_subscription_handler = EventSubscriptionHandler(
-            mock_device_proxy, event_name
+            mock_device_proxy, fqdn, event_name, logger
         )
 
         mock_callbacks = [mocker.Mock() for callback in range(callback_count)]
         for mock_callback in mock_callbacks:
             event_subscription_handler.register_callback(mock_callback)
+            mock_callback.assert_called_once()
+            mock_callback.reset_mock()
 
         # set up the mock_event we are going to push
         mock_event = mocker.Mock()
@@ -95,7 +103,7 @@ class TestEventSubscriptionHandler:
                 event_name, event_value, event_quality
             )
 
-    def test_unsubscribe(self, mocker, mock_device_proxies):
+    def test_unsubscribe(self, mocker, mock_device_proxies, logger):
         """
         Test that when an instance is deleted, the device receives an
         unsubcribe_event call.
@@ -114,13 +122,16 @@ class TestEventSubscriptionHandler:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdn = "mock/mock/1"
         event_name = "mock_event"
         mock_device_proxy = tango.DeviceProxy(fqdn)
 
         event_subscription_handler = EventSubscriptionHandler(
-            mock_device_proxy, event_name
+            mock_device_proxy, fqdn, event_name, logger
         )
 
         # Ideally we would `del event_subscription_handler` here, but `"del x`
@@ -154,7 +165,13 @@ class TestDeviceEventManager:
         ],
     )
     def test_event_spec(
-        self, allowed_events, event_spec, raise_context, mocker, mock_device_proxies
+        self,
+        allowed_events,
+        event_spec,
+        raise_context,
+        mocker,
+        mock_device_proxies,
+        logger,
     ):
         """
         Check the various supported value types for event_spec argument,
@@ -176,13 +193,16 @@ class TestDeviceEventManager:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
-        device_event_manager = DeviceEventManager("mock/mock/1", allowed_events)
+        device_event_manager = DeviceEventManager("mock/mock/1", logger, allowed_events)
 
         with raise_context:
             device_event_manager.register_callback(mocker.Mock(), event_spec=event_spec)
 
-    def test_subscription(self, mocker, mock_device_proxies):
+    def test_subscription(self, mocker, mock_device_proxies, logger):
         """
         Test subscription: specifically, test that when a
         a client subscribes to a specified event from a
@@ -196,9 +216,12 @@ class TestDeviceEventManager:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdn = "mock/mock/1"
-        device_event_manager = DeviceEventManager(fqdn)
+        device_event_manager = DeviceEventManager(fqdn, logger)
 
         event_count = 2  # test should pass for any positive number
         callbacks = [mocker.Mock() for i in range(event_count)]
@@ -217,7 +240,7 @@ class TestDeviceEventManager:
 
             mock_device_proxy.reset_mock()
 
-    def test_event_pushing(self, mocker, mock_device_proxies):
+    def test_event_pushing(self, mocker, mock_device_proxies, logger):
         """
         Test that when a EventSubscriptionHandler's push_event
         callback method is called, this DeviceEventMonitor receives the
@@ -231,12 +254,15 @@ class TestDeviceEventManager:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
 
         event_count = 2  # test should pass for any positive number
         fqdn = "mock/mock/1"
 
-        device_event_manager = DeviceEventManager(fqdn)
+        device_event_manager = DeviceEventManager(fqdn, logger)
 
         mock_callbacks = [mocker.Mock() for i in range(event_count)]
         for i in range(event_count):
@@ -244,6 +270,8 @@ class TestDeviceEventManager:
             device_event_manager.register_callback(
                 mock_callbacks[i], event_spec=event_name
             )
+            mock_callbacks[i].assert_called_once()
+            mock_callbacks[i].reset_mock()
 
         for i in range(event_count):
             event_name = f"mock_event_{i}"
@@ -296,7 +324,13 @@ class TestEventManager:
         ],
     )
     def test_fqdns_spec(
-        self, allowed_fqdns, fqdn_spec, raise_context, mocker, mock_device_proxies
+        self,
+        allowed_fqdns,
+        fqdn_spec,
+        raise_context,
+        mocker,
+        mock_device_proxies,
+        logger,
     ):
         """
         Check the various supported value types for fqdn_spec argument,
@@ -318,15 +352,18 @@ class TestEventManager:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
-        event_manager = EventManager(fqdns=allowed_fqdns)
+        event_manager = EventManager(logger, fqdns=allowed_fqdns)
 
         with raise_context:
             event_manager.register_callback(
                 mocker.Mock(), fqdn_spec=fqdn_spec, event_spec="mock"
             )
 
-    def test_subscribe(self, mocker, mock_device_proxies):
+    def test_subscribe(self, mocker, mock_device_proxies, logger):
         """
         Test subscription: specifically, test that when a
         a client uses an EventManager to subscribe to a specified event
@@ -340,11 +377,14 @@ class TestEventManager:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number
 
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
 
         fqdns = [f"mock/mock/{i}" for i in range(device_count)]
         events = [f"mock_event_{i}" for i in range(event_count)]
@@ -365,7 +405,7 @@ class TestEventManager:
 
                 mock_device_proxy.reset_mock()
 
-    def test_event_pushing(self, mocker, mock_device_proxies):
+    def test_event_pushing(self, mocker, mock_device_proxies, logger):
         """
         Test that when an device pushes an event, the event moves down
         the tree and eventually causes the EventManager instance to
@@ -378,6 +418,9 @@ class TestEventManager:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number
@@ -386,13 +429,15 @@ class TestEventManager:
         events = [f"mock_event_{i}" for i in range(event_count)]
         mock_callbacks = {}
 
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         for fqdn in fqdns:
             for event in events:
                 mock_callbacks[(fqdn, event)] = mocker.Mock()
                 event_manager.register_callback(
                     mock_callbacks[(fqdn, event)], fqdn_spec=fqdn, event_spec=event
                 )
+                mock_callbacks[(fqdn, event)].assert_called_once()
+                mock_callbacks[(fqdn, event)].reset_mock()
 
         for fqdn in fqdns:
             for event in events:

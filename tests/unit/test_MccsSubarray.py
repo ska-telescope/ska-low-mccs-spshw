@@ -10,6 +10,8 @@
 This module contains the tests for MccsSubarray.
 """
 import tango
+from tango import AttrQuality, EventType
+
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
 from ska.low.mccs import release

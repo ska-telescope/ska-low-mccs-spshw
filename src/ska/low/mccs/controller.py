@@ -31,7 +31,6 @@ from tango.server import attribute, command, device_property
 from ska.base import SKAMaster, SKABaseDevice
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import HealthState
 
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
@@ -124,6 +123,7 @@ class ControllerResourceManager:
             :return: True if this is suitable for allocation
             :rtype: bool
             """
+            # print(f"ResourceAvailabilityPolicy::is_allocatable({health_state})")
             return health_state in self._allocatable_health_states
 
         def assign_allocatable_health_states(self, health_states):
@@ -163,7 +163,7 @@ class ControllerResourceManager:
             self._fqdn = fqdn
             self._resource_state = ControllerResourceManager.ResourceState.AVAILABLE
             self._assigned_to = 0
-            self._health_state = HealthState.OK
+            self._health_state = HealthState.UNKNOWN
 
         def assigned_to(self):
             """
@@ -235,17 +235,19 @@ class ControllerResourceManager:
             """
             return self._resource_availability_policy.is_allocatable(self._health_state)
 
-        def _health_changed(self, event_name, event_value):
+        def _health_changed(self, fqdn, event_value):
             """
             Update the health state of the resource
 
-            :param event_name: Event name (should be 'healthState')
-            :type event_name: string
-
-            :param event_value: The HealthState to assign to the resource
+            :param fqdn: FQDN of the device for which healthState has
+                changed
+            :type fqdn: str
+            :param event_value: the HealthState to assign to the
+                resource
             :type event_value: int
             """
-            assert event_name == "healthState"
+            # print(f"Resource::health_changed({fqdn}, {event_value})")
+            assert fqdn == self._fqdn
             self._health_state = event_value
 
         def assign(self, owner):
@@ -723,12 +725,12 @@ class MccsController(SKAMaster):
                 this device monitors health
             :type: list of str
             """
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
+            device.event_manager = EventManager(self.logger, device._station_fqdns)
 
-            device.event_manager = EventManager(fqdns)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, device._station_fqdns, device.event_manager
+                None, device._station_fqdns, device.event_manager, device.health_changed
             )
 
         def _initialise_power_management(self, device, fqdns):
@@ -804,25 +806,22 @@ class MccsController(SKAMaster):
     # ----------
     # Attributes
     # ----------
-
-    # redefinition from base classes to turn polling on
-    @attribute(
-        dtype=HealthState,
-        polling_period=1000,
-        doc="The health state reported for this device. "
-        "It interprets the current device"
-        " condition and condition of all managed devices to set this. "
-        "Most possibly an aggregate attribute.",
-    )
-    def healthState(self):
+    def health_changed(self, health):
         """
-        returns the health of this device; which in this case means the
-        rolled-up health of the entire MCCS subsystem
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-        :return: the rolled-up health of the MCCS subsystem
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
         """
-        return self.health_model.health
+        # print(f"MccsController::health_changed({health})")
+        if self._health_state == health:
+            return
+        self._health_state = health
+        # print(f"MccsController::health_changed({health}): about to push event")
+        self.push_change_event("healthState", health)
+        # print(f"MccsController::health_changed({health}): event pushed")
 
     @attribute(
         dtype="DevUShort",

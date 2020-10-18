@@ -18,6 +18,9 @@
                                 "low-mccs/tile/0002",
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -32,7 +35,10 @@
                             "CapabilityTypes": [
                                 "BAND1",
                                 "BAND2"
-                            ]                            
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
                         }
                     }
                 }
@@ -44,7 +50,10 @@
                             "CapabilityTypes": [
                                 "BAND1",
                                 "BAND2"
-                            ]                            
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
                         }
                     }
                 }
@@ -103,6 +112,9 @@
                         "properties": {
                             "BeamId": [
                                 "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -114,6 +126,9 @@
                         "properties": {
                             "BeamId": [
                                 "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -124,6 +139,9 @@
                     "low-mccs/beam/03": {
                         "properties": {
                             "BeamId": [
+                                "3"
+                            ],
+                            "LoggingLevelDefault": [
                                 "3"
                             ]
                         }
@@ -136,6 +154,9 @@
                         "properties": {
                             "BeamId": [
                                 "4"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -152,6 +173,9 @@
                             ],
                             "AntennasPerTile": [
                                 "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -166,6 +190,9 @@
                             ],
                             "AntennasPerTile": [
                                 "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -180,6 +207,9 @@
                             ],
                             "AntennasPerTile": [
                                 "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -194,6 +224,9 @@
                             ],
                             "AntennasPerTile": [
                                 "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -225,6 +258,9 @@
                             ],
                             "LogicalTileAntennaId": [
                                 "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -245,6 +281,9 @@
                             ],
                             "LogicalTileAntennaId": [
                                 "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -265,6 +304,9 @@
                             ],
                             "LogicalTileAntennaId": [
                                 "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -285,6 +327,9 @@
                             ],
                             "LogicalTileAntennaId": [
                                 "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
                             ]
                         }
                     }
@@ -295,7 +340,11 @@
             "tpmsimulator": {
                 "MccsTpmDeviceSimulator": {
                     "low-mccs/tpmsimulator/tpmsimulator": {
-                        "properties": {}
+                        "properties": {
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
                     }
                 }
             }

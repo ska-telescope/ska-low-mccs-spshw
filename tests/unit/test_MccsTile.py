@@ -18,10 +18,10 @@ import json
 import threading
 
 import pytest
-from tango import DevFailed
+from tango import AttrQuality, DevFailed, EventType
 
 from ska.base import DeviceStateModel
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import ResultCode
 from ska.low.mccs.hardware import SimulableHardwareFactory
 from ska.low.mccs.tile import MccsTile
@@ -44,6 +44,14 @@ class TestMccsTile(object):
     Tests conducted herein aim to exercise the currently defined MCCS Tile
     device server methods.
     """
+
+    # def test_postinit(self, device_under_test):
+    #     # check that initialisation leaves us in a state where turning
+    #     # the device on doesn't put it into ALARM state
+    #     device_under_test.On()
+    #     assert device_under_test.state() == DevState.ON
+    #     time.sleep(1.1)
+    #     assert device_under_test.state() == DevState.ON
 
     def test_healthState(self, device_under_test, mocker):
         """

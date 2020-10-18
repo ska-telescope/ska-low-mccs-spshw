@@ -1,0 +1,80 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+"""
+This module implements classes useful for demonstrating MCCS
+functionality, though unlikely to be deployed operationally.
+"""
+from tango.server import command, Device
+
+from ska.base.control_model import SimulationMode
+from ska.low.mccs import MccsTile
+
+
+__all__ = ["ConnectionFailableDevice"]
+
+
+class ConnectionFailableDevice(Device):
+    """
+    A tango device mixin that adds a single simulate_connection_failure
+    command. This can be used with any tango device that has a
+    hardware_manager attribute that is an instance of
+    :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager`.
+    """
+
+    def is_SimulateConnectionFailure_allowed(self):
+        """
+        Return whether the SimulateConnectionFailure command is allowed
+        to be called
+
+        :return: whether the SimulateConnectionFailure command is
+            allowed to be called
+        :rtype: bool
+        """
+        return self.hardware_manager.simulation_mode == SimulationMode.TRUE
+
+    @command(dtype_in=bool)
+    def SimulateConnectionFailure(self, is_fail):
+        """
+        Tells the simulate whether or not to simulate connection
+        failure.
+
+        :param is_fail: whether or not to simulate connection failure.
+        :type is_fail: bool
+        """
+        self.hardware_manager.simulate_connection_failure(is_fail)
+
+
+class ConnectionFailableTile(MccsTile, ConnectionFailableDevice):
+    """
+    A version of the MccsTile tango device with an additional command
+    that can be used, when the device is in simulation mode, to tell the
+    simulator to simulate connection failure
+    """
+
+    pass
+
+
+# ----------
+# Run server
+# ----------
+def main(args=None, **kwargs):
+    """
+    Main function of the :py:mod:`ska.low.mccs.tile` module.
+
+    :param args: positional arguments
+    :type args: list
+    :param kwargs: named arguments
+    :type kwargs: dict
+
+    :return: exit code
+    :rtype: int
+    """
+    return ConnectionFailableTile.run_server(args=args, **kwargs)
+
+
+if __name__ == "__main__":
+    main()

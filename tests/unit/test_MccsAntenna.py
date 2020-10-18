@@ -17,7 +17,12 @@ import threading
 import pytest
 
 from tango import AttrQuality, DevFailed, DevSource, EventType
-from ska.base.control_model import ControlMode, SimulationMode, HealthState
+from ska.base.control_model import (
+    ControlMode,
+    LoggingLevel,
+    HealthState,
+    SimulationMode,
+)
 from ska.base.commands import ResultCode
 
 from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
@@ -430,7 +435,7 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.loggingLevel == 4
+        assert device_under_test.loggingLevel == LoggingLevel.WARNING
 
     def test_healthState(self, device_under_test, mocker):
         """
@@ -480,7 +485,7 @@ class TestMccsAntenna:
         """
         assert device_under_test.simulationMode == SimulationMode.FALSE
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Antennas cannot be put into simulation mode, but entire APIUs can.",
         ):
             device_under_test.simulationMode = SimulationMode.TRUE

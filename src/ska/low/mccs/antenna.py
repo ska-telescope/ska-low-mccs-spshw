@@ -19,8 +19,9 @@ from tango.server import attribute, command, device_property, AttrWriteType
 
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import HealthState, SimulationMode
 
+from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareDriver,
     HardwareHealthEvaluator,
@@ -574,9 +575,15 @@ class MccsAntenna(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.event_manager = EventManager()
+            device.event_manager = EventManager(self.logger)
+
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager, None, device.event_manager
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device.health_changed,
             )
 
         def interrupt(self):
@@ -612,24 +619,19 @@ class MccsAntenna(SKABaseDevice):
     # Attributes
     # ----------
 
-    # redefinition from base classes to turn polling on
-    @attribute(
-        dtype=HealthState,
-        polling_period=1000,
-        doc="The health state reported for this device. "
-        "It interprets the current device"
-        " condition and condition of all managed devices to set this. "
-        "Most possibly an aggregate attribute.",
-    )
-    def healthState(self):
+    def health_changed(self, health):
         """
-        returns the health of this device; which in this case means the
-        rolled-up health of the entire MCCS subsystem
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-        :return: the rolled-up health of the MCCS subsystem
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
         """
-        return self.health_model.health
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     # override from base classes so that it can be stored in the hardware manager
     @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)

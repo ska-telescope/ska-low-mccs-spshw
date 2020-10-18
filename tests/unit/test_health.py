@@ -159,7 +159,7 @@ class TestDeviceHealthMonitor:
     (The DeviceHealthMonitor monitors the health of a single device.)
     """
 
-    def test(self, mocker, mock_device_proxies):
+    def test(self, mocker, mock_device_proxies, logger):
         """
         Test that a DeviceHealthMonitor registers a change in device
         health when the device emits relevant events
@@ -171,9 +171,12 @@ class TestDeviceHealthMonitor:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdn = "mock/mock/1"
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
         _ = DeviceHealthMonitor(event_manager, fqdn, mock_callback)
 
@@ -213,7 +216,7 @@ class TestHealthMonitor:
     subservient devices.)
     """
 
-    def test(self, mocker, mock_device_proxies):
+    def test(self, mocker, mock_device_proxies, logger):
         """
         Test that a HealthMonitor registers changes in device health
         when devices emit relevant events
@@ -225,9 +228,12 @@ class TestHealthMonitor:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
         _ = HealthMonitor(fqdns, event_manager, mock_callback)
 
@@ -274,7 +280,7 @@ class TestHealthModel:
         ("with_hardware", "with_devices"),
         [(False, False), (False, True), (True, False), (True, True)],
     )
-    def test(self, with_hardware, with_devices, mocker, mock_device_proxies):
+    def test(self, with_hardware, with_devices, mocker, mock_device_proxies, logger):
         """
         Test that the health of a HealthModel changes with changes to
         hardware health and/or changes to the health of managed devices.
@@ -290,10 +296,13 @@ class TestHealthModel:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"] if with_devices else None
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
 
         health_model = HealthModel(
@@ -326,7 +335,7 @@ class TestMutableHealthMonitor:
     collection of subservient devices.)
     """
 
-    def test(self, mocker, mock_device_proxies):
+    def test(self, mocker, mock_device_proxies, logger):
         """
         Test that one can add and remove device, and a
         MutableHealthMonitor behaves as expected
@@ -338,10 +347,13 @@ class TestMutableHealthMonitor:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
 
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
         mutable_health_monitor = MutableHealthMonitor(
             fqdns, event_manager, mock_callback
@@ -396,7 +408,7 @@ class TestMutableHealthModel:
     """
 
     @pytest.mark.parametrize("with_hardware", [False, True])
-    def test(self, with_hardware, mocker, mock_device_proxies):
+    def test(self, with_hardware, mocker, mock_device_proxies, logger):
         """
         Test that the health of a MutableHealthModel changes with
         changes to the collection of managed devices.
@@ -410,10 +422,13 @@ class TestMutableHealthModel:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"]
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
 
         health_model = MutableHealthModel(hardware, fqdns, event_manager, mock_callback)

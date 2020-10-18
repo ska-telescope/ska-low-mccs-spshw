@@ -25,10 +25,12 @@ from tango.server import device_property
 # Additional import
 
 from ska.base import SKABaseDevice
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska.low.mccs.power import PowerManager, PowerManagerError
+
+from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
+from ska.low.mccs.power import PowerManager, PowerManagerError
 from ska.low.mccs.tile_hardware import TileHardwareManager
 
 
@@ -344,11 +346,14 @@ class MccsTile(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
-
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager, None, device.event_manager
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device.health_changed,
             )
 
         def _initialise_power_management(self, device):
@@ -450,6 +455,21 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
+
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            print(f"DEVICE: Tile healthState is still {health.name}")
+            return
+        self._health_state = health
+        print(f"DEVICE: Tile pushing change event healthState:{health.name}")
+        self.push_change_event("healthState", health)
 
     @attribute(dtype="DevLong", doc="Logical tile identifier within a station")
     def logicalTileId(self):
@@ -1118,7 +1138,7 @@ class MccsTile(SKABaseDevice):
         this function program it with the provided bitfile.
 
         :param argin: is the path to a file containing the required CPLD firmware
-        :type: 'DevString'
+        :type argin: :py:class:`tango.DevString`
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1742,7 +1762,7 @@ class MccsTile(SKABaseDevice):
         * argin[1] - is M, the number of frequency channel
         * argin[2:] - is the data
 
-        :type: DevVarLongArray
+        :type argin: :py:class:`tango.DevVarLongArray`
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

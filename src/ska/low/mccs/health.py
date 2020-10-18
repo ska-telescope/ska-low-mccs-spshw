@@ -106,6 +106,11 @@ class DeviceHealthRollupPolicy:
         if hardware_health is None:
             hardware_health = HealthState.OK
 
+        # return worst health, where FAILED > UNKNOWN > DEGRADED > OK
+        if hardware_health == HealthState.FAILED:
+            return HealthState.FAILED
+        if rolled_up_device_health == HealthState.FAILED:
+            return HealthState.FAILED
         return max(hardware_health, rolled_up_device_health)
 
 
@@ -128,6 +133,8 @@ class DeviceHealthMonitor:
             device health changes, defaults to None
         :type initial_callback: callable, optional
         """
+        self._fqdn = fqdn
+
         self._device_admin_mode = None
         self._device_health_state = None
         self._interpreted_health = None
@@ -135,15 +142,15 @@ class DeviceHealthMonitor:
 
         self._compute_health()
 
+        if initial_callback is not None:
+            self.register_callback(initial_callback)
+
         event_manager.register_callback(
             self._health_state_changed, fqdn_spec=fqdn, event_spec="healthState"
         )
         event_manager.register_callback(
             self._admin_mode_changed, fqdn_spec=fqdn, event_spec="adminMode"
         )
-
-        if initial_callback is not None:
-            self.register_callback(initial_callback)
 
     def register_callback(self, callback):
         """
@@ -172,7 +179,7 @@ class DeviceHealthMonitor:
         :param event_quality: the quality of the change event
         :type event_quality: :py:class:`tango.AttrQuality`
         """
-        assert event_name == "healthState"
+        assert event_name.lower() == "healthstate"
         self._device_health_state = event_value
         self._compute_health()
 
@@ -306,6 +313,9 @@ class HealthModel:
         :type initial_callback: callable, optional
         """
         self._health = HealthState.UNKNOWN
+        self._callbacks = []
+        if initial_callback is not None:
+            self.register_callback(initial_callback)
 
         self._hardware_manager = hardware_manager
         self._hardware_health = HealthState.UNKNOWN if hardware_manager else None
@@ -323,10 +333,6 @@ class HealthModel:
             )
         if self._health_monitor is not None:
             self._health_monitor.register_callback(self._device_health_changed)
-
-        self._callbacks = []
-        if initial_callback is not None:
-            self.register_callback(initial_callback)
 
     def _init_health_monitor(self, fqdns, event_manager):
         """
@@ -417,6 +423,7 @@ class HealthModel:
         if self._health == health:
             return
         self._health = health
+
         for callback in self._callbacks:
             callback(health)
 

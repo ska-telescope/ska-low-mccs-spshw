@@ -7,7 +7,6 @@ __all__ = [
     "ControllerResourceManager",
     "MccsSubarray",
     "MccsStation",
-    "StationHardwareManager",
     "StationPowerManager",
     "MccsStationBeam",
     "MccsTile",
@@ -17,8 +16,9 @@ __all__ = [
     "MccsTelState",
     "MccsTransientBuffer",
     "MccsClusterManagerDevice",
-    "MccsTpmDeviceSimulator",
+    "apiu_simulator",
     "cluster_simulator",
+    "demo",
     "events",
     "hardware",
     "health",
@@ -36,11 +36,10 @@ from .controller import (
     ControllerResourceManager,
 )
 from .subarray import MccsSubarray
-from .station import MccsStation, StationHardwareManager, StationPowerManager
+from .station import MccsStation, StationPowerManager
 from .station_beam import MccsStationBeam
 from .tile import MccsTile, TileHardwareManager, TilePowerManager
 from .antenna import MccsAntenna
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer
 from .cluster_manager import MccsClusterManagerDevice
-from .tpm_device_simulator import MccsTpmDeviceSimulator

@@ -13,7 +13,7 @@ This module contains the tests for MccsClusterManagerDevice.
 """
 import json
 import pytest
-from tango import DevFailed
+from tango import AttrQuality, DevFailed, EventType
 
 from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState

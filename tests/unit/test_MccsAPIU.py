@@ -13,7 +13,7 @@ This module contains the tests for MccsAPIU.
 """
 import pytest
 
-from tango import DevFailed, DevState
+from tango import DevFailed, DevState, AttrQuality, EventType
 
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
@@ -409,8 +409,6 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
-
         device_under_test.PowerUp()
         assert device_under_test.temperature == APIUHardwareSimulator.TEMPERATURE
         assert device_under_test.humidity == APIUHardwareSimulator.HUMIDITY

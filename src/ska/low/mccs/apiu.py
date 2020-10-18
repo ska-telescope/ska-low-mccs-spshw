@@ -18,7 +18,8 @@ from tango.server import attribute, command
 
 from ska.base import SKABaseDevice
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import HealthState, SimulationMode
+from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     OnOffHardwareManager,
@@ -249,184 +250,6 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return self._factory.hardware.get_antenna_temperature(logical_antenna_id)
 
 
-class APIUHardware(Hardware):
-    """
-    A stub class to take the place of actual APIU hardware
-    """
-
-    VOLTAGE = 3.4
-    CURRENT = 20.5
-    TEMPERATURE = 20.4
-    HUMIDITY = 23.9
-
-    def __init__(self):
-        """
-        Initialise a new AntennaHardware instance
-        """
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
-        super().__init__()
-
-    def off(self):
-        """
-        Turn me off
-        """
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
-        super().off()
-
-    def on(self):
-        """
-        Turn me on
-        """
-        self._voltage = APIUHardware.VOLTAGE  # for testing purposes
-        self._current = APIUHardware.CURRENT  # for testing purposes
-        self._temperature = APIUHardware.TEMPERATURE  # for testing purposes
-        self._humidity = APIUHardware.HUMIDITY  # for testing purposes
-        super().on()
-
-    @property
-    def voltage(self):
-        """
-        Return my voltage
-
-        :return: my voltage
-        :rtype: float
-        """
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        Return my current
-
-        :return: my current
-        :rtype: float
-        """
-        return self._current
-
-    @property
-    def temperature(self):
-        """
-        Return my temperature
-
-        :return: my temperature
-        :rtype: float
-        """
-        return self._temperature
-
-    @property
-    def humidity(self):
-        """
-        Return my humidity
-
-        :return: my humidity
-        :rtype: float
-        """
-        return self._humidity
-
-
-class APIUHardwareManager(HardwareManager):
-    """
-    This class manages APIU hardware.
-
-    :todo: So far all we can do with APIU hardware is turn it off and
-        on. We need to implement monitoring.
-    """
-
-    def __init__(self, hardware=None):
-        """
-        Initialise a new APIUHardwareManager instance
-
-        At present, hardware is simulated by stub software, and so the
-        only argument is an optional "hardware" instance. In future, its
-        arguments will allow connection to the actual hardware
-
-        :param hardware: the hardware itself, defaults to None. This only
-            exists to facilitate testing.
-        :type hardware: :py:class:`APIUHardware`
-        """
-        # polled hardware attributes
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
-        super().__init__(hardware or APIUHardware())
-
-    def poll_hardware(self):
-        """
-        Poll the hardware and update local attributes with values
-        reported by the hardware.
-        """
-        self._is_on = self._hardware.is_on
-        if self._is_on:
-            self._voltage = self._hardware.voltage
-            self._current = self._hardware.current
-            self._temperature = self._hardware.temperature
-            self._humidity = self._hardware.humidity
-        else:
-            self._voltage = None
-            self._current = None
-            self._temperature = None
-            self._humidity = None
-        self._update_health()
-
-    @property
-    def voltage(self):
-        """
-        The voltage of the hardware
-
-        :return: the voltage of the hardware
-        :rtype: float
-        """
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        The current of the hardware
-
-        :return: the current of the hardware
-        :rtype: float
-        """
-        return self._current
-
-    @property
-    def temperature(self):
-        """
-        The temperature of the hardware
-
-        :return: the temperature of the hardware
-        :rtype: float
-        """
-        return self._temperature
-
-    @property
-    def humidity(self):
-        """
-        The humidity of the hardware
-
-        :return: the humidity of the hardware
-        :rtype: float
-        """
-        return self._humidity
-
-    def _evaluate_health(self):
-        """
-        Evaluate the health of the hardware
-
-        :return: an evaluation of the health of the managed hardware
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
-        """
-        # TODO: look at the polled hardware values and maybe further
-        # poke the hardware to check that it is okay. But for now:
-        return HealthState.OK
-
-
 class MccsAPIU(SKABaseDevice):
     """
     An implementation of MCCS APIU device.
@@ -497,14 +320,6 @@ class MccsAPIU(SKABaseDevice):
             device._overVoltageThreshold = 0.0
             device._humidityThreshold = 0.0
 
-            device.hardware_manager = APIUHardwareManager()
-            device.event_manager = EventManager()
-            device.health_model = HealthModel(
-                device.hardware_manager, None, device.event_manager
-            )
-
-            device.hardware_manager.on()  # HACK until we have power management commands
-
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
@@ -570,11 +385,14 @@ class MccsAPIU(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
-
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager, None, None, device._update_health_state
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device.health_changed,
             )
 
         def interrupt(self):
@@ -609,25 +427,19 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-
-    # redefinition from base classes to turn polling on
-    @attribute(
-        dtype=HealthState,
-        polling_period=1000,
-        doc="The health state reported for this device. "
-        "It interprets the current device"
-        " condition and condition of all managed devices to set this. "
-        "Most possibly an aggregate attribute.",
-    )
-    def healthState(self):
+    def health_changed(self, health):
         """
-        returns the health of this device; which in this case means the
-        rolled-up health of the entire MCCS subsystem
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-        :return: the rolled-up health of the MCCS subsystem
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
         """
-        return self.health_model.health
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     @attribute(dtype="DevDouble", label="Voltage", unit="Volts", polling_period=1000)
     def voltage(self):

@@ -722,10 +722,10 @@ class MccsStation(SKAObsDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
-            id = config_dict.get("station_id")
+            stn_id = config_dict.get("station_id")
             device = self.target
             # Make sure we're configuring the correct station
-            if id != device._station_id:
+            if stn_id != device._station_id:
                 return (ResultCode.FAILED, "Configure failed: wrong station_id")
             device._is_configured = True
             return (ResultCode.OK, "Command succeeded")

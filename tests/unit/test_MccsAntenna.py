@@ -205,7 +205,6 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(tango.DevSource.DEV)
         device_under_test.PowerOn()
         assert device_under_test.voltage == AntennaHardware.VOLTAGE
 

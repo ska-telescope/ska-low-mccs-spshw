@@ -8,6 +8,9 @@ from ska.base.control_model import ObsState
 import tango
 import json
 
+from conftest import wait_for_initialisation
+
+
 devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
@@ -79,6 +82,11 @@ class TestMccsIntegrationTmc:
         station002 = device_context.get_device("low-mccs/station/002")
         subarray01 = device_context.get_device("low-mccs/subarray/01")
         subarray02 = device_context.get_device("low-mccs/subarray/02")
+
+        wait_for_initialisation(
+            [controller, subarray01, subarray02, station001, station002]
+        )
+
         assert controller.State() == DevState.OFF
         assert subarray01.State() == DevState.OFF
         assert subarray02.State() == DevState.OFF
@@ -90,7 +98,9 @@ class TestMccsIntegrationTmc:
         assert controller.State() == DevState.ON
         assert subarray01.State() == DevState.OFF
         assert subarray02.State() == DevState.OFF
-        # TODO: The stations are in alarm state because MCCS-212
+        # TODO: The stations are in alarm state because
+        # we don't yet ensure attributes are updated before
+        # transitioning out of INIT
         assert station001.State() == DevState.ALARM
         assert station002.State() == DevState.ALARM
 
@@ -99,7 +109,9 @@ class TestMccsIntegrationTmc:
         # assert controller.State() == DevState.ON
         # assert subarray01.State() == DevState.OFF
         # assert subarray02.State() == DevState.OFF
-        # # TODO: The stations are in alarm state because MCCS-212
+        # # TODO: The stations are in alarm state because
+        # # we don't yet ensure attributes are updated before
+        # # transitioning out of INIT
         # assert station001.State() == DevState.ALARM
         # assert station002.State() == DevState.ALARM
 
@@ -114,12 +126,17 @@ class TestMccsIntegrationTmc:
         controller = device_context.get_device("low-mccs/control/control")
         station001 = device_context.get_device("low-mccs/station/001")
         station002 = device_context.get_device("low-mccs/station/002")
+
+        wait_for_initialisation([controller, station001, station002])
+
         assert controller.State() == DevState.OFF
         assert station001.State() == DevState.OFF
         assert station002.State() == DevState.OFF
         self.async_command(device=controller, command="On")
         assert controller.State() == DevState.ON
-        # TODO: The stations are in alarm state because MCCS-212
+        # TODO: The stations are in alarm state because
+        # we don't yet ensure attributes are updated before
+        # transitioning out of INIT
         assert station001.State() == DevState.ALARM
         assert station002.State() == DevState.ALARM
         self.async_command(device=controller, command="Off")
@@ -148,6 +165,8 @@ class TestMccsIntegrationTmc:
         subarray.set_source(DevSource.DEV)
         station_001.set_source(DevSource.DEV)
         station_002.set_source(DevSource.DEV)
+
+        wait_for_initialisation([controller, subarray, station_001, station_002])
 
         # Turn on controller and stations
         self.async_command(device=controller, command="On")

@@ -10,7 +10,6 @@
 This module contains the tests for MccsSubarray.
 """
 import tango
-from tango import DevSource
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
 from ska.low.mccs import release
@@ -79,8 +78,6 @@ class TestMccsSubarray:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
-
         station_fqdn = "low-mccs/station/001"
         mock_station = tango.DeviceProxy(station_fqdn)
 

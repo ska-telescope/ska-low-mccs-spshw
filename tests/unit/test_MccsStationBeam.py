@@ -13,8 +13,6 @@ This module contains the tests for MccsStationBeam.
 """
 import json
 
-from tango import DevSource
-
 from ska.base.commands import ResultCode
 from ska.base.control_model import ControlMode, SimulationMode, TestMode
 from ska.low.mccs import release
@@ -234,7 +232,6 @@ class TestMccsStationBeam:
         """
 
         # SETUP
-        device_under_test.set_source(DevSource.DEV)
         write_as_string = [float_format.format(x) for x in value_to_write]
 
         # RUN

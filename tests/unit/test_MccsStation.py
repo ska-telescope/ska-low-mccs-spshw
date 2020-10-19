@@ -14,7 +14,7 @@ This module contains the tests for MccsStation.
 import logging
 import pytest
 import tango
-from tango import DevSource, DevState
+from tango import DevState
 
 from ska.base import DeviceStateModel
 from ska.base.commands import CommandError, ResultCode
@@ -214,7 +214,6 @@ class TestMccsStation:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         assert list(device_under_test.delayCentre) == []
 
         # SETUP

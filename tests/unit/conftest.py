@@ -4,8 +4,10 @@ ska.low.mccs unit tests
 """
 from collections import defaultdict
 import pytest
+import time
 
 # import tango
+from tango import DevSource, DevState
 from tango.test_context import DeviceTestContext
 
 
@@ -39,6 +41,30 @@ def mock_device_proxies(mocker):
     return device_proxy_mocks
 
 
+def _wait_for_initialisation(device):
+    """
+    Helper function that ensures the `device_under_test` fixture does
+    not return until the device has moved out of the INIT state.
+
+    :param device: the device that we are waiting to initialise
+    :type device: :py:class:`tango.DeviceProxy`
+
+    :raises TimeoutError: if retries have been exhausted and the device
+        still has not initialised
+    """
+    sleeps = [0.1, 0.2, 0.5, 1, 2, 4]
+    for sleep in sleeps:
+        if device.state() == DevState.INIT:
+            time.sleep(sleep)
+        else:
+            break
+    else:
+        if device.state() == DevState.INIT:
+            raise TimeoutError(
+                "Retries exhausted; stuck at asynchronous initialisation?"
+            )
+
+
 @pytest.fixture()
 def device_under_test(request, device_info, mock_device_proxies):
     """
@@ -65,6 +91,8 @@ def device_under_test(request, device_info, mock_device_proxies):
         with DeviceTestContext(
             device_info["class"], properties=device_info["properties"]
         ) as device_under_test:
+            device_under_test.set_source(DevSource.DEV)
+            _wait_for_initialisation(device_under_test)
             yield device_under_test
     except Exception as e:
         print(e)

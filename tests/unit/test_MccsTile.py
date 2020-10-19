@@ -19,7 +19,7 @@ import pytest
 import itertools
 import numpy as np
 from contextlib import redirect_stdout
-from tango import DevFailed, DevSource
+from tango import DevFailed
 
 from ska.base.control_model import HealthState, TestMode
 from ska.base.commands import ResultCode
@@ -220,7 +220,6 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
@@ -235,7 +234,6 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
@@ -265,7 +263,6 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
@@ -280,7 +277,6 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK
@@ -295,7 +291,6 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         device_under_test.On()
         [[result_code], [message]] = device_under_test.Connect(True)
         assert result_code == ResultCode.OK

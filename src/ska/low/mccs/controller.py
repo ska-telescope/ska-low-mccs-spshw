@@ -216,7 +216,7 @@ class ControllerResourceManager:
     of the device that owns each managed device.
     """
 
-    class resource_state(Enum):
+    class ResourceState(Enum):
         """
         This enum describes a resource's assigned state.
 
@@ -267,7 +267,7 @@ class ControllerResourceManager:
             """
             self._allocatableHealthStates = [HealthState.OK]
 
-    class resource:
+    class Resource:
         """
         This inner class implements state recording for a managed resource.
 
@@ -278,7 +278,7 @@ class ControllerResourceManager:
             self._manager = manager
             self._fqdn = fqdn
             self._devid = devid
-            self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+            self._resourceState = ControllerResourceManager.ResourceState.AVAILABLE
             self._assignedTo = 0
             self._health_state = HealthState.OK
 
@@ -297,7 +297,7 @@ class ControllerResourceManager:
             :rtype: bool
             """
             return (
-                self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
+                self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
                 and self._assignedTo != 0
             )
 
@@ -308,8 +308,7 @@ class ControllerResourceManager:
             :rtype: bool
             """
             return (
-                self._resourceState
-                == ControllerResourceManager.resource_state.AVAILABLE
+                self._resourceState == ControllerResourceManager.ResourceState.AVAILABLE
             )
 
         def isUnavailable(self):
@@ -320,7 +319,7 @@ class ControllerResourceManager:
             """
             return (
                 self._resourceState
-                == ControllerResourceManager.resource_state.UNAVAILABLE
+                == ControllerResourceManager.ResourceState.UNAVAILABLE
             )
 
         def isNotAvailable(self):
@@ -332,9 +331,9 @@ class ControllerResourceManager:
             """
             return (
                 self._resourceState
-                == ControllerResourceManager.resource_state.UNAVAILABLE
+                == ControllerResourceManager.ResourceState.UNAVAILABLE
                 or self._resourceState
-                == ControllerResourceManager.resource_state.ASSIGNED
+                == ControllerResourceManager.ResourceState.ASSIGNED
             )
 
         def isHealthy(self):
@@ -381,7 +380,7 @@ class ControllerResourceManager:
 
             if self.isAvailable():
                 self._assignedTo = owner
-                self._resourceState = ControllerResourceManager.resource_state.ASSIGNED
+                self._resourceState = ControllerResourceManager.ResourceState.ASSIGNED
             else:
                 raise ValueError(
                     f"{self._manager._managername}: " f"{self._fqdn} is unavailable"
@@ -399,13 +398,13 @@ class ControllerResourceManager:
                 )
             self._assignedTo = 0
 
-            if self._resourceState == ControllerResourceManager.resource_state.ASSIGNED:
+            if self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED:
                 # Previously assigned resource becomes available
                 if not self.isHealthy():
                     self.MakeUnavailable()
                 else:
                     self._resourceState = (
-                        ControllerResourceManager.resource_state.AVAILABLE
+                        ControllerResourceManager.ResourceState.AVAILABLE
                     )
             # Unassigned or unavailable resource does not change state
 
@@ -413,15 +412,12 @@ class ControllerResourceManager:
             """Mark the resource as unavailable for assignment"""
             # Change resource state to unavailable
             # If it was previously AVAILABLE (not ASSIGNED) we can just switch
-            if (
-                self._resourceState
-                == ControllerResourceManager.resource_state.AVAILABLE
-            ):
+            if self._resourceState == ControllerResourceManager.ResourceState.AVAILABLE:
                 self._resourceState = (
-                    ControllerResourceManager.resource_state.UNAVAILABLE
+                    ControllerResourceManager.ResourceState.UNAVAILABLE
                 )
             elif (
-                self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
+                self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
             ):
                 # TODO
                 # We must decide what to do with rescources that were assigned already
@@ -433,11 +429,11 @@ class ControllerResourceManager:
             # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
             if (
                 self._resourceState
-                == ControllerResourceManager.resource_state.UNAVAILABLE
+                == ControllerResourceManager.ResourceState.UNAVAILABLE
             ):
-                self._resourceState = ControllerResourceManager.resource_state.AVAILABLE
+                self._resourceState = ControllerResourceManager.ResourceState.AVAILABLE
             elif (
-                self._resourceState == ControllerResourceManager.resource_state.ASSIGNED
+                self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
             ):
                 # TODO
                 # We must decide what to do with resources that were assigned already
@@ -461,7 +457,7 @@ class ControllerResourceManager:
         )
         # For each resource, identified by FQDN, create an object
         for i, fqdn in enumerate(fqdns, start=1):
-            self._resources[fqdn] = self.resource(self, fqdn, i)
+            self._resources[fqdn] = self.Resource(self, fqdn, i)
             health_monitor.register_callback(
                 self._resources[fqdn]._health_changed, fqdn
             )

@@ -175,10 +175,6 @@ class HardwareManager:
         """
         Initialise a new HardwareManager instance
 
-        At present, hardware is simulated by stub software, and so the
-        only argument is an optional "hardware" instance. In future, its
-        arguments will allow connection to the actual hardware
-
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
@@ -190,10 +186,10 @@ class HardwareManager:
         self._health = None
         self._health_callbacks = []
 
-        self._simulation_mode = simulation_mode
         self._driver = None
         self._simulator = None
-        self._select_hardware()
+        self._simulation_mode = None
+        self.simulation_mode = simulation_mode  # use property setter
 
     @property
     def simulation_mode(self):
@@ -206,16 +202,24 @@ class HardwareManager:
         return self._simulation_mode
 
     @simulation_mode.setter
-    def simulation_mode(self, value):
+    def simulation_mode(self, mode):
         """
         Property setter for simulation_mode
 
-        :param value: new value for simulation model
-        :type value: :py:class:`~ska.base.control_model.SimulationMode`
+        :param mode: new value for simulation mode
+        :type mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        if self._simulation_mode != value:
-            self._simulation_mode = value
-            self._select_hardware(self._simulation_mode)
+        if self._simulation_mode != mode:
+            if mode == SimulationMode.FALSE:
+                if self._driver is None:
+                    self._driver = self._create_driver()
+                self._hardware = self._driver
+            else:
+                if self._simulator is None:
+                    self._simulator = self._create_simulator()
+                self._hardware = self._simulator
+            self._simulation_mode = mode
+            self.poll_hardware()
 
     def _create_driver(self):
         """
@@ -226,7 +230,9 @@ class HardwareManager:
         :raises NotImplementedError: if this method is not implemented
             by a subclass
         """
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement abstract _create_driver method."
+        )
 
     def _create_simulator(self):
         """
@@ -237,22 +243,10 @@ class HardwareManager:
         :raises NotImplementedError: if this method is not implemented
             by a subclass
         """
-        raise NotImplementedError
-
-    def _select_hardware(self):
-        """
-        Helper method to handle selection of hardware (either a driver
-        of actual hardware or a simulator) depending on simulation mode
-        """
-        if self._simulation_mode == SimulationMode.FALSE:
-            if self._driver is None:
-                self._driver = self._create_driver()
-            self._hardware = self._hardware_driver
-        else:
-            if self._simulator is None:
-                self._simulator = self._create_simulator()
-            self._hardware = self._simulator
-        self.poll_hardware()
+        class_name = type(self).__name__
+        raise NotImplementedError(
+            f"{class_name} does not implement abstract _create_simulator method."
+        )
 
     def off(self):
         """

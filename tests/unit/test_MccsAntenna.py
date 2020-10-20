@@ -20,7 +20,11 @@ import tango
 from ska.base.control_model import ControlMode, SimulationMode, HealthState
 from ska.base.commands import ResultCode
 
-from ska.low.mccs.antenna import AntennaHardwareManager, AntennaHardware, MccsAntenna
+from ska.low.mccs.antenna import (
+    AntennaHardwareManager,
+    AntennaHardwareSimulator,
+    MccsAntenna,
+)
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
@@ -29,16 +33,61 @@ device_to_load = {
 }
 
 
+@pytest.fixture()
+def hardware_manager():
+    """
+    Return a hardware manager for antenna hardware (in simulation mode)
+
+    :return: a hardware manager for antenna hardware
+    :rtype: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+    """
+    return AntennaHardwareManager(SimulationMode.TRUE)
+
+
 class TestAntennaHardwareManager:
     """
-    Contains the tests of the AntennaHardwareManager
+    Contains the tests of the
+    :py:class:`ska.low.mccs.antenna.AntennaHardwareManager`
     """
 
-    def test_on_off(self, mocker):
+    def test_init_simulation_mode(self):
         """
-        Test that the AntennaHardwareManager receives updated values,
+        Test that we can't create an hardware manager that isn't in
+        simulation mode
+        """
+        with pytest.raises(
+            NotImplementedError,
+            match=(
+                "AntennaHardwareManager does not implement "
+                "abstract _create_driver method."
+            ),
+        ):
+            _ = AntennaHardwareManager(SimulationMode.FALSE)
+
+    def test_simulation_mode(self, hardware_manager):
+        """
+        Test that we can't take the hardware manager out of simulation
+        mode
+
+        :param hardware_manager: a hardware manager for antenna hardware
+        :type hardware_manager: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+        """
+        with pytest.raises(
+            NotImplementedError,
+            match=(
+                "AntennaHardwareManager does not implement "
+                "abstract _create_driver method."
+            ),
+        ):
+            hardware_manager.simulation_mode = SimulationMode.FALSE
+
+    def test_on_off(self, hardware_manager, mocker):
+        """
+        Test that the hardware manager receives updated values,
         and re-evaluates device health, each time it polls the hardware
 
+        :param hardware_manager: a hardware manager for antenna hardware
+        :type hardware_manager: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -46,36 +95,35 @@ class TestAntennaHardwareManager:
         voltage = 3.5
         temperature = 120
 
-        hardware = AntennaHardware()
-        antenna_hardware_manager = AntennaHardwareManager(hardware)
+        hardware = hardware_manager._hardware
 
-        assert not antenna_hardware_manager.is_on
-        assert antenna_hardware_manager.voltage is None
-        assert antenna_hardware_manager.temperature is None
-        assert antenna_hardware_manager.health == HealthState.OK
+        assert not hardware_manager.is_on
+        assert hardware_manager.temperature is None
+        assert hardware_manager.voltage is None
+        assert hardware_manager.health == HealthState.OK
 
         mock_health_callback = mocker.Mock()
-        antenna_hardware_manager.register_health_callback(mock_health_callback)
+        hardware_manager.register_health_callback(mock_health_callback)
         mock_health_callback.assert_called_once_with(HealthState.OK)
         mock_health_callback.reset_mock()
 
-        antenna_hardware_manager.on()
+        hardware_manager.on()
         hardware._voltage = voltage
         hardware._temperature = temperature
-        antenna_hardware_manager.poll_hardware()
+        hardware_manager.poll_hardware()
 
-        assert antenna_hardware_manager.is_on
-        assert antenna_hardware_manager.voltage == voltage
-        assert antenna_hardware_manager.temperature == temperature
-        assert antenna_hardware_manager.health == HealthState.OK
+        assert hardware_manager.is_on
+        assert hardware_manager.voltage == voltage
+        assert hardware_manager.temperature == temperature
+        assert hardware_manager.health == HealthState.OK
         mock_health_callback.assert_not_called()
 
-        antenna_hardware_manager.off()
+        hardware_manager.off()
 
-        assert not antenna_hardware_manager.is_on
-        assert antenna_hardware_manager.voltage is None
-        assert antenna_hardware_manager.temperature is None
-        assert antenna_hardware_manager.health == HealthState.OK
+        assert not hardware_manager.is_on
+        assert hardware_manager.voltage is None
+        assert hardware_manager.temperature is None
+        assert hardware_manager.health == HealthState.OK
         mock_health_callback.assert_not_called()
 
 
@@ -208,7 +256,7 @@ class TestMccsAntenna:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.PowerOn()
-        assert device_under_test.voltage == AntennaHardware.VOLTAGE
+        assert device_under_test.voltage == AntennaHardwareSimulator.VOLTAGE
 
     def test_temperature(self, device_under_test):
         """
@@ -220,7 +268,7 @@ class TestMccsAntenna:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.PowerOn()
-        assert device_under_test.temperature == AntennaHardware.TEMPERATURE
+        assert device_under_test.temperature == AntennaHardwareSimulator.TEMPERATURE
 
     def test_xPolarisationFaulty(self, device_under_test):
         """
@@ -352,7 +400,16 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.SimulationMode == SimulationMode.FALSE
+        assert device_under_test.simulationMode == SimulationMode.TRUE
+        with pytest.raises(
+            tango.DevFailed,
+            match=(
+                "AntennaHardwareManager does not implement "
+                "abstract _create_driver method."
+            ),
+        ):
+            device_under_test.simulationMode = SimulationMode.FALSE
+        assert device_under_test.simulationMode == SimulationMode.TRUE
 
     def test_logicalAntennaId(self, device_under_test):
         """

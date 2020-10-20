@@ -18,6 +18,7 @@ __all__ = [
     "MccsClusterManager",
     "MccsTpmDeviceSimulator",
     "events",
+    "hardware",
     "health",
     "power",
     "tpm_simulator",

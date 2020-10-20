@@ -279,18 +279,18 @@ class ControllerResourceManager:
             self._fqdn = fqdn
             self._devid = devid
             self._resourceState = ControllerResourceManager.ResourceState.AVAILABLE
-            self._assignedTo = 0
+            self._assigned_to = 0
             self._health_state = HealthState.OK
 
-        def assignedTo(self):
+        def assigned_to(self):
             """Get the ID to which this resource is assigned
 
             :return: Device ID
             :rtype: int
             """
-            return self._assignedTo
+            return self._assigned_to
 
-        def isAssigned(self):
+        def is_assigned(self):
             """Check if this resource is assigned
 
             :return: True if assigned
@@ -298,10 +298,10 @@ class ControllerResourceManager:
             """
             return (
                 self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
-                and self._assignedTo != 0
+                and self._assigned_to != 0
             )
 
-        def isAvailable(self):
+        def is_available(self):
             """Check if this resource is AVAILABLE (for assignment)
 
             :return: True if available
@@ -311,7 +311,7 @@ class ControllerResourceManager:
                 self._resourceState == ControllerResourceManager.ResourceState.AVAILABLE
             )
 
-        def isUnavailable(self):
+        def is_unavailable(self):
             """Check if this resource is UNAVAILABLE
 
             :return: True if unavailable
@@ -322,7 +322,7 @@ class ControllerResourceManager:
                 == ControllerResourceManager.ResourceState.UNAVAILABLE
             )
 
-        def isNotAvailable(self):
+        def is_notAvailable(self):
             """Check if this resource is not available
             A resource is not available if it is ASSIGNED or UNAVAILABLE
 
@@ -336,7 +336,7 @@ class ControllerResourceManager:
                 == ControllerResourceManager.ResourceState.ASSIGNED
             )
 
-        def isHealthy(self):
+        def is_healthy(self):
             """Check if this resource is in a healthy state,
             as defined by its resource_availability_policy.
 
@@ -351,7 +351,7 @@ class ControllerResourceManager:
             assert event_name == "healthState"
             self._health_state = event_value
 
-        def Assign(self, owner):
+        def assign(self, owner):
             """Assign a resource to an owner
 
             :param owner: Device ID of the owner
@@ -362,8 +362,8 @@ class ControllerResourceManager:
             :raises ValueError: if the named resource is otherwise unavailable
             """
             # Don't allow assign if already assigned to another owner
-            if self.isAssigned():
-                if self._assignedTo != owner:
+            if self.is_assigned():
+                if self._assigned_to != owner:
                     # Trying to assign to new owner not allowed
                     raise ValueError(
                         f"{self._manager._managername}: "
@@ -372,43 +372,43 @@ class ControllerResourceManager:
                 # No action if repeating the existing assignment
                 return
             # Don't allow assign if resource is not healthy
-            if not self.isHealthy():
+            if not self.is_healthy():
                 raise ValueError(
                     f"{self._manager._managername}: "
                     f"{self._fqdn} does not pass health check for assignment"
                 )
 
-            if self.isAvailable():
-                self._assignedTo = owner
+            if self.is_available():
+                self._assigned_to = owner
                 self._resourceState = ControllerResourceManager.ResourceState.ASSIGNED
             else:
                 raise ValueError(
                     f"{self._manager._managername}: " f"{self._fqdn} is unavailable"
                 )
 
-        def Release(self):
+        def release(self):
             """Release the resource from assignment
 
             :raises TypeError: if the resource was unassigned
             """
-            if self._assignedTo == 0:
+            if self._assigned_to == 0:
                 raise TypeError(
                     f"{self._manager._managername}: "
                     f"Attempt to release unassigned resource, {self._fqdn}"
                 )
-            self._assignedTo = 0
+            self._assigned_to = 0
 
             if self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED:
                 # Previously assigned resource becomes available
-                if not self.isHealthy():
-                    self.MakeUnavailable()
+                if not self.is_healthy():
+                    self.make_unavailable()
                 else:
                     self._resourceState = (
                         ControllerResourceManager.ResourceState.AVAILABLE
                     )
             # Unassigned or unavailable resource does not change state
 
-        def MakeUnavailable(self):
+        def make_unavailable(self):
             """Mark the resource as unavailable for assignment"""
             # Change resource state to unavailable
             # If it was previously AVAILABLE (not ASSIGNED) we can just switch
@@ -423,7 +423,7 @@ class ControllerResourceManager:
                 # We must decide what to do with rescources that were assigned already
                 pass
 
-        def MakeAvailable(self):
+        def make_available(self):
             """Mark the resource as available for assignment"""
             # Change resource state to available
             # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
@@ -462,7 +462,7 @@ class ControllerResourceManager:
                 self._resources[fqdn]._health_changed, fqdn
             )
 
-    def exceptOnUnmanaged(self, fqdns):
+    def except_on_unmanaged(self, fqdns):
         """
         Raise an exception if any of the listed FQDNs
         are not being managed by this manager.
@@ -479,7 +479,7 @@ class ControllerResourceManager:
                 f"These FQDNs are not managed by {self._managername}: {bad}"
             )
 
-    def GetAllFqdns(self):
+    def get_all_fqdns(self):
         """
         Get all FQDNs managed by this resource manager
 
@@ -488,7 +488,7 @@ class ControllerResourceManager:
         """
         return self._resources.keys()
 
-    def GetAssignedFqdns(self, owner_id):
+    def get_assigned_fqdns(self, owner_id):
         """
         Get the FQDNs assigned to a given owner id
 
@@ -502,10 +502,10 @@ class ControllerResourceManager:
         return [
             fqdn
             for fqdn, res in self._resources.items()
-            if (res.isAssigned() and res.assignedTo() == owner_id)
+            if (res.is_assigned() and res.assigned_to() == owner_id)
         ]
 
-    def QueryAllocation(self, fqdns, new_owner):
+    def query_allocation(self, fqdns, new_owner):
         """
         Test if a (re)allocation is allowed, and if so, return lists of FQDNs
         to assign and to release. If the allocation is not permitted due to some
@@ -525,17 +525,17 @@ class ControllerResourceManager:
         :rtype: tuple (bool, list of strings, list of strings)
         """
 
-        self.exceptOnUnmanaged(fqdns)
+        self.except_on_unmanaged(fqdns)
 
         # Make a list of any FQDNs which are blocking this allocation
         blocking = [
             fqdn
             for fqdn in fqdns
             if (
-                (self._resources[fqdn].isUnavailable())
+                (self._resources[fqdn].is_unavailable())
                 or (
-                    self._resources[fqdn].isAssigned()
-                    and self._resources[fqdn].assignedTo() != new_owner
+                    self._resources[fqdn].is_assigned()
+                    and self._resources[fqdn].assigned_to() != new_owner
                 )
             )
         ]
@@ -545,7 +545,7 @@ class ControllerResourceManager:
             return (False, None, blocking)
 
         # Make a list of wanted FQDNs not already assigned
-        needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].isAssigned())]
+        needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].is_assigned())]
         if len(needed) == 0:
             needed = None
 
@@ -554,7 +554,9 @@ class ControllerResourceManager:
             fqdn
             for (fqdn, res) in self._resources.items()
             if (
-                res.isAssigned() and res.assignedTo() == new_owner and fqdn not in fqdns
+                res.is_assigned()
+                and res.assigned_to() == new_owner
+                and fqdn not in fqdns
             )
         ]
         if len(to_release) == 0:
@@ -563,7 +565,7 @@ class ControllerResourceManager:
         # Return True (ok to proceed), with the lists
         return (True, needed, to_release)
 
-    def Assign(self, fqdns, new_owner):
+    def assign(self, fqdns, new_owner):
         """
         Take a list of device FQDNs and assign them to a new owner id.
         If any of the FQDNs are not being managed or are otherwise
@@ -575,11 +577,11 @@ class ControllerResourceManager:
         :type new_owner: int
         """
 
-        self.exceptOnUnmanaged(fqdns)
+        self.except_on_unmanaged(fqdns)
         for fqdn in fqdns:
-            self._resources[fqdn].Assign(new_owner)
+            self._resources[fqdn].assign(new_owner)
 
-    def Release(self, fqdns):
+    def release(self, fqdns):
         """
         Take a list of device FQDNs and flag them as unassigned.
         TypeError is raised if any of the FQDNs are not being managed.
@@ -588,11 +590,11 @@ class ControllerResourceManager:
         :type fqdns: list of string
         """
 
-        self.exceptOnUnmanaged(fqdns)
+        self.except_on_unmanaged(fqdns)
         for fqdn in fqdns:
-            self._resources[fqdn].Release()
+            self._resources[fqdn].release()
 
-    def MakeUnavailable(self, fqdns):
+    def make_unavailable(self, fqdns):
         """
         For each resource in the given list of FQDNs make its availability state
         unavailable
@@ -600,11 +602,11 @@ class ControllerResourceManager:
         :param fqdns: The list of device FQDNs to make unavailable
         :type fqdns: list of string
         """
-        self.exceptOnUnmanaged(fqdns)
+        self.except_on_unmanaged(fqdns)
         for fqdn in fqdns:
-            self._resources[fqdn].MakeUnavailable()
+            self._resources[fqdn].make_unavailable()
 
-    def MakeAvailable(self, fqdns):
+    def make_available(self, fqdns):
         """
         For each resource in the given list of FQDNs make its availability state
         available
@@ -612,11 +614,11 @@ class ControllerResourceManager:
         :param fqdns: The list of device FQDNs to make unavailable
         :type fqdns: list of string
         """
-        self.exceptOnUnmanaged(fqdns)
+        self.except_on_unmanaged(fqdns)
         for fqdn in fqdns:
-            self._resources[fqdn].MakeAvailable()
+            self._resources[fqdn].make_available()
 
-    def FqdnFromId(self, devid):
+    def fqdn_from_id(self, devid):
         """
         Find a device FQDN by searching on its id number
 
@@ -632,7 +634,7 @@ class ControllerResourceManager:
                 return fqdn
         raise TypeError(f"Device ID {devid} is not managed by {self._managername}")
 
-    def AssignAllocatableHealthStates(self, health_states):
+    def assign_allocatable_health_states(self, health_states):
         """Assign a list of health states which permit allocation.
 
         :param health_states: The list of allowed states
@@ -642,7 +644,7 @@ class ControllerResourceManager:
             health_states
         )
 
-    def ResetResourceAvailabilityPolicy(self):
+    def reset_resource_availability_policy(self):
         """Reset to the default list of health states which permit allocation."""
         self.resource_availability_policy.reset()
 
@@ -1559,8 +1561,8 @@ class MccsController(SKAMaster):
                 alloc_allowed,
                 stations_to_assign,
                 stations_to_release,
-            ) = controllerdevice._stations_manager.QueryAllocation(
-                stations, subarray_id
+            ) = controllerdevice._stations_manager.query_allocation(
+                station_fqdns, subarray_id
             )
             if not alloc_allowed:
                 # If manager returns False (not allowed) stations_to_release
@@ -1591,7 +1593,7 @@ class MccsController(SKAMaster):
                 controllerdevice._stations_manager.Release(stations_to_release)
 
                 # Inform manager that we made the releases
-                controllerdevice._stations_manager.Release(stations_to_release)
+                controllerdevice._stations_manager.release(stations_to_release)
 
             # Enable the subarray specified by the caller (if required)
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
@@ -1625,7 +1627,7 @@ class MccsController(SKAMaster):
                     device.subarrayId = subarray_id
 
                 # Inform manager that we made the assignments
-                controllerdevice._stations_manager.Assign(
+                controllerdevice._stations_manager.assign(
                     stations_to_assign, subarray_id
                 )
 
@@ -1762,13 +1764,13 @@ class MccsController(SKAMaster):
 
             if release_all:
                 # Query stations resouce manager for stations assigned to subarray
-                fqdns = self.target._stations_manager.GetAssignedFqdns(subarray_id)
+                fqdns = self.target._stations_manager.get_assigned_fqdns(subarray_id)
                 # and clear the subarrayId in each
                 for fqdn in fqdns:
                     station = tango.DeviceProxy(fqdn)
                     station.subarrayId = 0
                 # Finally release them from assignment in the manager
-                self.target._stations_manager.Release(fqdns)
+                self.target._stations_manager.release(fqdns)
 
                 result = self._disable_subarray(subarray_id)
                 if result[0] is not ResultCode.OK:

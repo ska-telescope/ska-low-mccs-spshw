@@ -362,7 +362,7 @@ class TestMccsController:
         assert mock_station_1.subarrayId == 2
         assert mock_station_2.subarrayId == 2
 
-    def test_Release(self, device_under_test):
+    def test_release(self, device_under_test):
         """
         Test Release command.
 
@@ -859,7 +859,7 @@ class TestControllerResourceManager:
 
         return manager
 
-    def test_Assign(self, resource_manager):
+    def test_assign(self, resource_manager):
         """Test assignment operations of the ControllerResourceManager
 
         :param resource_manager: test fixture providing a manager object
@@ -867,18 +867,18 @@ class TestControllerResourceManager:
         """
 
         # Assign both stations
-        resource_manager.Assign(["low-mccs/station/001", "low-mccs/station/002"], 1)
+        resource_manager.assign(["low-mccs/station/001", "low-mccs/station/002"], 1)
 
         # They should both be recorded as assigned
-        assigned = resource_manager.GetAssignedFqdns(1)
+        assigned = resource_manager.get_assigned_fqdns(1)
         assert "low-mccs/station/001" in assigned
         assert "low-mccs/station/002" in assigned
 
         # Drop station 2
-        resource_manager.Release(["low-mccs/station/002"])
+        resource_manager.release(["low-mccs/station/002"])
 
         # It should now not be assigned
-        assigned = resource_manager.GetAssignedFqdns(1)
+        assigned = resource_manager.get_assigned_fqdns(1)
         assert "low-mccs/station/002" not in assigned
 
         # Mock a health event so that station 2 is FAILED
@@ -892,7 +892,7 @@ class TestControllerResourceManager:
         with pytest.raises(
             ValueError,
         ):
-            resource_manager.Assign(["low-mccs/station/002"], 1)
+            resource_manager.assign(["low-mccs/station/002"], 1)
 
         # Mock a health event so that station 2 is OK again
         resource_manager._resources["low-mccs/station/002"]._health_changed(
@@ -903,8 +903,8 @@ class TestControllerResourceManager:
         )
 
         # Assign it again
-        resource_manager.Assign(["low-mccs/station/002"], 1)
+        resource_manager.assign(["low-mccs/station/002"], 1)
 
         # and check
-        assigned = resource_manager.GetAssignedFqdns(1)
+        assigned = resource_manager.get_assigned_fqdns(1)
         assert "low-mccs/station/002" in assigned

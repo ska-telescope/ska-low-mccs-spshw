@@ -7,7 +7,7 @@ import pytest
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState
 
-from conftest import wait_for_initialisation
+from conftest import confirm_initialised
 
 
 devices_to_load = {
@@ -61,7 +61,7 @@ def devices(tango_context):
         "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
         "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
     }
-    wait_for_initialisation(device_dict.values())
+    confirm_initialised(device_dict.values())
     return device_dict
 
 

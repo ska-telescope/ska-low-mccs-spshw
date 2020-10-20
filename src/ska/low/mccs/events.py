@@ -11,8 +11,8 @@ subsystem.
 """
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
+import backoff
 from functools import partial
-import time
 
 import tango
 from tango import EventType
@@ -151,28 +151,23 @@ class DeviceEventManager:
             provided, this instance will reject attempts to subscribe
             to events not in this list
         :type events: list, optional
-        :raises ConnectionError: if unable to create a DeviceProxy
-            connection to the target device
         """
-        # HACK: Synchronous implementation of connection retries, to be
-        # fixed eventually by asyncio implementation
-        self._device = None
-        dev_failed = None
-        sleeps = [0.1, 0.2, 0.5, 1]
-        for sleep in sleeps:
-            try:
-                self._device = tango.DeviceProxy(fqdn)
-            except tango.DevFailed as _dev_failed:
-                dev_failed = _dev_failed
-                time.sleep(sleep)
-                continue
-            else:
-                break
-        else:
-            raise ConnectionError(f"Could not connect to device {fqdn}") from dev_failed
-
         self._allowed_events = events
         self._handlers = {}
+
+        self._connect(fqdn)
+
+    @backoff.on_exception(backoff.expo, tango.DevFailed, factor=0.1, max_tries=8)
+    def _connect(self, fqdn):
+        """
+        Attempts connection to a specified device, using an exponential
+        backoff-retry scheme in case of failure
+
+        :param fqdn: the fully qualified device name of the device for
+            which this DeviceEventManager will manage change events
+        :type fqdn: str
+        """
+        self._device = tango.DeviceProxy(fqdn)
 
     def register_callback(self, callback, event_spec=None):
         """

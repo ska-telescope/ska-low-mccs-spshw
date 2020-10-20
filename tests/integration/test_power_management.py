@@ -14,7 +14,7 @@ This test module contains the tests for the ska.low.mccs.power module.
 
 from tango import DevState
 
-from conftest import wait_for_initialisation
+from conftest import confirm_initialised
 
 
 devices_to_load = {
@@ -58,7 +58,7 @@ class TestPowerManagement:
         tile_3 = device_context.get_device("low-mccs/tile/0003")
         tile_4 = device_context.get_device("low-mccs/tile/0004")
 
-        wait_for_initialisation(
+        confirm_initialised(
             [controller, station_1, station_2, tile_1, tile_2, tile_3, tile_4]
         )
 

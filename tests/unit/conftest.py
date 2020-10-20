@@ -2,9 +2,9 @@
 This module contains pytest fixtures and other test setups for the
 ska.low.mccs unit tests
 """
+import backoff
 from collections import defaultdict
 import pytest
-import time
 
 # import tango
 from tango import DevSource, DevState
@@ -41,28 +41,20 @@ def mock_device_proxies(mocker):
     return device_proxy_mocks
 
 
-def _wait_for_initialisation(device):
+@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=5)
+def _confirm_initialised(device):
     """
-    Helper function that ensures the `device_under_test` fixture does
-    not return until the device has moved out of the INIT state.
+    Helper function that tries to confirm that a group of devices have
+    all completed initialisation and transitioned out out of INIT state,
+    using an exponential backoff-retry scheme in case of failure.
 
     :param device: the device that we are waiting to initialise
     :type device: :py:class:`tango.DeviceProxy`
 
-    :raises TimeoutError: if retries have been exhausted and the device
-        still has not initialised
+    :returns: whether the device is initialised or not
+    :rtype: bool
     """
-    sleeps = [0.1, 0.2, 0.5, 1, 2, 4]
-    for sleep in sleeps:
-        if device.state() == DevState.INIT:
-            time.sleep(sleep)
-        else:
-            break
-    else:
-        if device.state() == DevState.INIT:
-            raise TimeoutError(
-                "Retries exhausted; stuck at asynchronous initialisation?"
-            )
+    return device.state() != DevState.INIT
 
 
 @pytest.fixture()
@@ -85,6 +77,8 @@ def device_under_test(request, device_info, mock_device_proxies):
     :type mock_device_proxies: a dictionary (but don't access it
         directly, access it through :py:class:`tango.DeviceProxy` calls)
 
+    :raises TimeoutError: if the device does not complete initialisation
+        within a reasonable time.
     :yields: a DeviceProxy under a DeviceTestContext
     """
     try:
@@ -92,7 +86,8 @@ def device_under_test(request, device_info, mock_device_proxies):
             device_info["class"], properties=device_info["properties"]
         ) as device_under_test:
             device_under_test.set_source(DevSource.DEV)
-            _wait_for_initialisation(device_under_test)
+            if not _confirm_initialised(device_under_test):
+                raise TimeoutError("Device has not completed initialisation")
             yield device_under_test
     except Exception as e:
         print(e)

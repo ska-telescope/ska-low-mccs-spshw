@@ -8,7 +8,7 @@ from ska.base.control_model import ObsState
 import tango
 import json
 
-from conftest import wait_for_initialisation
+from conftest import confirm_initialised
 
 
 devices_to_load = {
@@ -83,7 +83,7 @@ class TestMccsIntegrationTmc:
         subarray01 = device_context.get_device("low-mccs/subarray/01")
         subarray02 = device_context.get_device("low-mccs/subarray/02")
 
-        wait_for_initialisation(
+        confirm_initialised(
             [controller, subarray01, subarray02, station001, station002]
         )
 
@@ -127,7 +127,7 @@ class TestMccsIntegrationTmc:
         station001 = device_context.get_device("low-mccs/station/001")
         station002 = device_context.get_device("low-mccs/station/002")
 
-        wait_for_initialisation([controller, station001, station002])
+        confirm_initialised([controller, station001, station002])
 
         assert controller.State() == DevState.OFF
         assert station001.State() == DevState.OFF
@@ -166,7 +166,7 @@ class TestMccsIntegrationTmc:
         station_001.set_source(DevSource.DEV)
         station_002.set_source(DevSource.DEV)
 
-        wait_for_initialisation([controller, subarray, station_001, station_002])
+        confirm_initialised([controller, subarray, station_001, station_002])
 
         # Turn on controller and stations
         self.async_command(device=controller, command="On")

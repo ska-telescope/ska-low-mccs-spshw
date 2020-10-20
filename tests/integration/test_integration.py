@@ -8,7 +8,7 @@ from tango import DevSource
 from ska.base.commands import ResultCode
 from ska.low.mccs.utils import call_with_json
 
-from conftest import wait_for_initialisation
+from conftest import confirm_initialised
 
 
 devices_to_load = {
@@ -68,7 +68,7 @@ class TestMccsIntegration:
         tile_3.set_source(DevSource.DEV)
         tile_4.set_source(DevSource.DEV)
 
-        wait_for_initialisation(
+        confirm_initialised(
             [
                 controller,
                 subarray_1,
@@ -179,7 +179,7 @@ class TestMccsIntegration:
         tile_3.set_source(DevSource.DEV)
         tile_4.set_source(DevSource.DEV)
 
-        wait_for_initialisation(
+        confirm_initialised(
             [
                 controller,
                 subarray_1,
@@ -279,7 +279,7 @@ class TestMccsIntegration:
         tile_1.set_source(DevSource.DEV)
         tile_2.set_source(DevSource.DEV)
 
-        wait_for_initialisation([station, tile_1, tile_2])
+        confirm_initialised([station, tile_1, tile_2])
 
         # check initial state
         assert station.subarrayId == 0

@@ -1,3 +1,4 @@
+backoff
 numpy == 1.17.2
 pytango >= 9.3.2
 jsonschema >= 3.2.0

@@ -3,9 +3,9 @@ This module contains pytest fixtures and other test setups for the
 ska.low.mccs lightweight integration tests
 """
 
+import backoff
 import pytest
 import socket
-import time
 
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
@@ -75,41 +75,17 @@ def device_context(mocker, devices_info):
         yield context
 
 
-def _still_initialising(devices):
+@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=6)
+def confirm_initialised(devices):
     """
-    Helper function that culls initialised devices out of a list of
-    initialising devices
+    Helper function that tries to confirm that a group of devices have
+    all completed initialisation and transitioned out out of INIT state,
+    using an exponential backoff-retry scheme in case of failure.
 
-    :param devices: list of devices that are being monitored for
-        completion of initialisations
-    :type devices: list of :py:class:`tango.DeviceProxy`
+    :param devices: the devices that we are waiting to initialise
+    :type devices: :py:class:`tango.DeviceProxy`
 
-    :return: updated list of devices that are still initialising
-    :rtype devices: list of :py:class:`tango.DeviceProxy`
+    :returns: whether the devices are all initialised or not
+    :rtype: bool
     """
-    return [device for device in devices if device.state() == tango.DevState.INIT]
-
-
-def wait_for_initialisation(devices):
-    """
-    Helper function that ensures the `device_under_test` fixture does
-    not return until the device has moved out of the INIT state.
-
-    :param devices: list of devices that we are waiting to initialise
-    :type devices: list of :py:class:`tango.DeviceProxy`
-
-    :raises TimeoutError: if retries have been exhausted and the device
-        still has not initialised
-    """
-    sleeps = [0.1, 0.2, 0.5, 1, 2, 4]
-    for sleep in sleeps:
-        devices = _still_initialising(devices)
-        if devices:
-            time.sleep(sleep)
-        else:
-            break
-    else:
-        if _still_initialising(devices):
-            raise TimeoutError(
-                "Retries exhausted; stuck at asynchronous initialisation?"
-            )
+    return all(device.state() != tango.DevState.INIT for device in devices)

@@ -104,3 +104,12 @@ function nextMajorLevel() {
 	version=$(printf "%d.0.0" $(($major + 1)))
 	echo $version
 }
+
+function applyRelease()  {
+	NEWVERSION=${1:-$(getRelease)}
+	sed -i -e "s/\(version = \"\)[^\"]*\"/\1$NEWVERSION\"/" src/ska/low/mccs/release.py
+	sed -i -e "s/\(version = \"\)[^\"]*\"/\1$NEWVERSION\"/;s/\(release = \"\)[^\"]*\"/\1$NEWVERSION\"/" docs/source/conf.py
+	sed -i -e "s/\(version = \"\)[^\"]*\"/\1$NEWVERSION\"/;s/\(appVersion = \"\)[^\"]*\"/\1$NEWVERSION\"/" charts/mccs/Chart.yaml
+	sed -i -e "/^\([[:space:]]*tag: \).*/s//\1$NEWVERSION/" charts/mccs/values.yaml
+	sed -i "3s/^/## $NEWVERSION \n\n/" CHANGELOG
+}

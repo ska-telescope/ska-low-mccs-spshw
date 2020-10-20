@@ -39,30 +39,14 @@ SHELL=/bin/bash
 DOCKER_BUILD_CONTEXT=.
 DOCKER_FILE_PATH=Dockerfile
 
-.PHONY: pre-build docker-build post-build build release patch-release minor-release major-release tag check-status check-release showver \
-	push pre-push do-push post-push
+.PHONY: docker-build build release patch-release minor-release major-release tag check-status check-release showver \
+	push do-push apply-release
 
-build: pre-build docker-build post-build  ## build the application image
-
-pre-build:
-
-post-build:
-
-pre-push:
-
-post-push:
+build: docker-build   ## build the application image
 
 docker-build: .release
 	docker build $(DOCKER_BUILD_ARGS) -t $(IMAGE):$(VERSION) $(DOCKER_BUILD_CONTEXT) -f $(DOCKER_FILE_PATH) --build-arg DOCKER_REGISTRY_HOST=$(DOCKER_REGISTRY_HOST) --build-arg DOCKER_REGISTRY_USER=$(DOCKER_REGISTRY_USER)
-	@DOCKER_MAJOR=$(shell docker -v | sed -e 's/.*version //' -e 's/,.*//' | cut -d\. -f1) ; \
-	DOCKER_MINOR=$(shell docker -v | sed -e 's/.*version //' -e 's/,.*//' | cut -d\. -f2) ; \
-	if [ $$DOCKER_MAJOR -eq 1 ] && [ $$DOCKER_MINOR -lt 10 ] ; then \
-		echo docker tag -f $(IMAGE):$(VERSION) $(IMAGE):latest ;\
-		docker tag -f $(IMAGE):$(VERSION) $(IMAGE):latest ;\
-	else \
-		echo docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ;\
-		docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ; \
-	fi
+	@echo docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ;#docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ; \
 
 .release:
 	@echo "release=0.0.0" > .release
@@ -72,10 +56,10 @@ docker-build: .release
 
 release: check-status check-release build push
 
-push: pre-push do-push post-push  ## push the image to the Docker registry
+push: do-push  ## push the image to the Docker registry
 
 do-push:
-#	docker push $(IMAGE):$(VERSION)
+	docker push $(IMAGE):$(VERSION)
 	docker push $(IMAGE):latest
 
 snapshot: build push
@@ -117,3 +101,6 @@ check-release: .release
 	@. $(RELEASE_SUPPORT) ; tagExists $(TAG) || (echo "ERROR: version not yet tagged in git. make [minor,major,patch]-release." >&2 && exit 1) ;
 	@. $(RELEASE_SUPPORT) ; ! differsFromRelease $(TAG) || (echo "ERROR: current directory differs from tagged $(TAG). make [minor,major,patch]-release." ; exit 1)
 
+# apply release version to all relevant packageswithin the project
+apply-release: .release
+	@. $(RELEASE_SUPPORT) ; applyRelease

@@ -51,15 +51,17 @@ def setup(app):
 
 
 # -- Project information -----------------------------------------------------
+release_filename = os.path.join("..", "..", "src", "ska", "low", "mccs", "release.py")
+version = None
+author = None
+for line in open(release_filename).readlines():
+    line = line.strip()
+    if line.startswith(("author", "version")):
+        exec(line)
+
 project = "MCCS LMC Prototype"
-# pylint: disable=redefined-builtin
+release = version
 copyright = "2020, SKA MCCS Team"
-author = "SKA MCCS Team"
-
-# The full version, including alpha/beta/rc tags
-version = "0.1.1"
-release = "0.1.1-alpha"
-
 
 # -- General configuration ------------------------------------------------
 

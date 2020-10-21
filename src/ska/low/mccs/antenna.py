@@ -14,17 +14,17 @@ architecture in SKA-TEL-LFAA-06000052-02.
 """
 __all__ = ["AntennaHardware", "AntennaHardwareManager", "MccsAntenna", "main"]
 
+import threading
+
 # tango imports
-from tango import DebugIt
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
-
 from ska.base.control_model import HealthState
 
-from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
 
@@ -145,12 +145,10 @@ class AntennaHardwareManager:
         :return: whether successful
         :rtype: boolean, or None if there was nothing to do.
         """
-        print("IN antennahardwaremanager on")
         if self._hardware.is_on:
             return
         self._hardware.on()
         self.poll_hardware()
-        print(f"OUT antennahardwaremanager on: {self.voltage}")
         return self.is_on
 
     def poll_hardware(self):
@@ -158,7 +156,6 @@ class AntennaHardwareManager:
         Poll the hardware and update local attributes with values
         reported by the hardware.
         """
-        print("IN antennahardwaremanager poll")
         self._is_on = self._hardware.is_on
         if self._is_on:
             self._voltage = self._hardware.voltage
@@ -167,7 +164,6 @@ class AntennaHardwareManager:
             self._voltage = None
             self._temperature = None
         self._evaluate_health()
-        print(f"OUT antennahardwaremanager poll: {self.voltage}")
 
     @property
     def is_on(self):
@@ -268,6 +264,29 @@ class MccsAntenna(SKABaseDevice):
         device.
         """
 
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new InitCommand
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            self._thread = None
+            self._lock = threading.Lock()
+            self._interrupt = False
+
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
@@ -308,18 +327,7 @@ class MccsAntenna(SKABaseDevice):
             device._delays = [0.0]
             device._delayRates = [0.0]
             device._bandpassCoefficient = [0.0]
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
             device._first = True
-
-            device.hardware_manager = AntennaHardwareManager()
-            device.event_manager = EventManager()
-            device.health_model = HealthModel(
-                device.hardware_manager,
-                None,
-                device.event_manager,
-                device._update_health_state,
-            )
 
             event_names = [
                 "voltage",
@@ -331,7 +339,85 @@ class MccsAntenna(SKABaseDevice):
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
 
-            return (ResultCode.OK, "Init command succeeded")
+            self._thread = threading.Thread(
+                target=self._initialise_connections, args=(device,)
+            )
+            with self._lock:
+                self._thread.start()
+                return (ResultCode.STARTED, "Init command started")
+
+        def _initialise_connections(self, device):
+            """
+            Thread target for asynchronous initialisation of connections
+            to external entities such as hardware and other devices.
+
+            :param device: the device being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            # https://pytango.readthedocs.io/en/stable/howto.html
+            # #using-clients-with-multithreading
+            with EnsureOmniThread():
+                self._initialise_hardware_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                with self._lock:
+                    self.succeeded()
+                    self._thread = None
+                    self._interrupt = False
+
+        def _initialise_hardware_management(self, device):
+            """
+            Initialise the connection to the hardware being managed by
+            this device. May also register commands that depend upon a
+            connection to that hardware
+
+            :param device: the device for which a connection to the
+                hardware is being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.hardware_manager = AntennaHardwareManager()
+            hardware_args = (device.hardware_manager, device.state_model, self.logger)
+            device.register_command_object("Reset", device.ResetCommand(*hardware_args))
+            device.register_command_object(
+                "PowerOn", device.PowerOnCommand(*hardware_args)
+            )
+            device.register_command_object(
+                "PowerOff", device.PowerOffCommand(*hardware_args)
+            )
+
+        def _initialise_health_monitoring(self, device):
+            """
+            Initialise the health model for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.set_change_event("healthState", True, True)
+            device.set_archive_event("healthState", True, True)
+
+            device.health_model = HealthModel(
+                device.hardware_manager, None, None, device._update_health_state
+            )
+
+        def interrupt(self):
+            """
+            Interrupt the initialisation thread (if one is running)
+
+            :return: whether the initialisation thread was interrupted
+            :rtype: bool
+            """
+            if self._thread is None:
+                return False
+            self._interrupt = True
+            return True
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -711,18 +797,6 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
-    def init_command_objects(self):
-        """
-        Set up the handler objects for Commands
-        """
-        super().init_command_objects()
-
-        hardware_args = (self.hardware_manager, self.state_model, self.logger)
-
-        self.register_command_object("Reset", self.ResetCommand(*hardware_args))
-        self.register_command_object("PowerOn", self.PowerOnCommand(*hardware_args))
-        self.register_command_object("PowerOff", self.PowerOffCommand(*hardware_args))
-
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.

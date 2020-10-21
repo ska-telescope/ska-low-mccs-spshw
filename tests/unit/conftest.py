@@ -2,10 +2,12 @@
 This module contains pytest fixtures and other test setups for the
 ska.low.mccs unit tests
 """
+import backoff
 from collections import defaultdict
 import pytest
 
 # import tango
+from tango import DevSource, DevState
 from tango.test_context import DeviceTestContext
 
 
@@ -39,6 +41,22 @@ def mock_device_proxies(mocker):
     return device_proxy_mocks
 
 
+@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=5)
+def _confirm_initialised(device):
+    """
+    Helper function that tries to confirm that a group of devices have
+    all completed initialisation and transitioned out out of INIT state,
+    using an exponential backoff-retry scheme in case of failure.
+
+    :param device: the device that we are waiting to initialise
+    :type device: :py:class:`tango.DeviceProxy`
+
+    :returns: whether the device is initialised or not
+    :rtype: bool
+    """
+    return device.state() != DevState.INIT
+
+
 @pytest.fixture()
 def device_under_test(request, device_info, mock_device_proxies):
     """
@@ -59,12 +77,17 @@ def device_under_test(request, device_info, mock_device_proxies):
     :type mock_device_proxies: a dictionary (but don't access it
         directly, access it through :py:class:`tango.DeviceProxy` calls)
 
+    :raises TimeoutError: if the device does not complete initialisation
+        within a reasonable time.
     :yields: a DeviceProxy under a DeviceTestContext
     """
     try:
         with DeviceTestContext(
             device_info["class"], properties=device_info["properties"]
         ) as device_under_test:
+            device_under_test.set_source(DevSource.DEV)
+            if not _confirm_initialised(device_under_test):
+                raise TimeoutError("Device has not completed initialisation")
             yield device_under_test
     except Exception as e:
         print(e)

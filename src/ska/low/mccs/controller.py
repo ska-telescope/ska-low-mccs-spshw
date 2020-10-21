@@ -15,10 +15,11 @@ __all__ = ["MccsController", "main"]
 
 import numpy
 import json
+import threading
 
 # PyTango imports
 import tango
-from tango import DebugIt, DevFailed, DevState
+from tango import DebugIt, DevFailed, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
@@ -93,15 +94,17 @@ class MccsController(SKAMaster):
         Initialises the command handlers for commands supported by this
         device.
         """
-
-        super().init_command_objects()
-
-        power_args = (self.power_manager, self.state_model, self.logger)
+        # Technical debt -- forced to register base class stuff rather than
+        # calling super(), because On() and Off() are registered on a
+        # thread, and we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)
-
+        self.register_command_object("Disable", self.DisableCommand(*args))
+        self.register_command_object("Standby", self.StandbyCommand(*args))
         self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object("On", self.OnCommand(*power_args))
-        self.register_command_object("Off", self.OffCommand(*power_args))
+        self.register_command_object(
+            "GetVersionInfo", self.GetVersionInfoCommand(*args)
+        )
+
         self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
         self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
         self.register_command_object("Operate", self.OperateCommand(*args))
@@ -116,6 +119,29 @@ class MccsController(SKAMaster):
         below is called upon :py:class:`~ska.low.mccs.controller.MccsController`'s
         initialisation.
         """
+
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new InitCommand
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            self._thread = None
+            self._lock = threading.Lock()
+            self._interrupt = False
 
         def do(self):
             """
@@ -157,18 +183,88 @@ class MccsController(SKAMaster):
                 len(device.MccsStations), dtype=numpy.ubyte
             )
 
-            device.event_manager = EventManager(device._station_fqdns)
-            device.health_model = HealthModel(
-                None,
-                device._station_fqdns,
-                device.event_manager,
-                device._update_health_state,
+            self._thread = threading.Thread(
+                target=self._initialise_connections,
+                args=(device, device._station_fqdns),
             )
+            with self._lock:
+                self._thread.start()
+                return (ResultCode.STARTED, "Init command started")
+
+        def _initialise_connections(self, device, fqdns):
+            """
+            Thread target for asynchronous initialisation of connections
+            to external entities such as hardware and other devices.
+
+            :param device: the device being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices to which
+                this device must maintain connections
+            :type: list of str
+            """
+            # https://pytango.readthedocs.io/en/stable/howto.html
+            # #using-clients-with-multithreading
+            with EnsureOmniThread():
+                self._initialise_health_monitoring(device, fqdns)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_power_management(device, fqdns)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                with self._lock:
+                    self.succeeded()
+
+        def _initialise_health_monitoring(self, device, fqdns):
+            """
+            Initialise the health model for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices for which
+                this device monitors health
+            :type: list of str
+            """
+            device.set_change_event("healthState", True, True)
+            device.set_archive_event("healthState", True, True)
+
+            device.event_manager = EventManager(fqdns)
+            device.health_model = HealthModel(
+                None, fqdns, device.event_manager, device._update_health_state
+            )
+
+        def _initialise_power_management(self, device, fqdns):
+            """
+            Initialise power management for this device.
+
+            :param device: the device for which power management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices for which
+                this device manages power
+            :type: list of str
+            """
             device.power_manager = ControllerPowerManager(device._station_fqdns)
 
-            message = "MccsController Init command completed OK"
-            self.logger.info(message)
-            return (ResultCode.OK, message)
+            power_args = (device.power_manager, device.state_model, device.logger)
+            device.register_command_object("Off", device.OffCommand(*power_args))
+            device.register_command_object("On", device.OnCommand(*power_args))
+
+        def interrupt(self):
+            """
+            Interrupt the initialisation thread (if one is running)
+
+            :return: whether the initialisation thread was interrupted
+            :rtype: bool
+            """
+            if self._thread is None:
+                return False
+            self._interrupt = True
+            return True
 
     def always_executed_hook(self):
         """
@@ -662,8 +758,7 @@ class MccsController(SKAMaster):
             if not subarray_device.State() == DevState.ON:
                 (result_code, message) = subarray_device.On()
 
-                # TODO: After MCCS-212, this code should be:
-                # if result_code is not ResultCode.OK:
+                # TODO: handle ResultCode.STARTED
                 if result_code == ResultCode.FAILED:
                     return (
                         result_code,

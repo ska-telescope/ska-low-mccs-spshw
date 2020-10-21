@@ -15,9 +15,10 @@ __all__ = ["MccsTile", "main"]
 
 import json
 import numpy as np
+import threading
 
 # PyTango imports
-from tango import DebugIt
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -28,7 +29,6 @@ from ska.base.control_model import HealthState, SimulationMode, TestMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.low.mccs.power import PowerManager, PowerManagerError
-from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
 
@@ -381,6 +381,29 @@ class MccsTile(SKABaseDevice):
            usually off
         """
 
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new InitCommand
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            self._thread = None
+            self._lock = threading.Lock()
+            self._interrupt = False
+
         def do(self):
             """
             Initialises the attributes and properties of the MCCS Tile
@@ -422,18 +445,6 @@ class MccsTile(SKABaseDevice):
                 float(1) for i in range(device.AntennasPerTile)
             ]
             device._is_connected = False
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
-
-            device.hardware_manager = TileHardwareManager()
-            device.power_manager = TilePowerManager(device.hardware_manager)
-            device.event_manager = EventManager()
-            device.health_model = HealthModel(
-                device.hardware_manager,
-                None,
-                device.event_manager,
-                device._update_health_state,
-            )
 
             event_names = [
                 "current",
@@ -442,12 +453,97 @@ class MccsTile(SKABaseDevice):
                 "fpga1_temperature",
                 "fpga2_temperature",
             ]
-
             for name in event_names:
                 device.set_archive_event(name, True, True)
 
-            device.logger.info("MccsTile init_device complete")
-            return (ResultCode.OK, "Init command succeeded")
+            self._thread = threading.Thread(
+                target=self._initialise_connections, args=(device,)
+            )
+            with self._lock:
+                self._thread.start()
+                return (ResultCode.STARTED, "Init command started")
+
+        def _initialise_connections(self, device):
+            """
+            Thread target for asynchronous initialisation of connections
+            to external entities such as hardware and other devices.
+
+            :param device: the device being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            # https://pytango.readthedocs.io/en/stable/howto.html
+            # #using-clients-with-multithreading
+            with EnsureOmniThread():
+                self._initialise_hardware_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_power_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                with self._lock:
+                    self.succeeded()
+
+        def _initialise_hardware_management(self, device):
+            """
+            Initialise the connection to the hardware being managed by
+            this device. May also register commands that depend upon a
+            connection to that hardware
+
+            :param device: the device for which a connection to the
+                hardware is being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.hardware_manager = TileHardwareManager()
+
+        def _initialise_health_monitoring(self, device):
+            """
+            Initialise the health model for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.set_change_event("healthState", True, True)
+            device.set_archive_event("healthState", True, True)
+
+            device.health_model = HealthModel(
+                device.hardware_manager, None, None, device._update_health_state
+            )
+
+        def _initialise_power_management(self, device):
+            """
+            Initialise power management for this device.
+
+            :param device: the device for which power management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.power_manager = TilePowerManager(device.hardware_manager)
+
+            power_args = (device.power_manager, device.state_model, device.logger)
+            device.register_command_object("Off", device.OffCommand(*power_args))
+            device.register_command_object("On", device.OnCommand(*power_args))
+
+        def interrupt(self):
+            """
+            Interrupt the initialisation thread (if one is running)
+
+            :return: whether the initialisation thread was interrupted
+            :rtype: bool
+            """
+            if self._thread is None:
+                return False
+            self._interrupt = True
+            return True
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -1037,13 +1133,16 @@ class MccsTile(SKABaseDevice):
         """
         Set up the handler objects for Commands
         """
-        super().init_command_objects()
-
+        # Technical debt -- forced to register base class stuff rather than
+        # calling super(), because On() and Off() are registered on a
+        # thread, and we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)
-        power_args = (self.power_manager, self.state_model, self.logger)
-
-        self.register_command_object("Off", self.OffCommand(*power_args))
-        self.register_command_object("On", self.OnCommand(*power_args))
+        self.register_command_object("Disable", self.DisableCommand(*args))
+        self.register_command_object("Standby", self.StandbyCommand(*args))
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object(
+            "GetVersionInfo", self.GetVersionInfoCommand(*args)
+        )
 
         self.register_command_object("Initialise", self.InitialiseCommand(*args))
         self.register_command_object("Connect", self.ConnectCommand(*args))

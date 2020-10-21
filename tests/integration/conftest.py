@@ -3,8 +3,10 @@ This module contains pytest fixtures and other test setups for the
 ska.low.mccs lightweight integration tests
 """
 
+import backoff
 import pytest
 import socket
+
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
@@ -71,3 +73,19 @@ def device_context(mocker, devices_info):
         devices_info, process=True, host=HOST, port=PORT
     ) as context:
         yield context
+
+
+@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=6)
+def confirm_initialised(devices):
+    """
+    Helper function that tries to confirm that a group of devices have
+    all completed initialisation and transitioned out out of INIT state,
+    using an exponential backoff-retry scheme in case of failure.
+
+    :param devices: the devices that we are waiting to initialise
+    :type devices: :py:class:`tango.DeviceProxy`
+
+    :returns: whether the devices are all initialised or not
+    :rtype: bool
+    """
+    return all(device.state() != tango.DevState.INIT for device in devices)

@@ -11,7 +11,9 @@ subsystem.
 """
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
+import backoff
 from functools import partial
+
 import tango
 from tango import EventType
 
@@ -86,12 +88,6 @@ class EventSubscriptionHandler:
             attribute for which change events are subscribed.
         :type event_name: str
         """
-        # TODO: this is MCCS-212
-        # HACK to make tests pass until we can resolve device initialisation
-        # race condition.
-        if self._device is None:
-            return
-
         self._subscription_id = self._device.subscribe_event(
             event_name, EventType.CHANGE_EVENT, self, stateless=True
         )
@@ -156,16 +152,22 @@ class DeviceEventManager:
             to events not in this list
         :type events: list, optional
         """
-        # HACK: Allowing silent failure until we can sort out our device
-        # initialisation race conditions
-        try:
-            self._device = tango.DeviceProxy(fqdn)
-        except Exception as exception:
-            print(f"device probably not started for {fqdn}", exception)
-            self._device = None
-
         self._allowed_events = events
         self._handlers = {}
+
+        self._connect(fqdn)
+
+    @backoff.on_exception(backoff.expo, tango.DevFailed, factor=0.1, max_tries=8)
+    def _connect(self, fqdn):
+        """
+        Attempts connection to a specified device, using an exponential
+        backoff-retry scheme in case of failure
+
+        :param fqdn: the fully qualified device name of the device for
+            which this DeviceEventManager will manage change events
+        :type fqdn: str
+        """
+        self._device = tango.DeviceProxy(fqdn)
 
     def register_callback(self, callback, event_spec=None):
         """

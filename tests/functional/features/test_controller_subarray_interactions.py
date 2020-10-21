@@ -7,6 +7,9 @@ import pytest
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState
 
+from conftest import confirm_initialised
+
+
 devices_to_load = {
     "path": "charts/mccs/data/configuration.json",
     "package": "ska.low.mccs",
@@ -47,7 +50,7 @@ def devices(tango_context):
     :return: a dictionary of devices keyed by their name
     :rtype: dict<string, :py:class:`tango.DeviceProxy`>
     """
-    return {
+    device_dict = {
         "controller": tango_context.get_device("low-mccs/control/control"),
         "subarray_01": tango_context.get_device("low-mccs/subarray/01"),
         "subarray_02": tango_context.get_device("low-mccs/subarray/02"),
@@ -58,6 +61,8 @@ def devices(tango_context):
         "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
         "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
     }
+    confirm_initialised(device_dict.values())
+    return device_dict
 
 
 @given(parsers.parse("we have {device_name}"))

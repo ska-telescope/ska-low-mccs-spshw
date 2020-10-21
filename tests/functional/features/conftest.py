@@ -2,9 +2,11 @@
 This module contains pytest fixtures and other test setups for the
 ska.low.mccs functional (BDD) tests
 """
+import backoff
 from contextlib import contextmanager
 import pytest
 import socket
+
 import tango
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
@@ -127,3 +129,19 @@ def tango_context(request, devices_info, module_mocker):
     else:
         with _tango_test_context(devices_info, module_mocker) as context:
             yield context
+
+
+@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=6)
+def confirm_initialised(devices):
+    """
+    Helper function that tries to confirm that a device has completed
+    its initialisation and transitioned out out of INIT state, using an
+    exponential backoff-retry scheme in case of failure
+
+    :param devices: the devices that we are waiting to initialise
+    :type devices: :py:class:`tango.DeviceProxy`
+
+    :returns: whether the devices are all initialised or not
+    :rtype: bool
+    """
+    return all(device.state() != tango.DevState.INIT for device in devices)

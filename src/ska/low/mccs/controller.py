@@ -11,7 +11,12 @@
 
 MccsController TANGO device class for the MccsController prototype
 """
-__all__ = ["MccsController", "main"]
+__all__ = [
+    "MccsController",
+    "ControllerResourceManager",
+    "ControllerPowerManager",
+    "main",
+]
 
 import numpy
 import json

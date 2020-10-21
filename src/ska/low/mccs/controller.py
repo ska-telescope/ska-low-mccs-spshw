@@ -322,7 +322,7 @@ class ControllerResourceManager:
                 == ControllerResourceManager.ResourceState.UNAVAILABLE
             )
 
-        def is_notAvailable(self):
+        def is_not_available(self):
             """Check if this resource is not available
             A resource is not available if it is ASSIGNED or UNAVAILABLE
 
@@ -771,6 +771,10 @@ class MccsController(SKAMaster):
                 len(device.MccsSubarrays), dtype=bool
             )
 
+            device._station_fqdns = numpy.array(
+                [] if device.MccsStations is None else device.MccsStations, dtype=str
+            )
+
             device._lock = threading.Lock()
 
             # Instantiate a resource manager for the Stations
@@ -809,6 +813,11 @@ class MccsController(SKAMaster):
                     self._interrupt = False
                     return
                 self._initialise_power_management(device, fqdns)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_resource_management(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -891,6 +900,14 @@ class MccsController(SKAMaster):
 
             # Power manager for the stations
             device.power_manager = ControllerPowerManager(device.MccsStations)
+            # TODO figure this out
+            resource_args = (device, device.state_model, device.logger)
+            device.register_command_object(
+                "Allocate", device.AllocateCommand(*resource_args)
+            )
+            device.register_command_object(
+                "Release", device.ReleaseCommand(*resource_args)
+            )
 
         def interrupt(self):
             """

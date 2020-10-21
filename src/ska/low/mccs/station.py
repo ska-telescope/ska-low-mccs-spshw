@@ -649,7 +649,7 @@ class MccsStation(SKAObsDevice):
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)
         )
-        self.register_command_object("Initialise", self.InitialSetupCommand(*args))
+        self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
 
     class OnCommand(SKABaseDevice.OnCommand):
@@ -759,13 +759,13 @@ class MccsStation(SKAObsDevice):
 
     class InitialSetupCommand(ResponseCommand):
         """
-        Class for handling the Initialise() command.
+        Class for handling the InitialSetup() command.
         """
 
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            :py:meth:`MccsStation.Initialise` command
+            :py:meth:`MccsStation.InitialSetup` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -788,15 +788,15 @@ class MccsStation(SKAObsDevice):
             #                 proxy.stationId = self.StationId
             #                 proxy.logicalBeamId = id + 1
 
-            return (ResultCode.OK, "Initialise command succeeded")
+            return (ResultCode.OK, "InitialSetup command succeeded")
 
     @command(
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
-    def Initialise(self):
+    def InitialSetup(self):
         """
-        Initialise the station
+        Initial setup the station
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -806,9 +806,9 @@ class MccsStation(SKAObsDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("Initialise")
+        >>> dp.command_inout("InitialSetup")
         """
-        handler = self.get_command_object("Initialise")
+        handler = self.get_command_object("InitialSetup")
         (return_code, message) = handler()
         return [[return_code], [message]]
 

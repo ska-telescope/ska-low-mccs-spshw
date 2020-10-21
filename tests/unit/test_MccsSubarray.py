@@ -89,7 +89,7 @@ class TestMccsSubarray:
         assert message == "AssignResources command completed successfully"
         assert list(device_under_test.stationFQDNs) == [station_fqdn]
 
-        mock_station.Initialise.assert_called_once_with()
+        mock_station.InitialSetup.assert_called_once_with()
 
     # tests of MccsSubarray commands
     def test_sendTransientBuffer(self, device_under_test):

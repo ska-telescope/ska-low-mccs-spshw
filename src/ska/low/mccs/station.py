@@ -649,7 +649,7 @@ class MccsStation(SKAObsDevice):
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)
         )
-
+        self.register_command_object("Initialise", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
 
     class OnCommand(SKABaseDevice.OnCommand):
@@ -728,7 +728,7 @@ class MccsStation(SKAObsDevice):
             if stn_id != device._station_id:
                 return (ResultCode.FAILED, "Configure failed: wrong station_id")
             device._is_configured = True
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "Configure command succeeded")
 
     @command(
         dtype_in="DevString",
@@ -757,7 +757,7 @@ class MccsStation(SKAObsDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    class InitialiseCommand(ResponseCommand):
+    class InitialSetupCommand(ResponseCommand):
         """
         Class for handling the Initialise() command.
         """

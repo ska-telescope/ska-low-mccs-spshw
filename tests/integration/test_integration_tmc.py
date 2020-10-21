@@ -144,6 +144,67 @@ class TestMccsIntegrationTmc:
         assert station001.State() == DevState.OFF
         assert station002.State() == DevState.OFF
 
+    def test_setup_only(self, device_context):
+        """
+        Test that runs through the basic TMC<->MCCS interactions to setup and
+        then tear down
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        """
+        self.async_init()
+        controller = device_context.get_device("low-mccs/control/control")
+        subarray = device_context.get_device("low-mccs/subarray/01")
+        station_001 = device_context.get_device("low-mccs/station/001")
+        station_002 = device_context.get_device("low-mccs/station/002")
+
+        # Bypass the cache because stationFQDNs etc are polled attributes,
+        # and having written to them, we don't want to have to wait a
+        # polling period to test that the write has stuck.
+        controller.set_source(DevSource.DEV)
+        subarray.set_source(DevSource.DEV)
+        station_001.set_source(DevSource.DEV)
+        station_002.set_source(DevSource.DEV)
+
+        confirm_initialised([controller, subarray, station_001, station_002])
+
+        # Turn on controller and stations
+        self.async_command(device=controller, command="On")
+        assert subarray.State() == DevState.OFF
+        assert subarray.obsState == ObsState.EMPTY
+        assert station_001.subarrayId == 0
+        assert station_002.subarrayId == 0
+
+        # Allocate stations to a subarray
+        parameters = {
+            "subarray_id": 1,
+            "station_ids": [1, 2],
+            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+            "station_beam_ids": [1],
+        }
+        json_string = json.dumps(parameters)
+        self.async_command(device=controller, command="Allocate", argin=json_string)
+        assert station_001.subarrayId == 1
+        assert station_002.subarrayId == 1
+        assert subarray.State() == DevState.ON
+        assert subarray.obsState == ObsState.IDLE
+
+        # Release Resources
+        release_config = {"subarray_id": 1, "release_all": True}
+        json_string = json.dumps(release_config)
+        self.async_command(device=controller, command="Release", argin=json_string)
+        assert subarray.obsState == ObsState.EMPTY
+        assert subarray.State() == DevState.OFF
+        assert subarray.stationFQDNs is None
+        assert station_001.subarrayId == 0
+        assert station_002.subarrayId == 0
+
+        # Turn off controller and stations
+        self.async_command(device=controller, command="Off")
+        assert controller.State() == DevState.OFF
+        assert station_001.State() == DevState.OFF
+        assert station_002.State() == DevState.OFF
+
     def test_setup_and_observation(self, device_context):
         """
         Test that runs through the basic TMC<->MCCS interactions to setup and
@@ -170,6 +231,12 @@ class TestMccsIntegrationTmc:
 
         # Turn on controller and stations
         self.async_command(device=controller, command="On")
+        assert subarray.State() == DevState.OFF
+        assert subarray.obsState == ObsState.EMPTY
+        assert station_001.subarrayId == 0
+        assert station_002.subarrayId == 0
+
+        # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
             "station_ids": [1, 2],
@@ -177,12 +244,6 @@ class TestMccsIntegrationTmc:
             "station_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
-        assert subarray.State() == DevState.OFF
-        assert subarray.obsState == ObsState.EMPTY
-        assert station_001.subarrayId == 0
-        assert station_002.subarrayId == 0
-
-        # Allocate stations to a subarray
         self.async_command(device=controller, command="Allocate", argin=json_string)
         assert station_001.subarrayId == 1
         assert station_002.subarrayId == 1

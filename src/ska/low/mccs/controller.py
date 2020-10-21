@@ -891,6 +891,22 @@ class MccsController(SKAMaster):
                 device._update_health_state,
             )
             # HACK pending device pool management refactor
+
+            power_args = (device.power_manager, device.state_model, device.logger)
+            device.register_command_object("Off", device.OffCommand(*power_args))
+            device.register_command_object("On", device.OnCommand(*power_args))
+
+        def _initialise_resource_management(self, device, fqdns):
+            """
+            Initialise resource management for this device.
+
+            :param device: the device for which resource management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices allocation of which
+                is managed by this device
+            :type: list of str
+            """
             health_monitor = device.health_model._health_monitor
 
             # Instantiate a resource manager for the Stations

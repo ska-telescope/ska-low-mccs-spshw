@@ -18,7 +18,6 @@ import threading
 
 import tango
 from tango import DevState
-from tango import DevSource
 
 from ska.base import DeviceStateModel
 from ska.base.commands import CommandError, ResultCode

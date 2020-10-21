@@ -2,11 +2,11 @@
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-  name: teststore-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  name: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: teststore-{{ template "tango-util.name" . }}-{{ .Release.Name }}
-    chart: {{ template "tango-util.chart" . }}
+    app: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+    chart: {{ template "mccs-util.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -24,11 +24,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: teststore-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  name: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: teststore-{{ template "tango-util.name" . }}-{{ .Release.Name }}
-    chart: {{ template "tango-util.chart" . }}
+    app: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+    chart: {{ template "mccs-util.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
     transient: "functional-test"
@@ -50,7 +50,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: functional-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  name: functional-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
   labels:
     transient: "functional-test"
   annotations:
@@ -58,14 +58,14 @@ metadata:
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   initContainers:
-  - name:  functional-permission-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  - name:  functional-permission-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
     image: busybox
     command: ["/bin/chown","1000:1000", "/data"]
     volumeMounts:
     - name: testdata
       mountPath: /data
   containers:
-  - name: functional-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+  - name: functional-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
     image: "{{ .Values.mccs.project.image.registry }}/{{ .Values.mccs.project.image.image }}:{{ .Values.mccs.project.image.tag }}"
     imagePullPolicy: {{ .Values.mccs.project.image.pullPolicy }}
     command:
@@ -75,14 +75,14 @@ spec:
         pip3 install -rrequirements-tst.txt  # TODO: should be part of image?
         pytest --true-context tests -k functional --junitxml=/reports/functional-test.xml --cucumberjson=/reports/cucumber.json
     env:
-{{ include "tango-util.dbenv" . | indent 4 }}
+{{ include "mccs-util.dbenv" . | indent 4 }}
     volumeMounts:
     - name: testdata
       mountPath: /reports
   volumes:
   - name: testdata
     persistentVolumeClaim:
-      claimName: teststore-{{ template "tango-util.name" . }}-{{ .Release.Name }}
+      claimName: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
   restartPolicy: Never
 {{- with .Values.nodeSelector }}
   nodeSelector:

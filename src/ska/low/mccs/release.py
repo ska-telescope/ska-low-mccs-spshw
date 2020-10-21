@@ -33,3 +33,7 @@ def get_release_info(clsname=None):
     if clsname is None:
         return info
     return ", ".join((clsname, info))
+
+
+if __name__ == "__main__":
+    print(version)

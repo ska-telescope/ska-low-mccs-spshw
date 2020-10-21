@@ -6,11 +6,12 @@ display: ":0"
 xauthority: "~/.Xauthority"
 minikube: true
 
-
-mccs:
-  enabled: true
+system: SW-infrastructure
+subsystem: mccs
+telescope: SKA-low
 
 project:
+  enabled: true
   name: mccs
   image:
     registry: nexus.engageska-portugal.pt/ska-docker
@@ -21,10 +22,15 @@ project:
 cli:
   enabled: true
 
+dsconfig:
+  configuration_file: data/configuration.json
+
 deviceServers:
   controller:
     name: controller
-    #override as controller only has a single instance
+    # fqdn: low-mccs/control/control
+    #
+    # override args as controller only has a single instance
     args:
       - -c
       - "MccsController controller"
@@ -47,3 +53,6 @@ nodeSelector: {}
 affinity: {}
 
 tolerations: []
+
+# defaults
+

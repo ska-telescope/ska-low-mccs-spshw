@@ -58,7 +58,9 @@ KUBE_CONFIG_BASE64 ?=  ## base64 encoded kubectl credentials for KUBECONFIG
 KUBECONFIG ?= /etc/deploy/config ## KUBECONFIG location
 
 # Run from local image only, requires either a pulled or local image 
-CUSTOM_VALUES ?= --set mccs.project.image.pullPolicy=Never
+# always run "latest" by default in dev environment
+CUSTOM_VALUES ?= --set mccs.project.image.pullPolicy=Never \
+	--set mccs.project.image.tag=latest
 
 ifneq ($(CI_JOB_ID),)
 CI_PROJECT_IMAGE := 

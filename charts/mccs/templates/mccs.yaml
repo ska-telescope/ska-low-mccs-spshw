@@ -1,8 +1,7 @@
- {{ if .Values.mccs.enabled }}
+ {{ if .Values.project.enabled }}
 
-# load boilerplate configmap from template in tango-util library chart
-# uses values.yaml override dsconfigFile: "data/configuration.json"
-{{ template "tango-util.configmap.tpl" . }}
+# uses values.yaml override dsconfig.configuration_file: "data/configuration.json"
+{{ template "tango-util.configuration.tpl" . }}
 
 # memorise global scope as it isn't accessible inside range
 {{- $global := . }}
@@ -15,11 +14,11 @@
 {{- $context := dict "instance" $deviceinstance "device" $deviceclass "global" $global }}
 ---
 # giving a dummy Service entry ensures that the single pod is DNS addressable
-{{ template "tango-util.service.tpl" $context }}
+{{ template "mccs-util.service.tpl" $context }}
 
 ---
 # Single Pod separate statefulset per Device Server
-{{ template "tango-util.statefulset.tpl" $context }}
+{{ template "mccs-util.statefulset.tpl" $context }}
 
 {{- end }} # instances
 {{- end }} # end devcieservers

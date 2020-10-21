@@ -2,7 +2,7 @@
 Generate arguments to start the device server process.
 Default can be changed via 'deviceServers.<server>.args'
 */ -}}
-{{- define "tango-util.deviceArgs" -}}
+{{- define "mccs-util.deviceArgs" -}}
 {{- if .device.args -}}
 {{- toYaml .device.args -}}
 {{- else -}}
@@ -11,6 +11,6 @@ Default can be changed via 'deviceServers.<server>.args'
 {{- $waitDevice := default "low-mccs/control/control" .global.Values.deviceServers.controller.fqdn -}}
 - -c
 - "retry --max=10 -- tango_admin --ping-device {{ $waitDevice }} &&
-{{- printf " %s %s\"" $serverName (include "tango-util.deviceInstance" .) }}
+{{- printf " %s %s\"" $serverName (include "mccs-util.deviceInstance" .) }}
 {{- end -}}
 {{- end -}}

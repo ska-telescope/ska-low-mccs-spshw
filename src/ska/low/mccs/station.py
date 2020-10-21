@@ -268,9 +268,9 @@ class MccsStation(SKAObsDevice):
             """
             super().__init__(target, state_model, logger)
 
-            # Used to ensure that our child thread can't return before
-            # the parent thread returns STARTED
+            self._thread = None
             self._lock = threading.Lock()
+            self._interrupt = False
 
         def do(self):
             """
@@ -310,11 +310,11 @@ class MccsStation(SKAObsDevice):
 
             fqdns = device._tile_fqdns + device._antenna_fqdns  # + device._beam_fqdns
 
-            init_connections_thread = threading.Thread(
+            self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device, fqdns)
             )
             with self._lock:
-                init_connections_thread.start()
+                self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
         def _initialise_connections(self, device, fqdns):
@@ -332,8 +332,20 @@ class MccsStation(SKAObsDevice):
             # #using-clients-with-multithreading
             with EnsureOmniThread():
                 self._initialise_hardware_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
                 self._initialise_health_monitoring(device, fqdns)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
                 self._initialise_power_management(device, fqdns)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
                 with self._lock:
                     self.succeeded()
 
@@ -387,6 +399,18 @@ class MccsStation(SKAObsDevice):
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
             device.register_command_object("On", device.OnCommand(*power_args))
+
+        def interrupt(self):
+            """
+            Interrupt the initialisation thread (if one is running)
+
+            :return: whether the initialisation thread was interrupted
+            :rtype: bool
+            """
+            if self._thread is None:
+                return False
+            self._interrupt = True
+            return True
 
     def always_executed_hook(self):
         """

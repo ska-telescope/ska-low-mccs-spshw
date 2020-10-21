@@ -12,18 +12,20 @@
 This module contains the tests for MccsTile.
 """
 
-import io
-import json
-import time
-import pytest
-import itertools
-import numpy as np
 from contextlib import redirect_stdout
+import io
+import itertools
+import json
+import threading
+import time
+
+import numpy as np
+import pytest
 from tango import DevFailed
 
 from ska.base.control_model import HealthState, TestMode
 from ska.base.commands import ResultCode
-from ska.low.mccs.tile import TileHardware, TileHardwareManager
+from ska.low.mccs.tile import MccsTile, TileHardware, TileHardwareManager
 
 device_to_load = {
     "path": "charts/mccs/data/configuration.json",
@@ -1671,3 +1673,99 @@ class TestMccsTile(object):
         jstr = json.dumps(dict0)
         with pytest.raises(DevFailed):
             device_under_test.CalculateDelay(jstr)
+
+
+class TestMccsTile_InitCommand:
+    """
+    Contains the tests of :py:class:`~ska.low.mccs.MccsTile`'s
+    :py:class:`~ska.low.mccs.MccsTile.InitCommand`.
+    """
+
+    class HangableInitCommand(MccsTile.InitCommand):
+        """
+        A subclass of InitCommand with the following properties that
+        support testing:
+
+        * A lock that, if acquired prior to calling the command, causes
+          the command to hang until the lock is released
+        * Call trace attributes that record which methods were called
+        """
+
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new HangableInitCommand instance
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+            self._hang_lock = threading.Lock()
+            self._initialise_hardware_management_called = False
+            self._initialise_health_monitoring_called = False
+
+        def _initialise_hardware_management(self, device):
+            """
+            Initialise the connection to the hardware being managed by
+            this device (overwridden here to inject a call trace
+            attribute).
+
+            :param device: the device for which a connection to the
+                hardware is being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            self._initialise_hardware_management_called = True
+            super()._initialise_hardware_management(device)
+            with self._hang_lock:
+                # hang until the hang lock is released
+                pass
+
+        def _initialise_health_monitoring(self, device):
+            """
+            Initialise the health model for this device (overridden
+            here to inject a call trace attribute).
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            self._initialise_health_monitoring_called = True
+            super()._initialise_health_monitoring(device)
+
+    def test_interrupt(self, mocker):
+        """
+        Test that the command's interrupt method will cause a running
+        thread to stop prematurely
+
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
+            module
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        mock_device = mocker.MagicMock()
+        mock_state_model = mocker.Mock()
+
+        init_command = self.HangableInitCommand(mock_device, mock_state_model)
+
+        with init_command._hang_lock:
+            init_command()
+            # we got the hang lock first, so the initialisation thread
+            # will hang in health initialisation until we release it
+            init_command.interrupt()
+
+        init_command._thread.join()
+
+        # now that we've released the hang lock, the thread can exit
+        # its _initialise_hardware_management, but before it enters its
+        # _initialise_health_monitoring, it will detect that it has been
+        # interrupted, and return
+        assert init_command._initialise_hardware_management_called
+        assert not init_command._initialise_health_monitoring_called

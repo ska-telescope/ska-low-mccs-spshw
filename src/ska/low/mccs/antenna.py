@@ -283,9 +283,9 @@ class MccsAntenna(SKABaseDevice):
             """
             super().__init__(target, state_model, logger)
 
-            # Used to ensure that our child thread can't return before
-            # the parent thread returns STARTED
+            self._thread = None
             self._lock = threading.Lock()
+            self._interrupt = False
 
         def do(self):
             """
@@ -339,11 +339,11 @@ class MccsAntenna(SKABaseDevice):
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
 
-            init_connections_thread = threading.Thread(
+            self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
             with self._lock:
-                init_connections_thread.start()
+                self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
         def _initialise_connections(self, device):
@@ -358,9 +358,19 @@ class MccsAntenna(SKABaseDevice):
             # #using-clients-with-multithreading
             with EnsureOmniThread():
                 self._initialise_hardware_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
                 self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
                 with self._lock:
                     self.succeeded()
+                    self._thread = None
+                    self._interrupt = False
 
         def _initialise_hardware_management(self, device):
             """
@@ -396,6 +406,18 @@ class MccsAntenna(SKABaseDevice):
             device.health_model = HealthModel(
                 device.hardware_manager, None, None, device._update_health_state
             )
+
+        def interrupt(self):
+            """
+            Interrupt the initialisation thread (if one is running)
+
+            :return: whether the initialisation thread was interrupted
+            :rtype: bool
+            """
+            if self._thread is None:
+                return False
+            self._interrupt = True
+            return True
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
@@ -775,12 +797,6 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
-    def init_command_objects(self):
-        """
-        Set up the handler objects for Commands
-        """
-        super().init_command_objects()
-
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.

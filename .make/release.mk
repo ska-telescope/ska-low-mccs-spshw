@@ -46,7 +46,7 @@ build: docker-build   ## build the application image
 
 docker-build: .release
 	docker build $(DOCKER_BUILD_ARGS) -t $(IMAGE):$(VERSION) $(DOCKER_BUILD_CONTEXT) -f $(DOCKER_FILE_PATH) --build-arg DOCKER_REGISTRY_HOST=$(DOCKER_REGISTRY_HOST) --build-arg DOCKER_REGISTRY_USER=$(DOCKER_REGISTRY_USER)
-	@echo docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ;#docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ; \
+	@echo docker tag $(IMAGE):$(VERSION) $(IMAGE):latest ; docker tag $(IMAGE):$(VERSION) $(IMAGE):latest 
 
 .release:
 	@echo "release=0.0.0" > .release

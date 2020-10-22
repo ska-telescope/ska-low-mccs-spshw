@@ -45,7 +45,7 @@ def mock_device_proxies(mocker):
 def _confirm_initialised(device):
     """
     Helper function that tries to confirm that a group of devices have
-    all completed initialisation and transitioned out out of INIT state,
+    all completed initialisation and transitioned out of INIT state,
     using an exponential backoff-retry scheme in case of failure.
 
     :param device: the device that we are waiting to initialise

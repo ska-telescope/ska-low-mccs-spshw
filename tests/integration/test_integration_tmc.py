@@ -5,6 +5,7 @@ from concurrent.futures import Future
 from tango import DevState, DevSource
 from ska.base.commands import ResultCode
 from ska.base.control_model import ObsState
+import pytest
 import tango
 import json
 
@@ -37,12 +38,62 @@ class TestMccsIntegrationTmc:
     Integration test cases for interactions between TMC and Mccs device classes
     """
 
+    @pytest.fixture()
+    def devices(self, device_context):
+        """
+        Fixture that provides access to devices via their names.
+
+        :todo: For now the purpose of this fixture is to isolate FQDNs in a
+            single place in this module. In future this will be changed to
+            extract the device FQDNs straight from the configuration file.
+
+        :param device_context: fixture that provides a tango context of some
+            sort
+        :type device_context: a tango context of some sort; possibly a
+            MultiDeviceTestContext, possibly the real thing. The only
+            requirement is that it provide a "get_device(fqdn)" method that
+            returns a DeviceProxy.
+
+        :return: a dictionary of devices keyed by their name
+        :rtype: dict<string, :py:class:`tango.DeviceProxy`>
+        """
+        device_dict = {
+            "controller": device_context.get_device("low-mccs/control/control"),
+            "subarray_01": device_context.get_device("low-mccs/subarray/01"),
+            "subarray_02": device_context.get_device("low-mccs/subarray/02"),
+            "station_001": device_context.get_device("low-mccs/station/001"),
+            "station_002": device_context.get_device("low-mccs/station/002"),
+            "tile_0001": device_context.get_device("low-mccs/tile/0001"),
+            "tile_0002": device_context.get_device("low-mccs/tile/0002"),
+            "tile_0003": device_context.get_device("low-mccs/tile/0003"),
+            "tile_0004": device_context.get_device("low-mccs/tile/0004"),
+            "antenna_000001": device_context.get_device("low-mccs/antenna/000001"),
+            "antenna_000002": device_context.get_device("low-mccs/antenna/000002"),
+            "antenna_000003": device_context.get_device("low-mccs/antenna/000003"),
+            "antenna_000004": device_context.get_device("low-mccs/antenna/000004"),
+        }
+        confirm_initialised(device_dict.values())
+        return device_dict
+
     def async_init(self):
         """
         Method that initialises the Tango instance to enable callback functions
         """
         api_util = tango.ApiUtil.instance()
         api_util.set_asynch_cb_sub_model(tango.cb_sub_model.PUSH_CALLBACK)
+
+    def set_all_dev_source(self, devices):
+        """
+        Set all of the devices to DevSource.DEV source
+
+        :param devices: fixture that provides access to devices by their name
+        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+        """
+        # Bypass the cache because stationFQDNs etc are polled attributes,
+        # and having written to them, we don't want to have to wait a
+        # polling period to test that the write has stuck.
+        for device in devices.values():
+            device.set_source(DevSource.DEV)
 
     def async_command(self, device, command, argin=None, expected_result=ResultCode.OK):
         """
@@ -69,111 +120,88 @@ class TestMccsIntegrationTmc:
         else:
             assert result.argout[0] == expected_result
 
-    def test_controller_on(self, device_context):
+    def test_controller_on(self, devices):
         """
         Test that an asynchronous call to controller:On() works correctly
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :param devices: fixture that provides access to devices by their name
+        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         self.async_init()
-        controller = device_context.get_device("low-mccs/control/control")
-        station001 = device_context.get_device("low-mccs/station/001")
-        station002 = device_context.get_device("low-mccs/station/002")
-        subarray01 = device_context.get_device("low-mccs/subarray/01")
-        subarray02 = device_context.get_device("low-mccs/subarray/02")
+        self.set_all_dev_source(devices)
 
-        confirm_initialised(
-            [controller, subarray01, subarray02, station001, station002]
-        )
-
-        assert controller.State() == DevState.OFF
-        assert subarray01.State() == DevState.OFF
-        assert subarray02.State() == DevState.OFF
-        assert station001.State() == DevState.OFF
-        assert station002.State() == DevState.OFF
+        assert devices["controller"].State() == DevState.OFF
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_02"].State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.OFF
+        assert devices["station_002"].State() == DevState.OFF
 
         # Call MccsController->On() command
-        self.async_command(device=controller, command="On")
-        assert controller.State() == DevState.ON
-        assert subarray01.State() == DevState.OFF
-        assert subarray02.State() == DevState.OFF
+        self.async_command(device=devices["controller"], command="On")
+        assert devices["controller"].State() == DevState.ON
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_02"].State() == DevState.OFF
         # TODO: The stations are in alarm state because
         # we don't yet ensure attributes are updated before
         # transitioning out of INIT
-        assert station001.State() == DevState.ALARM
-        assert station002.State() == DevState.ALARM
+        assert devices["station_001"].State() == DevState.ALARM
+        assert devices["station_002"].State() == DevState.ALARM
 
         # # A second call to On should have no side-effects
-        # self.async_command(device=controller, command="On", expected_result=None)
-        # assert controller.State() == DevState.ON
-        # assert subarray01.State() == DevState.OFF
-        # assert subarray02.State() == DevState.OFF
+        # self.async_command(
+        #     device=devices["controller"], command="On", expected_result=None
+        # )
+        # assert devices["controller"].State() == DevState.ON
+        # assert devices["subarray_01"].State() == DevState.OFF
+        # assert devices["subarray_02"].State() == DevState.OFF
         # # TODO: The stations are in alarm state because
         # # we don't yet ensure attributes are updated before
         # # transitioning out of INIT
-        # assert station001.State() == DevState.ALARM
-        # assert station002.State() == DevState.ALARM
+        # assert devices["station_001"].State() == DevState.ALARM
+        # assert devices["station_002"].State() == DevState.ALARM
 
-    def test_controller_off(self, device_context):
+    def test_controller_off(self, devices):
         """
         Test that an asynchronous call to controller:Off() works correctly
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :param devices: fixture that provides access to devices by their name
+        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         self.async_init()
-        controller = device_context.get_device("low-mccs/control/control")
-        station001 = device_context.get_device("low-mccs/station/001")
-        station002 = device_context.get_device("low-mccs/station/002")
+        self.set_all_dev_source(devices)
 
-        confirm_initialised([controller, station001, station002])
-
-        assert controller.State() == DevState.OFF
-        assert station001.State() == DevState.OFF
-        assert station002.State() == DevState.OFF
-        self.async_command(device=controller, command="On")
-        assert controller.State() == DevState.ON
+        assert devices["controller"].State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.OFF
+        assert devices["station_002"].State() == DevState.OFF
+        self.async_command(device=devices["controller"], command="On")
+        assert devices["controller"].State() == DevState.ON
         # TODO: The stations are in alarm state because
         # we don't yet ensure attributes are updated before
         # transitioning out of INIT
-        assert station001.State() == DevState.ALARM
-        assert station002.State() == DevState.ALARM
-        self.async_command(device=controller, command="Off")
-        assert controller.State() == DevState.OFF
-        assert station001.State() == DevState.OFF
-        assert station002.State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.ALARM
+        assert devices["station_002"].State() == DevState.ALARM
+        self.async_command(device=devices["controller"], command="Off")
+        assert devices["controller"].State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.OFF
+        assert devices["station_002"].State() == DevState.OFF
 
-    def test_setup_only(self, device_context):
+    def test_setup_only(self, devices):
         """
         Test that runs through the basic TMC<->MCCS interactions to setup and
         then tear down
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :param devices: fixture that provides access to devices by their name
+        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         self.async_init()
-        controller = device_context.get_device("low-mccs/control/control")
-        subarray = device_context.get_device("low-mccs/subarray/01")
-        station_001 = device_context.get_device("low-mccs/station/001")
-        station_002 = device_context.get_device("low-mccs/station/002")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        controller.set_source(DevSource.DEV)
-        subarray.set_source(DevSource.DEV)
-        station_001.set_source(DevSource.DEV)
-        station_002.set_source(DevSource.DEV)
-
-        confirm_initialised([controller, subarray, station_001, station_002])
+        self.set_all_dev_source(devices)
 
         # Turn on controller and stations
-        self.async_command(device=controller, command="On")
-        assert subarray.State() == DevState.OFF
-        assert subarray.obsState == ObsState.EMPTY
-        assert station_001.subarrayId == 0
-        assert station_002.subarrayId == 0
+        self.async_command(device=devices["controller"], command="On")
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_01"].obsState == ObsState.EMPTY
+        assert devices["station_001"].subarrayId == 0
+        assert devices["station_002"].subarrayId == 0
 
         # Allocate stations to a subarray
         parameters = {
@@ -183,58 +211,49 @@ class TestMccsIntegrationTmc:
             "station_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
-        self.async_command(device=controller, command="Allocate", argin=json_string)
-        assert station_001.subarrayId == 1
-        assert station_002.subarrayId == 1
-        assert subarray.State() == DevState.ON
-        assert subarray.obsState == ObsState.IDLE
+        self.async_command(
+            device=devices["controller"], command="Allocate", argin=json_string
+        )
+        assert devices["station_001"].subarrayId == 1
+        assert devices["station_002"].subarrayId == 1
+        assert devices["subarray_01"].State() == DevState.ON
+        assert devices["subarray_01"].obsState == ObsState.IDLE
 
         # Release Resources
         release_config = {"subarray_id": 1, "release_all": True}
         json_string = json.dumps(release_config)
-        self.async_command(device=controller, command="Release", argin=json_string)
-        assert subarray.obsState == ObsState.EMPTY
-        assert subarray.State() == DevState.OFF
-        assert subarray.stationFQDNs is None
-        assert station_001.subarrayId == 0
-        assert station_002.subarrayId == 0
+        self.async_command(
+            device=devices["controller"], command="Release", argin=json_string
+        )
+        assert devices["subarray_01"].obsState == ObsState.EMPTY
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_01"].stationFQDNs is None
+        assert devices["station_001"].subarrayId == 0
+        assert devices["station_002"].subarrayId == 0
 
         # Turn off controller and stations
-        self.async_command(device=controller, command="Off")
-        assert controller.State() == DevState.OFF
-        assert station_001.State() == DevState.OFF
-        assert station_002.State() == DevState.OFF
+        self.async_command(device=devices["controller"], command="Off")
+        assert devices["controller"].State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.OFF
+        assert devices["station_002"].State() == DevState.OFF
 
-    def test_setup_and_observation(self, device_context):
+    def test_setup_and_observation(self, devices):
         """
         Test that runs through the basic TMC<->MCCS interactions to setup and
         perform an observation (without pointing updates)
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :param devices: fixture that provides access to devices by their name
+        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         self.async_init()
-        controller = device_context.get_device("low-mccs/control/control")
-        subarray = device_context.get_device("low-mccs/subarray/01")
-        station_001 = device_context.get_device("low-mccs/station/001")
-        station_002 = device_context.get_device("low-mccs/station/002")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        controller.set_source(DevSource.DEV)
-        subarray.set_source(DevSource.DEV)
-        station_001.set_source(DevSource.DEV)
-        station_002.set_source(DevSource.DEV)
-
-        confirm_initialised([controller, subarray, station_001, station_002])
+        self.set_all_dev_source(devices)
 
         # Turn on controller and stations
-        self.async_command(device=controller, command="On")
-        assert subarray.State() == DevState.OFF
-        assert subarray.obsState == ObsState.EMPTY
-        assert station_001.subarrayId == 0
-        assert station_002.subarrayId == 0
+        self.async_command(device=devices["controller"], command="On")
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_01"].obsState == ObsState.EMPTY
+        assert devices["station_001"].subarrayId == 0
+        assert devices["station_002"].subarrayId == 0
 
         # Allocate stations to a subarray
         parameters = {
@@ -244,11 +263,13 @@ class TestMccsIntegrationTmc:
             "station_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
-        self.async_command(device=controller, command="Allocate", argin=json_string)
-        assert station_001.subarrayId == 1
-        assert station_002.subarrayId == 1
-        assert subarray.State() == DevState.ON
-        assert subarray.obsState == ObsState.IDLE
+        self.async_command(
+            device=devices["controller"], command="Allocate", argin=json_string
+        )
+        assert devices["station_001"].subarrayId == 1
+        assert devices["station_002"].subarrayId == 1
+        assert devices["subarray_01"].State() == DevState.ON
+        assert devices["subarray_01"].obsState == ObsState.IDLE
 
         # Configure the subarray
         configuration = {
@@ -279,38 +300,42 @@ class TestMccsIntegrationTmc:
             ],
         }
         json_string = json.dumps(configuration)
-        self.async_command(device=subarray, command="Configure", argin=json_string)
-        assert subarray.obsState == ObsState.READY
+        self.async_command(
+            device=devices["subarray_01"], command="Configure", argin=json_string
+        )
+        assert devices["subarray_01"].obsState == ObsState.READY
 
         # Perform a scan on the subarray
         scan_config = {"id": 1}
         json_string = json.dumps(scan_config)
         self.async_command(
-            device=subarray,
+            device=devices["subarray_01"],
             command="Scan",
             argin=json_string,
             expected_result=ResultCode.STARTED,
         )
-        assert subarray.obsState == ObsState.SCANNING
+        assert devices["subarray_01"].obsState == ObsState.SCANNING
 
         # End a scan
-        self.async_command(device=subarray, command="EndScan")
-        assert subarray.obsState == ObsState.READY
+        self.async_command(device=devices["subarray_01"], command="EndScan")
+        assert devices["subarray_01"].obsState == ObsState.READY
 
         # Prepare for and release Resources
-        self.async_command(device=subarray, command="End")
-        assert subarray.obsState == ObsState.IDLE
+        self.async_command(device=devices["subarray_01"], command="End")
+        assert devices["subarray_01"].obsState == ObsState.IDLE
         release_config = {"subarray_id": 1, "release_all": True}
         json_string = json.dumps(release_config)
-        self.async_command(device=controller, command="Release", argin=json_string)
-        assert subarray.obsState == ObsState.EMPTY
-        assert subarray.State() == DevState.OFF
-        assert subarray.stationFQDNs is None
-        assert station_001.subarrayId == 0
-        assert station_002.subarrayId == 0
+        self.async_command(
+            device=devices["controller"], command="Release", argin=json_string
+        )
+        assert devices["subarray_01"].obsState == ObsState.EMPTY
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_01"].stationFQDNs is None
+        assert devices["station_001"].subarrayId == 0
+        assert devices["station_002"].subarrayId == 0
 
         # Turn off controller and stations
-        self.async_command(device=controller, command="Off")
-        assert controller.State() == DevState.OFF
-        assert station_001.State() == DevState.OFF
-        assert station_002.State() == DevState.OFF
+        self.async_command(device=devices["controller"], command="Off")
+        assert devices["controller"].State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.OFF
+        assert devices["station_002"].State() == DevState.OFF

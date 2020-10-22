@@ -135,7 +135,7 @@ def tango_context(request, devices_info, module_mocker):
 def confirm_initialised(devices):
     """
     Helper function that tries to confirm that a device has completed
-    its initialisation and transitioned out out of INIT state, using an
+    its initialisation and transitioned out of INIT state, using an
     exponential backoff-retry scheme in case of failure
 
     :param devices: the devices that we are waiting to initialise

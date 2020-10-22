@@ -14,6 +14,7 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 __all__ = ["MccsStation", "main"]
 
 import threading
+import json
 
 # PyTango imports
 import tango
@@ -648,7 +649,7 @@ class MccsStation(SKAObsDevice):
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)
         )
-
+        self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
 
     class OnCommand(SKABaseDevice.OnCommand):
@@ -706,10 +707,65 @@ class MccsStation(SKAObsDevice):
         Class for handling the Configure() command.
         """
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the
             :py:meth:`MccsStation.Configure` command
+
+            :param argin: Configuration specification dict as a json string
+            :type argin: json string
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`ska.base.commands.ResultCode`, str)
+            """
+            config_dict = json.loads(argin)
+            stn_id = config_dict.get("station_id")
+            device = self.target
+            # Make sure we're configuring the correct station
+            if stn_id != device._station_id:
+                return (ResultCode.FAILED, "Configure failed: wrong station_id")
+            device._is_configured = True
+            return (ResultCode.OK, "Configure command succeeded")
+
+    @command(
+        dtype_in="DevString",
+        doc_in="Configuration parameters encoded in json string",
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ResultCode, 'informational message')",
+    )
+    def Configure(self, argin):
+        """
+        Configure the station with all relevant parameters.
+
+        :param argin: Configuration parameters encoded in a json string
+        :type argin: :py:class:`tango.DevString`
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dp.command_inout("Configure", json_str)
+        """
+        handler = self.get_command_object("Configure")
+        (return_code, message) = handler(argin)
+        return [[return_code], [message]]
+
+    class InitialSetupCommand(ResponseCommand):
+        """
+        Class for handling the InitialSetup() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            :py:meth:`MccsStation.InitialSetup` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -732,16 +788,15 @@ class MccsStation(SKAObsDevice):
             #                 proxy.stationId = self.StationId
             #                 proxy.logicalBeamId = id + 1
 
-            device._is_configured = True
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "InitialSetup command succeeded")
 
     @command(
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
-    def Configure(self):
+    def InitialSetup(self):
         """
-        Configure the station with tiles
+        Initial setup the station
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -751,9 +806,9 @@ class MccsStation(SKAObsDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("Configure")
+        >>> dp.command_inout("InitialSetup")
         """
-        handler = self.get_command_object("Configure")
+        handler = self.get_command_object("InitialSetup")
         (return_code, message) = handler()
         return [[return_code], [message]]
 

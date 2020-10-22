@@ -11,10 +11,11 @@
 """
 This module contains the tests for MccsStation.
 """
+import json
+import pytest
 import logging
 import threading
 
-import pytest
 import tango
 from tango import DevState
 
@@ -296,6 +297,21 @@ class TestMccsStation:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.dataDirectory == ""
+
+    def test_configure(self, device_under_test):
+        """
+        Test for configure command
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        config_dict = {"station_id": 1}
+        json_str = json.dumps(config_dict)
+        [[result_code], [message]] = device_under_test.configure(json_str)
+        assert result_code == ResultCode.OK
+        assert device_under_test.isConfigured is True
 
 
 class TestStationPowerManager:

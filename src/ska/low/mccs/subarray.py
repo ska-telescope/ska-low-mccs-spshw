@@ -60,7 +60,7 @@ class StationPoolManager:
         for fqdn in stations:
             if fqdn not in self._stations:
                 station = tango.DeviceProxy(fqdn)
-                station.Configure()
+                station.InitialSetup()
                 self._stations[fqdn] = station
 
     def release(self, stations):

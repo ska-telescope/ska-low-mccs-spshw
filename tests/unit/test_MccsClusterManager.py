@@ -9,10 +9,15 @@
 # See LICENSE.txt for more info.
 #########################################################################
 """
-This module contains the tests for MccsClusterManager.
+This module contains the tests for MccsClusterManagerDevice.
 """
+import json
+import pytest
+
 from ska.base.commands import ResultCode
-from tango import DevState
+from ska.base.control_model import HealthState, SimulationMode
+from ska.low.mccs.cluster_manager import ClusterManager
+from ska.low.mccs.cluster_simulator import ClusterSimulator, JobStatus
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/extra.json",
@@ -21,21 +26,66 @@ device_to_load = {
 }
 
 
-class TestMccsClusterManager(object):
+class TestClusterManager:
     """
-    Test class for MccsClusterManager tests.
+    Contains the test for the ClusterManager (the HardwareManager class
+    for clusters, not the MccsClusterManagerDevice tango device)
     """
 
-    def test_jobsError(self, device_under_test):
+    @pytest.fixture()
+    def cluster_manager(self):
         """
-        Test for jobsError
+        Return a manager for a cluster
+
+        :return: a manager for a cluster
+        :rtype: :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
+        """
+        return ClusterManager(SimulationMode.TRUE)
+
+    def test_init_simulation_mode(self):
+        """
+        Test that we can't create an hardware manager that isn't in
+        simulation mode
+        """
+        with pytest.raises(
+            NotImplementedError,
+            match=("ClusterManager._create_driver method not implemented."),
+        ):
+            _ = ClusterManager(SimulationMode.FALSE)
+
+    def test_simulation_mode(self, cluster_manager):
+        """
+        Test that we can't take the cluster manager out of simulation
+        mode
+
+        :param cluster_manager: a manager for a cluster
+        :type cluster_manager: :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
+        """
+        with pytest.raises(
+            NotImplementedError,
+            match=("ClusterManager._create_driver method not implemented."),
+        ):
+            cluster_manager.simulation_mode = SimulationMode.FALSE
+
+
+class TestMccsClusterManagerDevice:
+    """
+    Test class for MccsClusterManagerDevice tests.
+    """
+
+    def test_jobsErrored(self, device_under_test):
+        """
+        Test for jobsErrored
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsError == 0
+        assert (
+            device_under_test.jobsErrored
+            == ClusterSimulator.JOB_STATS[JobStatus.ERRORED]
+        )
 
     def test_jobsFailed(self, device_under_test):
         """
@@ -46,7 +96,9 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsFailed == 0
+        assert (
+            device_under_test.jobsFailed == ClusterSimulator.JOB_STATS[JobStatus.FAILED]
+        )
 
     def test_jobsFinished(self, device_under_test):
         """
@@ -57,7 +109,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsFinished == 0
+        assert (
+            device_under_test.jobsFinished
+            == ClusterSimulator.JOB_STATS[JobStatus.FINISHED]
+        )
 
     def test_jobsKilled(self, device_under_test):
         """
@@ -68,7 +123,9 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsKilled == 0
+        assert (
+            device_under_test.jobsKilled == ClusterSimulator.JOB_STATS[JobStatus.KILLED]
+        )
 
     def test_jobsKilling(self, device_under_test):
         """
@@ -79,7 +136,9 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsKilling == 0
+        assert device_under_test.jobsKilling == list(
+            ClusterSimulator.OPEN_JOBS.values()
+        ).count(JobStatus.KILLING)
 
     def test_jobsLost(self, device_under_test):
         """
@@ -90,7 +149,7 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsLost == 0
+        assert device_under_test.jobsLost == ClusterSimulator.JOB_STATS[JobStatus.LOST]
 
     def test_jobsRunning(self, device_under_test):
         """
@@ -101,7 +160,9 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsRunning == 0
+        assert device_under_test.jobsRunning == list(
+            ClusterSimulator.OPEN_JOBS.values()
+        ).count(JobStatus.RUNNING)
 
     def test_jobsStaging(self, device_under_test):
         """
@@ -112,7 +173,22 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsStaging == 0
+        assert device_under_test.jobsStaging == list(
+            ClusterSimulator.OPEN_JOBS.values()
+        ).count(JobStatus.STAGING)
+
+    def test_jobsStarting(self, device_under_test):
+        """
+        Test for jobsStarting
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.jobsStarting == list(
+            ClusterSimulator.OPEN_JOBS.values()
+        ).count(JobStatus.STARTING)
 
     def test_jobsUnreachable(self, device_under_test):
         """
@@ -123,7 +199,9 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.jobsUnreachable == 0
+        assert device_under_test.jobsUnreachable == list(
+            ClusterSimulator.OPEN_JOBS.values()
+        ).count(JobStatus.UNREACHABLE)
 
     def test_memoryTotal(self, device_under_test):
         """
@@ -134,7 +212,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.memoryTotal == 0.0
+        assert (
+            device_under_test.memoryTotal
+            == ClusterSimulator.CONFIGURATION["memory_total"]
+        )
 
     def test_memoryAvail(self, device_under_test):
         """
@@ -145,7 +226,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.memoryAvail == 0.0
+        assert (
+            pytest.approx(device_under_test.memoryAvail)
+            == device_under_test.memoryTotal - device_under_test.memoryUsed
+        )
 
     def test_memoryUsed(self, device_under_test):
         """
@@ -156,7 +240,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.memoryUsed == 0.0
+        assert (
+            device_under_test.memoryUsed
+            == ClusterSimulator.RESOURCE_STATS["memory_used"]
+        )
 
     def test_nodesInUse(self, device_under_test):
         """
@@ -167,7 +254,24 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.nodesInUse == 0
+        assert (
+            device_under_test.nodesInUse
+            == ClusterSimulator.RESOURCE_STATS["nodes_in_use"]
+        )
+
+    def test_nodesAvail(self, device_under_test):
+        """
+        Test for nodesAvail
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert (
+            pytest.approx(device_under_test.nodesAvail)
+            == device_under_test.nodesTotal - device_under_test.nodesInUse
+        )
 
     def test_nodesTotal(self, device_under_test):
         """
@@ -178,7 +282,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.nodesTotal == 0
+        assert (
+            device_under_test.nodesTotal
+            == ClusterSimulator.CONFIGURATION["nodes_total"]
+        )
 
     def test_masterNodeId(self, device_under_test):
         """
@@ -189,7 +296,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterNodeId == 0
+        assert (
+            device_under_test.masterNodeId
+            == ClusterSimulator.CONFIGURATION["master_node_id"]
+        )
 
     def test_masterCpusAllocatedPercent(self, device_under_test):
         """
@@ -200,7 +310,12 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterCpusAllocatedPercent == 0.0
+        assert (
+            pytest.approx(device_under_test.masterCpusAllocatedPercent)
+            == 100.0
+            * device_under_test.masterCpusUsed
+            / device_under_test.masterCpusTotal
+        )
 
     def test_masterCpusUsed(self, device_under_test):
         """
@@ -211,7 +326,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterCpusUsed == 0
+        assert (
+            device_under_test.masterCpusUsed
+            == ClusterSimulator.RESOURCE_STATS["master_cpus_used"]
+        )
 
     def test_masterCpusTotal(self, device_under_test):
         """
@@ -222,7 +340,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterCpusTotal == 0
+        assert (
+            device_under_test.masterCpusTotal
+            == ClusterSimulator.CONFIGURATION["master_cpus_total"]
+        )
 
     def test_masterDiskPercent(self, device_under_test):
         """
@@ -233,7 +354,12 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterDiskPercent == 0.0
+        assert (
+            pytest.approx(device_under_test.masterDiskPercent)
+            == 100.0
+            * device_under_test.masterDiskUsed
+            / device_under_test.masterDiskTotal
+        )
 
     def test_masterDiskUsed(self, device_under_test):
         """
@@ -244,7 +370,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterDiskUsed == 0.0
+        assert (
+            device_under_test.masterDiskUsed
+            == ClusterSimulator.RESOURCE_STATS["master_disk_used"]
+        )
 
     def test_masterDiskTotal(self, device_under_test):
         """
@@ -255,7 +384,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterDiskTotal == 0.0
+        assert (
+            device_under_test.masterDiskTotal
+            == ClusterSimulator.CONFIGURATION["master_disk_total"]
+        )
 
     def test_masterMemPercent(self, device_under_test):
         """
@@ -266,7 +398,12 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterMemPercent == 0.0
+        assert (
+            pytest.approx(device_under_test.masterMemPercent)
+            == 100.0
+            * device_under_test.masterMemUsed
+            / device_under_test.masterMemTotal
+        )
 
     def test_masterMemUsed(self, device_under_test):
         """
@@ -277,7 +414,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterMemUsed == 0.0
+        assert (
+            device_under_test.masterMemUsed
+            == ClusterSimulator.RESOURCE_STATS["master_mem_used"]
+        )
 
     def test_masterMemTotal(self, device_under_test):
         """
@@ -288,7 +428,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.masterMemTotal == 0.0
+        assert (
+            device_under_test.masterMemTotal
+            == ClusterSimulator.CONFIGURATION["master_mem_total"]
+        )
 
     def test_shadowMasterPoolNodeIds(self, device_under_test):
         """
@@ -299,7 +442,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.shadowMasterPoolNodeIds == (0,)
+        assert (
+            tuple(device_under_test.shadowMasterPoolNodeIds)
+            == ClusterSimulator.CONFIGURATION["shadow_master_pool_node_ids"]
+        )
 
     def test_shadowMasterPoolStatus(self, device_under_test):
         """
@@ -310,7 +456,9 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.shadowMasterPoolStatus == (DevState.UNKNOWN,)
+        assert tuple(device_under_test.shadowMasterPoolStatus) == (
+            HealthState.OK,
+        ) * len(device_under_test.shadowMasterPoolNodeIds)
 
     def test_StartJob(self, device_under_test):
         """
@@ -321,9 +469,16 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        [[result_code], [message]] = device_under_test.StartJob(0)
-        assert result_code == ResultCode.OK
-        assert message == "Stub implementation of StartJobCommand(), does nothing"
+        for (job_id, status) in list(ClusterSimulator.OPEN_JOBS.items()):
+            [[result_code], [message]] = device_under_test.StartJob(job_id)
+            if status == JobStatus.STAGING:
+                assert result_code == ResultCode.OK
+                assert message == "StartJob command successful"
+
+                assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
+            else:
+                assert result_code == ResultCode.FAILED
+                assert message == "Job cannot be started"
 
     def test_StopJob(self, device_under_test):
         """
@@ -334,9 +489,14 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        [[result_code], [message]] = device_under_test.StopJob(0)
-        assert result_code == ResultCode.OK
-        assert message == "Stub implementation of StopJobCommand(), does nothing"
+        for job_id in list(ClusterSimulator.OPEN_JOBS):
+            [[result_code], [message]] = device_under_test.StopJob(job_id)
+            assert result_code == ResultCode.OK
+            assert message == "StopJob command successful"
+
+            [[result_code], [message]] = device_under_test.StopJob(job_id)
+            assert result_code == ResultCode.FAILED
+            assert message == "No such job"
 
     def test_SubmitJob(self, device_under_test):
         """
@@ -347,9 +507,10 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        [[result_code], [message]] = device_under_test.SubmitJob(0)
-        assert result_code == ResultCode.OK
-        assert message == "Stub implementation of SubmitJobCommand(), does nothing"
+        job_config = json.dumps({"mock_key": "mock_value"})
+
+        job_id = device_under_test.SubmitJob(job_config)
+        assert device_under_test.GetJobStatus(job_id) == JobStatus.STAGING
 
     def test_GetJobStatus(self, device_under_test):
         """
@@ -360,9 +521,8 @@ class TestMccsClusterManager(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        [[result_code], [message]] = device_under_test.GetJobStatus(0)
-        assert result_code == ResultCode.OK
-        assert message == "Stub implementation of GetJobStatusCommand(), does nothing"
+        for (job_id, status) in ClusterSimulator.OPEN_JOBS.items():
+            assert status == device_under_test.GetJobStatus(job_id)
 
     def test_ClearJobStats(self, device_under_test):
         """
@@ -375,7 +535,7 @@ class TestMccsClusterManager(object):
         """
         [[result_code], [message]] = device_under_test.ClearJobStats()
         assert result_code == ResultCode.OK
-        assert message == "Stub implementation of ClearJobStatsCommand(), does nothing"
+        assert message == "Job stats cleared"
 
     def test_PingMasterPool(self, device_under_test):
         """
@@ -388,4 +548,4 @@ class TestMccsClusterManager(object):
         """
         [[result_code], [message]] = device_under_test.PingMasterPool()
         assert result_code == ResultCode.OK
-        assert message == "Stub implementation of PingMasterPoolCommand(), does nothing"
+        assert message == "PingMasterPool command successful"

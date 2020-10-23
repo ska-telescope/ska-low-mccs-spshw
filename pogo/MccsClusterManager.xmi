@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
-  <classes name="MccsClusterManager" pogoRevision="9.6">
+  <classes name="MccsClusterManagerDevice" pogoRevision="9.6">
     <description description="An implementation of the Cluster Manager Device Server for the MCCS based upon&#xA;architecture in SKA-TEL-LFAA-06000052-02." title="LFAA Cluster Manager Device Server" sourcePath="/home/ben" language="PythonHL" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" copyright="" hasMandatoryProperty="false" hasConcreteProperty="false" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <inheritances classname="MccsGroupDevice" sourcePath="./ska-low-mccs/pogo"/>

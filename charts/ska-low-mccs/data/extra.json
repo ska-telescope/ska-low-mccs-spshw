@@ -9,9 +9,9 @@
                 }
             }
         },
-        "MccsClusterManager": {
+        "MccsClusterManagerDevice": {
             "clustermanager": {
-                "MccsClusterManager": {
+                "MccsClusterManagerDevice": {
                     "low-mccs/clustermanager/clustermanager": {
                         "properties": {}
                     }

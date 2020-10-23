@@ -25,11 +25,15 @@ from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import SimulationMode
 
-from ska.low.mccs.hardware import HardwareSimulator, HardwareManager
+from ska.low.mccs.hardware import (
+    OnOffHardwareHealthEvaluator,
+    OnOffHardwareSimulator,
+    OnOffHardwareManager,
+)
 from ska.low.mccs.health import HealthModel
 
 
-class AntennaHardwareSimulator(HardwareSimulator):
+class AntennaHardwareSimulator(OnOffHardwareSimulator):
     """
     A simulator of AntennaHardware
     """
@@ -49,17 +53,17 @@ class AntennaHardwareSimulator(HardwareSimulator):
         """
         Turn me off
         """
+        super().off()
         self._voltage = None
         self._temperature = None
-        super().off()
 
     def on(self):
         """
         Turn me on
         """
-        self._voltage = AntennaHardwareSimulator.VOLTAGE
-        self._temperature = AntennaHardwareSimulator.TEMPERATURE
         super().on()
+        self._voltage = self.VOLTAGE
+        self._temperature = self.TEMPERATURE
 
     @property
     def voltage(self):
@@ -69,6 +73,7 @@ class AntennaHardwareSimulator(HardwareSimulator):
         :return: my voltage
         :rtype: float
         """
+        self.check_connected()
         return self._voltage
 
     @property
@@ -79,10 +84,21 @@ class AntennaHardwareSimulator(HardwareSimulator):
         :return: my temperature
         :rtype: float
         """
+        self.check_connected()
         return self._temperature
 
 
-class AntennaHardwareManager(HardwareManager):
+class AntennaHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
+    """
+    A placeholder for a class that implements a policy by which the
+    antenna hardware manager evaluates the health of its hardware. At
+    present this just inherits from the base class unchanged.
+    """
+
+    pass
+
+
+class AntennaHardwareManager(OnOffHardwareManager):
     """
     This class manages antenna hardware.
 
@@ -98,11 +114,7 @@ class AntennaHardwareManager(HardwareManager):
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        # polled hardware attributes
-        self._voltage = None
-        self._temperature = None
-
-        super().__init__(simulation_mode)
+        super().__init__(simulation_mode, AntennaHardwareHealthEvaluator())
 
     def _create_simulator(self):
         """
@@ -113,20 +125,6 @@ class AntennaHardwareManager(HardwareManager):
         """
         return AntennaHardwareSimulator()
 
-    def poll_hardware(self):
-        """
-        Poll the hardware and update local attributes with values
-        reported by the hardware.
-        """
-        self._is_on = self._hardware.is_on
-        if self._is_on:
-            self._voltage = self._hardware.voltage
-            self._temperature = self._hardware.temperature
-        else:
-            self._voltage = None
-            self._temperature = None
-        self._update_health()
-
     @property
     def voltage(self):
         """
@@ -135,7 +133,7 @@ class AntennaHardwareManager(HardwareManager):
         :return: the voltage of the hardware
         :rtype: float
         """
-        return self._voltage
+        return self._hardware.voltage
 
     @property
     def temperature(self):
@@ -145,7 +143,7 @@ class AntennaHardwareManager(HardwareManager):
         :return: the temperature of the hardware
         :rtype: float
         """
-        return self._temperature
+        return self._hardware.temperature
 
 
 class MccsAntenna(SKABaseDevice):
@@ -338,7 +336,7 @@ class MccsAntenna(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        self.hardware_manager.poll_hardware()
+        self.hardware_manager.poll()
 
     def delete_device(self):
         """

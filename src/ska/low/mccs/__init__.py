@@ -15,8 +15,9 @@ __all__ = [
     "MccsAntenna",
     "MccsTelState",
     "MccsTransientBuffer",
-    "MccsClusterManager",
+    "MccsClusterManagerDevice",
     "MccsTpmDeviceSimulator",
+    "cluster_simulator",
     "events",
     "hardware",
     "health",
@@ -35,5 +36,5 @@ from .tile import MccsTile, TileHardwareManager, TilePowerManager
 from .antenna import MccsAntenna
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer
-from .cluster_manager import MccsClusterManager
+from .cluster_manager import MccsClusterManagerDevice
 from .tpm_device_simulator import MccsTpmDeviceSimulator

@@ -57,10 +57,7 @@ class TestAntennaHardwareManager:
         """
         with pytest.raises(
             NotImplementedError,
-            match=(
-                "AntennaHardwareManager does not implement "
-                "abstract _create_driver method."
-            ),
+            match=("AntennaHardwareManager._create_driver method not implemented."),
         ):
             _ = AntennaHardwareManager(SimulationMode.FALSE)
 
@@ -74,10 +71,7 @@ class TestAntennaHardwareManager:
         """
         with pytest.raises(
             NotImplementedError,
-            match=(
-                "AntennaHardwareManager does not implement "
-                "abstract _create_driver method."
-            ),
+            match=("AntennaHardwareManager._create_driver method not implemented."),
         ):
             hardware_manager.simulation_mode = SimulationMode.FALSE
 
@@ -100,31 +94,31 @@ class TestAntennaHardwareManager:
         assert not hardware_manager.is_on
         assert hardware_manager.temperature is None
         assert hardware_manager.voltage is None
-        assert hardware_manager.health == HealthState.OK
+        assert hardware_manager.health == HealthState.UNKNOWN
 
         mock_health_callback = mocker.Mock()
         hardware_manager.register_health_callback(mock_health_callback)
-        mock_health_callback.assert_called_once_with(HealthState.OK)
+        mock_health_callback.assert_called_once_with(HealthState.UNKNOWN)
         mock_health_callback.reset_mock()
 
         hardware_manager.on()
-        hardware._voltage = voltage
-        hardware._temperature = temperature
-        hardware_manager.poll_hardware()
-
         assert hardware_manager.is_on
-        assert hardware_manager.voltage == voltage
-        assert hardware_manager.temperature == temperature
         assert hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
+        mock_health_callback.assert_called_once_with(HealthState.OK)
+        mock_health_callback.reset_mock()
+
+        hardware._voltage = voltage
+        assert hardware_manager.voltage == voltage
+
+        hardware._temperature = temperature
+        assert hardware_manager.temperature == temperature
 
         hardware_manager.off()
-
         assert not hardware_manager.is_on
         assert hardware_manager.voltage is None
         assert hardware_manager.temperature is None
-        assert hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
+        assert hardware_manager.health == HealthState.UNKNOWN
+        mock_health_callback.assert_called_once_with(HealthState.UNKNOWN)
 
 
 class TestMccsAntenna:
@@ -403,10 +397,7 @@ class TestMccsAntenna:
         assert device_under_test.simulationMode == SimulationMode.TRUE
         with pytest.raises(
             tango.DevFailed,
-            match=(
-                "AntennaHardwareManager does not implement "
-                "abstract _create_driver method."
-            ),
+            match=("AntennaHardwareManager._create_driver method not implemented."),
         ):
             device_under_test.simulationMode = SimulationMode.FALSE
         assert device_under_test.simulationMode == SimulationMode.TRUE

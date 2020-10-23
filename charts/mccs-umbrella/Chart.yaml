@@ -10,7 +10,7 @@ dependencies:
   version: 0.2.2
   repository: https://nexus.engageska-portugal.pt/repository/helm-chart
 - name: mccs
-  version: 0.0.2
+  version: 0.2.0
   repository: file://../mccs
 - name: webjive
   version: 0.1.0

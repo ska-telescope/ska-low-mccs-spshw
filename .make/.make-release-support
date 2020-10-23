@@ -110,5 +110,6 @@ function applyRelease()  {
 	sed -i -e "s/\(version = \"\)[^\"]*\"/\1$NEWVERSION\"/" src/ska/low/mccs/release.py
 	sed -i -e "s/\(version: \"\)[^\"]*\"/\1$NEWVERSION\"/;s/\(appVersion: \"\)[^\"]*\"/\1$NEWVERSION\"/" charts/mccs/Chart.yaml
 	sed -i -e "/^\([[:space:]]*tag: \).*/s//\1$NEWVERSION/" charts/mccs/values.yaml
+	perl -pi -e '$parent = $1 if /^- name: (\w+)$/; s/(?<=version:).*/ '$NEWVERSION'/ if $parent eq "mccs"' charts/mccs-umbrella/Chart.yaml
 	sed -i "3s/^/## $NEWVERSION \n\n/" CHANGELOG
 }

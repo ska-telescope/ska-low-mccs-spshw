@@ -16,7 +16,7 @@ project:
   image:
     registry: nexus.engageska-portugal.pt/ska-docker
     image: ska-low-mccs
-    tag: latest
+    tag: 0.2.0
     pullPolicy: IfNotPresent
 
 cli:

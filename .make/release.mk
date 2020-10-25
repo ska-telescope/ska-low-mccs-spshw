@@ -69,12 +69,15 @@ showver: .release
 
 bump-patch-release: VERSION := $(shell . $(RELEASE_SUPPORT); nextPatchLevel)
 bump-patch-release: .release tag
+	@echo "New release version is $(VERSION)"
 
 bump-minor-release: VERSION := $(shell . $(RELEASE_SUPPORT); nextMinorLevel)
 bump-minor-release: .release tag
+	@echo "New release version is $(VERSION)"
 
 bump-major-release: VERSION := $(shell . $(RELEASE_SUPPORT); nextMajorLevel)
 bump-major-release: .release tag
+	@echo "New release version is $(VERSION)"
 
 patch-release: tag-patch-release release
 	@echo $(VERSION)
@@ -103,4 +106,6 @@ check-release: .release
 
 # apply release version to all relevant packageswithin the project
 apply-release: .release
-	@. $(RELEASE_SUPPORT) ; applyRelease
+	@new_release=$$(. $(RELEASE_SUPPORT) ; getRelease) ; git checkout -b release-$$new_release 
+	. $(RELEASE_SUPPORT) ; applyRelease
+	git diff

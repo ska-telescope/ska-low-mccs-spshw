@@ -162,6 +162,7 @@ publish package to nexus:
     - python3 -m pip install twine
     - tox -e package # takes $PACKAGE_TAG as input
     - twine upload --repository-url $PYPI_REPOSITORY_URL dist/*
+  when: on_success
   only:
     refs:
       - tags
@@ -181,10 +182,9 @@ release docker image to nexus:
   script:
     - make build
     - make push
-  when: manual
+  when: on_success
   only:
     refs:
-      - master
       - tags
 
 create ci metrics:
@@ -208,7 +208,7 @@ include:
     file: "gitlab-ci/includes/helm_publish.yml"
 
 publish-chart:
+  when: on_success
   only:
     refs:
-      - master
       - tags

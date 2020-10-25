@@ -179,6 +179,8 @@ release docker image to nexus:
     - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
   tags:
     - k8srunner
+  # don't inherit artefacts to prevent dirty image
+  dependencies: []
   script:
     - make build
     - make push

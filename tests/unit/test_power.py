@@ -86,7 +86,7 @@ class TestPowerManager:
         return self._OnOffMock() if has_hardware else None
 
     @pytest.fixture(params=[None, 0, 2])
-    def devices(self, request):
+    def devices(self, request, mock_device_proxies):
         """
         Fixture that returns a list of devices to be provided to the
         power manager under test as its subservient devices. It is
@@ -97,12 +97,20 @@ class TestPowerManager:
         :param request: A pytest object giving access to the requesting test
             context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :param mock_device_proxies: fixture that mocks out tango.DeviceProxy.
+        :type mock_device_proxies: dict
 
         :return: a list of devices that can be turned on and off
         :rtype: list of objects, or None if no devices are provided
         """
         num_devices = request.param
-        return None if num_devices is None else [self._OnOffMock()] * num_devices
+        if num_devices is None:
+            return None
+
+        mock_device_proxies.update(
+            {f"mock/mock/{i+1}": self._OnOffMock() for i in range(num_devices)}
+        )
+        return mock_device_proxies.keys()
 
     @pytest.fixture()
     def power_manager(self, hardware_manager, devices):

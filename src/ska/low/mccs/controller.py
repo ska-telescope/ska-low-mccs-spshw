@@ -28,7 +28,7 @@ from ska.base.commands import ResponseCommand, ResultCode
 
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
-from ska.low.mccs.utils import call_with_json, LazyInstance, tango_raise
+from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
@@ -47,9 +47,7 @@ class ControllerPowerManager(PowerManager):
             device manages
         :type station_fqdns: list of string
         """
-        super().__init__(
-            None, [LazyInstance(tango.DeviceProxy, fqdn) for fqdn in station_fqdns]
-        )
+        super().__init__(None, station_fqdns)
 
 
 class MccsController(SKAMaster):

@@ -4,6 +4,7 @@ pytest-cov
 pytest-json-report
 pytest-mock
 pytest-xdist == 1.34.0
+pytest-repeat
 coverage
 docstr-coverage
 darglint

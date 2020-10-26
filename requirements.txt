@@ -2,5 +2,5 @@ backoff
 numpy == 1.17.2
 pytango >= 9.3.2
 jsonschema >= 3.2.0
-lmcbaseclasses >= 0.7.1
+lmcbaseclasses >= 0.7.2
 fire

@@ -189,23 +189,13 @@ release docker image to nexus:
     refs:
       - tags
 
-create ci metrics:
-  stage: .post
-  when: always
-  tags:
-    - k8srunner
-  script:
-    # Gitlab CI badges creation: START
-    - apt-get -y update
-    - apt-get install -y curl --no-install-recommends
-    - curl -s https://gitlab.com/ska-telescope/ci-metrics-utilities/raw/master/scripts/ci-badges-func.sh | sh
-    # Gitlab CI badges creation: END
-  artifacts:
-    paths:
-      - ./build
-
-# Ensure your .gitlab-ci.yml has "publish" stage defined!
 include:
+  # Create Gitlab CI badges from CI metrics
+  # https://developer.skatelescope.org/en/latest/tools/continuousintegration.html#automated-collection-of-ci-health-metrics-as-part-of-the-ci-pipeline
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/post_step.yml'
+
+  # Ensure your .gitlab-ci.yml has "publish" stage defined!
   - project: "ska-telescope/templates-repository"
     file: "gitlab-ci/includes/helm_publish.yml"
 

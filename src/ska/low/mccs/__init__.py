@@ -22,6 +22,7 @@ __all__ = [
     "hardware",
     "health",
     "power",
+    "tile_hardware",
     "tpm_simulator",
 ]
 

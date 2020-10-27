@@ -46,6 +46,14 @@ class TestAntennaHardwareSimulator:
         return AntennaHardwareSimulator()
 
     def test_off_on(self, antenna_hardware_simulator):
+        """
+        Test that we can turn the antenna hardware off and on
+
+        :param antenna_hardware_simulator: a simulator for antenna
+            hardware
+        :type antenna_hardware_simulator:
+            :py:class:`~ska.low.mccs.apiu.AntennaHardwareSimulator`
+        """
         assert not antenna_hardware_simulator.is_on
         with pytest.raises(ValueError, match="Antenna hardware is turned off"):
             _ = antenna_hardware_simulator.voltage
@@ -391,9 +399,6 @@ class TestMccsAPIU(object):
         assert device_under_test.overCurrentThreshold == 0.0
         assert device_under_test.overVoltageThreshold == 0.0
         assert device_under_test.humidityThreshold == 0.0
-
-        # print(f'logicalAntennaId -> {repr(device_under_test.logicalAntennaId)}')
-        # assert device_under_test.logicalAntennaId == [0]
 
         device_under_test.overCurrentThreshold = 22.0
         assert device_under_test.overCurrentThreshold == 22.0

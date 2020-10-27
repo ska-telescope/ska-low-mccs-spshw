@@ -215,6 +215,7 @@ class MccsAntenna(SKABaseDevice):
             # tango deployment, then start honouring the default of
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
+            device.hardware_manager = None
 
             device._antennaId = 0
             device._logicalTpmAntenna_id = 0
@@ -336,7 +337,8 @@ class MccsAntenna(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        self.hardware_manager.poll()
+        if self.hardware_manager is not None:
+            self.hardware_manager.poll()
 
     def delete_device(self):
         """

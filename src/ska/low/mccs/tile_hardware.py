@@ -1,239 +1,182 @@
 # -*- coding: utf-8 -*-
+#
+# This file is part of the MccsTile project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+
 """
-An implementation of a TPM simulator
+This module contains classes that support the MCCS Tile device's
+management of hardware
 """
-import copy
+__all__ = ["TileHardwareHealthEvaluator", "TileHardwareManager"]
 
-from ska.low.mccs.hardware import HardwareSimulator
+from ska.low.mccs.hardware import HardwareHealthEvaluator, HardwareManager
+from ska.low.mccs.tpm_simulator import TpmSimulator
 
 
-class TpmSimulator(HardwareSimulator):
+class TileHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
-    A simulator for a TPM
+    A very rudimentary stub
+    :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
+    for tile hardware.
+
+    At present this returns
+    * FAILED if the connection to the TPM has been lost
+    * OK otherwise.
     """
 
-    VOLTAGE = 4.7
-    CURRENT = 0.4
-    BOARD_TEMPERATURE = 36.0
-    FPGA1_TEMPERATURE = 38.0
-    FPGA2_TEMPERATURE = 37.5
-    ADC_RMS = tuple(float(i) for i in range(32))
-    FPGA1_TIME = 1
-    FPGA2_TIME = 2
-    CURRENT_TILE_BEAMFORMER_FRAME = 23
-    PPS_DELAY = 12
-    PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "firmware1"
-    FIRMWARE_LIST = {
-        "firmware1": {"design": "model1", "major": 2, "minor": 3},
-        "firmware2": {"design": "model2", "major": 3, "minor": 7},
-        "firmware3": {"design": "model3", "major": 2, "minor": 6},
-    }
-    REGISTER_MAP = {
-        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-    }
+    pass
 
-    def __init__(self, logger, fail_connect=False):
+
+class TileHardwareManager(HardwareManager):
+    """
+    This class manages tile hardware.
+    """
+
+    def __init__(self, simulation_mode, logger):
         """
-        Initialise a new TPM simulator instance
+        Initialise a new TileHardwareManager instance
 
-        :param logger: a logger for this simulator to use
-        :type logger: an instance of :py:class:`logging.Logger`, or
-            an object that implements the same interface
-        :param fail_connect: whether this simulator should initially
-            simulate failure to connect to the hardware
-        :type fail_connect: bool
+        :param logger: the logger to be used by this hardware manager.
+        :type logger: a logger that implements the standard library
+            logger interface
+        :param simulation_mode: the initial simulation mode of this
+            hardware manager
+        :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        self.logger = logger
-        self._is_programmed = False
-        self._is_beamformer_running = False
-        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+        self._logger = logger
+        super().__init__(simulation_mode, TileHardwareHealthEvaluator())
 
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._board_temperature = self.BOARD_TEMPERATURE
-        self._fpga1_temperature = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature = self.FPGA2_TEMPERATURE
-        self._adc_rms = tuple(self.ADC_RMS)
-        self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
-        self._pps_delay = self.PPS_DELAY
-        self._firmware_name = self.FIRMWARE_NAME
-        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
+    def _create_simulator(self):
+        """
+        Helper method to create and return a hardware simulator
 
-        self._fpga1_time = self.FPGA1_TIME
-        self._fpga2_time = self.FPGA2_TIME
-
-        self._address_map = {}
-        self._forty_gb_core_list = []
-        self._register_map = copy.deepcopy(self.REGISTER_MAP)
-        super().__init__(fail_connect=fail_connect)
+        :return: a simulator of antenna hardware
+        :rtype: :py:class:`APIUHardwareSimulator`
+        """
+        return TpmSimulator(self._logger)
 
     @property
     def firmware_list(self):
         """
-        Return the firmware list for this TPM simulator
+        Return a list of firmware stored on the hardware
 
-        :return: the firmware list
+        :return: the list of firmware stored on the hardware; actually
+            a dictionary indexed by firmware name.
         :rtype: dict
         """
-        self.logger.debug("TpmSimulator: get_firmware_list")
-        return copy.deepcopy(self._firmware_list)
+        return self._hardware.firmware_list
 
     @property
     def firmware_name(self):
         """
-        Return the name of the firmware that this TPM simulator is
-        running
+        Return the name of the firmware running on the hardware
 
-        :return: firmware name
+        :return: the name of the firmware
         :rtype: str
         """
-        self.logger.debug("TpmSimulator: get_firmware_list")
-        return self._firmware_name
+        return self._hardware.firmware_name
 
     @property
     def firmware_version(self):
         """
-        Return the name of the firmware that this TPM simulator is
-        running
+        Returns the name of the firmware running on the hardware
 
-        :return: firmware version (major.minor)
+        :return: the name of the firmware
         :rtype: str
         """
-        self.logger.debug("TpmSimulator: get_firmware_list")
-        firmware = self._firmware_list[self._firmware_name]
-        return "{major}.{minor}".format(**firmware)  # noqa: FS002
-
-    @property
-    def is_programmed(self):
-        """
-        Return whether this TPM is programmed (i.e. firmware has been
-        downloaded to it)
-
-        :return: whether this TPM is programmed
-        :rtype: bool
-        """
-        self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
-        return self._is_programmed
+        return self._hardware.firmware_version
 
     def download_firmware(self, bitfile):
         """
-        Download the provided firmware bitfile onto the TPM
+        Download firmware to the board
 
-        :param bitfile: a binary firmware blob
-        :type bitfile: data
+        :param bitfile: the bitfile to be downloaded
+        :type bitfile: str
         """
-        self.logger.debug("TpmSimulator: download_firmware")
-        self._is_programmed = True
+        self._hardware.download_firmware(bitfile)
 
     def cpld_flash_write(self, bitfile):
         """
-        Flash a program to the tile's CPLD (complex programmable logic
-        device).
+        Write a program to the CPLD flash
 
-        :param bitfile: the program to be flashed
-        :type bitfile: data
+        :param bitfile: the bitfile to be flashed
+        :type bitfile: str
         """
-        self.logger.debug("TpmSimulator: program_cpld")
-
-    def initialise(self):
-        """
-        TODO: What does this method do?
-
-        :todo: what does this method do?
-        """
-        self.logger.debug("TpmSimulator: initialise")
-
-    @property
-    def board_temperature(self):
-        """
-        Return the temperature of the TPM
-
-        :return: the temperature of the TPM
-        :rtype: float
-        """
-        self.logger.debug("TpmSimulator: board temperature")
-        return self._board_temperature
+        self._hardware.cpld_flash_write(bitfile)
 
     @property
     def voltage(self):
         """
-        Return the voltage of the TPM
+        The voltage of the hardware
 
-        :return: the voltage of the TPM
+        :return: the voltage of the hardware
         :rtype: float
         """
-        self.logger.debug("TpmSimulator: voltage")
-        return self._voltage
+        return self._hardware.voltage
 
     @property
     def current(self):
         """
-        Return the current of the TPM
+        The current of the hardware
 
-        :return: the current of the TPM
+        :return: the current of the hardware
         :rtype: float
         """
-        self.logger.debug("TpmSimulator: current")
-        return self._current
+        return self._hardware.current
+
+    @property
+    def board_temperature(self):
+        """
+        The temperature of the main board of the hardware
+
+        :return: the temperature of the main board of the hardware
+        :rtype: float
+        """
+        return self._hardware.board_temperature
 
     @property
     def fpga1_temperature(self):
         """
-        Return the temperature of FPGA 1
+        The temperature of FPGA 1
 
         :return: the temperature of FPGA 1
         :rtype: float
         """
-        self.logger.debug("TpmSimulator: fpga1_temperature")
-        return self._fpga1_temperature
+        return self._hardware.fpga1_temperature
 
     @property
     def fpga2_temperature(self):
         """
-        Return the temperature of FPGA 2
+        The temperature of FPGA 2
 
         :return: the temperature of FPGA 2
         :rtype: float
         """
-        self.logger.debug("TpmSimulator: fpga2_temperature")
-        return self._fpga2_temperature
-
-    @property
-    def adc_rms(self):
-        """
-        Return the RMS power of the TPM's analog-to-digital converter
-
-        :return: the RMS power of the TPM's ADC
-        :rtype: list of float
-        """
-        self.logger.debug("TpmSimulator: adc_rms")
-        return tuple(self._adc_rms)
+        return self._hardware.fpga2_temperature
 
     @property
     def fpga1_time(self):
         """
-        Return the FPGA1 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc
+        The FPGA 1 time
 
-        :return: the FPGA1 clock time
+        :return: the FPGA 1 time
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: fpga1_time")
-        return self._fpga1_time
+        return self._hardware.fpga1_time
 
     @property
     def fpga2_time(self):
         """
-        Return the FPGA2 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc
+        The FPGA 2 time
 
-        :return: the FPGA2 clock time
+        :return: the FPGA 2 time
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: fpga2_time")
-        return self._fpga2_time
+        return self._hardware.fpga2_time
 
     @property
     def pps_delay(self):
@@ -243,8 +186,92 @@ class TpmSimulator(HardwareSimulator):
         :return: PPS delay
         :rtype: float
         """
-        self.logger.debug("TpmSimulator: get_pps_delay")
-        return self._pps_delay
+        return self._hardware.pps_delay
+
+    @property
+    def is_programmed(self):
+        """
+        Return whether the TPM is programmed or not
+
+        :return: whether the TPM is programmed of not
+        :rtype: bool
+        """
+        return self._hardware.is_programmed
+
+    @property
+    def adc_rms(self):
+        """
+        Return the RMS power of the TPM's analogue-to-digital converter
+
+        :return: the RMS power of the TPM's ADC
+        :rtype: tuple of float
+        """
+        return self._hardware.adc_rms
+
+    @property
+    def current_tile_beamformer_frame(self):
+        """
+        Return the current beamformer frame of the tile
+
+        :return: the tile's current beamformer frame
+        :rtype: int
+        """
+        return self._hardware.current_tile_beamformer_frame
+
+    @property
+    def is_beamformer_running(self):
+        """
+        Check if beamformer is running
+
+        :return: whether the beamformer is running
+        :rtype: boolean
+        """
+        return self._hardware.is_beamformer_running
+
+    def start_beamformer(self, start_time=None, duration=None):
+        """
+        Start the beamformer at the specified time
+
+        :param start_time: time at which to start the beamformer,
+            defaults to 0
+        :type start_time: int, optional
+        :param duration: duration for which to run the beamformer,
+            defaults to -1 (run forever)
+        :type duration: int, optional
+        """
+        self._hardware.start_beamformer(start_time=start_time, duration=duration)
+
+    def stop_beamformer(self):
+        """
+        Stop the beamformer
+        """
+        self._hardware.stop_beamformer()
+
+    @property
+    def phase_terminal_count(self):
+        """
+        Get phase terminal count
+
+        :return: phase terminal count
+        :rtype: int
+        """
+        return self._hardware.phase_terminal_count
+
+    @phase_terminal_count.setter
+    def phase_terminal_count(self, value):
+        """
+        Set the phase terminal count
+
+        :param value: the phase terminal count
+        :type value: int
+        """
+        self._hardware.phase_terminal_count = value
+
+    def initialise(self):
+        """
+        Initialise the TPM
+        """
+        self._hardware.initialise()
 
     @property
     def register_list(self):
@@ -254,7 +281,7 @@ class TpmSimulator(HardwareSimulator):
         :return: list of registers
         :rtype: list of str
         """
-        return list(self._register_map[0].keys())
+        return self._hardware.register_list
 
     def read_register(self, register_name, nb_read, offset, device):
         """
@@ -269,17 +296,10 @@ class TpmSimulator(HardwareSimulator):
         :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
         :type device: int
 
-        :return: values read from the register
-        :rtype: list of int
+        :return: values from the register
+        :rtype: list
         """
-        address_map = self._register_map[device].get(register_name, None)
-        if address_map is None:
-            return tuple()
-        values = []
-        for i in range(nb_read):
-            key = str(offset + i)
-            values.append(address_map.get(key, 0))
-        return tuple(values)
+        return self._hardware.read_register(register_name, nb_read, offset, device)
 
     def write_register(self, register_name, values, offset, device):
         """
@@ -294,12 +314,7 @@ class TpmSimulator(HardwareSimulator):
         :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
         :type device: int
         """
-        address_map = self._register_map[device].get(register_name, None)
-        if address_map is None:
-            return
-        for i, value in enumerate(values):
-            key = str(offset + i)
-            address_map.update({key: value})
+        self._hardware.write_register(register_name, values, offset, device)
 
     def read_address(self, address, nvalues):
         """
@@ -313,11 +328,7 @@ class TpmSimulator(HardwareSimulator):
         :return: values at the address
         :rtype: list of int
         """
-        values = []
-        for i in range(nvalues):
-            key = str(address + i)
-            values.append(self._address_map.get(key, 0))
-        return tuple(values)
+        return self._hardware.read_address(address, nvalues)
 
     def write_address(self, address, values):
         """
@@ -328,9 +339,7 @@ class TpmSimulator(HardwareSimulator):
         :param values: values to write
         :type values: list of int
         """
-        for i, value in enumerate(values):
-            key = str(address + i)
-            self._address_map.update({key: value})
+        self._hardware.write_address(address, values)
 
     def configure_40G_core(
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
@@ -353,16 +362,9 @@ class TpmSimulator(HardwareSimulator):
         :param dst_port: port of the destination
         :type dst_port: int
         """
-        core_dict = {
-            "CoreID": core_id,
-            "SrcMac": src_mac,
-            "SrcIP": src_ip,
-            "SrcPort": src_port,
-            "DstMac": dst_mac,
-            "DstIP": dst_ip,
-            "DstPort": dst_port,
-        }
-        self._forty_gb_core_list.append(core_dict)
+        self._hardware.configure_40G_core(
+            core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+        )
 
     def get_40G_configuration(self, core_id=-1):
         """
@@ -376,20 +378,15 @@ class TpmSimulator(HardwareSimulator):
         :return: core configuration or list of core configurations
         :rtype: dict or list of dict
         """
-        if core_id == -1:
-            return self._forty_gb_core_list
-        for item in self._forty_gb_core_list:
-            if item.get("CoreID") == core_id:
-                return item
-        return
+        return self._hardware.get_40G_configuration(core_id)
 
     def set_lmc_download(
         self,
         mode,
-        payload_length=1024,
+        payload_length=None,
         dst_ip=None,
-        src_port=0xF0D0,
-        dst_port=4660,
+        src_port=None,
+        dst_port=None,
         lmc_mac=None,
     ):
         """
@@ -410,7 +407,14 @@ class TpmSimulator(HardwareSimulator):
         :param lmc_mac: LMC MAC address, defaults to None
         :type lmc_mac: str, optional
         """
-        self.logger.debug("TpmSimulator: set_lmc_download")
+        self._hardware.set_lmc_download(
+            mode,
+            payload_length=payload_length,
+            dst_ip=dst_ip,
+            src_port=src_port,
+            dst_port=dst_port,
+            lmc_mac=lmc_mac,
+        )
 
     def set_channeliser_truncation(self, array):
         """
@@ -422,7 +426,7 @@ class TpmSimulator(HardwareSimulator):
             array
         :type array: list of int
         """
-        self.logger.debug("TpmSimulator: set_channeliser_truncation")
+        self._hardware.set_channeliser_truncation(array)
 
     def set_beamformer_regions(self, regions):
         """
@@ -434,7 +438,7 @@ class TpmSimulator(HardwareSimulator):
             and 7)
         :type regions: list of int
         """
-        self.logger.debug("TpmSimulator: set_beamformer_regions")
+        self._hardware.set_beamformer_regions(regions)
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
@@ -449,7 +453,9 @@ class TpmSimulator(HardwareSimulator):
         :param is_last: whether this is the last (?)
         :type is_last: bool
         """
-        self.logger.debug("TpmSimulator: initialise_beamformer")
+        self._hardware.initialise_beamformer(
+            start_channel, nof_channels, is_first, is_last
+        )
 
     def load_calibration_coefficients(self, antenna, calibration_coeffs):
         """
@@ -463,7 +469,7 @@ class TpmSimulator(HardwareSimulator):
             coefficients, flattened into a list
         :type calibration_coeffs: list of int
         """
-        self.logger.debug("TpmSimulator: load_calibration_coefficients")
+        self._hardware.load_calibration_coefficients(antenna, calibration_coeffs)
 
     def load_beam_angle(self, angle_coeffs):
         """
@@ -473,7 +479,7 @@ class TpmSimulator(HardwareSimulator):
             beam
         :type angle_coeffs: list of double
         """
-        self.logger.debug("TpmSimulator: load_beam_angle")
+        self._hardware.load_beam_angle(angle_coeffs)
 
     def load_antenna_tapering(self, tapering_coeffs):
         """
@@ -483,9 +489,9 @@ class TpmSimulator(HardwareSimulator):
             antenna
         :type tapering_coeffs: list of double
         """
-        self.logger.debug("TpmSimulator: load_antenna_tapering")
+        self._hardware.load_antenna_tapering(tapering_coeffs)
 
-    def switch_calibration_bank(self, switch_time=0):
+    def switch_calibration_bank(self, switch_time=None):
         """
         Switch the calibration bank (i.e. apply the calibration
         coefficients previously loaded by
@@ -495,7 +501,7 @@ class TpmSimulator(HardwareSimulator):
             switch
         :type switch_time: int, optional
         """
-        self.logger.debug("TpmSimulator: switch_calibration_band")
+        self._hardware.switch_calibration_bank(switch_time=switch_time)
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
@@ -509,7 +515,7 @@ class TpmSimulator(HardwareSimulator):
             be applied
         :type beam_index: int
         """
-        self.logger.debug("TpmSimulator: set_pointing_delay")
+        self._hardware.set_pointing_delay(delay_array, beam_index)
 
     def load_pointing_delay(self, load_time):
         """
@@ -518,30 +524,9 @@ class TpmSimulator(HardwareSimulator):
         :param load_time: time at which to load the pointing delay
         :type load_time: int
         """
-        self.logger.debug("TpmSimulator: load_pointing_delay")
+        self._hardware.load_pointing_delay(load_time)
 
-    def start_beamformer(self, start_time=0, duration=-1):
-        """
-        Start the beamformer at the specified time
-
-        :param start_time: time at which to start the beamformer,
-            defaults to 0
-        :type start_time: int, optional
-        :param duration: duration for which to run the beamformer,
-            defaults to -1 (run forever)
-        :type duration: int, optional
-        """
-        self.logger.debug("TpmSimulator: Start beamformer")
-        self._is_beamformer_running = True
-
-    def stop_beamformer(self):
-        """
-        Stop the beamformer
-        """
-        self.logger.debug("TpmSimulator: Stop beamformer")
-        self._is_beamformer_running = False
-
-    def configure_integrated_channel_data(self, integration_time=0.5):
+    def configure_integrated_channel_data(self, integration_time=None):
         """
         Configure the transmission of integrated channel data with the
         provided integration time
@@ -549,9 +534,11 @@ class TpmSimulator(HardwareSimulator):
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
         """
-        self.logger.debug("TpmSimulator: configure_integrated_channel_data")
+        self._hardware.configure_integrated_channel_data(
+            integration_time=integration_time
+        )
 
-    def configure_integrated_beam_data(self, integration_time=0.5):
+    def configure_integrated_beam_data(self, integration_time=None):
         """
         Configure the transmission of integrated beam data with the provided
         integration time
@@ -559,10 +546,10 @@ class TpmSimulator(HardwareSimulator):
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
         """
-        self.logger.debug("TpmSimulator: configure_integrated_beam_data")
+        self._hardware.configure_integrated_beam_data(integration_time=integration_time)
 
     def send_raw_data(
-        self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
+        self, sync=False, period=None, timeout=None, timestamp=None, seconds=None
     ):
         """
         Transmit a snapshot containing raw antenna data
@@ -578,17 +565,23 @@ class TpmSimulator(HardwareSimulator):
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self.logger.debug("TpmSimulator: send_raw_data")
+        self._hardware.send_raw_data(
+            sync=sync,
+            period=period,
+            timeout=timeout,
+            timestamp=timestamp,
+            seconds=seconds,
+        )
 
     def send_channelised_data(
         self,
-        number_of_samples=1024,
-        first_channel=0,
-        last_channel=511,
-        period=0,
-        timeout=0,
+        number_of_samples=None,
+        first_channel=None,
+        last_channel=None,
+        period=None,
+        timeout=None,
         timestamp=None,
-        seconds=0.2,
+        seconds=None,
     ):
         """
         Transmit a snapshot containing channelized data totalling
@@ -609,16 +602,24 @@ class TpmSimulator(HardwareSimulator):
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self.logger.debug("TpmSimulator: send_channelised_data")
+        self._hardware.send_channelised_data(
+            number_of_samples=number_of_samples,
+            first_channel=first_channel,
+            last_channel=last_channel,
+            period=period,
+            timeout=timeout,
+            timestamp=timestamp,
+            seconds=seconds,
+        )
 
     def send_channelised_data_continuous(
         self,
         channel_id,
-        number_of_samples=128,
-        wait_seconds=0,
-        timeout=0,
+        number_of_samples=None,
+        wait_seconds=None,
+        timeout=None,
         timestamp=None,
-        seconds=0.2,
+        seconds=None,
     ):
         """
         Transmit data from a channel continuously.
@@ -636,9 +637,16 @@ class TpmSimulator(HardwareSimulator):
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self.logger.debug("TpmSimulator: send_channelised_data_continuous")
+        self._hardware.send_channelised_data_continuous(
+            channel_id,
+            number_of_samples=number_of_samples,
+            wait_seconds=wait_seconds,
+            timeout=timeout,
+            timestamp=timestamp,
+            seconds=seconds,
+        )
 
-    def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+    def send_beam_data(self, period=None, timeout=None, timestamp=None, seconds=None):
         """
         Transmit a snapshot containing beamformed data
 
@@ -651,22 +659,24 @@ class TpmSimulator(HardwareSimulator):
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self.logger.debug("TpmSimulator: send_beam_data")
+        self._hardware.send_beam_data(
+            period=period, timeout=timeout, timestamp=timestamp, seconds=seconds
+        )
 
     def stop_data_transmission(self):
         """
         Stop data transmission
         """
-        self.logger.debug("TpmSimulator: stop_data_transmission")
+        self._hardware.stop_data_transmission()
 
     def compute_calibration_coefficients(self):
         """
         Compute the calibration coefficients and load them into the
         hardware.
         """
-        self.logger.debug("TpmSimulator: compute_calibration_coefficients")
+        self._hardware.compute_calibration_coefficients()
 
-    def start_acquisition(self, start_time=None, delay=2):
+    def start_acquisition(self, start_time=None, delay=None):
         """
         Start data acquisitiong
 
@@ -676,7 +686,7 @@ class TpmSimulator(HardwareSimulator):
         :param delay: delay start, defaults to 2
         :type delay: int, optional
         """
-        self.logger.debug("TpmSimulator:Start acquisition")
+        self._hardware.start_acquisition(start_time=start_time, delay=delay)
 
     def set_time_delays(self, delays):
         """
@@ -686,7 +696,7 @@ class TpmSimulator(HardwareSimulator):
             A positive delay adds delay to the signal stream
         :type delays: int
         """
-        self.logger.debug("TpmSimulator: set_time_delays")
+        self._hardware.set_time_delays(delays)
 
     def set_csp_rounding(self, rounding):
         """
@@ -695,7 +705,7 @@ class TpmSimulator(HardwareSimulator):
         :param rounding: the output rounding
         :type rounding: float
         """
-        self.logger.debug("TpmSimulator: set_csp_rounding")
+        self._hardware.set_csp_rounding(rounding)
 
     def set_lmc_integrated_download(
         self,
@@ -703,8 +713,8 @@ class TpmSimulator(HardwareSimulator):
         channel_payload_length,
         beam_payload_length,
         dst_ip=None,
-        src_port=0xF0D0,
-        dst_port=4660,
+        src_port=None,
+        dst_port=None,
         lmc_mac=None,
     ):
         """
@@ -727,10 +737,18 @@ class TpmSimulator(HardwareSimulator):
         :param lmc_mac: MAC address of destination, defaults to None
         :type lmc_mac: str, optional
         """
-        self.logger.debug("TpmSimulator: set_lmc_integrated_download")
+        self._hardware.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip=dst_ip,
+            src_port=src_port,
+            dst_port=dst_port,
+            lmc_mac=lmc_mac,
+        )
 
     def send_raw_data_synchronised(
-        self, period=0, timeout=0, timestamp=None, seconds=0.2
+        self, period=None, timeout=None, timestamp=None, seconds=None
     ):
         """
         Send synchronised raw data
@@ -744,49 +762,28 @@ class TpmSimulator(HardwareSimulator):
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self.logger.debug("TpmSimulator: send_raw_data_synchronised")
-
-    @property
-    def current_tile_beamformer_frame(self):
-        """
-        Return current frame, in units of 256 ADC frames
-
-        :return: current tile beamformer frame
-        :rtype: int
-        """
-        self.logger.debug("TpmSimulator: current_tile_beamformer_frame")
-        return self._current_tile_beamformer_frame
-
-    @property
-    def is_beamformer_running(self):
-        """
-        Whether the beamformer is currently running
-
-        :return: whether the beamformer is currently running
-        :rtype: bool
-        """
-        self.logger.debug("TpmSimulator: beamformer_is_running")
-        return self._is_beamformer_running
+        self._hardware.send_raw_data_synchronised(
+            period=period, timeout=timeout, timestamp=timestamp, seconds=seconds
+        )
 
     def check_pending_data_requests(self):
         """
-        Check for pending data requests
+        Check the TPM for pending data requests
 
-        :return: whether there are data requests pending
+        :return: whether the TPM has pending data requests
         :rtype: bool
         """
-        self.logger.debug("TpmSimulator: check_pending_data_requests")
-        return False
+        return self._hardware.check_pending_data_requests()
 
     def send_channelised_data_narrowband(
         self,
         frequency,
         round_bits,
-        number_of_samples=128,
-        wait_seconds=0,
-        timeout=0,
+        number_of_samples=None,
+        wait_seconds=None,
+        timeout=None,
         timestamp=None,
-        seconds=0.2,
+        seconds=None,
     ):
         """
         Continuously send channelised data from a single channel
@@ -808,19 +805,21 @@ class TpmSimulator(HardwareSimulator):
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self.logger.debug("TpmSimulator: send_channelised_data_narrowband")
+        self._hardware.send_channelised_data_narrowband(
+            frequency,
+            round_bits,
+            number_of_samples=number_of_samples,
+            wait_seconds=wait_seconds,
+            timeout=timeout,
+            timestamp=timestamp,
+            seconds=seconds,
+        )
 
-    #
-    # The synchronisation routine for the current TPM requires that
-    # the function below are accessible from the station (where station-level
-    # synchronisation is performed), however I am not sure whether the routine
-    # for the new TPMs will still required these
-    #
     def tweak_transceivers(self):
         """
         Tweak the transceivers.
         """
-        self.logger.debug("TpmSimulator: tweak_transceivers")
+        self._hardware.tweak_transceivers()
 
     @property
     def phase_terminal_count(self):
@@ -830,8 +829,7 @@ class TpmSimulator(HardwareSimulator):
         :return: the phase terminal count
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: get_phase_terminal_count")
-        return self._phase_terminal_count
+        return self._hardware._phase_terminal_count
 
     @phase_terminal_count.setter
     def phase_terminal_count(self, value):
@@ -841,23 +839,21 @@ class TpmSimulator(HardwareSimulator):
         :param value: the phase terminal count
         :type value: int
         """
-        self.logger.debug("TpmSimulator: set_phase_terminal_count")
-        self._phase_terminal_count = value
+        self._hardware.phase_terminal_count = value
 
     def post_synchronisation(self):
         """
         Perform post tile configuration synchronization
         """
-        self.logger.debug("TpmSimulator: post_synchronisation")
+        self._hardware.post_synchronisation()
 
     def sync_fpgas(self):
         """
         Synchronise the FPGAs
         """
-        self.logger.debug("TpmSimulator: sync_fpgas")
+        self._hardware.sync_fpgas()
 
-    @staticmethod
-    def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):
+    def calculate_delay(self, current_delay, current_tc, ref_lo, ref_hi):
         """
         Calculate the delay
 
@@ -870,4 +866,4 @@ class TpmSimulator(HardwareSimulator):
         :param ref_hi: high reference
         :type ref_hi: float
         """
-        pass
+        self._hardware.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)

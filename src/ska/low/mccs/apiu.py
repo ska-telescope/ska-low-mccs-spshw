@@ -543,6 +543,7 @@ class MccsAPIU(SKABaseDevice):
             # tango deployment, then start honouring the default of
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
+            device.hardware_manager = None
 
             device._isAlive = True
             device._overCurrentThreshold = 0.0
@@ -635,6 +636,8 @@ class MccsAPIU(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
+        if self.hardware_manager is not None:
+            self.hardware_manager.poll()
 
     def delete_device(self):
         """
@@ -773,6 +776,10 @@ class MccsAPIU(SKABaseDevice):
     # --------
 
     class PowerUpAntennaCommand(ResponseCommand):
+        """
+        The command class for the PowerDownAntenna command
+        """
+
         def do(self, argin):
             """
             Stateless hook for implementation of
@@ -822,6 +829,10 @@ class MccsAPIU(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerDownAntennaCommand(ResponseCommand):
+        """
+        The command class for the PowerDownAntenna command
+        """
+
         def do(self, argin):
             """
             Stateless hook for implementation of

@@ -776,7 +776,6 @@ class MccsStation(SKAObsDevice):
                 proxy.subarrayId = device._subarray_id
                 proxy.stationId = device._station_id
                 proxy.logicalTileId = tile_id + 1
-                proxy.command_inout("Connect", True)
 
             #             self._beams = []
             #             for id, beam in enumerate(self._beam_fqdns):

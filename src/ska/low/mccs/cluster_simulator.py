@@ -581,6 +581,16 @@ class ClusterSimulator(HardwareSimulator):
             self._job_stats[JobStatus.KILLED] += 1
 
     def simulate_node_failure(self, node_id, failed):
+        """
+        Tells this simulator to simulate the failure of one of its nodes
+
+        :param node_id: id of the node whose failure status is to be
+            changed
+        :type node_id: int
+        :param failed: Whether the node should fail; pass False to
+            simulate restoration of a previously failed node
+        :type failed: bool
+        """
         if failed:
             self._node_statuses[node_id] = HealthState.FAILED
         else:
@@ -588,6 +598,10 @@ class ClusterSimulator(HardwareSimulator):
         self._update_master_node()
 
     def _update_master_node(self):
+        """
+        Helper method to update the master node after we have simulated
+        failure of the previous master node
+        """
         if self._node_statuses[self.master_node_id] != HealthState.OK:
             try:
                 healthy_index = self.shadow_master_pool_status.index(HealthState.OK)

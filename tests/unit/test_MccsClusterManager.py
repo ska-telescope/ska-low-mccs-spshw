@@ -15,8 +15,7 @@ import json
 import pytest
 
 from ska.base.commands import ResultCode
-from ska.base.control_model import HealthState, SimulationMode
-from ska.low.mccs.cluster_manager import ClusterManager
+from ska.base.control_model import HealthState
 from ska.low.mccs.cluster_simulator import ClusterSimulator, JobStatus
 
 device_to_load = {
@@ -24,48 +23,6 @@ device_to_load = {
     "package": "ska.low.mccs",
     "device": "clustermanager",
 }
-
-
-class TestClusterManager:
-    """
-    Contains the test for the ClusterManager (the HardwareManager class
-    for clusters, not the MccsClusterManagerDevice tango device)
-    """
-
-    @pytest.fixture()
-    def cluster_manager(self):
-        """
-        Return a manager for a cluster
-
-        :return: a manager for a cluster
-        :rtype: :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
-        """
-        return ClusterManager(SimulationMode.TRUE)
-
-    def test_init_simulation_mode(self):
-        """
-        Test that we can't create an hardware manager that isn't in
-        simulation mode
-        """
-        with pytest.raises(
-            NotImplementedError,
-            match=("ClusterManager._create_driver method not implemented."),
-        ):
-            _ = ClusterManager(SimulationMode.FALSE)
-
-    def test_simulation_mode(self, cluster_manager):
-        """
-        Test that we can't take the cluster manager out of simulation
-        mode
-
-        :param cluster_manager: a manager for a cluster
-        :type cluster_manager: :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
-        """
-        with pytest.raises(
-            NotImplementedError,
-            match=("ClusterManager._create_driver method not implemented."),
-        ):
-            cluster_manager.simulation_mode = SimulationMode.FALSE
 
 
 class TestMccsClusterManagerDevice:

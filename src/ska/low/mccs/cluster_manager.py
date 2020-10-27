@@ -485,9 +485,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             """
             super().__init__(target, state_model, logger)
 
-            self._thread = None
-            self._lock = threading.Lock()
-            self._interrupt = False
+            self._init_thread = None
+            self._init_lock = threading.Lock()
+            self._init_interrupt = False
 
         def do(self):
             """
@@ -512,12 +512,13 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             # tango deployment, then start honouring the default of
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
+            device.cluster_manager = None
 
-            self._thread = threading.Thread(
+            self._init_thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
-            with self._lock:
-                self._thread.start()
+            with self._init_lock:
+                self._init_thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
         def _initialise_connections(self, device):
@@ -532,16 +533,16 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             # #using-clients-with-multithreading
             with EnsureOmniThread():
                 self._initialise_hardware_management(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
+                if self._init_interrupt:
+                    self._init_thread = None
+                    self._init_interrupt = False
                     return
                 self._initialise_health_monitoring(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
+                if self._init_interrupt:
+                    self._init_thread = None
+                    self._init_interrupt = False
                     return
-                with self._lock:
+                with self._init_lock:
                     self.succeeded()
 
         def _initialise_hardware_management(self, device):
@@ -554,9 +555,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = ClusterManager(device._simulation_mode)
+            device.cluster_manager = ClusterManager(device._simulation_mode)
 
-            args = (device.hardware_manager, device.state_model, self.logger)
+            args = (device.cluster_manager, device.state_model, self.logger)
 
             device.register_command_object("StartJob", device.StartJobCommand(*args))
             device.register_command_object("StopJob", device.StopJobCommand(*args))
@@ -583,7 +584,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             device.set_archive_event("healthState", True, True)
 
             device.health_model = HealthModel(
-                device.hardware_manager, None, None, device._update_health_state
+                device.cluster_manager, None, None, device._update_health_state
             )
 
         def interrupt(self):
@@ -600,6 +601,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
+        if self.cluster_manager is not None:
+            self.cluster_manager.poll()
 
     def delete_device(self):
         """
@@ -627,7 +630,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of errored jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_errored
+        return self.cluster_manager.jobs_errored
 
     @attribute(dtype="DevShort", label="jobsFailed", max_alarm=1, polling_period=10000)
     def jobsFailed(self):
@@ -637,7 +640,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of failed jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_failed
+        return self.cluster_manager.jobs_failed
 
     @attribute(dtype="DevShort", label="jobsFinished", polling_period=10000)
     def jobsFinished(self):
@@ -647,7 +650,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of finished jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_finished
+        return self.cluster_manager.jobs_finished
 
     @attribute(dtype="DevShort", label="jobsKilled", polling_period=10000)
     def jobsKilled(self):
@@ -657,7 +660,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of killed jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_killed
+        return self.cluster_manager.jobs_killed
 
     @attribute(dtype="DevShort", label="jobsKilling", polling_period=10000)
     def jobsKilling(self):
@@ -667,7 +670,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of jobs currently being killed
         :rtype: int
         """
-        return self.hardware_manager.jobs_killing
+        return self.cluster_manager.jobs_killing
 
     @attribute(dtype="DevShort", label="jobsLost", polling_period=10000)
     def jobsLost(self):
@@ -677,7 +680,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of lost jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_lost
+        return self.cluster_manager.jobs_lost
 
     @attribute(dtype="DevShort", label="jobsRunning", polling_period=10000)
     def jobsRunning(self):
@@ -687,7 +690,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of running jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_running
+        return self.cluster_manager.jobs_running
 
     @attribute(dtype="DevShort", label="jobsStaging", polling_period=10000)
     def jobsStaging(self):
@@ -697,7 +700,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of staging jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_staging
+        return self.cluster_manager.jobs_staging
 
     @attribute(dtype="DevShort", label="jobsStarting", polling_period=10000)
     def jobsStarting(self):
@@ -707,7 +710,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of starting jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_starting
+        return self.cluster_manager.jobs_starting
 
     @attribute(dtype="DevShort", max_alarm=1, polling_period=10000)
     def jobsUnreachable(self):
@@ -717,7 +720,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of unreachable jobs
         :rtype: int
         """
-        return self.hardware_manager.jobs_unreachable
+        return self.cluster_manager.jobs_unreachable
 
     @attribute(dtype="DevFloat", label="memoryTotal", polling_period=10000)
     def memoryTotal(self):
@@ -727,7 +730,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the total memory size
         :rtype: float
         """
-        return self.hardware_manager.memory_total
+        return self.cluster_manager.memory_total
 
     @attribute(dtype="DevFloat", label="memoryAvail", polling_period=10000)
     def memoryAvail(self):
@@ -737,7 +740,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the available memory
         :rtype: float
         """
-        return self.hardware_manager.memory_avail
+        return self.cluster_manager.memory_avail
 
     @attribute(dtype="DevFloat", label="memoryUsed", polling_period=10000)
     def memoryUsed(self):
@@ -747,7 +750,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the amount of memory in use
         :rtype: float
         """
-        return self.hardware_manager.memory_used
+        return self.cluster_manager.memory_used
 
     @attribute(dtype="DevShort", label="nodesInUse", polling_period=10000)
     def nodesInUse(self):
@@ -757,7 +760,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of nodes in use
         :rtype: int
         """
-        return self.hardware_manager.nodes_in_use
+        return self.cluster_manager.nodes_in_use
 
     @attribute(dtype="DevShort", label="nodesAvail", polling_period=10000)
     def nodesAvail(self):
@@ -767,7 +770,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of available nodes
         :rtype: int
         """
-        return self.hardware_manager.nodes_avail
+        return self.cluster_manager.nodes_avail
 
     @attribute(dtype="DevShort", label="nodesTotal", polling_period=10000)
     def nodesTotal(self):
@@ -777,7 +780,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the total number of notes
         :rtype: int
         """
-        return self.hardware_manager.nodes_total
+        return self.cluster_manager.nodes_total
 
     @attribute(dtype="DevShort", label="masterNodeId", polling_period=10000)
     def masterNodeId(self):
@@ -787,7 +790,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the id of the master node
         :rtype: int
         """
-        return self.hardware_manager.master_node_id
+        return self.cluster_manager.master_node_id
 
     @attribute(
         dtype="DevFloat", label="masterCpusAllocatedPercent", polling_period=10000
@@ -799,7 +802,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the percent allocation of the CPUs
         :rtype: float
         """
-        return self.hardware_manager.master_cpus_allocated_percent
+        return self.cluster_manager.master_cpus_allocated_percent
 
     @attribute(dtype="DevShort", label="masterCpusUsed", polling_period=10000)
     def masterCpusUsed(self):
@@ -809,7 +812,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of CPUs in use on the master node
         :rtype: int
         """
-        return self.hardware_manager.master_cpus_used
+        return self.cluster_manager.master_cpus_used
 
     @attribute(dtype="DevShort", label="masterCpusTotal", polling_period=10000)
     def masterCpusTotal(self):
@@ -819,7 +822,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the number of CPUs that the master node has
         :rtype: int
         """
-        return self.hardware_manager.master_cpus_total
+        return self.cluster_manager.master_cpus_total
 
     @attribute(dtype="DevFloat", label="masterDiskPercent", polling_period=10000)
     def masterDiskPercent(self):
@@ -830,7 +833,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             used, as a percentage
         :rtype: float
         """
-        return self.hardware_manager.master_disk_percent
+        return self.cluster_manager.master_disk_percent
 
     @attribute(dtype="DevDouble", label="masterDiskUsed", polling_period=10000)
     def masterDiskUsed(self):
@@ -841,7 +844,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             used
         :rtype: double
         """
-        return self.hardware_manager.master_disk_used
+        return self.cluster_manager.master_disk_used
 
     @attribute(dtype="DevFloat", label="masterDiskTotal", polling_period=10000)
     def masterDiskTotal(self):
@@ -851,7 +854,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the total disk size on the master node
         :rtype: float
         """
-        return self.hardware_manager.master_disk_total
+        return self.cluster_manager.master_disk_total
 
     @attribute(dtype="DevFloat", label="masterMemPercent", polling_period=10000)
     def masterMemPercent(self):
@@ -863,7 +866,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             master node
         :rtype: float
         """
-        return self.hardware_manager.master_mem_percent
+        return self.cluster_manager.master_mem_percent
 
     @attribute(dtype="DevFloat", label="masterMemPercent", polling_period=10000)
     def masterMemUsed(self):
@@ -875,7 +878,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             node
         :rtype: float
         """
-        return self.hardware_manager.master_mem_used
+        return self.cluster_manager.master_mem_used
 
     @attribute(dtype="DevFloat", label="masterMemTotal", polling_period=10000)
     def masterMemTotal(self):
@@ -885,7 +888,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return:  the total amount of memory on the master node
         :rtype: float
         """
-        return self.hardware_manager.master_mem_total
+        return self.cluster_manager.master_mem_total
 
     @attribute(
         dtype=("DevShort",),
@@ -900,7 +903,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the ids of nodes in the shadow master pool
         :rtype: list of int
         """
-        return self.hardware_manager.shadow_master_pool_node_ids
+        return self.cluster_manager.shadow_master_pool_node_ids
 
     @attribute(
         dtype=("DevState",),
@@ -915,7 +918,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: the states of nodes in the shadow master pool
         :rtype: list of :py:class:`tango.DevState`
         """
-        return self.hardware_manager.shadow_master_pool_status
+        return self.cluster_manager.shadow_master_pool_status
 
     # --------
     # Commands

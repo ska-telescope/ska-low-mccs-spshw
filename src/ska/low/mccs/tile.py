@@ -25,307 +25,11 @@ from tango.server import device_property
 # Additional import
 
 from ska.base import SKABaseDevice
-from ska.base.control_model import HealthState, SimulationMode, TestMode
+from ska.base.control_model import SimulationMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska.low.mccs.tpm_simulator import TpmSimulator
 from ska.low.mccs.power import PowerManager, PowerManagerError
 from ska.low.mccs.health import HealthModel
-
-
-class TileHardware:
-    """
-    A stub class to take the place of actual antenna hardware
-    """
-
-    VOLTAGE = 3.5
-    CURRENT = 0.4
-    BOARD_TEMPERATURE = 36.0
-    FPGA1_TEMPERATURE = 38.0
-    FPGA2_TEMPERATURE = 37.5
-
-    def __init__(self):
-        """
-        Initialise a new AntennaHardware instance
-        """
-        self._is_on = False
-        self._voltage = None
-        self._current = None
-        self._board_temperature = None
-        self._fpga1_temperature = None
-        self._fpga2_temperature = None
-
-    def off(self):
-        """
-        Turn me off
-        """
-        self._is_on = False
-        self._voltage = None
-        self._current = None
-        self._board_temperature = None
-        self._fpga1_temperature = None
-        self._fpga2_temperature = None
-
-    def on(self):
-        """
-        Turn me on
-        """
-        self._is_on = True
-        self._voltage = TileHardware.VOLTAGE
-        self._current = TileHardware.CURRENT
-        self._board_temperature = TileHardware.BOARD_TEMPERATURE
-        self._fpga1_temperature = TileHardware.FPGA1_TEMPERATURE
-        self._fpga2_temperature = TileHardware.FPGA2_TEMPERATURE
-
-    @property
-    def is_on(self):
-        """
-        Return whether I am on or off
-
-        :return: whether I am on or off
-        :rtype: bool
-        """
-        return self._is_on
-
-    @property
-    def voltage(self):
-        """
-        Return my voltage
-
-        :return: my voltage
-        :rtype: float
-        """
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        Return my current
-
-        :return: my current
-        :rtype: float
-        """
-        return self._current
-
-    @property
-    def board_temperature(self):
-        """
-        Return the temperature of my board
-
-        :return: the temperature of my board
-        :rtype: float
-        """
-        return self._board_temperature
-
-    @property
-    def fpga1_temperature(self):
-        """
-        Return the temperature of my FPGA 1
-
-        :return: the temperature of my FPGA 1
-        :rtype: float
-        """
-        return self._fpga1_temperature
-
-    @property
-    def fpga2_temperature(self):
-        """
-        Return the temperature of my FPGA 2
-
-        :return: the temperature of my FPGA 2
-        :rtype: float
-        """
-        return self._fpga2_temperature
-
-
-class TileHardwareManager:
-    """
-    This class manages tile hardware.
-
-    :todo: So far only voltage, current and the temperature attributes
-        have been moved in here. There are lots of other attributes that
-        should be.
-    :todo: Also, the device properties that deal with how to connect to
-        the hardware should be passed to the initialiser for this.
-    """
-
-    def __init__(self, hardware=None):
-        """
-        Initialise a new TileHardwareManager instance
-
-        At present, hardware is simulated by stub software, and so the
-        only argument is an optional "hardware" instance. In future, its
-        arguments will allow connection to the actual hardware
-
-        :param hardware: the hardware itself, defaults to None. This only
-            exists to facilitate testing.
-        :type hardware: :py:class:`TileHardware`
-        """
-        self._hardware = TileHardware() if hardware is None else hardware
-
-        # polled hardware attributes
-        self._is_on = None
-        self._voltage = None
-        self._current = None
-        self._board_temperature = None
-        self._fpga1_temperature = None
-        self._fpga2_temperature = None
-
-        self._health = None
-        self._health_callbacks = []
-
-        self.poll_hardware()
-
-    def off(self):
-        """
-        Turn the hardware off
-
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
-        """
-        if not self._hardware.is_on:
-            return
-        self._hardware.off()
-        self.poll_hardware()
-        return not self.is_on
-
-    def on(self):
-        """
-        Turn the hardware on
-
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
-        """
-        if self._hardware.is_on:
-            return
-        self._hardware.on()
-        self.poll_hardware()
-        return self.is_on
-
-    def poll_hardware(self):
-        """
-        Poll the hardware and update local attributes with values
-        reported by the hardware.
-        """
-        self._is_on = self._hardware.is_on
-        if self._is_on:
-            self._voltage = self._hardware.voltage
-            self._current = self._hardware.current
-            self._board_temperature = self._hardware.board_temperature
-            self._fpga1_temperature = self._hardware.fpga1_temperature
-            self._fpga2_temperature = self._hardware.fpga2_temperature
-        else:
-            self._voltage = None
-            self._current = None
-            self._board_temperature = None
-            self._fpga1_temperature = None
-            self._fpga2_temperature = None
-        self._evaluate_health()
-
-    @property
-    def is_on(self):
-        """
-        Whether the hardware is on or not
-
-        :return: whether the hardware is on or not
-        :rtype: boolean
-        """
-        return self._is_on
-
-    @property
-    def voltage(self):
-        """
-        The voltage of the hardware
-
-        :return: the voltage of the hardware
-        :rtype: float
-        """
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        The current of the hardware
-
-        :return: the current of the hardware
-        :rtype: float
-        """
-        return self._current
-
-    @property
-    def board_temperature(self):
-        """
-        Return the temperature of the board
-
-        :return: the temperature of the board
-        :rtype: float
-        """
-        return self._board_temperature
-
-    @property
-    def fpga1_temperature(self):
-        """
-        Return the temperature of FPGA 1
-
-        :return: the temperature of FPGA 1
-        :rtype: float
-        """
-        return self._fpga1_temperature
-
-    @property
-    def fpga2_temperature(self):
-        """
-        Return the temperature of FPGA 2
-
-        :return: the temperature of FPGA 2
-        :rtype: float
-        """
-        return self._fpga2_temperature
-
-    @property
-    def health(self):
-        """
-        The health of the hardware, as evaluated by this manager
-
-        :return: the health of the hardware
-        :rtype: :py:class:`ska.base.control_model.HealthState`
-        """
-        return self._health
-
-    def _evaluate_health(self):
-        """
-        Evaluate the health of the hardware
-        """
-        # TODO: look at the polled hardware values and maybe further
-        # poke the hardware to check that it is okay. But for now:
-        evaluated_health = HealthState.OK
-
-        self._update_health(evaluated_health)
-
-    def _update_health(self, health):
-        """
-        Update the health of this hardware, ensuring that any registered
-        callbacks are called
-
-        :param health: the new health value
-        :type health: :py:class:`ska.base.control_model.HealthState`
-        """
-        if self._health == health:
-            return
-        self._health = health
-        for callback in self._health_callbacks:
-            callback(health)
-
-    def register_health_callback(self, callback):
-        """
-        Register a callback to be called when the health of the hardware
-        changes
-
-        :param callback: A callback to be called when the health of the
-            hardware changes
-        :type callback: callable
-        """
-        self._health_callbacks.append(callback)
-        callback(self._health)
+from ska.low.mccs.tile_hardware import TileHardwareManager
 
 
 class TilePowerManager(PowerManager):
@@ -342,7 +46,7 @@ class TilePowerManager(PowerManager):
             hardware
         :type tile_hardware_manager: object
         """
-        super().__init__(tile_hardware_manager, None)
+        super().__init__(None, None)
 
 
 class MccsTile(SKABaseDevice):
@@ -359,11 +63,11 @@ class MccsTile(SKABaseDevice):
     # -----------------
     # Device Properties
     # -----------------
-    TileId = device_property(dtype=int, default_value=0)
-    TileIP = device_property(dtype=str, default_value="0.0.0.0")
-    TpmCpldPort = device_property(dtype=int, default_value=20000)
-    LmcIp = device_property(dtype=str, default_value="0.0.0.0")
-    DstPort = device_property(dtype=int, default_value=30000)
+    # TileId = device_property(dtype=int, default_value=0)
+    # TileIP = device_property(dtype=str, default_value="0.0.0.0")
+    # TpmCpldPort = device_property(dtype=int, default_value=20000)
+    # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
+    # DstPort = device_property(dtype=int, default_value=30000)
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
     # ---------------
@@ -417,44 +121,49 @@ class MccsTile(SKABaseDevice):
             """
             (result_code, message) = super().do()
             device = self.target
-            device._ip_address = device.TileIP
-            device._port = device.TpmCpldPort
-            device._lmc_ip = device.LmcIp
-            device._lmc_port = device.DstPort
-            device._antennas_per_tile = device.AntennasPerTile
 
-            device._programmed = False
-            device._tile_id = device.TileId
+            # TODO: the default value for simulationMode should be
+            # FALSE, but we don't have real hardware to test yet, so we
+            # can't take our devices out of simulation mode. However,
+            # simulationMode is a memorized attribute, and
+            # pytango.test_context.MultiDeviceTestContext will soon
+            # support memorized attributes. Once it does, we should
+            # figure out how to inject memorized values into our real
+            # tango deployment, then start honouring the default of
+            # FALSE by removing this next line.
+            device._simulation_mode = SimulationMode.TRUE
+            device.hardware_manager = None
+
+            device._logical_tile_id = 0
             device._subarray_id = 0
             device._station_id = 0
-            device._logical_tile_id = 0
+
             device._csp_destination_ip = ""
             device._csp_destination_mac = ""
             device._csp_destination_port = 0
-            device._firmware_name = ""
-            device._firmware_version = ""
-            device._antenna_ids = []
-            device._forty_gb_destination_ips = []
-            device._forty_gb_destination_macs = []
-            device._forty_gb_destination_ports = []
-            device._adc_power = []
-            device._sampling_rate = 0.0
-            device._tpm = None
-            device._simulation_mode = SimulationMode.TRUE
-            device._default_tapering_coeffs = [
-                float(1) for i in range(device.AntennasPerTile)
-            ]
-            device._is_connected = False
 
-            event_names = [
-                "current",
-                "voltage",
-                "board_temperature",
-                "fpga1_temperature",
-                "fpga2_temperature",
-            ]
-            for name in event_names:
-                device.set_archive_event(name, True, True)
+            device._antenna_ids = []
+
+            # device._ip_address = device.TileIP
+            # device._port = device.TpmCpldPort
+            # device._lmc_ip = device.LmcIp
+            # device._lmc_port = device.DstPort
+
+            # device._tile_id = device.TileId
+            # device._sampling_rate = 0.0
+            # device._default_tapering_coeffs = [
+            #     float(1) for i in range(device.AntennasPerTile)
+            # ]
+
+            # event_names = [
+            #     "current",
+            #     "voltage",
+            #     "board_temperature",
+            #     "fpga1_temperature",
+            #     "fpga2_temperature",
+            # ]
+            # for name in event_names:
+            #     device.set_archive_event(name, True, True)
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -502,7 +211,148 @@ class MccsTile(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = TileHardwareManager()
+            device.hardware_manager = TileHardwareManager(
+                device._simulation_mode, device.logger
+            )
+            args = (device.hardware_manager, device.state_model, device.logger)
+            device.register_command_object(
+                "Initialise", device.InitialiseCommand(*args)
+            )
+            device.register_command_object(
+                "GetFirmwareList", device.GetFirmwareListCommand(*args)
+            )
+            device.register_command_object(
+                "DownloadFirmware", device.DownloadFirmwareCommand(*args)
+            )
+            device.register_command_object(
+                "ProgramCPLD", device.ProgramCPLDCommand(*args)
+            )
+            device.register_command_object(
+                "GetRegisterList", device.GetRegisterListCommand(*args)
+            )
+            device.register_command_object(
+                "ReadRegister", device.ReadRegisterCommand(*args)
+            )
+            device.register_command_object(
+                "WriteRegister", device.WriteRegisterCommand(*args)
+            )
+            device.register_command_object(
+                "ReadAddress", device.ReadAddressCommand(*args)
+            )
+            device.register_command_object(
+                "WriteAddress", device.WriteAddressCommand(*args)
+            )
+            device.register_command_object(
+                "Configure40GCore", device.Configure40GCoreCommand(*args)
+            )
+            device.register_command_object(
+                "Get40GCoreConfiguration", device.Get40GCoreConfigurationCommand(*args)
+            )
+            device.register_command_object(
+                "SetLmcDownload", device.SetLmcDownloadCommand(*args)
+            )
+            device.register_command_object(
+                "SetChanneliserTruncation",
+                device.SetChanneliserTruncationCommand(*args),
+            )
+            device.register_command_object(
+                "SetBeamFormerRegions", device.SetBeamFormerRegionsCommand(*args)
+            )
+            device.register_command_object(
+                "ConfigureStationBeamformer",
+                device.ConfigureStationBeamformerCommand(*args),
+            )
+            device.register_command_object(
+                "LoadCalibrationCoefficients",
+                device.LoadCalibrationCoefficientsCommand(*args),
+            )
+            device.register_command_object(
+                "LoadBeamAngle", device.LoadBeamAngleCommand(*args)
+            )
+
+            device.register_command_object(
+                "SwitchCalibrationBank", device.SwitchCalibrationBankCommand(*args)
+            )
+            device.register_command_object(
+                "LoadPointingDelay", device.LoadPointingDelayCommand(*args)
+            )
+            device.register_command_object(
+                "StartBeamformer", device.StartBeamformerCommand(*args)
+            )
+            device.register_command_object(
+                "StopBeamformer", device.StopBeamformerCommand(*args)
+            )
+            device.register_command_object(
+                "ConfigureIntegratedChannelData",
+                device.ConfigureIntegratedChannelDataCommand(*args),
+            )
+            device.register_command_object(
+                "ConfigureIntegratedBeamData",
+                device.ConfigureIntegratedBeamDataCommand(*args),
+            )
+            device.register_command_object(
+                "SendRawData", device.SendRawDataCommand(*args)
+            )
+            device.register_command_object(
+                "SendChannelisedData", device.SendChannelisedDataCommand(*args)
+            )
+            device.register_command_object(
+                "SendChannelisedDataContinuous",
+                device.SendChannelisedDataContinuousCommand(*args),
+            )
+            device.register_command_object(
+                "SendBeamData", device.SendBeamDataCommand(*args)
+            )
+            device.register_command_object(
+                "StopDataTransmission", device.StopDataTransmissionCommand(*args)
+            )
+            device.register_command_object(
+                "ComputeCalibrationCoefficients",
+                device.ComputeCalibrationCoefficientsCommand(*args),
+            )
+            device.register_command_object(
+                "StartAcquisition", device.StartAcquisitionCommand(*args)
+            )
+            device.register_command_object(
+                "SetTimeDelays", device.SetTimeDelaysCommand(*args)
+            )
+            device.register_command_object(
+                "SetCspRounding", device.SetCspRoundingCommand(*args)
+            )
+            device.register_command_object(
+                "SetLmcIntegratedDownload",
+                device.SetLmcIntegratedDownloadCommand(*args),
+            )
+            device.register_command_object(
+                "SendRawDataSynchronised", device.SendRawDataSynchronisedCommand(*args)
+            )
+            device.register_command_object(
+                "SendChannelisedDataNarrowband",
+                device.SendChannelisedDataNarrowbandCommand(*args),
+            )
+            device.register_command_object(
+                "TweakTransceivers", device.TweakTransceiversCommand(*args)
+            )
+            device.register_command_object(
+                "PostSynchronisation", device.PostSynchronisationCommand(*args)
+            )
+            device.register_command_object("SyncFpgas", device.SyncFpgasCommand(*args))
+            device.register_command_object(
+                "CalculateDelay", device.CalculateDelayCommand(*args)
+            )
+
+            antenna_args = (
+                device.hardware_manager,
+                device.state_model,
+                device.logger,
+                device.AntennasPerTile,
+            )
+            device.register_command_object(
+                "LoadAntennaTapering", device.LoadAntennaTaperingCommand(*antenna_args)
+            )
+            device.register_command_object(
+                "SetPointingDelay", device.SetPointingDelayCommand(*antenna_args)
+            )
 
         def _initialise_health_monitoring(self, device):
             """
@@ -600,7 +450,8 @@ class MccsTile(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        self.hardware_manager.poll_hardware()
+        if self.hardware_manager is not None:
+            self.hardware_manager.poll()
 
     def delete_device(self):
         """
@@ -617,20 +468,6 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-
-    def is_hardware_attribute_access_allowed(self, attr_req_type):
-        """
-        Helper that allows access to certain hardware attributes only
-        when the device is connected to the TPM
-
-        :param attr_req_type: the access that is being request i.e. an
-            attribute read or an attribute write
-        :type attr_req_type: :py:class:`tango.AttReqType`
-
-        :return: Whether hardware attribute access is allowed right now
-        :rtype: boolean
-        """
-        return self._tpm is not None and self._is_connected
 
     @attribute(dtype="DevLong", doc="Logical tile identifier within a station")
     def logicalTileId(self):
@@ -669,7 +506,6 @@ class MccsTile(SKABaseDevice):
         return self._subarray_id
 
     @subarrayId.write
-    @DebugIt()
     def subarrayId(self, value):
         """
         Set the id of the subarray to which this tile is assigned.
@@ -781,7 +617,7 @@ class MccsTile(SKABaseDevice):
         :return: firmware name
         :rtype: str
         """
-        return self._firmware_name
+        return self.hardware_manager.firmware_name
 
     @firmwareName.write
     def firmwareName(self, value):
@@ -791,7 +627,7 @@ class MccsTile(SKABaseDevice):
         :param value: firmware name
         :type value: str
         """
-        self._firmware_name = value
+        self.hardware_manager.firmware_name = value
 
     @attribute(dtype="DevString", doc="Version of currently running firmware")
     def firmwareVersion(self):
@@ -801,7 +637,7 @@ class MccsTile(SKABaseDevice):
         :return: firmware version
         :rtype: str
         """
-        return self._firmware_version
+        return self.hardware_manager.firmware_version
 
     @firmwareVersion.write
     def firmwareVersion(self, value):
@@ -811,11 +647,10 @@ class MccsTile(SKABaseDevice):
         :param value: firmware version
         :type value: str
         """
-        self._firmware_version = value
+        self.hardware_manager.firmware_version = value
 
     @attribute(
         dtype="DevDouble",
-        fisallowed=is_hardware_attribute_access_allowed,
         abs_change=0.05,
         min_value=4.5,
         max_value=5.5,
@@ -834,7 +669,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevDouble",
-        fisallowed=is_hardware_attribute_access_allowed,
         abs_change=0.05,
         min_value=0.0,
         max_value=3.0,
@@ -864,12 +698,11 @@ class MccsTile(SKABaseDevice):
         :return: whether of not the board is programmed
         :rtype: bool
         """
-        return self._tpm.is_programmed()
+        return self.hardware_manager.is_programmed
 
     @attribute(
         dtype="DevDouble",
         doc="The board temperature",
-        fisallowed=is_hardware_attribute_access_allowed,
         abs_change=0.1,
         min_value=25.0,
         max_value=40.0,
@@ -888,7 +721,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevDouble",
-        fisallowed=is_hardware_attribute_access_allowed,
         abs_change=0.1,
         min_value=25.0,
         max_value=40.0,
@@ -907,7 +739,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevDouble",
-        fisallowed=is_hardware_attribute_access_allowed,
         abs_change=0.1,
         min_value=25.0,
         max_value=40.0,
@@ -924,7 +755,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.fpga2_temperature
 
-    @attribute(dtype="DevLong", fisallowed=is_hardware_attribute_access_allowed)
+    @attribute(dtype="DevLong")
     def fpga1_time(self):
         """
         Return the time for FPGA 1
@@ -932,19 +763,9 @@ class MccsTile(SKABaseDevice):
         :return: the time for FPGA 1
         :rtype: int
         """
-        return self._tpm.get_fpga1_time()
+        return self.hardware_manager.fpga1_time
 
-    @fpga1_time.write
-    def fpga1_time(self, value):
-        """
-        Set the time for FPGA 1
-
-        :param value: the time for FPGA 1
-        :type value: int
-        """
-        self._tpm.set_fpga1_time(value)
-
-    @attribute(dtype="DevLong", fisallowed=is_hardware_attribute_access_allowed)
+    @attribute(dtype="DevLong")
     def fpga2_time(self):
         """
         Return the time for FPGA 2
@@ -952,17 +773,7 @@ class MccsTile(SKABaseDevice):
         :return: the time for FPGA 2
         :rtype: int
         """
-        return self._tpm.get_fpga2_time()
-
-    @fpga2_time.write
-    def fpga2_time(self, value):
-        """
-        Set the time for FPGA 2
-
-        :param value: the time for FPGA 2
-        :type value: int
-        """
-        self._tpm.set_fpga2_time(value)
+        return self.hardware_manager.fpga2_time
 
     @attribute(
         dtype=("DevLong",),
@@ -978,17 +789,17 @@ class MccsTile(SKABaseDevice):
         :return: the antenna IDs
         :rtype: array of int
         """
-        return self._antenna_ids
+        return tuple(self._antenna_ids)
 
     @antennaIds.write
-    def antennaIds(self, ids):
+    def antennaIds(self, antenna_ids):
         """
         Set the antenna IDs
 
-        :param ids: the antenna IDs
-        :type ids: array of int
+        :param antenna_ids: the antenna IDs
+        :type antenna_ids: array of int
         """
-        self._antenna_ids = ids
+        self._antenna_ids = list(antenna_ids)
 
     @attribute(
         dtype=("DevString",),
@@ -1003,10 +814,9 @@ class MccsTile(SKABaseDevice):
         :return: IP addresses
         :rtype: array of str
         """
-        dst_ips = []
-        for item in self._tpm.get_40G_configuration():
-            dst_ips.append(item.get("DstIP"))
-        return dst_ips
+        return tuple(
+            item["DstIP"] for item in self.hardware_manager.get_40G_configuration()
+        )
 
     @attribute(
         dtype=("DevString",),
@@ -1021,10 +831,9 @@ class MccsTile(SKABaseDevice):
         :return: MAC addresses
         :rtype: array of str
         """
-        dst_macs = []
-        for item in self._tpm.get_40G_configuration():
-            dst_macs.append(item.get("DstMac"))
-        return dst_macs
+        return tuple(
+            item["DstMac"] for item in self.hardware_manager.get_40G_configuration()
+        )
 
     @attribute(
         dtype=("DevLong",),
@@ -1039,17 +848,15 @@ class MccsTile(SKABaseDevice):
         :return: ports
         :rtype: array of int
         """
-        dst_ports = []
-        for item in self._tpm.get_40G_configuration():
-            dst_ports.append(item.get("DstPort"))
-        return dst_ports
+        return tuple(
+            item["DstPort"] for item in self.hardware_manager.get_40G_configuration()
+        )
 
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=32,
         doc="Return the RMS power of every ADC signal (so a TPM processes "
         "16 antennas, this should return 32 RMS values)",
-        fisallowed=is_hardware_attribute_access_allowed,
     )
     def adcPower(self):
         """
@@ -1059,12 +866,11 @@ class MccsTile(SKABaseDevice):
         :return: RMP power of ADC signals
         :rtype: array of double
         """
-        return self._tpm.get_adc_rms()
+        return self.hardware_manager.adc_rms
 
     @attribute(
         dtype="DevLong",
         doc="Return current frame, in units of 256 ADC frames (276,48 us)",
-        fisallowed=is_hardware_attribute_access_allowed,
     )
     def currentTileBeamformerFrame(self):
         """
@@ -1074,9 +880,9 @@ class MccsTile(SKABaseDevice):
         :return: current frame
         :rtype: int
         """
-        return self._tpm.current_tile_beamformer_frame()
+        return self.hardware_manager.current_tile_beamformer_frame
 
-    @attribute(dtype="DevBoolean", fisallowed=is_hardware_attribute_access_allowed)
+    @attribute(dtype="DevBoolean")
     def checkPendingDataRequests(self):
         """
         Check for pending data requests
@@ -1084,9 +890,9 @@ class MccsTile(SKABaseDevice):
         :return: whether there are data requests pending
         :rtype: boolean
         """
-        return self._tpm.check_pending_data_requests()
+        return self.hardware_manager.check_pending_data_requests()
 
-    @attribute(dtype="DevBoolean", fisallowed=is_hardware_attribute_access_allowed)
+    @attribute(dtype="DevBoolean")
     def isBeamformerRunning(self):
         """
         Check if beamformer is running
@@ -1094,9 +900,9 @@ class MccsTile(SKABaseDevice):
         :return: whether the beamformer is running
         :rtype: boolean
         """
-        return self._tpm.beamformer_is_running()
+        return self.hardware_manager.is_beamformer_running
 
-    @attribute(dtype="DevLong", fisallowed=is_hardware_attribute_access_allowed)
+    @attribute(dtype="DevLong")
     def phaseTerminalCount(self):
         """
         Get phase terminal count
@@ -1104,7 +910,7 @@ class MccsTile(SKABaseDevice):
         :return: phase terminal count
         :rtype: int
         """
-        return self._tpm.get_phase_terminal_count()
+        return self.hardware_manager.phase_terminal_count
 
     @phaseTerminalCount.write
     def phaseTerminalCount(self, value):
@@ -1114,9 +920,9 @@ class MccsTile(SKABaseDevice):
         :param value: the phase terminal count
         :type value: int
         """
-        self._tpm.set_phase_terminal_count(value)
+        self.hardware_manager.phase_terminal_count = value
 
-    @attribute(dtype="DevLong", fisallowed=is_hardware_attribute_access_allowed)
+    @attribute(dtype="DevLong")
     def ppsDelay(self):
         """
         Return the PPS delay
@@ -1124,11 +930,11 @@ class MccsTile(SKABaseDevice):
         :return: Return the PPS delay
         :rtype: int
         """
-        return self._tpm.get_pps_delay()
+        return self.hardware_manager.pps_delay
 
-    # --------
-    # Commands
-    # --------
+    # # --------
+    # # Commands
+    # # --------
     def init_command_objects(self):
         """
         Set up the handler objects for Commands
@@ -1142,117 +948,6 @@ class MccsTile(SKABaseDevice):
         self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)
-        )
-
-        self.register_command_object("Initialise", self.InitialiseCommand(*args))
-        self.register_command_object("Connect", self.ConnectCommand(*args))
-        self.register_command_object("Disconnect", self.DisconnectCommand(*args))
-        self.register_command_object(
-            "GetFirmwareList", self.GetFirmwareListCommand(*args)
-        )
-        self.register_command_object(
-            "DownloadFirmware", self.DownloadFirmwareCommand(*args)
-        )
-        self.register_command_object("ProgramCPLD", self.ProgramCPLDCommand(*args))
-        self.register_command_object("WaitPPSEvent", self.WaitPPSEventCommand(*args))
-        self.register_command_object(
-            "GetRegisterList", self.GetRegisterListCommand(*args)
-        )
-        self.register_command_object("ReadRegister", self.ReadRegisterCommand(*args))
-        self.register_command_object("WriteRegister", self.WriteRegisterCommand(*args))
-        self.register_command_object("ReadAddress", self.ReadAddressCommand(*args))
-        self.register_command_object("WriteAddress", self.WriteAddressCommand(*args))
-        self.register_command_object(
-            "Configure40GCore", self.Configure40GCoreCommand(*args)
-        )
-        self.register_command_object(
-            "Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand(*args)
-        )
-        self.register_command_object(
-            "SetLmcDownload", self.SetLmcDownloadCommand(*args)
-        )
-        self.register_command_object(
-            "SetChanneliserTruncation", self.SetChanneliserTruncationCommand(*args)
-        )
-        self.register_command_object(
-            "SetBeamFormerRegions", self.SetBeamFormerRegionsCommand(*args)
-        )
-        self.register_command_object(
-            "ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand(*args)
-        )
-        self.register_command_object(
-            "LoadCalibrationCoefficients",
-            self.LoadCalibrationCoefficientsCommand(*args),
-        )
-        self.register_command_object("LoadBeamAngle", self.LoadBeamAngleCommand(*args))
-        self.register_command_object(
-            "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*args)
-        )
-        self.register_command_object(
-            "SwitchCalibrationBank", self.SwitchCalibrationBankCommand(*args)
-        )
-        self.register_command_object(
-            "SetPointingDelay", self.SetPointingDelayCommand(*args)
-        )
-        self.register_command_object(
-            "LoadPointingDelay", self.LoadPointingDelayCommand(*args)
-        )
-        self.register_command_object(
-            "StartBeamformer", self.StartBeamformerCommand(*args)
-        )
-        self.register_command_object(
-            "StopBeamformer", self.StopBeamformerCommand(*args)
-        )
-        self.register_command_object(
-            "ConfigureIntegratedChannelData",
-            self.ConfigureIntegratedChannelDataCommand(*args),
-        )
-        self.register_command_object(
-            "ConfigureIntegratedBeamData",
-            self.ConfigureIntegratedBeamDataCommand(*args),
-        )
-        self.register_command_object("SendRawData", self.SendRawDataCommand(*args))
-        self.register_command_object(
-            "SendChannelisedData", self.SendChannelisedDataCommand(*args)
-        )
-        self.register_command_object(
-            "SendChannelisedDataContinuous",
-            self.SendChannelisedDataContinuousCommand(*args),
-        )
-        self.register_command_object("SendBeamData", self.SendBeamDataCommand(*args))
-        self.register_command_object(
-            "StopDataTransmission", self.StopDataTransmissionCommand(*args)
-        )
-        self.register_command_object(
-            "ComputeCalibrationCoefficients",
-            self.ComputeCalibrationCoefficientsCommand(*args),
-        )
-        self.register_command_object(
-            "StartAcquisition", self.StartAcquisitionCommand(*args)
-        )
-        self.register_command_object("SetTimeDelays", self.SetTimeDelaysCommand(*args))
-        self.register_command_object(
-            "SetCspRounding", self.SetCspRoundingCommand(*args)
-        )
-        self.register_command_object(
-            "SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand(*args)
-        )
-        self.register_command_object(
-            "SendRawDataSynchronised", self.SendRawDataSynchronisedCommand(*args)
-        )
-        self.register_command_object(
-            "SendChannelisedDataNarrowband",
-            self.SendChannelisedDataNarrowbandCommand(*args),
-        )
-        self.register_command_object(
-            "TweakTransceivers", self.TweakTransceiversCommand(*args)
-        )
-        self.register_command_object(
-            "PostSynchronisation", self.PostSynchronisationCommand(*args)
-        )
-        self.register_command_object("SyncFpgas", self.SyncFpgasCommand(*args))
-        self.register_command_object(
-            "CalculateDelay", self.CalculateDelayCommand(*args)
         )
 
     class InitialiseCommand(ResponseCommand):
@@ -1272,8 +967,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.initialise()
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.initialise()
+            return (ResultCode.OK, "Initialise command completed OK")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1295,134 +991,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("Connect", False)
         >>> dp.command_inout("Initialise")
         """
         handler = self.get_command_object("Initialise")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
-
-    class ConnectCommand(ResponseCommand):
-        """
-        Class for handling the Connect(argin) command.
-        """
-
-        def do(self, argin):
-            """
-            Implementation of
-            :py:meth:`MccsTile.Connect` command
-            functionality.
-
-            :param argin: Flag to request tpm initialisation
-            :type argin: boolean
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
-            """
-            initialise_tpm = argin
-            device = self.target
-            if device._simulation_mode == SimulationMode.TRUE:
-                device._tpm = TpmSimulator(self.logger)
-            else:
-                device._tpm = Tpm(  # noqa: F821
-                    device._ip_address,
-                    device._port,
-                    device._lmc_ip,
-                    device._lmc_port,
-                    device._sampling_rate,
-                )
-
-            tm = True if device._test_mode == TestMode.TEST else False
-            device._tpm.connect(
-                initialise=initialise_tpm, simulation=device.simulationMode, testmode=tm
-            )
-
-            # Load tpm test firmware for both FPGAs
-            if not device._tpm.is_programmed() and initialise_tpm:
-                device._tpm.download_firmware("TpmTestFirmware")
-            elif not device._tpm.is_programmed():
-                self.logger.warning("TPM is not programmed! No plugins loaded")
-
-            if initialise_tpm:
-                device.Initialise()
-
-            device._is_connected = True
-            return (ResultCode.OK, "Command succeeded")
-
-    @command(
-        dtype_in="DevBoolean",
-        doc_in="Initialise",
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
-    )
-    @DebugIt()
-    def Connect(self, argin):
-        """
-        Creates connection to board. When True the initialise function is
-        called immediately after connection (board must be programmed)
-
-        :param argin: When True initialise immediately after connection
-        :type argin: :py:class:`tango.DevBoolean`
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("Connect", True)
-        """
-        handler = self.get_command_object("Connect")
-        (return_code, message) = handler(argin)
-        return [[return_code], [message]]
-
-    class DisconnectCommand(ResponseCommand):
-        """
-        Class for handling the Disconnect() command.
-        """
-
-        def do(self):
-            """
-            Implementation of
-            :py:meth:`MccsTile.Disonnect` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
-            """
-            device = self.target
-            device._is_connected = False
-            device._tpm.disconnect()
-            return (ResultCode.OK, "Command succeeded")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
-    )
-    @DebugIt()
-    def Disconnect(self):
-        """
-        Disconnects from the board, the internal state needs to be reset
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("Disconnect")
-        """
-        handler = self.get_command_object("Disconnect")
         (return_code, message) = handler()
         return [[return_code], [message]]
 
@@ -1440,8 +1011,8 @@ class MccsTile(SKABaseDevice):
             :return: json encoded string containing list of dictionaries
             :rtype: str
             """
-            firmware_list = self.target._tpm.get_firmware_list()
-            return json.dumps(firmware_list)
+            hardware_manager = self.target
+            return json.dumps(hardware_manager.firmware_list)
 
     @command(dtype_out="DevString", doc_out="list of firmware")
     @DebugIt()
@@ -1486,12 +1057,10 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
+            hardware_manager = self.target
             bitfile = argin
-            device = self.target
-            if device._tpm is not None:
-                self.logger.info("Downloading bitfile to board")
-                device._tpm.download_firmware(bitfile)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager.download_firmware(bitfile)
+            return (ResultCode.OK, "DownloadFirmware command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -1502,12 +1071,12 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def DownloadFirmware(self, argin):
         """
-        Downloads the firmware contained in bitfile to all FPGAs on the board.
-        This should also update the internal register mapping, such that
-        registers become available for use.
+        Downloads the firmware contained in bitfile to all FPGAs on the
+        board. This should also update the internal register mapping,
+        such that registers become available for use.
 
-        :param argin: can either be the design name returned from get_firmware_list(),
-                        or a path to a file
+        :param argin: can either be the design name returned from
+            get_firmware_list(), or a path to a file
         :type argin: :py:class:`tango.DevString`
 
         :return: A tuple containing a return code and a string
@@ -1544,12 +1113,11 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
+            hardware_manager = self.target
             bitfile = argin
-            device = self.target
-            if device._tpm is not None:
-                self.logger.info("Downloading bitstream to CPLD FLASH")
-                device._tpm.cpld_flash_write(bitfile)
-            return (ResultCode.OK, "Command succeeded")
+            self.logger.info("Downloading bitstream to CPLD FLASH")
+            hardware_manager.cpld_flash_write(bitfile)
+            return (ResultCode.OK, "ProgramCPLD command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -1580,53 +1148,6 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    class WaitPPSEventCommand(ResponseCommand):
-        """
-        Class for handling the WaitPPSEvent() command.
-        """
-
-        def do(self):
-            """
-            Implementation of
-            :py:meth:`MccsTile.WaitPPSEvent` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
-            """
-            device = self.target
-            if device._tpm is not None:
-                t0 = device._tpm.get_fpga1_time()
-                while t0 == device._tpm.get_fpga1_time():
-                    pass
-            return (ResultCode.OK, "Command succeeded")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
-    )
-    @DebugIt()
-    def WaitPPSEvent(self):
-        """
-        Block until a PPS edge is detected, then return from function
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
-
-        :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("WaitPPSEvent")
-        """
-        handler = self.get_command_object("WaitPPSEvent")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
-
     class GetRegisterListCommand(BaseCommand):
         """
         Class for handling the GetRegisterList() command.
@@ -1641,7 +1162,8 @@ class MccsTile(SKABaseDevice):
             :return:a list of firmware & cpld registers
             :rtype: list of str
             """
-            return self.target._tpm.get_register_list()
+            hardware_manager = self.target
+            return hardware_manager.register_list
 
     @command(dtype_out="DevVarStringArray")
     @DebugIt()
@@ -1683,6 +1205,8 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
+            hardware_manager = self.target
+
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
@@ -1701,7 +1225,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
-            return self.target._tpm.read_register(name, nb_read, offset, device)
+            return hardware_manager.read_register(name, nb_read, offset, device)
 
     @command(
         dtype_in="DevString",
@@ -1765,6 +1289,8 @@ class MccsTile(SKABaseDevice):
                 against a schema
 
             """
+            hardware_manager = self.target
+
             params = json.loads(argin)
             name = params.get("RegisterName", None)
             if name is None:
@@ -1783,8 +1309,8 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Device is a mandatory parameter")
                 raise ValueError("Device is a mandatory parameter")
 
-            self.target._tpm.write_register(name, values, offset, device)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager.write_register(name, values, offset, device)
+            return (ResultCode.OK, "WriteRegister command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -1844,12 +1370,14 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument has the wrong length
                 or structure
             """
+            hardware_manager = self.target
+
             if len(argin) < 2:
                 self.logger.error("Two parameters are required")
                 raise ValueError("Two parameters are required")
             address = argin[0]
             nvalues = argin[1]
-            return self.target._tpm.read_address(address, nvalues)
+            return hardware_manager.read_address(address, nvalues)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -1899,12 +1427,12 @@ class MccsTile(SKABaseDevice):
 
             :raises ValueError: if the argin has the wrong length/structure
             """
+            hardware_manager = self.target
             if len(argin) < 2:
                 self.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
-            address = argin[0]
-            self.target._tpm.write_address(address, argin[1:])
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager.write_address(argin[0], argin[1:])
+            return (ResultCode.OK, "WriteAddress command completed OK")
 
     @command(
         dtype_in="DevVarULongArray",
@@ -1990,10 +1518,12 @@ class MccsTile(SKABaseDevice):
             if dst_port is None:
                 self.logger.error("DstPort is a mandatory parameter")
                 raise ValueError("DstPort is a mandatory parameter")
-            self.target._tpm.configure_40G_core(
+
+            hardware_manager = self.target
+            hardware_manager.configure_40G_core(
                 core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "Configure40GCore command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -2057,7 +1587,8 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin is an invalid code id
             """
             core_id = argin
-            item = self.target._tpm.get_40G_configuration(core_id)
+            hardware_manager = self.target
+            item = hardware_manager.get_40G_configuration(core_id)
             if item is not None:
                 return json.dumps(item.pop("CoreID"))
             raise ValueError("Invalid core id specified")
@@ -2126,10 +1657,12 @@ class MccsTile(SKABaseDevice):
             src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
-            self.target._tpm.set_lmc_download(
+
+            hardware_manager = self.target
+            hardware_manager.set_lmc_download(
                 mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SetLmcDownload command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -2201,8 +1734,10 @@ class MccsTile(SKABaseDevice):
             nb_freq = argin[1]
             arr = np.array(argin[2:])
             np.reshape(arr, (nb_chan, nb_freq))
-            self.target._tpm.set_channeliser_truncation(arr)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.set_channeliser_truncation(arr)
+            return (ResultCode.OK, "SetChanneliserTruncation command completed OK")
 
     @command(
         dtype_in="DevVarLongArray",
@@ -2293,8 +1828,10 @@ class MccsTile(SKABaseDevice):
                     self.logger.error("Too many channels specified > 384")
                     raise ValueError("Too many channels specified > 384")
                 regions.append(region)
-            self.target._tpm.set_beamformer_regions(regions)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.set_beamformer_regions(regions)
+            return (ResultCode.OK, "SetBeamFormerRegions command completed OK")
 
     @command(
         dtype_in="DevVarLongArray",
@@ -2374,10 +1911,12 @@ class MccsTile(SKABaseDevice):
             if is_last is None:
                 self.logger.error("IsLast is a mandatory parameter")
                 raise ValueError("IsLast is a mandatory parameter")
-            self.target._tpm.initialise_beamformer(
+
+            hardware_manager = self.target
+            hardware_manager.initialise_beamformer(
                 start_channel, ntiles, is_first, is_last
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "ConfigureStationBeamformer command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -2455,8 +1994,10 @@ class MccsTile(SKABaseDevice):
                 ]
                 for i in range(1, len(argin), 8)
             ]
-            self.target._tpm.load_calibration_coefficients(antenna, calib_coeffs)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.load_calibration_coefficients(antenna, calib_coeffs)
+            return (ResultCode.OK, "LoadCalibrationCoefficients command completed OK")
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2534,8 +2075,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.load_beam_angle(argin)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.load_beam_angle(argin)
+            return (ResultCode.OK, "LoadBeamAngle command completed OK")
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2576,6 +2118,28 @@ class MccsTile(SKABaseDevice):
         Class for handling the LoadAntennaTapering(argin) command.
         """
 
+        def __init__(self, target, state_model, logger, antennas_per_tile):
+            """
+            Initialise a new LoadAntennaTaperingCommand instance
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            :param antennas_per_tile: the number of antennas per tile
+            :type antennas_per_tile: int
+            """
+            super().__init__(target, state_model, logger)
+            self._antennas_per_tile = antennas_per_tile
+
         def do(self, argin):
             """
             Implementation of
@@ -2594,15 +2158,17 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) < self.target.AntennasPerTile:
+            if len(argin) < self._antennas_per_tile:
                 self.logger.error(
-                    f"Insufficient coefficients should be {self.AntennasPerTile}"
+                    f"Insufficient coefficients should be {self._antennas_per_tile}"
                 )
                 raise ValueError(
-                    f"Insufficient coefficients should be {self.AntennasPerTile}"
+                    f"Insufficient coefficients should be {self._antennas_per_tile}"
                 )
-            self.target._tpm.load_antenna_tapering(argin)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.load_antenna_tapering(argin)
+            return (ResultCode.OK, "LoadAntennaTapering command completed OK")
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2655,8 +2221,9 @@ class MccsTile(SKABaseDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             switch_time = argin
-            self.target._tpm.switch_calibration_bank(switch_time)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.switch_calibration_bank(switch_time)
+            return (ResultCode.OK, "SwitchCalibrationBank command completed OK")
 
     @command(
         dtype_in="DevLong",
@@ -2691,6 +2258,28 @@ class MccsTile(SKABaseDevice):
         Class for handling the SetPointingDelay(argin) command.
         """
 
+        def __init__(self, target, state_model, logger, antennas_per_tile):
+            """
+            Initialise a new SetPointingDelayCommand instance
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            :param antennas_per_tile: the number of antennas per tile
+            :type antennas_per_tile: int
+            """
+            super().__init__(target, state_model, logger)
+            self._antennas_per_tile = antennas_per_tile
+
         def do(self, argin):
             """
             Implementation of
@@ -2710,7 +2299,7 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) != self.target.AntennasPerTile * 2 + 1:
+            if len(argin) != self._antennas_per_tile * 2 + 1:
                 self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
@@ -2718,10 +2307,12 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
-            for i in range(self.target.AntennasPerTile):
+            for i in range(self._antennas_per_tile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
-            self.target._tpm.set_pointing_delay(delay_array, beam_index)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.set_pointing_delay(delay_array, beam_index)
+            return (ResultCode.OK, "SetPointingDelay command completed OK")
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2732,7 +2323,7 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SetPointingDelay(self, argin):
         """
-        Specifies the delay in seconds and the delay rate in seconds/seconds.
+        Specifies the delay in seconds and the delay rate in seconds/second.
         The delay_array specifies the delay and delay rate for each antenna.
         beam_index specifies which beam is desired (range 0-7)
 
@@ -2770,8 +2361,9 @@ class MccsTile(SKABaseDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             load_time = argin
-            self.target._tpm.load_pointing_delay(load_time)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.load_pointing_delay(load_time)
+            return (ResultCode.OK, "LoadPointingDelay command completed OK")
 
     @command(
         dtype_in="DevLong",
@@ -2822,11 +2414,13 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
+            hardware_manager = self.target
+
             params = json.loads(argin)
             start_time = params.get("StartTime", 0)
             duration = params.get("Duration", -1)
-            self.target._tpm.start_beamformer(start_time, duration)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager.start_beamformer(start_time, duration)
+            return (ResultCode.OK, "StartBeamformer command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -2878,8 +2472,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.stop_beamformer()
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.stop_beamformer()
+            return (ResultCode.OK, "StopBeamformer command completed OK")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -2928,8 +2523,13 @@ class MccsTile(SKABaseDevice):
             integration_time = argin
             if integration_time <= 0:
                 integration_time = 0.5
-            self.target._tpm.configure_integrated_channel_data(integration_time)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.configure_integrated_channel_data(integration_time)
+            return (
+                ResultCode.OK,
+                "ConfigureIntegratedChannelData command completed OK",
+            )
 
     @command(
         dtype_in="DevDouble",
@@ -2983,8 +2583,10 @@ class MccsTile(SKABaseDevice):
             integration_time = argin
             if integration_time <= 0:
                 integration_time = 0.5
-            self.target._tpm.configure_integrated_beam_data(integration_time)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.configure_integrated_beam_data(integration_time)
+            return (ResultCode.OK, "ConfigureIntegratedBeamData command completed OK")
 
     @command(
         dtype_in="DevDouble",
@@ -3041,8 +2643,10 @@ class MccsTile(SKABaseDevice):
             timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            self.target._tpm.send_raw_data(sync, period, timeout, timestamp, seconds)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.send_raw_data(sync, period, timeout, timestamp, seconds)
+            return (ResultCode.OK, "SendRawData command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3108,7 +2712,9 @@ class MccsTile(SKABaseDevice):
             timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            self.target._tpm.send_channelised_data(
+
+            hardware_manager = self.target
+            hardware_manager.send_channelised_data(
                 number_of_samples,
                 first_channel,
                 last_channel,
@@ -3117,7 +2723,7 @@ class MccsTile(SKABaseDevice):
                 timestamp,
                 seconds,
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SendChannelisedData command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3194,10 +2800,12 @@ class MccsTile(SKABaseDevice):
             timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            self.target._tpm.send_channelised_data_continuous(
+
+            hardware_manager = self.target
+            hardware_manager.send_channelised_data_continuous(
                 channel_id, number_of_samples, wait_seconds, timeout, timestamp, seconds
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SendChannelisedDataContinuous command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3264,8 +2872,10 @@ class MccsTile(SKABaseDevice):
             timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            self.target._tpm.send_beam_data(period, timeout, timestamp, seconds)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.send_beam_data(period, timeout, timestamp, seconds)
+            return (ResultCode.OK, "SendBeamData command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3320,8 +2930,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.stop_data_transmission()
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.stop_data_transmission()
+            return (ResultCode.OK, "StopDataTransmission command completed OK")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3363,8 +2974,12 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.compute_calibration_coefficients()
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.compute_calibration_coefficients()
+            return (
+                ResultCode.OK,
+                "ComputeCalibrationCoefficients command completed OK",
+            )
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3412,8 +3027,10 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             start_time = params.get("StartTime", None)
             delay = params.get("Delay", 2)
-            self.target._tpm.start_acquisition(start_time, delay)
-            return (ResultCode.OK, "Command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.start_acquisition(start_time, delay)
+            return (ResultCode.OK, "StartAcquisition command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3469,8 +3086,9 @@ class MccsTile(SKABaseDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             delays = argin
-            self.target._tpm.set_time_delays(delays)
-            return (ResultCode.OK, "Command succeeded")
+            hardware_manager = self.target
+            hardware_manager.set_time_delays(delays)
+            return (ResultCode.OK, "SetTimeDelays command completed OK")
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -3523,8 +3141,9 @@ class MccsTile(SKABaseDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             rounding = argin
-            self.target._tpm.set_csp_rounding(rounding)
-            return (ResultCode.OK, "SetCspRounding command succeeded")
+            hardware_manager = self.target
+            hardware_manager.set_csp_rounding(rounding)
+            return (ResultCode.OK, "SetCspRounding command completed OK")
 
     @command(
         dtype_in="DevDouble",
@@ -3589,7 +3208,9 @@ class MccsTile(SKABaseDevice):
             src_port = params.get("SrcPort", 0xF0D0)
             dst_port = params.get("DstPort", 4660)
             lmc_mac = params.get("LmcMac", None)
-            self.target._tpm.set_lmc_integrated_download(
+
+            hardware_manager = self.target
+            hardware_manager.set_lmc_integrated_download(
                 mode,
                 channel_payload_length,
                 beam_payload_length,
@@ -3598,7 +3219,7 @@ class MccsTile(SKABaseDevice):
                 dst_port,
                 lmc_mac,
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SetLmcIntegratedDownload command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3666,10 +3287,12 @@ class MccsTile(SKABaseDevice):
             timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            self.target._tpm.send_raw_data_synchronised(
+
+            hardware_manager = self.target
+            hardware_manager.send_raw_data_synchronised(
                 period, timeout, timestamp, seconds
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SendRawDataSynchronised command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3744,7 +3367,8 @@ class MccsTile(SKABaseDevice):
             timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
-            self.target._tpm.send_channelised_data_narrowband(
+            hardware_manager = self.target
+            hardware_manager.send_channelised_data_narrowband(
                 frequency,
                 round_bits,
                 number_of_samples,
@@ -3753,7 +3377,7 @@ class MccsTile(SKABaseDevice):
                 timestamp,
                 seconds,
             )
-            return (ResultCode.OK, "Command succeeded")
+            return (ResultCode.OK, "SendChannelisedDataNarrowband command completed OK")
 
     @command(
         dtype_in="DevString",
@@ -3818,8 +3442,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.tweak_transceivers()
-            return (ResultCode.OK, "TweakTransceivers command succeeded")
+            hardware_manager = self.target
+            hardware_manager.tweak_transceivers()
+            return (ResultCode.OK, "TweakTransceivers command completed OK")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3861,8 +3486,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.post_synchronisation()
-            return (ResultCode.OK, "PostSynchronisation command succeeded")
+            hardware_manager = self.target
+            hardware_manager.post_synchronisation()
+            return (ResultCode.OK, "PostSynchronisation command completed OK")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3904,8 +3530,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            self.target._tpm.sync_fpgas()
-            return (ResultCode.OK, "SyncFpgas command succeeded")
+            hardware_manager = self.target
+            hardware_manager.sync_fpgas()
+            return (ResultCode.OK, "SyncFpgas command completed OK")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3973,8 +3600,10 @@ class MccsTile(SKABaseDevice):
             if ref_hi is None:
                 self.logger.error("RefHi is a mandatory parameter")
                 raise ValueError("RefHi is a mandatory parameter")
-            self.target._tpm.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
-            return (ResultCode.OK, "CalculateDelay command succeeded")
+
+            hardware_manager = self.target
+            hardware_manager.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
+            return (ResultCode.OK, "CalculateDelay command completed OK")
 
     @command(
         dtype_in="DevString",

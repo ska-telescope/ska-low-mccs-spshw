@@ -12,92 +12,27 @@
 This module contains the tests for MccsTile.
 """
 
-from contextlib import redirect_stdout
-import io
+import logging
 import itertools
 import json
 import threading
-import time
 
-import numpy as np
 import pytest
 from tango import DevFailed
 
-from ska.base.control_model import HealthState, TestMode
+from ska.base import DeviceStateModel
+from ska.base.control_model import SimulationMode
 from ska.base.commands import ResultCode
-from ska.low.mccs.tile import MccsTile, TileHardware, TileHardwareManager
+from ska.low.mccs.tile import MccsTile
+from ska.low.mccs.tile_hardware import TileHardwareManager
+from ska.low.mccs.tpm_simulator import TpmSimulator
+
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "tile_0001",
 }
-
-
-class TestTileHardwareManager:
-    """
-    Contains the tests of the TileHardwareManager
-    """
-
-    def test(self, mocker):
-        """
-        Test that the TileHardwareManager receives updated values, and
-        re-evaluates device health, each time it polls the hardware
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
-            module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
-        """
-
-        voltage = 3.5
-        current = 0.6
-        board_temperature = 120.1
-        fpga1_temperature = 120.2
-        fpga2_temperature = 120.3
-
-        hardware = TileHardware()
-        tile_hardware_manager = TileHardwareManager(hardware)
-
-        assert not tile_hardware_manager.is_on
-        assert tile_hardware_manager.voltage is None
-        assert tile_hardware_manager.current is None
-        assert tile_hardware_manager.board_temperature is None
-        assert tile_hardware_manager.fpga1_temperature is None
-        assert tile_hardware_manager.fpga2_temperature is None
-        assert tile_hardware_manager.health == HealthState.OK
-
-        mock_health_callback = mocker.Mock()
-        tile_hardware_manager.register_health_callback(mock_health_callback)
-        mock_health_callback.assert_called_once_with(HealthState.OK)
-        mock_health_callback.reset_mock()
-
-        tile_hardware_manager.on()
-        hardware._voltage = voltage
-        hardware._current = current
-        hardware._board_temperature = board_temperature
-        hardware._fpga1_temperature = fpga1_temperature
-        hardware._fpga2_temperature = fpga2_temperature
-        tile_hardware_manager.poll_hardware()
-
-        assert tile_hardware_manager.is_on
-        assert tile_hardware_manager.voltage == voltage
-        assert tile_hardware_manager.current == current
-        assert tile_hardware_manager.board_temperature == board_temperature
-        assert tile_hardware_manager.fpga1_temperature == fpga1_temperature
-        assert tile_hardware_manager.fpga2_temperature == fpga2_temperature
-        assert tile_hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
-
-        tile_hardware_manager.off()
-
-        assert not tile_hardware_manager.is_on
-        assert tile_hardware_manager.voltage is None
-        assert tile_hardware_manager.current is None
-        assert tile_hardware_manager.board_temperature is None
-        assert tile_hardware_manager.fpga1_temperature is None
-        assert tile_hardware_manager.fpga2_temperature is None
-        assert tile_hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
 
 
 class TestMccsTile(object):
@@ -187,32 +122,6 @@ class TestMccsTile(object):
         device_under_test.cspDestinationPort = 4567
         assert device_under_test.cspDestinationPort == 4567
 
-    def test_firmwareName(self, device_under_test):
-        """
-        Test for the firmwareName attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.firmwareName == ""
-        device_under_test.firmwareName = "test_firmware"
-        assert device_under_test.firmwareName == "test_firmware"
-
-    def test_firmwareVersion(self, device_under_test):
-        """
-        Test for the firmwareVersion attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.firmwareVersion == ""
-        device_under_test.firmwareVersion = "01-beta"
-        assert device_under_test.firmwareVersion == "01-beta"
-
     def test_voltage(self, device_under_test):
         """
         Test for the voltage attribute.
@@ -223,9 +132,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.voltage == TileHardware.VOLTAGE
+        assert device_under_test.voltage == TpmSimulator.VOLTAGE
 
     def test_current(self, device_under_test):
         """
@@ -237,24 +144,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        device_under_test.current == TileHardware.CURRENT
-
-    def test_isProgrammed(self, device_under_test):
-        """
-        Test for the isProgrammed attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        device_under_test.Connect(True)
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.isProgrammed is True
+        device_under_test.current == TpmSimulator.CURRENT
 
     def test_board_temperature(self, device_under_test):
         """
@@ -266,9 +156,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.board_temperature == TileHardware.BOARD_TEMPERATURE
+        assert device_under_test.board_temperature == TpmSimulator.BOARD_TEMPERATURE
 
     def test_fpga1_temperature(self, device_under_test):
         """
@@ -280,9 +168,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.fpga1_temperature == TileHardware.FPGA1_TEMPERATURE
+        assert device_under_test.fpga1_temperature == TpmSimulator.FPGA1_TEMPERATURE
 
     def test_fpga2_temperature(self, device_under_test):
         """
@@ -294,9 +180,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.fpga2_temperature == TileHardware.FPGA2_TEMPERATURE
+        assert device_under_test.fpga2_temperature == TpmSimulator.FPGA2_TEMPERATURE
 
     def test_fpga1_time(self, device_under_test):
         """
@@ -308,12 +192,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.fpga1_time == 0
-        sec = int(time.time())
-        device_under_test.fpga1_time = sec
-        assert device_under_test.fpga1_time == sec
+        assert device_under_test.fpga1_time == TpmSimulator.FPGA1_TIME
 
     def test_fpga2_time(self, device_under_test):
         """
@@ -325,11 +204,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.fpga2_time == 0
-        device_under_test.fpga2_time = 1535
-        assert device_under_test.fpga2_time == 1535
+        assert device_under_test.fpga2_time == TpmSimulator.FPGA2_TIME
 
     def test_antennaIds(self, device_under_test):
         """
@@ -340,121 +215,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert (device_under_test.AntennaIds == []).all()
-        new_ids = [i for i in range(8)]
-        device_under_test.AntennaIds = new_ids
-        assert (device_under_test.AntennaIds == new_ids).all()
-
-    def test_fortyGbDestinationIps(self, device_under_test):
-        """
-        Test for the fortyGbDestinationIps attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        dict1 = {
-            "CoreID": 1,
-            "SrcMac": "10:fe:ed:08:0a:58",
-            "SrcIP": "10.0.99.3",
-            "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:59",
-            "DstIP": "10.0.98.3",
-            "DstPort": 5000,
-        }
-        jstr = json.dumps(dict1)
-        device_under_test.Configure40GCore(jstr)
-        dict2 = {
-            "CoreID": 2,
-            "SrcMac": "10:fe:ed:08:0a:56",
-            "SrcIP": "10.0.99.4",
-            "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:57",
-            "DstIP": "10.0.98.4",
-            "DstPort": 5000,
-        }
-        jstr = json.dumps(dict2)
-        device_under_test.Configure40GCore(jstr)
-        assert device_under_test.fortyGbDestinationIps == ("10.0.98.3", "10.0.98.4")
-
-    def test_fortyGbDestinationMacs(self, device_under_test):
-        """
-        Test for the fortyGbDestinationMacs attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        dict1 = {
-            "CoreID": 1,
-            "SrcMac": "10:fe:ed:08:0a:58",
-            "SrcIP": "10.0.99.3",
-            "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:59",
-            "DstIP": "10.0.98.3",
-            "DstPort": 5000,
-        }
-        jstr = json.dumps(dict1)
-        device_under_test.Configure40GCore(jstr)
-        dict2 = {
-            "CoreID": 2,
-            "SrcMac": "10:fe:ed:08:0a:56",
-            "SrcIP": "10.0.99.4",
-            "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:57",
-            "DstIP": "10.0.98.4",
-            "DstPort": 5000,
-        }
-        jstr = json.dumps(dict2)
-        device_under_test.Configure40GCore(jstr)
-        assert device_under_test.fortyGbDestinationMacs == (
-            "10:fe:ed:08:0b:59",
-            "10:fe:ed:08:0b:57",
-        )
-
-    def test_fortyGbDestinationPorts(self, device_under_test):
-        """
-        Test for the fortyGbDestinationPorts attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        dict1 = {
-            "CoreID": 1,
-            "SrcMac": "10:fe:ed:08:0a:58",
-            "SrcIP": "10.0.99.3",
-            "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:59",
-            "DstIP": "10.0.98.3",
-            "DstPort": 5000,
-        }
-        jstr = json.dumps(dict1)
-        device_under_test.Configure40GCore(jstr)
-        dict2 = {
-            "CoreID": 2,
-            "SrcMac": "10:fe:ed:08:0a:56",
-            "SrcIP": "10.0.99.4",
-            "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:57",
-            "DstIP": "10.0.98.4",
-            "DstPort": 5001,
-        }
-        jstr = json.dumps(dict2)
-        device_under_test.Configure40GCore(jstr)
-        assert (device_under_test.fortyGbDestinationPorts == (5000, 5001)).all()
+        assert tuple(device_under_test.antennaIds) == tuple()
+        new_ids = tuple(range(8))
+        device_under_test.antennaIds = new_ids
+        assert tuple(device_under_test.antennaIds) == new_ids
 
     def test_adcPower(self, device_under_test):
         """
@@ -465,12 +229,9 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.testMode = TestMode.TEST
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(False)
-        assert result_code == ResultCode.OK
-        expected = [float(i) for i in range(32)]
-        assert (device_under_test.adcPower == expected).all()
+        expected = tuple(float(i) for i in range(32))
+        assert device_under_test.adcPower == pytest.approx(expected)
 
     def test_currentTileBeamformerFrame(self, device_under_test):
         """
@@ -482,9 +243,10 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.CurrentTileBeamformerFrame == 23
+        assert (
+            device_under_test.currentTileBeamformerFrame
+            == TpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME
+        )
 
     def test_checkPendingDataRequests(self, device_under_test):
         """
@@ -496,25 +258,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
         assert device_under_test.CheckPendingDataRequests is False
-
-    def test_isBeamformerRunning(self, device_under_test):
-        """
-        Test for the isBeamformerRunning attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.isBeamformerRunning is False
-        device_under_test.StartBeamformer("{}")
-        assert device_under_test.isBeamformerRunning is True
 
     def test_phaseTerminalCount(self, device_under_test):
         """
@@ -526,9 +270,7 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.PhaseTerminalCount == 0
+        assert device_under_test.PhaseTerminalCount == TpmSimulator.PHASE_TERMINAL_COUNT
         device_under_test.PhaseTerminalCount = 45
         assert device_under_test.PhaseTerminalCount == 45
 
@@ -542,32 +284,188 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
         assert device_under_test.ppsDelay == 12
 
-    # ------------------------------------------------------
-    # Commands.
-    # Tests for commands by calling the method by assertion.
-    # ------------------------------------------------------
 
-    def test_Initialise(self, device_under_test):
+class TestMccsTileCommands:
+    """
+    Tests of MccsTile device commands
+    """
+
+    @pytest.mark.parametrize(
+        ("device_command", "arg"),
+        (
+            (
+                "SetLmcDownload",
+                json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
+            ),
+            ("SetBeamFormerRegions", (1, 8, 5)),
+            (
+                "ConfigureStationBeamformer",
+                json.dumps(
+                    {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
+                ),
+            ),
+            ("LoadBeamAngle", tuple(float(i) for i in range(16))),
+            ("LoadAntennaTapering", tuple(float(i) for i in range(16))),
+            ("SetPointingDelay", [3] * 33),
+            ("ConfigureIntegratedChannelData", 6.284),
+            ("ConfigureIntegratedBeamData", 3.142),
+            ("SendRawData", json.dumps({"Sync": True, "Period": 5, "Seconds": 6.7})),
+            (
+                "SendChannelisedData",
+                json.dumps(
+                    {"NSamples": 4, "FirstChannel": 7, "LastChannel": 234, "Period": 5}
+                ),
+            ),
+            (
+                "SendChannelisedDataContinuous",
+                json.dumps({"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}),
+            ),
+            ("SendBeamData", json.dumps({"Period": 10, "Timeout": 4, "Seconds": 0.5})),
+            ("StartAcquisition", json.dumps({"StartTime": 5})),
+            ("SetTimeDelays", tuple(float(i) for i in range(32))),
+            (
+                "SetLmcIntegratedDownload",
+                json.dumps(
+                    {
+                        "Mode": "1G",
+                        "ChannelPayloadLength": 4,
+                        "BeamPayloadLength": 6,
+                        "DstIP": "10.0.1.23",
+                    }
+                ),
+            ),
+            (
+                "SendRawDataSynchronised",
+                json.dumps({"Period": 10, "Timeout": 4, "Seconds": 0.5}),
+            ),
+            (
+                "SendChannelisedDataNarrowband",
+                json.dumps(
+                    {
+                        "Frequency": 4000,
+                        "RoundBits": 256,
+                        "NSamples": 48,
+                        "WaitSeconds": 10,
+                        "Seconds": 0.5,
+                    }
+                ),
+            ),
+            (
+                "CalculateDelay",
+                json.dumps(
+                    {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
+                ),
+            ),
+        ),
+    )
+    def test_command_ok(self, device_under_test, device_command, arg):
         """
-        Test for Initialise
+        Test of commands that return OK.
+
+        This is a very weak test, and should only be used for commands
+        that have not been meaningfully implemented.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param device_command: the name of the device command under test
+        :type device_command: str
+        :param arg: argument to the command (optional)
+        :type arg: any
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(False)
+
+        args = [] if arg is None else [arg]
+        [[result_code], [message]] = getattr(device_under_test, device_command)(*args)
         assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.Initialise()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: initialise"
+        assert message == f"{device_command} command completed OK"
+
+    @pytest.mark.parametrize(
+        ("device_command", "arg", "tpm_command"),
+        (
+            ("Initialise", None, "initialise"),
+            ("ProgramCPLD", "test_bitload_cpld", "cpld_flash_write"),
+            ("WriteAddress", (0xF, 10), "write_address"),
+            # ("set_channeliser_truncation", 1),
+            # ("set_beamformer_regions", 1),
+            # ("initialise_beamformer", 4),
+            ("SwitchCalibrationBank", 19, "switch_calibration_bank"),
+            # ("load_beam_angle", 1),
+            # ("load_calibration_coefficients", 2),
+            # ("load_antenna_tapering", 1),
+            ("LoadPointingDelay", 0.5, "load_pointing_delay"),
+            # ("set_pointing_delay", 2),
+            # ("configure_integrated_channel_data", 0),
+            # ("configure_integrated_beam_data", 0),
+            # ("send_raw_data", 0),
+            # ("send_channelised_data", 0),
+            # ("send_channelised_data", 1),
+            # ("send_beam_data", 0),
+            ("StopDataTransmission", None, "stop_data_transmission"),
+            (
+                "ComputeCalibrationCoefficients",
+                None,
+                "compute_calibration_coefficients",
+            ),
+            # ("start_acquisition", 0),
+            # ("set_time_delays", 1),
+            ("SetCspRounding", 6.284, "set_csp_rounding"),
+            # ("set_lmc_integrated_download", 3),
+            # ("send_raw_data_synchronised", 0),
+            # ("send_channelised_data_narrowband", 2),
+            ("TweakTransceivers", None, "tweak_transceivers"),
+            ("PostSynchronisation", None, "post_synchronisation"),
+            ("SyncFpgas", None, "sync_fpgas"),
+        ),
+    )
+    def test_command_passthrough(
+        self, device_under_test, mocker, device_command, arg, tpm_command
+    ):
+        """
+        Test of commands that return OK and have a simple pass-through
+        implementation, such that calling the command on the device
+        causes a corresponding command to be called on the TPM
+        simulator.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param device_command: the name of the device command under test
+        :type device_command: str
+        :param arg: argument to the command (optional)
+        :type arg: any
+        :param tpm_command: the name of the tpm command that is expected
+            to be called as a result of the device command being called
+        :type tpm_command: str
+        """
+        device_under_test.On()
+
+        # First test that the calling the command on the device results
+        # in OK being returned
+        args = [] if arg is None else [arg]
+        [[result_code], [message]] = getattr(device_under_test, device_command)(*args)
+        assert result_code == ResultCode.OK
+        assert message == f"{device_command} command completed OK"
+
+        # Now check that calling the command object results in the
+        # correct TPM simulator command being called.
+        mock_tpm_simulator = mocker.Mock()
+
+        logger = logging.getLogger()
+        state_model = DeviceStateModel(logger)
+        hardware_manager = TileHardwareManager(SimulationMode.TRUE, logger=logger)
+        hardware_manager._hardware = mock_tpm_simulator
+
+        command_class = getattr(MccsTile, f"{device_command}Command")
+        command_object = command_class(hardware_manager, state_model, logger)
+        command_object(*args)
+        assert getattr(mock_tpm_simulator, tpm_command).called_once_with(*args)
 
     def test_On(self, device_under_test):
         """Test for On
@@ -581,44 +479,12 @@ class TestMccsTile(object):
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
 
-    def test_Connect(self, device_under_test):
-        """
-        Test for Connect
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            [[result_code], [message]] = device_under_test.Connect(False)
-            assert result_code == ResultCode.OK
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: connect"
-
-    def test_Disconnect(self, device_under_test):
-        """
-        Test for Disconnect from the board
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(False)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.disconnect()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: disconnect"
-
     def test_GetFirmwareList(self, device_under_test):
         """
-        Test for GetFirmwareList
+        Test for
+        * GetFirmwareList command
+        * firmwareName attribute
+        * firmwareVersion attribute
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -626,19 +492,22 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        firmware_str = device_under_test.GetFirmwareList()
-        firmware_list = json.loads(firmware_str)
-        assert firmware_list == {
-            "firmware1": {"design": "model1", "major": 2, "minor": 3},
-            "firmware2": {"design": "model2", "major": 3, "minor": 7},
-            "firmware3": {"design": "model3", "major": 2, "minor": 6},
-        }
+
+        firmware_list_str = device_under_test.GetFirmwareList()
+        firmware_list = json.loads(firmware_list_str)
+        assert firmware_list == TpmSimulator.FIRMWARE_LIST
+
+        firmware_name = device_under_test.firmwareName
+        assert firmware_name == TpmSimulator.FIRMWARE_NAME
+
+        major = firmware_list[firmware_name]["major"]
+        minor = firmware_list[firmware_name]["minor"]
+        assert device_under_test.firmwareVersion == f"{major}.{minor}"
 
     def test_DownloadFirmware(self, device_under_test):
         """
-        Test for DownloadFirmware
+        Test for DownloadFirmware.
+        Also functions as the test for the isProgrammed property
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -646,49 +515,11 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(False)
-        assert result_code == ResultCode.OK
+
+        assert not device_under_test.isProgrammed
         bitfile = "test_bitload_firmware"
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.DownloadFirmware(bitfile)
-        result = ss.getvalue().strip()
-        assert result == bitfile
-
-    def test_ProgramCPLD(self, device_under_test):
-        """
-        Test for ProgramCPLD
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        bitfile = "test_bitload_cpld"
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ProgramCPLD(bitfile)
-        result = ss.getvalue().strip()
-        assert result == bitfile
-
-    def test_WaitPPSEvent(self, device_under_test):
-        """
-        Test for WaitPPSEvent
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        device_under_test.fpga1_time = int(time.time())
-        (result, info) = device_under_test.WaitPPSEvent()
-        assert result == ResultCode.OK
+        device_under_test.DownloadFirmware(bitfile)
+        assert device_under_test.isProgrammed
 
     def test_GetRegisterList(self, device_under_test):
         """
@@ -700,18 +531,13 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        assert device_under_test.GetRegisterList() == [
-            "test-reg1",
-            "test-reg2",
-            "test-reg3",
-            "test-reg4",
-        ]
+        assert device_under_test.GetRegisterList() == list(
+            TpmSimulator.REGISTER_MAP[0].keys()
+        )
 
-    def test_ReadAndWriteRegister(self, device_under_test):
+    def test_ReadRegister(self, device_under_test):
         """
-        Test for ReadRegister & WriteRegister
+        Test for ReadRegister
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -719,97 +545,29 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        nb_read = 4
-        offset = 1
-        device = 0
-        dict0 = {
-            "RegisterName": "test-reg1",
-            "NbRead": nb_read,
-            "Offset": offset,
-            "Device": device,
-        }
-        jstr = json.dumps(dict0)
-        values = device_under_test.ReadRegister(jstr)
-        assert (values == [0 for i in range(nb_read)]).all()
-        values = [i for i in range(9)]
-        offset = 2
-        dict1 = {
-            "RegisterName": "test-reg1",
-            "Values": values,
-            "Offset": offset,
-            "Device": device,
-        }
-        jstr = json.dumps(dict1)
-        device_under_test.WriteRegister(jstr)
-        jstr = json.dumps(dict0)
-        values = device_under_test.ReadRegister(jstr)
-        assert (values == [0, 0, 1, 2]).all()
-        dict2 = dict0.copy()
-        dict2.pop("RegisterName")
-        jstr = json.dumps(dict2)
-        with pytest.raises(DevFailed):
-            device_under_test.ReadRegister(jstr)
-        dict2 = dict0.copy()
-        dict2.pop("NbRead")
-        jstr = json.dumps(dict2)
-        with pytest.raises(DevFailed):
-            device_under_test.ReadRegister(jstr)
-        dict2 = dict0.copy()
-        dict2.pop("Offset")
-        jstr = json.dumps(dict2)
-        with pytest.raises(DevFailed):
-            device_under_test.ReadRegister(jstr)
-        dict2 = dict0.copy()
-        dict2.pop("Device")
-        jstr = json.dumps(dict2)
-        with pytest.raises(DevFailed):
-            device_under_test.ReadRegister(jstr)
-        device = 1
-        dict0 = {
-            "RegisterName": "test-reg1",
-            "NbRead": nb_read,
-            "Offset": offset,
-            "Device": device,
-        }
-        jstr = json.dumps(dict0)
-        values = device_under_test.ReadRegister(jstr)
-        assert (values == [0 for i in range(nb_read)]).all()
-        dict0 = {
-            "RegisterName": "test-reg5",
-            "NbRead": nb_read,
-            "Offset": offset,
-            "Device": device,
-        }
-        jstr = json.dumps(dict0)
-        values = device_under_test.ReadRegister(jstr)
-        assert len(values) == 0
 
-        dict3 = dict1.copy()
-        dict3.pop("RegisterName")
-        jstr = json.dumps(dict3)
-        with pytest.raises(DevFailed):
-            device_under_test.WriteRegister(jstr)
-        dict3 = dict1.copy()
-        dict3.pop("Values")
-        jstr = json.dumps(dict3)
-        with pytest.raises(DevFailed):
-            device_under_test.WriteRegister(jstr)
-        dict3 = dict1.copy()
-        dict3.pop("Offset")
-        jstr = json.dumps(dict3)
-        with pytest.raises(DevFailed):
-            device_under_test.WriteRegister(jstr)
-        dict3 = dict1.copy()
-        dict3.pop("Device")
-        jstr = json.dumps(dict3)
-        with pytest.raises(DevFailed):
-            device_under_test.WriteRegister(jstr)
+        num_values = 4
+        arg = {
+            "RegisterName": "test-reg1",
+            "NbRead": num_values,
+            "Offset": 1,
+            "Device": 1,
+        }
+        json_arg = json.dumps(arg)
+        values = device_under_test.ReadRegister(json_arg)
+        assert (values == [0 for i in range(num_values)]).all()
 
-    def test_ReadAndWriteAddress(self, device_under_test):
+        for exclude_key in arg.keys():
+            bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
+            bad_json_arg = json.dumps(bad_arg)
+            with pytest.raises(
+                DevFailed, match=f"{exclude_key} is a mandatory parameter"
+            ):
+                _ = device_under_test.ReadRegister(bad_json_arg)
+
+    def test_WriteRegister(self, device_under_test):
         """
-        Test for ReadAddress and WriteAddress
+        Test for WriteRegister
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -817,24 +575,53 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
+
+        arg = {
+            "RegisterName": "test-reg1",
+            "Values": [0, 1, 2, 3],
+            "Offset": 1,
+            "Device": 1,
+        }
+        json_arg = json.dumps(arg)
+
+        [[result_code], [message]] = device_under_test.WriteRegister(json_arg)
         assert result_code == ResultCode.OK
+        assert message == "WriteRegister command completed OK"
+
+        for exclude_key in arg.keys():
+            bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
+            bad_json_arg = json.dumps(bad_arg)
+            with pytest.raises(
+                DevFailed, match=f"{exclude_key} is a mandatory parameter"
+            ):
+                _ = device_under_test.WriteRegister(bad_json_arg)
+
+    def test_ReadAddress(self, device_under_test):
+        """
+        Test for ReadAddress
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        device_under_test.On()
+
         address = 0xF
         nvalues = 10
-        expected = [0 for i in range(nvalues)]
-        assert (device_under_test.ReadAddress([address, nvalues]) == expected).all()
-        values = [val for val in range(nvalues)]
-        values.insert(0, address)
-        device_under_test.WriteAddress(values)
-        assert (device_under_test.ReadAddress([address, nvalues]) == values[1:]).all()
+        expected = (0,) * nvalues
+        assert tuple(device_under_test.ReadAddress([address, nvalues])) == expected
+
         with pytest.raises(DevFailed):
-            device_under_test.ReadAddress([address])
-        with pytest.raises(DevFailed):
-            device_under_test.WriteAddress([address])
+            _ = device_under_test.ReadAddress([address])
 
     def test_Configure40GCore(self, device_under_test):
         """
-        Test for Configure40GCore
+        Test for
+        * Configure40GCore command
+        * fortyGDestinationIps attribute
+        * fortyGDestinationMacs attribute
+        * fortyGDestinationPorts attribute
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -842,9 +629,8 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        dict1 = {
+
+        config_1 = {
             "CoreID": 1,
             "SrcMac": "10:fe:ed:08:0a:58",
             "SrcIP": "10.0.99.3",
@@ -853,94 +639,38 @@ class TestMccsTile(object):
             "DstIP": "10.0.98.3",
             "DstPort": 5000,
         }
-        jstr = json.dumps(dict1)
-        device_under_test.Configure40GCore(jstr)
-        dict2 = {
+        device_under_test.Configure40GCore(json.dumps(config_1))
+        config_2 = {
             "CoreID": 2,
             "SrcMac": "10:fe:ed:08:0a:56",
             "SrcIP": "10.0.99.4",
-            "SrcPort": 4000,
+            "SrcPort": 4001,
             "DstMac": "10:fe:ed:08:0b:57",
             "DstIP": "10.0.98.4",
-            "DstPort": 5000,
+            "DstPort": 5001,
         }
-        jstr = json.dumps(dict2)
-        device_under_test.Configure40GCore(jstr)
-        output = device_under_test.Get40GCoreConfiguration(1)
-        result = json.loads(output)
-        assert result == dict1.pop("CoreID")
-        with pytest.raises(DevFailed):
-            output = device_under_test.Get40GCoreConfiguration(3)
+        device_under_test.Configure40GCore(json.dumps(config_2))
 
-        dict0 = dict2.copy()
-        dict0.pop("CoreID")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
-        dict0 = dict2.copy()
-        dict0.pop("SrcMac")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
-        dict0 = dict2.copy()
-        dict0.pop("SrcIP")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
-        dict0 = dict2.copy()
-        dict0.pop("SrcPort")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
-        dict0 = dict2.copy()
-        dict0.pop("DstMac")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
-        dict0 = dict2.copy()
-        dict0.pop("DstIP")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
-        dict0 = dict2.copy()
-        dict0.pop("DstPort")
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.Configure40GCore(jstr)
+        assert tuple(device_under_test.fortyGbDestinationIps) == (
+            "10.0.98.3",
+            "10.0.98.4",
+        )
+        assert tuple(device_under_test.fortyGbDestinationMacs) == (
+            "10:fe:ed:08:0b:59",
+            "10:fe:ed:08:0b:57",
+        )
+        assert tuple(device_under_test.fortyGbDestinationPorts) == (5000, 5001)
 
-    def test_SetLmcDownload(self, device_under_test):
-        """
-        Test for SetLMCDownload
+        result_str = device_under_test.Get40GCoreConfiguration(1)
+        result = json.loads(result_str)
+        assert result == config_1.pop("CoreID")
 
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {
-            "Mode": "1G",
-            "PayloadLength": 4,
-            "DstIP": "10.0.1.23",
-            "SrcPort": 0xF0D0,
-            "DstPort": 4660,
-            "LmcMac": None,
-        }
-        dict0 = {"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetLmcDownload(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-        dict0 = {"PayloadLength": 4, "DstIP": "10.0.1.23"}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.SetLmcDownload(jstr)
+        with pytest.raises(DevFailed, match="Invalid core id specified"):
+            _ = device_under_test.Get40GCoreConfiguration(3)
 
-    def test_SetChanneliserTruncation(self, device_under_test):
+    @pytest.mark.parametrize("channels", (2, 3))
+    @pytest.mark.parametrize("frequencies", (1, 2, 3))
+    def test_SetChanneliserTruncation(self, device_under_test, channels, frequencies):
         """
         Test for SetChanneliserTruncation
 
@@ -948,110 +678,21 @@ class TestMccsTile(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param channels: number of channels to set
+        :type channels: int
+        :param frequencies: number of frequencies to set
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
+
+        array = [channels] + [frequencies] + [1.0] * (channels * frequencies)
+        [[result_code], [message]] = device_under_test.SetChanneliserTruncation(array)
         assert result_code == ResultCode.OK
-        trunc = [
-            [0, 1, 2, 3, 4, 5],
-            [6, 7, 8, 9, 10, 11],
-            [12, 13, 14, 15, 16, 17],
-            [18, 19, 20, 21, 22, 23],
-        ]
-        arr = np.array(trunc).ravel()
-        n = len(trunc)
-        m = len(arr) // n
-        argin = np.concatenate([np.array((n, m)), arr])
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetChanneliserTruncation(argin)
-        out = ss.getvalue().strip()
-        result = []
-        for x in out[1:-1].split(" "):
-            if x != "":
-                result.append(int(x))
-        assert (result == arr).all()
-        argin = [2, 2]
-        with pytest.raises(DevFailed):
-            device_under_test.SetChanneliserTruncation(argin)
+        assert message == "SetChanneliserTruncation command completed OK"
 
-    def test_SetBeamFormerRegions(self, device_under_test):
-        """
-        Test for SetBeamFormerRegions
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        regions = [[5, 16, 1], [25, 32, 2], [45, 48, 3]]
-        regions_input = list(itertools.chain.from_iterable(regions))
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetBeamformerRegions(regions_input)
-        out = ss.getvalue().strip()
-        result = [int(x) for x in out[1:-1].split(",")]
-        assert regions_input == result
-        regions_input = [3, 8]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-        regions_input = [i for i in range(49)]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-        regions_input = [5, 16, 1, 25, 32, 2, 45, 48]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-        regions_input = [5, 15, 1, 25, 32, 2, 45, 48, 3]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-        regions_input = [5, 16, -1, 25, 32, 2, 45, 48, 3]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-        regions_input = [5, 16, 1, 25, 32, 2, 45, 48, 8]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-        regions_input = [5, 160, 1, 25, 160, 2, 45, 72, 3]
-        with pytest.raises(DevFailed):
-            device_under_test.SetBeamformerRegions(regions_input)
-
-    def test_ConfigureStationBeamformer(self, device_under_test):
-        """
-        Test for ConfigureStationBeamformer
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        dict0 = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True, "IsLast": False}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ConfigureStationBeamformer(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == dict0
-        dict0 = {"NumTiles": 4, "IsFirst": True, "IsLast": False}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.ConfigureStationBeamformer(jstr)
-        dict0 = {"StartChannel": 2, "IsFirst": True, "IsLast": False}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.ConfigureStationBeamformer(jstr)
-        dict0 = {"StartChannel": 2, "NumTiles": 4, "IsLast": False}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.ConfigureStationBeamformer(jstr)
-        dict0 = {"StartChannel": 2, "NumTiles": 4, "IsFirst": True}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.ConfigureStationBeamformer(jstr)
+        with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
+            _ = device_under_test.SetChanneliserTruncation(array[:-1])
+        with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
+            _ = device_under_test.SetChanneliserTruncation(array + [1.0])
 
     def test_LoadCalibrationCoefficients(self, device_under_test):
         """
@@ -1063,616 +704,46 @@ class TestMccsTile(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
         antenna = 2
         complex_coeffs = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
         ] * 5
         inp = list(itertools.chain.from_iterable(complex_coeffs))
         out = [[v.real, v.imag] for v in inp]
-        coeffs = list(itertools.chain.from_iterable(out))
-        coeffs.insert(0, float(antenna))
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.LoadCalibrationCoefficients(coeffs)
-        out = ss.getvalue().strip()
-        result = [float(x) for x in out[1:-1].split(",")]
-        assert result == coeffs
+        coeffs = [antenna] + list(itertools.chain.from_iterable(out))
+        device_under_test.LoadCalibrationCoefficients(coeffs)
+
         with pytest.raises(DevFailed):
             device_under_test.LoadCalibrationCoefficients(coeffs[0:8])
+
         with pytest.raises(DevFailed):
             device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
 
-    def test_LoadBeamAngle(self, device_under_test):
+    @pytest.mark.parametrize("start_time", (None, 0))
+    @pytest.mark.parametrize("duration", (None, -1))
+    def test_start_and_stop_beamformer(self, device_under_test, start_time, duration):
         """
-        Test for LoadBeamAngle
+        Test for
+        * StartBeamformer command
+        * StopBeamformer command
+        * isBeamformerRunning attribute
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param start_time: time to state the beamformer
+        :type start_time: int or None
+        :param duration: duration of time that the beamformer should run
+        :type duration: int or None
         """
         device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        angle_coeffs = [float(i) for i in range(16)]
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.LoadBeamAngle(angle_coeffs)
-        out = ss.getvalue().strip()
-        result = [float(x) for x in out[1:-1].split(",")]
-        assert result == angle_coeffs
-
-    def test_LoadAntennaTapering(self, device_under_test):
-        """
-        Test for LoadAntennaTapering
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        tapering_coeffs = [float(i) for i in range(16)]
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.LoadAntennaTapering(tapering_coeffs)
-        out = ss.getvalue().strip()
-        result = [float(x) for x in out[1:-1].split(",")]
-        assert result == tapering_coeffs
-        with pytest.raises(DevFailed):
-            device_under_test.LoadAntennaTapering(tapering_coeffs[:12])
-
-    def test_SwitchCalibrationBank(self, device_under_test):
-        """
-        Test for SwitchCalibrationBank
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SwitchCalibrationBank(19)
-        result = ss.getvalue().strip()
-        assert result == "19"
-
-    def test_SetPointingDelay(self, device_under_test):
-        """
-        Test for SetPointingDelay
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        delays = [3]
-        for i in range(32):
-            delays.append(float(i))
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetPointingDelay(delays)
-        out = ss.getvalue().strip()
-        result = [float(x) for x in out[1:-1].split(",")]
-        assert result == delays
-        with pytest.raises(DevFailed):
-            device_under_test.SetPointingDelay(delays[:32])
-        delays[0] = 8
-        with pytest.raises(DevFailed):
-            device_under_test.SetPointingDelay(delays)
-
-    def test_LoadPointingDelay(self, device_under_test):
-        """
-        Test for LoadPointingDelay
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        delay = 11
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.LoadPointingDelay(delay)
-        result = ss.getvalue().strip()
-        assert int(result) == delay
-
-    def test_StartBeamformer(self, device_under_test):
-        """
-        Test for StartBeamformer
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {"StartTime": 0, "Duration": 5}
-        dict0 = {"Duration": 5}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.StartBeamformer(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-
-    def test_StopBeamformer(self, device_under_test):
-        """
-        Test for StopBeamformer
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.StopBeamformer()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: stop_beamformer"
-
-    def test_ConfigureIntegratedChannelData(self, device_under_test):
-        """
-        Test for ConfigureIntegratedChannelData
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ConfigureIntegratedChannelData(6.284)
-        result = ss.getvalue().strip()
-        assert result == "6.284"
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ConfigureIntegratedChannelData(0.0)
-        result = ss.getvalue().strip()
-        assert result == "0.5"
-
-    def test_ConfigureIntegratedBeamData(self, device_under_test):
-        """
-        Test for ConfigureIntegratedBeamData
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ConfigureIntegratedBeamData(3.142)
-        result = ss.getvalue().strip()
-        assert result == "3.142"
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ConfigureIntegratedBeamData(0.0)
-        result = ss.getvalue().strip()
-        assert result == "0.5"
-
-    def test_SendRawData(self, device_under_test):
-        """
-        Test for SendRawData
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {
-            "Sync": True,
-            "Period": 5,
-            "Timeout": 0,
-            "Timestamp": None,
-            "Seconds": 6.7,
-        }
-        dict0 = {"Sync": True, "Period": 5, "Seconds": 6.7}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SendRawData(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-
-    def test_SendChannelisedData(self, device_under_test):
-        """
-        Test for SendChannelisedData
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {
-            "NSamples": 4,
-            "FirstChannel": 7,
-            "LastChannel": 234,
-            "Period": 5,
-            "Timeout": 0,
-            "Timestamp": None,
-            "Seconds": 0.2,
-        }
-        dict0 = {"NSamples": 4, "FirstChannel": 7, "LastChannel": 234, "Period": 5}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SendChannelisedData(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-
-    def test_SendChannelisedDataContinuous(self, device_under_test):
-        """
-        Test for SendChannelisedDataContinuous
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {
-            "ChannelID": 2,
-            "NSamples": 4,
-            "WaitSeconds": 3.5,
-            "Timeout": 0,
-            "Timestamp": None,
-            "Seconds": 0.2,
-        }
-        dict0 = {"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SendChannelisedDataContinuous(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-        dict0 = {"NSamples": 4, "WaitSeconds": 3.5}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.SendChannelisedDataContinuous(jstr)
-
-    def test_SendBeamData(self, device_under_test):
-        """
-        Test for SendBeamData
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
-        dict0 = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SendBeamData(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-
-    def test_StopDataTransmission(self, device_under_test):
-        """
-        Test for StopDataTransmission
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.StopDataTransmission()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: stop_data_transmission"
-
-    def test_ComputeCalibrationCoefficients(self, device_under_test):
-        """
-        Test for ComputeCalibrationCoefficients
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.ComputeCalibrationCoefficients()
-        result = ss.getvalue().strip()
-        assert result == "TpmSimulator: compute_calibration_coefficients"
-
-    def test_StartAcquisition(self, device_under_test):
-        """
-        Test for StartAcquisition
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {"StartTime": 5, "Delay": 2}
-        dict0 = {"StartTime": 5}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.StartAcquisition(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-
-    def test_SetTimeDelays(self, device_under_test):
-        """
-        Test for SetTimeDelays
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        delays = []
-        for i in range(32):
-            delays.append(float(i))
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetTimeDelays(delays)
-        out = ss.getvalue().strip()
-        result = [float(x) for x in out[1:-1].split(",")]
-        assert result == delays
-
-    def test_SetCspRounding(self, device_under_test):
-        """
-        Test for SetCspRounding
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        [[result_code], [message]] = device_under_test.SetCspRounding(6.284)
-        assert result_code == ResultCode.OK
-        assert message == "SetCspRounding command succeeded"
-
-    def test_SetLmcIntegratedDownload(self, device_under_test):
-        """
-        Test for SetLmcIntegratedDownload
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {
-            "Mode": "1G",
-            "ChannelPayloadLength": 4,
-            "BeamPayloadLength": 6,
-            "DstIP": "10.0.1.23",
-            "SrcPort": 0xF0D0,
-            "DstPort": 4660,
-            "LmcMac": None,
-        }
-        dict0 = {
-            "Mode": "1G",
-            "ChannelPayloadLength": 4,
-            "BeamPayloadLength": 6,
-            "DstIP": "10.0.1.23",
-        }
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SetLmcIntegratedDownload(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-        dict0 = {
-            "ChannelPayloadLength": 4,
-            "BeamPayloadLength": 6,
-            "DstIP": "10.0.1.23",
-        }
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.SetLmcIntegratedDownload(jstr)
-
-    def test_SendRawDataSynchronised(self, device_under_test):
-        """
-        Test for SendRawDataSynchronised
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {"Period": 10, "Timeout": 4, "Timestamp": None, "Seconds": 0.5}
-        dict0 = {"Period": 10, "Timeout": 4, "Seconds": 0.5}
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SendRawDataSynchronised(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-
-    def test_SendChannelisedDataNarrowband(self, device_under_test):
-        """
-        Test for SendChannelisedDataNarrowband
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        expected = {
-            "Frequency": 4000,
-            "RoundBits": 256,
-            "NSamples": 48,
-            "WaitSeconds": 10,
-            "Timeout": 0,
-            "Timestamp": None,
-            "Seconds": 0.5,
-        }
-        dict0 = {
-            "Frequency": 4000,
-            "RoundBits": 256,
-            "NSamples": 48,
-            "WaitSeconds": 10,
-            "Seconds": 0.5,
-        }
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.SendChannelisedDataNarrowband(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-        dict0 = {"RoundBits": 256, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.SendChannelisedDataNarrowband(jstr)
-        dict0 = {"Frequency": 4000, "NSamples": 48, "WaitSeconds": 10, "Seconds": 0.5}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.SendChannelisedDataNarrowband(jstr)
-
-    def test_TweakTransceivers(self, device_under_test):
-        """
-        Test for TweakTransceivers
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        [[result_code], [message]] = device_under_test.TweakTransceivers()
-        assert result_code == ResultCode.OK
-        assert message == "TweakTransceivers command succeeded"
-
-    def test_PostSynchronisation(self, device_under_test):
-        """
-        Test for PostSynchronisation
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        [[result_code], [message]] = device_under_test.PostSynchronisation()
-        assert result_code == ResultCode.OK
-        assert message == "PostSynchronisation command succeeded"
-
-    def test_SyncFpgas(self, device_under_test):
-        """
-        Test for SyncFpgas
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(False)
-        assert result_code == ResultCode.OK
-        [[result_code], [message]] = device_under_test.SyncFpgas()
-        assert result_code == ResultCode.OK
-        assert message == "SyncFpgas command succeeded"
-
-    def test_CalculateDelay(self, device_under_test):
-        """
-        Test for CalculateDelay
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        [[result_code], [message]] = device_under_test.Connect(True)
-        assert result_code == ResultCode.OK
-        dict0 = expected = {
-            "CurrentDelay": 5.0,
-            "CurrentTC": 2,
-            "RefLo": 3.0,
-            "RefHi": 78.0,
-        }
-        jstr = json.dumps(dict0)
-        ss = io.StringIO()
-        with redirect_stdout(ss):
-            device_under_test.CalculateDelay(jstr)
-        result = json.loads(ss.getvalue())
-        assert result == expected
-        dict0 = {"CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.CalculateDelay(jstr)
-        dict0 = expected = {"CurrentDelay": 5.0, "RefLo": 3.0, "RefHi": 78.0}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.CalculateDelay(jstr)
-        dict0 = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefHi": 78.0}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.CalculateDelay(jstr)
-        dict0 = {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0}
-        jstr = json.dumps(dict0)
-        with pytest.raises(DevFailed):
-            device_under_test.CalculateDelay(jstr)
+        assert not device_under_test.isBeamformerRunning
+        args = {"StartTime": start_time, "Duration": duration}
+        device_under_test.StartBeamformer(json.dumps(args))
+        assert device_under_test.isBeamformerRunning
+        device_under_test.StopBeamformer()
+        assert not device_under_test.isBeamformerRunning
 
 
 class TestMccsTile_InitCommand:

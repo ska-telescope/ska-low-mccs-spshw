@@ -1,12 +1,10 @@
 """
 This module contains tests of interactions between the TMC and ska.low.mccs classes.
 """
-from concurrent.futures import Future
 from tango import DevState, DevSource
 from ska.base.commands import ResultCode
 from ska.base.control_model import ObsState
 import pytest
-import tango
 import json
 
 from conftest import confirm_initialised
@@ -75,13 +73,6 @@ class TestMccsIntegrationTmc:
         confirm_initialised(device_dict.values())
         return device_dict
 
-    def async_init(self):
-        """
-        Method that initialises the Tango instance to enable callback functions
-        """
-        api_util = tango.ApiUtil.instance()
-        api_util.set_asynch_cb_sub_model(tango.cb_sub_model.PUSH_CALLBACK)
-
     def set_all_dev_source(self, devices):
         """
         Set all of the devices to DevSource.DEV source
@@ -95,9 +86,11 @@ class TestMccsIntegrationTmc:
         for device in devices.values():
             device.set_source(DevSource.DEV)
 
-    def async_command(self, device, command, argin=None, expected_result=ResultCode.OK):
+    def assert_command(
+        self, device, command, argin=None, expected_result=ResultCode.OK
+    ):
         """
-        Method to simplfy the TMC calls for asynchronous commands
+        Method to simplfy assertions on the result of TMC calls
 
         :param device: The MCCS device to send command to
         :type device: :py:class:`tango.DeviceProxy`
@@ -108,17 +101,11 @@ class TestMccsIntegrationTmc:
         :param expected_result: The expected return code from the command
         :type expected_result: :py:class:`ska.base.commands.ResultCode`
         """
-        future = Future()
-        # Call the specified command asynchronously
-        if argin is None:
-            device.command_inout_asynch(command, future.set_result)
-        else:
-            device.command_inout_asynch(command, argin, future.set_result)
-        result = future.result(timeout=0.5)
+        result = device.command_inout(command, argin)
         if expected_result is None:
-            assert result.argout is None
+            assert result is None
         else:
-            assert result.argout[0] == expected_result
+            assert result[0] == expected_result
 
     def test_controller_on(self, devices):
         """
@@ -127,7 +114,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.async_init()
         self.set_all_dev_source(devices)
 
         assert devices["controller"].State() == DevState.OFF
@@ -137,7 +123,7 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].State() == DevState.OFF
 
         # Call MccsController->On() command
-        self.async_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="On")
         assert devices["controller"].State() == DevState.ON
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF
@@ -167,20 +153,19 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.async_init()
         self.set_all_dev_source(devices)
 
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
-        self.async_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="On")
         assert devices["controller"].State() == DevState.ON
         # TODO: The stations are in alarm state because
         # we don't yet ensure attributes are updated before
         # transitioning out of INIT
         assert devices["station_001"].State() == DevState.ALARM
         assert devices["station_002"].State() == DevState.ALARM
-        self.async_command(device=devices["controller"], command="Off")
+        self.assert_command(device=devices["controller"], command="Off")
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
@@ -193,11 +178,10 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.async_init()
         self.set_all_dev_source(devices)
 
         # Turn on controller and stations
-        self.async_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="On")
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
@@ -211,7 +195,7 @@ class TestMccsIntegrationTmc:
             "station_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
-        self.async_command(
+        self.assert_command(
             device=devices["controller"], command="Allocate", argin=json_string
         )
         assert devices["station_001"].subarrayId == 1
@@ -222,7 +206,7 @@ class TestMccsIntegrationTmc:
         # Release Resources
         release_config = {"subarray_id": 1, "release_all": True}
         json_string = json.dumps(release_config)
-        self.async_command(
+        self.assert_command(
             device=devices["controller"], command="Release", argin=json_string
         )
         assert devices["subarray_01"].obsState == ObsState.EMPTY
@@ -232,7 +216,7 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].subarrayId == 0
 
         # Turn off controller and stations
-        self.async_command(device=devices["controller"], command="Off")
+        self.assert_command(device=devices["controller"], command="Off")
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
@@ -245,11 +229,10 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.async_init()
         self.set_all_dev_source(devices)
 
         # Turn on controller and stations
-        self.async_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="On")
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
@@ -263,7 +246,7 @@ class TestMccsIntegrationTmc:
             "station_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
-        self.async_command(
+        self.assert_command(
             device=devices["controller"], command="Allocate", argin=json_string
         )
         assert devices["station_001"].subarrayId == 1
@@ -300,7 +283,7 @@ class TestMccsIntegrationTmc:
             ],
         }
         json_string = json.dumps(configuration)
-        self.async_command(
+        self.assert_command(
             device=devices["subarray_01"], command="Configure", argin=json_string
         )
         assert devices["subarray_01"].obsState == ObsState.READY
@@ -308,7 +291,7 @@ class TestMccsIntegrationTmc:
         # Perform a scan on the subarray
         scan_config = {"id": 1}
         json_string = json.dumps(scan_config)
-        self.async_command(
+        self.assert_command(
             device=devices["subarray_01"],
             command="Scan",
             argin=json_string,
@@ -317,15 +300,15 @@ class TestMccsIntegrationTmc:
         assert devices["subarray_01"].obsState == ObsState.SCANNING
 
         # End a scan
-        self.async_command(device=devices["subarray_01"], command="EndScan")
+        self.assert_command(device=devices["subarray_01"], command="EndScan")
         assert devices["subarray_01"].obsState == ObsState.READY
 
         # Prepare for and release Resources
-        self.async_command(device=devices["subarray_01"], command="End")
+        self.assert_command(device=devices["subarray_01"], command="End")
         assert devices["subarray_01"].obsState == ObsState.IDLE
         release_config = {"subarray_id": 1, "release_all": True}
         json_string = json.dumps(release_config)
-        self.async_command(
+        self.assert_command(
             device=devices["controller"], command="Release", argin=json_string
         )
         assert devices["subarray_01"].obsState == ObsState.EMPTY
@@ -335,7 +318,7 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].subarrayId == 0
 
         # Turn off controller and stations
-        self.async_command(device=devices["controller"], command="Off")
+        self.assert_command(device=devices["controller"], command="Off")
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF

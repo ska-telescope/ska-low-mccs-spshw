@@ -29,7 +29,6 @@ from ska.base.control_model import HealthState
 
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
-from ska.low.mccs.utils import LazyInstance
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
@@ -206,9 +205,7 @@ class StationPowerManager(PowerManager):
             device manages
         :type fqdns: list of string
         """
-        super().__init__(
-            hardware_manager, [LazyInstance(tango.DeviceProxy, fqdn) for fqdn in fqdns]
-        )
+        super().__init__(hardware_manager, fqdns)
 
 
 class MccsStation(SKAObsDevice):

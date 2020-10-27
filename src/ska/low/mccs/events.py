@@ -11,11 +11,11 @@ subsystem.
 """
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
-import backoff
 from functools import partial
 
-import tango
 from tango import EventType
+
+from ska.low.mccs.utils import backoff_connect
 
 
 def _parse_spec(spec, allowed):
@@ -155,19 +155,7 @@ class DeviceEventManager:
         self._allowed_events = events
         self._handlers = {}
 
-        self._connect(fqdn)
-
-    @backoff.on_exception(backoff.expo, tango.DevFailed, factor=0.1, max_tries=8)
-    def _connect(self, fqdn):
-        """
-        Attempts connection to a specified device, using an exponential
-        backoff-retry scheme in case of failure
-
-        :param fqdn: the fully qualified device name of the device for
-            which this DeviceEventManager will manage change events
-        :type fqdn: str
-        """
-        self._device = tango.DeviceProxy(fqdn)
+        self._device = backoff_connect(fqdn)
 
     def register_callback(self, callback, event_spec=None):
         """

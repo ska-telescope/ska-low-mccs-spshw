@@ -11,6 +11,7 @@ subsystem, separate from or common to all devices.
 Each device will have its own implementation of power management, but
 hopefully built on this infrastructure
 """
+from ska.low.mccs.utils import backoff_connect
 
 
 class PowerManagerError(ValueError):
@@ -33,21 +34,24 @@ class PowerManager:
     devices that this device is responsible for turning off and on.
     """
 
-    def __init__(self, hardware, devices):
+    def __init__(self, hardware, device_fqdns):
         """
         Initialise a new PowerManager object
 
         :param hardware: an object encapsulating the device hardware,
             with on() and off() commands
         :type hardware: object
-        :param devices: the devices that are subservient,
-            for power-management purposes, to this manager
-        :type devices: list of :py:class:`tango.DeviceProxy`
+        :param device_fqdns: the FQDNs of the devices that are
+            subservient, for power-management purposes, to this manager
+        :type device_fqdns: list of str
         """
         self._is_on = False
 
         self.hardware = hardware
-        self.devices = devices
+        if device_fqdns is None:
+            self.devices = None
+        else:
+            self.devices = [backoff_connect(fqdn) for fqdn in device_fqdns]
 
     def off(self):
         """

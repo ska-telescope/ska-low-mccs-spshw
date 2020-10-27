@@ -1,5 +1,9 @@
 # Version History
 
+## 0.2.1 
+
+* MCCS-227 - address segfaults
+
 ## 0.2.0
 
 test release - to verify MCCS-209

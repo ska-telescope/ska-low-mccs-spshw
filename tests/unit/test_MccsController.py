@@ -745,14 +745,19 @@ class TestControllerResourceManager:
         # Event manager to take health events
         self.event_manager = EventManager(self.stations)
         self.health_model = HealthModel(
-            None, self.stations, self.event_manager, device_under_test,
+            None,
+            self.stations,
+            self.event_manager,
+            device_under_test,
         )
         # HACK pending device pool management refactor
         self.health_monitor = self.health_model._health_monitor
 
         # Instantiate a resource manager for the Stations
         manager = ControllerResourceManager(
-            self.health_monitor, "Test Manager", self.stations
+            self.health_monitor,
+            "Test Manager",
+            self.stations,
         )
         return manager
 
@@ -780,7 +785,8 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is FAILED
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "healthState", HealthState.FAILED,
+            "healthState",
+            HealthState.FAILED,
         )
 
         with pytest.raises(
@@ -791,7 +797,8 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is OK again
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "healthState", HealthState.OK,
+            "healthState",
+            HealthState.OK,
         )
 
         # Assign it again

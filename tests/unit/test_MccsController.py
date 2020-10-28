@@ -745,10 +745,7 @@ class TestControllerResourceManager:
         # Event manager to take health events
         self.event_manager = EventManager(self.stations)
         self.health_model = HealthModel(
-            None,
-            self.stations,
-            self.event_manager,
-            device_under_test,
+            None, self.stations, self.event_manager, device_under_test,
         )
         # HACK pending device pool management refactor
         self.health_monitor = self.health_model._health_monitor
@@ -757,7 +754,6 @@ class TestControllerResourceManager:
         manager = ControllerResourceManager(
             self.health_monitor, "Test Manager", self.stations
         )
-
         return manager
 
     def test_assign(self, resource_manager):
@@ -784,23 +780,18 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is FAILED
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "low-mccs/station/002",
-            "healthState",
-            HealthState.FAILED,
-            tango.AttrQuality.ATTR_VALID,
+            "healthState", HealthState.FAILED,
         )
 
         with pytest.raises(
             ValueError,
+            match="low-mccs/station/002 does not pass health check for assignment",
         ):
             resource_manager.assign(["low-mccs/station/002"], 1)
 
         # Mock a health event so that station 2 is OK again
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "low-mccs/station/002",
-            "healthState",
-            HealthState.OK,
-            tango.AttrQuality.ATTR_VALID,
+            "healthState", HealthState.OK,
         )
 
         # Assign it again

@@ -18,7 +18,6 @@ __all__ = [
     "main",
 ]
 
-import numpy
 import json
 import threading
 from enum import Enum
@@ -91,7 +90,7 @@ class ControllerResourceManager:
         """
 
         def __init__(self, allocatable_health_states=[HealthState.OK]):
-            self._allocatableHealthStates = allocatable_health_states
+            self._allocatable_health_states = allocatable_health_states
 
         def is_allocatable(self, health_state):
             """Check if a state allows allocation.
@@ -101,7 +100,7 @@ class ControllerResourceManager:
             :return: True if this is suitable for allocation
             :rtype: bool
             """
-            return health_state in self._allocatableHealthStates
+            return health_state in self._allocatable_health_states
 
         def assign_allocatable_health_states(self, health_states):
             """Set the health states allowed for allocation.
@@ -109,26 +108,32 @@ class ControllerResourceManager:
             :param health_states: Allowed health states
             :type health_states: list of int
             """
-            self._allocatableHealthStates = health_states
+            self._allocatable_health_states = health_states
 
         def reset(self):
             """Reset to the default set of states
             allowed for allocation.
             """
-            self._allocatableHealthStates = [HealthState.OK]
+            self._allocatable_health_states = [HealthState.OK]
 
     class Resource:
         """
         This inner class implements state recording for a managed resource.
 
-        Initialize with a device id number.
+        Initialise with a device id number.
         """
 
-        def __init__(self, manager, fqdn, devid):
-            self._manager = manager
+        def __init__(self, availability_policy, fqdn):
+            """Initialise a new Resource instance
+
+            :param availability_policy: the policy associated with this device
+            :type availability_policy: ResourceAvailabilityPolicy
+            :param fqdn: fqdn of supervised device
+            :type fqdn: string
+            """
+            self._resource_availability_policy = availability_policy
             self._fqdn = fqdn
-            self._devid = devid
-            self._resourceState = ControllerResourceManager.ResourceState.AVAILABLE
+            self._resource_state = ControllerResourceManager.ResourceState.AVAILABLE
             self._assigned_to = 0
             self._health_state = HealthState.OK
 
@@ -147,7 +152,7 @@ class ControllerResourceManager:
             :rtype: bool
             """
             return (
-                self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
+                self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED
                 and self._assigned_to != 0
             )
 
@@ -158,7 +163,8 @@ class ControllerResourceManager:
             :rtype: bool
             """
             return (
-                self._resourceState == ControllerResourceManager.ResourceState.AVAILABLE
+                self._resource_state
+                == ControllerResourceManager.ResourceState.AVAILABLE
             )
 
         def is_unavailable(self):
@@ -168,7 +174,7 @@ class ControllerResourceManager:
             :rtype: bool
             """
             return (
-                self._resourceState
+                self._resource_state
                 == ControllerResourceManager.ResourceState.UNAVAILABLE
             )
 
@@ -180,9 +186,9 @@ class ControllerResourceManager:
             :rtype: bool
             """
             return (
-                self._resourceState
+                self._resource_state
                 == ControllerResourceManager.ResourceState.UNAVAILABLE
-                or self._resourceState
+                or self._resource_state
                 == ControllerResourceManager.ResourceState.ASSIGNED
             )
 
@@ -193,11 +199,17 @@ class ControllerResourceManager:
             :return: True if healthy
             :rtype: bool
             """
-            return self._manager.resource_availability_policy.is_allocatable(
-                self._health_state
-            )
+            return self._resource_availability_policy.is_allocatable(self._health_state)
 
-        def _health_changed(self, fqdn, event_name, event_value, event_quality):
+        def _health_changed(self, event_name, event_value):
+            """Update the health state of the resource
+
+            :param event_name: Event name (should be 'healthState')
+            :type event_name: string
+
+            :param event_value: The HealthState to assign to the resource
+            :type event_value: int
+            """
             assert event_name == "healthState"
             self._health_state = event_value
 
@@ -216,7 +228,6 @@ class ControllerResourceManager:
                 if self._assigned_to != owner:
                     # Trying to assign to new owner not allowed
                     raise ValueError(
-                        f"{self._manager._managername}: "
                         f"{self._fqdn} already assigned to {self._assignedTo}"
                     )
                 # No action if repeating the existing assignment
@@ -224,17 +235,14 @@ class ControllerResourceManager:
             # Don't allow assign if resource is not healthy
             if not self.is_healthy():
                 raise ValueError(
-                    f"{self._manager._managername}: "
                     f"{self._fqdn} does not pass health check for assignment"
                 )
 
             if self.is_available():
                 self._assigned_to = owner
-                self._resourceState = ControllerResourceManager.ResourceState.ASSIGNED
+                self._resource_state = ControllerResourceManager.ResourceState.ASSIGNED
             else:
-                raise ValueError(
-                    f"{self._manager._managername}: " f"{self._fqdn} is unavailable"
-                )
+                raise ValueError(f"{self._fqdn} is unavailable")
 
         def release(self):
             """Release the resource from assignment
@@ -242,18 +250,15 @@ class ControllerResourceManager:
             :raises TypeError: if the resource was unassigned
             """
             if self._assigned_to == 0:
-                raise TypeError(
-                    f"{self._manager._managername}: "
-                    f"Attempt to release unassigned resource, {self._fqdn}"
-                )
+                raise TypeError(f"Attempt to release unassigned resource, {self._fqdn}")
             self._assigned_to = 0
 
-            if self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED:
+            if self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED:
                 # Previously assigned resource becomes available
                 if not self.is_healthy():
                     self.make_unavailable()
                 else:
-                    self._resourceState = (
+                    self._resource_state = (
                         ControllerResourceManager.ResourceState.AVAILABLE
                     )
             # Unassigned or unavailable resource does not change state
@@ -262,12 +267,12 @@ class ControllerResourceManager:
             """Mark the resource as unavailable for assignment"""
             # Change resource state to unavailable
             # If it was previously AVAILABLE (not ASSIGNED) we can just switch
-            if self._resourceState == ControllerResourceManager.ResourceState.AVAILABLE:
-                self._resourceState = (
+            if self.is_available():
+                self._resource_state = (
                     ControllerResourceManager.ResourceState.UNAVAILABLE
                 )
             elif (
-                self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
+                self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED
             ):
                 # TODO
                 # We must decide what to do with rescources that were assigned already
@@ -277,13 +282,10 @@ class ControllerResourceManager:
             """Mark the resource as available for assignment"""
             # Change resource state to available
             # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
-            if (
-                self._resourceState
-                == ControllerResourceManager.ResourceState.UNAVAILABLE
-            ):
-                self._resourceState = ControllerResourceManager.ResourceState.AVAILABLE
+            if self.is_unavailable():
+                self._resource_state = ControllerResourceManager.ResourceState.AVAILABLE
             elif (
-                self._resourceState == ControllerResourceManager.ResourceState.ASSIGNED
+                self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED
             ):
                 # TODO
                 # We must decide what to do with resources that were assigned already
@@ -306,13 +308,15 @@ class ControllerResourceManager:
             [HealthState.OK]
         )
         # For each resource, identified by FQDN, create an object
-        for i, fqdn in enumerate(fqdns, start=1):
-            self._resources[fqdn] = self.Resource(self, fqdn, i)
+        for fqdn in fqdns:
+            self._resources[fqdn] = self.Resource(
+                self.resource_availability_policy, fqdn
+            )
             health_monitor.register_callback(
                 self._resources[fqdn]._health_changed, fqdn
             )
 
-    def except_on_unmanaged(self, fqdns):
+    def _except_on_unmanaged(self, fqdns):
         """
         Raise an exception if any of the listed FQDNs
         are not being managed by this manager.
@@ -375,7 +379,7 @@ class ControllerResourceManager:
         :rtype: tuple (bool, list of strings, list of strings)
         """
 
-        self.except_on_unmanaged(fqdns)
+        self._except_on_unmanaged(fqdns)
 
         # Make a list of any FQDNs which are blocking this allocation
         blocking = [
@@ -418,31 +422,35 @@ class ControllerResourceManager:
     def assign(self, fqdns, new_owner):
         """
         Take a list of device FQDNs and assign them to a new owner id.
-        If any of the FQDNs are not being managed or are otherwise
-        assigned a TypeError is raised
 
         :param fqdns: The list of device FQDNs to assign
         :type fqdns: list of string
         :param new_owner: 1-based id of the new owner
         :type new_owner: int
+        :raises ValueError: if any of the FQDNs are unavailable or not healthy
         """
 
-        self.except_on_unmanaged(fqdns)
+        self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
-            self._resources[fqdn].assign(new_owner)
+            try:
+                self._resources[fqdn].assign(new_owner)
+            except ValueError as value_error:
+                raise ValueError(f"{self._managername}: {value_error}")
 
     def release(self, fqdns):
         """
         Take a list of device FQDNs and flag them as unassigned.
-        TypeError is raised if any of the FQDNs are not being managed.
 
         :param fqdns: The list of device FQDNs to release
         :type fqdns: list of string
+        :raises TypeError: if any of the FQDNs are not being managed
         """
-
-        self.except_on_unmanaged(fqdns)
+        self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
-            self._resources[fqdn].release()
+            try:
+                self._resources[fqdn].release()
+            except TypeError as type_error:
+                raise TypeError(f"{self._managername}: {type_error}")
 
     def make_unavailable(self, fqdns):
         """
@@ -452,7 +460,7 @@ class ControllerResourceManager:
         :param fqdns: The list of device FQDNs to make unavailable
         :type fqdns: list of string
         """
-        self.except_on_unmanaged(fqdns)
+        self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
             self._resources[fqdn].make_unavailable()
 
@@ -464,7 +472,7 @@ class ControllerResourceManager:
         :param fqdns: The list of device FQDNs to make unavailable
         :type fqdns: list of string
         """
-        self.except_on_unmanaged(fqdns)
+        self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
             self._resources[fqdn].make_available()
 
@@ -612,18 +620,15 @@ class MccsController(SKAMaster):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device._subarray_fqdns = numpy.array(
-                [] if device.MccsSubarrays is None else device.MccsSubarrays, dtype=str
-            )
-
-            # whether subarray is enabled
-            device._subarray_enabled = numpy.zeros(
-                len(device.MccsSubarrays), dtype=bool
-            )
-
-            device._station_fqdns = numpy.array(
-                [] if device.MccsStations is None else device.MccsStations, dtype=str
-            )
+            if device.MccsSubarrays is None:
+                device._subarray_fqdns = list()
+            else:
+                device._subarray_fqdns = device.MccsSubarrays
+            device._subarray_enabled = [False] * len(device.MccsSubarrays)
+            if device.MccsStations is None:
+                device._station_fqdns = list()
+            else:
+                device._station_fqdns = device.MccsStations
 
             self._thread = threading.Thread(
                 target=self._initialise_connections,
@@ -1439,8 +1444,7 @@ class MccsController(SKAMaster):
         :type health_state: :py:class:`ska.base.control_model.HealthState`
         """
         self.push_change_event("healthState", health_state)
-        with self._lock:
-            self._health_state = health_state
+        self._health_state = health_state
         self.logger.info("health state = " + str(health_state))
 
 

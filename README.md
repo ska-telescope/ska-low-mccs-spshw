@@ -6,7 +6,7 @@ This project is developing the Local Monitoring and Control (LMC) prototype for 
 Documentation
 -------------
 
-[![Documentation Status](https://readthedocs.org/projects/ska-low-mccs/badge/?version=latest)](https://developer.skatelescope.org/projects/ska-low-mccs/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/ska-telescope-ska-low-mccs/badge/?version=latest)](https://developer.skatelescope.org/projects/ska-low-mccs/en/master/?badge=latest)
 
 The documentation for this project, including how to get started with it, can be found in the `docs` folder, and can be better browsed in the SKA development portal:
 
@@ -18,7 +18,7 @@ How to use
 Full details of how to deploy this prototype can be found in the documentation. Briefly:
 
 For instructions on fully deploying the project, consult the kubernetes
-readme file K8S-README.md.
+section in the project documentation.
 
 For a basic environment in which devices may be tested:
 

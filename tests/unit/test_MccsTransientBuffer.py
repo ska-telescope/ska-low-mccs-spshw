@@ -13,7 +13,7 @@ This module contains the tests for MccsTransientBuffer.
 """
 
 device_to_load = {
-    "path": "charts/mccs/data/extra.json",
+    "path": "charts/ska-low-mccs/data/extra.json",
     "package": "ska.low.mccs",
     "device": "transientbuffer",
 }

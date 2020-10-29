@@ -28,7 +28,7 @@ from ska.base.commands import ResultCode
 from ska.low.mccs.tile import MccsTile, TileHardware, TileHardwareManager
 
 device_to_load = {
-    "path": "charts/mccs/data/configuration.json",
+    "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "tile_0001",
 }

@@ -21,9 +21,6 @@ endif
 #
 .DEFAULT_GOAL := help
 
-test lint:
-	@echo "Disabled - use native tox build"
-
 pull:  ## download the application image
 	docker pull $(IMAGE_TO_TEST)
 

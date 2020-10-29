@@ -23,7 +23,7 @@ from ska.base.commands import ResultCode
 from ska.low.mccs.antenna import AntennaHardwareManager, AntennaHardware, MccsAntenna
 
 device_to_load = {
-    "path": "charts/mccs/data/configuration.json",
+    "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "antenna_000001",
 }

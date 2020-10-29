@@ -88,10 +88,10 @@ Start the cluster manager
 MCCS cluster configuration
 --------------------------
 The set of all deployable devices, with suitable configurations, is
-declared in `charts/mccs/data/configuration.json`.
+declared in `charts/ska-low-mccs/data/configuration.json`.
 
 The selection of devices to be deployed is specified in
-`charts/mccs/templates/values.yaml`.
+`charts/ska-low-mccs/values.yaml`.
 
 
 Deploy MCCS to a cluster
@@ -112,7 +112,7 @@ quite a few `make` commands. The main sequence for deploying is:
 
    .. code-block:: bash
 
-      make deploy
+      make install-chart
 
    This too may take a very long time the first time it is run.
 3. Monitor the cluster to make sure it comes up okay. There are two
@@ -141,7 +141,7 @@ quite a few `make` commands. The main sequence for deploying is:
    
      .. code-block:: shell-session
 
-        $ make deploy; make wait; make functional_test
+        $ make install-chart; make wait; make functional_test
 
 
 Use
@@ -156,7 +156,7 @@ Once you have finished with the cluster, you can tear it down:
 
 .. code-block:: shell-session
 
-   make delete
+   make uninstall-chart
    make watch
     
 This may take a minute or so; use `make watch` to monitor
@@ -186,7 +186,7 @@ Helm charts, need to run up the mccs pods first, if not running:
 
   cd ska-low-mccs
   make devimage
-  make deploy
+  make install-chart
   make watch
 
 After which, continue with the grafana setup:

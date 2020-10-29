@@ -31,7 +31,7 @@ from ska.low.mccs import MccsController, ControllerPowerManager, release
 from ska.low.mccs.utils import call_with_json
 
 device_to_load = {
-    "path": "charts/mccs/data/configuration.json",
+    "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "controller",
 }

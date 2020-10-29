@@ -6,7 +6,7 @@ Initial set of commits with the goal of setting up the TANGO-grafana project wit
 Pre-requisites
 --------------
 
-See K8S-README.md
+See project documentation
 
 Set-up Script
 -------------
@@ -15,7 +15,7 @@ setup_tango_grafana.sh:
 Clones TANGO-grafana and skampi projects
 Deploys tango-base and webjive Helm charts (this takes about 8 minutes to install on my VM)
 Wait for Helm charts to be deployed
-Install Traefix with detected server IP address
+Install Traefik with detected server IP address
 Install TANGO-grafana chart
 Wait for chart to be installed
 

@@ -1,10 +1,11 @@
 # static overrides for gitlab ci job
-minikube: false
+global:
+  minikube: false
 
 tango-base:
   itango:
     enabled: false
 
-mccs:
+ska-low-mccs:
   cli:
     enabled: false

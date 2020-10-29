@@ -248,18 +248,6 @@ class TestMccsTile(object):
             == TpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME
         )
 
-    def test_checkPendingDataRequests(self, device_under_test):
-        """
-        Test for the checkPendingDataRequests attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-        assert device_under_test.CheckPendingDataRequests is False
-
     def test_phaseTerminalCount(self, device_under_test):
         """
         Test for the phaseTerminalCount attribute.
@@ -324,6 +312,7 @@ class TestMccsTileCommands:
             ),
             ("SendBeamData", json.dumps({"Period": 10, "Timeout": 4, "Seconds": 0.5})),
             ("StartAcquisition", json.dumps({"StartTime": 5})),
+            ("CheckPendingDataRequests", None),
             ("SetTimeDelays", tuple(float(i) for i in range(32))),
             (
                 "SetLmcIntegratedDownload",
@@ -360,12 +349,9 @@ class TestMccsTileCommands:
             ),
         ),
     )
-    def test_command_ok(self, device_under_test, device_command, arg):
+    def test_command_not_implemeented(self, device_under_test, device_command, arg):
         """
-        Test of commands that return OK.
-
-        This is a very weak test, and should only be used for commands
-        that have not been meaningfully implemented.
+        A very weak test for commands that are not implemented yet.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -379,43 +365,23 @@ class TestMccsTileCommands:
         device_under_test.On()
 
         args = [] if arg is None else [arg]
-        [[result_code], [message]] = getattr(device_under_test, device_command)(*args)
-        assert result_code == ResultCode.OK
-        assert message == f"{device_command} command completed OK"
+        with pytest.raises(DevFailed, match="NotImplementedError"):
+            _ = getattr(device_under_test, device_command)(*args)
 
     @pytest.mark.parametrize(
         ("device_command", "arg", "tpm_command"),
         (
             ("Initialise", None, "initialise"),
             ("ProgramCPLD", "test_bitload_cpld", "cpld_flash_write"),
-            ("WriteAddress", (0xF, 10), "write_address"),
-            # ("set_channeliser_truncation", 1),
-            # ("set_beamformer_regions", 1),
-            # ("initialise_beamformer", 4),
             ("SwitchCalibrationBank", 19, "switch_calibration_bank"),
-            # ("load_beam_angle", 1),
-            # ("load_calibration_coefficients", 2),
-            # ("load_antenna_tapering", 1),
             ("LoadPointingDelay", 0.5, "load_pointing_delay"),
-            # ("set_pointing_delay", 2),
-            # ("configure_integrated_channel_data", 0),
-            # ("configure_integrated_beam_data", 0),
-            # ("send_raw_data", 0),
-            # ("send_channelised_data", 0),
-            # ("send_channelised_data", 1),
-            # ("send_beam_data", 0),
             ("StopDataTransmission", None, "stop_data_transmission"),
             (
                 "ComputeCalibrationCoefficients",
                 None,
                 "compute_calibration_coefficients",
             ),
-            # ("start_acquisition", 0),
-            # ("set_time_delays", 1),
             ("SetCspRounding", 6.284, "set_csp_rounding"),
-            # ("set_lmc_integrated_download", 3),
-            # ("send_raw_data_synchronised", 0),
-            # ("send_channelised_data_narrowband", 2),
             ("TweakTransceivers", None, "tweak_transceivers"),
             ("PostSynchronisation", None, "post_synchronisation"),
             ("SyncFpgas", None, "sync_fpgas"),
@@ -447,11 +413,10 @@ class TestMccsTileCommands:
         device_under_test.On()
 
         # First test that the calling the command on the device results
-        # in OK being returned
+        # in a NotImplementedError
         args = [] if arg is None else [arg]
-        [[result_code], [message]] = getattr(device_under_test, device_command)(*args)
-        assert result_code == ResultCode.OK
-        assert message == f"{device_command} command completed OK"
+        with pytest.raises(DevFailed, match="NotImplementedError"):
+            _ = getattr(device_under_test, device_command)(*args)
 
         # Now check that calling the command object results in the
         # correct TPM simulator command being called.
@@ -464,6 +429,9 @@ class TestMccsTileCommands:
 
         command_class = getattr(MccsTile, f"{device_command}Command")
         command_object = command_class(hardware_manager, state_model, logger)
+
+        # doesn't raise NotImplementedError because the tpm simulator is
+        # mocked out
         command_object(*args)
         assert getattr(mock_tpm_simulator, tpm_command).called_once_with(*args)
 
@@ -615,6 +583,26 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed):
             _ = device_under_test.ReadAddress([address])
 
+    def WriteAddress(self, device_under_test):
+        """
+        Test for WriteAddress
+
+        This is a very weak test but the
+        :py:class:`~ska.low.mccs.tile_hardware.TileHardwareManager`'s
+        :py:meth:`~ska.low.mccs.tile_hardware.TileHardwareManager.write_address`
+        method is well tested.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        device_under_test.On()
+
+        [[result_code], [message]] = device_under_test.WriteAddress([20, 1, 2, 3])
+        assert result_code == ResultCode.OK
+        assert message == "On command completed OK"
+
     def test_Configure40GCore(self, device_under_test):
         """
         Test for
@@ -685,10 +673,9 @@ class TestMccsTileCommands:
         device_under_test.On()
 
         array = [channels] + [frequencies] + [1.0] * (channels * frequencies)
-        [[result_code], [message]] = device_under_test.SetChanneliserTruncation(array)
-        assert result_code == ResultCode.OK
-        assert message == "SetChanneliserTruncation command completed OK"
 
+        with pytest.raises(DevFailed, match="NotImplementedError"):
+            _ = device_under_test.SetChanneliserTruncation(array)
         with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
             _ = device_under_test.SetChanneliserTruncation(array[:-1])
         with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
@@ -711,13 +698,15 @@ class TestMccsTileCommands:
         inp = list(itertools.chain.from_iterable(complex_coeffs))
         out = [[v.real, v.imag] for v in inp]
         coeffs = [antenna] + list(itertools.chain.from_iterable(out))
-        device_under_test.LoadCalibrationCoefficients(coeffs)
 
-        with pytest.raises(DevFailed):
-            device_under_test.LoadCalibrationCoefficients(coeffs[0:8])
+        with pytest.raises(DevFailed, match="NotImplementedError"):
+            _ = device_under_test.LoadCalibrationCoefficients(coeffs)
 
-        with pytest.raises(DevFailed):
-            device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
+        with pytest.raises(DevFailed, match="ValueError"):
+            _ = device_under_test.LoadCalibrationCoefficients(coeffs[0:8])
+
+        with pytest.raises(DevFailed, match="ValueError"):
+            _ = device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
 
     @pytest.mark.parametrize("start_time", (None, 0))
     @pytest.mark.parametrize("duration", (None, -1))

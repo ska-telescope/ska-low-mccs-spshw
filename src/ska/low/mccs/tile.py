@@ -63,12 +63,15 @@ class MccsTile(SKABaseDevice):
     # -----------------
     # Device Properties
     # -----------------
+    AntennasPerTile = device_property(dtype=int, default_value=16)
+
+    # TODO: These properties are not currently being used in any way.
+    # Can they be removed, or do they need to be handled somehow?
     # TileId = device_property(dtype=int, default_value=0)
     # TileIP = device_property(dtype=str, default_value="0.0.0.0")
     # TpmCpldPort = device_property(dtype=int, default_value=20000)
     # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
     # DstPort = device_property(dtype=int, default_value=30000)
-    AntennasPerTile = device_property(dtype=int, default_value=16)
 
     # ---------------
     # General methods
@@ -143,27 +146,6 @@ class MccsTile(SKABaseDevice):
             device._csp_destination_port = 0
 
             device._antenna_ids = []
-
-            # device._ip_address = device.TileIP
-            # device._port = device.TpmCpldPort
-            # device._lmc_ip = device.LmcIp
-            # device._lmc_port = device.DstPort
-
-            # device._tile_id = device.TileId
-            # device._sampling_rate = 0.0
-            # device._default_tapering_coeffs = [
-            #     float(1) for i in range(device.AntennasPerTile)
-            # ]
-
-            # event_names = [
-            #     "current",
-            #     "voltage",
-            #     "board_temperature",
-            #     "fpga1_temperature",
-            #     "fpga2_temperature",
-            # ]
-            # for name in event_names:
-            #     device.set_archive_event(name, True, True)
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -787,7 +769,7 @@ class MccsTile(SKABaseDevice):
         Return the antenna IDs
 
         :return: the antenna IDs
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return tuple(self._antenna_ids)
 
@@ -797,7 +779,7 @@ class MccsTile(SKABaseDevice):
         Set the antenna IDs
 
         :param antenna_ids: the antenna IDs
-        :type antenna_ids: array of int
+        :type antenna_ids: sequence of int
         """
         self._antenna_ids = list(antenna_ids)
 
@@ -812,7 +794,7 @@ class MccsTile(SKABaseDevice):
         Return the destination IPs for all 40Gb ports on the tile
 
         :return: IP addresses
-        :rtype: array of str
+        :rtype: sequence of str
         """
         return tuple(
             item["DstIP"] for item in self.hardware_manager.get_40G_configuration()
@@ -829,7 +811,7 @@ class MccsTile(SKABaseDevice):
         Return the destination MAC addresses for all 40Gb ports on the tile
 
         :return: MAC addresses
-        :rtype: array of str
+        :rtype: sequence of str
         """
         return tuple(
             item["DstMac"] for item in self.hardware_manager.get_40G_configuration()
@@ -846,7 +828,7 @@ class MccsTile(SKABaseDevice):
         Return the destination ports for all 40Gb ports on the tile
 
         :return: ports
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return tuple(
             item["DstPort"] for item in self.hardware_manager.get_40G_configuration()
@@ -864,7 +846,7 @@ class MccsTile(SKABaseDevice):
         16 antennas, this should return 32 RMS value
 
         :return: RMP power of ADC signals
-        :rtype: array of double
+        :rtype: sequence of double
         """
         return self.hardware_manager.adc_rms
 
@@ -1173,7 +1155,7 @@ class MccsTile(SKABaseDevice):
         registers
 
         :return: a list of register names
-        :rtype: array of string
+        :rtype: sequence of string
 
         :example:
 
@@ -1198,7 +1180,7 @@ class MccsTile(SKABaseDevice):
                 including RegisterName, NbRead, Offset, Device
             :type argin: string
             :return: list of register values
-            :rtype: array of long
+            :rtype: sequence of long
 
             :raises ValueError: if the JSON input lacks mandatory parameters
 
@@ -1361,7 +1343,7 @@ class MccsTile(SKABaseDevice):
             :py:meth:`MccsTile.ReadAddress` command
             functionality.
 
-            :param argin: array of length two, containing an address and
+            :param argin: sequence of length two, containing an address and
                 a value
             :type argin: array
 
@@ -1415,7 +1397,7 @@ class MccsTile(SKABaseDevice):
             :py:meth:`MccsTile.WriteAddress` command
             functionality.
 
-            :param argin: array of length two, containing an address and
+            :param argin: sequence of length two, containing an address and
                 a value
             :type argin: array
 
@@ -1716,7 +1698,7 @@ class MccsTile(SKABaseDevice):
             command functionality.
 
             :param argin: a truncation array
-            :type argin: array of int
+            :type argin: sequence of int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1789,7 +1771,7 @@ class MccsTile(SKABaseDevice):
             command functionality.
 
             :param argin: a region array
-            :type argin: array of int
+            :type argin: sequence of int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1967,7 +1949,7 @@ class MccsTile(SKABaseDevice):
             command functionality.
 
             :param argin: calibration coefficients
-            :type argin: array of double
+            :type argin: sequence of double
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2067,7 +2049,7 @@ class MccsTile(SKABaseDevice):
             functionality.
 
             :param argin: angle coefficients
-            :type argin: array of double
+            :type argin: sequence of double
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2147,7 +2129,7 @@ class MccsTile(SKABaseDevice):
             command functionality.
 
             :param argin: antenna tapering coefficients
-            :type argin: array of double
+            :type argin: sequence of double
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2288,7 +2270,7 @@ class MccsTile(SKABaseDevice):
 
             :param argin: an array containing a beam index and antenna
                 delays
-            :type argin: array of double
+            :type argin: sequence of double
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2329,7 +2311,7 @@ class MccsTile(SKABaseDevice):
 
         :param argin: the delay in seconds and the delay rate in
             seconds/second.
-        :type argin: array of double
+        :type argin: sequence of double
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

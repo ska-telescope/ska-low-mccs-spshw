@@ -612,7 +612,7 @@ class MccsAntenna(SKABaseDevice):
         Return the logical antenna ID attribute.
 
         :return: the x polarisation scaling factor
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return self._xPolarisationScalingFactor
 
@@ -622,7 +622,7 @@ class MccsAntenna(SKABaseDevice):
         Return the yPolarisationScalingFactor attribute.
 
         :return: the y polarisation scaling factor
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return self._yPolarisationScalingFactor
 
@@ -640,7 +640,7 @@ class MccsAntenna(SKABaseDevice):
         channel in the calibration cycle
 
         :return: the calibration coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._calibrationCoefficient
 
@@ -650,7 +650,7 @@ class MccsAntenna(SKABaseDevice):
         Return the pointingCoefficient attribute.
 
         :return: the pointing coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._pointingCoefficient
 
@@ -660,7 +660,7 @@ class MccsAntenna(SKABaseDevice):
         Return the spectrumX attribute.
 
         :return: x spectrum
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._spectrumX
 
@@ -670,7 +670,7 @@ class MccsAntenna(SKABaseDevice):
         Return the spectrumY attribute.
 
         :return: y spectrum
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._spectrumY
 
@@ -680,7 +680,7 @@ class MccsAntenna(SKABaseDevice):
         Return the position attribute.
 
         :return: positions
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._position
 
@@ -696,7 +696,7 @@ class MccsAntenna(SKABaseDevice):
         Return the delays attribute.
 
         :return: delay for each beam
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._delays
 
@@ -712,7 +712,7 @@ class MccsAntenna(SKABaseDevice):
         Return the delayRates attribute.
 
         :return: delay rate for each beam
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._delayRates
 
@@ -728,7 +728,7 @@ class MccsAntenna(SKABaseDevice):
         Return the bandpassCoefficient attribute.
 
         :return: bandpass coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._bandpassCoefficient
 

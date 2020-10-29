@@ -134,16 +134,24 @@ class TpmSimulator(HardwareSimulator):
 
         :param bitfile: the program to be flashed
         :type bitfile: data
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: program_cpld")
+        raise NotImplementedError
 
     def initialise(self):
         """
         TODO: What does this method do?
 
         :todo: what does this method do?
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: initialise")
+        raise NotImplementedError
 
     @property
     def board_temperature(self):
@@ -409,8 +417,12 @@ class TpmSimulator(HardwareSimulator):
         :type dst_port: int, optional
         :param lmc_mac: LMC MAC address, defaults to None
         :type lmc_mac: str, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_lmc_download")
+        raise NotImplementedError
 
     def set_channeliser_truncation(self, array):
         """
@@ -421,8 +433,12 @@ class TpmSimulator(HardwareSimulator):
             encoded as a list comprising N, then M, then the flattened
             array
         :type array: list of int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_channeliser_truncation")
+        raise NotImplementedError
 
     def set_beamformer_regions(self, regions):
         """
@@ -433,8 +449,12 @@ class TpmSimulator(HardwareSimulator):
             (which must be a multiple of 8), and a beam index (between 0
             and 7)
         :type regions: list of int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_beamformer_regions")
+        raise NotImplementedError
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
@@ -448,8 +468,12 @@ class TpmSimulator(HardwareSimulator):
         :type is_first: bool
         :param is_last: whether this is the last (?)
         :type is_last: bool
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: initialise_beamformer")
+        raise NotImplementedError
 
     def load_calibration_coefficients(self, antenna, calibration_coeffs):
         """
@@ -462,8 +486,12 @@ class TpmSimulator(HardwareSimulator):
         :param calibration_coeffs: a bidirectional complex array of
             coefficients, flattened into a list
         :type calibration_coeffs: list of int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
+        raise NotImplementedError
 
     def load_beam_angle(self, angle_coeffs):
         """
@@ -472,8 +500,12 @@ class TpmSimulator(HardwareSimulator):
         :param angle_coeffs: list containing angle coefficients for each
             beam
         :type angle_coeffs: list of double
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_beam_angle")
+        raise NotImplementedError
 
     def load_antenna_tapering(self, tapering_coeffs):
         """
@@ -482,8 +514,12 @@ class TpmSimulator(HardwareSimulator):
         :param tapering_coeffs: list of tapering coefficients for each
             antenna
         :type tapering_coeffs: list of double
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_antenna_tapering")
+        raise NotImplementedError
 
     def switch_calibration_bank(self, switch_time=0):
         """
@@ -494,8 +530,12 @@ class TpmSimulator(HardwareSimulator):
         :param switch_time: an optional time at which to perform the
             switch
         :type switch_time: int, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: switch_calibration_band")
+        raise NotImplementedError
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
@@ -508,8 +548,12 @@ class TpmSimulator(HardwareSimulator):
         :param beam_index: the beam to which the pointing delay should
             be applied
         :type beam_index: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_pointing_delay")
+        raise NotImplementedError
 
     def load_pointing_delay(self, load_time):
         """
@@ -517,8 +561,12 @@ class TpmSimulator(HardwareSimulator):
 
         :param load_time: time at which to load the pointing delay
         :type load_time: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_pointing_delay")
+        raise NotImplementedError
 
     def start_beamformer(self, start_time=0, duration=-1):
         """
@@ -548,8 +596,12 @@ class TpmSimulator(HardwareSimulator):
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: configure_integrated_channel_data")
+        raise NotImplementedError
 
     def configure_integrated_beam_data(self, integration_time=0.5):
         """
@@ -558,8 +610,12 @@ class TpmSimulator(HardwareSimulator):
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: configure_integrated_beam_data")
+        raise NotImplementedError
 
     def send_raw_data(
         self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
@@ -577,8 +633,12 @@ class TpmSimulator(HardwareSimulator):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: send_raw_data")
+        raise NotImplementedError
 
     def send_channelised_data(
         self,
@@ -608,8 +668,12 @@ class TpmSimulator(HardwareSimulator):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: send_channelised_data")
+        raise NotImplementedError
 
     def send_channelised_data_continuous(
         self,
@@ -635,8 +699,12 @@ class TpmSimulator(HardwareSimulator):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: send_channelised_data_continuous")
+        raise NotImplementedError
 
     def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
         """
@@ -650,21 +718,33 @@ class TpmSimulator(HardwareSimulator):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: send_beam_data")
+        raise NotImplementedError
 
     def stop_data_transmission(self):
         """
         Stop data transmission
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: stop_data_transmission")
+        raise NotImplementedError
 
     def compute_calibration_coefficients(self):
         """
         Compute the calibration coefficients and load them into the
         hardware.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: compute_calibration_coefficients")
+        raise NotImplementedError
 
     def start_acquisition(self, start_time=None, delay=2):
         """
@@ -675,8 +755,12 @@ class TpmSimulator(HardwareSimulator):
         :type start_time: int, optional
         :param delay: delay start, defaults to 2
         :type delay: int, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator:Start acquisition")
+        raise NotImplementedError
 
     def set_time_delays(self, delays):
         """
@@ -685,8 +769,12 @@ class TpmSimulator(HardwareSimulator):
         :param delays: the delay in samples, specified in nanoseconds.
             A positive delay adds delay to the signal stream
         :type delays: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_time_delays")
+        raise NotImplementedError
 
     def set_csp_rounding(self, rounding):
         """
@@ -694,8 +782,12 @@ class TpmSimulator(HardwareSimulator):
 
         :param rounding: the output rounding
         :type rounding: float
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_csp_rounding")
+        raise NotImplementedError
 
     def set_lmc_integrated_download(
         self,
@@ -726,8 +818,12 @@ class TpmSimulator(HardwareSimulator):
         :type dst_port: int, optional
         :param lmc_mac: MAC address of destination, defaults to None
         :type lmc_mac: str, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_lmc_integrated_download")
+        raise NotImplementedError
 
     def send_raw_data_synchronised(
         self, period=0, timeout=0, timestamp=None, seconds=0.2
@@ -743,8 +839,12 @@ class TpmSimulator(HardwareSimulator):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: send_raw_data_synchronised")
+        raise NotImplementedError
 
     @property
     def current_tile_beamformer_frame(self):
@@ -772,11 +872,11 @@ class TpmSimulator(HardwareSimulator):
         """
         Check for pending data requests
 
-        :return: whether there are data requests pending
-        :rtype: bool
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: check_pending_data_requests")
-        return False
+        raise NotImplementedError
 
     def send_channelised_data_narrowband(
         self,
@@ -807,8 +907,12 @@ class TpmSimulator(HardwareSimulator):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: send_channelised_data_narrowband")
+        raise NotImplementedError
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -819,8 +923,12 @@ class TpmSimulator(HardwareSimulator):
     def tweak_transceivers(self):
         """
         Tweak the transceivers.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: tweak_transceivers")
+        raise NotImplementedError
 
     @property
     def phase_terminal_count(self):
@@ -847,14 +955,22 @@ class TpmSimulator(HardwareSimulator):
     def post_synchronisation(self):
         """
         Perform post tile configuration synchronization
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: post_synchronisation")
+        raise NotImplementedError
 
     def sync_fpgas(self):
         """
         Synchronise the FPGAs
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: sync_fpgas")
+        raise NotImplementedError
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):
@@ -869,5 +985,8 @@ class TpmSimulator(HardwareSimulator):
         :type ref_lo: float
         :param ref_hi: high reference
         :type ref_hi: float
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
-        pass
+        raise NotImplementedError

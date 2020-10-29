@@ -13,6 +13,7 @@ This module contains the tests for MccsClusterManagerDevice.
 """
 import json
 import pytest
+from tango import DevFailed
 
 from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState
@@ -503,6 +504,8 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        [[result_code], [message]] = device_under_test.PingMasterPool()
-        assert result_code == ResultCode.OK
-        assert message == "PingMasterPool command successful"
+        with pytest.raises(
+            DevFailed,
+            match="ClusterSimulator.ping_master_pool has not been implemented",
+        ):
+            _ = device_under_test.PingMasterPool()

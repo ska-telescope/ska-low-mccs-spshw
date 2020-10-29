@@ -418,11 +418,11 @@ class TestMccsAPIU(object):
         """
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
-        assert message == "APIU successfully powered up"
+        assert message == "APIU power-up successful"
 
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
-        assert message == "APIU was already powered up"
+        assert message == "APIU power-up is redundant"
 
     def test_PowerDown(self, device_under_test):
         """
@@ -435,13 +435,13 @@ class TestMccsAPIU(object):
         """
         [[result_code], [message]] = device_under_test.PowerDown()
         assert result_code == ResultCode.OK
-        assert message == "APIU was already powered down"
+        assert message == "APIU power-down is redundant"
 
         _ = device_under_test.PowerUp()
 
         [[result_code], [message]] = device_under_test.PowerDown()
         assert result_code == ResultCode.OK
-        assert message == "APIU successfully powered down"
+        assert message == "APIU power-down successful"
 
     def test_PowerUpAntenna(self, device_under_test):
         """
@@ -459,11 +459,11 @@ class TestMccsAPIU(object):
 
         [[result_code], [message]] = device_under_test.PowerUpAntenna(0)
         assert result_code == ResultCode.OK
-        assert message == "Antenna 0 successfully powered up"
+        assert message == "APIU antenna 0 power-up successful"
 
         [[result_code], [message]] = device_under_test.PowerUpAntenna(0)
         assert result_code == ResultCode.OK
-        assert message == "Antenna 0 was already powered up"
+        assert message == "APIU antenna 0 power-up is redundant"
 
     def test_PowerDownAntenna(self, device_under_test):
         """
@@ -482,10 +482,10 @@ class TestMccsAPIU(object):
 
         [[result_code], [message]] = device_under_test.PowerDownAntenna(0)
         assert result_code == ResultCode.OK
-        assert message == "Antenna 0 was already powered down"
+        assert message == "APIU antenna 0 power-down is redundant"
 
         _ = device_under_test.PowerUpAntenna(0)
 
         [[result_code], [message]] = device_under_test.PowerDownAntenna(0)
         assert result_code == ResultCode.OK
-        assert message == "Antenna 0 successfully powered down"
+        assert message == "APIU antenna 0 power-down successful"

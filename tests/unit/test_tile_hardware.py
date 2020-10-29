@@ -231,6 +231,7 @@ class TestCommon:
             ("tweak_transceivers", 0),
             ("post_synchronisation", 0),
             ("sync_fpgas", 0),
+            ("check_pending_data_requests", 0),
         ),
     )
     def test_command(self, hardware_under_test, command_name, num_args):
@@ -250,7 +251,8 @@ class TestCommon:
         :type num_args: int
         """
         args = [Mock()] * num_args
-        getattr(hardware_under_test, command_name)(*args)
+        with pytest.raises(NotImplementedError):
+            getattr(hardware_under_test, command_name)(*args)
 
     def test_download_firmware(self, hardware_under_test, mocker):
         """
@@ -406,20 +408,6 @@ class TestCommon:
         assert hardware_under_test.is_beamformer_running
         hardware_under_test.stop_beamformer()
         assert not hardware_under_test.is_beamformer_running
-
-    def test_check_pending_data_requests(self, hardware_under_test):
-        """
-        Test of the check_pending_data_requests command.
-
-        At present this command always returns False
-
-        :param hardware_under_test: the hardware object under test. This
-            could be a TpmSimulator, or a TileHardwareManager, or, when
-            we eventually write it, a TpmDriver of an actual hardware
-            TPM
-        :type hardware_under_test: object
-        """
-        assert not hardware_under_test.check_pending_data_requests()
 
     def test_40G_configuration(self, hardware_under_test):
         """

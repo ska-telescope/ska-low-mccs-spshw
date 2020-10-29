@@ -275,7 +275,11 @@ class TestClusterCommon:
         :type cluster:
             :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
         """
-        assert cluster.ping_master_pool() is None
+        with pytest.raises(
+            NotImplementedError,
+            match="ClusterSimulator.ping_master_pool has not been implemented",
+        ):
+            assert cluster.ping_master_pool() is None
 
     def test_submit_job(self, cluster):
         """

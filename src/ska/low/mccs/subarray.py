@@ -569,7 +569,7 @@ class MccsSubarray(SKASubarray):
                 Together, these parameters narrow the selection of
                 transient buffer data to the period of time and
                 frequencies that are of interest.
-            :type argin: array of int
+            :type argin: sequence of int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

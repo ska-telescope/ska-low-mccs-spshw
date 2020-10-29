@@ -38,6 +38,32 @@ __all__ = [
 ]
 
 
+def create_return(success, action):
+    """
+    Helper function to package up a boolean result into a
+    (:py:class:`~ska.base.commands.ResultCode`, message) tuple
+
+    :param success: whether execution of the action was successful. This
+        may be None, in which case the action was not performed due to
+        redundancy (i.e. it was already done).
+    :type success: bool or None
+    :param action: Informal description of the action that the command
+        performs, for use in constructing a message
+    :type action: str
+
+    :return: A tuple containing a return code and a string
+        message indicating status. The message is for
+        information purpose only.
+    :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+    """
+    if success is None:
+        return (ResultCode.OK, f"APIU {action} is redundant")
+    elif success:
+        return (ResultCode.OK, f"APIU {action} successful")
+    else:
+        return (ResultCode.FAILED, f"APIU {action} failed")
+
+
 class AntennaHardwareSimulator(OnOffHardwareSimulator):
     """
     A simulator of antenna hardware. This is part of the apiu module
@@ -797,12 +823,7 @@ class MccsAPIU(SKABaseDevice):
             """
             hardware_manager = self.target
             success = hardware_manager.turn_on_antenna(argin)
-            if success is None:
-                return (ResultCode.OK, f"Antenna {argin} was already powered up")
-            elif success:
-                return (ResultCode.OK, f"Antenna {argin} successfully powered up")
-            else:
-                return (ResultCode.FAILED, f"Antenna {argin} power-up failed")
+            return create_return(success, f"antenna {argin} power-up")
 
     @command(
         dtype_in="DevULong",
@@ -850,12 +871,7 @@ class MccsAPIU(SKABaseDevice):
             """
             hardware_manager = self.target
             success = hardware_manager.turn_off_antenna(argin)
-            if success is None:
-                return (ResultCode.OK, f"Antenna {argin} was already powered down")
-            elif success:
-                return (ResultCode.OK, f"Antenna {argin} successfully powered down")
-            else:
-                return (ResultCode.FAILED, f"Antenna {argin} power-down failed")
+            return create_return(success, f"antenna {argin} power-down")
 
     @command(
         dtype_in="DevULong",
@@ -902,12 +918,7 @@ class MccsAPIU(SKABaseDevice):
             """
             hardware_manager = self.target
             success = hardware_manager.on()
-            if success is None:
-                return (ResultCode.OK, "APIU was already powered up")
-            elif success:
-                return (ResultCode.OK, "APIU successfully powered up")
-            else:
-                return (ResultCode.FAILED, "APIU power-up failed")
+            return create_return(success, "power-up")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -948,12 +959,7 @@ class MccsAPIU(SKABaseDevice):
             """
             hardware_manager = self.target
             success = hardware_manager.off()
-            if success is None:
-                return (ResultCode.OK, "APIU was already powered down")
-            elif success:
-                return (ResultCode.OK, "APIU successfully powered down")
-            else:
-                return (ResultCode.FAILED, "APIU power-down failed")
+            return create_return(success, "power-down")
 
     @command(
         dtype_out="DevVarLongStringArray",

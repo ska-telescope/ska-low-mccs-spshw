@@ -511,8 +511,13 @@ class ClusterSimulator(HardwareSimulator):
         """
         Ping the master pool nodes to make sure they are ok.
         This has not been implemented.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
-        pass
+        raise NotImplementedError(
+            "ClusterSimulator.ping_master_pool has not been implemented"
+        )
 
     def clear_job_stats(self):
         """

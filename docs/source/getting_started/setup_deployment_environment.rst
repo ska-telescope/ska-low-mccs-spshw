@@ -4,10 +4,12 @@ Set up your deployment environment
 
 The instructions at the :doc:`setup_development_environment` page will
 allow you to run tests in a lightweight test harness that mocks out
-Tango Controls. Running these tests does not actually deploy Tango
-devices. These instructions will allow you to set up a deployment
-environment so that you can run an actual cluster of Tango devices. They
-are largely independed of the instructions for setting up a development
+Tango Controls. *This is sufficient to get you started developing.*
+
+However, running these tests does not actually deploy Tango devices.
+These instructions will allow you to set up a deployment environment so
+that you can run an actual cluster of Tango devices. They are largely
+independent of the instructions for setting up a development
 environment: you can follow these instructions to set up a deployment
 environment on the same machine as your development environment, or on
 a completely different machine.

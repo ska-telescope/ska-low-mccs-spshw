@@ -85,7 +85,7 @@ class ClusterManager(HardwareManager):
 
     def __init__(self, simulation_mode):
         """
-        Initialise a new ClusterHardwareManager instance
+        Initialise a new ClusterManager instance
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager

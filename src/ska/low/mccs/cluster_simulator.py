@@ -144,7 +144,7 @@ class ClusterSimulator(HardwareSimulator):
     :py:meth:`clear_job_stats`.
 
     Stats on resources in use are hard-coded and cannot be changed.
-    They are keep coherent e.g. "available" will always be "total" minus
+    They are kept coherent e.g. "available" will always be "total" minus
     "in use".
 
     A small set of initial open jobs are hard-coded. These are modified

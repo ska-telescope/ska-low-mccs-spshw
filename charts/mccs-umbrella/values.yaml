@@ -1,23 +1,17 @@
+display: ":0"
+xauthority: "~/.Xauthority"
 
 global:
   labels:
-    app: mccs
+    app: ska-low-mccs
   annotations:
     app.gitlab.com/app: CI_PROJECT_PATH_SLUG
     app.gitlab.com/env: CI_ENVIRONMENT_SLUG
+  minikube: true
   tango_host: databaseds-tango-base-test:10000
-  dsconfig:
-    image:
-      registry: nexus.engageska-portugal.pt/ska-docker
-      image: tango-dsconfig
-      tag: 1.5.0
-      pullPolicy: IfNotPresent
-  itango:
-    image:
-      registry: nexus.engageska-portugal.pt/ska-docker
-      image: tango-itango
-      tag: 9.3.1
-      pullPolicy: IfNotPresent
+  sub-system:
+    tango-base:
+      enabled: false
 
 tango-base:
   vnc:
@@ -30,22 +24,8 @@ tango-base:
     enabled: false
   tangodb:
     use_pv: false
-
-mccs:
-  project:
-    enabled: true
-    name: mccs
-    image:
-      registry: nexus.engageska-portugal.pt/ska-docker
-      image: ska-low-mccs
-      tag: latest
-      pullPolicy: IfNotPresent
-  cli:
+  itango:
     enabled: true
 
 webjive:
   enabled: false
-
-display: ":0"
-xauthority: "~/.Xauthority"
-minikube: true

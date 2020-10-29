@@ -11,7 +11,7 @@ from conftest import confirm_initialised
 
 
 devices_to_load = {
-    "path": "charts/mccs/data/configuration.json",
+    "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "devices": [
         "controller",

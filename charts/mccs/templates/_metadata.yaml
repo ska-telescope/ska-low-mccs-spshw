@@ -1,6 +1,0 @@
-{{- define "mccs-util.metadata" -}}
-app: {{ template "mccs-util.deviceName" . }}
-chart: {{ template "mccs-util.chart" .global }}
-release: {{ .global.Release.Name | quote }}
-heritage: {{ .global.Release.Service | quote  }}
-{{- end -}}

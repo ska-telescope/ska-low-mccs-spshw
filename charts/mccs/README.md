@@ -1,4 +1,0 @@
-MCCS chart
-==========
-
-describe here

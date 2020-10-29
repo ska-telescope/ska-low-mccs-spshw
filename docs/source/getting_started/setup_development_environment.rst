@@ -230,7 +230,7 @@ understanding of what your IDE is doing for you.
 
      me@local:~$ cd ska-low-mccs
      me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest bash
-     root@caa98e8e264d:/app#
+     root@0852a572ffff:/app#
 
    (The first time you run this command, it may take a very long time.
    This is because the Docker image has to be downloaded. Once
@@ -246,10 +246,12 @@ understanding of what your IDE is doing for you.
      
    .. code-block:: shell-session
 
-     root@caa98e8e264d:/app# ls
-     CHANGELOG      LICENSE	  build   integration_tests	requirements-tst.txt  setup.py	tox.ini
-     Dockerfile     Makefile   charts  pogo			requirements.txt      src
-     K8S-README.md  README.md  docs	  requirements-dev.txt	setup.cfg	      tests
+     root@0852a572ffff:/app# ls
+     CHANGELOG   PrivateRules.mak  demos                 requirements-tst.txt  setup.py      tox.ini
+     Dockerfile  README.md         docs                  requirements.txt      src           values-gitlab-ci.yaml
+     LICENSE     charts            pogo                  scripts               test-results
+     Makefile    dashboards        requirements-dev.txt  setup.cfg             tests
+
 
 3. Before you can run tests in the Docker container, you need to install
    the SKA-Low-MCCS dependencies. Run this command (inside your
@@ -257,14 +259,14 @@ understanding of what your IDE is doing for you.
 
    .. code-block:: shell-session
 
-     $ root@caa98e8e264d:/app# python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt
+     $ root@0852a572ffff:/app# python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt
      
 4. Hooray, your container now has all dependencies installed, and can
    now run the tests. To run the tests (inside the container):
 
    .. code-block:: shell-session
 
-     $ root@caa98e8e264d:/app# tox
+     $ root@0852a572ffff:/app# tox
 
 
 Tox commands you may find useful:

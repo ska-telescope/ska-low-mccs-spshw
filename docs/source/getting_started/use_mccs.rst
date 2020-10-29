@@ -33,11 +33,11 @@ absolutely necessary. If doing so, the basic workflow is:
 
       make devimage
 
-3. Deploy the built image
+3. Re-deploy with the newly built image
 
    .. code-block:: shell-session
 
-      make deploy
+      make bounce
 
 
 4. Wait for the cluster to be fully deployed:
@@ -59,7 +59,7 @@ absolutely necessary. If doing so, the basic workflow is:
    
    .. code-block:: shell-session
 
-      kubectl -n integration logs PODNAME
+      kubectl -n mccs logs PODNAME
 
 5. Once the cluster is fully deployed, run the tests:
 
@@ -176,8 +176,8 @@ An interactice itango session can be run using `make itango`:
 
 .. code-block:: shell-session
 
-   ska-mccs:ska-low-mccs$ make itango
-   kubectl exec -it -n integration itango-tango-base-test  -- itango3
+   ska-low-mccs$ make itango
+   kubectl exec -it -n mccs tango-base-itango-console  -- itango3
    ITango 9.3.1 -- An interactive Tango client.
 
    Running on top of Python 3.7.3, IPython 7.13 and PyTango 9.3.1
@@ -189,6 +189,9 @@ An interactice itango session can be run using `make itango`:
 
    hint: Try typing: mydev = Device("<tab>
 
-   In [1]: tile = DeviceProxy("low-mccs/tile/0006")
+   In [1]: tile = DeviceProxy("low-mccs/tile/0004")
 
    In [2]: tile.adminMode
+   Out[2]: <adminMode.MAINTENANCE: 2>
+
+   In [3]: 

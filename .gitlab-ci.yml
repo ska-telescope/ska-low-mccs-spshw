@@ -9,7 +9,7 @@ image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest
 #  paths:
 
 variables:
-  CHARTS_TO_PUBLISH: mccs
+  CHARTS_TO_PUBLISH: ska-low-mccs
 
 # before_script is used to define the command that should be run before all jobs, including deploy jobs, but after the restoration of artifacts.
 # This can be an array or a multi-line string.
@@ -81,20 +81,20 @@ functional_test:
   stage: integration
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
   tags:
-    - auto-k8sv2
+    - k8srunner
   dependencies:
     - build-image # no point running when image hasn't been built (tests fail)
   script:
     # test
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
     - make k8s
-    - make deploy
-    - make show
+    - make install-chart
+    - make template-chart
     - make wait
     - make functional_test
   after_script:
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
-    - make delete
+    - make uninstall-chart
     - make delete_namespace
   artifacts:
     paths:

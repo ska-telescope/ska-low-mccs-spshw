@@ -1,0 +1,14 @@
+{{ $localchart := . }}
+
+{{ template "tango-util.configuration.tpl" . }}
+
+{{ range $deviceserver := .Values.deviceServers }}
+
+{{ range $instance := $deviceserver.instances }}
+
+{{ $context := dict "deviceserver" $deviceserver "image" $localchart.Values.mccs.image "local" $localchart "instance" $instance }}
+{{ template "tango-util.deviceserver.tpl" $context }}
+
+{{ end }} ## instances
+
+{{ end }} # deviceservers

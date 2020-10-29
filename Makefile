@@ -13,14 +13,16 @@ PROJECT = ska-low-mccs
 
 # KUBE_NAMESPACE defines the Kubernetes Namespace that will be deployed to
 # using Helm.  If this does not already exist it will be created
-KUBE_NAMESPACE ?= integration
+KUBE_NAMESPACE ?= mccs
 
 # HELM_RELEASE is the release that all Kubernetes resources will be labelled
 # with
-HELM_RELEASE ?= test
+RELEASE_NAME ?= test
 
 # HELM_CHART the chart name
 HELM_CHART ?= mccs-umbrella
+
+UMBRELLA_CHART_PATH ?= charts/mccs-umbrella/
 
 # INGRESS_HOST is the host name used in the Ingress resource definition for
 # publishing services via the Ingress Controller
@@ -30,9 +32,9 @@ INGRESS_HOST ?= $(HELM_RELEASE).$(HELM_CHART).local
 # Timeout for gitlab-runner when run locally
 TIMEOUT = 86400
 # Helm version
-HELM_VERSION = v3.1.2
+HELM_VERSION = v3.3.1
 # kubectl version
-KUBERNETES_VERSION = v1.18.2
+KUBERNETES_VERSION = v1.19.2
 
 # minikube needs a Persistent Volume modified to be writable by the tango
 # user/group 1000. This will require sudo access in "make create_tmp"
@@ -59,13 +61,13 @@ KUBECONFIG ?= /etc/deploy/config ## KUBECONFIG location
 
 # Run from local image only, requires either a pulled or local image 
 # always run "latest" by default in dev environment
-CUSTOM_VALUES ?= --set mccs.project.image.pullPolicy=Never \
-	--set mccs.project.image.tag=latest
+CUSTOM_VALUES ?= --set ska-low-mccs.mccs.image.pullPolicy=Never \
+	--set ska-low-mccs.mccs.image.tag=latest
 
 ifneq ($(CI_JOB_ID),)
 CI_PROJECT_IMAGE := 
-CUSTOM_VALUES = --set mccs.project.image.registry=$(CI_REGISTRY)/ska-telescope \
-	--set mccs.project.image.tag=$(CI_COMMIT_SHORT_SHA) \
+CUSTOM_VALUES = --set ska-low-mccs.mccs.image.registry=$(CI_REGISTRY)/ska-telescope \
+	--set ska-low-mccs.mccs.image.tag=$(CI_COMMIT_SHORT_SHA) \
 	-f values-gitlab-ci.yaml
 else
 endif

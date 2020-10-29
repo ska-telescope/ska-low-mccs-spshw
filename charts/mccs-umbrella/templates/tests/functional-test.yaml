@@ -1,12 +1,14 @@
-{{ if .Values.minikube }}
+{{ $mccs_chart := index .Values "ska-low-mccs" "mccs" }}
+
+{{ if .Values.global.minikube }}
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-  name: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+  name: teststore-{{ .Chart.Name}}-{{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
-    chart: {{ template "mccs-util.chart" . }}
+    app: teststore-{{ .Chart.Name}}-{{ .Release.Name }}
+    chart: {{ .Chart.Name}}-{{ .Chart.Version }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -24,16 +26,16 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+  name: teststore-{{ .Chart.Name}}-{{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
-    chart: {{ template "mccs-util.chart" . }}
+    app: teststore-{{ .Chart.Name}}-{{ .Release.Name }}
+    chart: {{ .Chart.Name}}-{{ .Chart.Version }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
     transient: "functional-test"
 spec:
-{{ if .Values.minikube }}
+{{ if .Values.global.minikube }}
   storageClassName: standard
   accessModes:
     - ReadWriteOnce
@@ -50,7 +52,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: functional-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+  name: functional-{{ .Chart.Name}}-{{ .Release.Name }}
   labels:
     transient: "functional-test"
   annotations:
@@ -58,16 +60,16 @@ metadata:
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   initContainers:
-  - name:  functional-permission-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+  - name:  functional-permission-{{ .Chart.Name}}-{{ .Release.Name }}
     image: busybox
     command: ["/bin/chown","1000:1000", "/data"]
     volumeMounts:
     - name: testdata
       mountPath: /data
   containers:
-  - name: functional-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
-    image: "{{ .Values.mccs.project.image.registry }}/{{ .Values.mccs.project.image.image }}:{{ .Values.mccs.project.image.tag }}"
-    imagePullPolicy: {{ .Values.mccs.project.image.pullPolicy }}
+  - name: functional-{{ .Chart.Name}}-{{ .Release.Name }}
+    image: "{{ $mccs_chart.image.registry }}/{{ $mccs_chart.image.image }}:{{ $mccs_chart.image.tag }}"
+    imagePullPolicy: {{ $mccs_chart.image.pullPolicy }}
     command:
       - /bin/bash
       - "-ce"
@@ -75,14 +77,15 @@ spec:
         pip3 install -rrequirements-tst.txt  # TODO: should be part of image?
         pytest --true-context tests -k functional --junitxml=/reports/functional-test.xml --cucumberjson=/reports/cucumber.json
     env:
-{{ include "mccs-util.dbenv" . | indent 4 }}
+    - name: TANGO_HOST
+      value: {{ .Values.global.tango_host }} 
     volumeMounts:
     - name: testdata
       mountPath: /reports
   volumes:
   - name: testdata
     persistentVolumeClaim:
-      claimName: teststore-{{ template "mccs-util.name" . }}-{{ .Release.Name }}
+      claimName: teststore-{{ .Chart.Name}}-{{ .Release.Name }}
   restartPolicy: Never
 {{- with .Values.nodeSelector }}
   nodeSelector:

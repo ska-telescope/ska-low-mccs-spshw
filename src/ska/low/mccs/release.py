@@ -8,7 +8,7 @@
 import sys
 
 name = """ska.low.mccs"""
-version = "0.2.1"
+version = "0.3.0"
 version_info = version.split(".")
 description = """A set of Low MCCS tango devices for the SKA Telescope."""
 author = "Team MCCS"

@@ -1,14 +1,16 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsController project
+# This file is part of the SKA-Low-MCCS project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""Contains the tests for the MccsController Tango device_under_test prototype."""
+"""
+Contains the tests for the MccsController Tango device_under_test prototype.
+"""
 
 import logging
 import threading
@@ -45,7 +47,9 @@ device_to_load = {
 
 
 class TestMccsController:
-    """Test case for packet generation."""
+    """
+    Tests of the MccsController device.
+    """
 
     def test_State(self, device_under_test):
         """
@@ -362,7 +366,7 @@ class TestMccsController:
         assert mock_station_1.subarrayId == 2
         assert mock_station_2.subarrayId == 2
 
-    def test_release(self, device_under_test):
+    def test_Release(self, device_under_test):
         """
         Test Release command.
 
@@ -745,19 +749,14 @@ class TestControllerResourceManager:
         # Event manager to take health events
         self.event_manager = EventManager(self.stations)
         self.health_model = HealthModel(
-            None,
-            self.stations,
-            self.event_manager,
-            device_under_test,
+            None, self.stations, self.event_manager, device_under_test
         )
         # HACK pending device pool management refactor
         self.health_monitor = self.health_model._health_monitor
 
         # Instantiate a resource manager for the Stations
         manager = ControllerResourceManager(
-            self.health_monitor,
-            "Test Manager",
-            self.stations,
+            self.health_monitor, "Test Manager", self.stations
         )
         return manager
 
@@ -785,8 +784,7 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is FAILED
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "healthState",
-            HealthState.FAILED,
+            "healthState", HealthState.FAILED
         )
 
         with pytest.raises(
@@ -797,8 +795,7 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is OK again
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "healthState",
-            HealthState.OK,
+            "healthState", HealthState.OK
         )
 
         # Assign it again

@@ -4,6 +4,7 @@ __all__ = [
     "MccsAPIU",
     "MccsController",
     "ControllerPowerManager",
+    "ControllerResourceManager",
     "MccsSubarray",
     "MccsStation",
     "StationHardwareManager",
@@ -29,7 +30,11 @@ __all__ = [
 from .device import MccsDevice  # noqa: F401
 from .group_device import MccsGroupDevice  # noqa: F401
 from .apiu import MccsAPIU
-from .controller import MccsController, ControllerPowerManager
+from .controller import (
+    MccsController,
+    ControllerPowerManager,
+    ControllerResourceManager,
+)
 from .subarray import MccsSubarray
 from .station import MccsStation, StationHardwareManager, StationPowerManager
 from .station_beam import MccsStationBeam

@@ -1,21 +1,26 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsController project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MccsController Tango device prototype
-
-MccsController TANGO device class for the MccsController prototype
 """
-__all__ = ["MccsController", "main"]
+This module contains the SKA Low MCCS Controller device prototype.
+"""
 
-import numpy
+__all__ = [
+    "MccsController",
+    "ControllerResourceManager",
+    "ControllerPowerManager",
+    "main",
+]
+
 import json
 import threading
+from enum import Enum
 
 # PyTango imports
 import tango
@@ -25,6 +30,7 @@ from tango.server import attribute, command, device_property
 # Additional import
 from ska.base import SKAMaster, SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.control_model import HealthState
 
 from ska.low.mccs.power import PowerManager, PowerManagerError
 import ska.low.mccs.release as release
@@ -48,6 +54,489 @@ class ControllerPowerManager(PowerManager):
         :type station_fqdns: list of string
         """
         super().__init__(None, station_fqdns)
+
+
+class ControllerResourceManager:
+    """
+    This class implements a resource manger for the MCCS controller device
+
+    Initialize with a list of FQDNs of devices to be managed.
+    The ControllerResourceManager holds the FQDN and the (1-based) ID
+    of the device that owns each managed device.
+    """
+
+    class ResourceState(Enum):
+        """
+        This enum describes a resource's assigned state.
+
+        A resource which is UNAVAILABLE cannot be assigned.
+        A resource which is AVAILABLE can be assigned.
+        A resource which is ASSIGNED cannot be assigned until the original
+        assignment has been released.
+        """
+
+        UNAVAILABLE = 1
+        """
+        The resource is unallocated and cannot be allocated; for
+        example, it is in a fault state
+        """
+
+        AVAILABLE = 2
+        """
+        The resource is unallocated and available for allocation
+        """
+
+        ASSIGNED = 3
+        """
+        The resource is allocated.
+        """
+
+    class ResourceAvailabilityPolicy:
+        """
+        This inner class implements a resource allocation policy for the
+        resources belonging to the parent.
+
+        Initialise with a list of allocatable health states:
+        (OK = 0, DEGRADED = 1, FAILED = 2, UNKNOWN = 3).
+        Defaults to [OK]
+        """
+
+        def __init__(self, allocatable_health_states=[HealthState.OK]):
+            self._allocatable_health_states = list(allocatable_health_states)
+
+        def is_allocatable(self, health_state):
+            """
+            Check if a state allows allocation.
+
+            :param health_state: The state of health to check
+            :type health_state: int
+
+            :return: True if this is suitable for allocation
+            :rtype: bool
+            """
+            return health_state in self._allocatable_health_states
+
+        def assign_allocatable_health_states(self, health_states):
+            """
+            Set the health states allowed for allocation.
+
+            :param health_states: Allowed health states
+            :type health_states: list of int
+            """
+            self._allocatable_health_states = list(health_states)
+
+        def reset(self):
+            """Reset to the default set of states
+            allowed for allocation.
+            """
+            self._allocatable_health_states = [HealthState.OK]
+
+    class Resource:
+        """
+        This inner class implements state recording for a managed resource.
+
+        Initialise with a device id number.
+        """
+
+        def __init__(self, availability_policy, fqdn):
+            """
+            Initialise a new Resource instance
+
+            :param availability_policy: the policy associated with this
+                device
+            :type availability_policy:
+                :py:class:`ResourceAvailabilityPolicy`
+            :param fqdn: FQDN of supervised device
+            :type fqdn: string
+            """
+            self._resource_availability_policy = availability_policy
+            self._fqdn = fqdn
+            self._resource_state = ControllerResourceManager.ResourceState.AVAILABLE
+            self._assigned_to = 0
+            self._health_state = HealthState.OK
+
+        def assigned_to(self):
+            """
+            Get the ID to which this resource is assigned
+
+            :return: Device ID
+            :rtype: int
+            """
+            return self._assigned_to
+
+        def is_assigned(self):
+            """
+            Check if this resource is assigned
+
+            :return: True if assigned
+            :rtype: bool
+            """
+            return (
+                self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED
+                and self._assigned_to != 0
+            )
+
+        def is_available(self):
+            """
+            Check if this resource is AVAILABLE (for assignment)
+
+            :return: True if available
+            :rtype: bool
+            """
+            return (
+                self._resource_state
+                == ControllerResourceManager.ResourceState.AVAILABLE
+            )
+
+        def is_unavailable(self):
+            """
+            Check if this resource is UNAVAILABLE
+
+            :return: True if unavailable
+            :rtype: bool
+            """
+            return (
+                self._resource_state
+                == ControllerResourceManager.ResourceState.UNAVAILABLE
+            )
+
+        def is_not_available(self):
+            """
+            Check if this resource is not available
+            A resource is not available if it is ASSIGNED or UNAVAILABLE
+
+            :return: True if not unavailable
+            :rtype: bool
+            """
+            return (
+                self._resource_state
+                == ControllerResourceManager.ResourceState.UNAVAILABLE
+                or self._resource_state
+                == ControllerResourceManager.ResourceState.ASSIGNED
+            )
+
+        def is_healthy(self):
+            """
+            Check if this resource is in a healthy state, as defined by
+            its resource availability policy.
+
+            :return: True if healthy
+            :rtype: bool
+            """
+            return self._resource_availability_policy.is_allocatable(self._health_state)
+
+        def _health_changed(self, event_name, event_value):
+            """
+            Update the health state of the resource
+
+            :param event_name: Event name (should be 'healthState')
+            :type event_name: string
+
+            :param event_value: The HealthState to assign to the resource
+            :type event_value: int
+            """
+            assert event_name == "healthState"
+            self._health_state = event_value
+
+        def assign(self, owner):
+            """
+            Assign a resource to an owner
+
+            :param owner: Device ID of the owner
+            :type owner: int
+
+            :raises ValueError: if the named resource is already assigned
+            :raises ValueError: if the named resource is unhealthy
+            :raises ValueError: if the named resource is otherwise unavailable
+            """
+            # Don't allow assign if already assigned to another owner
+            if self.is_assigned():
+                if self._assigned_to != owner:
+                    # Trying to assign to new owner not allowed
+                    raise ValueError(
+                        f"{self._fqdn} already assigned to {self._assignedTo}"
+                    )
+                # No action if repeating the existing assignment
+                return
+            # Don't allow assign if resource is not healthy
+            if not self.is_healthy():
+                raise ValueError(
+                    f"{self._fqdn} does not pass health check for assignment"
+                )
+
+            if self.is_available():
+                self._assigned_to = owner
+                self._resource_state = ControllerResourceManager.ResourceState.ASSIGNED
+            else:
+                raise ValueError(f"{self._fqdn} is unavailable")
+
+        def release(self):
+            """Release the resource from assignment
+
+            :raises ValueError: if the resource was unassigned
+            """
+            if self._assigned_to == 0:
+                raise ValueError(
+                    f"Attempt to release unassigned resource, {self._fqdn}"
+                )
+            self._assigned_to = 0
+
+            if self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED:
+                # Previously assigned resource becomes available
+                if not self.is_healthy():
+                    self.make_unavailable()
+                else:
+                    self._resource_state = (
+                        ControllerResourceManager.ResourceState.AVAILABLE
+                    )
+            # Unassigned or unavailable resource does not change state
+
+        def make_unavailable(self):
+            """
+            Mark the resource as unavailable for assignment
+            """
+            # Change resource state to unavailable
+            # If it was previously AVAILABLE (not ASSIGNED) we can just switch
+            if self.is_available():
+                self._resource_state = (
+                    ControllerResourceManager.ResourceState.UNAVAILABLE
+                )
+            elif (
+                self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED
+            ):
+                # TODO
+                # We must decide what to do with rescources that were assigned already
+                pass
+
+        def make_available(self):
+            """
+            Mark the resource as available for assignment
+            """
+            # Change resource state to available
+            # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
+            if self.is_unavailable():
+                self._resource_state = ControllerResourceManager.ResourceState.AVAILABLE
+            elif (
+                self._resource_state == ControllerResourceManager.ResourceState.ASSIGNED
+            ):
+                # TODO
+                # We must decide what to do with resources that were assigned already
+                pass
+
+    def __init__(self, health_monitor, managername, fqdns):
+        """
+        Initialize new ControllerResourceManager instance
+
+        :param health_monitor: Provides for monitoring of health states
+        :type health_monitor: HealthMonitor object
+        :param managername: Name for this manager (imformation only)
+        :type managername: string
+        :param fqdns: A list of device FQDNs
+        :type fqdns: list of string
+        """
+        self._managername = managername
+        self._resources = dict()
+        self.resource_availability_policy = self.ResourceAvailabilityPolicy(
+            [HealthState.OK]
+        )
+        # For each resource, identified by FQDN, create an object
+        for fqdn in fqdns:
+            self._resources[fqdn] = self.Resource(
+                self.resource_availability_policy, fqdn
+            )
+            health_monitor.register_callback(
+                self._resources[fqdn]._health_changed, fqdn
+            )
+
+    def _except_on_unmanaged(self, fqdns):
+        """
+        Raise an exception if any of the listed FQDNs
+        are not being managed by this manager.
+
+        :param fqdns: The FQDNs to check
+        :type fqdns: list of str
+        :raises ValueError: if an FQDN is not managed by this
+        """
+        # Are these keys all managed?
+        # return any FQDNs not in our list of managed FQDNs
+        bad = [fqdn for fqdn in fqdns if fqdn not in self._resources]
+        if any(bad):
+            raise ValueError(
+                f"These FQDNs are not managed by {self._managername}: {bad}"
+            )
+
+    def get_all_fqdns(self):
+        """
+        Get all FQDNs managed by this resource manager
+
+        :return: List of FQDNs managed
+        :rtype: list of strings
+        """
+        return self._resources.keys()
+
+    def get_assigned_fqdns(self, owner_id):
+        """
+        Get the FQDNs assigned to a given owner id
+
+        :param owner_id: 1-based device id that we check for ownership
+        :type owner_id: int
+
+        :return: List of FQDNs assigned to owner_id
+        :rtype: list of strings
+        """
+
+        return [
+            fqdn
+            for fqdn, res in self._resources.items()
+            if (res.is_assigned() and res.assigned_to() == owner_id)
+        ]
+
+    def query_allocation(self, fqdns, new_owner):
+        """
+        Test if a (re)allocation is allowed, and if so, return lists of FQDNs
+        to assign and to release. If the allocation is not permitted due to some
+        FQDNs being allocated to another owner already, the list of blocking
+        FQDNs is returned as the ReleaseList.
+
+        :param fqdns: The list of FQDNs we would like to assign
+        :type fqdns: list of string
+        :param new_owner: 1-based device id that would take ownership
+        :type new_owner: int
+
+        :return: tuple (Allowed, AssignList, ReleaseList)
+            WHERE
+            Allowed (bool): True if this (re)allocation is allowed
+            AssignList (list): The list of FQDNs to allocate, or None
+            ReleaseList (list): The list of FQDNs to release, or None
+        :rtype: tuple (bool, list of strings, list of strings)
+        """
+
+        self._except_on_unmanaged(fqdns)
+
+        # Make a list of any FQDNs which are blocking this allocation
+        blocking = [
+            fqdn
+            for fqdn in fqdns
+            if (
+                (self._resources[fqdn].is_unavailable())
+                or (
+                    self._resources[fqdn].is_assigned()
+                    and self._resources[fqdn].assigned_to() != new_owner
+                )
+            )
+        ]
+
+        if any(blocking):
+            # Return False to indicate we are blocked, with the list
+            return (False, None, blocking)
+
+        # Make a list of wanted FQDNs not already assigned
+        needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].is_assigned())]
+        if len(needed) == 0:
+            needed = None
+
+        # Make a list of already-assigned FQDNs no longer wanted
+        to_release = [
+            fqdn
+            for (fqdn, res) in self._resources.items()
+            if (
+                res.is_assigned()
+                and res.assigned_to() == new_owner
+                and fqdn not in fqdns
+            )
+        ]
+        if len(to_release) == 0:
+            to_release = None
+
+        # Return True (ok to proceed), with the lists
+        return (True, needed, to_release)
+
+    def assign(self, fqdns, new_owner):
+        """
+        Take a list of device FQDNs and assign them to a new owner id.
+
+        :param fqdns: The list of device FQDNs to assign
+        :type fqdns: list of string
+        :param new_owner: 1-based id of the new owner
+        :type new_owner: int
+        :raises ValueError: if any of the FQDNs are unavailable or not healthy
+        """
+
+        self._except_on_unmanaged(fqdns)
+        for fqdn in fqdns:
+            try:
+                self._resources[fqdn].assign(new_owner)
+            except ValueError as value_error:
+                raise ValueError(f"{self._managername}: {value_error}") from value_error
+
+    def release(self, fqdns):
+        """
+        Take a list of device FQDNs and flag them as unassigned.
+
+        :param fqdns: The list of device FQDNs to release
+        :type fqdns: list of string
+        :raises ValueError: if any of the FQDNs are not being managed
+        """
+        self._except_on_unmanaged(fqdns)
+        for fqdn in fqdns:
+            try:
+                self._resources[fqdn].release()
+            except ValueError as value_error:
+                raise ValueError(f"{self._managername}: {value_error}") from value_error
+
+    def make_unavailable(self, fqdns):
+        """
+        For each resource in the given list of FQDNs make its availability state
+        unavailable
+
+        :param fqdns: The list of device FQDNs to make unavailable
+        :type fqdns: list of string
+        """
+        self._except_on_unmanaged(fqdns)
+        for fqdn in fqdns:
+            self._resources[fqdn].make_unavailable()
+
+    def make_available(self, fqdns):
+        """
+        For each resource in the given list of FQDNs make its availability state
+        available
+
+        :param fqdns: The list of device FQDNs to make unavailable
+        :type fqdns: list of string
+        """
+        self._except_on_unmanaged(fqdns)
+        for fqdn in fqdns:
+            self._resources[fqdn].make_available()
+
+    def fqdn_from_id(self, devid):
+        """
+        Find a device FQDN by searching on its id number
+
+        :param devid: The device ID to find
+        :type devid: int
+        :raises ValueError: if the devid is not being managed
+        :return: fqdn
+        :rtype: string
+        """
+
+        for fqdn, res in self._resources.items():
+            if res._devid == devid:
+                return fqdn
+        raise ValueError(f"Device ID {devid} is not managed by {self._managername}")
+
+    def assign_allocatable_health_states(self, health_states):
+        """Assign a list of health states which permit allocation.
+
+        :param health_states: The list of allowed states
+        :type health_states: list if int
+        """
+        self.resource_availability_policy.assign_allocatable_health_states = (
+            health_states
+        )
+
+    def reset_resource_availability_policy(self):
+        """Reset to the default list of health states which permit allocation."""
+        self.resource_availability_policy.reset()
 
 
 class MccsController(SKAMaster):
@@ -163,23 +652,15 @@ class MccsController(SKAMaster):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device._subarray_fqdns = numpy.array(
-                [] if device.MccsSubarrays is None else device.MccsSubarrays, dtype=str
-            )
-
-            # whether subarray is enabled
-            device._subarray_enabled = numpy.zeros(
-                len(device.MccsSubarrays), dtype=bool
-            )
-
-            device._station_fqdns = numpy.array(
-                [] if device.MccsStations is None else device.MccsStations, dtype=str
-            )
-
-            # id of subarray that station is allocated to, zero if unallocated
-            device._station_allocated = numpy.zeros(
-                len(device.MccsStations), dtype=numpy.ubyte
-            )
+            if device.MccsSubarrays is None:
+                device._subarray_fqdns = list()
+            else:
+                device._subarray_fqdns = device.MccsSubarrays
+            device._subarray_enabled = [False] * len(device.MccsSubarrays)
+            if device.MccsStations is None:
+                device._station_fqdns = list()
+            else:
+                device._station_fqdns = device.MccsStations
 
             self._thread = threading.Thread(
                 target=self._initialise_connections,
@@ -209,6 +690,11 @@ class MccsController(SKAMaster):
                     self._interrupt = False
                     return
                 self._initialise_power_management(device, fqdns)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_resource_management(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -247,10 +733,34 @@ class MccsController(SKAMaster):
             :type: list of str
             """
             device.power_manager = ControllerPowerManager(device._station_fqdns)
-
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
             device.register_command_object("On", device.OnCommand(*power_args))
+
+        def _initialise_resource_management(self, device, fqdns):
+            """
+            Initialise resource management for this device.
+
+            :param device: the device for which resource management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices allocation of which
+                is managed by this device
+            :type: list of str
+            """
+            health_monitor = device.health_model._health_monitor
+
+            # Instantiate a resource manager for the Stations
+            device._stations_manager = ControllerResourceManager(
+                health_monitor, "StationsManager", fqdns
+            )
+            resource_args = (device, device.state_model, device.logger)
+            device.register_command_object(
+                "Allocate", device.AllocateCommand(*resource_args)
+            )
+            device.register_command_object(
+                "Release", device.ReleaseCommand(*resource_args)
+            )
 
         def interrupt(self):
             """
@@ -633,41 +1143,37 @@ class MccsController(SKAMaster):
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
             # Allocation request checks
-            station_fqdns = []
-            for station_id in station_ids:
-                station_fqdns.append(f"low-mccs/station/{station_id:03}")
+            # Generate station FQDNs from IDs
+            station_fqdns = [
+                f"low-mccs/station/{station_id:03}" for station_id in station_ids
+            ]
 
-            station_allocation = numpy.isin(
-                controllerdevice._station_fqdns, station_fqdns, assume_unique=True
+            # Generate subarray FQDN from ID
+            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
+
+            # Query stations resource manager
+            # Are we allowed to make this allocation?
+            # Which FQDNs need to be assigned and released?
+            (
+                alloc_allowed,
+                stations_to_assign,
+                stations_to_release,
+            ) = controllerdevice._stations_manager.query_allocation(
+                station_fqdns, subarray_id
             )
-            already_allocated = numpy.logical_and.reduce(
-                (
-                    controllerdevice._station_allocated != 0,
-                    controllerdevice._station_allocated != subarray_id,
-                    station_allocation,
-                )
-            )
-            if numpy.any(already_allocated):
-                already_allocated_fqdns = list(
-                    controllerdevice._station_fqdns[already_allocated]
-                )
-                fqdns_string = ", ".join(already_allocated_fqdns)
+            if not alloc_allowed:
+                # If manager returns False (not allowed) stations_to_release
+                # gives the list of FQDNs blocking the allocation.
+                aalist = ", ".join(stations_to_release)
                 return (
                     ResultCode.FAILED,
-                    f"Cannot allocate stations already allocated: {fqdns_string}",
+                    f"Cannot allocate stations already allocated: {aalist}",
                 )
 
-            # Check to see if we need to release resources before allocating
-            subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
             subarray_device = tango.DeviceProxy(subarray_fqdn)
-            release_mask = numpy.logical_and(
-                controllerdevice._station_allocated == subarray_id,
-                numpy.logical_not(station_allocation),
-            )
-            if numpy.any(release_mask):
-                stations_to_release = list(
-                    controllerdevice._station_fqdns[release_mask]
-                )
+
+            # Manager gave this list of stations to release (no longer required)
+            if stations_to_release is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
                 )
@@ -681,6 +1187,9 @@ class MccsController(SKAMaster):
                     station = tango.DeviceProxy(station_fqdn)
                     station.subarrayId = 0
 
+                # Inform manager that we made the releases
+                controllerdevice._stations_manager.release(stations_to_release)
+
             # Enable the subarray specified by the caller (if required)
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
                 self._enable_subarray(subarray_id)
@@ -688,13 +1197,8 @@ class MccsController(SKAMaster):
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
                 return (ResultCode.FAILED, f"Cannot enable subarray {subarray_fqdn}")
 
-            # Now, assign resources
-            assign_mask = numpy.logical_and(
-                controllerdevice._station_allocated == 0, station_allocation
-            )
-
-            if numpy.any(assign_mask):
-                stations_to_assign = list(controllerdevice._station_fqdns[assign_mask])
+            # Manager gave this list of stations to assign
+            if stations_to_assign is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources, stations=stations_to_assign
                 )
@@ -708,8 +1212,11 @@ class MccsController(SKAMaster):
                     device = tango.DeviceProxy(fqdn)
                     device.subarrayId = subarray_id
 
-            controllerdevice._station_allocated[release_mask] = 0
-            controllerdevice._station_allocated[assign_mask] = subarray_id
+                # Inform manager that we made the assignments
+                controllerdevice._stations_manager.assign(
+                    stations_to_assign, subarray_id
+                )
+
             return (ResultCode.OK, "Allocate command successful")
 
         def check_allowed(self):
@@ -842,12 +1349,14 @@ class MccsController(SKAMaster):
                 )
 
             if release_all:
-                mask = device._station_allocated == subarray_id
-                active_station_fqdns = list(device._station_fqdns[mask])
-                for station_fqdn in active_station_fqdns:
-                    station = tango.DeviceProxy(station_fqdn)
+                # Query stations resouce manager for stations assigned to subarray
+                fqdns = self.target._stations_manager.get_assigned_fqdns(subarray_id)
+                # and clear the subarrayId in each
+                for fqdn in fqdns:
+                    station = tango.DeviceProxy(fqdn)
                     station.subarrayId = 0
-                device._station_allocated[mask] = 0
+                # Finally release them from assignment in the manager
+                self.target._stations_manager.release(fqdns)
 
                 result = self._disable_subarray(subarray_id)
                 if result[0] is not ResultCode.OK:
@@ -860,6 +1369,7 @@ class MccsController(SKAMaster):
                     ResultCode.FAILED,
                     "Release() command failed - partial release currently unsupported",
                 )
+
             return (ResultCode.OK, "Release() command successful")
 
         def check_allowed(self):

@@ -2,8 +2,9 @@
 
 ## unreleased
 
-* MCCS-207 - rafcor helm charts to use tango-util
+* MCCS-156 - controller resource management model
 * MCCS-225 - hardware model
+* MCCS-207 - refactor helm charts to use tango-util
 
 ## 0.2.1 
 

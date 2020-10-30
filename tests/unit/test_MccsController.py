@@ -1,14 +1,16 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsController project
+# This file is part of the SKA-Low-MCCS project
 #
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""Contains the tests for the MccsController Tango device_under_test prototype."""
+"""
+Contains the tests for the MccsController Tango device_under_test prototype.
+"""
 
 import logging
 import threading
@@ -27,8 +29,15 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsController, ControllerPowerManager, release
+from ska.low.mccs import (
+    MccsController,
+    ControllerPowerManager,
+    ControllerResourceManager,
+    release,
+)
 from ska.low.mccs.utils import call_with_json
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthModel
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
@@ -38,7 +47,9 @@ device_to_load = {
 
 
 class TestMccsController:
-    """Test case for packet generation."""
+    """
+    Tests of the MccsController device.
+    """
 
     def test_State(self, device_under_test):
         """
@@ -710,6 +721,89 @@ class TestControllerPowerManager:
         assert off_command() == (ResultCode.OK, "Off command completed OK")
         assert not power_manager.is_on()
         assert state_model.op_state == DevState.OFF
+
+
+class TestControllerResourceManager:
+    """
+    This class contains tests of the ska.low.mccs.controller.ControllerResourceManager
+    class.
+
+    This class is already exercised through the Tango commands of Controller,
+    but here we simulate some scenarios not covered.
+    """
+
+    @pytest.fixture()
+    def resource_manager(self, device_under_test):
+        """
+        Fixture that returns a resource manager with 2 managed stations
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :return: a resource manager with 2 subservient station devices
+        :rtype: :py:class:`ska.low.mccs.controller.ControllerResourceManager`
+        """
+        self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
+
+        # Event manager to take health events
+        self.event_manager = EventManager(self.stations)
+        self.health_model = HealthModel(
+            None, self.stations, self.event_manager, device_under_test
+        )
+        # HACK pending device pool management refactor
+        self.health_monitor = self.health_model._health_monitor
+
+        # Instantiate a resource manager for the Stations
+        manager = ControllerResourceManager(
+            self.health_monitor, "Test Manager", self.stations
+        )
+        return manager
+
+    def test_assign(self, resource_manager):
+        """Test assignment operations of the ControllerResourceManager
+
+        :param resource_manager: test fixture providing a manager object
+        :type resource_manager: ControllerResourceManager
+        """
+
+        # Assign both stations
+        resource_manager.assign(["low-mccs/station/001", "low-mccs/station/002"], 1)
+
+        # They should both be recorded as assigned
+        assigned = resource_manager.get_assigned_fqdns(1)
+        assert "low-mccs/station/001" in assigned
+        assert "low-mccs/station/002" in assigned
+
+        # Drop station 2
+        resource_manager.release(["low-mccs/station/002"])
+
+        # It should now not be assigned
+        assigned = resource_manager.get_assigned_fqdns(1)
+        assert "low-mccs/station/002" not in assigned
+
+        # Mock a health event so that station 2 is FAILED
+        resource_manager._resources["low-mccs/station/002"]._health_changed(
+            "healthState", HealthState.FAILED
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="low-mccs/station/002 does not pass health check for assignment",
+        ):
+            resource_manager.assign(["low-mccs/station/002"], 1)
+
+        # Mock a health event so that station 2 is OK again
+        resource_manager._resources["low-mccs/station/002"]._health_changed(
+            "healthState", HealthState.OK
+        )
+
+        # Assign it again
+        resource_manager.assign(["low-mccs/station/002"], 1)
+
+        # and check
+        assigned = resource_manager.get_assigned_fqdns(1)
+        assert "low-mccs/station/002" in assigned
 
 
 class TestMccsController_InitCommand:

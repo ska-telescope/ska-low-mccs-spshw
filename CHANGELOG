@@ -2,6 +2,8 @@
 
 ## unreleased
 
+## 0.3.0 
+
 * MCCS-156 - controller resource management model
 * MCCS-225 - hardware model
 * MCCS-207 - refactor helm charts to use tango-util

@@ -10,5 +10,5 @@ dependencies:
   version: 0.2.10
   repository: https://nexus.engageska-portugal.pt/repository/helm-chart
 - name: ska-low-mccs
-  version:  0.2.1 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+  version:   0.3.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs

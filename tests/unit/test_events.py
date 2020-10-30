@@ -57,7 +57,7 @@ class TestEventSubscriptionHandler:
         method is called, it passes the event on by invoking its own
         registered callbacks
 
-        :param mocker: fixture that wraps unittest.Mock
+        :param mocker: fixture that wraps unittest.mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock

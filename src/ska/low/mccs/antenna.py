@@ -12,25 +12,30 @@
 An implementation of the Antenna Device Server for the MCCS based upon
 architecture in SKA-TEL-LFAA-06000052-02.
 """
-__all__ = ["AntennaHardware", "AntennaHardwareManager", "MccsAntenna", "main"]
+__all__ = ["AntennaHardwareSimulator", "AntennaHardwareManager", "MccsAntenna", "main"]
 
 import threading
 
 # tango imports
 from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command
+from tango.server import attribute, command, AttrWriteType
 
 # Additional import
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import HealthState
+from ska.base.control_model import SimulationMode
 
+from ska.low.mccs.hardware import (
+    OnOffHardwareHealthEvaluator,
+    OnOffHardwareSimulator,
+    OnOffHardwareManager,
+)
 from ska.low.mccs.health import HealthModel
 
 
-class AntennaHardware:
+class AntennaHardwareSimulator(OnOffHardwareSimulator):
     """
-    A stub class to take the place of actual antenna hardware
+    A simulator of AntennaHardware
     """
 
     VOLTAGE = 3.5
@@ -38,17 +43,17 @@ class AntennaHardware:
 
     def __init__(self):
         """
-        Initialise a new AntennaHardware instance
+        Initialise a new AntennaHardwareSimulator instance
         """
-        self._is_on = False
         self._voltage = None
         self._temperature = None
+        super().__init__()
 
     def off(self):
         """
         Turn me off
         """
-        self._is_on = False
+        super().off()
         self._voltage = None
         self._temperature = None
 
@@ -56,21 +61,9 @@ class AntennaHardware:
         """
         Turn me on
         """
-        print("IN hardware on")
-        self._is_on = True
-        self._voltage = AntennaHardware.VOLTAGE  # for testing purposes
-        self._temperature = AntennaHardware.TEMPERATURE  # for testing purposes
-        print(f"OUT hardware on {self._voltage}")
-
-    @property
-    def is_on(self):
-        """
-        Return whether I am on or off
-
-        :return: whether I am on or off
-        :rtype: bool
-        """
-        return self._is_on
+        super().on()
+        self._voltage = self.VOLTAGE
+        self._temperature = self.TEMPERATURE
 
     @property
     def voltage(self):
@@ -80,6 +73,7 @@ class AntennaHardware:
         :return: my voltage
         :rtype: float
         """
+        self.check_connected()
         return self._voltage
 
     @property
@@ -90,10 +84,21 @@ class AntennaHardware:
         :return: my temperature
         :rtype: float
         """
+        self.check_connected()
         return self._temperature
 
 
-class AntennaHardwareManager:
+class AntennaHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
+    """
+    A placeholder for a class that implements a policy by which the
+    antenna hardware manager evaluates the health of its hardware. At
+    present this just inherits from the base class unchanged.
+    """
+
+    pass
+
+
+class AntennaHardwareManager(OnOffHardwareManager):
     """
     This class manages antenna hardware.
 
@@ -101,79 +106,24 @@ class AntennaHardwareManager:
         There are lots of other attributes that should be.
     """
 
-    def __init__(self, hardware=None):
+    def __init__(self, simulation_mode):
         """
         Initialise a new AntennaHardwareManager instance
 
-        At present, hardware is simulated by stub software, and so the
-        only argument is an optional "hardware" instance. In future, its
-        arguments will allow connection to the actual hardware
-
-        :param hardware: the hardware itself, defaults to None. This only
-            exists to facilitate testing.
-        :type hardware: :py:class:`AntennaHardware`
+        :param simulation_mode: the initial simulation mode of this
+            hardware manager
+        :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        self._hardware = AntennaHardware() if hardware is None else hardware
+        super().__init__(simulation_mode, AntennaHardwareHealthEvaluator())
 
-        # polled hardware attributes
-        self._is_on = None
-        self._voltage = None
-        self._temperature = None
-
-        self._health = None
-        self._health_callbacks = []
-
-        self.poll_hardware()
-
-    def off(self):
+    def _create_simulator(self):
         """
-        Turn the hardware off
+        Helper method to create and return a hardware simulator
 
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
+        :return: a simulator of antenna hardware
+        :rtype: :py:class:`AntennaHardwareSimulator`
         """
-        if not self._hardware.is_on:
-            return
-        self._hardware.off()
-        self.poll_hardware()
-        return not self.is_on
-
-    def on(self):
-        """
-        Turn the hardware on
-
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
-        """
-        if self._hardware.is_on:
-            return
-        self._hardware.on()
-        self.poll_hardware()
-        return self.is_on
-
-    def poll_hardware(self):
-        """
-        Poll the hardware and update local attributes with values
-        reported by the hardware.
-        """
-        self._is_on = self._hardware.is_on
-        if self._is_on:
-            self._voltage = self._hardware.voltage
-            self._temperature = self._hardware.temperature
-        else:
-            self._voltage = None
-            self._temperature = None
-        self._evaluate_health()
-
-    @property
-    def is_on(self):
-        """
-        Whether the hardware is on or not
-
-        :return: whether the hardware is on or not
-        :rtype: boolean
-        """
-        return self._is_on
+        return AntennaHardwareSimulator()
 
     @property
     def voltage(self):
@@ -183,7 +133,7 @@ class AntennaHardwareManager:
         :return: the voltage of the hardware
         :rtype: float
         """
-        return self._voltage
+        return self._hardware.voltage
 
     @property
     def temperature(self):
@@ -193,54 +143,7 @@ class AntennaHardwareManager:
         :return: the temperature of the hardware
         :rtype: float
         """
-        return self._temperature
-
-    @property
-    def health(self):
-        """
-        The health of the hardware, as evaluated by this manager
-
-        :return: the health of the hardware
-        :rtype: :py:class:`ska.base.control_model.HealthState`
-        """
-        return self._health
-
-    def _evaluate_health(self):
-        """
-        Evaluate the health of the hardware
-        """
-        # TODO: look at the polled hardware values and maybe further
-        # poke the hardware to check that it is okay. But for now:
-        evaluated_health = HealthState.OK
-
-        self._update_health(evaluated_health)
-
-    def _update_health(self, health):
-        """
-        Update the health of this hardware, ensuring that any registered
-        callbacks are called
-
-        :param health: the new health value
-        :type health: :py:class:`ska.base.control_model.HealthState`
-        """
-        if self._health == health:
-            return
-        self._health = health
-        for callback in self._health_callbacks:
-            callback(health)
-
-    def register_health_callback(self, callback):
-        """
-        Register a callback to be called when the health of the hardware
-        changes. The callback will be called immediately upon
-        registration.
-
-        :param callback: A callback to be called when the health of the
-            hardware changes
-        :type callback: callable
-        """
-        self._health_callbacks.append(callback)
-        callback(self._health)
+        return self._hardware.temperature
 
 
 class MccsAntenna(SKABaseDevice):
@@ -301,6 +204,19 @@ class MccsAntenna(SKABaseDevice):
             super().do()
 
             device = self.target
+
+            # TODO: the default value for simulationMode should be
+            # FALSE, but we don't have real hardware to test yet, so we
+            # can't take our devices out of simulation mode. However,
+            # simulationMode is a memorized attribute, and
+            # pytango.test_context.MultiDeviceTestContext will soon
+            # support memorized attributes. Once it does, we should
+            # figure out how to inject memorized values into our real
+            # tango deployment, then start honouring the default of
+            # FALSE by removing this next line.
+            device._simulation_mode = SimulationMode.TRUE
+            device.hardware_manager = None
+
             device._antennaId = 0
             device._logicalTpmAntenna_id = 0
             device._logicalApiuAntenna_id = 0
@@ -382,7 +298,7 @@ class MccsAntenna(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = AntennaHardwareManager()
+            device.hardware_manager = AntennaHardwareManager(device._simulation_mode)
             hardware_args = (device.hardware_manager, device.state_model, self.logger)
             device.register_command_object("Reset", device.ResetCommand(*hardware_args))
             device.register_command_object(
@@ -421,7 +337,8 @@ class MccsAntenna(SKABaseDevice):
 
     def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
-        self.hardware_manager.poll_hardware()
+        if self.hardware_manager is not None:
+            self.hardware_manager.poll()
 
     def delete_device(self):
         """
@@ -438,6 +355,27 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    # override from base classes so that it can be stored in the hardware manager
+    @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
+    def simulationMode(self):
+        """
+        Return the simulation mode of this device
+
+        :return: the simulation mode of this device
+        :rtype: :py:class:`~ska.base.control_model.SimulationMode`
+        """
+        return self.hardware_manager.simulation_mode
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode of this device
+
+        :param value: the new simulation mode
+        :type value: :py:class:`~ska.base.control_model.SimulationMode`
+        """
+        self.hardware_manager.simulation_mode = value
 
     @attribute(dtype="int", label="AntennaID", doc="Global antenna identifier")
     def antennaId(self):
@@ -674,7 +612,7 @@ class MccsAntenna(SKABaseDevice):
         Return the logical antenna ID attribute.
 
         :return: the x polarisation scaling factor
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return self._xPolarisationScalingFactor
 
@@ -684,7 +622,7 @@ class MccsAntenna(SKABaseDevice):
         Return the yPolarisationScalingFactor attribute.
 
         :return: the y polarisation scaling factor
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return self._yPolarisationScalingFactor
 
@@ -702,7 +640,7 @@ class MccsAntenna(SKABaseDevice):
         channel in the calibration cycle
 
         :return: the calibration coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._calibrationCoefficient
 
@@ -712,7 +650,7 @@ class MccsAntenna(SKABaseDevice):
         Return the pointingCoefficient attribute.
 
         :return: the pointing coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._pointingCoefficient
 
@@ -722,7 +660,7 @@ class MccsAntenna(SKABaseDevice):
         Return the spectrumX attribute.
 
         :return: x spectrum
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._spectrumX
 
@@ -732,7 +670,7 @@ class MccsAntenna(SKABaseDevice):
         Return the spectrumY attribute.
 
         :return: y spectrum
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._spectrumY
 
@@ -742,7 +680,7 @@ class MccsAntenna(SKABaseDevice):
         Return the position attribute.
 
         :return: positions
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._position
 
@@ -758,7 +696,7 @@ class MccsAntenna(SKABaseDevice):
         Return the delays attribute.
 
         :return: delay for each beam
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._delays
 
@@ -774,7 +712,7 @@ class MccsAntenna(SKABaseDevice):
         Return the delayRates attribute.
 
         :return: delay rate for each beam
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._delayRates
 
@@ -790,7 +728,7 @@ class MccsAntenna(SKABaseDevice):
         Return the bandpassCoefficient attribute.
 
         :return: bandpass coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._bandpassCoefficient
 

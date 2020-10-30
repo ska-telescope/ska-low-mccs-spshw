@@ -150,7 +150,6 @@ def device_info(device_to_load):
     devices = _load_devices(
         path=device_to_load["path"], device_names=[device_to_load["device"]]
     )
-    # print(devices)
     class_to_import = devices[0]["class"]
     package = __import__(device_to_load["package"], fromlist=class_to_import)
 

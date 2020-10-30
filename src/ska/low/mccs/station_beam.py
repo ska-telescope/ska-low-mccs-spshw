@@ -258,7 +258,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the ids of the channels configured for this beam.
 
         :return: channel ids
-        :rtype: array of int
+        :rtype: sequence of int
         """
         return self._channels
 
@@ -278,7 +278,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the desired pointing of this beam.
 
         :return: the desired point of this beam
-        :rtype: array of doubles conforming to the Sky Coordinate Set
+        :rtype: sequence of doubles conforming to the Sky Coordinate Set
             definition
         """
         return self._desired_pointing
@@ -294,7 +294,8 @@ class MccsStationBeam(SKAObsDevice):
         * elevation rate (deg/s) -- value range 0-10^37
 
         :param values: the desired pointing of this beam
-        :type values: array of doubles conforming to the Sky Coordinate set definition
+        :type values: sequence of doubles conforming to the Sky
+            Coordinate set definition
         """
         self._desired_pointing = values
 
@@ -308,7 +309,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the pointing delay per antenna
 
         :return: the pointing delay per antenna
-        :rtype: array of double
+        :rtype: sequence of double
         """
         return self._pointing_delay
 
@@ -322,7 +323,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the pointing delay rate for each antenna
 
         :return: the pointing delay rate per antenna
-        :rtype: array of double
+        :rtype: sequence of double
         """
         return self._pointing_delay_rate
 
@@ -337,7 +338,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the antenna weights
 
         :return: the antenna weights
-        :rtype: array of double
+        :rtype: sequence of double
         """
         return self._antenna_weights
 
@@ -347,7 +348,7 @@ class MccsStationBeam(SKAObsDevice):
         Set the antenna weights
 
         :param value: the new antenna weights
-        :type value: array of double
+        :type value: sequence of double
         """
         self._antenna_weights = value
 

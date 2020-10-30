@@ -154,7 +154,6 @@ class TestMccsDevice(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        print(device_under_test.buildState)
         assert device_under_test.buildState == (
             ", ".join((release.name, release.version, release.description))
         )  # noqa: E501

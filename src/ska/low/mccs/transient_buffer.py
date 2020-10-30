@@ -148,7 +148,7 @@ class MccsTransientBuffer(MccsDevice):
         Return the transient frequency window
 
         :return: the transient frequency window
-        :rtype: array of double
+        :rtype: sequence of double
         """
         return self._transient_frequency_window
 
@@ -158,7 +158,7 @@ class MccsTransientBuffer(MccsDevice):
         Return the station ids
 
         :return: the station ids
-        :rtype: array of str
+        :rtype: sequence of str
         """
         return self._station_ids
 

@@ -282,6 +282,8 @@ class MccsStation(SKAObsDevice):
             """
             super().do()
             device = self.target
+            device.hardware_manager = None
+
             device._subarray_id = 0
             device._tile_fqdns = list(device.TileFQDNs)
             device._antenna_fqdns = list(device.AntennaFQDNs)
@@ -414,15 +416,16 @@ class MccsStation(SKAObsDevice):
         """
         Method always executed before any TANGO command is executed.
         """
-        self.hardware_manager.poll_hardware()
+        if self.hardware_manager is not None:
+            self.hardware_manager.poll_hardware()
 
-        state = self.get_state()
-        if self._is_calibrated and self._is_configured:
-            if state == DevState.ALARM:
-                self.set_state(DevState.ON)
-        else:
-            if state == DevState.ON:
-                self.set_state(DevState.ALARM)
+            state = self.get_state()
+            if self._is_calibrated and self._is_configured:
+                if state == DevState.ALARM:
+                    self.set_state(DevState.ON)
+            else:
+                if state == DevState.ON:
+                    self.set_state(DevState.ALARM)
 
     def delete_device(self):
         """
@@ -576,7 +579,7 @@ class MccsStation(SKAObsDevice):
         Return the FQDNs of station beams associated with this station.
 
         :return: the FQDNs of station beams associated with this station
-        :rtype: array of str
+        :rtype: sequence of str
         """
         return self._beam_fqdns
 
@@ -595,7 +598,7 @@ class MccsStation(SKAObsDevice):
             too?
 
         :return: the WGS84 position of the delay centre of the station
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._delay_centre
 
@@ -605,7 +608,7 @@ class MccsStation(SKAObsDevice):
         Set the delay centre of the station
 
         :param value: WGS84 position
-        :type value: array of float
+        :type value: sequence of float
         """
         self._delay_centre = value
 
@@ -625,7 +628,7 @@ class MccsStation(SKAObsDevice):
             channel. But how many channels?
 
         :return: the calibration coefficients
-        :rtype: array of float
+        :rtype: sequence of float
         """
         return self._calibration_coefficients
 
@@ -776,7 +779,6 @@ class MccsStation(SKAObsDevice):
                 proxy.subarrayId = device._subarray_id
                 proxy.stationId = device._station_id
                 proxy.logicalTileId = tile_id + 1
-                proxy.command_inout("Connect", True)
 
             #             self._beams = []
             #             for id, beam in enumerate(self._beam_fqdns):

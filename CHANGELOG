@@ -1,8 +1,9 @@
 # Version History
 
-# unreleased
+## unreleased
 
 * MCCS-207 - rafcor helm charts to use tango-util
+* MCCS-225 - hardware model
 
 ## 0.2.1 
 

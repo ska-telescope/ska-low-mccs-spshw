@@ -33,15 +33,24 @@ prototype for the `Square Kilometre Array`_.
    api/tel_state
    api/tile
    api/tpm_device_simulator
+   api/transient_buffer
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Hardware-related
+
+   api/cluster_simulator
+   api/tile_hardware
+   api/tpm_simulator
 
 .. toctree::
    :maxdepth: 1
    :caption: Other modules
 
    api/events
+   api/hardware
    api/health
    api/power
-   api/tpm_simulator
    api/utils
 
 

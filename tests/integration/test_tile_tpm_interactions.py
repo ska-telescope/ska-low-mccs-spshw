@@ -3,8 +3,7 @@ This module contains tests of MccsTile that requires the presence of a
 MccsTpmDeviceSimulator interactions between ska.low.mccs classes,
 particularly tango devices.
 """
-import time
-from ska.low.mccs.tile import TileHardware
+from ska.low.mccs.tpm_simulator import TpmSimulator
 
 devices_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
@@ -27,9 +26,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
-        tile.Connect(True)
-        time.sleep(1)
-        assert tile.voltage == TileHardware.VOLTAGE
+        assert tile.voltage == TpmSimulator.VOLTAGE
 
     def test_current(self, device_context):
         """
@@ -40,9 +37,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
-        tile.Connect(True)
-        time.sleep(1)
-        tile.current == TileHardware.CURRENT
+        tile.current == TpmSimulator.CURRENT
 
     def test_board_temperature(self, device_context):
         """
@@ -53,9 +48,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
-        tile.Connect(True)
-        time.sleep(1)
-        assert tile.board_temperature == TileHardware.BOARD_TEMPERATURE
+        assert tile.board_temperature == TpmSimulator.BOARD_TEMPERATURE
 
     def test_fpga1_temperature(self, device_context):
         """
@@ -66,9 +59,7 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
-        tile.Connect(True)
-        time.sleep(1)
-        assert tile.fpga1_temperature == TileHardware.FPGA1_TEMPERATURE
+        assert tile.fpga1_temperature == TpmSimulator.FPGA1_TEMPERATURE
 
     def test_fpga2_temperature(self, device_context):
         """
@@ -79,6 +70,4 @@ class TestMccsTile_MccsTpmDeviceSimulator_Integration:
         """
         tile = device_context.get_device("low-mccs/tile/0001")
         tile.On()
-        tile.Connect(True)
-        time.sleep(1)
-        assert tile.fpga2_temperature == TileHardware.FPGA2_TEMPERATURE
+        assert tile.fpga2_temperature == TpmSimulator.FPGA2_TEMPERATURE

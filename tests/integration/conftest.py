@@ -32,7 +32,7 @@ def device_context(mocker, devices_info):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: wrapper for :py:mod:`unittest.mock`
     :param devices_info: Information about the devices under test that
         are needed to stand the device up in a DeviceTestContext, such
         as the device classes and properties

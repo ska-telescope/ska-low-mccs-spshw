@@ -468,7 +468,7 @@ class MccsDevice(SKABaseDevice):
             command functionality.
 
             :return: a command report
-            :rtype: array of str
+            :rtype: sequence of str
             """
             return [""]
 
@@ -479,7 +479,7 @@ class MccsDevice(SKABaseDevice):
         GetCommandReport Command
 
         :return: a command report
-        :rtype: array of string
+        :rtype: sequence of string
         """
         handler = self.get_command_object("GetCommandReport")
         return handler()
@@ -509,7 +509,7 @@ class MccsDevice(SKABaseDevice):
         GetAttributeReport Command
 
         :return: an attribute report
-        :rtype: array of string
+        :rtype: sequence of string
         """
         handler = self.get_command_object("GetAttributeReport")
         return handler()

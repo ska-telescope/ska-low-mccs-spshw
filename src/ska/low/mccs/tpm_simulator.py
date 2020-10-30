@@ -1,190 +1,341 @@
 # -*- coding: utf-8 -*-
-import json
-import time
-import random
-import itertools
+"""
+An implementation of a TPM simulator
+"""
+import copy
 
-import tango
+from ska.low.mccs.hardware import HardwareSimulator
 
 
-class TpmSimulator:
-    def __init__(self, logger):
+class TpmSimulator(HardwareSimulator):
+    """
+    A simulator for a TPM
+    """
+
+    VOLTAGE = 4.7
+    CURRENT = 0.4
+    BOARD_TEMPERATURE = 36.0
+    FPGA1_TEMPERATURE = 38.0
+    FPGA2_TEMPERATURE = 37.5
+    ADC_RMS = tuple(float(i) for i in range(32))
+    FPGA1_TIME = 1
+    FPGA2_TIME = 2
+    CURRENT_TILE_BEAMFORMER_FRAME = 23
+    PPS_DELAY = 12
+    PHASE_TERMINAL_COUNT = 0
+    FIRMWARE_NAME = "firmware1"
+    FIRMWARE_LIST = {
+        "firmware1": {"design": "model1", "major": 2, "minor": 3},
+        "firmware2": {"design": "model2", "major": 3, "minor": 7},
+        "firmware3": {"design": "model3", "major": 2, "minor": 6},
+    }
+    REGISTER_MAP = {
+        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
+    }
+
+    def __init__(self, logger, fail_connect=False):
+        """
+        Initialise a new TPM simulator instance
+
+        :param logger: a logger for this simulator to use
+        :type logger: an instance of :py:class:`logging.Logger`, or
+            an object that implements the same interface
+        :param fail_connect: whether this simulator should initially
+            simulate failure to connect to the hardware
+        :type fail_connect: bool
+        """
         self.logger = logger
-        self._programmed = False
-        self._beamformer_running = False
-        self._phase_terminal_count = 0
-        self._fpga1_time = 0
-        self._fpga2_time = 0
+        self._is_programmed = False
+        self._is_beamformer_running = False
+        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+
+        self._voltage = self.VOLTAGE
+        self._current = self.CURRENT
+        self._board_temperature = self.BOARD_TEMPERATURE
+        self._fpga1_temperature = self.FPGA1_TEMPERATURE
+        self._fpga2_temperature = self.FPGA2_TEMPERATURE
+        self._adc_rms = tuple(self.ADC_RMS)
+        self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
+        self._pps_delay = self.PPS_DELAY
+        self._firmware_name = self.FIRMWARE_NAME
+        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
+
+        self._fpga1_time = self.FPGA1_TIME
+        self._fpga2_time = self.FPGA2_TIME
+
         self._address_map = {}
         self._forty_gb_core_list = []
-        self._register0_map = {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        }
-        self._register1_map = {
-            "test-reg1": {},
-            "test-reg2": {},
-            "test-reg3": {},
-            "test-reg4": {},
-        }
-        self._use_clock = False
-        self._test_mode = False
-        self._tpm_proxy = None
+        self._register_map = copy.deepcopy(self.REGISTER_MAP)
+        super().__init__(fail_connect=fail_connect)
 
-    def connect(
-        self, initialise=None, simulation=True, enable_ada=None, testmode=False
-    ):
-        self.logger.info(f"TpmSimulator: connect: testmode={testmode}")
-        self._test_mode = testmode
-        if not self._test_mode:
-            try:
-                self.logger.info("TpmSimulator: connect: trying DeviceProxy")
-                self._tpm_proxy = tango.DeviceProxy(
-                    "low-mccs/tpmsimulator/tpmsimulator"
-                )
-                self._tpm_proxy.simulate = False
-            except tango.DevFailed:
-                self._tpm_proxy = None
-        else:
-            self.logger.info("setting tpm_proxy to None")
-            self._tpm_proxy = None
-        print("TpmSimulator: connect")
+    @property
+    def firmware_list(self):
+        """
+        Return the firmware list for this TPM simulator
 
-    def disconnect(self):
-        self.logger.debug("TpmSimulator: disconnect")
-        print("TpmSimulator: disconnect")
-
-    def get_firmware_list(self):
+        :return: the firmware list
+        :rtype: dict
+        """
         self.logger.debug("TpmSimulator: get_firmware_list")
-        return {
-            "firmware1": {"design": "model1", "major": 2, "minor": 3},
-            "firmware2": {"design": "model2", "major": 3, "minor": 7},
-            "firmware3": {"design": "model3", "major": 2, "minor": 6},
-        }
+        return copy.deepcopy(self._firmware_list)
 
+    @property
+    def firmware_name(self):
+        """
+        Return the name of the firmware that this TPM simulator is
+        running
+
+        :return: firmware name
+        :rtype: str
+        """
+        self.logger.debug("TpmSimulator: get_firmware_list")
+        return self._firmware_name
+
+    @property
+    def firmware_version(self):
+        """
+        Return the name of the firmware that this TPM simulator is
+        running
+
+        :return: firmware version (major.minor)
+        :rtype: str
+        """
+        self.logger.debug("TpmSimulator: get_firmware_list")
+        firmware = self._firmware_list[self._firmware_name]
+        return "{major}.{minor}".format(**firmware)  # noqa: FS002
+
+    @property
     def is_programmed(self):
-        self.logger.debug(f"TpmSimulator: is_programmed {self._programmed}")
-        return self._programmed
+        """
+        Return whether this TPM is programmed (i.e. firmware has been
+        downloaded to it)
+
+        :return: whether this TPM is programmed
+        :rtype: bool
+        """
+        self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
+        return self._is_programmed
 
     def download_firmware(self, bitfile):
+        """
+        Download the provided firmware bitfile onto the TPM
+
+        :param bitfile: a binary firmware blob
+        :type bitfile: data
+        """
         self.logger.debug("TpmSimulator: download_firmware")
-        self._programmed = True
-        print(f"{bitfile}")
+        self._is_programmed = True
 
     def cpld_flash_write(self, bitfile):
+        """
+        Flash a program to the tile's CPLD (complex programmable logic
+        device).
+
+        :param bitfile: the program to be flashed
+        :type bitfile: data
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: program_cpld")
-        print(f"{bitfile}")
+        raise NotImplementedError
 
     def initialise(self):
+        """
+        TODO: What does this method do?
+
+        :todo: what does this method do?
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: initialise")
-        print("TpmSimulator: initialise")
+        raise NotImplementedError
 
-    def temperature(self):
-        self.logger.debug("TpmSimulator: temperature")
-        if self._tpm_proxy is None:  # for unit testing
-            return 36.0
-        else:
-            return self._tpm_proxy.temperature
+    @property
+    def board_temperature(self):
+        """
+        Return the temperature of the TPM
 
+        :return: the temperature of the TPM
+        :rtype: float
+        """
+        self.logger.debug("TpmSimulator: board temperature")
+        return self._board_temperature
+
+    @property
     def voltage(self):
+        """
+        Return the voltage of the TPM
+
+        :return: the voltage of the TPM
+        :rtype: float
+        """
         self.logger.debug("TpmSimulator: voltage")
-        if self._tpm_proxy is None:  # for unit testing
-            return 4.7
-        else:
-            return self._tpm_proxy.voltage
+        return self._voltage
 
+    @property
     def current(self):
+        """
+        Return the current of the TPM
+
+        :return: the current of the TPM
+        :rtype: float
+        """
         self.logger.debug("TpmSimulator: current")
-        if self._tpm_proxy is None:  # for unit testing
-            return 0.4
-        else:
-            return self._tpm_proxy.current
+        return self._current
 
-    def get_fpga1_temperature(self):
-        self.logger.debug("TpmSimulator: get_fpga1_temperature")
-        if self._tpm_proxy is None:  # for unit testing
-            return 38.0
-        else:
-            return self._tpm_proxy.fpga1_temperature
+    @property
+    def fpga1_temperature(self):
+        """
+        Return the temperature of FPGA 1
 
-    def get_fpga2_temperature(self):
-        self.logger.debug("TpmSimulator: get_fpga2_temperature")
-        if self._tpm_proxy is None:  # for unit testing
-            return 37.5
-        else:
-            return self._tpm_proxy.fpga2_temperature
+        :return: the temperature of FPGA 1
+        :rtype: float
+        """
+        self.logger.debug("TpmSimulator: fpga1_temperature")
+        return self._fpga1_temperature
 
-    def get_adc_rms(self):
-        self.logger.debug("TpmSimulator: get_adc_rms")
-        rms = []
-        for i in range(0, 32, 2):
-            if self._tpm_proxy is None:  # for unit testing
-                x = float(i)
-                y = float(i + 1)
-            else:  # simulate real adc
-                x = random.uniform(0.0, 3.0)
-                y = random.uniform(0.0, 3.0)
-            rms.append(x)
-            rms.append(y)
-        return rms
+    @property
+    def fpga2_temperature(self):
+        """
+        Return the temperature of FPGA 2
 
-    def get_fpga1_time(self):
-        self.logger.debug("TpmSimulator: get_fpga1_time")
-        if self._use_clock:
-            self._fpga1_time = int(time.time())
+        :return: the temperature of FPGA 2
+        :rtype: float
+        """
+        self.logger.debug("TpmSimulator: fpga2_temperature")
+        return self._fpga2_temperature
+
+    @property
+    def adc_rms(self):
+        """
+        Return the RMS power of the TPM's analog-to-digital converter
+
+        :return: the RMS power of the TPM's ADC
+        :rtype: list of float
+        """
+        self.logger.debug("TpmSimulator: adc_rms")
+        return tuple(self._adc_rms)
+
+    @property
+    def fpga1_time(self):
+        """
+        Return the FPGA1 clock time. Useful for detecting clock skew,
+        propagation delays, contamination delays, etc
+
+        :return: the FPGA1 clock time
+        :rtype: int
+        """
+        self.logger.debug("TpmSimulator: fpga1_time")
         return self._fpga1_time
 
-    def set_fpga1_time(self, value):
-        self.logger.debug("TpmSimulator: set_fpga1_time")
-        self._fpga1_time = value
-        if not self._use_clock:
-            self._use_clock = True
+    @property
+    def fpga2_time(self):
+        """
+        Return the FPGA2 clock time. Useful for detecting clock skew,
+        propagation delays, contamination delays, etc
 
-    def get_fpga2_time(self):
-        self.logger.debug("TpmSimulator: get_fpga2_time")
+        :return: the FPGA2 clock time
+        :rtype: int
+        """
+        self.logger.debug("TpmSimulator: fpga2_time")
         return self._fpga2_time
 
-    def set_fpga2_time(self, value):
-        self.logger.debug("TpmSimulator: set_fpga2_time")
-        self._fpga2_time = value
+    @property
+    def pps_delay(self):
+        """
+        Returns the PPS delay of the TPM
 
-    def get_register_list(self):
-        return list(self._register0_map.keys())
+        :return: PPS delay
+        :rtype: float
+        """
+        self.logger.debug("TpmSimulator: get_pps_delay")
+        return self._pps_delay
+
+    @property
+    def register_list(self):
+        """
+        Return a list of registers available on each device
+
+        :return: list of registers
+        :rtype: list of str
+        """
+        return list(self._register_map[0].keys())
 
     def read_register(self, register_name, nb_read, offset, device):
+        """
+        Read the values in a register
+
+        :param register_name: name of the register
+        :type register_name: str
+        :param nb_read: number of values to read
+        :type nb_read: int
+        :param offset: offset from which to start reading
+        :type offset: int
+        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
+        :type device: int
+
+        :return: values read from the register
+        :rtype: list of int
+        """
+        address_map = self._register_map[device].get(register_name, None)
+        if address_map is None:
+            return tuple()
         values = []
-        if device == 0:
-            address_map = self._register0_map.get(register_name, None)
-        else:
-            address_map = self._register1_map.get(register_name, None)
-        if address_map is not None:
-            for i in range(nb_read):
-                key = str(offset + i)
-                values.append(address_map.get(key, 0))
-        else:
-            values = []
-        return values
+        for i in range(nb_read):
+            key = str(offset + i)
+            values.append(address_map.get(key, 0))
+        return tuple(values)
 
     def write_register(self, register_name, values, offset, device):
-        if device == 0:
-            address_map = self._register0_map.get(register_name, None)
-        else:
-            address_map = self._register1_map.get(register_name, None)
-        if address_map is not None:
-            for i, value in enumerate(values):
-                key = str(offset + i)
-                address_map.update({key: value})
+        """
+        Read the values in a register
+
+        :param register_name: name of the register
+        :type register_name: str
+        :param values: values to write
+        :type values: list
+        :param offset: offset from which to start reading
+        :type offset: int
+        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
+        :type device: int
+        """
+        address_map = self._register_map[device].get(register_name, None)
+        if address_map is None:
+            return
+        for i, value in enumerate(values):
+            key = str(offset + i)
+            address_map.update({key: value})
 
     def read_address(self, address, nvalues):
+        """
+        Returns a list of values from a given address
+
+        :param address: address of start of read
+        :type address: int
+        :param nvalues: number of values to read
+        :type nvalues: int
+
+        :return: values at the address
+        :rtype: list of int
+        """
         values = []
         for i in range(nvalues):
             key = str(address + i)
             values.append(self._address_map.get(key, 0))
-        return values
+        return tuple(values)
 
     def write_address(self, address, values):
+        """
+        Write a list of values to a given address
+
+        :param address: address of start of read
+        :type address: int
+        :param values: values to write
+        :type values: list of int
+        """
         for i, value in enumerate(values):
             key = str(address + i)
             self._address_map.update({key: value})
@@ -192,6 +343,24 @@ class TpmSimulator:
     def configure_40G_core(
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
+        """
+        Configure the 40G code
+
+        :param core_id: id of the core
+        :type core_id: int
+        :param src_mac: MAC address of the source
+        :type src_mac: str
+        :param src_ip: IP address of the source
+        :type src_ip: str
+        :param src_port: port of the source
+        :type src_port: int
+        :param dst_mac: MAC address of the destination
+        :type dst_mac: str
+        :param dst_ip: IP address of the destination
+        :type dst_ip: str
+        :param dst_port: port of the destination
+        :type dst_port: int
+        """
         core_dict = {
             "CoreID": core_id,
             "SrcMac": src_mac,
@@ -204,6 +373,17 @@ class TpmSimulator:
         self._forty_gb_core_list.append(core_dict)
 
     def get_40G_configuration(self, core_id=-1):
+        """
+        Return a 40G configuration
+
+        :param core_id: id of the core for which a configuration is to
+            be return. Defaults to -1, in which case all cores
+            configurations are returned, defaults to -1
+        :type core_id: int, optional
+
+        :return: core configuration or list of core configurations
+        :rtype: dict or list of dict
+        """
         if core_id == -1:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
@@ -220,101 +400,245 @@ class TpmSimulator:
         dst_port=4660,
         lmc_mac=None,
     ):
+        """
+        Specify whether control data will be transmitted over 1G or 40G
+        networks
+
+        :param mode: "1g" or "10g"
+        :type mode: str
+        :param payload_length: SPEAD payload length for integrated
+            channel data, defaults to 1024
+        :type payload_length: int, optional
+        :param dst_ip: destination IP, defaults to None
+        :type dst_ip: str, optional
+        :param src_port: sourced port, defaults to 0xF0D0
+        :type src_port: int, optional
+        :param dst_port: destination port, defaults to 4660
+        :type dst_port: int, optional
+        :param lmc_mac: LMC MAC address, defaults to None
+        :type lmc_mac: str, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_lmc_download")
-        download_dict = {
-            "Mode": mode,
-            "PayloadLength": payload_length,
-            "DstIP": dst_ip,
-            "SrcPort": src_port,
-            "DstPort": dst_port,
-            "LmcMac": lmc_mac,
-        }
-        print(json.dumps(download_dict))
+        raise NotImplementedError
 
     def set_channeliser_truncation(self, array):
+        """
+        Set the channeliser coefficients to modify the bandpass
+
+        :param array: an N * M array, where N is the number of input
+            channels, and M is the number of frequency channels. This is
+            encoded as a list comprising N, then M, then the flattened
+            array
+        :type array: list of int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_channeliser_truncation")
-        print(array.ravel())
+        raise NotImplementedError
 
     def set_beamformer_regions(self, regions):
+        """
+        Set the frequency regions to be beamformed into a single beam
+
+        :param regions: a list encoding up to 16 regions, with each
+            region containing a start channel, the size of the region
+            (which must be a multiple of 8), and a beam index (between 0
+            and 7)
+        :type regions: list of int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_beamformer_regions")
-        result = list(itertools.chain.from_iterable(regions))
-        print(result)
+        raise NotImplementedError
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
+        """
+        Initialise the beamformer
+
+        :param start_channel: the start channel
+        :type start_channel: int
+        :param nof_channels: number of channels
+        :type nof_channels: int
+        :param is_first: whether this is the first (?)
+        :type is_first: bool
+        :param is_last: whether this is the last (?)
+        :type is_last: bool
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: initialise_beamformer")
-        beamformer_dict = {
-            "StartChannel": start_channel,
-            "NumTiles": nof_channels,
-            "IsFirst": is_first,
-            "IsLast": is_last,
-        }
-        print(json.dumps(beamformer_dict))
+        raise NotImplementedError
 
     def load_calibration_coefficients(self, antenna, calibration_coeffs):
+        """
+        Load calibration coefficients. These may include any rotation
+        matrix (e.g. the parallactic angle), but do not include the
+        geometric delay.
+
+        :param antenna: the antenna to which the coefficients apply
+        :type antenna: int
+        :param calibration_coeffs: a bidirectional complex array of
+            coefficients, flattened into a list
+        :type calibration_coeffs: list of int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
-        inp = list(itertools.chain.from_iterable(calibration_coeffs))
-        out = [[v.real, v.imag] for v in inp]
-        coeffs = list(itertools.chain.from_iterable(out))
-        coeffs.insert(0, float(antenna))
-        print(coeffs)
+        raise NotImplementedError
 
     def load_beam_angle(self, angle_coeffs):
+        """
+        Load the beam angle
+
+        :param angle_coeffs: list containing angle coefficients for each
+            beam
+        :type angle_coeffs: list of double
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: load_beam_angle")
-        result = [angle_coeffs[i] for i in range(len(angle_coeffs))]
-        print(result)
+        raise NotImplementedError
 
     def load_antenna_tapering(self, tapering_coeffs):
-        self.logger.debug("TpmSimulator: load_pointing_delay")
-        result = [tapering_coeffs[i] for i in range(len(tapering_coeffs))]
-        print(result)
+        """
+        Loat the antenna tapering coefficients
+
+        :param tapering_coeffs: list of tapering coefficients for each
+            antenna
+        :type tapering_coeffs: list of double
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmSimulator: load_antenna_tapering")
+        raise NotImplementedError
 
     def switch_calibration_bank(self, switch_time=0):
-        self.logger.debug("TpmSimulator: set_pointing_delay")
-        print(switch_time)
+        """
+        Switch the calibration bank (i.e. apply the calibration
+        coefficients previously loaded by
+        :py:meth:`load_calibration_coefficients`).
+
+        :param switch_time: an optional time at which to perform the
+            switch
+        :type switch_time: int, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmSimulator: switch_calibration_band")
+        raise NotImplementedError
 
     def set_pointing_delay(self, delay_array, beam_index):
+        """
+        Specifies the delay in seconds and the delay rate in seconds/second.
+        The delay_array specifies the delay and delay rate for each antenna.
+        beam_index specifies which beam is desired (range 0-7)
+
+        :param delay_array: delay in seconds, and delay rate in seconds/second
+        :type delay_array: list of float
+        :param beam_index: the beam to which the pointing delay should
+            be applied
+        :type beam_index: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_pointing_delay")
-        out = [beam_index]
-        for i in range(16):
-            out.append(delay_array[i][0])
-            out.append(delay_array[i][1])
-        print(out)
+        raise NotImplementedError
 
     def load_pointing_delay(self, load_time):
+        """
+        Load the pointing delay at a specified time
+
+        :param load_time: time at which to load the pointing delay
+        :type load_time: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: load_pointing_delay")
-        print(load_time)
+        raise NotImplementedError
 
     def start_beamformer(self, start_time=0, duration=-1):
+        """
+        Start the beamformer at the specified time
+
+        :param start_time: time at which to start the beamformer,
+            defaults to 0
+        :type start_time: int, optional
+        :param duration: duration for which to run the beamformer,
+            defaults to -1 (run forever)
+        :type duration: int, optional
+        """
         self.logger.debug("TpmSimulator: Start beamformer")
-        self._beamformer_running = True
-        beamformer_dict = {"StartTime": start_time, "Duration": duration}
-        print(json.dumps(beamformer_dict))
+        self._is_beamformer_running = True
 
     def stop_beamformer(self):
+        """
+        Stop the beamformer
+        """
         self.logger.debug("TpmSimulator: Stop beamformer")
-        self._beamformer_running = False
-        print("TpmSimulator: stop_beamformer")
+        self._is_beamformer_running = False
 
     def configure_integrated_channel_data(self, integration_time=0.5):
+        """
+        Configure the transmission of integrated channel data with the
+        provided integration time
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: configure_integrated_channel_data")
-        print(integration_time)
+        raise NotImplementedError
 
     def configure_integrated_beam_data(self, integration_time=0.5):
+        """
+        Configure the transmission of integrated beam data with the provided
+        integration time
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: configure_integrated_beam_data")
-        print(integration_time)
+        raise NotImplementedError
 
     def send_raw_data(
         self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
     ):
+        """
+        Transmit a snapshot containing raw antenna data
+
+        :param sync: whether synchronised, defaults to False
+        :type sync: bool, optional
+        :param period: duration to send data, in seconds, defaults to 0
+        :type period: int, optional
+        :param timeout: when to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: send_raw_data")
-        data_dict = {
-            "Sync": sync,
-            "Period": period,
-            "Timeout": timeout,
-            "Timestamp": timestamp,
-            "Seconds": seconds,
-        }
-        print(json.dumps(data_dict))
+        raise NotImplementedError
 
     def send_channelised_data(
         self,
@@ -326,17 +650,30 @@ class TpmSimulator:
         timestamp=None,
         seconds=0.2,
     ):
+        """
+        Transmit a snapshot containing channelized data totalling
+        number_of_samples spectra.
+
+        :param number_of_samples: number of spectra to send, defaults to 1024
+        :type number_of_samples: int, optional
+        :param first_channel: first channel to send, defaults to 0
+        :type first_channel: int, optional
+        :param last_channel: last channel to send, defaults to 511
+        :type last_channel: int, optional
+        :param period: period of time, in seconds, to send data, defaults to 0
+        :type period: int, optional
+        :param timeout: wqhen to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: send_channelised_data")
-        data_dict = {
-            "NSamples": number_of_samples,
-            "FirstChannel": first_channel,
-            "LastChannel": last_channel,
-            "Period": period,
-            "Timeout": timeout,
-            "Timestamp": timestamp,
-            "Seconds": seconds,
-        }
-        print(json.dumps(data_dict))
+        raise NotImplementedError
 
     def send_channelised_data_continuous(
         self,
@@ -347,47 +684,110 @@ class TpmSimulator:
         timestamp=None,
         seconds=0.2,
     ):
+        """
+        Transmit data from a channel continuously.
+
+        :param channel_id: index of channel to send
+        :type channel_id: int
+        :param number_of_samples: number of spectra to send, defaults to 1024
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: float
+        :param timeout: wqhen to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: send_channelised_data_continuous")
-        data_dict = {
-            "ChannelID": channel_id,
-            "NSamples": number_of_samples,
-            "WaitSeconds": wait_seconds,
-            "Timeout": timeout,
-            "Timestamp": timestamp,
-            "Seconds": seconds,
-        }
-        print(json.dumps(data_dict))
+        raise NotImplementedError
 
     def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+        """
+        Transmit a snapshot containing beamformed data
+
+        :param period: period of time, in seconds, to send data, defaults to 0
+        :type period: int, optional
+        :param timeout: wqhen to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: send_beam_data")
-        data_dict = {
-            "Period": period,
-            "Timeout": timeout,
-            "Timestamp": timestamp,
-            "Seconds": seconds,
-        }
-        print(json.dumps(data_dict))
+        raise NotImplementedError
 
     def stop_data_transmission(self):
+        """
+        Stop data transmission
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: stop_data_transmission")
-        print("TpmSimulator: stop_data_transmission")
+        raise NotImplementedError
 
     def compute_calibration_coefficients(self):
+        """
+        Compute the calibration coefficients and load them into the
+        hardware.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: compute_calibration_coefficients")
-        print("TpmSimulator: compute_calibration_coefficients")
+        raise NotImplementedError
 
     def start_acquisition(self, start_time=None, delay=2):
+        """
+        Start data acquisitiong
+
+        :param start_time: the time at which to start data acquisition,
+            defaults to None
+        :type start_time: int, optional
+        :param delay: delay start, defaults to 2
+        :type delay: int, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator:Start acquisition")
-        acquisition_dict = {"StartTime": start_time, "Delay": delay}
-        print(json.dumps(acquisition_dict))
+        raise NotImplementedError
 
     def set_time_delays(self, delays):
+        """
+        Set coarse zenith delay for input ADC streams
+
+        :param delays: the delay in samples, specified in nanoseconds.
+            A positive delay adds delay to the signal stream
+        :type delays: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_time_delays")
-        result = [delays[i] for i in range(len(delays))]
-        print(result)
+        raise NotImplementedError
 
     def set_csp_rounding(self, rounding):
+        """
+        Set output rounding for CSP
+
+        :param rounding: the output rounding
+        :type rounding: float
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_csp_rounding")
+        raise NotImplementedError
 
     def set_lmc_integrated_download(
         self,
@@ -399,42 +799,84 @@ class TpmSimulator:
         dst_port=4660,
         lmc_mac=None,
     ):
+        """
+        Configure link and size of control data
+
+        :param mode: '1g' or '10g'
+        :type mode: str
+        :param channel_payload_length: SPEAD payload length for
+            integrated channel data
+        :type channel_payload_length: int
+        :param beam_payload_length: SPEAD payload length for integrated
+            beam data
+        :type beam_payload_length: int
+        :param dst_ip: Destination IP, defaults to None
+        :type dst_ip: str, optional
+        :param src_port: source port, defaults to 0xF0D0
+        :type src_port: int, optional
+        :param dst_port: destination port, defaults to 4660
+        :type dst_port: int, optional
+        :param lmc_mac: MAC address of destination, defaults to None
+        :type lmc_mac: str, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: set_lmc_integrated_download")
-        download_dict = {
-            "Mode": mode,
-            "ChannelPayloadLength": channel_payload_length,
-            "BeamPayloadLength": beam_payload_length,
-            "DstIP": dst_ip,
-            "SrcPort": src_port,
-            "DstPort": dst_port,
-            "LmcMac": lmc_mac,
-        }
-        print(json.dumps(download_dict))
+        raise NotImplementedError
 
     def send_raw_data_synchronised(
         self, period=0, timeout=0, timestamp=None, seconds=0.2
     ):
+        """
+        Send synchronised raw data
+
+        :param period: period of time in seconds, defaults to 0
+        :type period: int, optional
+        :param timeout: when to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: send_raw_data_synchronised")
-        data_dict = {
-            "Period": period,
-            "Timeout": timeout,
-            "Timestamp": timestamp,
-            "Seconds": seconds,
-        }
-        print(json.dumps(data_dict))
+        raise NotImplementedError
 
+    @property
     def current_tile_beamformer_frame(self):
-        # Currently this is required, not sure if it will remain so
-        self.logger.debug("TpmSimulator: current_tile_beamformer_frame")
-        return 23
+        """
+        Return current frame, in units of 256 ADC frames
 
-    def beamformer_is_running(self):
+        :return: current tile beamformer frame
+        :rtype: int
+        """
+        self.logger.debug("TpmSimulator: current_tile_beamformer_frame")
+        return self._current_tile_beamformer_frame
+
+    @property
+    def is_beamformer_running(self):
+        """
+        Whether the beamformer is currently running
+
+        :return: whether the beamformer is currently running
+        :rtype: bool
+        """
         self.logger.debug("TpmSimulator: beamformer_is_running")
-        return self._beamformer_running
+        return self._is_beamformer_running
 
     def check_pending_data_requests(self):
+        """
+        Check for pending data requests
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: check_pending_data_requests")
-        return False
+        raise NotImplementedError
 
     def send_channelised_data_narrowband(
         self,
@@ -446,17 +888,31 @@ class TpmSimulator:
         timestamp=None,
         seconds=0.2,
     ):
+        """
+        Continuously send channelised data from a single channel
+
+        This is a special mode used for UAV campaigns.
+
+        :param frequency: sky frequency to transmit
+        :type frequency: int
+        :param round_bits: which bits to round
+        :type round_bits: int
+        :param number_of_samples: number of spectra to send, defaults to 128
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data, defaults to 0
+        :type wait_seconds: int, optional
+        :param timeout: when to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start, defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: send_channelised_data_narrowband")
-        data_dict = {
-            "Frequency": frequency,
-            "RoundBits": round_bits,
-            "NSamples": number_of_samples,
-            "WaitSeconds": wait_seconds,
-            "Timeout": timeout,
-            "Timestamp": timestamp,
-            "Seconds": seconds,
-        }
-        print(json.dumps(data_dict))
+        raise NotImplementedError
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -465,32 +921,72 @@ class TpmSimulator:
     # for the new TPMs will still required these
     #
     def tweak_transceivers(self):
-        self.logger.debug("TpmSimulator: tweak_transceivers")
+        """
+        Tweak the transceivers.
 
-    def get_phase_terminal_count(self):
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmSimulator: tweak_transceivers")
+        raise NotImplementedError
+
+    @property
+    def phase_terminal_count(self):
+        """
+        Return the phase terminal count
+
+        :return: the phase terminal count
+        :rtype: int
+        """
         self.logger.debug("TpmSimulator: get_phase_terminal_count")
         return self._phase_terminal_count
 
-    def set_phase_terminal_count(self, value):
+    @phase_terminal_count.setter
+    def phase_terminal_count(self, value):
+        """
+        Set the phase terminal count
+
+        :param value: the phase terminal count
+        :type value: int
+        """
         self.logger.debug("TpmSimulator: set_phase_terminal_count")
         self._phase_terminal_count = value
 
-    def get_pps_delay(self):
-        self.logger.debug("TpmSimulator: get_pps_delay")
-        return 12
-
     def post_synchronisation(self):
+        """
+        Perform post tile configuration synchronization
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: post_synchronisation")
+        raise NotImplementedError
 
     def sync_fpgas(self):
+        """
+        Synchronise the FPGAs
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
         self.logger.debug("TpmSimulator: sync_fpgas")
+        raise NotImplementedError
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):
-        delay_dict = {
-            "CurrentDelay": current_delay,
-            "CurrentTC": current_tc,
-            "RefLo": ref_lo,
-            "RefHi": ref_hi,
-        }
-        print(json.dumps(delay_dict))
+        """
+        Calculate the delay
+
+        :param current_delay: the current delay
+        :type current_delay: float
+        :param current_tc: current phase register terminal count
+        :type current_tc: int
+        :param ref_lo: low reference
+        :type ref_lo: float
+        :param ref_hi: high reference
+        :type ref_hi: float
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        raise NotImplementedError

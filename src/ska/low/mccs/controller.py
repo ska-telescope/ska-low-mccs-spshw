@@ -102,6 +102,15 @@ class ControllerResourceManager:
         """
 
         def __init__(self, allocatable_health_states=[HealthState.OK]):
+            """
+            Create a new instance
+
+            :param allocatable_health_states: list of health states that
+                are to be regarded as okay to allocate, defaults to only
+                OK
+            :type allocatable_health_states: list of
+                :py:class:`~ska.base.control_model.HealthState`
+            """
             self._allocatable_health_states = list(allocatable_health_states)
 
         def is_allocatable(self, health_state):

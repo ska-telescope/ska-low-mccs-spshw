@@ -39,6 +39,7 @@ prototype for the `Square Kilometre Array`_.
    :maxdepth: 1
    :caption: Hardware-related
 
+   api/apiu_simulator
    api/cluster_simulator
    api/tile_hardware
    api/tpm_simulator

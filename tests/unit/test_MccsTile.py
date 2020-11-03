@@ -1,7 +1,7 @@
 #########################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsTile project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -23,6 +23,7 @@ from tango import DevFailed
 from ska.base import DeviceStateModel
 from ska.base.control_model import SimulationMode
 from ska.base.commands import ResultCode
+from ska.low.mccs.hardware import SimulableHardwareFactory
 from ska.low.mccs.tile import MccsTile
 from ska.low.mccs.tile_hardware import TileHardwareManager
 from ska.low.mccs.tpm_simulator import TpmSimulator
@@ -420,12 +421,14 @@ class TestMccsTileCommands:
 
         # Now check that calling the command object results in the
         # correct TPM simulator command being called.
-        mock_tpm_simulator = mocker.Mock()
-
         logger = logging.getLogger()
         state_model = DeviceStateModel(logger)
-        hardware_manager = TileHardwareManager(SimulationMode.TRUE, logger=logger)
-        hardware_manager._hardware = mock_tpm_simulator
+
+        mock_tpm_simulator = mocker.Mock()
+        hardware_factory = SimulableHardwareFactory(True, _simulator=mock_tpm_simulator)
+        hardware_manager = TileHardwareManager(
+            SimulationMode.TRUE, logger, _factory=hardware_factory
+        )
 
         command_class = getattr(MccsTile, f"{device_command}Command")
         command_object = command_class(hardware_manager, state_model, logger)

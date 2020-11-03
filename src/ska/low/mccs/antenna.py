@@ -1,94 +1,64 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsAntenna project
-#
+# This file is part of the SKA Low MCCS project
 #
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" LFAA Antenna Device Server
-
-An implementation of the Antenna Device Server for the MCCS based upon
-architecture in SKA-TEL-LFAA-06000052-02.
 """
-__all__ = ["AntennaHardwareSimulator", "AntennaHardwareManager", "MccsAntenna", "main"]
+This module contains an implementation of the SKA Low MCCS Antenna
+Device Server, based on the architecture in SKA-TEL-LFAA-06000052-02.
+"""
+__all__ = ["AntennaHardwareManager", "MccsAntenna", "main"]
 
 import threading
 
-# tango imports
-from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command, AttrWriteType
+from tango import DebugIt, DevFailed, EnsureOmniThread
+from tango.server import attribute, command, device_property, AttrWriteType
 
-# Additional import
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import SimulationMode
 
 from ska.low.mccs.hardware import (
-    OnOffHardwareHealthEvaluator,
-    OnOffHardwareSimulator,
+    HardwareDriver,
+    HardwareHealthEvaluator,
+    OnOffHardwareDriver,
+    HardwareFactory,
     OnOffHardwareManager,
 )
 from ska.low.mccs.health import HealthModel
+from ska.low.mccs.utils import backoff_connect, tango_raise
 
 
-class AntennaHardwareSimulator(OnOffHardwareSimulator):
+def create_return(success, action):
     """
-    A simulator of AntennaHardware
+    Helper function to package up a boolean result into a
+    (:py:class:`~ska.base.commands.ResultCode`, message) tuple
+
+    :param success: whether execution of the action was successful. This
+        may be None, in which case the action was not performed due to
+        redundancy (i.e. it was already done).
+    :type success: bool or None
+    :param action: Informal description of the action that the command
+        performs, for use in constructing a message
+    :type action: str
+
+    :return: A tuple containing a return code and a string
+        message indicating status. The message is for
+        information purpose only.
+    :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
     """
-
-    VOLTAGE = 3.5
-    TEMPERATURE = 20.6
-
-    def __init__(self):
-        """
-        Initialise a new AntennaHardwareSimulator instance
-        """
-        self._voltage = None
-        self._temperature = None
-        super().__init__()
-
-    def off(self):
-        """
-        Turn me off
-        """
-        super().off()
-        self._voltage = None
-        self._temperature = None
-
-    def on(self):
-        """
-        Turn me on
-        """
-        super().on()
-        self._voltage = self.VOLTAGE
-        self._temperature = self.TEMPERATURE
-
-    @property
-    def voltage(self):
-        """
-        Return my voltage
-
-        :return: my voltage
-        :rtype: float
-        """
-        self.check_connected()
-        return self._voltage
-
-    @property
-    def temperature(self):
-        """
-        Return my temperature
-
-        :return: my temperature
-        :rtype: float
-        """
-        self.check_connected()
-        return self._temperature
+    if success is None:
+        return (ResultCode.OK, f"Antenna {action} is redundant")
+    elif success:
+        return (ResultCode.OK, f"Antenna {action} successful")
+    else:
+        return (ResultCode.FAILED, f"Antenna {action} failed")
 
 
-class AntennaHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
+class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
     A placeholder for a class that implements a policy by which the
     antenna hardware manager evaluates the health of its hardware. At
@@ -98,32 +68,297 @@ class AntennaHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
     pass
 
 
+class AntennaAPIUProxy(OnOffHardwareDriver):
+    """
+    A proxy to the APIU. The MccsAntenna device server manages antenna
+    hardware, but indirectly, via the MccsAPIU and MccsTile devices.
+    This class is a proxy to the APIU device that the MccsAntenna can
+    use to drive the antenna hardware
+    """
+
+    def __init__(self, apiu_fqdn, logical_antenna_id):
+        """
+        Initialise a new APIU proxy instance
+
+        :param apiu_fqdn: the FQDN of the APIU
+        :type apiu_fqdn: str
+        :param logical_antenna_id: this antenna's id within the APIU
+        :type logical_antenna_id: int
+
+        :raises DevFailed: if unable to connect to the tile device
+        """
+        self._logical_antenna_id = logical_antenna_id
+        try:
+            self._apiu = backoff_connect(apiu_fqdn)
+            self._is_connected = True
+        except DevFailed:
+            self._is_connected = False
+            raise
+
+    def on(self):
+        """
+        Turn the antenna on (by telling the APIU to turn the right
+        antenna on)
+        """
+        self._check_connected()
+        self._apiu.turn_on_antenna(self._logical_antenna_id)
+
+    def off(self):
+        """
+        Turn the antenna off (by telling the APIU to turn the right
+        antenna off)
+        """
+        self._check_connected()
+        self._apiu.turn_off_antenna(self._logical_antenna_id)
+
+    @property
+    def is_on(self):
+        """
+        Whether this antenna is on (determined by asking the APIU
+        whether a certain antenna is on)
+
+        :return: whether the antenna is on
+        :rtype: bool
+        """
+        return self._apiu.is_antenna_on(self._logical_antenna_id)
+
+    @property
+    def current(self):
+        """
+        This antenna's current
+
+        :return: the current of this antenna
+        :rtype: float
+        """
+        self._check_connected()
+        return self._apiu.get_antenna_current(self._logical_antenna_id)
+
+    @property
+    def voltage(self):
+        """
+        This antenna's voltage
+
+        :return: the voltage of this antenna
+        :rtype: float
+        """
+        self._check_connected()
+        return self._apiu.get_antenna_voltage(self._logical_antenna_id)
+
+    @property
+    def temperature(self):
+        """
+        This antenna's temperature
+
+        :return: the temperature of this antenna
+        :rtype: float
+        """
+        self._check_connected()
+        return self._apiu.get_antenna_temperature(self._logical_antenna_id)
+
+
+class AntennaTileProxy(HardwareDriver):
+    """
+    A proxy to the Tile. The MccsAntenna device server manages antenna
+    hardware, but indirectly, via the MccsAPIU and MccsTile devices.
+    This class is a proxy to the MccsTile device that the MccsAntenna
+    can use to drive the antenna hardware. At present it is an unused,
+    unimplemented placeholder.
+    """
+
+    def __init__(self, tile_fqdn, logical_antenna_id):
+        """
+        Create a new Tile proxy instance
+
+        :param tile_fqdn: the FQDN of the tile that manages the antenna
+            hardware for this antenna device
+        :type tile_fqdn: str
+        :param logical_antenna_id: this antenna's id in tile
+        :type logical_antenna_id: int
+
+        :raises DevFailed: if unable to connect to the tile device
+        """
+        self._logical_antenna_id = logical_antenna_id
+        try:
+            self._tile = backoff_connect(tile_fqdn)
+            self._is_connected = True
+        except DevFailed:
+            self._is_connected = False
+            raise
+
+
+class AntennaHardwareDriver(OnOffHardwareDriver):
+    """
+    A hardware driver for antenna hardware. Actually antenna hardware
+    cannot be directly monitored or controlled; it must be monitored and
+    controlled via the APIU and Tile devices. So this driver acts as a
+    proxy to these other devices.
+    """
+
+    def __init__(
+        self, apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+    ):
+        """
+        Create a new driver for antenna hardware
+
+        :param apiu_fqdn: the FQDN of the APIU to which the antenna is
+            attached
+        :type apiu_fqdn: str
+        :param logical_apiu_antenna_id: the APIU's id for this antenna
+        :type logical_apiu_antenna_id: int
+        :param tile_fqdn: the FQDN of the tile to which the antenna is
+            attached.
+        :type tile_fqdn: str
+        :param logical_tile_antenna_id: the tile's id for this antenna
+        :type logical_tile_antenna_id: int
+        """
+        self._apiu = AntennaAPIUProxy(apiu_fqdn, logical_apiu_antenna_id)
+        self._tile = AntennaTileProxy(tile_fqdn, logical_tile_antenna_id)
+
+    @property
+    def is_connected(self):
+        """
+        Whether this antenna hardware driver has a connection to the
+        hardware.
+
+        :return: whether this antenna hardware driver has a connection
+            to the hardware
+        :rtype: bool
+        """
+        return self._apiu.is_connected and self._tile._is_connected
+
+    def on(self):
+        """
+        Turn the antenna hardware on
+        """
+        self._apiu.on()
+
+    def off(self):
+        """
+        Turn the antenna hardware off
+        """
+        self._apiu.off()
+
+    @property
+    def is_on(self):
+        """
+        Whether the antenna hardware is turned on
+
+        :return: whether the antenna hardware is turned on
+        :rtype: bool
+        """
+        return self._apiu.is_on
+
+    @property
+    def current(self):
+        """
+        Return the current of the antenna
+
+        :return: the current of the antenna
+        :rtype: float
+        """
+        return self._apiu.current
+
+    @property
+    def voltage(self):
+        """
+        Return the voltage of the antenna
+
+        :return: the voltage of the antenna
+        :rtype: float
+        """
+        return self._apiu.voltage
+
+    @property
+    def temperature(self):
+        """
+        Return the temperature of the antenna
+
+        :return: the temperature of the antenna
+        :rtype: float
+        """
+        return self._apiu.temperature
+
+
+class AntennaHardwareFactory(HardwareFactory):
+    """
+    A factory that returns a hardware driver for the antenna hardware
+    """
+
+    def __init__(
+        self, apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+    ):
+        """
+        Create a new antenna hardware factory instance
+
+        :param apiu_fqdn: the FQDN of the APIU to which the antenna is
+            attached
+        :type apiu_fqdn: str
+        :param logical_apiu_antenna_id: the APIU's id for this antenna
+        :type logical_apiu_antenna_id: int
+        :param tile_fqdn: the FQDN of the tile to which the antenna is
+            attached.
+        :type tile_fqdn: str
+        :param logical_tile_antenna_id: the tile's id for this antenna
+        :type logical_tile_antenna_id: int
+        """
+        self._hardware = AntennaHardwareDriver(
+            apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+        )
+
+    @property
+    def hardware(self):
+        """
+        Return an antenna hardware driver created by this factory
+
+        :return: an antenna hardware driver created by this factory
+        :rtype: :py:class:`AntennaHardwareDriver`
+        """
+        return self._hardware
+
+
 class AntennaHardwareManager(OnOffHardwareManager):
     """
     This class manages antenna hardware.
 
-    :todo: So far only voltage and temperature have been moved in here.
-        There are lots of other attributes that should be.
+    :todo: So far this antenna hardware manager can only manage antenna
+        hardware via the APIU e.g. attributes voltage, current and
+        temperature. It also needs to manage antenna attributes via the
+        tile.
     """
 
-    def __init__(self, simulation_mode):
+    def __init__(
+        self,
+        apiu_fqdn,
+        logical_apiu_antenna_id,
+        tile_fqdn,
+        logical_tile_antenna_id,
+        _factory=None,
+    ):
         """
         Initialise a new AntennaHardwareManager instance
 
-        :param simulation_mode: the initial simulation mode of this
-            hardware manager
-        :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
+        :param apiu_fqdn: the FQDN of the APIU to which the antenna is
+            attached
+        :type apiu_fqdn: str
+        :param logical_apiu_antenna_id: the APIU's id for this antenna
+        :type logical_apiu_antenna_id: int
+        :param tile_fqdn: the FQDN of the tile to which the antenna is
+            attached.
+        :type tile_fqdn: str
+        :param logical_tile_antenna_id: the tile's id for this antenna
+        :type logical_tile_antenna_id: int
+        :param _factory: allows for substitution of a hardware factory.
+            This is useful for testing, but generally should not be used
+            in operations.
+        :type _factory: :py:class:`AntennaHardwareFactory`
         """
-        super().__init__(simulation_mode, AntennaHardwareHealthEvaluator())
-
-    def _create_simulator(self):
-        """
-        Helper method to create and return a hardware simulator
-
-        :return: a simulator of antenna hardware
-        :rtype: :py:class:`AntennaHardwareSimulator`
-        """
-        return AntennaHardwareSimulator()
+        super().__init__(
+            _factory
+            or AntennaHardwareFactory(
+                apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+            ),
+            AntennaHardwareHealthEvaluator(),
+        )
 
     @property
     def voltage(self):
@@ -133,7 +368,17 @@ class AntennaHardwareManager(OnOffHardwareManager):
         :return: the voltage of the hardware
         :rtype: float
         """
-        return self._hardware.voltage
+        return self._factory.hardware.voltage
+
+    @property
+    def current(self):
+        """
+        The current of the hardware
+
+        :return: the current of the hardware
+        :rtype: float
+        """
+        return self._factory.hardware.current
 
     @property
     def temperature(self):
@@ -143,7 +388,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
         :return: the temperature of the hardware
         :rtype: float
         """
-        return self._hardware.temperature
+        return self._factory.hardware.temperature
 
 
 class MccsAntenna(SKABaseDevice):
@@ -157,6 +402,10 @@ class MccsAntenna(SKABaseDevice):
     # -----------------
     # Device Properties
     # -----------------
+    ApiuId = device_property(dtype=int)
+    LogicalApiuAntennaId = device_property(dtype=int)
+    TileId = device_property(dtype=int)
+    LogicalTileAntennaId = device_property(dtype=int)
 
     # ---------------
     # General methods
@@ -218,10 +467,6 @@ class MccsAntenna(SKABaseDevice):
             device.hardware_manager = None
 
             device._antennaId = 0
-            device._logicalTpmAntenna_id = 0
-            device._logicalApiuAntenna_id = 0
-            device._tpmId = 0
-            device._apiuId = 0
             device._gain = 0.0
             device._rms = 0.0
             device._xPolarisationFaulty = False
@@ -298,7 +543,12 @@ class MccsAntenna(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = AntennaHardwareManager(device._simulation_mode)
+            device.hardware_manager = AntennaHardwareManager(
+                f"low-mccs/apiu/{device.ApiuId:03}",
+                device.LogicalApiuAntennaId,
+                f"low-mccs/tile/{device.TileId:04}",
+                device.LogicalTileAntennaId,
+            )
             hardware_args = (device.hardware_manager, device.state_model, self.logger)
             device.register_command_object("Reset", device.ResetCommand(*hardware_args))
             device.register_command_object(
@@ -365,7 +615,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the simulation mode of this device
         :rtype: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        return self.hardware_manager.simulation_mode
+        return SimulationMode.FALSE
 
     @simulationMode.write
     def simulationMode(self, value):
@@ -375,7 +625,10 @@ class MccsAntenna(SKABaseDevice):
         :param value: the new simulation mode
         :type value: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        self.hardware_manager.simulation_mode = value
+        if value == SimulationMode.TRUE:
+            tango_raise(
+                "Antennas cannot be put into simulation mode, but entire APIUs can."
+            )
 
     @attribute(dtype="int", label="AntennaID", doc="Global antenna identifier")
     def antennaId(self):
@@ -386,58 +639,6 @@ class MccsAntenna(SKABaseDevice):
         :rtype: int
         """
         return self._antennaId
-
-    @attribute(
-        dtype="int",
-        label="logicalTpmAntenna_id",
-        doc="Local within Tile identifier for the Antenna TPM\n",
-    )
-    def logicalTpmAntenna_id(self):
-        """
-        Return the logical antenna ID attribute.
-
-        :return: logical antenna ID within the tpm
-        :rtype: int
-        """
-        return self._logicalTpmAntenna_id
-
-    @attribute(
-        dtype="int",
-        label="logicalApiuAntenna_id",
-        doc="Local within Tile identifier for the Antenna APIU",
-    )
-    def logicalApiuAntenna_id(self):
-        """
-        Return the logical APIU antenna ID attribute.
-
-        :return: logical APIU antenna ID
-        :rtype: int
-        """
-        return self._logicalApiuAntenna_id
-
-    @attribute(
-        dtype="int",
-        label="tpmId",
-        doc="Global Tile ID to which the antenna is connected",
-    )
-    def tpmId(self):
-        """
-        Return the global tile ID attribute.
-
-        :return: tpm ID
-        :rtype: int
-        """
-        return self._tpmId
-
-    @attribute(dtype="int", label="apiuId")
-    def apiuId(self):
-        """
-        Return the APIU ID attribute.
-
-        :return: tpm ID
-        :rtype: int
-        """
-        return self._apiuId
 
     @attribute(dtype="float", label="gain", doc="The gain set for the antenna")
     def gain(self):
@@ -480,6 +681,16 @@ class MccsAntenna(SKABaseDevice):
         :rtype: float
         """
         return self.hardware_manager.voltage
+
+    @attribute(dtype="float", label="current", unit="amperes", polling_period=1000)
+    def current(self):
+        """
+        Return the current attribute.
+
+        :return: the current
+        :rtype: float
+        """
+        return self.hardware_manager.current
 
     @attribute(dtype="float", label="temperature", unit="DegC")
     def temperature(self):
@@ -776,8 +987,8 @@ class MccsAntenna(SKABaseDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            hardware_manager.on()
-            return (ResultCode.OK, "Hardware got turned on")
+            success = hardware_manager.on()
+            return create_return(success, "on")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -815,8 +1026,8 @@ class MccsAntenna(SKABaseDevice):
                 (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            hardware_manager.off()
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            success = hardware_manager.off()
+            return create_return(success, "off")
 
     @command(
         dtype_out="DevVarLongStringArray",

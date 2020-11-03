@@ -2,7 +2,7 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# This file is part of the SKA-Low MCCS project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -20,11 +20,9 @@ import tango
 from ska.base.control_model import ControlMode, SimulationMode, HealthState
 from ska.base.commands import ResultCode
 
-from ska.low.mccs.antenna import (
-    AntennaHardwareManager,
-    AntennaHardwareSimulator,
-    MccsAntenna,
-)
+from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
+from ska.low.mccs.apiu_simulator import AntennaHardwareSimulator
+from ska.low.mccs.hardware import HardwareFactory
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
@@ -34,14 +32,79 @@ device_to_load = {
 
 
 @pytest.fixture()
-def hardware_manager():
+def hardware_driver():
     """
-    Return a hardware manager for antenna hardware (in simulation mode)
+    Returns a hardware driver for antenna hardware. The antenna tango
+    device is supposed to drive the APIU tango device, which drives the
+    APIU hardware (driver or simulator), which drives the Antenna
+    hardware (driver or simulator). But for unit testing, we bypass all
+    that and drive an antenna simulator directly
+
+    :return: an antenna hardware driver
+    :rtype:
+        :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+    """
+    return AntennaHardwareSimulator()
+
+
+@pytest.fixture()
+def hardware_factory(hardware_driver):
+    """
+    Return a hardware factory for antenna hardware
+
+    :param hardware_driver: the antenna hardware driver that the factory
+        will return
+    :type hardware_driver:
+        :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+
+    :return: a hardware factory for antenna hardware
+    :rtype:
+        :py:class:`~ska.low.mccs.antenna.AntennaHardwareFactory`
+    """
+
+    class BasicAntennaHardwareFactory(HardwareFactory):
+        """
+        A simple hardware factory that always returns the same,
+        pre-created hardware driver
+        """
+
+        def __init__(self):
+            """
+            Create a new instance
+            """
+            self._hardware = hardware_driver
+
+        @property
+        def hardware(self):
+            """
+            Return a hardware driver created by this factory
+
+            :return: a hardware driver created by this factory
+            :rtype:
+                :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+            """
+            return self._hardware
+
+    return BasicAntennaHardwareFactory()
+
+
+@pytest.fixture()
+def hardware_manager(hardware_factory):
+    """
+    Return a hardware manager for antenna hardware
+
+    :param hardware_factory: a factory that gives us control over, and
+        access to, the hardware driver that it returns, for testing
+        purposes
+    :type:
+        :py:class:`~ska.low.mccs.antenna.AntennaHardwareDriver`
 
     :return: a hardware manager for antenna hardware
     :rtype: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
     """
-    return AntennaHardwareManager(SimulationMode.TRUE)
+    return AntennaHardwareManager(
+        "low-mccs/apiu/001", 1, "low-mccs/tile/0001", 1, _factory=hardware_factory
+    )
 
 
 class TestAntennaHardwareManager:
@@ -50,75 +113,66 @@ class TestAntennaHardwareManager:
     :py:class:`ska.low.mccs.antenna.AntennaHardwareManager`
     """
 
-    def test_init_simulation_mode(self):
-        """
-        Test that we can't create an hardware manager that isn't in
-        simulation mode
-        """
-        with pytest.raises(
-            NotImplementedError,
-            match=("AntennaHardwareManager._create_driver method not implemented."),
-        ):
-            _ = AntennaHardwareManager(SimulationMode.FALSE)
-
-    def test_simulation_mode(self, hardware_manager):
-        """
-        Test that we can't take the hardware manager out of simulation
-        mode
-
-        :param hardware_manager: a hardware manager for antenna hardware
-        :type hardware_manager: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
-        """
-        with pytest.raises(
-            NotImplementedError,
-            match=("AntennaHardwareManager._create_driver method not implemented."),
-        ):
-            hardware_manager.simulation_mode = SimulationMode.FALSE
-
-    def test_on_off(self, hardware_manager, mocker):
+    def test_on_off(self, hardware_driver, hardware_manager, mocker):
         """
         Test that the hardware manager receives updated values,
         and re-evaluates device health, each time it polls the hardware
 
+        :param hardware_driver: the antenna hardware driver
+        :type hardware_driver:
+            :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
         :param hardware_manager: a hardware manager for antenna hardware
-        :type hardware_manager: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+        :type hardware_manager:
+            :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         voltage = 3.5
+        current = 23.4
         temperature = 120
 
-        hardware = hardware_manager._hardware
-
         assert not hardware_manager.is_on
-        assert hardware_manager.temperature is None
-        assert hardware_manager.voltage is None
-        assert hardware_manager.health == HealthState.UNKNOWN
+        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            _ = hardware_manager.temperature
+        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            _ = hardware_manager.voltage
+        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            _ = hardware_manager.current
 
+        assert hardware_manager.health == HealthState.OK
         mock_health_callback = mocker.Mock()
         hardware_manager.register_health_callback(mock_health_callback)
-        mock_health_callback.assert_called_once_with(HealthState.UNKNOWN)
+        mock_health_callback.assert_called_once_with(HealthState.OK)
         mock_health_callback.reset_mock()
 
         hardware_manager.on()
         assert hardware_manager.is_on
+        assert hardware_manager.voltage == AntennaHardwareSimulator.VOLTAGE
+        assert hardware_manager.current == AntennaHardwareSimulator.CURRENT
+        assert hardware_manager.temperature == AntennaHardwareSimulator.TEMPERATURE
         assert hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_called_once_with(HealthState.OK)
-        mock_health_callback.reset_mock()
+        mock_health_callback.assert_not_called()
 
-        hardware._voltage = voltage
+        hardware_driver.simulate_voltage(voltage)
         assert hardware_manager.voltage == voltage
 
-        hardware._temperature = temperature
+        hardware_driver.simulate_current(current)
+        assert hardware_manager.voltage == voltage
+
+        hardware_driver.simulate_temperature(temperature)
         assert hardware_manager.temperature == temperature
 
         hardware_manager.off()
         assert not hardware_manager.is_on
-        assert hardware_manager.voltage is None
-        assert hardware_manager.temperature is None
-        assert hardware_manager.health == HealthState.UNKNOWN
-        mock_health_callback.assert_called_once_with(HealthState.UNKNOWN)
+        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            _ = hardware_manager.temperature
+        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            _ = hardware_manager.voltage
+        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            _ = hardware_manager.current
+        assert hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
 
 
 class TestMccsAntenna:
@@ -126,7 +180,7 @@ class TestMccsAntenna:
     Test class for MccsAntenna tests.
     """
 
-    def test_PowerOn(self, device_under_test):
+    def test_PowerOn(self, device_under_test, mock_device_proxies):
         """
         Test for PowerOn
 
@@ -134,11 +188,20 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict
         """
-        (result, info) = device_under_test.PowerOn()
-        assert result == ResultCode.OK
+        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu.is_antenna_on.side_effect = [False, True]
 
-    def test_PowerOff(self, device_under_test):
+        [[result_code], [message]] = device_under_test.PowerOn()
+        assert result_code == ResultCode.OK
+        mock_apiu.is_antenna_on.assert_called_with(1)
+        mock_apiu.turn_on_antenna.assert_called_once_with(1)
+
+    def test_PowerOff(self, device_under_test, mock_device_proxies):
         """
         Test for PowerOff
 
@@ -146,9 +209,18 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict
         """
-        (result, info) = device_under_test.PowerOff()
-        assert result == ResultCode.OK
+        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu.is_antenna_on.side_effect = [True, False]
+
+        [[result_code], [message]] = device_under_test.PowerOff()
+        assert result_code == ResultCode.OK
+        mock_apiu.is_antenna_on.assert_called_with(1)
+        mock_apiu.turn_off_antenna.assert_called_once_with(1)
 
     def test_Reset(self, device_under_test):
         """
@@ -174,50 +246,6 @@ class TestMccsAntenna:
         """
         assert device_under_test.antennaId == 0
 
-    def test_logicalTpmAntenna_id(self, device_under_test):
-        """
-        Test for logicalTpmAntenna_id
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.logicalTpmAntenna_id == 0
-
-    def test_logicalApiuAntenna_id(self, device_under_test):
-        """
-        Test for logicalApiuAntenna_id
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.logicalApiuAntenna_id == 0.0
-
-    def test_tpmId(self, device_under_test):
-        """
-        Test for tpmId
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.tpmId == 0.0
-
-    def test_apiuId(self, device_under_test):
-        """
-        Test for apiuId
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.apiuId == 0.0
-
     def test_gain(self, device_under_test):
         """
         Test for gain
@@ -240,7 +268,7 @@ class TestMccsAntenna:
         """
         assert device_under_test.rms == 0.0
 
-    def test_voltage(self, device_under_test):
+    def test_voltage(self, device_under_test, mock_device_proxies):
         """
         Test for voltage
 
@@ -248,11 +276,41 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict
         """
-        device_under_test.PowerOn()
-        assert device_under_test.voltage == AntennaHardwareSimulator.VOLTAGE
+        VOLTAGE = 19.0
+        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu.get_antenna_voltage.return_value = VOLTAGE
 
-    def test_temperature(self, device_under_test):
+        device_under_test.PowerOn()
+        assert device_under_test.voltage == VOLTAGE
+        assert mock_apiu.get_antenna_voltage.called_once_with(1)
+
+    def test_current(self, device_under_test, mock_device_proxies):
+        """
+        Test for current
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict
+        """
+        CURRENT = 4.5
+        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu.get_antenna_current.return_value = CURRENT
+
+        device_under_test.PowerOn()
+        assert device_under_test.current == CURRENT
+        assert mock_apiu.get_antenna_current.called_once_with(1)
+
+    def test_temperature(self, device_under_test, mock_device_proxies):
         """
         Test for temperature
 
@@ -260,9 +318,18 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict
         """
+        TEMPERATURE = 37.4
+        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu.get_antenna_temperature.return_value = TEMPERATURE
+
         device_under_test.PowerOn()
-        assert device_under_test.temperature == AntennaHardwareSimulator.TEMPERATURE
+        assert device_under_test.temperature == TEMPERATURE
+        assert mock_apiu.get_antenna_temperature.called_once_with(1)
 
     def test_xPolarisationFaulty(self, device_under_test):
         """
@@ -394,13 +461,12 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.simulationMode == SimulationMode.TRUE
+        assert device_under_test.simulationMode == SimulationMode.FALSE
         with pytest.raises(
             tango.DevFailed,
-            match=("AntennaHardwareManager._create_driver method not implemented."),
+            match="Antennas cannot be put into simulation mode, but entire APIUs can.",
         ):
-            device_under_test.simulationMode = SimulationMode.FALSE
-        assert device_under_test.simulationMode == SimulationMode.TRUE
+            device_under_test.simulationMode = SimulationMode.TRUE
 
     def test_logicalAntennaId(self, device_under_test):
         """

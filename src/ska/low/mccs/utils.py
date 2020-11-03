@@ -160,9 +160,22 @@ class json_input:
         """
 
         @wraps(func)
-        def wrapped(cls, json_string):
+        def wrapped(obj, json_string):
+            """
+            The wrapped function
+
+            :param obj: the object that owns the method to be wrapped
+                i.e. the value passed into the method as "self"
+            :type obj: object
+            :param json_string: The string to be JSON-decoded into
+                kwargs
+            :type json_string: str
+
+            :return: whatever the function to be wrapped returns
+            :rtype: any
+            """
             json_object = self._parse(json_string)
-            return func(cls, **json_object)
+            return func(obj, **json_object)
 
         return wrapped
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsAPIU project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -17,20 +17,20 @@ from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 from ska.base import SKABaseDevice
-from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.base.control_model import SimulationMode
 from ska.low.mccs.hardware import (
-    OnOffHardwareHealthEvaluator,
+    HardwareHealthEvaluator,
     OnOffHardwareManager,
-    OnOffHardwareSimulator,
+    SimulableHardwareFactory,
+    SimulableHardwareManager,
 )
+from ska.low.mccs.apiu_simulator import APIUHardwareSimulator
 from ska.low.mccs.health import HealthModel
 
 
 __all__ = [
-    "AntennaHardwareSimulator",
-    "AntennaHardwareHealthEvaluator",
-    "APIUHardwareSimulator",
+    # "AntennaHardwareHealthEvaluator",
     "APIUHardwareHealthEvaluator",
     "APIUHardwareManager",
     "MccsAPIU",
@@ -64,91 +64,7 @@ def create_return(success, action):
         return (ResultCode.FAILED, f"APIU {action} failed")
 
 
-class AntennaHardwareSimulator(OnOffHardwareSimulator):
-    """
-    A simulator of antenna hardware. This is part of the apiu module
-    because the physical antenna is not directly monitorable, but must
-    rather be monitored via the APIU.
-    """
-
-    VOLTAGE = 3.3
-    CURRENT = 20.5
-    TEMPERATURE = 23.8
-
-    def __init__(self):
-        """
-        Initialise a new AntennaHardwareSimulator instance
-        """
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        super().__init__()
-
-    def off(self):
-        """
-        Turn me off
-        """
-        super().off()
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-
-    def on(self):
-        """
-        Turn me on
-        """
-        super().on()
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._temperature = self.TEMPERATURE
-
-    @property
-    def voltage(self):
-        """
-        Return my voltage
-
-        :return: my voltage
-        :rtype: float
-        """
-        self.check_on()
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        Return my current
-
-        :return: my current
-        :rtype: float
-        """
-        self.check_on()
-        return self._current
-
-    @property
-    def temperature(self):
-        """
-        Return my temperature
-
-        :return: my temperature
-        :rtype: float
-        """
-        self.check_on()
-        return self._temperature
-
-    def check_on(self, error=None):
-        """
-        Overrides the
-        :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator.check_on`
-        helped method with a more specific error message
-
-        :param error: the error message for the exception to be raise if
-            not connected
-        :type error: str
-        """
-        super().check_on(error or "Antenna hardware is turned off")
-
-
-class AntennaHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
+class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
     A placeholder for a class that implements a policy by which the
     antenna hardware manager evaluates the health of its hardware. At
@@ -158,203 +74,36 @@ class AntennaHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
     pass
 
 
-class APIUHardwareSimulator(OnOffHardwareSimulator):
+class APIUHardwareFactory(SimulableHardwareFactory):
     """
-    A simulator of APIU hardware
-    """
-
-    VOLTAGE = 3.4
-    CURRENT = 20.5
-    TEMPERATURE = 20.4
-    HUMIDITY = 23.9
-    NUMBER_OF_ANTENNAS = 2
-
-    def __init__(self):
-        """
-        Initialise a new APIUHardwareSimulator instance
-        """
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
-
-        self._antennas = [
-            AntennaHardwareSimulator() for antenna_id in range(self.NUMBER_OF_ANTENNAS)
-        ]
-        super().__init__()
-
-    def off(self):
-        """
-        Turn me off
-        """
-        super().off()
-        self._voltage = None
-        self._current = None
-        self._temperature = None
-        self._humidity = None
-
-        for antenna in self._antennas:
-            antenna.off()
-
-    def on(self):
-        """
-        Turn me on
-        """
-        super().on()
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._temperature = self.TEMPERATURE
-        self._humidity = self.HUMIDITY
-
-        # but don't turn antennas on
-
-    @property
-    def voltage(self):
-        """
-        Return my voltage
-
-        :return: my voltage
-        :rtype: float
-        """
-        self.check_on()
-        return self._voltage
-
-    @property
-    def current(self):
-        """
-        Return my current
-
-        :return: my current
-        :rtype: float
-        """
-        self.check_on()
-        return self._current
-
-    @property
-    def temperature(self):
-        """
-        Return my temperature
-
-        :return: my temperature
-        :rtype: float
-        """
-        self.check_on()
-        return self._temperature
-
-    @property
-    def humidity(self):
-        """
-        Return my humidity
-
-        :return: my humidity
-        :rtype: float
-        """
-        self.check_on()
-        return self._humidity
-
-    def is_antenna_on(self, logical_antenna_id):
-        """
-        Return whether a specified antenna is turned on
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna to be turned off
-        :type logical_antenna_id: int
-
-        :return: whether the antenna is on, or None if the APIU itself
-            is off
-        :rtype: bool or None
-        """
-        self.check_on()
-        return self._antennas[logical_antenna_id - 1].is_on
-
-    def turn_off_antenna(self, logical_antenna_id):
-        """
-        Turn off a specified antenna
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna to be turned off
-        :type logical_antenna_id: int
-        """
-        self.check_on()
-        self._antennas[logical_antenna_id - 1].off()
-
-    def turn_on_antenna(self, logical_antenna_id):
-        """
-        Turn on a specified antenna
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna to be turned on
-        :type logical_antenna_id: int
-        """
-        self.check_on()
-        self._antennas[logical_antenna_id - 1].on()
-
-    def get_antenna_current(self, logical_antenna_id):
-        """
-        Get the current of a specified antenna
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna for which the current is requested
-        :type logical_antenna_id: int
-
-        :return: the antenna current
-        :rtype: float
-        """
-        self.check_on()
-        return self._antennas[logical_antenna_id - 1].current
-
-    def get_antenna_voltage(self, logical_antenna_id):
-        """
-        Get the voltage of a specified antenna
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna for which the voltage is requested
-        :type logical_antenna_id: int
-
-        :return: the antenna voltage
-        :rtype: float
-        """
-        self.check_on()
-        return self._antennas[logical_antenna_id - 1].voltage
-
-    def get_antenna_temperature(self, logical_antenna_id):
-        """
-        Get the temperature of a specified antenna
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna for which the temperature is requested
-        :type logical_antenna_id: int
-
-        :return: the antenna temperature
-        :rtype: float
-        """
-        self.check_on()
-        return self._antennas[logical_antenna_id - 1].temperature
-
-    def check_on(self, error=None):
-        """
-        Overrides the
-        :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator.check_on`
-        helped method with a more specific error message
-
-        :param error: the error message for the exception to be raise if
-            not connected
-        :type error: str
-        """
-        super().check_on(error or "APIU hardware is turned off")
-
-
-class APIUHardwareHealthEvaluator(OnOffHardwareHealthEvaluator):
-    """
-    A placeholder for a class that implements a policy by which the
-    antenna hardware manager evaluates the health of its hardware. At
-    present this just inherits from the base class unchanged.
+    A hardware factory for APIU hardware. At present, this returns a
+    :py:class:`~ska.low.mccs.apiu_simulator.APIUSimulator` object when
+    in simulation mode, and raises :py:exception:`NotImplementedError`
+    if the hardware is sought whilst not in simulation mode
     """
 
-    pass
+    def __init__(self, simulation_mode):
+        """
+        Create a new factory instance
+
+        :param simulation_mode: the initial simulation mode of this
+            hardware manager
+        :type simulation_mode:
+            :py:class:`~ska.base.control_model.SimulationMode`
+        """
+        super().__init__(simulation_mode)
+
+    def _create_simulator(self):
+        """
+        Returns a hardware simulator
+
+        :return: a hardware simulator for the tile
+        :rtype: :py:class:`TpmSimulator`
+        """
+        return APIUHardwareSimulator()
 
 
-class APIUHardwareManager(OnOffHardwareManager):
+class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     """
     This class manages APIU hardware.
 
@@ -362,7 +111,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         on. We need to implement monitoring.
     """
 
-    def __init__(self, simulation_mode):
+    def __init__(self, simulation_mode, _factory=None):
         """
         Initialise a new APIUHardwareManager instance
 
@@ -370,16 +119,10 @@ class APIUHardwareManager(OnOffHardwareManager):
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        super().__init__(simulation_mode, AntennaHardwareHealthEvaluator())
-
-    def _create_simulator(self):
-        """
-        Helper method to create and return a hardware simulator
-
-        :return: a simulator of antenna hardware
-        :rtype: :py:class:`APIUHardwareSimulator`
-        """
-        return APIUHardwareSimulator()
+        hardware_factory = _factory or APIUHardwareFactory(
+            simulation_mode == SimulationMode.TRUE
+        )
+        super().__init__(hardware_factory, APIUHardwareHealthEvaluator())
 
     @property
     def voltage(self):
@@ -389,7 +132,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the voltage of the hardware
         :rtype: float
         """
-        return self._hardware.voltage
+        return self._factory.hardware.voltage
 
     @property
     def current(self):
@@ -399,7 +142,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the current of the hardware
         :rtype: float
         """
-        return self._hardware.current
+        return self._factory.hardware.current
 
     @property
     def temperature(self):
@@ -409,7 +152,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the temperature of the hardware
         :rtype: float
         """
-        return self._hardware.temperature
+        return self._factory.hardware.temperature
 
     @property
     def humidity(self):
@@ -419,7 +162,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the humidity of the hardware
         :rtype: float
         """
-        return self._hardware.humidity
+        return self._factory.hardware.humidity
 
     def turn_off_antenna(self, logical_antenna_id):
         """
@@ -432,10 +175,10 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        if not self._hardware.is_antenna_on(logical_antenna_id):
+        if not self._factory.hardware.is_antenna_on(logical_antenna_id):
             return None
-        self._hardware.turn_off_antenna(logical_antenna_id)
-        return not self._hardware.is_antenna_on(logical_antenna_id)
+        self._factory.hardware.turn_off_antenna(logical_antenna_id)
+        return not self._factory.hardware.is_antenna_on(logical_antenna_id)
 
     def turn_on_antenna(self, logical_antenna_id):
         """
@@ -448,10 +191,10 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        if self._hardware.is_antenna_on(logical_antenna_id):
+        if self._factory.hardware.is_antenna_on(logical_antenna_id):
             return None
-        self._hardware.turn_on_antenna(logical_antenna_id)
-        return self._hardware.is_antenna_on(logical_antenna_id)
+        self._factory.hardware.turn_on_antenna(logical_antenna_id)
+        return self._factory.hardware.is_antenna_on(logical_antenna_id)
 
     def is_antenna_on(self, logical_antenna_id):
         """
@@ -464,7 +207,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: whether the antenna is on
         :rtype: bool
         """
-        return self._hardware.is_antenna_on(logical_antenna_id)
+        return self._factory.hardware.is_antenna_on(logical_antenna_id)
 
     def get_antenna_current(self, logical_antenna_id):
         """
@@ -477,7 +220,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the antenna current
         :rtype: float
         """
-        return self._hardware.get_antenna_current(logical_antenna_id)
+        return self._factory.hardware.get_antenna_current(logical_antenna_id)
 
     def get_antenna_voltage(self, logical_antenna_id):
         """
@@ -490,7 +233,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the antenna voltage
         :rtype: float
         """
-        return self._hardware.get_antenna_voltage(logical_antenna_id)
+        return self._factory.hardware.get_antenna_voltage(logical_antenna_id)
 
     def get_antenna_temperature(self, logical_antenna_id):
         """
@@ -503,7 +246,7 @@ class APIUHardwareManager(OnOffHardwareManager):
         :return: the antenna temperature
         :rtype: float
         """
-        return self._hardware.get_antenna_temperature(logical_antenna_id)
+        return self._factory.hardware.get_antenna_temperature(logical_antenna_id)
 
 
 class MccsAPIU(SKABaseDevice):
@@ -624,6 +367,9 @@ class MccsAPIU(SKABaseDevice):
 
             args = (device.hardware_manager, device.state_model, self.logger)
 
+            device.register_command_object(
+                "IsAntennaOn", device.IsAntennaOnCommand(*args)
+            )
             device.register_command_object(
                 "PowerUpAntenna", device.PowerUpAntennaCommand(*args)
             )
@@ -800,6 +546,42 @@ class MccsAPIU(SKABaseDevice):
     # --------
     # Commands
     # --------
+
+    class IsAntennaOnCommand(BaseCommand):
+        """
+        The command class for the IsAntennaOn command
+        """
+
+        def do(self, argin):
+            """
+            Stateless hook for implementation of
+            :py:meth:`MccsAPIU.IsAntennaOn` command functionality.
+
+            :param argin: the logical antenna id of the antenna to power
+                up
+            :type argin: int
+
+            :return: whether the specified antenna is on or not
+            :rtype: bool
+            """
+            hardware_manager = self.target
+            return hardware_manager.is_antenna_on(argin)
+
+    @command(dtype_in="DevULong", doc_in="logicalAntennaId", dtype_out=bool)
+    @DebugIt()
+    def IsAntennaOn(self, argin):
+        """
+        Power up the antenna
+
+        :param argin: the logical antenna id of the antenna to power
+            up
+        :type argin: int
+
+        :return: whether the specified antenna is on or not
+        :rtype: bool
+        """
+        handler = self.get_command_object("PowerUpAntenna")
+        return handler(argin)
 
     class PowerUpAntennaCommand(ResponseCommand):
         """

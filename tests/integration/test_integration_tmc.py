@@ -1,7 +1,14 @@
 """
 This module contains tests of interactions between the TMC and ska.low.mccs classes.
 """
-from tango import DevState, DevSource
+from tango import (
+    DevState,
+    DevSource,
+    AsynCall,
+    AsynReplyNotArrived,
+    CommunicationFailed,
+    DevFailed,
+)
 from ska.base.commands import ResultCode
 from ska.base.control_model import ObsState
 import pytest
@@ -101,11 +108,18 @@ class TestMccsIntegrationTmc:
         :param expected_result: The expected return code from the command
         :type expected_result: :py:class:`ska.base.commands.ResultCode`
         """
-        result = device.command_inout(command, argin)
-        if expected_result is None:
-            assert result is None
-        else:
-            assert result[0] == expected_result
+        # Call the specified command asynchronously
+        async_id = device.command_inout_asynch(command, argin)
+        try:
+            result = device.command_inout_reply(async_id, timeout=5000)
+            if expected_result is None:
+                assert result is None
+            else:
+                assert result[0] == expected_result
+        except AsynReplyNotArrived as err:
+            assert False, f"AsyncReplyNotArrived: {err}"
+        except (AsynCall, CommunicationFailed, DevFailed) as err:
+            assert False, f"Exception raised: {err}"
 
     def test_controller_on(self, devices):
         """

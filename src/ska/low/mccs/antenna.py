@@ -85,8 +85,12 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :param logical_antenna_id: this antenna's id within the APIU
         :type logical_antenna_id: int
 
+        :raises AssertionError: if parameters are out of bounds
         :raises DevFailed: if unable to connect to the tile device
         """
+        assert (
+            logical_antenna_id > 0
+        ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
         try:
             self._apiu = backoff_connect(apiu_fqdn)
@@ -175,8 +179,12 @@ class AntennaTileProxy(HardwareDriver):
         :param logical_antenna_id: this antenna's id in tile
         :type logical_antenna_id: int
 
+        :raises AssertionError: if parameters are out of bounds
         :raises DevFailed: if unable to connect to the tile device
         """
+        assert (
+            logical_antenna_id > 0
+        ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
         try:
             self._tile = backoff_connect(tile_fqdn)

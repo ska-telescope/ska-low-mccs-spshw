@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* MCCS-225 - further work on hardware model, especially antenna
+
 ## 0.3.0 
 
 * MCCS-156 - controller resource management model

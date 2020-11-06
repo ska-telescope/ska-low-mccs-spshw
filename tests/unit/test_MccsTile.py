@@ -450,10 +450,10 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
 
-    def test_GetFirmwareList(self, device_under_test):
+    def test_GetFirmwareAvailable(self, device_under_test):
         """
         Test for
-        * GetFirmwareList command
+        * GetFirmwareAvailable command
         * firmwareName attribute
         * firmwareVersion attribute
 
@@ -464,15 +464,15 @@ class TestMccsTileCommands:
         """
         device_under_test.On()
 
-        firmware_list_str = device_under_test.GetFirmwareList()
-        firmware_list = json.loads(firmware_list_str)
-        assert firmware_list == TpmSimulator.FIRMWARE_LIST
+        firmware_available_str = device_under_test.GetFirmwareAvailable()
+        firmware_available = json.loads(firmware_available_str)
+        assert firmware_available == TpmSimulator.FIRMWARE_AVAILABLE
 
         firmware_name = device_under_test.firmwareName
         assert firmware_name == TpmSimulator.FIRMWARE_NAME
 
-        major = firmware_list[firmware_name]["major"]
-        minor = firmware_list[firmware_name]["minor"]
+        major = firmware_available[firmware_name]["major"]
+        minor = firmware_available[firmware_name]["minor"]
         assert device_under_test.firmwareVersion == f"{major}.{minor}"
 
     def test_DownloadFirmware(self, device_under_test):

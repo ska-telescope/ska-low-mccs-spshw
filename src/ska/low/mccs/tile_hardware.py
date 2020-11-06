@@ -95,15 +95,15 @@ class TileHardwareManager(SimulableHardwareManager):
         super().__init__(hardware_factory, TileHardwareHealthEvaluator())
 
     @property
-    def firmware_list(self):
+    def firmware_available(self):
         """
-        Return a list of firmware stored on the hardware
+        Return specifications of the firmware stored on the hardware and
+        available for use
 
-        :return: the list of firmware stored on the hardware; actually
-            a dictionary indexed by firmware name.
+        :return: specifications of the firmware stored on the hardware
         :rtype: dict
         """
-        return self._factory.hardware.firmware_list
+        return self._factory.hardware.firmware_available
 
     @property
     def firmware_name(self):

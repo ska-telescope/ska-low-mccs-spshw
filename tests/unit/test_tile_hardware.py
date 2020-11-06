@@ -136,7 +136,7 @@ class TestCommon:
                 TpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
             ("pps_delay", TpmSimulator.PPS_DELAY),
-            ("firmware_list", TpmSimulator.FIRMWARE_LIST),
+            ("firmware_available", TpmSimulator.FIRMWARE_AVAILABLE),
             ("register_list", list(TpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )

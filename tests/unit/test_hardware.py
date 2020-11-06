@@ -491,6 +491,16 @@ class TestOnOffHardware:
         @pytest.mark.parametrize(
             ("hardware_simulator", "is_connected", "is_on"),
             [
+                # We pass the test a hardware simulator that has been
+                # initialised with the first element of this triple, and
+                # test that its connection status is that of the second
+                # element, and its power mode is that of the third.
+                #
+                # For example, "((True, False), True, False)" means:
+                # * take a hardware simulator that has been initialised
+                #   as connected but not turned on;
+                # * test that it behaves as though connected, but not
+                #   turned on
                 ((False, False), False, False),
                 ((False, True), False, True),
                 ((True, False), True, False),

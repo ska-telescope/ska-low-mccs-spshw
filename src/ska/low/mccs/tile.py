@@ -201,7 +201,7 @@ class MccsTile(SKABaseDevice):
                 "Initialise", device.InitialiseCommand(*args)
             )
             device.register_command_object(
-                "GetFirmwareList", device.GetFirmwareListCommand(*args)
+                "GetFirmwareAvailable", device.GetFirmwareAvailableCommand(*args)
             )
             device.register_command_object(
                 "DownloadFirmware", device.DownloadFirmwareCommand(*args)
@@ -979,26 +979,26 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler()
         return [[return_code], [message]]
 
-    class GetFirmwareListCommand(BaseCommand):
+    class GetFirmwareAvailableCommand(BaseCommand):
         """
-        Class for handling the GetFirmwareList() command.
+        Class for handling the GetFirmwareAvailable() command.
         """
 
         def do(self):
             """
             Implementation of
-            :py:meth:`MccsTile.GetFirmwareList` command
+            :py:meth:`MccsTile.GetFirmwareAvailable` command
             functionality.
 
             :return: json encoded string containing list of dictionaries
             :rtype: str
             """
             hardware_manager = self.target
-            return json.dumps(hardware_manager.firmware_list)
+            return json.dumps(hardware_manager.firmware_available)
 
     @command(dtype_out="DevString", doc_out="list of firmware")
     @DebugIt()
-    def GetFirmwareList(self):
+    def GetFirmwareAvailable(self):
         """
         Return a dictionary containing the following information for each
         firmware stored on the board (such as in Flash memory).
@@ -1011,12 +1011,16 @@ class MccsTile(SKABaseDevice):
         :rtype: string
 
         :example:
-
-        >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> jstr = dp.command_inout("GetFirmwareList")
-        >>> dict = json.load(jstr)
+            >>> dp = tango.DeviceProxy("mccs/tile/01")
+            >>> jstr = dp.command_inout("GetFirmwareAvailable")
+            >>> dict = json.load(jstr)
+            {
+            "firmware1": {"design": "model1", "major": 2, "minor": 3},
+            "firmware2": {"design": "model2", "major": 3, "minor": 7},
+            "firmware3": {"design": "model3", "major": 2, "minor": 6},
+            }
         """
-        handler = self.get_command_object("GetFirmwareList")
+        handler = self.get_command_object("GetFirmwareAvailable")
         return handler()
 
     class DownloadFirmwareCommand(ResponseCommand):
@@ -1058,7 +1062,7 @@ class MccsTile(SKABaseDevice):
         such that registers become available for use.
 
         :param argin: can either be the design name returned from
-            get_firmware_list(), or a path to a file
+            :py:meth:`firmware_available` property, or a path to a file
         :type argin: :py:class:`tango.DevString`
 
         :return: A tuple containing a return code and a string

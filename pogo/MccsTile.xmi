@@ -89,7 +89,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="DownloadFirmware" description="Downloads the firmware contained in bitfile to all FPGAs on the board. This should also updatethe internal register mapping, such that registers become available for use. bitfile can either be the &#x2018;design&#x2019; name return from get_firmware_list(), or a path to a file" execMethod="download_firmware" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="DownloadFirmware" description="Downloads the firmware contained in bitfile to all FPGAs on the board. This should also updatethe internal register mapping, such that registers become available for use. bitfile can either be the &#x2018;design&#x2019; name return from firmware_available(), or a path to a file" execMethod="download_firmware" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="bitfile location">
         <type xsi:type="pogoDsl:StringType"/>
       </argin>

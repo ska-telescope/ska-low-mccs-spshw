@@ -24,6 +24,7 @@ devices_to_load = {
         "tile_0002",
         "tile_0003",
         "tile_0004",
+        "apiu_001",
         "antenna_000001",
         "antenna_000002",
         "antenna_000003",

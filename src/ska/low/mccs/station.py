@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsStation project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -19,8 +19,7 @@ import json
 # PyTango imports
 import tango
 from tango import DebugIt, DevState, EnsureOmniThread
-from tango.server import device_property
-from tango.server import attribute, command
+from tango.server import attribute, command, device_property
 
 # additional imports
 from ska.base import SKABaseDevice, SKAObsDevice

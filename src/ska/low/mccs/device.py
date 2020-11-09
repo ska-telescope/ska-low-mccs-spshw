@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsDevice project
+# This file is part of the SKA Low MCCS project
 #
 #
 #

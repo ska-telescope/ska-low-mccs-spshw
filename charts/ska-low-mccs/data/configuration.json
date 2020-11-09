@@ -200,32 +200,93 @@
                 }
             }
         },
+        "MccsAPIU": {
+            "apiu_001": {
+                "MccsAPIU": {
+                    "low-mccs/apiu/001": {
+                        "properties": {}
+                    }
+                }
+            }
+        },
         "MccsAntenna": {
             "antenna_000001": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000001": {
-                        "properties": {}
+                        "properties": {
+                            "ApiuId": [
+                                "1"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "1"
+                            ],
+                            "TileId": [
+                                "1"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "1"
+                            ]
+                        }
                     }
                 }
             },
             "antenna_000002": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000002": {
-                        "properties": {}
+                        "properties": {
+                            "ApiuId": [
+                                "1"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "2"
+                            ],
+                            "TileId": [
+                                "1"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "2"
+                            ]
+                        }
                     }
                 }
             },
             "antenna_000003": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000003": {
-                        "properties": {}
+                        "properties": {
+                            "ApiuId": [
+                                "1"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "3"
+                            ],
+                            "TileId": [
+                                "2"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "1"
+                            ]
+                        }
                     }
                 }
             },
             "antenna_000004": {
                 "MccsAntenna": {
                     "low-mccs/antenna/000004": {
-                        "properties": {}
+                        "properties": {
+                            "ApiuId": [
+                                "1"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "4"
+                            ],
+                            "TileId": [
+                                "2"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "2"
+                            ]
+                        }
                     }
                 }
             }

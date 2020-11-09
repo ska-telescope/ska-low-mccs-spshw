@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsClusterManagerDevice project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -15,14 +15,18 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 import threading
 
 from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command
+from tango.server import attribute, command, AttrWriteType
 import json
 
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.base.control_model import HealthState, SimulationMode
 from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.cluster_simulator import ClusterSimulator, JobStatus, JobConfig
-from ska.low.mccs.hardware import HardwareHealthEvaluator, HardwareManager
+from ska.low.mccs.hardware import (
+    HardwareHealthEvaluator,
+    SimulableHardwareManager,
+    SimulableHardwareFactory,
+)
 from ska.low.mccs.health import HealthModel
 
 __all__ = [
@@ -77,30 +81,59 @@ class ClusterHealthEvaluator(HardwareHealthEvaluator):
             return HealthState.FAILED
 
 
-class ClusterManager(HardwareManager):
+class ClusterFactory(SimulableHardwareFactory):
+    """
+    A hardware factory for cluster hardware. At present, this returns a
+    :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator` object
+    when in simulation mode, and raises
+    :py:exception:`NotImplementedError` if the hardware is sought whilst
+    not in simulation mode
+    """
+
+    def __init__(self, simulation_mode):
+        """
+        Create a new factory instance
+
+        :param simulation_mode: the initial simulation mode for this
+            cluster manager
+        :type simulation_mode:
+            :py:class:`~ska.base.control_model.SimulationMode`
+        """
+        super().__init__(simulation_mode)
+
+    def _create_simulator(self):
+        """
+        Returns a hardware simulator
+
+        :return: a hardware simulator for the tile
+        :rtype: :py:class:`TpmSimulator`
+        """
+        return ClusterSimulator()
+
+
+class ClusterManager(SimulableHardwareManager):
     """
     This class manages a cluster on behalf of the MccsClusterManagerDevice
     device.
     """
 
-    def __init__(self, simulation_mode):
+    def __init__(self, simulation_mode, _factory=None):
         """
         Initialise a new ClusterManager instance
 
-        :param simulation_mode: the initial simulation mode of this
-            hardware manager
-        :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
+        :param simulation_mode: the initial simulation mode for this
+            cluster manager
+        :type simulation_mode:
+            :py:class:`~ska.base.control_model.SimulationMode`
+        :param _factory: allows for substitution of a hardware factory.
+            This is useful for testing, but generally should not be used
+            in operations.
+        :type _factory: :py:class:`AntennaHardwareFactory`
         """
-        super().__init__(simulation_mode, ClusterHealthEvaluator())
-
-    def _create_simulator(self):
-        """
-        Helper method to create and return a hardware simulator
-
-        :return: a simulator of antenna hardware
-        :rtype: :py:class:`APIUHardwareSimulator`
-        """
-        return ClusterSimulator()
+        cluster_factory = _factory or ClusterFactory(
+            simulation_mode == SimulationMode.TRUE
+        )
+        super().__init__(cluster_factory, ClusterHealthEvaluator())
 
     @property
     def jobs_errored(self):
@@ -110,7 +143,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that have errored
         :rtype: int
         """
-        return self._hardware.jobs_errored
+        return self._factory.hardware.jobs_errored
 
     @property
     def jobs_failed(self):
@@ -120,7 +153,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that have failed
         :rtype: int
         """
-        return self._hardware.jobs_failed
+        return self._factory.hardware.jobs_failed
 
     @property
     def jobs_finished(self):
@@ -130,7 +163,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that have finished
         :rtype: int
         """
-        return self._hardware.jobs_finished
+        return self._factory.hardware.jobs_finished
 
     @property
     def jobs_killed(self):
@@ -140,7 +173,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that have been killed
         :rtype: int
         """
-        return self._hardware.jobs_killed
+        return self._factory.hardware.jobs_killed
 
     @property
     def jobs_lost(self):
@@ -150,7 +183,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that have been lost
         :rtype: int
         """
-        return self._hardware.jobs_lost
+        return self._factory.hardware.jobs_lost
 
     @property
     def jobs_staging(self):
@@ -160,7 +193,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that are currently staging
         :rtype: int
         """
-        return self._hardware.jobs_staging
+        return self._factory.hardware.jobs_staging
 
     @property
     def jobs_starting(self):
@@ -170,7 +203,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that are currently starting
         :rtype: int
         """
-        return self._hardware.jobs_starting
+        return self._factory.hardware.jobs_starting
 
     @property
     def jobs_running(self):
@@ -180,7 +213,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that are currently running
         :rtype: int
         """
-        return self._hardware.jobs_running
+        return self._factory.hardware.jobs_running
 
     @property
     def jobs_killing(self):
@@ -190,7 +223,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that are currently being killed
         :rtype: int
         """
-        return self._hardware.jobs_killing
+        return self._factory.hardware.jobs_killing
 
     @property
     def jobs_unreachable(self):
@@ -200,7 +233,7 @@ class ClusterManager(HardwareManager):
         :return: the number of jobs that are currently unreachable
         :rtype: int
         """
-        return self._hardware.jobs_unreachable
+        return self._factory.hardware.jobs_unreachable
 
     @property
     def memory_total(self):
@@ -210,7 +243,7 @@ class ClusterManager(HardwareManager):
         :return: the total memory of the cluster
         :rtype: float
         """
-        return self._hardware.memory_total
+        return self._factory.hardware.memory_total
 
     @property
     def memory_used(self):
@@ -220,7 +253,7 @@ class ClusterManager(HardwareManager):
         :return: the used memory of the cluster
         :rtype: float
         """
-        return self._hardware.memory_used
+        return self._factory.hardware.memory_used
 
     @property
     def memory_avail(self):
@@ -230,7 +263,7 @@ class ClusterManager(HardwareManager):
         :return: the available memory of the cluster
         :rtype: float
         """
-        return self._hardware.memory_avail
+        return self._factory.hardware.memory_avail
 
     @property
     def nodes_total(self):
@@ -240,7 +273,7 @@ class ClusterManager(HardwareManager):
         :return: the total number of nodes in the cluster
         :rtype: int
         """
-        return self._hardware.nodes_total
+        return self._factory.hardware.nodes_total
 
     @property
     def nodes_in_use(self):
@@ -250,7 +283,7 @@ class ClusterManager(HardwareManager):
         :return: the number of nodes in use in the cluster
         :rtype: int
         """
-        return self._hardware.nodes_in_use
+        return self._factory.hardware.nodes_in_use
 
     @property
     def nodes_avail(self):
@@ -260,7 +293,7 @@ class ClusterManager(HardwareManager):
         :return: the number of available nodes in the cluster
         :rtype: int
         """
-        return self._hardware.nodes_avail
+        return self._factory.hardware.nodes_avail
 
     @property
     def master_cpus_total(self):
@@ -270,7 +303,7 @@ class ClusterManager(HardwareManager):
         :return: the total number of CPUs on the master node
         :rtype: int
         """
-        return self._hardware.master_cpus_total
+        return self._factory.hardware.master_cpus_total
 
     @property
     def master_cpus_used(self):
@@ -280,7 +313,7 @@ class ClusterManager(HardwareManager):
         :return: the total number of CPUs in use on the master node
         :rtype: int
         """
-        return self._hardware.master_cpus_used
+        return self._factory.hardware.master_cpus_used
 
     @property
     def master_cpus_allocated_percent(self):
@@ -290,7 +323,7 @@ class ClusterManager(HardwareManager):
         :return: the percent of CPUs allocated on master
         :rtype: float
         """
-        return self._hardware.master_cpus_allocated_percent
+        return self._factory.hardware.master_cpus_allocated_percent
 
     @property
     def master_disk_total(self):
@@ -300,7 +333,7 @@ class ClusterManager(HardwareManager):
         :return: the total disk size on the master node
         :rtype: float
         """
-        return self._hardware.master_disk_total
+        return self._factory.hardware.master_disk_total
 
     @property
     def master_disk_used(self):
@@ -310,7 +343,7 @@ class ClusterManager(HardwareManager):
         :return: the total disk usage on the master node
         :rtype: float
         """
-        return self._hardware.master_disk_used
+        return self._factory.hardware.master_disk_used
 
     @property
     def master_disk_percent(self):
@@ -320,7 +353,7 @@ class ClusterManager(HardwareManager):
         :return: the percent of disk used on master
         :rtype: float
         """
-        return self._hardware.master_disk_percent
+        return self._factory.hardware.master_disk_percent
 
     @property
     def master_mem_total(self):
@@ -330,7 +363,7 @@ class ClusterManager(HardwareManager):
         :return: the total memory size on the master node
         :rtype: float
         """
-        return self._hardware.master_mem_total
+        return self._factory.hardware.master_mem_total
 
     @property
     def master_mem_used(self):
@@ -340,7 +373,7 @@ class ClusterManager(HardwareManager):
         :return: the total memory usage on the master node
         :rtype: float
         """
-        return self._hardware.master_mem_used
+        return self._factory.hardware.master_mem_used
 
     @property
     def master_mem_percent(self):
@@ -350,7 +383,7 @@ class ClusterManager(HardwareManager):
         :return: the percent of memory used on master
         :rtype: float
         """
-        return self._hardware.master_mem_percent
+        return self._factory.hardware.master_mem_percent
 
     @property
     def master_node_id(self):
@@ -360,7 +393,7 @@ class ClusterManager(HardwareManager):
         :return: the id of the master node
         :rtype: int
         """
-        return self._hardware.master_node_id
+        return self._factory.hardware.master_node_id
 
     @property
     def shadow_master_pool_node_ids(self):
@@ -370,7 +403,7 @@ class ClusterManager(HardwareManager):
         :return: the ids of nodes in the shadow master pool
         :rtype: tuple of int
         """
-        return self._hardware.shadow_master_pool_node_ids
+        return self._factory.hardware.shadow_master_pool_node_ids
 
     @property
     def shadow_master_pool_status(self):
@@ -380,20 +413,20 @@ class ClusterManager(HardwareManager):
         :return: the statuses of nodes in the shadow master pool
         :rtype: tuple of HealthState
         """
-        return self._hardware.shadow_master_pool_status
+        return self._factory.hardware.shadow_master_pool_status
 
     def ping_master_pool(self):
         """
         Ping the master pool nodes to make sure they are ok.
         This has not been implemented.
         """
-        self._hardware.ping_master_pool()
+        self._factory.hardware.ping_master_pool()
 
     def clear_job_stats(self):
         """
         Clear stats for closed jobs
         """
-        self._hardware.clear_job_stats()
+        self._factory.hardware.clear_job_stats()
 
     def get_job_status(self, job_id):
         """
@@ -405,7 +438,7 @@ class ClusterManager(HardwareManager):
         :return: the status of the job
         :rtype: str
         """
-        return self._hardware.get_job_status(job_id)
+        return self._factory.hardware.get_job_status(job_id)
 
     def submit_job(self, job_config):
         """
@@ -419,7 +452,7 @@ class ClusterManager(HardwareManager):
         :return: the job_id
         :rtype: int
         """
-        return self._hardware.submit_job(job_config)
+        return self._factory.hardware.submit_job(job_config)
 
     def start_job(self, job_id):
         """
@@ -428,7 +461,7 @@ class ClusterManager(HardwareManager):
         :param job_id: The id of the job to be started
         :type job_id: str
         """
-        self._hardware.start_job(job_id)
+        self._factory.hardware.start_job(job_id)
 
     def stop_job(self, job_id):
         """
@@ -437,7 +470,7 @@ class ClusterManager(HardwareManager):
         :param job_id: The id of the job to be started
         :type job_id: str
         """
-        self._hardware.stop_job(job_id)
+        self._factory.hardware.stop_job(job_id)
 
 
 class MccsClusterManagerDevice(MccsGroupDevice):
@@ -919,6 +952,27 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :rtype: list of :py:class:`tango.DevState`
         """
         return self.cluster_manager.shadow_master_pool_status
+
+    # override from base classes so that it can be stored in the hardware manager
+    @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
+    def simulationMode(self):
+        """
+        Return the simulation mode of this device
+
+        :return: the simulation mode of this device
+        :rtype: :py:class:`~ska.base.control_model.SimulationMode`
+        """
+        return self.cluster_manager.simulation_mode
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode of this device
+
+        :param value: the new simulation mode
+        :type value: :py:class:`~ska.base.control_model.SimulationMode`
+        """
+        self.cluster_manager.simulation_mode = value
 
     # --------
     # Commands

@@ -1,8 +1,7 @@
 #########################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsTransientBuffer project
-#
+# This file is part of the SKA Low MCCS project
 #
 #
 # Distributed under the terms of the GPL license.
@@ -387,8 +386,7 @@ class TestClusterManager:
         simulation mode
         """
         with pytest.raises(
-            NotImplementedError,
-            match=("ClusterManager._create_driver method not implemented."),
+            NotImplementedError, match=("._create_driver method not implemented.")
         ):
             _ = ClusterManager(SimulationMode.FALSE)
 
@@ -402,7 +400,6 @@ class TestClusterManager:
             :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
         """
         with pytest.raises(
-            NotImplementedError,
-            match=("ClusterManager._create_driver method not implemented."),
+            NotImplementedError, match=("._create_driver method not implemented.")
         ):
             cluster_manager.simulation_mode = SimulationMode.FALSE

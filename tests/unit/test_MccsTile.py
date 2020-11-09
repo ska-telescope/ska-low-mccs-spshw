@@ -1,7 +1,7 @@
 #########################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsTile project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -23,6 +23,7 @@ from tango import DevFailed
 from ska.base import DeviceStateModel
 from ska.base.control_model import SimulationMode
 from ska.base.commands import ResultCode
+from ska.low.mccs.hardware import SimulableHardwareFactory
 from ska.low.mccs.tile import MccsTile
 from ska.low.mccs.tile_hardware import TileHardwareManager
 from ska.low.mccs.tpm_simulator import TpmSimulator
@@ -420,12 +421,14 @@ class TestMccsTileCommands:
 
         # Now check that calling the command object results in the
         # correct TPM simulator command being called.
-        mock_tpm_simulator = mocker.Mock()
-
         logger = logging.getLogger()
         state_model = DeviceStateModel(logger)
-        hardware_manager = TileHardwareManager(SimulationMode.TRUE, logger=logger)
-        hardware_manager._hardware = mock_tpm_simulator
+
+        mock_tpm_simulator = mocker.Mock()
+        hardware_factory = SimulableHardwareFactory(True, _simulator=mock_tpm_simulator)
+        hardware_manager = TileHardwareManager(
+            SimulationMode.TRUE, logger, _factory=hardware_factory
+        )
 
         command_class = getattr(MccsTile, f"{device_command}Command")
         command_object = command_class(hardware_manager, state_model, logger)
@@ -447,10 +450,10 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
 
-    def test_GetFirmwareList(self, device_under_test):
+    def test_GetFirmwareAvailable(self, device_under_test):
         """
         Test for
-        * GetFirmwareList command
+        * GetFirmwareAvailable command
         * firmwareName attribute
         * firmwareVersion attribute
 
@@ -461,15 +464,15 @@ class TestMccsTileCommands:
         """
         device_under_test.On()
 
-        firmware_list_str = device_under_test.GetFirmwareList()
-        firmware_list = json.loads(firmware_list_str)
-        assert firmware_list == TpmSimulator.FIRMWARE_LIST
+        firmware_available_str = device_under_test.GetFirmwareAvailable()
+        firmware_available = json.loads(firmware_available_str)
+        assert firmware_available == TpmSimulator.FIRMWARE_AVAILABLE
 
         firmware_name = device_under_test.firmwareName
         assert firmware_name == TpmSimulator.FIRMWARE_NAME
 
-        major = firmware_list[firmware_name]["major"]
-        minor = firmware_list[firmware_name]["minor"]
+        major = firmware_available[firmware_name]["major"]
+        minor = firmware_available[firmware_name]["minor"]
         assert device_under_test.firmwareVersion == f"{major}.{minor}"
 
     def test_DownloadFirmware(self, device_under_test):

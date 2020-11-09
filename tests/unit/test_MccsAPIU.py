@@ -1,7 +1,7 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsStationBeam project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -17,16 +17,13 @@ from tango import DevFailed, DevState
 
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
-from ska.low.mccs.apiu import (
-    AntennaHardwareSimulator,
-    APIUHardwareManager,
-    APIUHardwareSimulator,
-)
+from ska.low.mccs.apiu import APIUHardwareManager
+from ska.low.mccs.apiu_simulator import AntennaHardwareSimulator, APIUHardwareSimulator
 
 device_to_load = {
-    "path": "charts/ska-low-mccs/data/extra.json",
+    "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
-    "device": "apiu",
+    "device": "apiu_001",
 }
 
 
@@ -214,8 +211,7 @@ class TestAPIUHardwareManager:
         simulation mode
         """
         with pytest.raises(
-            NotImplementedError,
-            match=("APIUHardwareManager._create_driver method not implemented."),
+            NotImplementedError, match=("._create_driver method not implemented.")
         ):
             _ = APIUHardwareManager(SimulationMode.FALSE)
 
@@ -228,8 +224,7 @@ class TestAPIUHardwareManager:
         :type hardware_manager: :py:class:`~ska.low.mccs.apiu.APIUHardwareManager`
         """
         with pytest.raises(
-            NotImplementedError,
-            match=("APIUHardwareManager._create_driver method not implemented."),
+            NotImplementedError, match=("._create_driver method not implemented.")
         ):
             hardware_manager.simulation_mode = SimulationMode.FALSE
 
@@ -249,7 +244,7 @@ class TestAPIUHardwareManager:
         current = 4.7
         humidity = 23.4
 
-        hardware = hardware_manager._hardware
+        hardware = hardware_manager._factory.hardware
 
         assert not hardware_manager.is_on
         with pytest.raises(ValueError, match="APIU hardware is turned off"):
@@ -260,18 +255,17 @@ class TestAPIUHardwareManager:
             _ = hardware_manager.temperature
         with pytest.raises(ValueError, match="APIU hardware is turned off"):
             _ = hardware_manager.humidity
-        assert hardware_manager.health == HealthState.UNKNOWN
+        assert hardware_manager.health == HealthState.OK
 
         mock_health_callback = mocker.Mock()
         hardware_manager.register_health_callback(mock_health_callback)
-        mock_health_callback.assert_called_once_with(HealthState.UNKNOWN)
+        mock_health_callback.assert_called_once_with(HealthState.OK)
         mock_health_callback.reset_mock()
 
         hardware_manager.on()
         assert hardware_manager.is_on
         assert hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_called_once_with(HealthState.OK)
-        mock_health_callback.reset_mock()
+        mock_health_callback.assert_not_called()
 
         hardware._current = current
         assert hardware_manager.current == current
@@ -287,8 +281,8 @@ class TestAPIUHardwareManager:
 
         hardware_manager.off()
         assert not hardware_manager.is_on
-        assert hardware_manager.health == HealthState.UNKNOWN
-        mock_health_callback.assert_called_once_with(HealthState.UNKNOWN)
+        assert hardware_manager.health == HealthState.OK
+        mock_health_callback.assert_not_called()
 
         with pytest.raises(ValueError, match="APIU hardware is turned off"):
             _ = hardware_manager.current

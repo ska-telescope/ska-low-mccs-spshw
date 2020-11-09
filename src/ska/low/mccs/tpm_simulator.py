@@ -24,7 +24,7 @@ class TpmSimulator(HardwareSimulator):
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "firmware1"
-    FIRMWARE_LIST = {
+    FIRMWARE_AVAILABLE = {
         "firmware1": {"design": "model1", "major": 2, "minor": 3},
         "firmware2": {"design": "model2", "major": 3, "minor": 7},
         "firmware3": {"design": "model3", "major": 2, "minor": 6},
@@ -59,7 +59,7 @@ class TpmSimulator(HardwareSimulator):
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
-        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
+        self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
 
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
@@ -70,15 +70,15 @@ class TpmSimulator(HardwareSimulator):
         super().__init__(fail_connect=fail_connect)
 
     @property
-    def firmware_list(self):
+    def firmware_available(self):
         """
         Return the firmware list for this TPM simulator
 
         :return: the firmware list
         :rtype: dict
         """
-        self.logger.debug("TpmSimulator: get_firmware_list")
-        return copy.deepcopy(self._firmware_list)
+        self.logger.debug("TpmSimulator: firmware_available")
+        return copy.deepcopy(self._firmware_available)
 
     @property
     def firmware_name(self):
@@ -89,7 +89,7 @@ class TpmSimulator(HardwareSimulator):
         :return: firmware name
         :rtype: str
         """
-        self.logger.debug("TpmSimulator: get_firmware_list")
+        self.logger.debug("TpmSimulator: firmware_name")
         return self._firmware_name
 
     @property
@@ -101,8 +101,8 @@ class TpmSimulator(HardwareSimulator):
         :return: firmware version (major.minor)
         :rtype: str
         """
-        self.logger.debug("TpmSimulator: get_firmware_list")
-        firmware = self._firmware_list[self._firmware_name]
+        self.logger.debug("TpmSimulator: firmware_version")
+        firmware = self._firmware_available[self._firmware_name]
         return "{major}.{minor}".format(**firmware)  # noqa: FS002
 
     @property

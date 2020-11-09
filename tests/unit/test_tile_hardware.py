@@ -1,7 +1,7 @@
 #########################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsTransientBuffer project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -61,8 +61,7 @@ class TestTileHardwareManager:
         simulation mode
         """
         with pytest.raises(
-            NotImplementedError,
-            match=("TileHardwareManager._create_driver method not implemented."),
+            NotImplementedError, match=("._create_driver method not implemented.")
         ):
             _ = TileHardwareManager(SimulationMode.FALSE, logger=logging.getLogger())
 
@@ -76,8 +75,7 @@ class TestTileHardwareManager:
             :py:class:`~ska.low.mccs.tile_hardware.TileHardwareManager`
         """
         with pytest.raises(
-            NotImplementedError,
-            match=("TileHardwareManager._create_driver method not implemented."),
+            NotImplementedError, match=("._create_driver method not implemented.")
         ):
             tile_hardware_manager.simulation_mode = SimulationMode.FALSE
 
@@ -138,7 +136,7 @@ class TestCommon:
                 TpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
             ("pps_delay", TpmSimulator.PPS_DELAY),
-            ("firmware_list", TpmSimulator.FIRMWARE_LIST),
+            ("firmware_available", TpmSimulator.FIRMWARE_AVAILABLE),
             ("register_list", list(TpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )

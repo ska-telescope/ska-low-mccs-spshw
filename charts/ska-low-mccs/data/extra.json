@@ -1,14 +1,5 @@
 {
     "servers": {
-        "MccsAPIU": {
-            "apiu": {
-                "MccsAPIU": {
-                    "low-mccs/apiu/apiu": {
-                        "properties": {}
-                    }
-                }
-            }
-        },
         "MccsClusterManagerDevice": {
             "clustermanager": {
                 "MccsClusterManagerDevice": {

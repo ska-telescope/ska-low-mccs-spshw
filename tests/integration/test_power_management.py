@@ -1,7 +1,7 @@
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
-# This file is part of the MccsController project
+# This file is part of the SKA Low MCCS project
 #
 #
 #
@@ -30,6 +30,7 @@ devices_to_load = {
         "tile_0002",
         "tile_0003",
         "tile_0004",
+        "apiu_001",
         "antenna_000001",
         "antenna_000002",
         "antenna_000003",

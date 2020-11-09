@@ -1,12 +1,13 @@
 """
 This module contains the pytest-bdd implementation of the Gherkin BDD
-tests for the SKA Low MCCS prototype
+tests for TMC and MCCS interactions
 """
-
+from ska.base.commands import ResultCode
 import pytest
+import json
 from pytest_bdd import scenario, given, when, then, parsers
-from tango import DevState
-
+from tango import DevState, DevSource
+from ska.base.control_model import AdminMode, ObsState, HealthState
 from conftest import confirm_initialised
 
 
@@ -30,6 +31,17 @@ devices_to_load = {
         "antenna_000004",
     ],
 }
+
+
+@pytest.fixture(scope="module")
+def cached_obsstate():
+    """
+    Use a pytest message box to retain obsstate between test stages
+
+    :return: cached_obsstate: pytest message box for the cached obsstate
+    :rtype: cached_obsstate: dict<string, :py:class:`ska.base.control_model.ObsState`>
+    """
+    return {}
 
 
 @pytest.fixture()
@@ -61,120 +73,460 @@ def devices(tango_context):
         "tile_0002": tango_context.get_device("low-mccs/tile/0002"),
         "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
         "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
+        "apiu_001": tango_context.get_device("low-mccs/apiu/001"),
+        "antenna_000001": tango_context.get_device("low-mccs/antenna/000001"),
+        "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
+        "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
+        "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
     }
+    # Bypass the cache because stationFQDNs etc are polled attributes,
+    # and having written to them, we don't want to have to wait a
+    # polling period to test that the write has stuck.
+    # TODO: Need to investigate disabling this section for tests performed on
+    #       a real deployment (i.e. not in a test/development environment)
+    for device in device_dict.values():
+        device.set_source(DevSource.DEV)
     confirm_initialised(device_dict.values())
     return device_dict
 
 
-@given(parsers.parse("we have {device_name}"))
-def we_have_device(devices, device_name):
+def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     """
-    Asserts that existence/availability of a device
+    Method to simplify assertions on the result of TMC calls
+
+    :param device: The MCCS device to send command to
+    :type device: :py:class:`tango.DeviceProxy`
+    :param command: The command to send to the device
+    :type command: str
+    :param argin: Optional argument to send to the command
+    :type argin: str
+    :param expected_result: The expected return code from the command
+    :type expected_result: :py:class:`ska.base.commands.ResultCode`
+    """
+    # Call the specified command synchronously
+    result = device.command_inout(command, argin)
+    if expected_result is None:
+        assert result is None
+    else:
+        assert result[0] == expected_result
+
+
+@scenario("controller_subarray_interactions.feature", "Start up low telescope")
+def test_start_up_low_telescope(devices):
+    """
+    This is run at the end of the scenario.
+    Turn MCCS Controller Off.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-    :param device_name: name of the device
-    :type device_name: str
     """
-    assert device_name in devices
+    assert_command(device=devices["controller"], command="Off")
+    check_mccs_controller_state(devices, "off")
+    check_reset_state(devices)
 
 
-@scenario("controller_subarray_interactions.feature", "Controller is turned on")
-def test_controller_is_turned_on():
+@given(parsers.parse("we have mvplow running an instance of {component_name}"))
+def we_have_mvplow_running_an_instance_of(devices, component_name):
     """
-    This is run at the end of the scenario. It does nothing at present.
-    """
-    pass
-
-
-@given(parsers.parse("{device_name} is {device_state}"))
-def device_is_offon(devices, device_name, device_state):
-    """
-    Asserts that a device is off/on
+    Asserts the existence/availability of a component
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-    :param device_name: name of the device
-    :type device_name: str
+    :param component_name: name of the component
+    :type component_name: str
+    """
+
+    if component_name == "mccs":
+        for device_name in devices_to_load["devices"]:
+            assert device_name in devices
+    elif component_name == "tmc":
+        pass
+    else:
+        assert False
+
+
+@given(parsers.parse("{component_name} is ready to {direction} an on command"))
+def component_is_ready_to_receive_an_on_command(devices, component_name, direction):
+    """
+    Asserts that a component is ready to receive an on command
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param component_name: name of the component
+    :type component_name: str
+    :param direction: direction of communication
+    :type direction: str
+    """
+    if component_name == "mccs":
+        assert devices["controller"].state() == DevState.OFF
+    elif component_name == "tmc":
+        pass
+    else:
+        assert False
+
+
+@when(parsers.parse("tmc turns mccs controller {device_state}"))
+def tmc_turns_mccs_controller_onoff(devices, device_state):
+    """
+    Turn the mccs controller device off/on
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param device_state: the state to transition to (on/off)
+    :type device_state: str
+    """
+    {
+        "off": lambda device: assert_command(device=device, command="Off"),
+        "on": lambda device: assert_command(device=device, command="On"),
+    }[device_state](devices["controller"])
+
+
+@then(parsers.parse("mccs controller state is {device_state}"))
+def check_mccs_controller_state(devices, device_state):
+    """
+    Asserts that the mccs controller device is on/off
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param device_state: asserted state of the device -- either "off" or
         "on"
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-    assert devices[device_name].state() in state_map[device_state]
+    assert devices["controller"].state() in state_map[device_state]
 
 
-@when(parsers.parse("we turn {device_name} {device_state}"))
-def we_turn_device_onoff(devices, device_name, device_state):
+@then(parsers.parse("all mccs station states are {state}"))
+def all_mccs_station_states_are_onoff(devices, device_state):
     """
-    Turn a device off/on
+    Asserts that online or maintenance mccs station devices are on/off
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-    :param device_name: name of the device
-    :type device_name: str
-    :param device_state: target state of the device -- either "off" or
-        "on"
-    :type device_state: str
-    """
-    {"off": lambda device: device.Off(), "on": lambda device: device.On()}[
-        device_state
-    ](devices[device_name])
-
-
-@then(parsers.parse("{device_name} should be {device_state}"))
-def device_should_be_onoff(devices, device_name, device_state):
-    """
-    Asserts that the controller device is on
-
-    :param devices: fixture that provides access to devices by their name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-    :param device_name: name of the device
-    :type device_name: str
     :param device_state: asserted state of the device -- either "off" or
         "on"
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-    assert devices[device_name].state() in state_map[device_state]
+    for number in range(1, 513):
+        station_key = f"station_{number:03}"
+        if station_key in devices:
+            station = devices[station_key]
+            if station.AdminMode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
+                assert station.state() in state_map[device_state]
 
 
-# @scenario(
-#     "controller_subarray_interactions.feature",
-#     "Controller allocates stations to subarrays"
-# )
-# def test_subarray_allocation():
-#     pass
+def check_reset_state(devices):
+    """
+    Check that the MCCS devices are in a known reset state
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    check_mccs_controller_state(devices, "off")
+    assert devices["subarray_01"].State() == DevState.OFF
+    assert devices["subarray_02"].State() == DevState.OFF
+    assert devices["subarray_01"].stationFQDNs is None
+    assert devices["subarray_02"].stationFQDNs is None
+    assert devices["station_001"].State() == DevState.OFF
+    assert devices["station_002"].State() == DevState.OFF
+    assert devices["station_001"].subarrayId == 0
+    assert devices["station_002"].subarrayId == 0
 
 
-# @when(
-#     parsers.parse(
-#         "we tell controller to allocate station {station_id:d} to subarray "
-#         "{subarray_id:d}"
-#     )
-# )
-# def controller_allocates_station_to_subarray(controller, subarray_id, station_id):
-#     call_with_json(
-#         controller.Allocate,
-#         subarray_id=subarray_id,
-#         stations=[f"low-mccs/station/{station_id:03}"],
-#     )
+@scenario("controller_subarray_interactions.feature", "Allocate subarray")
+def test_allocate_subarray(devices):
+    """
+    This is run at the end of the scenario.
+    Turn MCCS Controller Off.
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    release_config = {"subarray_id": 1, "release_all": True}
+    json_string = json.dumps(release_config)
+    assert_command(device=devices["controller"], command="Release", argin=json_string)
+    assert_command(device=devices["controller"], command="Off")
+    check_reset_state(devices)
 
 
-# @then(
-#     parsers.parse(
-#         "the stations that subarray {subarray_id:d} thinks are allocated to it "
-#         "should include station {station_id:d}"
-#     )
-# )
-# def subarray_allocation_includes_station(subarrays, subarray_id, station_id):
-#     assert f"low-mccs/station/{station_id:03}" in subarrays[subarray_id].stationFQDNs
+@given(parsers.parse("{component_name} is ready to {action} a subarray"))
+def component_is_ready_to_action_a_subarray(devices, component_name, action):
+    """
+    Asserts that a component is ready to perform an action on a subarray
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param component_name: name of the component
+    :type component_name: str
+    :param action: action to perform on a subarray
+    :type action: str
+    """
+    if component_name == "mccs":
+        tmc_turns_mccs_controller_onoff(devices, "on")
+        check_mccs_controller_state(devices, "on")
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_02"].State() == DevState.OFF
+        assert devices["station_001"].subarrayId == 0
+        assert devices["station_002"].subarrayId == 0
+    elif component_name == "tmc":
+        pass
+    else:
+        assert False
 
 
-# @then(
-#     parsers.parse(
-#         "the subarray id of station {station_id:d} should be subarray {subarray_id:d}"
-#     )
-# )
-# def subarray_id_of_station_is(stations, station_id, subarray_id):
-#     assert stations[station_id].subarrayId == subarray_id
+@given(parsers.parse("subarray obsstate is idle or empty"))
+def subarray_obsstate_is_idle_or_empty(devices, cached_obsstate):
+    """
+    The obsstate of each subarray should be idle or empty
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param cached_obsstate: pytest message box for the cached obsstate
+    :type cached_obsstate: dict<string, :py:class:`ska.base.control_model.ObsState`>
+    """
+
+    for device in ["subarray_01", "subarray_02"]:
+        obsstate = devices[device].obsstate
+        assert (obsstate == ObsState.IDLE) or (obsstate == ObsState.EMPTY)
+        cached_obsstate["subarry_01"] = devices["subarray_01"].obsstate
+        cached_obsstate["subarry_02"] = devices["subarray_02"].obsstate
+
+
+@when(parsers.parse("tmc allocates a subarray with {validity} parameters"))
+def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
+    """
+    TMC allocates a subarray
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param validity: whether the allocate has valid|invalid parameters
+    :type validity: str
+    """
+    parameters = {
+        "subarray_id": 1,
+        "station_ids": [1, 2],
+        "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+        "station_beam_ids": [1],
+    }
+    expected_result = ResultCode.OK
+
+    if validity == "invalid":
+        parameters["subarray_id"] = 3
+        expected_result = ResultCode.FAILED
+
+    json_string = json.dumps(parameters)
+    assert_command(
+        device=devices["controller"],
+        command="Allocate",
+        argin=json_string,
+        expected_result=expected_result,
+    )
+
+
+@then(parsers.parse("the stations have the correct subarray id"))
+def the_stations_have_the_correct_subarray_id(devices):
+    """
+    Stations have the correct subarray id
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert devices["station_001"].subarrayId == 1
+    assert devices["station_002"].subarrayId == 1
+
+
+@then(parsers.parse("subarray state is on"))
+def subarray_state_is_on(devices):
+    """
+    The subarray should be on
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert devices["subarray_01"].State() == DevState.ON
+
+
+@then(
+    parsers.parse("according to allocation policy health of allocated subarray is good")
+)
+def according_to_allocation_policy_health_of_allocated_subarray_is_good(devices):
+    """
+    Health is good
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert devices["controller"].healthState == HealthState.OK
+    assert devices["station_001"].healthState == HealthState.OK
+    assert devices["station_002"].healthState == HealthState.OK
+    assert devices["subarray_01"].healthState == HealthState.OK
+    assert devices["subarray_02"].healthState == HealthState.OK
+
+
+@then(parsers.parse("other resources are not affected"))
+def other_resources_are_not_affected(devices):
+    """
+    Other resource should not be affected
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert devices["subarray_02"].State() == DevState.OFF
+    assert devices["subarray_02"].obsState == ObsState.EMPTY
+
+
+@then(parsers.parse("subarray obsstate is not changed"))
+def subarray_obsstate_is_not_changed(devices, cached_obsstate):
+    """
+    Check that the subarray obsState has not changed
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param cached_obsstate: pytest message box for the cached obsstate
+    :type cached_obsstate: dict<string, :py:class:`ska.base.control_model.ObsState`>
+    """
+    assert devices["subarray_01"].obsstate == cached_obsstate["subarray_01"]
+    assert devices["subarray_02"].obsstate == cached_obsstate["subarray_02"]
+
+
+@scenario("controller_subarray_interactions.feature", "Configure a subarray")
+def test_configure_a_subarray(devices):
+    """
+    This is run at the end of the scenario.
+    Turn MCCS Controller Off.
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert_command(device=devices["subarray_01"], command="End")
+    release_config = {"subarray_id": 1, "release_all": True}
+    json_string = json.dumps(release_config)
+    assert_command(device=devices["controller"], command="Release", argin=json_string)
+    assert_command(device=devices["controller"], command="Off")
+    check_reset_state(devices)
+
+
+@given(parsers.parse("we have a successfully {desired_state} subarray"))
+def we_have_a_successfully_configured_and_or_allocated_subarray(
+    devices, desired_state, cached_obsstate
+):
+    """
+    Get the subarray into an configured and/or allocated state
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param desired_state: The desired state to be in
+    :type desired_state: str
+    :param cached_obsstate: pytest message box for the cached obsstate
+    :type cached_obsstate: dict<string, :py:class:`ska.base.control_model.ObsState`>
+    """
+    we_have_mvplow_running_an_instance_of(devices, "mccs")
+    component_is_ready_to_action_a_subarray(devices, "mccs", "allocate")
+    subarray_obsstate_is_idle_or_empty(devices, cached_obsstate)
+    tmc_allocates_a_subarray_with_validity_parameters(devices, "valid")
+    if desired_state == "configured":
+        configure_subarray(devices)
+        the_subarray_obsstate_is(devices, "ready")
+
+
+def configure_subarray(devices):
+    """
+    Configure the subarray
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    # Configure the subarray
+    configuration = {
+        "stations": [{"station_id": 1}, {"station_id": 2}],
+        "station_beam_pointings": [
+            {
+                "station_beam_id": 1,  # should correspond to one in the
+                # station_beam_ids in the resources
+                "target": {
+                    "system": "HORIZON",  # Target coordinate system
+                    "name": "DriftScan",  # Source name - metadata only,
+                    # does not need to be resolved
+                    "Az": 180.0,  # This is in degrees
+                    "El": 45.0,  # Ditto
+                },
+                "update_rate": 0.0,  # seconds - never update for a drift scan
+                # should be a subset of the channels in the resources
+                "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+            }
+        ],
+    }
+    json_string = json.dumps(configuration)
+    assert_command(
+        device=devices["subarray_01"], command="Configure", argin=json_string
+    )
+
+
+@when(parsers.parse("tmc starts a scan on subarray"))
+def tmc_starts_a_scan_on_subarray(devices):
+    """
+    TMC starts a scan on the subarray
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    scan_config = {"id": 1}
+    json_string = json.dumps(scan_config)
+    assert_command(
+        device=devices["subarray_01"],
+        command="Scan",
+        argin=json_string,
+        expected_result=ResultCode.STARTED,
+    )
+
+
+@when(parsers.parse("tmc configures the subarray"))
+def tmc_configures_the_subarray(devices):
+    """
+    TMC configures a subarray
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    configure_subarray(devices)
+    the_subarray_obsstate_is(devices, "ready")
+
+
+@then(parsers.parse("the subarray obsstate is {obsstate}"))
+def the_subarray_obsstate_is(devices, obsstate):
+    """
+    The subarray obsstate is ready
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param obsstate: The observation state
+    :type obsstate: str
+    """
+    assert devices["subarray_01"].obsState.name == obsstate.upper()
+
+
+@then(parsers.parse("subarray health is good"))
+def subarray_health_is_good(devices):
+    """
+    The health of the subarray is good
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert devices["subarray_01"].healthState == HealthState.OK
+
+
+@scenario("controller_subarray_interactions.feature", "Perform a scan on subarray")
+def test_perform_a_scan_on_subarray(devices):
+    """
+    This is run at the end of the scenario.
+    Turn MCCS Controller Off.
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert_command(device=devices["subarray_01"], command="EndScan")
+    assert_command(device=devices["subarray_01"], command="End")
+    release_config = {"subarray_id": 1, "release_all": True}
+    json_string = json.dumps(release_config)
+    assert_command(device=devices["controller"], command="Release", argin=json_string)
+    assert_command(device=devices["controller"], command="Off")
+    check_reset_state(devices)

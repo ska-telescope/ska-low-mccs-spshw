@@ -32,7 +32,6 @@ prototype for the `Square Kilometre Array`_.
    api/subarray
    api/tel_state
    api/tile
-   api/tpm_device_simulator
    api/transient_buffer
 
 .. toctree::

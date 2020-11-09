@@ -32,6 +32,11 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
 
+class StationHealthModel(HealthModel):
+    # debugging only. delete me
+    pass
+
+
 class StationPowerManager(PowerManager):
     """
     This class that implements the power manager for the MCCS Station
@@ -199,7 +204,7 @@ class MccsStation(SKAObsDevice):
 
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
-            device.health_model = HealthModel(
+            device.health_model = StationHealthModel(
                 None, fqdns, device.event_manager, device.health_changed
             )
 
@@ -262,10 +267,8 @@ class MccsStation(SKAObsDevice):
         :type health: :py:class:`~ska.base.control_model.HealthState`
         """
         if self._health_state == health:
-            print(f"DEVICE: Station healthState is still {health.name}")
             return
         self._health_state = health
-        print(f"DEVICE: Station pushing change event healthState:{health.name}")
         self.push_change_event("healthState", health)
 
     @attribute(

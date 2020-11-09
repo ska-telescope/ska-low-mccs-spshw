@@ -24,26 +24,26 @@ devices_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "devices": [
-        # "controller",
+        "controller",
         # "subarray_01",
         # "subarray_02",
         "station_001",
-        # "station_002",
+        "station_002",
         "tile_0001",
         "tile_0002",
-        # "tile_0003",
-        # "tile_0004",
+        "tile_0003",
+        "tile_0004",
         "apiu_001",
         "antenna_000001",
         "antenna_000002",
-        # "antenna_000003",
-        # "antenna_000004",
+        "antenna_000003",
+        "antenna_000004",
     ],
     "patch": {"low-mccs/tile/0001": ConnectionFailableTile},
 }
 
 
-def sleep(seconds=0.1):
+def sleep(seconds=1.1):
     """
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.
@@ -65,23 +65,66 @@ def test(device_context):
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
     """
-    failable_tile = device_context.get_device("low-mccs/tile/0001")
-    station = device_context.get_device("low-mccs/station/001")
+    controller = device_context.get_device("low-mccs/control/control")
+    station_1 = device_context.get_device("low-mccs/station/001")
+    station_2 = device_context.get_device("low-mccs/station/002")
+    tile_1 = device_context.get_device("low-mccs/tile/0001")
+    tile_2 = device_context.get_device("low-mccs/tile/0002")
+    tile_3 = device_context.get_device("low-mccs/tile/0003")
+    tile_4 = device_context.get_device("low-mccs/tile/0004")
+    apiu_1 = device_context.get_device("low-mccs/apiu/001")
+    antenna_1 = device_context.get_device("low-mccs/antenna/000001")
+    antenna_2 = device_context.get_device("low-mccs/antenna/000002")
+    antenna_3 = device_context.get_device("low-mccs/antenna/000003")
+    antenna_4 = device_context.get_device("low-mccs/antenna/000004")
 
-    confirm_initialised([failable_tile, station])
+    confirm_initialised(
+        [
+            controller,
+            station_1,
+            station_2,
+            tile_1,
+            tile_2,
+            tile_3,
+            tile_4,
+            apiu_1,
+            antenna_1,
+            antenna_2,
+            antenna_3,
+            antenna_4,
+        ]
+    )
 
-    assert failable_tile.healthState == HealthState.OK
+    assert tile_1.healthState == HealthState.OK
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
     sleep()
-    assert station.healthState == HealthState.OK
-
-    failable_tile.SimulateConnectionFailure(True)
-
-    assert failable_tile.healthState == HealthState.FAILED
+    assert station_1.healthState == HealthState.OK
+    assert station_2.healthState == HealthState.OK
     sleep()
-    assert station.healthState == HealthState.FAILED
+    assert controller.healthState == HealthState.OK
 
-    failable_tile.SimulateConnectionFailure(False)
+    tile_1.SimulateConnectionFailure(True)
 
-    assert failable_tile.healthState == HealthState.OK
+    assert tile_1.healthState == HealthState.FAILED
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
     sleep()
-    assert station.healthState == HealthState.OK
+    assert station_1.healthState == HealthState.FAILED
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert controller.healthState == HealthState.FAILED
+
+    tile_1.SimulateConnectionFailure(False)
+
+    assert tile_1.healthState == HealthState.OK
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
+    sleep()
+    assert station_1.healthState == HealthState.OK
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert controller.healthState == HealthState.OK

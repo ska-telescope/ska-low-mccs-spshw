@@ -12,7 +12,9 @@ subsystem.
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
 from functools import partial
-from tango import EventType
+
+import backoff
+from tango import DevFailed, EventType
 
 from ska.low.mccs.utils import backoff_connect
 
@@ -95,12 +97,21 @@ class EventSubscriptionHandler:
 
         self._subscribe()
 
+    @backoff.on_exception(backoff.expo, DevFailed, factor=0.1, max_tries=8)
     def _subscribe(self):
         """
-        Subscribe to a change event
+        Subscribe to a change event.
+
+        Even though we already have a DeviceProxy to the device that we
+        want to subscribe to, it is still possible that the device is
+        not ready, in which case subscription will fail and a
+        :py:class:`tango.DevFailed` exception will be raised. Here, we
+        attempt subscription in a backoff-retry, and only raise the
+        exception one our retries are exhausted. (The alternative option
+        of subscribing with "stateless=True" could not be made to work.)
         """
         self._subscription_id = self._device.subscribe_event(
-            self._event_name, EventType.CHANGE_EVENT, self, stateless=True
+            self._event_name, EventType.CHANGE_EVENT, self
         )
 
     def _read(self):
@@ -128,10 +139,12 @@ class EventSubscriptionHandler:
         if event.attr_value is None:
             self._logger.warn(
                 "Received changed event with empty value. "
-                "Falling back to manual attribute read"
+                "Falling back to manual attribute read."
             )
-            return self._read()
-        return event.attr_value
+            attribute_data = self._read()
+        else:
+            attribute_data = event.attr_value
+        return attribute_data
 
     def _call(self, callback, attribute_data):
         """
@@ -231,6 +244,7 @@ class DeviceEventManager:
         :raises ValueError: if the event is not in the list
             of allowed events
         """
+
         try:
             events = _parse_spec(event_spec, self._allowed_events)
         except ValueError as value_error:
@@ -238,10 +252,20 @@ class DeviceEventManager:
 
         for event in events:
             if event not in self._handlers:
-                self._handlers[event] = EventSubscriptionHandler(
-                    self._device, self._fqdn, event, self._logger
-                )
+                self._handlers[event] = self._create_event_subscription_handler(event)
             self._handlers[event].register_callback(callback)
+
+    def _create_event_subscription_handler(self, event):
+        """
+        Create a new event subscription handler for a given event
+
+        :param event: the event for which change events are subscribed.
+        :type event: str
+
+        :return: a device event manager for the device at a given FQDN
+        :rtype: :py:class:`DeviceEventManager`
+        """
+        return EventSubscriptionHandler(self._device, self._fqdn, event, self._logger)
 
 
 class EventManager:
@@ -301,9 +325,20 @@ class EventManager:
 
         for fqdn in fqdns:
             if fqdn not in self._handlers:
-                self._handlers[fqdn] = DeviceEventManager(
-                    fqdn, self._logger, self._allowed_events
-                )
+                self._handlers[fqdn] = self._create_device_event_manager(fqdn)
             self._handlers[fqdn].register_callback(
                 partial(callback, fqdn), event_spec=event_spec
             )
+
+    def _create_device_event_manager(self, fqdn):
+        """
+        Create a new device event manager for a given FQDN
+
+        :param fqdn: FQDN of the device for which we are creating a
+            device event manager
+        :type fqdn: str
+
+        :return: a device event manager for the device at a given FQDN
+        :rtype: :py:class:`DeviceEventManager`
+        """
+        return DeviceEventManager(fqdn, self._logger, self._allowed_events)

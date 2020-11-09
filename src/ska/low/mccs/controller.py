@@ -123,7 +123,6 @@ class ControllerResourceManager:
             :return: True if this is suitable for allocation
             :rtype: bool
             """
-            # print(f"ResourceAvailabilityPolicy::is_allocatable({health_state})")
             return health_state in self._allocatable_health_states
 
         def assign_allocatable_health_states(self, health_states):
@@ -246,7 +245,6 @@ class ControllerResourceManager:
                 resource
             :type event_value: int
             """
-            # print(f"Resource::health_changed({fqdn}, {event_value})")
             assert fqdn == self._fqdn
             self._health_state = event_value
 
@@ -815,13 +813,10 @@ class MccsController(SKAMaster):
         :param health: the new health value
         :type health: :py:class:`~ska.base.control_model.HealthState`
         """
-        # print(f"MccsController::health_changed({health})")
         if self._health_state == health:
             return
         self._health_state = health
-        # print(f"MccsController::health_changed({health}): about to push event")
         self.push_change_event("healthState", health)
-        # print(f"MccsController::health_changed({health}): event pushed")
 
     @attribute(
         dtype="DevUShort",

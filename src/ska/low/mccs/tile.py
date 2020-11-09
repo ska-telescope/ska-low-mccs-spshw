@@ -465,10 +465,8 @@ class MccsTile(SKABaseDevice):
         :type health: :py:class:`~ska.base.control_model.HealthState`
         """
         if self._health_state == health:
-            print(f"DEVICE: Tile healthState is still {health.name}")
             return
         self._health_state = health
-        print(f"DEVICE: Tile pushing change event healthState:{health.name}")
         self.push_change_event("healthState", health)
 
     @attribute(dtype="DevLong", doc="Logical tile identifier within a station")

@@ -43,6 +43,7 @@ def mock_device_proxies(mocker):
         """
         A mock class for DeviceProxy with some DeviceProxy-specific
         behaviours:
+
         * read_attribute returns mock events, with specific attribute
           values for healthState and adminMode
         """

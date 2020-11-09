@@ -14,8 +14,7 @@ management functionality of the SKA Low MCCS system.
 """
 import time
 
-
-from ska.base.control_model import HealthState
+from ska.base.control_model import AdminMode, HealthState
 from ska.low.mccs.demo import ConnectionFailableTile
 from conftest import confirm_initialised
 
@@ -43,7 +42,7 @@ devices_to_load = {
 }
 
 
-def sleep(seconds=1.1):
+def sleep(seconds=0.1):
     """
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.
@@ -95,6 +94,7 @@ def test(device_context):
         ]
     )
 
+    # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
     assert tile_3.healthState == HealthState.OK
@@ -105,6 +105,8 @@ def test(device_context):
     sleep()
     assert controller.healthState == HealthState.OK
 
+    # Now let's make tile 1 fail. We should see that failure
+    # propagate up to station and then to controller
     tile_1.SimulateConnectionFailure(True)
 
     assert tile_1.healthState == HealthState.FAILED
@@ -117,7 +119,28 @@ def test(device_context):
     sleep()
     assert controller.healthState == HealthState.FAILED
 
+    # It might take some time to replace the failed tile 1, and
+    # meanwhile we don't want it alarming for weeks. Let's disable it,
+    # then take it offline. The tile will still report itself as FAILED,
+    # but station will not take it into account when calculating its own
+    # health.
+    tile_1.Disable()
+    tile_1.adminMode = AdminMode.OFFLINE
+
+    assert tile_1.healthState == HealthState.FAILED
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
+    sleep()
+    assert station_1.healthState == HealthState.OK
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert controller.healthState == HealthState.OK
+
+    # Okay, we've finally fixed the tile. Let's make it work again, and
+    # put it back online
     tile_1.SimulateConnectionFailure(False)
+    tile_1.adminMode = AdminMode.ONLINE
 
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK

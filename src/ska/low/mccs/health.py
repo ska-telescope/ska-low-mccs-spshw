@@ -203,7 +203,7 @@ class DeviceHealthMonitor:
         :raises AssertionError: if the event name is not
             "adminMode"
         """
-        assert event_name == "adminMode"
+        assert event_name.lower() == "adminmode"
         self._device_admin_mode = event_value
         self._compute_health()
 

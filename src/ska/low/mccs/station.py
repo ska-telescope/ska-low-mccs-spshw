@@ -32,11 +32,6 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
 
-class StationHealthModel(HealthModel):
-    # debugging only. delete me
-    pass
-
-
 class StationPowerManager(PowerManager):
     """
     This class that implements the power manager for the MCCS Station
@@ -204,7 +199,7 @@ class MccsStation(SKAObsDevice):
 
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
-            device.health_model = StationHealthModel(
+            device.health_model = HealthModel(
                 None, fqdns, device.event_manager, device.health_changed
             )
 

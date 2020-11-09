@@ -292,8 +292,6 @@ class TestMccsController:
             health_state=HealthState.OK,
         )
 
-        # time.sleep(1.1)
-
         (result_code, message) = call_with_json(
             controller.Allocate, subarray_id=1, station_ids=[1]
         )
@@ -638,7 +636,7 @@ class TestMccsController:
         # push_change_event isn't synchronous, because it has to go
         # through the 0MG event system. So we have to sleep long enough
         # for the event to arrive
-        time.sleep(0.1)
+        time.sleep(0.2)
         mock_callback.assert_called_once()
 
         event_data = mock_callback.call_args[0][0].attr_value

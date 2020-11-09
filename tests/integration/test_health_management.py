@@ -114,10 +114,10 @@ def test(device_context):
     assert tile_3.healthState == HealthState.OK
     assert tile_4.healthState == HealthState.OK
     sleep()
-    assert station_1.healthState == HealthState.FAILED
+    assert station_1.healthState == HealthState.DEGRADED
     assert station_2.healthState == HealthState.OK
     sleep()
-    assert controller.healthState == HealthState.FAILED
+    assert controller.healthState == HealthState.DEGRADED
 
     # It might take some time to replace the failed tile 1, and
     # meanwhile we don't want it alarming for weeks. Let's disable it,

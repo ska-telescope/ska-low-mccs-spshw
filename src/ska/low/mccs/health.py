@@ -17,6 +17,7 @@ __all__ = [
     "HealthModel",
 ]
 
+from collections import Counter
 from functools import partial
 
 from ska.base.control_model import AdminMode, HealthState
@@ -66,10 +67,63 @@ class DeviceHealthRollupPolicy:
     device should determine its own health, on the basis of the health
     of its hardware (if any) and of the devices that it supervises (if
     any).
+
+    This is a very simple but flexible policy:
+
+    * If all devices are OK, it reports OK
+    * If any devices have UNKNOWN health, it reports UNKNOWN.
+    * Otherwise it computes the weighted sum of degraded and failed
+      devices, and reports FAILED if the sum is greater than one, else
+      DEGRADED.
     """
 
-    @classmethod
-    def compute_health(cls, hardware_health, device_healths):
+    def __init__(self, degraded_weight=1.0, failed_weight=1.0):
+        """
+        Create a new instances
+
+        :param degraded_weight: the weight to give to devices with
+            DEGRADED health, defaults to 1.0
+        :type degraded_weight: float, optional
+        :param failed_weight: the weight to give to devices with FAILED
+            health, defaults to 1.0
+        :type failed_weight: float, optional
+        """
+        self._degraded_weight = degraded_weight
+        self._failed_weight = failed_weight
+
+    def _compute_device_health(self, device_healths):
+        """
+        Helper method to roll up device healths into a single device
+        health
+
+        :param device_healths: sequence of healths of subservient
+            devices
+        :type device_healths: list of
+            :py:class:`ska.base.control_model.HealthState`
+
+        :return: a rolled up health state
+        :rtype: :py:class:`ska.base.control_model.HealthState`
+        """
+        if device_healths is None:
+            return HealthState.OK
+        device_healths = [health for health in device_healths if health is not None]
+        if device_healths == []:
+            return HealthState.OK
+        if HealthState.UNKNOWN in device_healths:
+            return HealthState.UNKNOWN
+
+        counter = Counter(device_healths)
+        score = (
+            self._failed_weight * counter[HealthState.FAILED]
+            + self._degraded_weight * counter[HealthState.DEGRADED]
+        )
+        if score > 1.0:
+            return HealthState.FAILED
+        if score > 0.0:
+            return HealthState.DEGRADED
+        return HealthState.OK
+
+    def compute_health(self, hardware_health, device_healths):
         """
         Compute this devices health, given the health of its hardware
         and the health of the devices that it supervises.
@@ -90,18 +144,7 @@ class DeviceHealthRollupPolicy:
         :return: the health of this device
         :rtype: :py:class:`~ska.base.control_model.HealthState`
         """
-        if device_healths is None:
-            rolled_up_device_health = HealthState.OK
-        else:
-            device_healths = [
-                device_health
-                for device_health in device_healths
-                if device_health is not None
-            ]
-            if device_healths:
-                rolled_up_device_health = max(device_healths)
-            else:
-                rolled_up_device_health = HealthState.OK
+        rolled_up_device_health = self._compute_device_health(device_healths)
 
         if hardware_health is None:
             hardware_health = HealthState.OK
@@ -312,6 +355,7 @@ class HealthModel:
             health of this device changes
         :type initial_callback: callable, optional
         """
+        self._device_health_rollup_policy = DeviceHealthRollupPolicy()
         self._health = HealthState.UNKNOWN
         self._callbacks = []
         if initial_callback is not None:
@@ -402,7 +446,7 @@ class HealthModel:
         the hardware (if any) and subservient devices (if any)
         """
         try:
-            health = DeviceHealthRollupPolicy.compute_health(
+            health = self._device_health_rollup_policy.compute_health(
                 self._hardware_health,
                 None if self._device_health is None else self._device_health.values(),
             )

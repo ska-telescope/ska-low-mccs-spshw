@@ -107,21 +107,35 @@ class TestDeviceHealthRollupPolicy:
         [
             (None, None, HealthState.OK),
             (None, [None, None], HealthState.OK),
-            (None, [None, HealthState.FAILED], HealthState.FAILED),
+            (None, [None, HealthState.UNKNOWN], HealthState.UNKNOWN),
+            (None, [None, HealthState.FAILED], HealthState.DEGRADED),
             (None, [None, HealthState.OK], HealthState.OK),
-            (None, [HealthState.FAILED, HealthState.OK], HealthState.FAILED),
+            (None, [HealthState.FAILED, HealthState.OK], HealthState.DEGRADED),
             (HealthState.DEGRADED, None, HealthState.DEGRADED),
             (HealthState.DEGRADED, [None, None], HealthState.DEGRADED),
-            (HealthState.DEGRADED, [None, HealthState.FAILED], HealthState.FAILED),
+            (HealthState.DEGRADED, [None, HealthState.FAILED], HealthState.DEGRADED),
             (HealthState.DEGRADED, [None, HealthState.OK], HealthState.DEGRADED),
             (
                 HealthState.DEGRADED,
                 [HealthState.FAILED, HealthState.OK],
-                HealthState.FAILED,
+                HealthState.DEGRADED,
+            ),
+            (HealthState.OK, None, HealthState.OK),
+            (HealthState.OK, [], HealthState.OK),
+            (HealthState.OK, [HealthState.OK], HealthState.OK),
+            (
+                HealthState.OK,
+                [HealthState.OK, HealthState.UNKNOWN, HealthState.DEGRADED],
+                HealthState.UNKNOWN,
             ),
             (
+                HealthState.OK,
+                [HealthState.FAILED, HealthState.OK],
                 HealthState.DEGRADED,
-                [HealthState.OK, HealthState.OK],
+            ),
+            (
+                HealthState.OK,
+                [HealthState.DEGRADED, HealthState.OK],
                 HealthState.DEGRADED,
             ),
         ],
@@ -147,7 +161,7 @@ class TestDeviceHealthRollupPolicy:
             ignored.
         """
         assert (
-            DeviceHealthRollupPolicy.compute_health(hardware_health, device_healths)
+            DeviceHealthRollupPolicy().compute_health(hardware_health, device_healths)
             == expected_health
         )
 

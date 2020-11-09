@@ -16,7 +16,6 @@ import json
 
 from conftest import confirm_initialised
 
-
 devices_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
@@ -98,7 +97,7 @@ class TestMccsIntegrationTmc:
         self, device, command, argin=None, expected_result=ResultCode.OK
     ):
         """
-        Method to simplfy assertions on the result of TMC calls
+        Method to simplify assertions on the result of TMC calls
 
         :param device: The MCCS device to send command to
         :type device: :py:class:`tango.DeviceProxy`
@@ -284,16 +283,8 @@ class TestMccsIntegrationTmc:
                         "El": 45.0,  # Ditto
                     },
                     "update_rate": 0.0,  # seconds - never update for a drift scan
-                    "channels": [
-                        1,
-                        2,
-                        3,
-                        4,
-                        5,
-                        6,
-                        7,
-                        8,
-                    ],  # should be a subset of the channels in the resources
+                    # should be a subset of the channels in the resources
+                    "channels": [1, 2, 3, 4, 5, 6, 7, 8],
                 }
             ],
         }

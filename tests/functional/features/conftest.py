@@ -97,7 +97,7 @@ def _tango_test_context(_devices_info, _module_mocker):
 def tango_context(request, devices_info, module_mocker):
     """
     Returns a Tango context. The Tango context returned depends upon
-    whether or not pytest was invoked with the `--truecontext` option.
+    whether or not pytest was invoked with the `--true-context` option.
 
     If no, then this returns a tango.test_context.MultiDeviceTestContext
     set up with the devices specified in the module's devices_info.

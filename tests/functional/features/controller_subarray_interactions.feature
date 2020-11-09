@@ -1,40 +1,34 @@
-Feature: Controller-subarray interactions
+Feature: tmc <-> mccs interactions
 
 Background:
-    Given we have controller
-    And we have subarray_01
-    And we have subarray_02
-    And we have station_001
-    And we have station_002
-    And we have tile_0001
-    And we have tile_0002
-    And we have tile_0003
-    And we have tile_0004
+    Given we have mvplow running an instance of tmc
+    And we have mvplow running an instance of mccs
 
-Scenario: Controller is turned on
-    Given controller is off
-    And station_001 is off
-    And station_002 is off
-    And tile_0001 is off
-    And tile_0002 is off
-    And tile_0003 is off
-    And tile_0004 is off
+Scenario: Start up low telescope
+    Given tmc is ready to issue an on command
+    And mccs is ready to receive an on command
+    When tmc turns mccs controller on
+    Then mccs controller state is on
+    And all mccs station states are on
 
-    When we turn controller on
+Scenario: Allocate subarray
+    Given tmc is ready to allocate a subarray
+    And mccs is ready to allocate a subarray
+    And subarray obsstate is idle or empty
+    When tmc allocates a subarray with valid parameters
+    Then the stations have the correct subarray id
+    And subarray state is on
+    And the subarray obsstate is idle
+    And according to allocation policy health of allocated subarray is good
+    And other resources are not affected
 
-    Then controller should be on
-    And station_001 should be on
-    And station_002 should be on
-    And tile_0001 should be on
-    And tile_0002 should be on
-    And tile_0003 should be on
-    And tile_0004 should be on
+Scenario: Configure a subarray
+    Given we have a successfully allocated subarray
+    When tmc configures the subarray
+    Then the subarray obsstate is ready
+    And subarray health is good
 
-# Scenario: Controller allocates stations to subarrays
-#     Given controller is on
-
-#     When we tell controller to allocate station 1 to subarray 1
-
-#     Then subarray 1's list of allocated stations should be
-#         | low-mccs/station/001 |
-#     And station 1's subarray id should be 1
+Scenario: Perform a scan on subarray
+    Given we have a successfully configured subarray
+    When tmc starts a scan on subarray
+    Then the subarray obsstate is scanning

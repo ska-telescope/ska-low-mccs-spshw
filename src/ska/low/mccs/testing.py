@@ -5,12 +5,12 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements classes useful for demonstrating MCCS
+This module implements classes useful for testing and demonstrating MCCS
 functionality, though unlikely to be deployed operationally.
 """
 from tango.server import command, Device
 
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import AdminMode, SimulationMode
 from ska.low.mccs import MccsTile
 
 
@@ -48,14 +48,36 @@ class ConnectionFailableDevice(Device):
         self.hardware_manager.simulate_connection_failure(is_fail)
 
 
-class ConnectionFailableTile(MccsTile, ConnectionFailableDevice):
+class DemoTile(MccsTile, ConnectionFailableDevice):
     """
-    A version of the MccsTile tango device with an additional command
-    that can be used, when the device is in simulation mode, to tell the
-    simulator to simulate connection failure
+    A version of the MccsTile tango device with extra functionality
+    for testing/demos:
+
+    * an additional command that can be used, when the device is in
+      simulation mode, to tell the simulator to simulate connection
+      failure
+
+    * the ability to write adminMode as an int instead of as a
+      HealthState, in order to support webjive
     """
 
-    pass
+    @command()
+    def TakeOffline(self):
+        """
+        Disable the tile and put it into admin mode OFFLINE. Implemented
+        this way because webjive.
+        """
+        self.Disable()
+        self.write_adminMode(AdminMode.OFFLINE)
+
+    @command()
+    def PutOnline(self):
+        """
+        Put the tile into admin mode ONLINE, then enable it.
+        Implemented this way because webjive.
+        """
+        self.write_adminMode(AdminMode.ONLINE)
+        self.Off()
 
 
 # ----------
@@ -73,7 +95,7 @@ def main(args=None, **kwargs):
     :return: exit code
     :rtype: int
     """
-    return ConnectionFailableTile.run_server(args=args, **kwargs)
+    return DemoTile.run_server(args=args, **kwargs)
 
 
 if __name__ == "__main__":

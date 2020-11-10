@@ -7,23 +7,23 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska.low.mccs.demo module
+This module contains the tests for the ska.low.mccs.testing module
 """
 from ska.base.control_model import HealthState, SimulationMode
-from ska.low.mccs.demo import ConnectionFailableTile
+from ska.low.mccs.testing import DemoTile
 
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "tile_0001",
-    "patch": ConnectionFailableTile,
+    "patch": DemoTile,
 }
 
 
-class TestConnectionFailableTile:
+class TestDemoTile:
     """
-    This class contains the tests for the ConnectionFailableTile device
+    This class contains the tests for the DemoTile device
     class.
     """
 

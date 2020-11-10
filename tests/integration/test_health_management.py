@@ -14,8 +14,8 @@ management functionality of the SKA Low MCCS system.
 """
 import time
 
-from ska.base.control_model import AdminMode, HealthState
-from ska.low.mccs.demo import ConnectionFailableTile
+from ska.base.control_model import HealthState
+from ska.low.mccs.testing import DemoTile
 from conftest import confirm_initialised
 
 
@@ -38,7 +38,7 @@ devices_to_load = {
         "antenna_000003",
         "antenna_000004",
     ],
-    "patch": {"low-mccs/tile/0001": ConnectionFailableTile},
+    "patch": {"low-mccs/tile/0001": DemoTile},
 }
 
 
@@ -124,8 +124,10 @@ def test_controller_health_rollup(device_context):
     # then take it offline. The tile will still report itself as FAILED,
     # but station will not take it into account when calculating its own
     # health.
-    tile_1.Disable()
-    tile_1.adminMode = AdminMode.OFFLINE
+
+    # tile_1.Disable()
+    # tile_1.adminMode = AdminMode.OFFLINE
+    tile_1.TakeOffline()  # A single command to do both of the above, because webjive
 
     assert tile_1.healthState == HealthState.FAILED
     assert tile_2.healthState == HealthState.OK
@@ -140,7 +142,9 @@ def test_controller_health_rollup(device_context):
     # Okay, we've finally fixed the tile. Let's make it work again, and
     # put it back online
     tile_1.SimulateConnectionFailure(False)
-    tile_1.adminMode = AdminMode.ONLINE
+    # tile_1.adminMode = AdminMode.ONLINE
+    # tile_1.On()
+    tile_1.PutOnline()  # A single command to do both of the above, because webjive
 
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK

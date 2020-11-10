@@ -18,11 +18,11 @@ __all__ = [
     "MccsClusterManagerDevice",
     "apiu_simulator",
     "cluster_simulator",
-    "demo",
     "events",
     "hardware",
     "health",
     "power",
+    "testing",
     "tile_hardware",
     "tpm_simulator",
 ]

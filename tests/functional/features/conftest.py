@@ -8,6 +8,7 @@ import pytest
 import socket
 
 import tango
+from tango import DevState
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 
@@ -144,4 +145,6 @@ def confirm_initialised(devices):
     :returns: whether the devices are all initialised or not
     :rtype: bool
     """
-    return all(device.state() != tango.DevState.INIT for device in devices)
+    return all(
+        device.state() not in [DevState.UNKNOWN, DevState.INIT] for device in devices
+    )

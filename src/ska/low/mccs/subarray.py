@@ -13,10 +13,11 @@ __all__ = ["MccsSubarray", "main"]
 
 # imports
 import json
+import threading
 
 # PyTango imports
 import tango
-from tango import DebugIt
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
@@ -136,6 +137,29 @@ class MccsSubarray(SKASubarray):
         Command class for device initialisation
         """
 
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new InitCommand
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            self._thread = None
+            self._lock = threading.Lock()
+            self._interrupt = False
+
         def do(self):
             """
             Stateless hook for initialisation of the attributes and
@@ -160,14 +184,47 @@ class MccsSubarray(SKASubarray):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
+            self._thread = threading.Thread(
+                target=self._initialise_connections, args=(device,)
+            )
+
+            with self._lock:
+                self._thread.start()
+                return (ResultCode.STARTED, "Init command started")
+
+        def _initialise_connections(self, device):
+            """
+            Thread target for asynchronous initialisation of connections
+            to external entities such as hardware and other devices.
+
+            :param device: the device being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            # https://pytango.readthedocs.io/en/stable/howto.html
+            # #using-clients-with-multithreading
+            with EnsureOmniThread():
+                self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                with self._lock:
+                    self.succeeded()
+
+        def _initialise_health_monitoring(self, device):
+            """
+            Initialise the health model for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
             device.event_manager = EventManager(self.logger)
-            device._health_state = HealthState.UNKNOWN
+            device._health_state = HealthState.OK
             device.set_change_event("healthState", True, False)
             device.health_model = MutableHealthModel(
                 None, [], device.event_manager, device.health_changed
             )
-
-            return (result_code, message)
 
     def init_command_objects(self):
         """
@@ -348,8 +405,8 @@ class MccsSubarray(SKASubarray):
             # target object
             stations = json.loads(argin)["stations"]
             device = self.target
-            device._station_pool_manager.assign(stations)
             device.health_model.add_devices(stations)
+            device._station_pool_manager.assign(stations)
             return [ResultCode.OK, "AssignResources command completed successfully"]
 
         def succeeded(self):

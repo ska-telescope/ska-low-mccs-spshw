@@ -319,10 +319,11 @@ class TestHealthModel:
         event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
 
-        health_model = HealthModel(
-            hardware, fqdns, event_manager, mock_callback
-        )  # health initialises to UNKNOWN
-        mock_callback.assert_called_with(HealthState.UNKNOWN)
+        health_model = HealthModel(hardware, fqdns, event_manager, mock_callback)
+        if with_hardware or with_devices:
+            mock_callback.assert_called_with(HealthState.UNKNOWN)
+        else:
+            mock_callback.assert_called_with(HealthState.OK)
         mock_callback.reset_mock()
 
         if with_hardware:

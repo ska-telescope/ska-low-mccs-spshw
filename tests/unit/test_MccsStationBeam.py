@@ -94,7 +94,7 @@ class TestMccsStationBeam:
 
         # It seems that push_change_event isn't synchronous, so we have
         # no choice but to sleep a polling period
-        time.sleep(1.1)
+        time.sleep(0.2)
         mock_callback.assert_called_once()
 
         event_data = mock_callback.call_args[0][0].attr_value
@@ -108,7 +108,7 @@ class TestMccsStationBeam:
 
         # It seems that push_change_event isn't synchronous, so we have
         # no choice but to sleep a polling period
-        time.sleep(1.1)
+        time.sleep(0.2)
         mock_callback.assert_called_once()
 
         event_data = mock_callback.call_args[0][0].attr_value

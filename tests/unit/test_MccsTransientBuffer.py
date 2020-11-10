@@ -38,7 +38,7 @@ class TestMccsTransientBuffer(object):
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
-        assert device_under_test.healthState == HealthState.UNKNOWN
+        assert device_under_test.healthState == HealthState.OK
 
         # Test that polling is turned on and subscription yields an
         # event as expected
@@ -50,7 +50,7 @@ class TestMccsTransientBuffer(object):
 
         event_data = mock_callback.call_args[0][0].attr_value
         assert event_data.name == "healthState"
-        assert event_data.value == HealthState.UNKNOWN
+        assert event_data.value == HealthState.OK
         assert event_data.quality == AttrQuality.ATTR_VALID
 
     def test_stationId(self, device_under_test):

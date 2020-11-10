@@ -877,7 +877,10 @@ class MccsController(SKAMaster):
             """
             power_manager = self.target
             try:
-                if power_manager.on():
+                result = power_manager.on()
+                if result is None:
+                    return (ResultCode.OK, "On command redundant; already on")
+                elif result:
                     return (ResultCode.OK, "On command completed OK")
                 else:
                     return (ResultCode.FAILED, "On command failed")
@@ -902,7 +905,10 @@ class MccsController(SKAMaster):
             """
             power_manager = self.target
             try:
-                if power_manager.off():
+                result = power_manager.off()
+                if result is None:
+                    return (ResultCode.OK, "Off command redundant; already off")
+                elif result:
                     return (ResultCode.OK, "Off command completed OK")
                 else:
                     return (ResultCode.FAILED, "Off command failed")

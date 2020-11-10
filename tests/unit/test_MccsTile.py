@@ -45,14 +45,6 @@ class TestMccsTile(object):
     device server methods.
     """
 
-    # def test_postinit(self, device_under_test):
-    #     # check that initialisation leaves us in a state where turning
-    #     # the device on doesn't put it into ALARM state
-    #     device_under_test.On()
-    #     assert device_under_test.state() == DevState.ON
-    #     time.sleep(1.1)
-    #     assert device_under_test.state() == DevState.ON
-
     def test_healthState(self, device_under_test, mocker):
         """
         Test for healthState

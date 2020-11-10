@@ -76,7 +76,7 @@ class TestMccsStation:
         # the device on doesn't put it into ALARM state
         device_under_test.On()
         assert device_under_test.state() == DevState.ON
-        time.sleep(1.1)
+        time.sleep(0.2)
         assert device_under_test.state() == DevState.ON
 
     def test_healthState(self, device_under_test, mocker):

@@ -378,6 +378,11 @@ class HealthModel:
         if self._health_monitor is not None:
             self._health_monitor.register_callback(self._device_health_changed)
 
+        # For devices that start with neither hardware nor subservient
+        # devices, such as an empty subarray, this next is essential to
+        # ensure that health gets computed once.
+        self._compute_health()
+
     def _init_health_monitor(self, fqdns, event_manager):
         """
         Initialise a new HealthMonitor

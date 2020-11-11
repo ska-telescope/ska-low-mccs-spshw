@@ -31,7 +31,8 @@ webjive:
   enabled: false
 
 ska-low-mccs:
+  dsconfig:
+    configuration_file: data/demo_configuration.json
   deviceServers:
     tiles:
       command: "python3 -m ska.low.mccs.testing"
-  

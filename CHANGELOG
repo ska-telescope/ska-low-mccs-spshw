@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-240 - allow deviceserver overrides
 * MCCS-225 - further work on hardware model, especially antenna
 
 ## 0.3.0 

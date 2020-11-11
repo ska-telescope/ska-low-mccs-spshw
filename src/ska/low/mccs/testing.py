@@ -63,6 +63,10 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
     """
 
     def init_device(self):
+        """
+        Tango hook for initialisation code. Overridden here to log the
+        fact that this is a demo tile.
+        """
         super().init_device()
         self.logger.warn("I am a DEMO tile!")
 

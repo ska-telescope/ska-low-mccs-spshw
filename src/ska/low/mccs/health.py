@@ -314,7 +314,7 @@ class HealthMonitor:
             the FQDNs provided at initialisation are used.
         :type fqdn_spec: str, or list of str, or None
 
-        :raises ValueError: if an unknown FQDN is passes
+        :raises ValueError: if an unknown FQDN is passed
         """
         if fqdn_spec is None:
             fqdns = self._device_health_monitors.keys()
@@ -506,6 +506,19 @@ class MutableHealthMonitor(HealthMonitor):
         super().__init__(fqdns, event_manager, initial_callback)
 
     def register_callback(self, callback, fqdn_spec=None):
+        """
+        Register a callback on change to health from one or more fqdns
+
+        :param callback: callable to be called with args (fqdn, name,
+            value, quality) whenever the event is received
+        :type callback: callable
+        :param fqdn_spec: specification of the devices upon which the
+            callback is registered. This specification may be the FQDN
+            of a device, or a list of such FQDNs, or None, in which case
+            the FQDNs provided at initialisation are used.
+        :type fqdn_spec: str, or list of str, or None
+        """
+
         if fqdn_spec is None:
             self._pool_callbacks.append(callback)
         super().register_callback(callback, fqdn_spec)

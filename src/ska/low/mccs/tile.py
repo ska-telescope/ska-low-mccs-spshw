@@ -17,12 +17,9 @@ import json
 import numpy as np
 import threading
 
-# PyTango imports
 from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 from tango.server import device_property
-
-# Additional import
 
 from ska.base import SKABaseDevice
 from ska.base.control_model import HealthState, SimulationMode
@@ -403,7 +400,10 @@ class MccsTile(SKABaseDevice):
             """
             power_manager = self.target
             try:
-                if power_manager.on():
+                result = power_manager.on()
+                if result is None:
+                    return (ResultCode.OK, "On command redundant; already on")
+                elif result:
                     return (ResultCode.OK, "On command completed OK")
                 else:
                     return (ResultCode.FAILED, "On command failed")
@@ -428,7 +428,10 @@ class MccsTile(SKABaseDevice):
             """
             power_manager = self.target
             try:
-                if power_manager.off():
+                result = power_manager.off()
+                if result is None:
+                    return (ResultCode.OK, "Off command redundant; already off")
+                elif result:
                     return (ResultCode.OK, "Off command completed OK")
                 else:
                     return (ResultCode.FAILED, "Off command failed")

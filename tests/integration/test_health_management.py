@@ -16,6 +16,7 @@ import time
 
 from ska.base.control_model import HealthState
 from ska.low.mccs.testing import DemoTile
+from ska.low.mccs.utils import call_with_json
 from conftest import confirm_initialised
 
 
@@ -24,8 +25,8 @@ devices_to_load = {
     "package": "ska.low.mccs",
     "devices": [
         "controller",
-        # "subarray_01",
-        # "subarray_02",
+        "subarray_01",
+        "subarray_02",
         "station_001",
         "station_002",
         "tile_0001",
@@ -38,7 +39,12 @@ devices_to_load = {
         "antenna_000003",
         "antenna_000004",
     ],
-    "patch": {"low-mccs/tile/0001": DemoTile},
+    "patch": {
+        "low-mccs/tile/0001": DemoTile,
+        "low-mccs/tile/0002": DemoTile,
+        "low-mccs/tile/0003": DemoTile,
+        "low-mccs/tile/0004": DemoTile,
+    },
 }
 
 
@@ -157,127 +163,130 @@ def test_controller_health_rollup(device_context):
     assert controller.healthState == HealthState.OK
 
 
-# def test_subarray_health_rollup(device_context):
-#     """
-#     Test that health rolls up to the controller
+def test_subarray_health_rollup(device_context):
+    """
+    Test that health rolls up to the controller
 
-#     :param device_context: fixture that provides a tango context of some
-#         sort
-#     :type device_context: a tango context of some sort; possibly a
-#         MultiDeviceTestContext, possibly the real thing. The only
-#         requirement is that it provide a "get_device(fqdn)" method that
-#         returns a DeviceProxy.
-#     """
-#     controller = device_context.get_device("low-mccs/control/control")
-#     subarray_1 = device_context.get_device("low-mccs/subarray/001")
-#     subarray_2 = device_context.get_device("low-mccs/subarray/002")
-#     station_1 = device_context.get_device("low-mccs/station/001")
-#     station_2 = device_context.get_device("low-mccs/station/002")
-#     tile_1 = device_context.get_device("low-mccs/tile/0001")
-#     tile_2 = device_context.get_device("low-mccs/tile/0002")
-#     tile_3 = device_context.get_device("low-mccs/tile/0003")
-#     tile_4 = device_context.get_device("low-mccs/tile/0004")
-#     apiu_1 = device_context.get_device("low-mccs/apiu/001")
-#     antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-#     antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-#     antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-#     antenna_4 = device_context.get_device("low-mccs/antenna/000004")
+    :param device_context: fixture that provides a tango context of some
+        sort
+    :type device_context: a tango context of some sort; possibly a
+        MultiDeviceTestContext, possibly the real thing. The only
+        requirement is that it provide a "get_device(fqdn)" method that
+        returns a DeviceProxy.
+    """
+    controller = device_context.get_device("low-mccs/control/control")
+    subarray_1 = device_context.get_device("low-mccs/subarray/01")
+    subarray_2 = device_context.get_device("low-mccs/subarray/02")
+    station_1 = device_context.get_device("low-mccs/station/001")
+    station_2 = device_context.get_device("low-mccs/station/002")
+    tile_1 = device_context.get_device("low-mccs/tile/0001")
+    tile_2 = device_context.get_device("low-mccs/tile/0002")
+    tile_3 = device_context.get_device("low-mccs/tile/0003")
+    tile_4 = device_context.get_device("low-mccs/tile/0004")
+    apiu_1 = device_context.get_device("low-mccs/apiu/001")
+    antenna_1 = device_context.get_device("low-mccs/antenna/000001")
+    antenna_2 = device_context.get_device("low-mccs/antenna/000002")
+    antenna_3 = device_context.get_device("low-mccs/antenna/000003")
+    antenna_4 = device_context.get_device("low-mccs/antenna/000004")
 
-#     confirm_initialised(
-#         [
-#             controller,
-#             subarray_1,
-#             subarray_2,
-#             station_1,
-#             station_2,
-#             tile_1,
-#             tile_2,
-#             tile_3,
-#             tile_4,
-#             apiu_1,
-#             antenna_1,
-#             antenna_2,
-#             antenna_3,
-#             antenna_4,
-#         ]
-#     )
+    confirm_initialised(
+        [
+            controller,
+            subarray_1,
+            subarray_2,
+            station_1,
+            station_2,
+            tile_1,
+            tile_2,
+            tile_3,
+            tile_4,
+            apiu_1,
+            antenna_1,
+            antenna_2,
+            antenna_3,
+            antenna_4,
+        ]
+    )
 
-#     # Check that all devices are OK
-#     assert tile_1.healthState == HealthState.OK
-#     assert tile_2.healthState == HealthState.OK
-#     assert tile_3.healthState == HealthState.OK
-#     assert tile_4.healthState == HealthState.OK
-#     sleep()
-#     assert station_1.healthState == HealthState.OK
-#     assert station_2.healthState == HealthState.OK
-#     sleep()
-#     assert controller.healthState == HealthState.OK
+    # Check that all devices are OK
+    assert tile_1.healthState == HealthState.OK
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
+    sleep()
+    assert station_1.healthState == HealthState.OK
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert controller.healthState == HealthState.OK
 
-#     assert subarray_1.healthState == HealthState.OK
-#     assert subarray_2.healthState == HealthState.OK
+    assert subarray_1.healthState == HealthState.OK
+    assert subarray_2.healthState == HealthState.OK
 
-#     _ = call_with_json(
-#         controller.Allocate, subarray_id=1, station_ids=[1]
-#     )
-#     _ = call_with_json(
-#         controller.Allocate, subarray_id=2, station_ids=[2]
-#     )
+    _ = controller.On()
 
-#     sleep()
+    _ = call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
+    _ = call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
 
-#     assert subarray_1.healthState == HealthState.OK
-#     assert subarray_2.healthState == HealthState.OK
+    sleep()
 
+    assert subarray_1.healthState == HealthState.OK
+    assert subarray_2.healthState == HealthState.OK
 
-#     # Now let's make tile 1 fail. We should see that failure
-#     # propagate up to station and then to controller
-#     tile_1.SimulateConnectionFailure(True)
+    # Now let's make tile 1 fail. We should see that failure
+    # propagate up to station and then to controller
+    tile_1.SimulateConnectionFailure(True)
 
-#     assert tile_1.healthState == HealthState.FAILED
-#     assert tile_2.healthState == HealthState.OK
-#     assert tile_3.healthState == HealthState.OK
-#     assert tile_4.healthState == HealthState.OK
-#     sleep()
-#     assert station_1.healthState == HealthState.DEGRADED
-#     assert station_2.healthState == HealthState.OK
-#     sleep()
-#     assert subarray_1.healthState == HealthState.DEGRADED
-#     assert subarray_2.healthState == HealthState.OK
-#     assert controller.healthState == HealthState.DEGRADED
+    assert tile_1.healthState == HealthState.FAILED
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
+    sleep()
+    assert station_1.healthState == HealthState.DEGRADED
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert subarray_1.healthState == HealthState.DEGRADED
+    assert subarray_2.healthState == HealthState.OK
+    assert controller.healthState == HealthState.DEGRADED
 
-#     # It might take some time to replace the failed tile 1, and
-#     # meanwhile we don't want it alarming for weeks. Let's disable it,
-#     # then take it offline. The tile will still report itself as FAILED,
-#     # but station will not take it into account when calculating its own
-#     # health.
-#     tile_1.Disable()
-#     tile_1.adminMode = AdminMode.OFFLINE
+    # It might take some time to replace the failed tile 1, and
+    # meanwhile we don't want it alarming for weeks. Let's disable it,
+    # then take it offline. The tile will still report itself as FAILED,
+    # but station will not take it into account when calculating its own
+    # health.
 
-#     assert tile_1.healthState == HealthState.FAILED
-#     assert tile_2.healthState == HealthState.OK
-#     assert tile_3.healthState == HealthState.OK
-#     assert tile_4.healthState == HealthState.OK
-#     sleep()
-#     assert station_1.healthState == HealthState.OK
-#     assert station_2.healthState == HealthState.OK
-#     sleep()
-#     assert subarray_1.healthState == HealthState.OK
-#     assert subarray_2.healthState == HealthState.OK
-#     assert controller.healthState == HealthState.OK
+    # tile_1.Disable()
+    # tile_1.adminMode = AdminMode.OFFLINE
+    tile_1.TakeOffline()  # A single command to do both of the above, because webjive
 
-#     # Okay, we've finally fixed the tile. Let's make it work again, and
-#     # put it back online
-#     tile_1.SimulateConnectionFailure(False)
-#     tile_1.adminMode = AdminMode.ONLINE
+    assert tile_1.healthState == HealthState.FAILED
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
+    sleep()
+    assert station_1.healthState == HealthState.OK
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert subarray_1.healthState == HealthState.OK
+    assert subarray_2.healthState == HealthState.OK
+    assert controller.healthState == HealthState.OK
 
-#     assert tile_1.healthState == HealthState.OK
-#     assert tile_2.healthState == HealthState.OK
-#     assert tile_3.healthState == HealthState.OK
-#     assert tile_4.healthState == HealthState.OK
-#     sleep()
-#     assert station_1.healthState == HealthState.OK
-#     assert station_2.healthState == HealthState.OK
-#     sleep()
-#     assert subarray_1.healthState == HealthState.OK
-#     assert subarray_2.healthState == HealthState.OK
-#     assert controller.healthState == HealthState.OK
+    # Okay, we've finally fixed the tile. Let's make it work again, and
+    # put it back online
+    tile_1.SimulateConnectionFailure(False)
+
+    # tile_1.adminMode = AdminMode.ONLINE
+    # tile_1.Off()
+    # tile_1.On()
+    tile_1.PutOnline()  # A single command to do all of the above, because webjive
+
+    assert tile_1.healthState == HealthState.OK
+    assert tile_2.healthState == HealthState.OK
+    assert tile_3.healthState == HealthState.OK
+    assert tile_4.healthState == HealthState.OK
+    sleep()
+    assert station_1.healthState == HealthState.OK
+    assert station_2.healthState == HealthState.OK
+    sleep()
+    assert subarray_1.healthState == HealthState.OK
+    assert subarray_2.healthState == HealthState.OK
+    assert controller.healthState == HealthState.OK

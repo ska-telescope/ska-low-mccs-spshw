@@ -498,8 +498,17 @@ class MutableHealthMonitor(HealthMonitor):
         :type initial_callback: callable, optional
         """
         self._event_manager = event_manager
-        self._initial_callback = initial_callback
+
+        # remember callbacks that are registered against all fqdns in the device pool,
+        # so that we can register them against fqdns that are added to the pool later
+        self._pool_callbacks = list()
+
         super().__init__(fqdns, event_manager, initial_callback)
+
+    def register_callback(self, callback, fqdn_spec=None):
+        if fqdn_spec is None:
+            self._pool_callbacks.append(callback)
+        super().register_callback(callback, fqdn_spec)
 
     def add_devices(self, fqdns):
         """
@@ -513,8 +522,8 @@ class MutableHealthMonitor(HealthMonitor):
                 self._device_health_monitors[fqdn] = DeviceHealthMonitor(
                     self._event_manager, fqdn
                 )
-                if self._initial_callback is not None:
-                    self.register_callback(self._initial_callback, fqdn)
+                for callback in self._pool_callbacks:
+                    self.register_callback(callback, fqdn)
 
     def remove_devices(self, fqdns):
         """

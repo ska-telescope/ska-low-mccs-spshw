@@ -8,6 +8,7 @@
 This module implements classes useful for testing and demonstrating MCCS
 functionality, though unlikely to be deployed operationally.
 """
+from tango import DevState
 from tango.server import command, Device
 
 from ska.base.control_model import AdminMode, SimulationMode
@@ -67,6 +68,8 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         Disable the tile and put it into admin mode OFFLINE. Implemented
         this way because webjive.
         """
+        if self.get_state() == DevState.ON:
+            self.Off()
         self.Disable()
         self.write_adminMode(AdminMode.OFFLINE)
 
@@ -78,6 +81,7 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         """
         self.write_adminMode(AdminMode.ONLINE)
         self.Off()
+        self.On()
 
 
 # ----------

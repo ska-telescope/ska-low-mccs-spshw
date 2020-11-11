@@ -462,5 +462,8 @@ class TestMutableHealthModel:
         mock_callback.reset_mock()
 
         health_model.add_devices(["mock/mock/3"])
+        mock_callback.assert_called_once_with(HealthState.UNKNOWN)
+        mock_callback.reset_mock()
+
         health_model._device_health_changed("mock/mock/3", HealthState.DEGRADED)
         mock_callback.assert_called_once_with(HealthState.DEGRADED)

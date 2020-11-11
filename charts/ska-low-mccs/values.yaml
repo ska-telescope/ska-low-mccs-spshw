@@ -51,14 +51,16 @@ mccs:
 # Default ska-low-mccs device server instances
 deviceServers:
   # controller has only one instance
-  - name: mccs-controller
+  controller:
+    name: mccs-controller
     function: controller
     domain: ska-low-mccs
     command: "MccsController"
     instances: ["controller"]
     depends_on:
       - device: sys/database/2
-  - name: mccs-subarray
+  subarrays:
+    name: mccs-subarray
     # subarray instances have to be 0-padded to two digits
     function: subarray
     domain: ska-low-mccs
@@ -66,7 +68,8 @@ deviceServers:
     instances: ["subarray_01", "subarray_02"]
     depends_on:
       - device: low-mccs/control/control
-  - name: mccs-station
+  stations:
+    name: mccs-station
     # station instances have to be 0-padded to three digits
     function: station
     domain: ska-low-mccs
@@ -74,7 +77,8 @@ deviceServers:
     instances: ["station_001", "station_002"]
     depends_on:
       - device: low-mccs/control/control
-  - name: mccs-tile
+  tiles:
+    name: mccs-tile
     # tile instances have to be 0-padded to four digits
     function: tile
     domain: ska-low-mccs
@@ -82,7 +86,8 @@ deviceServers:
     instances: ["tile_0001", "tile_0002", "tile_0003", "tile_0004"]
     depends_on:
       - device: low-mccs/control/control
-  - name: mccs-apiu
+  apius:
+    name: mccs-apiu
     # apiu instances have to be 0-padded to three digits
     function: apiu
     domain: ska-low-mccs
@@ -90,7 +95,8 @@ deviceServers:
     instances: ["apiu_001"]
     depends_on:
       - device: low-mccs/control/control
-  - name: mccs-antenna
+  antennas:
+    name: mccs-antenna
     # antenna instances have to be 0-padded to six digits
     function: antenna
     domain: ska-low-mccs

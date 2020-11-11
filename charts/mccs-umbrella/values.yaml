@@ -29,3 +29,14 @@ tango-base:
 
 webjive:
   enabled: false
+
+# example overrides
+# ska-low-mccs:
+#   deviceServers:
+#     # no tiles
+#     tiles:
+#       instances: []
+#     # change controller command
+#     controller:
+#       command: "SimController"
+  

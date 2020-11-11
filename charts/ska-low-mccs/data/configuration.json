@@ -233,6 +233,76 @@
                 }
             }
         },
+        "DemoTile": {
+            "tile_0001": {
+                "DemoTile": {
+                    "low-mccs/tile/0001": {
+                        "properties": {
+                            "TileId": [
+                                "1"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile_0002": {
+                "DemoTile": {
+                    "low-mccs/tile/0002": {
+                        "properties": {
+                            "TileId": [
+                                "2"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile_0003": {
+                "DemoTile": {
+                    "low-mccs/tile/0003": {
+                        "properties": {
+                            "TileId": [
+                                "3"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "tile_0004": {
+                "DemoTile": {
+                    "low-mccs/tile/0004": {
+                        "properties": {
+                            "TileId": [
+                                "4"
+                            ],
+                            "AntennasPerTile": [
+                                "16"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "MccsAPIU": {
             "apiu_001": {
                 "MccsAPIU": {

@@ -6,7 +6,7 @@ TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
 
-CHARTS ?= ska-low-mccs mccs-umbrella
+CHARTS ?= ska-low-mccs mccs-umbrella mccs-demo
 
 CI_PROJECT_PATH_SLUG ?= ska-low-mccs
 CI_ENVIRONMENT_SLUG ?= ska-low-mccs

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: mccs-umbrella
+description: A Helm chart for Kubernetes MCCS
+type: application
+version: 0.1.1
+appVersion: 0.1.1
+icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
+dependencies:
+- name: tango-base
+  version: 0.2.10
+  repository: https://nexus.engageska-portugal.pt/repository/helm-chart
+- name: ska-low-mccs
+  version:   0.3.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+  repository: file://../ska-low-mccs

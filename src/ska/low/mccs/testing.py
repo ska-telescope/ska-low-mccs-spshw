@@ -62,6 +62,10 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
       HealthState, in order to support webjive
     """
 
+    def init_device(self):
+        super().init_device()
+        self.logger.warn("I am a DEMO tile!")
+
     @command()
     def TakeOffline(self):
         """

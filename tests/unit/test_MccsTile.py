@@ -24,9 +24,7 @@ from ska.base import DeviceStateModel
 from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import ResultCode
 from ska.low.mccs.hardware import SimulableHardwareFactory
-from ska.low.mccs.tile import MccsTile
-from ska.low.mccs.tile_hardware import TileHardwareManager
-from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.low.mccs.tile import MccsTile, TileHardwareManager, TpmSimulator
 
 
 device_to_load = {
@@ -617,8 +615,8 @@ class TestMccsTileCommands:
         Test for WriteAddress
 
         This is a very weak test but the
-        :py:class:`~ska.low.mccs.tile_hardware.TileHardwareManager`'s
-        :py:meth:`~ska.low.mccs.tile_hardware.TileHardwareManager.write_address`
+        :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`'s
+        :py:meth:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager.write_address`
         method is well tested.
 
         :param device_under_test: fixture that provides a
@@ -805,7 +803,7 @@ class TestMccsTile_InitCommand:
         def _initialise_hardware_management(self, device):
             """
             Initialise the connection to the hardware being managed by
-            this device (overwridden here to inject a call trace
+            this device (overridden here to inject a call trace
             attribute).
 
             :param device: the device for which a connection to the

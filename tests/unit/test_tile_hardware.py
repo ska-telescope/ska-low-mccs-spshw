@@ -20,8 +20,7 @@ from unittest.mock import Mock
 import pytest
 
 from ska.base.control_model import SimulationMode
-from ska.low.mccs.tile_hardware import TileHardwareManager
-from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
 
 
 @pytest.fixture()
@@ -30,7 +29,7 @@ def tpm_simulator():
     Fixture that returns a TPM simulator
 
     :return: a TPM simulator
-    :rtype: :py:class:`ska.low.mccs.tpm_simulator.TpmSimulator`
+    :rtype: :py:class:`ska.low.mccs.tile.tpm_simulator.TpmSimulator`
     """
     return TpmSimulator(logger=logging.getLogger())
 
@@ -72,7 +71,7 @@ class TestTileHardwareManager:
 
         :param tile_hardware_manager: a manager for tile hardware
         :type tile_hardware_manager:
-            :py:class:`~ska.low.mccs.tile_hardware.TileHardwareManager`
+            :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -100,11 +99,11 @@ class TestCommon:
 
         :param tpm_simulator: the TPM simulator to return
         :type tpm_simulator:
-            :py:class:`~ska.low.mccs.tpm_simulator.TpmSimulator`
+            :py:class:`~ska.low.mccs.tile.tpm_simulator.TpmSimulator`
         :param tile_hardware_manager: the tile hardware manager to
             return
         :type tile_hardware_manager:
-            :py:class:`~ska.low.mccs.tile_hardware.TileHardwareManager`
+            :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         :param request: A pytest object giving access to the requesting test
             context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
@@ -263,7 +262,7 @@ class TestCommon:
             we eventually write it, a TpmDriver of an actual hardware
             TPM
         :type hardware_under_test: object
-            :py:class:`~ska.low.mccs.tile_hardware.TileHardwareManager`
+            :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         :param mocker: fixture that wraps unittest.mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """

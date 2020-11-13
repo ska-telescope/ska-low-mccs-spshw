@@ -929,9 +929,7 @@ class TestControllerResourceManager:
         resource_manager.assign(stations, 1)
 
         # They should both be recorded as assigned
-        assigned = resource_manager.get_assigned_fqdns(1)
-        assert "low-mccs/station/001" in assigned
-        assert "low-mccs/station/002" in assigned
+        assert stations == tuple(resource_manager.get_assigned_fqdns(1))
 
         # Drop station 2
         resource_manager.release(["low-mccs/station/002"])

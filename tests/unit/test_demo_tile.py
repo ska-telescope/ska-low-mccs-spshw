@@ -7,10 +7,11 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska.low.mccs.testing module
+This module contains the tests for the ska.low.mccs.tile.demo_tile
+module
 """
 from ska.base.control_model import HealthState, SimulationMode
-from ska.low.mccs.testing import DemoTile
+from ska.low.mccs.tile.demo_tile import DemoTile
 
 
 device_to_load = {

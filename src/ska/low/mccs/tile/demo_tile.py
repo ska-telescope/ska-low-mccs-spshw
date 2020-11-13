@@ -5,8 +5,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements classes useful for testing and demonstrating MCCS
-functionality, though unlikely to be deployed operationally.
+This module implements a DemoTileDevice, with extra interface features
+that support testing and demonstrating the MCCS Tile device.
 """
 from tango import DevState
 from tango.server import command, Device
@@ -97,7 +97,7 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
 # ----------
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.tile` module.
+    Main function of the :py:mod:`ska.low.mccs.tile.demo_tile` module.
 
     :param args: positional arguments
     :type args: list

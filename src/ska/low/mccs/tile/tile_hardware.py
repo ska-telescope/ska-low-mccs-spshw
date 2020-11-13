@@ -19,7 +19,7 @@ from ska.low.mccs.hardware import (
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
-from ska.low.mccs.tpm_simulator import TpmSimulator
+from ska.low.mccs.tile import TpmSimulator
 
 
 class TileHardwareHealthEvaluator(HardwareHealthEvaluator):
@@ -39,9 +39,10 @@ class TileHardwareHealthEvaluator(HardwareHealthEvaluator):
 class TileHardwareFactory(SimulableHardwareFactory):
     """
     A hardware factory for tile hardware. At present, this returns a
-    :py:class:`~ska.low.mccs.tile_hardware.TpmSimulator` object when in
-    simulation mode, and raises :py:exception:`NotImplementedError` if
-    the hardware is sought whilst not in simulation mode
+    :py:class:`~ska.low.mccs.tile.tpm_simulator.TpmSimulator` object
+    when in simulation mode, and raises
+    :py:exception:`NotImplementedError` if the hardware is sought whilst
+    not in simulation mode
     """
 
     def __init__(self, simulation_mode, logger):

@@ -414,10 +414,10 @@ class MccsSubarray(SKASubarray):
             Action to take on successful completion of a resourcing
             command.
             """
-            if len(self.target._station_pool_manager):
-                action = "resourcing_succeeded_some_resources"
-            else:
+            if len(self.target._station_pool_manager) == 0:
                 action = "resourcing_succeeded_no_resources"
+            else:
+                action = "resourcing_succeeded_some_resources"
             self.state_model.perform_action(action)
 
     class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):

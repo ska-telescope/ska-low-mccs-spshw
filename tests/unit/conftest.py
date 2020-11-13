@@ -91,7 +91,7 @@ def mock_device_proxies(mocker):
     return device_proxy_mocks
 
 
-@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=5)
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
 def _confirm_initialised(device):
     """
     Helper function that tries to confirm that a group of devices have

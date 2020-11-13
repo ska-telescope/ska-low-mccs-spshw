@@ -97,7 +97,7 @@ class EventSubscriptionHandler:
 
         self._subscribe()
 
-    @backoff.on_exception(backoff.expo, DevFailed, factor=0.1, max_tries=10)
+    @backoff.on_exception(backoff.expo, DevFailed, factor=0.1, max_time=120)
     def _subscribe(self):
         """
         Subscribe to a change event.
@@ -141,10 +141,9 @@ class EventSubscriptionHandler:
                 "Received changed event with empty value. "
                 "Falling back to manual attribute read."
             )
-            attribute_data = self._read()
+            return self._read()
         else:
-            attribute_data = event.attr_value
-        return attribute_data
+            return event.attr_value
 
     def _call(self, callback, attribute_data):
         """

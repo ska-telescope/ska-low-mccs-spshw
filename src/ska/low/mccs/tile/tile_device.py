@@ -28,7 +28,7 @@ from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.power import PowerManager, PowerManagerError
-from ska.low.mccs.tile_hardware import TileHardwareManager
+from ska.low.mccs.tile import TileHardwareManager
 
 
 class TilePowerManager(PowerManager):
@@ -446,13 +446,17 @@ class MccsTile(SKABaseDevice):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.tile.MccsTile.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.tile.MccsTile.InitCommand` class.
+        :py:meth:`~ska.low.mccs.tile.tile_device.MccsTile.InitCommand.do`
+        method of the nested
+        :py:class:`~ska.low.mccs.tile.tile_device.MccsTile.InitCommand`
+        class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.tile.MccsTile.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the
+        :py:meth:`~ska.low.mccs.tile.tile_device.MccsTile.InitCommand.do`
+        method to be released. This method is called by the device
+        destructor, and by the Init command when the Tango device server
+        is re-initialised.
         """
 
     # ----------
@@ -3653,7 +3657,7 @@ class MccsTile(SKABaseDevice):
 # ----------
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.tile` module.
+    Main function of the :py:mod:`ska.low.mccs.tile.tile_device` module.
 
     :param args: positional arguments
     :type args: list

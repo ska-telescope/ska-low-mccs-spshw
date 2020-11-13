@@ -132,7 +132,7 @@ def tango_context(request, devices_info, module_mocker):
             yield context
 
 
-@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=6)
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
 def confirm_initialised(devices):
     """
     Helper function that tries to confirm that a device has completed

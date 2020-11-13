@@ -664,7 +664,7 @@ class TestMccsAntenna_InitCommand:
         def _initialise_hardware_management(self, device):
             """
             Initialise the connection to the hardware being managed by
-            this device (overwridden here to inject a call trace
+            this device (overridden here to inject a call trace
             attribute).
 
             :param device: the device for which a connection to the

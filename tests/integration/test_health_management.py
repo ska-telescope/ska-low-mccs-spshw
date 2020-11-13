@@ -15,7 +15,7 @@ management functionality of the SKA Low MCCS system.
 import time
 
 from ska.base.control_model import HealthState
-from ska.low.mccs.testing import DemoTile
+from ska.low.mccs.tile.demo_tile import DemoTile
 from ska.low.mccs.utils import call_with_json
 from conftest import confirm_initialised
 
@@ -165,7 +165,7 @@ def test_controller_health_rollup(device_context):
 
 def test_subarray_health_rollup(device_context):
     """
-    Test that health rolls up to the controller
+    Test that health rolls up to the subarray
 
     :param device_context: fixture that provides a tango context of some
         sort

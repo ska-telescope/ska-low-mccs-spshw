@@ -516,7 +516,7 @@ class TestMccsStation_InitCommand:
 
         def _initialise_power_management(self, device, fqdns):
             """
-            Initialise the device's power manager (overwridden here to
+            Initialise the device's power manager (overridden here to
             inject a call trace attribute).
 
             :param device: the device for which power management is

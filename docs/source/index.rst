@@ -31,9 +31,9 @@ prototype for the `Square Kilometre Array`_.
    api/station_beam
    api/subarray
    api/tel_state
-   api/tile
-   api/tpm_device_simulator
+   api/tile_device
    api/transient_buffer
+   api/demo_tile
 
 .. toctree::
    :maxdepth: 1

@@ -19,6 +19,10 @@ from ska.low.mccs import MccsDevice
 
 # Additional import
 from ska.base.commands import ResultCode
+from ska.base.control_model import HealthState
+
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthModel
 
 __all__ = ["MccsTransientBuffer", "main"]
 
@@ -55,7 +59,7 @@ class MccsTransientBuffer(MccsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -66,18 +70,12 @@ class MccsTransientBuffer(MccsDevice):
             device._transient_frequency_window = (0.0,)
             device._station_ids = ("",)
 
-            device.set_change_event("stationId", True, False)
-            device.set_archive_event("stationId", True, False)
-            device.set_change_event("transientBufferJobId", True, False)
-            device.set_archive_event("transientBufferJobId", True, False)
-            device.set_change_event("resamplingBits", True, False)
-            device.set_archive_event("resamplingBits", True, False)
-            device.set_change_event("nStations", True, False)
-            device.set_archive_event("nStations", True, False)
-            device.set_change_event("transientFrequencyWindow", True, False)
-            device.set_archive_event("transientFrequencyWindow", True, False)
-            device.set_change_event("stationIds", True, False)
-            device.set_archive_event("stationIds", True, False)
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
+            device.health_model = HealthModel(
+                None, None, device.event_manager, device.health_changed
+            )
 
             return (ResultCode.OK, "Init command succeeded")
 
@@ -101,8 +99,21 @@ class MccsTransientBuffer(MccsDevice):
     # ----------
     # Attributes
     # ----------
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-    @attribute(dtype="DevString", label="stationId")
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
+
+    @attribute(dtype="DevString", label="stationId", polling_period=1000)
     def stationId(self):
         """
         Return the station id
@@ -112,7 +123,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._station_id
 
-    @attribute(dtype="DevString", label="transientBufferJobId")
+    @attribute(dtype="DevString", label="transientBufferJobId", polling_period=1000)
     def transientBufferJobId(self):
         """
         Return the transient buffer job id
@@ -122,7 +133,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._transient_buffer_job_id
 
-    @attribute(dtype="DevLong", label="resamplingBits")
+    @attribute(dtype="DevLong", label="resamplingBits", polling_period=1000)
     def resamplingBits(self):
         """
         Return the resampling bit depth
@@ -132,7 +143,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._resampling_bits
 
-    @attribute(dtype="DevShort", label="nStations")
+    @attribute(dtype="DevShort", label="nStations", polling_period=1000)
     def nStations(self):
         """
         Return the number of stations
@@ -142,7 +153,12 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._n_stations
 
-    @attribute(dtype=("DevDouble",), max_dim_x=100, label="transientFrequencyWindow")
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=100,
+        label="transientFrequencyWindow",
+        polling_period=1000,
+    )
     def transientFrequencyWindow(self):
         """
         Return the transient frequency window
@@ -152,7 +168,9 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._transient_frequency_window
 
-    @attribute(dtype=("DevString",), max_dim_x=100, label="stationIds")
+    @attribute(
+        dtype=("DevString",), max_dim_x=100, label="stationIds", polling_period=1000
+    )
     def stationIds(self):
         """
         Return the station ids

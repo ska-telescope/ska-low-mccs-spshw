@@ -14,11 +14,13 @@ Contains the tests for the MccsController Tango device_under_test prototype.
 
 import logging
 import threading
+import time
 
 import json
 import pytest
 import tango
-from tango import DevState
+from tango import AttrQuality, DevState
+from tango.server import command
 
 from ska.base import DeviceStateModel
 from ska.base.commands import CommandError, ResultCode
@@ -39,10 +41,54 @@ from ska.low.mccs.utils import call_with_json
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 
+
+class ControllerWithFailableDevices(MccsController):
+    """
+    An extension of the MccsController device with additional commands
+    that we can use to tell the device to simulate the receipt of events
+    from subservient devices.
+    """
+
+    @command(dtype_in="DevString")
+    def simulateHealthStateChange(self, argin):
+        """
+        Makes this controller think that a device that it manages has
+        had a change of healthState
+
+        :param argin: JSON-encode dict with "fqdn" and "health" values
+        :type argin: str
+        """
+        args = json.loads(argin)
+        fqdn = args["fqdn"]
+        health = args["health_state"]
+
+        self.health_model._health_monitor._device_health_monitors[
+            fqdn
+        ]._health_state_changed(fqdn, "healthState", health, AttrQuality.ATTR_VALID)
+
+    @command(dtype_in="DevString")
+    def simulateAdminModeChange(self, argin):
+        """
+        Makes this controller think that a device that it manages has
+        had a change of adminMode
+
+        :param argin: JSON-encode dict with "fqdn" and "adminMode" values
+        :type argin: str
+        """
+        args = json.loads(argin)
+        fqdn = args["fqdn"]
+        admin_mode = args["admin_mode"]
+
+        self.health_model._health_monitor._device_health_monitors[
+            fqdn
+        ]._admin_mode_changed(fqdn, "adminMode", admin_mode, AttrQuality.ATTR_VALID)
+
+
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "controller",
+    "patch": ControllerWithFailableDevices,
 }
 
 
@@ -225,7 +271,27 @@ class TestMccsController:
             (ResultCode.OK, "Resources assigned"),
         )
 
-        # allocate station_1 to subarray_1
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/station/001",
+            admin_mode=AdminMode.ONLINE,
+        )
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/station/001",
+            health_state=HealthState.OK,
+        )
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/station/002",
+            admin_mode=AdminMode.ONLINE,
+        )
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/station/002",
+            health_state=HealthState.OK,
+        )
+
         (result_code, message) = call_with_json(
             controller.Allocate, subarray_id=1, station_ids=[1]
         )
@@ -388,6 +454,28 @@ class TestMccsController:
         mock_subarray_1.AssignResources.side_effect = (
             (ResultCode.OK, "Resources assigned"),
         )
+
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/station/001",
+            admin_mode=AdminMode.ONLINE,
+        )
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/station/001",
+            health_state=HealthState.OK,
+        )
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/station/002",
+            admin_mode=AdminMode.ONLINE,
+        )
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/station/002",
+            health_state=HealthState.OK,
+        )
+
         call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
         mock_subarray_1.On.assert_called_once_with()
         # check state
@@ -487,7 +575,7 @@ class TestMccsController:
         """
         assert device_under_test.versionId == release.version
 
-    def test_healthState(self, device_under_test):
+    def test_healthState(self, device_under_test, mocker):
         """
         Test for healthState
 
@@ -495,8 +583,66 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
-        assert device_under_test.healthState == HealthState.OK
+
+        # The device has subscribed to healthState change events on
+        # its subsidiary, but hasn't heard from them (because in unit
+        # testing these devices are mocked out), so its healthState is
+        # UNKNOWN
+        assert device_under_test.healthState == HealthState.UNKNOWN
+
+        # Test that subscription yields an event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", tango.EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.UNKNOWN
+        assert event_data.quality == tango.AttrQuality.ATTR_VALID
+
+        mock_callback.reset_mock()
+
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/station/001",
+            admin_mode=AdminMode.ONLINE,
+        )
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/station/002",
+            admin_mode=AdminMode.ONLINE,
+        )
+
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/station/001",
+            health_state=HealthState.FAILED,
+        )
+        assert device_under_test.healthState == HealthState.UNKNOWN
+        mock_callback.assert_not_called()
+
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/station/002",
+            health_state=HealthState.FAILED,
+        )
+        assert device_under_test.healthState == HealthState.FAILED
+
+        # push_change_event isn't synchronous, because it has to go
+        # through the 0MG event system. So we have to sleep long enough
+        # for the event to arrive
+        time.sleep(0.2)
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthstate"
+        assert event_data.value == HealthState.FAILED
+        assert event_data.quality == tango.AttrQuality.ATTR_VALID
 
     def test_controlMode(self, device_under_test):
         """
@@ -617,7 +763,7 @@ class TestControllerPowerManager:
             an object that implements the same interface
 
         :return: a state model for the command under test to use
-        :rtype: :py:class:`ska.base.DeviceStateModel`
+        :rtype: :py:class:`~ska.base.DeviceStateModel`
         """
         return DeviceStateModel(logger)
 
@@ -639,7 +785,7 @@ class TestControllerPowerManager:
             devices
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         :param state_model: the state model for the device
-        :type state_model: :py:class:`ska.base.DeviceStateModel`
+        :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         on_command = MccsController.OnCommand(power_manager, state_model)
         assert not power_manager.is_on()
@@ -687,7 +833,7 @@ class TestControllerPowerManager:
             devices
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         :param state_model: the state model for the device
-        :type state_model: :py:class:`ska.base.DeviceStateModel`
+        :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         off_command = MccsController.OffCommand(power_manager, state_model)
         power_manager.on()
@@ -733,7 +879,7 @@ class TestControllerResourceManager:
     """
 
     @pytest.fixture()
-    def resource_manager(self, device_under_test):
+    def resource_manager(self, device_under_test, logger):
         """
         Fixture that returns a resource manager with 2 managed stations
 
@@ -741,16 +887,18 @@ class TestControllerResourceManager:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
+
         :return: a resource manager with 2 subservient station devices
         :rtype: :py:class:`ska.low.mccs.controller.ControllerResourceManager`
         """
         self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
 
         # Event manager to take health events
-        self.event_manager = EventManager(self.stations)
-        self.health_model = HealthModel(
-            None, self.stations, self.event_manager, device_under_test
-        )
+        self.event_manager = EventManager(logger, self.stations)
+        self.health_model = HealthModel(None, self.stations, self.event_manager)
         # HACK pending device pool management refactor
         self.health_monitor = self.health_model._health_monitor
 
@@ -766,14 +914,22 @@ class TestControllerResourceManager:
         :param resource_manager: test fixture providing a manager object
         :type resource_manager: ControllerResourceManager
         """
-
+        stations = ("low-mccs/station/001", "low-mccs/station/002")
         # Assign both stations
-        resource_manager.assign(["low-mccs/station/001", "low-mccs/station/002"], 1)
+        with pytest.raises(
+            ValueError, match="does not pass health check for assignment"
+        ):
+            resource_manager.assign(stations, 1)
+
+        for station in stations:
+            resource_manager._resources[station]._health_changed(
+                station, HealthState.OK
+            )
+
+        resource_manager.assign(stations, 1)
 
         # They should both be recorded as assigned
-        assigned = resource_manager.get_assigned_fqdns(1)
-        assert "low-mccs/station/001" in assigned
-        assert "low-mccs/station/002" in assigned
+        assert stations == tuple(resource_manager.get_assigned_fqdns(1))
 
         # Drop station 2
         resource_manager.release(["low-mccs/station/002"])
@@ -784,7 +940,7 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is FAILED
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "healthState", HealthState.FAILED
+            "low-mccs/station/002", HealthState.FAILED
         )
 
         with pytest.raises(
@@ -795,7 +951,7 @@ class TestControllerResourceManager:
 
         # Mock a health event so that station 2 is OK again
         resource_manager._resources["low-mccs/station/002"]._health_changed(
-            "healthState", HealthState.OK
+            "low-mccs/station/002", HealthState.OK
         )
 
         # Assign it again

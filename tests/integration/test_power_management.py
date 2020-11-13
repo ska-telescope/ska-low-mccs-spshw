@@ -9,7 +9,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """
-This test module contains the tests for the ska.low.mccs.power module.
+This test module contains integration tests that exercise the power
+management functionality of the SKA Low MCCS system.
 """
 
 from tango import DevState
@@ -74,8 +75,8 @@ class TestPowerManagement:
         controller.On()
 
         assert controller.State() == DevState.ON
-        assert station_1.State() in [DevState.ON, DevState.ALARM]
-        assert station_2.State() in [DevState.ON, DevState.ALARM]
+        assert station_1.State() == DevState.ON
+        assert station_2.State() == DevState.ON
         assert tile_1.State() == DevState.ON
         assert tile_2.State() == DevState.ON
         assert tile_3.State() == DevState.ON

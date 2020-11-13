@@ -75,7 +75,7 @@ def device_context(mocker, devices_info):
         yield context
 
 
-@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=6)
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
 def confirm_initialised(devices):
     """
     Helper function that tries to confirm that a group of devices have

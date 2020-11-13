@@ -19,8 +19,9 @@ from tango.server import attribute, command, device_property, AttrWriteType
 
 from ska.base import SKABaseDevice
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import HealthState, SimulationMode
 
+from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareDriver,
     HardwareHealthEvaluator,
@@ -456,7 +457,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -574,11 +575,15 @@ class MccsAntenna(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
+            device.event_manager = EventManager(self.logger)
 
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager, None, None, device._update_health_state
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device.health_changed,
             )
 
         def interrupt(self):
@@ -613,6 +618,20 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
+
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     # override from base classes so that it can be stored in the hardware manager
     @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
@@ -710,7 +729,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self.hardware_manager.temperature
 
-    @attribute(dtype="bool", label="xPolarisationFaulty")
+    @attribute(dtype="bool", label="xPolarisationFaulty", polling_period=1000)
     def xPolarisationFaulty(self):
         """
         Return the xPolarisationFaulty attribute.
@@ -720,7 +739,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._xPolarisationFaulty
 
-    @attribute(dtype="bool", label="yPolarisationFaulty")
+    @attribute(dtype="bool", label="yPolarisationFaulty", polling_period=1000)
     def yPolarisationFaulty(self):
         """
         Return the yPolarisationFaulty attribute.
@@ -970,7 +989,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
 
             (result_code, message) = super().do()
@@ -992,7 +1011,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.on()
@@ -1010,7 +1029,7 @@ class MccsAntenna(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOn")
         (return_code, message) = handler()
@@ -1031,7 +1050,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.off()
@@ -1049,22 +1068,11 @@ class MccsAntenna(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOff")
         (return_code, message) = handler()
         return [[return_code], [message]]
-
-    def _update_health_state(self, health_state):
-        """
-        Update and push a change event for the healthState attribute
-
-        :param health_state: The new health state
-        :type health_state: :py:class:`ska.base.control_model.HealthState`
-        """
-        self.push_change_event("healthState", health_state)
-        self._health_state = health_state
-        self.logger.info("health state = " + str(health_state))
 
 
 # ----------

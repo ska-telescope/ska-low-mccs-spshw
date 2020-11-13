@@ -17,7 +17,11 @@ from tango.server import run, attribute
 
 # Additional import
 from ska.base import SKATelState
+from ska.base.control_model import HealthState
+
 import ska.low.mccs.release as release
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import HealthModel
 
 
 __all__ = ["MccsTelState", "main"]
@@ -41,6 +45,19 @@ class MccsTelState(SKATelState):
     # ----------
     # Attributes
     # ----------
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
+
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     # ---------------
     # General methods
@@ -58,7 +75,7 @@ class MccsTelState(SKATelState):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -69,6 +86,13 @@ class MccsTelState(SKATelState):
             device._algorithms_version = ""
             device._build_state = release.get_release_info()
             device._version_id = release.version
+
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
+            device.health_model = HealthModel(
+                None, None, device.event_manager, device.health_changed
+            )
 
             return (result_code, message)
 

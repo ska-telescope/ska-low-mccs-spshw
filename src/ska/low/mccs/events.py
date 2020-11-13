@@ -13,7 +13,8 @@ __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
 from functools import partial
 
-from tango import EventType
+import backoff
+from tango import DevFailed, EventType
 
 from ska.low.mccs.utils import backoff_connect
 
@@ -63,34 +64,98 @@ class EventSubscriptionHandler:
     callbacks.
     """
 
-    def __init__(self, device_proxy, event_name):
+    def __init__(self, device_proxy, fqdn, event_name, logger):
         """
         Initialise a new EventSubscriptionHandler
 
         :param device_proxy: proxy to the device upon which the change
             event is subscribed
         :type device_proxy: :py:class:`tango.DeviceProxy`
+        :param fqdn: fqdn of the device_proxy (this is pass as a
+            workaround for the problem that
+            :py:meth:`tango.DeviceProxy.get_fqdn()` returns an empty
+            string when run under a
+            :py:class:`tango.test_context.MultiDeviceTestContext`.)
+        :type fqdn: str
         :param event_name: name of the event; that is, the name of the
             attribute for which change events are subscribed.
         :type event_name: str
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
+        self._logger = logger
+
         self._device = device_proxy
-        self._callbacks = []
+        self._fqdn = fqdn
+
+        self._event_name = event_name
+        self._event_value = None
+        self._event_quality = None
         self._subscription_id = None
+        self._callbacks = []
 
-        self._subscribe(event_name)
+        self._subscribe()
 
-    def _subscribe(self, event_name):
+    @backoff.on_exception(backoff.expo, DevFailed, factor=0.1, max_time=120)
+    def _subscribe(self):
         """
-        Subscribe to a change event
+        Subscribe to a change event.
 
-        :param event_name: name of the event; that is, the name of the
-            attribute for which change events are subscribed.
-        :type event_name: str
+        Even though we already have a DeviceProxy to the device that we
+        want to subscribe to, it is still possible that the device is
+        not ready, in which case subscription will fail and a
+        :py:class:`tango.DevFailed` exception will be raised. Here, we
+        attempt subscription in a backoff-retry, and only raise the
+        exception one our retries are exhausted. (The alternative option
+        of subscribing with "stateless=True" could not be made to work.)
         """
         self._subscription_id = self._device.subscribe_event(
-            event_name, EventType.CHANGE_EVENT, self, stateless=True
+            self._event_name, EventType.CHANGE_EVENT, self
         )
+
+    def _read(self):
+        """
+        Manually read an attribute. Used when we receive an event with
+        empty attribute data.
+
+        :return: the attribute value
+        :rtype: any
+        """
+        return self._device.read_attribute(self._event_name)
+
+    def _process_event(self, event):
+        """
+        Extract the attribute value from a received event; or, if the
+        event failed to carry an attribute value, read the attribute
+        value directly.
+
+        :param event: the received event
+        :type event: :py:class:`tango.EventData`
+
+        :return: the attribute value data
+        :rtype: :py:class:`tango.DeviceAttribute`
+        """
+        if event.attr_value is None:
+            self._logger.warn(
+                "Received changed event with empty value. "
+                "Falling back to manual attribute read."
+            )
+            return self._read()
+        else:
+            return event.attr_value
+
+    def _call(self, callback, attribute_data):
+        """
+        Call the callback with unpacked attribute data
+
+        :param callback: the callback to be called
+        :type callback: function
+        :param attribute_data: the attribute data to be unpacked and
+            used to call the callback
+        :type attribute_data: :py:class:`tango.DeviceAttribute`
+        """
+        callback(attribute_data.name, attribute_data.value, attribute_data.quality)
 
     def register_callback(self, callback):
         """
@@ -102,6 +167,7 @@ class EventSubscriptionHandler:
         :type callback: callable
         """
         self._callbacks.append(callback)
+        self._call(callback, self._read())
 
     def push_event(self, event):
         """
@@ -111,13 +177,9 @@ class EventSubscriptionHandler:
         :param event: an object encapsulating the event data.
         :type event: :py:class:`tango.EventData`
         """
-        if event.attr_value is not None and event.attr_value.value is not None:
-            for callback in self._callbacks:
-                callback(
-                    event.attr_value.name,
-                    event.attr_value.value,
-                    event.attr_value.quality,
-                )
+        attribute_data = self._process_event(event)
+        for callback in self._callbacks:
+            self._call(callback, attribute_data)
 
     def _unsubscribe(self):
         """
@@ -140,21 +202,27 @@ class DeviceEventManager:
     single device.
     """
 
-    def __init__(self, fqdn, events=None):
+    def __init__(self, fqdn, logger, events=None):
         """
         Initialise a new DeviceEventManager object
 
         :param fqdn: the fully qualified device name of the device for
             which this DeviceEventManager will manage change events
         :type fqdn: str
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         :param events: Names of events handled by this instance. If
             provided, this instance will reject attempts to subscribe
             to events not in this list
         :type events: list, optional
         """
+        self._logger = logger
+
         self._allowed_events = events
         self._handlers = {}
 
+        self._fqdn = fqdn
         self._device = backoff_connect(fqdn)
 
     def register_callback(self, callback, event_spec=None):
@@ -175,6 +243,7 @@ class DeviceEventManager:
         :raises ValueError: if the event is not in the list
             of allowed events
         """
+
         try:
             events = _parse_spec(event_spec, self._allowed_events)
         except ValueError as value_error:
@@ -182,8 +251,20 @@ class DeviceEventManager:
 
         for event in events:
             if event not in self._handlers:
-                self._handlers[event] = EventSubscriptionHandler(self._device, event)
+                self._handlers[event] = self._create_event_subscription_handler(event)
             self._handlers[event].register_callback(callback)
+
+    def _create_event_subscription_handler(self, event):
+        """
+        Create a new event subscription handler for a given event
+
+        :param event: the event for which change events are subscribed.
+        :type event: str
+
+        :return: a device event manager for the device at a given FQDN
+        :rtype: :py:class:`DeviceEventManager`
+        """
+        return EventSubscriptionHandler(self._device, self._fqdn, event, self._logger)
 
 
 class EventManager:
@@ -192,10 +273,13 @@ class EventManager:
     It supports and manages multiple event types from multiple devices.
     """
 
-    def __init__(self, fqdns=None, events=None):
+    def __init__(self, logger, fqdns=None, events=None):
         """
         Initialise a new EventManager object
 
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         :param fqdns: FQDNs of devices handled by this instance. If
             provided, this instance will reject attempts to subscribe
             to events from devices whose FQDN is not in this list
@@ -205,6 +289,8 @@ class EventManager:
             to events not in this list
         :type events: list, optional
         """
+        self._logger = logger
+
         self._allowed_fqdns = fqdns
         self._allowed_events = events
         self._handlers = {}
@@ -238,7 +324,20 @@ class EventManager:
 
         for fqdn in fqdns:
             if fqdn not in self._handlers:
-                self._handlers[fqdn] = DeviceEventManager(fqdn, self._allowed_events)
+                self._handlers[fqdn] = self._create_device_event_manager(fqdn)
             self._handlers[fqdn].register_callback(
                 partial(callback, fqdn), event_spec=event_spec
             )
+
+    def _create_device_event_manager(self, fqdn):
+        """
+        Create a new device event manager for a given FQDN
+
+        :param fqdn: FQDN of the device for which we are creating a
+            device event manager
+        :type fqdn: str
+
+        :return: a device event manager for the device at a given FQDN
+        :rtype: :py:class:`DeviceEventManager`
+        """
+        return DeviceEventManager(fqdn, self._logger, self._allowed_events)

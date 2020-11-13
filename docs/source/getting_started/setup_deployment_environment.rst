@@ -117,6 +117,16 @@ quite a few `make` commands. The main sequence for deploying is:
       make install-chart
 
    This too may take a very long time the first time it is run.
+
+   MCCS also has a "mccs-demo" umbrella chart for deploying a separate
+   configuration for demo / testing purposes. To deploy this chart
+   instead:
+
+   .. code-block:: bash
+
+      make UMBRELLA_CHART_PATH=charts/mccs-demo/ install-chart
+
+
 3. Monitor the cluster to make sure it comes up okay. There are two
    tools available for this:
 

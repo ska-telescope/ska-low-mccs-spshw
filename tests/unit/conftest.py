@@ -10,6 +10,8 @@ import pytest
 from tango import DevSource, DevState
 from tango.test_context import DeviceTestContext
 
+from ska.base.control_model import AdminMode, HealthState
+
 
 def pytest_itemcollected(item):
     """
@@ -36,12 +38,60 @@ def mock_device_proxies(mocker):
         through :py:class:`tango.DeviceProxy` calls)
     :rtype: dict
     """
-    device_proxy_mocks = defaultdict(mocker.Mock)
+
+    class MockDeviceProxy(mocker.Mock):
+        """
+        A mock class for DeviceProxy with some DeviceProxy-specific
+        behaviours:
+
+        * read_attribute returns mock events, with specific attribute
+          values for healthState and adminMode
+        """
+
+        class MockDeviceAttribute:
+            """
+            A class for mock device attributes, such as is returned by
+            an attribute read or an attribute change event.
+            """
+
+            _VALUES = {
+                "healthState": HealthState.UNKNOWN,
+                "adminMode": AdminMode.ONLINE,
+            }
+
+            def __init__(self, name):
+                """
+                Create a new instance
+
+                :param name: the name of the device attribute
+                :type name: string
+                """
+                self.name = name
+                self.value = self._VALUES[name] if name in self._VALUES else "MockValue"
+                self.quality = "MockQuality"
+
+        def read_attribute(self, name, *args, **kwargs):
+            """
+            Pretent to read an attribute
+
+            :param name: the name of the attribute to be read
+            :type name: str
+            :param args: position args to read_attribute
+            :type args: list
+            :param kwargs: named args to read_attribute
+            :type kwargs: dict
+
+            :return: a mock device attribute for the named attribute
+            :rtype: :py:class:`MockDeviceAttribute`
+            """
+            return self.MockDeviceAttribute(name)
+
+    device_proxy_mocks = defaultdict(MockDeviceProxy)
     mocker.patch("tango.DeviceProxy", side_effect=lambda fqdn: device_proxy_mocks[fqdn])
     return device_proxy_mocks
 
 
-@backoff.on_predicate(backoff.expo, factor=0.1, max_tries=5)
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
 def _confirm_initialised(device):
     """
     Helper function that tries to confirm that a group of devices have

@@ -13,7 +13,7 @@ This module contains the tests for MccsAPIU.
 """
 import pytest
 
-from tango import DevFailed, DevState
+from tango import DevFailed, DevState, AttrQuality, EventType
 
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
@@ -374,6 +374,32 @@ class TestMccsAPIU(object):
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.testMode == TestMode.NONE
 
+    def test_healthState(self, device_under_test, mocker):
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        assert device_under_test.healthState == HealthState.OK
+
+        # Test that polling is turned on and subscription yields an
+        # event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.OK
+        assert event_data.quality == AttrQuality.ATTR_VALID
+
     def test_attributes(self, device_under_test):
         """
         Test of attributes
@@ -383,7 +409,6 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         device_under_test.PowerUp()
         assert device_under_test.temperature == APIUHardwareSimulator.TEMPERATURE
         assert device_under_test.humidity == APIUHardwareSimulator.HUMIDITY

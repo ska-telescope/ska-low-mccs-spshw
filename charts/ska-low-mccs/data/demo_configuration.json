@@ -163,9 +163,9 @@
                 }
             }
         },
-        "MccsTile": {
+        "DemoTile": {
             "tile_0001": {
-                "MccsTile": {
+                "DemoTile": {
                     "low-mccs/tile/0001": {
                         "properties": {
                             "TileId": [
@@ -182,7 +182,7 @@
                 }
             },
             "tile_0002": {
-                "MccsTile": {
+                "DemoTile": {
                     "low-mccs/tile/0002": {
                         "properties": {
                             "TileId": [
@@ -199,7 +199,7 @@
                 }
             },
             "tile_0003": {
-                "MccsTile": {
+                "DemoTile": {
                     "low-mccs/tile/0003": {
                         "properties": {
                             "TileId": [
@@ -216,7 +216,7 @@
                 }
             },
             "tile_0004": {
-                "MccsTile": {
+                "DemoTile": {
                     "low-mccs/tile/0004": {
                         "properties": {
                             "TileId": [

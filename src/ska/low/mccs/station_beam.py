@@ -13,19 +13,197 @@ Prototype TANGO device server for the MCSS Station Beam
 """
 __all__ = ["MccsStationBeam", "main"]
 
-# imports
-import json
+import threading
 
-# PyTango imports
-from tango import DevState
+import json
+from tango import EnsureOmniThread
 from tango.server import attribute, command
 from tango.server import device_property
 
-# Additional imports
 from ska.base import SKAObsDevice
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
+
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.hardware import (
+    HardwareDriver,
+    HardwareFactory,
+    HardwareHealthEvaluator,
+    HardwareManager,
+)
+from ska.low.mccs.health import HealthModel
+
+
+class StationBeamHealthEvaluator(HardwareHealthEvaluator):
+    """
+    A :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator` for a
+    station beam. A station beam doesn't have hardware as such. Here we
+    are pretending it does because we have to set health to DEGRADED if
+    the beam is not locked, so for now we pretend that the
+    `isBeamLocked` attribute is a hardware property.
+
+    :todo: It seems that the health of a device can depend on more than
+        just hardware health plus subservient device health. Here,
+        health depends on whether the beam is locked, which appears to
+        be a property of neither the hardware nor subservient devices.
+        The health model may need to be reviewed in light of this.
+    """
+
+    def evaluate_health(self, hardware):
+        """
+        Evaluate the health of the "hardware".
+
+        :param hardware: the "hardware" for which health is being
+            evaluated
+        :type hardware: :py:class:`HardwareDriver`
+
+        :return: the evaluated health of the hardware
+        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if not hardware.is_locked:
+            return HealthState.DEGRADED
+        return HealthState.OK
+
+
+class StationBeamDriver(HardwareDriver):
+    """
+    A hardware driver for a station beam. A station beam doesn't
+    actually have hardware. Here we are shoe-horning the station beam
+    implementation into the hardware model by pretending that the
+    `isBeamLocked` attribute is a hardware property.
+
+    :todo: It seems that the health of a device can depend on more than
+        just hardware health plus subservient device health. Here,
+        health depends on whether the beam is locked, which appears to
+        be a property of neither the hardware nor subservient devices.
+        The health model may need to be reviewed in light of this.
+    """
+
+    def __init__(self, is_locked=False):
+        """
+        Create a new driver for station beam hardware
+
+        :param is_locked: initial value for whether this beam is locked
+        :type is_locked: bool
+        """
+        self._is_locked = is_locked
+
+    @property
+    def is_connected(self):
+        """
+        Whether this station beam "hardware" driver has a connection to
+        the hardware.
+
+        :return: whether this antenna hardware driver has a connection
+            to the hardware; hardwired to return True
+        :rtype: bool
+        """
+        return True
+
+    @property
+    def is_locked(self):
+        """
+        Whether the station beam is locked
+
+        :return: whether the station beam is locked
+        :rtype: bool
+        """
+        return self._is_locked
+
+    @is_locked.setter
+    def is_locked(self, value):
+        """
+        Setter for the is_locked property
+
+        :param value: whether the station beam is locked
+        :type value: bool
+        """
+        self._is_locked = value
+
+
+class StationBeamHardwareFactory(HardwareFactory):
+    """
+    A hardware factory for a station beam. A station beam doesn't
+    actually have hardware. Here we are shoe-horning the station beam
+    implementation into the hardware model by pretending that the
+    `isLocked` attribute is a hardware property.
+
+    :todo: It seems that the health of a device can depend on more than
+        just hardware health plus subservient device health. Here,
+        health depends on whether the beam is locked, which appears to
+        be a property of neither the hardware nor subservient devices.
+        The health model may need to be reviewed in light of this.
+    """
+
+    def __init__(self, is_locked):
+        """
+        Create a new factory instance
+
+        :param is_locked: initial value for whether this beam is locked
+        :type is_locked: bool
+        """
+        self._hardware = StationBeamDriver(is_locked=is_locked)
+
+    @property
+    def hardware(self):
+        """
+        Return a station beam driver created by this factory
+
+        :return: an station beam driver created by this factory
+        :rtype: :py:class:`StationBeamDriver`
+        """
+        return self._hardware
+
+
+class StationBeamHardwareManager(HardwareManager):
+    """
+    This class manages station beam "hardware".  A station beam doesn't
+    actually have hardware. Here we are shoe-horning the station beam
+    implementation into the hardware model by pretending that the
+    `isLocked` attribute is a hardware property.
+
+    :todo: It seems that the health of a device can depend on more than
+        just hardware health plus subservient device health. Here,
+        health depends on whether the beam is locked, which appears to
+        be a property of neither the hardware nor subservient devices.
+        The health model may need to be reviewed in light of this.
+    """
+
+    def __init__(self, is_locked=False, _factory=None):
+        """
+        Initialise a new TileHardwareManager instance
+
+        :param is_locked: initial value for whether this beam is locked
+        :type is_locked: bool
+        :param _factory: allows for substitution of a hardware factory.
+            This is useful for testing, but generally should not be used
+            in operations.
+        :type _factory: :py:class:`StationBeamHardwareFactory`
+        """
+        hardware_factory = _factory or StationBeamHardwareFactory(is_locked)
+        super().__init__(hardware_factory, StationBeamHealthEvaluator())
+
+    @property
+    def is_locked(self):
+        """
+        Whether the station beam is locked
+
+        :return: whether the station beam is locked
+        :rtype: bool
+        """
+        return self._factory.hardware.is_locked
+
+    @is_locked.setter
+    def is_locked(self, value):
+        """
+        Setter for the is_locked property
+
+        :param value: whether the station beam is locked
+        :type value: bool
+        """
+        self._factory.hardware.is_locked = value
+        self._update_health()
 
 
 class MccsStationBeam(SKAObsDevice):
@@ -56,6 +234,29 @@ class MccsStationBeam(SKAObsDevice):
         initialisation.
         """
 
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new InitCommand
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            self._thread = None
+            self._lock = threading.Lock()
+            self._interrupt = False
+
         def do(self):
             """
             Initialises the attributes and properties of the
@@ -71,7 +272,7 @@ class MccsStationBeam(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -87,14 +288,85 @@ class MccsStationBeam(SKAObsDevice):
             device._pointing_delay_rate = []
             device._update_rate = 0.0
             device._antenna_weights = []
-            device._is_beam_locked = False
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            message = "MccsStationBeam Init command completed OK"
-            self.logger.info(message)
-            return (ResultCode.OK, message)
+            self._thread = threading.Thread(
+                target=self._initialise_connections, args=(device,)
+            )
+            with self._lock:
+                self._thread.start()
+                return (ResultCode.STARTED, "Init command started")
+
+        def _initialise_connections(self, device):
+            """
+            Thread target for asynchronous initialisation of connections
+            to external entities such as hardware and other devices.
+
+            :param device: the device being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            # https://pytango.readthedocs.io/en/stable/howto.html
+            # #using-clients-with-multithreading
+            with EnsureOmniThread():
+                self._initialise_hardware_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                with self._lock:
+                    self.succeeded()
+                    self._thread = None
+                    self._interrupt = False
+
+        def _initialise_hardware_management(self, device):
+            """
+            Initialise the connection to the hardware being managed by
+            this device. May also register commands that depend upon a
+            connection to that hardware
+
+            :param device: the device for which a connection to the
+                hardware is being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.hardware_manager = StationBeamHardwareManager()
+
+        def _initialise_health_monitoring(self, device):
+            """
+            Initialise the health model for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.event_manager = EventManager(self.logger)
+
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
+            device.health_model = HealthModel(
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device.health_changed,
+            )
+
+        def interrupt(self):
+            """
+            Interrupt the initialisation thread (if one is running)
+
+            :return: whether the initialisation thread was interrupted
+            :rtype: bool
+            """
+            if self._thread is None:
+                return False
+            self._interrupt = True
+            return True
 
     def init_command_objects(self):
         """
@@ -110,18 +382,8 @@ class MccsStationBeam(SKAObsDevice):
         """
         Method always executed before any TANGO command is executed.
         """
-        if self._is_beam_locked:
-            self._health_state = HealthState.OK
-        else:
-            self._health_state = HealthState.DEGRADED
-
-        state = self.get_state()
-        if self._health_state == HealthState.OK:
-            if state == DevState.ALARM:
-                self.set_state(DevState.ON)
-        else:
-            if state == DevState.ON:
-                self.set_state(DevState.ALARM)
+        if self.hardware_manager is not None:
+            self.hardware_manager.poll()
 
     def delete_device(self):
         """
@@ -139,6 +401,19 @@ class MccsStationBeam(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
+
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
 
     @attribute(dtype="DevLong", format="%i", polling_period=1000, doc="ID of the beam")
     def beamId(self):
@@ -233,7 +508,7 @@ class MccsStationBeam(SKAObsDevice):
         :return: whether the beam is locked or not
         :rtype: bool
         """
-        return self._is_beam_locked
+        return self.hardware_manager.is_locked
 
     @isBeamLocked.write
     def isBeamLocked(self, value):
@@ -243,7 +518,7 @@ class MccsStationBeam(SKAObsDevice):
         :param value: whether the beam is locked or not
         :type value: boolean
         """
-        self._is_beam_locked = value
+        self.hardware_manager.is_locked = value
 
     @attribute(
         dtype=("DevLong",),

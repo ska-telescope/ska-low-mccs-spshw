@@ -15,9 +15,14 @@ This module contains the tests for the MccsAntenna.
 import threading
 
 import pytest
-import tango
 
-from ska.base.control_model import ControlMode, SimulationMode, HealthState
+from tango import AttrQuality, DevFailed, DevSource, EventType
+from ska.base.control_model import (
+    ControlMode,
+    LoggingLevel,
+    HealthState,
+    SimulationMode,
+)
 from ska.base.commands import ResultCode
 
 from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
@@ -232,7 +237,7 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        with pytest.raises(tango.DevFailed):
+        with pytest.raises(DevFailed):
             device_under_test.Reset()
 
     def test_antennaId(self, device_under_test):
@@ -340,6 +345,7 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.set_source(DevSource.DEV)
         assert device_under_test.xPolarisationFaulty is False
 
     def test_yPolarisationFaulty(self, device_under_test):
@@ -351,6 +357,7 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.set_source(DevSource.DEV)
         assert device_under_test.yPolarisationFaulty is False
 
     def test_fieldNodeLongitude(self, device_under_test):
@@ -428,9 +435,9 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.loggingLevel == 4
+        assert device_under_test.loggingLevel == LoggingLevel.WARNING
 
-    def test_healthState(self, device_under_test):
+    def test_healthState(self, device_under_test, mocker):
         """
         Test for healthState
 
@@ -438,8 +445,23 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         assert device_under_test.healthState == HealthState.OK
+
+        # Test that polling is turned on and subscription yields an
+        # event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.OK
+        assert event_data.quality == AttrQuality.ATTR_VALID
 
     def test_controlMode(self, device_under_test):
         """
@@ -463,7 +485,7 @@ class TestMccsAntenna:
         """
         assert device_under_test.simulationMode == SimulationMode.FALSE
         with pytest.raises(
-            tango.DevFailed,
+            DevFailed,
             match="Antennas cannot be put into simulation mode, but entire APIUs can.",
         ):
             device_under_test.simulationMode = SimulationMode.TRUE
@@ -642,7 +664,7 @@ class TestMccsAntenna_InitCommand:
         def _initialise_hardware_management(self, device):
             """
             Initialise the connection to the hardware being managed by
-            this device (overwridden here to inject a call trace
+            this device (overridden here to inject a call trace
             attribute).
 
             :param device: the device for which a connection to the

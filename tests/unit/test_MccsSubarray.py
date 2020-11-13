@@ -10,6 +10,8 @@
 This module contains the tests for MccsSubarray.
 """
 import tango
+from tango import AttrQuality, EventType
+
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
 from ska.low.mccs import release
@@ -56,7 +58,34 @@ class TestMccsSubarray:
         #         assert device_under_test.stationBeamFQDNs is None
         assert device_under_test.activationTime == 0
 
-    # tests of overridden base class commands
+    def test_healthState(self, device_under_test, mocker):
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        # The device has neither hardware nor (yet) subsidiary devices,
+        # so its healthState is OK
+        assert device_under_test.healthState == HealthState.OK
+
+        # Test that polling is turned on and subscription yields an
+        # event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.OK
+        assert event_data.quality == AttrQuality.ATTR_VALID
+
     def test_GetVersionInfo(self, device_under_test):
         """
         Test for GetVersionInfo

@@ -169,17 +169,6 @@ class TestMccsDevice(object):
         """
         assert device_under_test.loggingLevel == LoggingLevel.INFO
 
-    def test_healthState(self, device_under_test):
-        """
-        Test for healthState
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.healthState == 0
-
     def test_adminMode(self, device_under_test):
         """
         Test for adminMode

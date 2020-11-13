@@ -214,7 +214,7 @@ class HardwareManager:
         :type health_evaluator: :py:class:`HardwareHealthEvaluator`
         """
         self._factory = hardware_factory
-        self._health = None
+        self._health = HealthState.UNKNOWN
         self._health_callbacks = []
         self._health_evaluator = health_evaluator
         self._update_health()
@@ -444,6 +444,19 @@ class SimulableHardwareManager(HardwareManager):
         """
         self._factory.simulation_mode = mode == SimulationMode.TRUE
         self._update_health()
+
+    def simulate_connection_failure(self, is_fail):
+        """
+        Tell the hardware whether or not to simulate connection failure
+
+        :param is_fail: whether to simulate connection failure
+        :type is_fail: bool
+
+        :raises ValueError: if not in simulation mode
+        """
+        if not self._factory.simulation_mode:
+            raise ValueError("Cannot simulate failure when not in simulation mode")
+        self._factory.hardware.simulate_connection_failure(is_fail)
 
 
 class OnOffHardwareDriver(HardwareDriver):

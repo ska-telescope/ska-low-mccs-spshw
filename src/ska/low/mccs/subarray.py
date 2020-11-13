@@ -13,16 +13,20 @@ __all__ = ["MccsSubarray", "main"]
 
 # imports
 import json
+import threading
 
 # PyTango imports
 import tango
-from tango import DebugIt
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
 from ska.base import SKASubarray
 from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import ObsState
+from ska.base.control_model import HealthState, ObsState
+
+from ska.low.mccs.events import EventManager
+from ska.low.mccs.health import MutableHealthModel
 import ska.low.mccs.release as release
 
 
@@ -133,6 +137,29 @@ class MccsSubarray(SKASubarray):
         Command class for device initialisation
         """
 
+        def __init__(self, target, state_model, logger=None):
+            """
+            Create a new InitCommand
+
+            :param target: the object that this command acts upon; for
+                example, the device for which this class implements the
+                command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`DeviceStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            self._thread = None
+            self._lock = threading.Lock()
+            self._interrupt = False
+
         def do(self):
             """
             Stateless hook for initialisation of the attributes and
@@ -141,26 +168,63 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
             device = self.target
-            device.station_pool_manager = StationPoolManager()
-            device.transient_buffer_manager = TransientBufferManager()
+            device._station_pool_manager = StationPoolManager()
+            device._transient_buffer_manager = TransientBufferManager()
 
             device._scan_id = -1
 
             device.set_change_event("stationFQDNs", True, True)
             device.set_archive_event("stationFQDNs", True, True)
 
-            device.set_change_event("adminMode", True, True)
-            device.set_archive_event("adminMode", True, True)
-
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            return (result_code, message)
+            self._thread = threading.Thread(
+                target=self._initialise_connections, args=(device,)
+            )
+
+            with self._lock:
+                self._thread.start()
+                return (ResultCode.STARTED, "Init command started")
+
+        def _initialise_connections(self, device):
+            """
+            Thread target for asynchronous initialisation of connections
+            to external entities such as hardware and other devices.
+
+            :param device: the device being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            # https://pytango.readthedocs.io/en/stable/howto.html
+            # #using-clients-with-multithreading
+            with EnsureOmniThread():
+                self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                with self._lock:
+                    self.succeeded()
+
+        def _initialise_health_monitoring(self, device):
+            """
+            Initialise the health model for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.OK
+            device.set_change_event("healthState", True, False)
+            device.health_model = MutableHealthModel(
+                None, [], device.event_manager, device.health_changed
+            )
 
     def init_command_objects(self):
         """
@@ -170,17 +234,16 @@ class MccsSubarray(SKASubarray):
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
-        resourcing_args = (self.station_pool_manager, self.state_model, self.logger)
         self.register_command_object("On", self.OnCommand(*args))
         self.register_command_object("Off", self.OffCommand(*args))
         self.register_command_object(
-            "AssignResources", self.AssignResourcesCommand(*resourcing_args)
+            "AssignResources", self.AssignResourcesCommand(*args)
         )
         self.register_command_object(
-            "ReleaseResources", self.ReleaseResourcesCommand(*resourcing_args)
+            "ReleaseResources", self.ReleaseResourcesCommand(*args)
         )
         self.register_command_object(
-            "ReleaseAllResources", self.ReleaseAllResourcesCommand(*resourcing_args)
+            "ReleaseAllResources", self.ReleaseAllResourcesCommand(*args)
         )
         self.register_command_object("Configure", self.ConfigureCommand(*args))
         self.register_command_object("Scan", self.ScanCommand(*args))
@@ -192,7 +255,7 @@ class MccsSubarray(SKASubarray):
         self.register_command_object(
             "SendTransientBuffer",
             self.SendTransientBufferCommand(
-                self.transient_buffer_manager, self.state_model, self.logger
+                self._transient_buffer_manager, self.state_model, self.logger
             ),
         )
 
@@ -216,6 +279,20 @@ class MccsSubarray(SKASubarray):
     # ------------------
     # Attribute methods
     # ------------------
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
+
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
+
     @attribute(
         dtype="DevLong",
         format="%i",
@@ -257,7 +334,7 @@ class MccsSubarray(SKASubarray):
         :return: FQDNs of stations assigned to this subarray
         :rtype: list of str
         """
-        return self.station_pool_manager.fqdns
+        return self._station_pool_manager.fqdns
 
     # -------------------------------------------
     # Base class command and gatekeeper overrides
@@ -277,7 +354,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -298,7 +375,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -322,14 +399,26 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
             stations = json.loads(argin)["stations"]
-            station_pool_manager = self.target
-            station_pool_manager.assign(stations)
+            device = self.target
+            device.health_model.add_devices(stations)
+            device._station_pool_manager.assign(stations)
             return [ResultCode.OK, "AssignResources command completed successfully"]
+
+        def succeeded(self):
+            """
+            Action to take on successful completion of a resourcing
+            command.
+            """
+            if len(self.target._station_pool_manager) == 0:
+                action = "resourcing_succeeded_no_resources"
+            else:
+                action = "resourcing_succeeded_some_resources"
+            self.state_model.perform_action(action)
 
     class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):
         """
@@ -349,14 +438,26 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
             stations = json.loads(argin)["stations"]
-            station_pool_manager = self.target
-            station_pool_manager.release(stations)
+            device = self.target
+            device._station_pool_manager.release(stations)
+            device.health_model.remove_devices(stations)
             return [ResultCode.OK, "ReleaseResources command completed successfully"]
+
+        def succeeded(self):
+            """
+            Action to take on successful completion of a resourcing
+            command.
+            """
+            if len(self.target._station_pool_manager):
+                action = "resourcing_succeeded_some_resources"
+            else:
+                action = "resourcing_succeeded_no_resources"
+            self.state_model.perform_action(action)
 
     class ReleaseAllResourcesCommand(SKASubarray.ReleaseAllResourcesCommand):
         """
@@ -373,14 +474,26 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
-            station_pool_manager = self.target
-            station_pool_manager.release_all()
+            device = self.target
+            device._station_pool_manager.release_all()
+            device.health_model.remove_all_devices()
 
             return (ResultCode.OK, "ReleaseAllResources command completed successfully")
+
+        def succeeded(self):
+            """
+            Action to take on successful completion of a resourcing
+            command.
+            """
+            if len(self.target._station_pool_manager):
+                action = "resourcing_succeeded_some_resources"
+            else:
+                action = "resourcing_succeeded_no_resources"
+            self.state_model.perform_action(action)
 
     class ConfigureCommand(SKASubarray.ConfigureCommand):
         """
@@ -399,7 +512,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             result_code = ResultCode.OK
             message = "Configure command completed successfully"
@@ -434,7 +547,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do(argin)
 
@@ -455,7 +568,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -476,7 +589,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -497,7 +610,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -518,7 +631,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -539,7 +652,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -574,7 +687,7 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)

@@ -41,10 +41,10 @@ setuptools.setup(
             "MccsSubarray=ska.low.mccs.subarray:main",
             "MccsStation=ska.low.mccs.station:main",
             "MccsStationBeam=ska.low.mccs.station_beam:main",
-            "MccsTile=ska.low.mccs.tile:main",
+            "MccsTile=ska.low.mccs.tile.tile_device:main",
             "MccsTelState=ska.low.mccs.tel_state:main",
             "mccs-controller=ska.low.mccs.controller_cli:main",
-            "mccs-tile=ska.low.mccs.tile_cli:main",
+            "mccs-tile=ska.low.mccs.tile.tile_cli:main",
         ]
     },
     install_requires=[

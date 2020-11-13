@@ -11,11 +11,12 @@
 """
 This module contains the tests for MccsStation.
 """
-import json
-import pytest
 import logging
 import threading
+import time
 
+import json
+import pytest
 import tango
 from tango import DevState
 
@@ -29,56 +30,13 @@ from ska.base.control_model import (
     TestMode,
 )
 from ska.low.mccs import MccsStation, release
-from ska.low.mccs.station import (
-    StationHardware,
-    StationHardwareManager,
-    StationPowerManager,
-)
-
+from ska.low.mccs.station import StationPowerManager
 
 device_to_load = {
     "path": "charts/ska-low-mccs/data/configuration.json",
     "package": "ska.low.mccs",
     "device": "station_001",
 }
-
-
-class TestStationHardwareManager:
-    """
-    Contains the tests of the StationHardwareManager
-    """
-
-    def test_on_off(self, mocker):
-        """
-        Test that the StationHardwareManager receives updated values,
-        and re-evaluates device health, each time it polls the hardware
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
-            module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
-        """
-        hardware = StationHardware()
-        station_hardware_manager = StationHardwareManager(hardware)
-
-        assert not station_hardware_manager.is_on
-        assert station_hardware_manager.health == HealthState.OK
-
-        mock_health_callback = mocker.Mock()
-        station_hardware_manager.register_health_callback(mock_health_callback)
-        mock_health_callback.assert_called_once_with(HealthState.OK)
-        mock_health_callback.reset_mock()
-
-        station_hardware_manager.on()
-
-        assert station_hardware_manager.is_on
-        assert station_hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
-
-        station_hardware_manager.off()
-
-        assert not station_hardware_manager.is_on
-        assert station_hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
 
 
 class TestMccsStation:
@@ -96,7 +54,7 @@ class TestMccsStation:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.healthState == HealthState.OK
+        assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.NONE
@@ -113,6 +71,46 @@ class TestMccsStation:
         assert device_under_test.beamFQDNs is None
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
+
+        # check that initialisation leaves us in a state where turning
+        # the device on doesn't put it into ALARM state
+        device_under_test.On()
+        assert device_under_test.state() == DevState.ON
+        time.sleep(0.2)
+        assert device_under_test.state() == DevState.ON
+
+    def test_healthState(self, device_under_test, mocker):
+        """
+        Test for healthState
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+
+        # The device has subscribed to healthState change events on
+        # its subsidiary, but hasn't heard from them (because in unit
+        # testing these devices are mocked out), so its healthState is
+        # UNKNOWN
+        assert device_under_test.healthState == HealthState.UNKNOWN
+
+        # Test that polling is turned on and subscription yields an
+        # event as expected
+        mock_callback = mocker.Mock()
+        _ = device_under_test.subscribe_event(
+            "healthState", tango.EventType.CHANGE_EVENT, mock_callback
+        )
+        mock_callback.assert_called_once()
+
+        event_data = mock_callback.call_args[0][0].attr_value
+        assert event_data.name == "healthState"
+        assert event_data.value == HealthState.UNKNOWN
+        assert event_data.quality == tango.AttrQuality.ATTR_VALID
+
+        mock_callback.reset_mock()
 
     # overridden base class attributes
     def test_buildState(self, device_under_test):
@@ -333,31 +331,16 @@ class TestStationPowerManager:
         return logging.getLogger()
 
     @pytest.fixture()
-    def hardware_manager(self):
-        """
-        Fixture that returns a hardware manager for the power manager
-        under test to use
-
-        :return: a hardware manager for power manager under test to use
-        :rtype: :py:class:`ska.low.mccs.station.StationHardwareManager`
-        """
-        return StationHardwareManager()
-
-    @pytest.fixture()
-    def power_manager(self, hardware_manager):
+    def power_manager(self):
         """
         Fixture that returns a power manager with no subservient devices
 
-        :param hardware_manager: fixture that returns a mock that can
-            serve as a hardware manager for power management purposes;
-            that is, something that can be turned on and off
-        :type hardware_manager: object
-
-        :return: a power manager with no subservient devices
+        :return: a power manager with no hardware and no subservient
+            devices
         :rtype: :py:class:`ska.low.mccs.power.PowerManager`
 
         """
-        return StationPowerManager(hardware_manager, [])
+        return StationPowerManager([])
 
     @pytest.fixture()
     def state_model(self, logger):
@@ -370,7 +353,7 @@ class TestStationPowerManager:
             an object that implements the same interface
 
         :return: a state model for the command under test to use
-        :rtype: :py:class:`ska.base.DeviceStateModel`
+        :rtype: :py:class:`~ska.base.DeviceStateModel`
         """
         return DeviceStateModel(logger)
 
@@ -392,7 +375,7 @@ class TestStationPowerManager:
             devices
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         :param state_model: the state model for the device
-        :type state_model: :py:class:`ska.base.DeviceStateModel`
+        :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         on_command = MccsStation.OnCommand(power_manager, state_model)
         assert not power_manager.is_on()
@@ -440,7 +423,7 @@ class TestStationPowerManager:
             devices
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         :param state_model: the state model for the device
-        :type state_model: :py:class:`ska.base.DeviceStateModel`
+        :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         off_command = MccsStation.OffCommand(power_manager, state_model)
         power_manager.on()
@@ -511,26 +494,10 @@ class TestMccsStation_InitCommand:
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
-            self._initialise_hardware_management_called = False
             self._initialise_health_monitoring_called = False
+            self._initialise_power_management_called = False
 
-        def _initialise_hardware_management(self, device):
-            """
-            Initialise the connection to the hardware being managed by
-            this device (overwridden here to inject a call trace
-            attribute).
-
-            :param device: the device for which a connection to the
-                hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-            """
-            self._initialise_hardware_management_called = True
-            super()._initialise_hardware_management(device)
-            with self._hang_lock:
-                # hang until the hang lock is released
-                pass
-
-        def _initialise_health_monitoring(self, device):
+        def _initialise_health_monitoring(self, device, fqdns):
             """
             Initialise the health model for this device (overridden
             here to inject a call trace attribute).
@@ -538,9 +505,28 @@ class TestMccsStation_InitCommand:
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: FQDNs of subservient devices
+            :type fqdns: list of str
             """
             self._initialise_health_monitoring_called = True
-            super()._initialise_health_monitoring(device)
+            super()._initialise_health_monitoring(device, fqdns)
+            with self._hang_lock:
+                # hang until the hang lock is released
+                pass
+
+        def _initialise_power_management(self, device, fqdns):
+            """
+            Initialise the device's power manager (overridden here to
+            inject a call trace attribute).
+
+            :param device: the device for which power management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: FQDNs of subservient devices
+            :type fqdns: list of str
+            """
+            self._initialise_power_management_called = True
+            super()._initialise_power_management(device, fqdns)
 
     def test_interrupt(self, mocker):
         """
@@ -565,8 +551,8 @@ class TestMccsStation_InitCommand:
         init_command._thread.join()
 
         # now that we've released the hang lock, the thread can exit
-        # its _initialise_hardware_management, but before it enters its
-        # _initialise_health_monitoring, it will detect that it has been
+        # its _initialise_health_monitoring, but before it enters its
+        # _initialise_power_management, it will detect that it has been
         # interrupted, and return
-        assert init_command._initialise_hardware_management_called
-        assert not init_command._initialise_health_monitoring_called
+        assert init_command._initialise_health_monitoring_called
+        assert not init_command._initialise_power_management_called

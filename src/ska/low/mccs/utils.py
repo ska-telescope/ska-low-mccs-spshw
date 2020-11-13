@@ -13,7 +13,7 @@ from tango.server import Device
 import tango
 
 
-@backoff.on_exception(backoff.expo, tango.DevFailed, factor=0.1, max_tries=8)
+@backoff.on_exception(backoff.expo, tango.DevFailed, factor=0.1, max_time=120)
 def backoff_connect(fqdn):
     """
     Attempts connection to a specified device, using an exponential

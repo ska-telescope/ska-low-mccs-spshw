@@ -1,9 +1,9 @@
-=================================================
-TPM Simulator module (ska.low.mccs.tpm_simulator)
-=================================================
+======================================================
+TPM Simulator module (ska.low.mccs.tile.tpm_simulator)
+======================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.tpm_simulator
+.. automodule:: ska.low.mccs.tile.tpm_simulator
    :members:

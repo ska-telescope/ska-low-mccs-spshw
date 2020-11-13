@@ -106,7 +106,7 @@ class TestMccsIntegrationTmc:
         :param argin: Optional argument to send to the command
         :type argin: str
         :param expected_result: The expected return code from the command
-        :type expected_result: :py:class:`ska.base.commands.ResultCode`
+        :type expected_result: :py:class:`~ska.base.commands.ResultCode`
         """
         # Call the specified command asynchronously
         async_id = device.command_inout_asynch(command, argin)
@@ -141,11 +141,8 @@ class TestMccsIntegrationTmc:
         assert devices["controller"].State() == DevState.ON
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF
-        # TODO: The stations are in alarm state because
-        # we don't yet ensure attributes are updated before
-        # transitioning out of INIT
-        assert devices["station_001"].State() == DevState.ALARM
-        assert devices["station_002"].State() == DevState.ALARM
+        assert devices["station_001"].State() == DevState.ON
+        assert devices["station_002"].State() == DevState.ON
 
         # # A second call to On should have no side-effects
         # self.async_command(
@@ -154,11 +151,8 @@ class TestMccsIntegrationTmc:
         # assert devices["controller"].State() == DevState.ON
         # assert devices["subarray_01"].State() == DevState.OFF
         # assert devices["subarray_02"].State() == DevState.OFF
-        # # TODO: The stations are in alarm state because
-        # # we don't yet ensure attributes are updated before
-        # # transitioning out of INIT
-        # assert devices["station_001"].State() == DevState.ALARM
-        # assert devices["station_002"].State() == DevState.ALARM
+        # assert devices["station_001"].State() == DevState.ON
+        # assert devices["station_002"].State() == DevState.ON
 
     def test_controller_off(self, devices):
         """
@@ -174,11 +168,8 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].State() == DevState.OFF
         self.assert_command(device=devices["controller"], command="On")
         assert devices["controller"].State() == DevState.ON
-        # TODO: The stations are in alarm state because
-        # we don't yet ensure attributes are updated before
-        # transitioning out of INIT
-        assert devices["station_001"].State() == DevState.ALARM
-        assert devices["station_002"].State() == DevState.ALARM
+        assert devices["station_001"].State() == DevState.ON
+        assert devices["station_002"].State() == DevState.ON
         self.assert_command(device=devices["controller"], command="Off")
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF

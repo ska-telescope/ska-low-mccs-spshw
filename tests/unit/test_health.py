@@ -22,6 +22,8 @@ from ska.low.mccs.health import (
     DeviceHealthMonitor,
     HealthMonitor,
     HealthModel,
+    MutableHealthMonitor,
+    MutableHealthModel,
 )
 
 
@@ -105,21 +107,35 @@ class TestDeviceHealthRollupPolicy:
         [
             (None, None, HealthState.OK),
             (None, [None, None], HealthState.OK),
-            (None, [None, HealthState.FAILED], HealthState.FAILED),
+            (None, [None, HealthState.UNKNOWN], HealthState.UNKNOWN),
+            (None, [None, HealthState.FAILED], HealthState.DEGRADED),
             (None, [None, HealthState.OK], HealthState.OK),
-            (None, [HealthState.FAILED, HealthState.OK], HealthState.FAILED),
+            (None, [HealthState.FAILED, HealthState.OK], HealthState.DEGRADED),
             (HealthState.DEGRADED, None, HealthState.DEGRADED),
             (HealthState.DEGRADED, [None, None], HealthState.DEGRADED),
-            (HealthState.DEGRADED, [None, HealthState.FAILED], HealthState.FAILED),
+            (HealthState.DEGRADED, [None, HealthState.FAILED], HealthState.DEGRADED),
             (HealthState.DEGRADED, [None, HealthState.OK], HealthState.DEGRADED),
             (
                 HealthState.DEGRADED,
                 [HealthState.FAILED, HealthState.OK],
-                HealthState.FAILED,
+                HealthState.DEGRADED,
+            ),
+            (HealthState.OK, None, HealthState.OK),
+            (HealthState.OK, [], HealthState.OK),
+            (HealthState.OK, [HealthState.OK], HealthState.OK),
+            (
+                HealthState.OK,
+                [HealthState.OK, HealthState.UNKNOWN, HealthState.DEGRADED],
+                HealthState.UNKNOWN,
             ),
             (
+                HealthState.OK,
+                [HealthState.FAILED, HealthState.OK],
                 HealthState.DEGRADED,
-                [HealthState.OK, HealthState.OK],
+            ),
+            (
+                HealthState.OK,
+                [HealthState.DEGRADED, HealthState.OK],
                 HealthState.DEGRADED,
             ),
         ],
@@ -145,7 +161,7 @@ class TestDeviceHealthRollupPolicy:
             ignored.
         """
         assert (
-            DeviceHealthRollupPolicy.compute_health(hardware_health, device_healths)
+            DeviceHealthRollupPolicy().compute_health(hardware_health, device_healths)
             == expected_health
         )
 
@@ -157,7 +173,7 @@ class TestDeviceHealthMonitor:
     (The DeviceHealthMonitor monitors the health of a single device.)
     """
 
-    def test(self, mocker, mock_device_proxies):
+    def test(self, mocker, mock_device_proxies, logger):
         """
         Test that a DeviceHealthMonitor registers a change in device
         health when the device emits relevant events
@@ -169,11 +185,17 @@ class TestDeviceHealthMonitor:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdn = "mock/mock/1"
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
         _ = DeviceHealthMonitor(event_manager, fqdn, mock_callback)
+
+        mock_callback.assert_called_once_with(HealthState.UNKNOWN)
+        mock_callback.reset_mock()
 
         # This is an implementation-dependent hack by which we pretend that the
         # device is emitting events
@@ -186,8 +208,7 @@ class TestDeviceHealthMonitor:
         event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
             admin_mode_mock_event
         )
-        mock_callback.assert_called_once_with(HealthState.UNKNOWN)
-        mock_callback.reset_mock()
+        mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
         health_state_mock_event.attr_value.name = "healthState"
@@ -209,7 +230,7 @@ class TestHealthMonitor:
     subservient devices.)
     """
 
-    def test(self, mocker, mock_device_proxies):
+    def test(self, mocker, mock_device_proxies, logger):
         """
         Test that a HealthMonitor registers changes in device health
         when devices emit relevant events
@@ -221,11 +242,17 @@ class TestHealthMonitor:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
         _ = HealthMonitor(fqdns, event_manager, mock_callback)
+
+        posargs = [call[0] for call in mock_callback.call_args_list]
+        assert set(posargs) == set((fqdn, HealthState.UNKNOWN) for fqdn in fqdns)
 
         # This is an implementation-dependent hack by which we pretend that the
         # device is emitting events
@@ -234,13 +261,13 @@ class TestHealthMonitor:
         admin_mode_mock_event.attr_value.value = AdminMode.ONLINE
         admin_mode_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
+        mock_callback.reset_mock()
         for fqdn in fqdns:
             # push the event
-            mock_callback.reset_mock()
             event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
                 admin_mode_mock_event
             )
-            mock_callback.assert_called_once_with(fqdn, HealthState.UNKNOWN)
+            mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
         health_state_mock_event.attr_value.name = "healthState"
@@ -267,15 +294,15 @@ class TestHealthModel:
         ("with_hardware", "with_devices"),
         [(False, False), (False, True), (True, False), (True, True)],
     )
-    def test(self, with_hardware, with_devices, mocker, mock_device_proxies):
+    def test(self, with_hardware, with_devices, mocker, mock_device_proxies, logger):
         """
         Test that the health of a HealthModel changes with changes to
         hardware health and/or changes to the health of managed devices.
 
-        :param with_hardware: [description]
-        :type with_hardware: [type]
-        :param with_devices: [description]
-        :type with_devices: [type]
+        :param with_hardware: whether the model manages hardware or not
+        :type with_hardware: bool
+        :param with_devices: whether the model manages devices or not
+        :type with_devices: bool
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
         :param mock_device_proxies: fixture that patches
@@ -283,17 +310,21 @@ class TestHealthModel:
             for each fqdn
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"] if with_devices else None
-        event_manager = EventManager()
+        event_manager = EventManager(logger)
         mock_callback = mocker.Mock()
 
-        health_model = HealthModel(
-            hardware, fqdns, event_manager, mock_callback
-        )  # health initialises to UNKNOWN
-
-        mock_callback.assert_not_called()
+        health_model = HealthModel(hardware, fqdns, event_manager, mock_callback)
+        if with_hardware or with_devices:
+            mock_callback.assert_called_with(HealthState.UNKNOWN)
+        else:
+            mock_callback.assert_called_with(HealthState.OK)
+        mock_callback.reset_mock()
 
         if with_hardware:
             health_model._hardware_health_changed(HealthState.OK)
@@ -309,3 +340,130 @@ class TestHealthModel:
 
             health_model._device_health_changed("mock/mock/2", HealthState.OK)
             mock_callback.assert_called_once_with(HealthState.OK)
+
+
+class TestMutableHealthMonitor:
+    """
+    This class contains tests of the MutableHealthMonitor class.
+
+    (The MutableHealthMonitor class monitors the health of a mutable
+    collection of subservient devices.)
+    """
+
+    def test(self, mocker, mock_device_proxies, logger):
+        """
+        Test that one can add and remove device, and a
+        MutableHealthMonitor behaves as expected
+
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict (but don't access it directly,
+            access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
+        """
+        fqdns = ["mock/mock/1", "mock/mock/2"]
+
+        event_manager = EventManager(logger)
+        mock_callback = mocker.Mock()
+        mutable_health_monitor = MutableHealthMonitor(
+            fqdns, event_manager, mock_callback
+        )
+
+        posargs = [call[0] for call in mock_callback.call_args_list]
+        assert set(posargs) == set((fqdn, HealthState.UNKNOWN) for fqdn in fqdns)
+
+        mock_callback.reset_mock()
+
+        new_fqdn = "mock/mock/3"
+        mutable_health_monitor.add_devices([new_fqdn])
+        mock_callback.assert_called_once_with(new_fqdn, HealthState.UNKNOWN)
+        mock_callback.reset_mock()
+
+        # This is an implementation-dependent hack by which we pretend that the
+        # device is emitting events
+        admin_mode_mock_event = mocker.Mock()
+        admin_mode_mock_event.attr_value.name = "adminMode"
+        admin_mode_mock_event.attr_value.value = AdminMode.ONLINE
+        admin_mode_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
+
+        mock_callback.reset_mock()
+        for fqdn in fqdns:
+            # push the event
+            event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
+                admin_mode_mock_event
+            )
+            mock_callback.assert_not_called()
+
+        health_state_mock_event = mocker.Mock()
+        health_state_mock_event.attr_value.name = "healthState"
+        health_state_mock_event.attr_value.value = HealthState.DEGRADED
+        health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
+
+        event_manager._handlers[new_fqdn]._handlers["adminMode"].push_event(
+            admin_mode_mock_event
+        )
+        event_manager._handlers[new_fqdn]._handlers["healthState"].push_event(
+            health_state_mock_event
+        )
+
+        mock_callback.assert_called_once_with(new_fqdn, HealthState.DEGRADED)
+
+
+class TestMutableHealthModel:
+    """
+    This class contains tests of the MutableHealthModel class.
+
+    (The MutableHealthModel class represents and manages the health of a
+    device for which subservient devices may change.)
+    """
+
+    @pytest.mark.parametrize("with_hardware", [False, True])
+    def test(self, with_hardware, mocker, mock_device_proxies, logger):
+        """
+        Test that the health of a MutableHealthModel changes with
+        changes to the collection of managed devices.
+
+        :param with_hardware: whether the model manages hardware or not
+        :type with_hardware: bool
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_device_proxies: fixture that patches
+            :py:class:`tango.DeviceProxy` to always return the same mock
+            for each fqdn
+        :type mock_device_proxies: dict (but don't access it directly,
+            access it through :py:class:`tango.DeviceProxy` calls)
+        :param logger: the logger to be used by the object under test
+        :type logger: a logger that implements the standard library
+            :py:class:`logging.Logger` interface
+        """
+        hardware = mocker.Mock() if with_hardware else None
+        fqdns = ["mock/mock/1", "mock/mock/2"]
+        event_manager = EventManager(logger)
+        mock_callback = mocker.Mock()
+
+        health_model = MutableHealthModel(hardware, fqdns, event_manager, mock_callback)
+        mock_callback.assert_called_with(HealthState.UNKNOWN)
+        mock_callback.reset_mock()
+
+        if with_hardware:
+            health_model._hardware_health_changed(HealthState.OK)
+            mock_callback.assert_not_called()  # health is still UNKNOWN
+
+        health_model._device_health_changed("mock/mock/1", HealthState.OK)
+        mock_callback.assert_not_called()  # health is still UNKNOWN
+
+        health_model._device_health_changed("mock/mock/2", HealthState.OK)
+        mock_callback.assert_called_once_with(HealthState.OK)
+        mock_callback.reset_mock()
+
+        health_model.add_devices(["mock/mock/3"])
+        mock_callback.assert_called_once_with(HealthState.UNKNOWN)
+        mock_callback.reset_mock()
+
+        health_model._device_health_changed("mock/mock/3", HealthState.DEGRADED)
+        mock_callback.assert_called_once_with(HealthState.DEGRADED)

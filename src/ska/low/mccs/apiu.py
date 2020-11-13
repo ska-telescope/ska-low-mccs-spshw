@@ -18,7 +18,8 @@ from tango.server import attribute, command
 
 from ska.base import SKABaseDevice
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import HealthState, SimulationMode
+from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     OnOffHardwareManager,
@@ -319,9 +320,6 @@ class MccsAPIU(SKABaseDevice):
             device._overVoltageThreshold = 0.0
             device._humidityThreshold = 0.0
 
-            device.set_change_event("voltage", True, False)
-            device.set_archive_event("voltage", True, False)
-
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
@@ -387,11 +385,14 @@ class MccsAPIU(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.set_change_event("healthState", True, True)
-            device.set_archive_event("healthState", True, True)
-
+            device.event_manager = EventManager(self.logger)
+            device._health_state = HealthState.UNKNOWN
+            device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager, None, None, device._update_health_state
+                device.hardware_manager,
+                None,
+                device.event_manager,
+                device.health_changed,
             )
 
         def interrupt(self):
@@ -426,8 +427,21 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    def health_changed(self, health):
+        """
+        Callback to be called whenever the HealthModel's health state
+        changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
-    @attribute(dtype="DevDouble", label="Voltage", unit="Volts")
+        :param health: the new health value
+        :type health: :py:class:`~ska.base.control_model.HealthState`
+        """
+        if self._health_state == health:
+            return
+        self._health_state = health
+        self.push_change_event("healthState", health)
+
+    @attribute(dtype="DevDouble", label="Voltage", unit="Volts", polling_period=1000)
     def voltage(self):
         """
         Return the voltage attribute.
@@ -437,7 +451,7 @@ class MccsAPIU(SKABaseDevice):
         """
         return self.hardware_manager.voltage
 
-    @attribute(dtype="DevDouble", label="Current", unit="Amps")
+    @attribute(dtype="DevDouble", label="Current", unit="Amps", polling_period=1000)
     def current(self):
         """
         Return the current attribute.
@@ -447,7 +461,7 @@ class MccsAPIU(SKABaseDevice):
         """
         return self.hardware_manager.current
 
-    @attribute(dtype="DevDouble", label="Temperature", unit="degC")
+    @attribute(dtype="DevDouble", label="Temperature", unit="degC", polling_period=1000)
     def temperature(self):
         """
         Return the temperature attribute.
@@ -461,6 +475,7 @@ class MccsAPIU(SKABaseDevice):
         dtype="DevDouble",
         label="Humidity",
         unit="percent",
+        polling_period=1000,
         # max_value=0.0,
         # min_value=100.0,
     )
@@ -601,7 +616,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.turn_on_antenna(argin)
@@ -625,7 +640,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUpAntenna")
         (return_code, message) = handler(argin)
@@ -649,7 +664,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.turn_off_antenna(argin)
@@ -673,7 +688,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDownAntenna")
         (return_code, message) = handler(argin)
@@ -696,7 +711,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.on()
@@ -714,7 +729,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUp")
         (return_code, message) = handler()
@@ -737,7 +752,7 @@ class MccsAPIU(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.off()
@@ -755,7 +770,7 @@ class MccsAPIU(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDown")
         (return_code, message) = handler()

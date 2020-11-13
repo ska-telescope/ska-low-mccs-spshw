@@ -76,8 +76,8 @@ install-chart: clean dep-up namespace## install the helm chart with name RELEASE
 		helm install $(RELEASE_NAME) \
 		--set global.minikube=$(MINIKUBE) \
 		--set global.tango_host=$(TANGO_HOST) \
-		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) \
-		--values values.yaml \
+		--set minikubeHostPath=$(MINIKUBE_TMP) \
+		--values values.yaml  $(CUSTOM_VALUES) \
 		 $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE); \
 		 rm generated_values.yaml; \
 		 rm values.yaml
@@ -88,8 +88,8 @@ template-chart: clean dep-up namespace## install the helm chart with name RELEAS
 		helm template $(RELEASE_NAME) \
 		--set global.minikube=$(MINIKUBE) \
 		--set global.tango_host=$(TANGO_HOST) \
-		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) \
-		--values values.yaml \
+		--set minikubeHostPath=$(MINIKUBE_TMP) \
+		--values values.yaml $(CUSTOM_VALUES) \
 		 $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE); \
 		 rm generated_values.yaml; \
 		 rm values.yaml
@@ -97,7 +97,7 @@ template-chart: clean dep-up namespace## install the helm chart with name RELEAS
 # chart_lint: dep-up ## lint check the helm chart
 lint-chart: dep-up ## lint check the helm chart
 	@mkdir -p build; \
-	helm lint $(UMBRELLA_CHART_PATH) --with-subcharts  $(CUSTOM_VALUES) ; \
+	helm lint $(UMBRELLA_CHART_PATH) $(CUSTOM_VALUES); \
 	echo "<testsuites><testsuite errors=\"$(LINTING_OUTPUT)\" failures=\"0\" name=\"helm-lint\" skipped=\"0\" tests=\"0\" time=\"0.000\" timestamp=\"$(shell date)\"> </testsuite> </testsuites>" > build/linting.xml
 	exit $(LINTING_OUTPUT)
 

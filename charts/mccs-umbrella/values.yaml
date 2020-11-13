@@ -28,7 +28,7 @@ tango-base:
     enabled: true
 
 webjive:
-  enabled: false
+  enabled: true
 
 # example overrides
 # ska-low-mccs:

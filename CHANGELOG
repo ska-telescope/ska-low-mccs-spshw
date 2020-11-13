@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-208 - re-enable webjive chart
 * MCCS-237 - device subpackages
 * MCCS-240 - allow deviceserver overrides
 * MCCS-225 - further work on hardware model, especially antenna

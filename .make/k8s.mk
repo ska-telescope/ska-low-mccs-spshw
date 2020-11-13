@@ -5,11 +5,14 @@ IMAGE_TO_TEST ?= $(DOCKER_REGISTRY_HOST)/$(DOCKER_REGISTRY_USER)/$(PROJECT):late
 TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_HOST is an input!
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
+EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
 CHARTS ?= ska-low-mccs mccs-umbrella mccs-demo
 
 CI_PROJECT_PATH_SLUG ?= ska-low-mccs
 CI_ENVIRONMENT_SLUG ?= ska-low-mccs
+
+helm_add_stable_repo := helm repo add stable https://kubernetes-charts.storage.googleapis.com/
 
 k8s: ## Which kubernetes are we connected to
 	@echo "Kubernetes cluster-info:"
@@ -97,14 +100,24 @@ lint-chart: dep-up ## lint check the helm chart
 	helm lint $(UMBRELLA_CHART_PATH) --with-subcharts  $(CUSTOM_VALUES) ; \
 	echo "<testsuites><testsuite errors=\"$(LINTING_OUTPUT)\" failures=\"0\" name=\"helm-lint\" skipped=\"0\" tests=\"0\" time=\"0.000\" timestamp=\"$(shell date)\"> </testsuite> </testsuites>" > build/linting.xml
 	exit $(LINTING_OUTPUT)
-		
+
 uninstall-chart: ## delete the helm chart release
 	@helm uninstall $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE)
 
 reinstall-chart: uninstall-chart install-chart
 
 upgrade-chart: ## upgrade the  helm chart
-		@helm upgrade --set global.minikube=$(MINIKUBE) --set global.tango_host=$(TANGO_HOST) $(RELEASE_NAME) $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE)
+	@sed -e 's/CI_PROJECT_PATH_SLUG/$(CI_PROJECT_PATH_SLUG)/' $(UMBRELLA_CHART_PATH)values.yaml > generated_values.yaml; \
+		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > values.yaml; \
+		helm upgrade $(RELEASE_NAME) \
+		--set global.minikube=$(MINIKUBE) \
+		--set global.tango_host=$(TANGO_HOST) \
+		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) \
+		--values values.yaml \
+		 $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE); \
+		 rm generated_values.yaml; \
+		 rm values.yaml
+
 
 describe: ## describe Pods executed from Helm chart
 	@for i in `kubectl -n $(KUBE_NAMESPACE) get pods -l app.kubernetes.io/instance=$(RELEASE_NAME) -o=name`; \
@@ -211,3 +224,24 @@ cli:
 
 watch:
 	watch kubectl get all,pv,pvc,ingress -n $(KUBE_NAMESPACE)
+
+
+# traefik needed for webjive/grafana ingress
+
+install-traefik: ## install the helm chart for traefik (in the kube-system namespace). @param: EXTERNAL_IP (i.e. private ip of the master node).
+	@if [ $$(kubectl get all -n kube-system | grep -c traefik) == 4 ]; \
+		then echo "traefik installed already"; exit 0; fi; \
+	TMP=`mktemp -d`; \
+	$(helm_add_stable_repo) && \
+		helm fetch stable/traefik --untar --untardir $$TMP && \
+		helm template $$TMP/traefik -n traefik0 --namespace kube-system \
+			--set externalIP="$(EXTERNAL_IP)" \
+		| kubectl apply -n kube-system -f - && rm -rf $$TMP 
+
+uninstall-traefik: ## delete the helm chart for traefik. @param: EXTERNAL_IP
+	@TMP=`mktemp -d`; \
+	$(helm_add_stable_repo) && \
+	helm fetch stable/traefik --untar --untardir $$TMP && \	
+	helm template $$TMP/traefik -n traefik0 --namespace kube-system \
+			--set externalIP="$(EXTERNAL_IP)" \
+		| kubectl delete -n kube-system -f - && rm -rf $$TMP

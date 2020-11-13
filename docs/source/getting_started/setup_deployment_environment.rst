@@ -178,9 +178,9 @@ deletion.
 deployed to it. There is no need to stop minikube.)
 
 
-Monitoring the cluster with TANGO-grafana
------------------------------------------
-To start up a TANGO-grafana cluster:
+Monitoring the cluster
+----------------------
+To start up a cluster:
 
 .. code-block:: bash
 
@@ -191,8 +191,8 @@ To start up a TANGO-grafana cluster:
    # Export Docker environment variables to Bash
    eval $(minikube docker-env)
 
-Currently, to start up TANGO-grafana with the changes to the MCCS
-Helm charts, need to run up the mccs pods first, if not running:
+
+Now deploy mccs-umbrell chart to the cluster:
 
 .. code-block:: bash
 
@@ -201,51 +201,6 @@ Helm charts, need to run up the mccs pods first, if not running:
   make install-chart
   make watch
 
-After which, continue with the grafana setup:
-
-.. code-block:: bash
-
-   # Navigate to the MCCS scripts folder
-   cd ska-low-mccs/scripts
-   # Run setup script - installs tango-base, webjive, Traefik and
-   # TANGO-grafana charts
-   ./setup_tango_grafana.sh
-
-Instantiate WebJive
--------------------
-To start up WebJive in the cluster (continuing on from the previous instructions):
-
-.. code-block:: bash
-
-   # Navigate to the SKAMPI folder
-   cd skampi
-   # Deploy the WebJive Helm chart
-   make deploy HELM_CHART=webjive
-
-When the pod has been created and is ready, on the local machine navigate to:
-http://integration.engageska-portugal.pt/testdb/devices
-
-Login with credentials found here: https://github.com/ska-telescope/ska-engineering-ui-compose-utils
-
-
-Tidy-up resources
------------------
-
-.. code-block:: bash
-
-   # Remove tango grafana elements
-   cd ska-low-mccs/scripts
-   ./tear_down_tango_grafana.sh
-
-If you need to tear down minikube:
-
-.. code-block:: bash
-
-   # If your k8s cluster is broken... 
-   cd ska-low-mccs/scripts/
-   ./tear_down_minikube.sh
-   exit
-
 If everything went smoothly, when all the pods are running...
 
 .. code-block:: bash
@@ -253,13 +208,32 @@ If everything went smoothly, when all the pods are running...
    # Take a note of the server IP address
    kubectl config view | grep server:
 
-Place IP address and names in /etc/hosts file; for example
+Place IP address and names in /etc/hosts file; for example if the above returns
+172.17.0.3, add
 
 .. code-block:: text
 
    172.17.0.3	grafana.integration.engageska-portugal.pt
    172.17.0.3	tangogql-proxy.integration.engageska-portugal.pt
 
+
+
+WebJive
+-------
+When the pod has been created and is ready, on the local machine navigate to:
+http://integration.engageska-portugal.pt/testdb/devices
+
+Login with credentials found here: https://github.com/ska-telescope/ska-engineering-ui-compose-utils
+
+
+Grafana
+-------
+
+**Currently under rework**
+
+.. code-block:: bash
+
+   # 
 
 To monitor MCCS with Grafana:
 

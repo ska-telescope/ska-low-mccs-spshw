@@ -34,10 +34,10 @@ def devices_to_load():
             "tile_0003",
             "tile_0004",
             "apiu_001",
-            "antenna_000001",
-            "antenna_000002",
-            "antenna_000003",
-            "antenna_000004",
+            # "antenna_000001",  # workaround for MCCS-244
+            # "antenna_000002",
+            # "antenna_000003",
+            # "antenna_000004",
         ],
     }
 

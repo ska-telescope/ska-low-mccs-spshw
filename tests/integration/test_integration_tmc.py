@@ -41,10 +41,10 @@ def devices_to_load():
             "tile_0003",
             "tile_0004",
             "apiu_001",
-            "antenna_000001",
-            "antenna_000002",
-            "antenna_000003",
-            "antenna_000004",
+            # "antenna_000001",  # workaround for MCCS-244
+            # "antenna_000002",
+            # "antenna_000003",
+            # "antenna_000004",
         ],
     }
 
@@ -83,10 +83,11 @@ class TestMccsIntegrationTmc:
             "tile_0002": device_context.get_device("low-mccs/tile/0002"),
             "tile_0003": device_context.get_device("low-mccs/tile/0003"),
             "tile_0004": device_context.get_device("low-mccs/tile/0004"),
-            "antenna_000001": device_context.get_device("low-mccs/antenna/000001"),
-            "antenna_000002": device_context.get_device("low-mccs/antenna/000002"),
-            "antenna_000003": device_context.get_device("low-mccs/antenna/000003"),
-            "antenna_000004": device_context.get_device("low-mccs/antenna/000004"),
+            # workaround for MCCS-244
+            # "antenna_000001": device_context.get_device("low-mccs/antenna/000001"),
+            # "antenna_000002": device_context.get_device("low-mccs/antenna/000002"),
+            # "antenna_000003": device_context.get_device("low-mccs/antenna/000003"),
+            # "antenna_000004": device_context.get_device("low-mccs/antenna/000004"),
         }
         confirm_initialised(device_dict.values())
         return device_dict

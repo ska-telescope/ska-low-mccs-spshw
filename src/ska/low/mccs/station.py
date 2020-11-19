@@ -13,8 +13,8 @@ MccsStation is the Tango device class for the MCCS Station prototype.
 """
 __all__ = ["MccsStation", "main"]
 
-import threading
 import json
+import threading
 
 # PyTango imports
 import tango

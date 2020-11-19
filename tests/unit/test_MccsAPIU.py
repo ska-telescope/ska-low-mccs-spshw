@@ -20,11 +20,20 @@ from ska.base.commands import ResultCode
 from ska.low.mccs.apiu import APIUHardwareManager
 from ska.low.mccs.apiu_simulator import AntennaHardwareSimulator, APIUHardwareSimulator
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/configuration.json",
-    "package": "ska.low.mccs",
-    "device": "apiu_001",
-}
+
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska.low.mccs",
+        "device": "apiu_001",
+    }
 
 
 class TestAntennaHardwareSimulator:

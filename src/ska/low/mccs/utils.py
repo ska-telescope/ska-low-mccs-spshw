@@ -1,13 +1,13 @@
 """
 Module for MCCS utils
 """
-import backoff
 from functools import wraps
 import inspect
-import pkg_resources
 import json
-import jsonschema
+import pkg_resources
 
+import backoff
+import jsonschema
 from tango import Except, ErrSeverity
 from tango.server import Device
 import tango

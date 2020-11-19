@@ -6,10 +6,11 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-import types
 import functools
-import fire
 import json
+import types
+
+import fire
 import tango
 
 from ska.base.commands import ResultCode

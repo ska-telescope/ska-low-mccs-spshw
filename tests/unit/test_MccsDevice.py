@@ -12,17 +12,27 @@
 This module contains the tests for MccsDevice.
 """
 
+import pytest
 from tango import DevState
+
 from ska.base.commands import ResultCode
 from ska.base.control_model import AdminMode, LoggingLevel
 from ska.low.mccs import release
 
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/extra.json",
-    "package": "ska.low.mccs",
-    "device": "device",
-}
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/extra.json",
+        "package": "ska.low.mccs",
+        "device": "device",
+    }
 
 
 class TestMccsDevice(object):

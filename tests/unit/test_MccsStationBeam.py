@@ -11,9 +11,10 @@
 """
 This module contains the tests for MccsStationBeam.
 """
+import json
 import time
 
-import json
+import pytest
 from tango import AttrQuality, EventType
 
 from ska.base.commands import ResultCode
@@ -21,11 +22,19 @@ from ska.base.control_model import ControlMode, HealthState, SimulationMode, Tes
 from ska.low.mccs import release
 
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/configuration.json",
-    "package": "ska.low.mccs",
-    "device": "beam_01",
-}
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska.low.mccs",
+        "device": "beam_01",
+    }
 
 
 # pylint: disable=invalid-name

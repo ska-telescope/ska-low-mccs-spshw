@@ -10,8 +10,6 @@ import pytest
 from tango import DevSource, DevState
 from tango.test_context import DeviceTestContext
 
-from ska.base.control_model import AdminMode, HealthState
-
 
 def pytest_itemcollected(item):
     """
@@ -27,68 +25,61 @@ def pytest_itemcollected(item):
 
 
 @pytest.fixture()
-def mock_device_proxies(mocker):
+def initial_mocks():
+    """
+    Fixture that registers device proxy mocks prior to patching. By
+    default no initial mocks are registered, but this fixture can be
+    overridden by test modules/classes that need to register initial
+    mocks.
+
+    :return: an empty dictionary
+    :rtype: dict
+    """
+    return {}
+
+
+@pytest.fixture()
+def mock_factory(mocker):
+    """
+    Fixture that provides a mock factory for device proxy mocks. This
+    default factory provides vanilla mocks, but this fixture can be
+    overridden by test modules/classes to provide mocks with specified
+    behaviours
+
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+
+    :return: a factory for device proxy mocks
+    :rtype: :py:class:`Mock` (the class itself, not an instance)
+    """
+    return mocker.Mock
+
+
+@pytest.fixture()
+def mock_device_proxies(mocker, mock_factory, initial_mocks):
     """
     Fixture that patches :py:class:`tango.DeviceProxy` to always return
     the same mock for each fqdn
 
     :param mocker: fixture that wraps unittest.Mock
     :type mocker: wrapper for :py:mod:`unittest.mock`
+    :param mock_factory: a factory for producing
+        :py:class:`tango.DeviceProxy` mocks
+    :type mock_factory: object
+    :param initial_mocks: :py:class:`tango.DeviceProxy` mocks to be used
+        for given FQDNs
+    :type initial_mocks: dict
+
     :return: a dictionary (but don't access it directly, access it
         through :py:class:`tango.DeviceProxy` calls)
     :rtype: dict
     """
-
-    class MockDeviceProxy(mocker.Mock):
-        """
-        A mock class for DeviceProxy with some DeviceProxy-specific
-        behaviours:
-
-        * read_attribute returns mock events, with specific attribute
-          values for healthState and adminMode
-        """
-
-        class MockDeviceAttribute:
-            """
-            A class for mock device attributes, such as is returned by
-            an attribute read or an attribute change event.
-            """
-
-            _VALUES = {
-                "healthState": HealthState.UNKNOWN,
-                "adminMode": AdminMode.ONLINE,
-            }
-
-            def __init__(self, name):
-                """
-                Create a new instance
-
-                :param name: the name of the device attribute
-                :type name: string
-                """
-                self.name = name
-                self.value = self._VALUES[name] if name in self._VALUES else "MockValue"
-                self.quality = "MockQuality"
-
-        def read_attribute(self, name, *args, **kwargs):
-            """
-            Pretent to read an attribute
-
-            :param name: the name of the attribute to be read
-            :type name: str
-            :param args: position args to read_attribute
-            :type args: list
-            :param kwargs: named args to read_attribute
-            :type kwargs: dict
-
-            :return: a mock device attribute for the named attribute
-            :rtype: :py:class:`MockDeviceAttribute`
-            """
-            return self.MockDeviceAttribute(name)
-
-    device_proxy_mocks = defaultdict(MockDeviceProxy)
-    mocker.patch("tango.DeviceProxy", side_effect=lambda fqdn: device_proxy_mocks[fqdn])
-    return device_proxy_mocks
+    mocks = defaultdict(mock_factory, initial_mocks)
+    mocker.patch(
+        "tango.DeviceProxy", side_effect=lambda fqdn, *args, **kwargs: mocks[fqdn]
+    )
+    return mocks
 
 
 @backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)

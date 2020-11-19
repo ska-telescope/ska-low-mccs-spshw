@@ -10,6 +10,7 @@
 This module contains the tests for the ska.low.mccs.utils module.
 """
 import json
+
 import jsonschema
 import pytest
 from tango import DevFailed, ErrSeverity

@@ -11,15 +11,25 @@
 """
 This module contains the tests for MccsTransientBuffer.
 """
+import pytest
 
 from tango import AttrQuality, EventType
 from ska.base.control_model import HealthState
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/extra.json",
-    "package": "ska.low.mccs",
-    "device": "transientbuffer",
-}
+
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/extra.json",
+        "package": "ska.low.mccs",
+        "device": "transientbuffer",
+    }
 
 
 class TestMccsTransientBuffer(object):

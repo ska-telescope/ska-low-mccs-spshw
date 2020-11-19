@@ -3,9 +3,9 @@ This module contains pytest fixtures and other test setups common to
 all ska.low.mccs tests: unit, integration and functional (BDD)
 """
 from collections import defaultdict
+import json
 import logging
 
-import json
 import pytest
 
 
@@ -84,59 +84,7 @@ def _load_devices(path, device_names):
     return devices_info
 
 
-@pytest.fixture(scope="module")
-def devices_to_load(request):
-    """
-    Fixture that returns the "devices_to_load" variable from the module
-    under test. This variable is a dictionary containing three entries:
-
-    * "path": the path to a JSON file containing device configuration
-      information in dsconfig format
-    * "package": the package from which classes will be loaded; for
-      example, if the package is "ska.low.mccs", then if the JSON
-      configuration file refers to a class named "MccsController", then this
-      will be interpretated as the ska.low.mccs.MccsController class
-    * "devices": a list of names of the devices that are to be loaded.
-
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
-
-    :return: the "device_to_load" global from the test module,
-        containing a specification of the device to be included in the
-        TANGO test context
-    :rtype: dict
-    """
-    return request.module.devices_to_load
-
-
-@pytest.fixture(scope="module")
-def device_to_load(request):
-    """
-    Fixture that returns the "device_to_load" variable from the module
-    under test. This variable is a dictionary containing three entries:
-
-    * "path": the path to a JSON file containing device configuration
-      information in dsconfig format
-    * "package": the package from which classes will be loaded; for
-      example, if the package is "ska.low.mccs", then if the JSON
-      configuration file refers to a class named "MccsController", then this
-      will be interpretated as the ska.low.mccs.MccsController class
-    * "device": the name of the devices that is to be loaded.
-
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
-
-    :return: the "device_to_load" global from the test module,
-        containing a specification of the device to be included in the
-        TANGO test context
-    :rtype: dict
-    """
-    return getattr(request.module, "device_to_load", None)
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def device_info(device_to_load):
     """
     Constructs a device_info dictionary in the form required by
@@ -164,7 +112,7 @@ def device_info(device_to_load):
     return {"class": device_class, "properties": devices[0]["devices"][0]["properties"]}
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def devices_info(devices_to_load):
     """
     Constructs a devices_info dictionary in the form required by

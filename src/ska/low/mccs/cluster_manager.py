@@ -12,11 +12,11 @@
 An implementation of the Cluster Manager Device Server for the MCCS
 based upon architecture in SKA-TEL-LFAA-06000052-02.
 """
+import json
 import threading
 
 from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command, AttrWriteType
-import json
 
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.base.control_model import HealthState, SimulationMode

@@ -17,11 +17,20 @@ from ska.base.control_model import ControlMode, HealthState, SimulationMode, Tes
 from ska.base.control_model import LoggingLevel
 from ska.low.mccs import release
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/extra.json",
-    "package": "ska.low.mccs",
-    "device": "telstate",
-}
+
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/extra.json",
+        "package": "ska.low.mccs",
+        "device": "telstate",
+    }
 
 
 # Device test case

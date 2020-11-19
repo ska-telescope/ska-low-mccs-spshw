@@ -10,16 +10,26 @@
 This module contains the tests for the ska.low.mccs.tile.demo_tile
 module
 """
+import pytest
+
 from ska.base.control_model import HealthState, SimulationMode
 from ska.low.mccs.tile.demo_tile import DemoTile
 
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/configuration.json",
-    "package": "ska.low.mccs",
-    "device": "tile_0001",
-    "patch": DemoTile,
-}
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska.low.mccs",
+        "device": "tile_0001",
+        "patch": DemoTile,
+    }
 
 
 class TestDemoTile:

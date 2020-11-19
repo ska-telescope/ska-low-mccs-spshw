@@ -11,11 +11,11 @@
 """
 This module contains the tests for MccsStation.
 """
+import json
 import logging
 import threading
 import time
 
-import json
 import pytest
 import tango
 from tango import DevState
@@ -32,11 +32,82 @@ from ska.base.control_model import (
 from ska.low.mccs import MccsStation, release
 from ska.low.mccs.station import StationPowerManager
 
-device_to_load = {
-    "path": "charts/ska-low-mccs/data/configuration.json",
-    "package": "ska.low.mccs",
-    "device": "station_001",
-}
+
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska.low.mccs",
+        "device": "station_001",
+    }
+
+
+@pytest.fixture()
+def mock_factory(mocker):
+    """
+    Fixture that provides a mock factory for device proxy mocks. This
+    default factory provides vanilla mocks, but this fixture can be
+    overridden by test modules/classes to provide mocks with specified
+    behaviours
+
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+
+    :return: a factory for device proxy mocks
+    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+        instance)
+    """
+    _VALUES = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
+
+    def _mock_attribute(name, *args, **kwargs):
+        """
+        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
+        for a given attribute name.
+
+        :param name: name of the attribute
+        :type name: str
+        :param args: positional args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type args: list
+        :param kwargs: named args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type kwargs: dict
+
+
+        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
+            instance, with name, value and quality values
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mocker.Mock()
+        mock.name = name
+        mock.value = _VALUES.get(name, "MockValue")
+        mock.quality = "MockQuality"
+        return mock
+
+    def _mock_device():
+        """
+        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
+        with its :py:meth:`tango.DeviceProxy.read_attribute` method
+        mocked to return :py:class:`tango.DeviceAttribute` mocks.
+
+        :return: a basic mock for a :py:class:`tango.DeviceProxy`
+            instance,
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mocker.Mock()
+        mock.read_attribute.side_effect = _mock_attribute
+        return mock
+
+    return _mock_device
 
 
 class TestMccsStation:

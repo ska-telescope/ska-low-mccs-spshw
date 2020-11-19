@@ -13,9 +13,9 @@ Prototype TANGO device server for the MCSS Station Beam
 """
 __all__ = ["MccsStationBeam", "main"]
 
+import json
 import threading
 
-import json
 from tango import EnsureOmniThread
 from tango.server import attribute, command
 from tango.server import device_property

@@ -13,31 +13,40 @@ This test module contains integration tests that exercise the power
 management functionality of the SKA Low MCCS system.
 """
 
+import pytest
 from tango import DevState
 
 from conftest import confirm_initialised
 
 
-devices_to_load = {
-    "path": "charts/ska-low-mccs/data/configuration.json",
-    "package": "ska.low.mccs",
-    "devices": [
-        "controller",
-        "subarray_01",
-        "subarray_02",
-        "station_001",
-        "station_002",
-        "tile_0001",
-        "tile_0002",
-        "tile_0003",
-        "tile_0004",
-        "apiu_001",
-        "antenna_000001",
-        "antenna_000002",
-        "antenna_000003",
-        "antenna_000004",
-    ],
-}
+@pytest.fixture()
+def devices_to_load():
+    """
+    Fixture that specifies the devices to be loaded for testing
+
+    :return: specification of the devices to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska.low.mccs",
+        "devices": [
+            "controller",
+            "subarray_01",
+            "subarray_02",
+            "station_001",
+            "station_002",
+            "tile_0001",
+            "tile_0002",
+            "tile_0003",
+            "tile_0004",
+            "apiu_001",
+            "antenna_000001",
+            "antenna_000002",
+            "antenna_000003",
+            "antenna_000004",
+        ],
+    }
 
 
 class TestPowerManagement:

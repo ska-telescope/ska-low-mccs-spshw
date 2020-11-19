@@ -222,7 +222,9 @@ class DeviceHealthMonitor:
         :param event_quality: the quality of the change event
         :type event_quality: :py:class:`tango.AttrQuality`
         """
-        assert event_name.lower() == "healthstate"
+        assert (
+            event_name.lower() == "healthstate"
+        ), f"healthState changed callback called but event_name is {event_name}"
         self._device_health_state = event_value
         self._compute_health()
 

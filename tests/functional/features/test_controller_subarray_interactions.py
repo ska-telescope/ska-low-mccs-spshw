@@ -2,35 +2,46 @@
 This module contains the pytest-bdd implementation of the Gherkin BDD
 tests for TMC and MCCS interactions
 """
-from ska.base.commands import ResultCode
-import pytest
 import json
+
+import pytest
 from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState, DevSource
+
+from ska.base.commands import ResultCode
 from ska.base.control_model import AdminMode, ObsState, HealthState
+
 from conftest import confirm_initialised
 
 
-devices_to_load = {
-    "path": "charts/ska-low-mccs/data/configuration.json",
-    "package": "ska.low.mccs",
-    "devices": [
-        "controller",
-        "subarray_01",
-        "subarray_02",
-        "station_001",
-        "station_002",
-        "tile_0001",
-        "tile_0002",
-        "tile_0003",
-        "tile_0004",
-        "apiu_001",
-        "antenna_000001",
-        "antenna_000002",
-        "antenna_000003",
-        "antenna_000004",
-    ],
-}
+@pytest.fixture(scope="module")
+def devices_to_load():
+    """
+    Fixture that specifies the devices to be loaded for testing
+
+    :return: specification of the devices to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/configuration.json",
+        "package": "ska.low.mccs",
+        "devices": [
+            "controller",
+            "subarray_01",
+            "subarray_02",
+            "station_001",
+            "station_002",
+            "tile_0001",
+            "tile_0002",
+            "tile_0003",
+            "tile_0004",
+            "apiu_001",
+            "antenna_000001",
+            "antenna_000002",
+            "antenna_000003",
+            "antenna_000004",
+        ],
+    }
 
 
 @pytest.fixture(scope="module")
@@ -126,12 +137,15 @@ def test_start_up_low_telescope(devices):
 
 
 @given(parsers.parse("we have mvplow running an instance of {component_name}"))
-def we_have_mvplow_running_an_instance_of(devices, component_name):
+def we_have_mvplow_running_an_instance_of(devices, devices_to_load, component_name):
     """
     Asserts the existence/availability of a component
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param devices_to_load: fixture that provides a specification of the
+        devices that are to be included in the devices_info dictionary
+    :type devices_to_load: dictionary
     :param component_name: name of the component
     :type component_name: str
     """
@@ -407,19 +421,22 @@ def test_configure_a_subarray(devices):
 
 @given(parsers.parse("we have a successfully {desired_state} subarray"))
 def we_have_a_successfully_configured_and_or_allocated_subarray(
-    devices, desired_state, cached_obsstate
+    devices, devices_to_load, desired_state, cached_obsstate
 ):
     """
     Get the subarray into an configured and/or allocated state
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param devices_to_load: fixture that provides a specification of the
+        devices that are to be included in the devices_info dictionary
+    :type devices_to_load: dictionary
     :param desired_state: The desired state to be in
     :type desired_state: str
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate: dict<string, :py:class:`ska.base.control_model.ObsState`>
     """
-    we_have_mvplow_running_an_instance_of(devices, "mccs")
+    we_have_mvplow_running_an_instance_of(devices, devices_to_load, "mccs")
     component_is_ready_to_action_a_subarray(devices, "mccs", "allocate")
     subarray_obsstate_is_idle_or_empty(devices, cached_obsstate)
     tmc_allocates_a_subarray_with_validity_parameters(devices, "valid")

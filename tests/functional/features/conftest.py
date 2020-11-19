@@ -2,11 +2,13 @@
 This module contains pytest fixtures and other test setups for the
 ska.low.mccs functional (BDD) tests
 """
-import backoff
+from collections import defaultdict
 from contextlib import contextmanager
-import pytest
+import json
 import socket
 
+import backoff
+import pytest
 import tango
 from tango import DevState
 from tango.test_context import MultiDeviceTestContext, get_host_ip
@@ -92,6 +94,106 @@ def _tango_test_context(_devices_info, _module_mocker):
     )
 
     return MultiDeviceTestContext(_devices_info, process=True, host=HOST, port=PORT)
+
+
+def _load_data_from_json(path):
+    """
+    Loads a dataset from a named json file.
+
+    :param path: path to the JSON file from which the dataset is to be
+        loaded.
+    :type path: string
+
+    :return: data loaded and deserialised from a JSON data file
+    :rtype: anything JSON-serialisable
+    """
+    with open(path, "r") as json_file:
+        return json.load(json_file)
+
+
+def _load_devices(path, device_names):
+    """
+    Loads device configuration data for specified devices from a
+    specified JSON configuration file.
+
+    :param path: path to the JSON configuration file
+    :type path: string
+    :param device_names: names of the devices for which configuration
+        data should be loaded
+    :type device_names: list of string
+
+    :return: a devices_info spec in a format suitable for use by as
+        input to a :py:class:`tango.test_context.MultiDeviceTestContext`
+    :rtype: dict
+    """
+    configuration = _load_data_from_json(path)
+    devices_by_class = {}
+
+    servers = configuration["servers"]
+    for server in servers:
+        for device_name in servers[server]:
+            if device_name in device_names:
+                for class_name, device_info in servers[server][device_name].items():
+                    if class_name not in devices_by_class:
+                        devices_by_class[class_name] = []
+                    for fqdn, device_specs in device_info.items():
+                        devices_by_class[class_name].append(
+                            {"name": fqdn, **device_specs}
+                        )
+
+    devices_info = []
+    for device_class in devices_by_class:
+        device_info = []
+        for device in devices_by_class[device_class]:
+            device_info.append(device)
+
+        devices_info.append({"class": device_class, "devices": device_info})
+
+    return devices_info
+
+
+@pytest.fixture(scope="module")
+def devices_info(devices_to_load):
+    """
+    Constructs a devices_info dictionary in the form required by
+    tango.test_context.MultiDeviceTestContext, with devices as specified
+    by the devices_to_load fixture
+
+    :param devices_to_load: fixture that provides a specification of the
+        devices that are to be included in the devices_info dictionary
+    :type devices_to_load: dictionary
+
+    :return: a specification of devices
+    :rtype: dict
+    """
+    devices = _load_devices(
+        path=devices_to_load["path"], device_names=devices_to_load["devices"]
+    )
+
+    patches = devices_to_load["patch"] if "patch" in devices_to_load else {}
+
+    devices_to_patch = defaultdict(list)
+    devices_to_import = defaultdict(list)
+
+    for group in devices:
+        for device in group["devices"]:
+            if device["name"] in patches:
+                patch = patches[device["name"]]
+                devices_to_patch[patch].append(device)
+            else:
+                devices_to_import[group["class"]].append(device)
+
+    patched_devices = [
+        {"class": cls, "devices": devices_to_patch[cls]} for cls in devices_to_patch
+    ]
+
+    package = __import__(devices_to_load["package"], fromlist=devices_to_import.keys())
+    imported_devices = [
+        {"class": getattr(package, cls), "devices": devices_to_import[cls]}
+        for cls in devices_to_import
+    ]
+
+    return imported_devices + patched_devices
 
 
 @pytest.fixture(scope="module")

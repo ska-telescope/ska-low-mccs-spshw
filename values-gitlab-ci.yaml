@@ -12,3 +12,4 @@ ska-low-mccs:
 
 webjive:
   enabled: false
+  minikube: false

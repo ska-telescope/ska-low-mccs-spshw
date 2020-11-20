@@ -12,7 +12,7 @@ CHARTS ?= ska-low-mccs mccs-umbrella mccs-demo
 CI_PROJECT_PATH_SLUG ?= ska-low-mccs
 CI_ENVIRONMENT_SLUG ?= ska-low-mccs
 
-helm_add_stable_repo := helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+helm_add_stable_repo := helm repo add stable https://charts.helm.sh/stable
 
 k8s: ## Which kubernetes are we connected to
 	@echo "Kubernetes cluster-info:"
@@ -225,23 +225,3 @@ cli:
 watch:
 	watch kubectl get all,pv,pvc,ingress -n $(KUBE_NAMESPACE)
 
-
-# traefik needed for webjive/grafana ingress
-
-install-traefik: ## install the helm chart for traefik (in the kube-system namespace). @param: EXTERNAL_IP (i.e. private ip of the master node).
-	@if [ $$(kubectl get all -n kube-system | grep -c traefik) == 4 ]; \
-		then echo "traefik installed already"; exit 0; fi; \
-	TMP=`mktemp -d`; \
-	$(helm_add_stable_repo) && \
-		helm fetch stable/traefik --untar --untardir $$TMP && \
-		helm template $$TMP/traefik -n traefik0 --namespace kube-system \
-			--set externalIP="$(EXTERNAL_IP)" \
-		| kubectl apply -n kube-system -f - && rm -rf $$TMP 
-
-uninstall-traefik: ## delete the helm chart for traefik. @param: EXTERNAL_IP
-	@TMP=`mktemp -d`; \
-	$(helm_add_stable_repo) && \
-	helm fetch stable/traefik --untar --untardir $$TMP && \	
-	helm template $$TMP/traefik -n traefik0 --namespace kube-system \
-			--set externalIP="$(EXTERNAL_IP)" \
-		| kubectl delete -n kube-system -f - && rm -rf $$TMP

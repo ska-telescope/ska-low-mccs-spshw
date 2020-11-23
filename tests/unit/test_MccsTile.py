@@ -382,7 +382,7 @@ class TestMccsTileCommands:
             ),
         ),
     )
-    def test_command_not_implemeented(self, device_under_test, device_command, arg):
+    def test_command_not_implemented(self, device_under_test, device_command, arg):
         """
         A very weak test for commands that are not implemented yet.
 

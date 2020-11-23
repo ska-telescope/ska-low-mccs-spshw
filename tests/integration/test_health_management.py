@@ -44,10 +44,10 @@ def devices_to_load():
             "tile_0003",
             "tile_0004",
             "apiu_001",
-            "antenna_000001",
-            "antenna_000002",
-            "antenna_000003",
-            "antenna_000004",
+            # "antenna_000001",  # workaround for MCCS-244
+            # "antenna_000002",
+            # "antenna_000003",
+            # "antenna_000004",
         ],
         "patch": {
             "low-mccs/tile/0001": DemoTile,
@@ -88,10 +88,12 @@ def test_controller_health_rollup(device_context):
     tile_3 = device_context.get_device("low-mccs/tile/0003")
     tile_4 = device_context.get_device("low-mccs/tile/0004")
     apiu_1 = device_context.get_device("low-mccs/apiu/001")
-    antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-    antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-    antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-    antenna_4 = device_context.get_device("low-mccs/antenna/000004")
+
+    # workaround for MCCS-244
+    # antenna_1 = device_context.get_device("low-mccs/antenna/000001")
+    # antenna_2 = device_context.get_device("low-mccs/antenna/000002")
+    # antenna_3 = device_context.get_device("low-mccs/antenna/000003")
+    # antenna_4 = device_context.get_device("low-mccs/antenna/000004")
 
     confirm_initialised(
         [
@@ -103,10 +105,10 @@ def test_controller_health_rollup(device_context):
             tile_3,
             tile_4,
             apiu_1,
-            antenna_1,
-            antenna_2,
-            antenna_3,
-            antenna_4,
+            # antenna_1,  # workaround for MCCS-244
+            # antenna_2,
+            # antenna_3,
+            # antenna_4,
         ]
     )
 
@@ -194,10 +196,12 @@ def test_subarray_health_rollup(device_context):
     tile_3 = device_context.get_device("low-mccs/tile/0003")
     tile_4 = device_context.get_device("low-mccs/tile/0004")
     apiu_1 = device_context.get_device("low-mccs/apiu/001")
-    antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-    antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-    antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-    antenna_4 = device_context.get_device("low-mccs/antenna/000004")
+
+    # workaround for MCCS-244
+    # antenna_1 = device_context.get_device("low-mccs/antenna/000001")
+    # antenna_2 = device_context.get_device("low-mccs/antenna/000002")
+    # antenna_3 = device_context.get_device("low-mccs/antenna/000003")
+    # antenna_4 = device_context.get_device("low-mccs/antenna/000004")
 
     confirm_initialised(
         [
@@ -211,10 +215,10 @@ def test_subarray_health_rollup(device_context):
             tile_3,
             tile_4,
             apiu_1,
-            antenna_1,
-            antenna_2,
-            antenna_3,
-            antenna_4,
+            # antenna_1,  # workaround for MCCS-244
+            # antenna_2,
+            # antenna_3,
+            # antenna_4,
         ]
     )
 

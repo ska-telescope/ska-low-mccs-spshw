@@ -126,7 +126,9 @@ class MccsStation(SKAObsDevice):
 
             device._subarray_id = 0
             device._tile_fqdns = list(device.TileFQDNs)
-            device._antenna_fqdns = list(device.AntennaFQDNs)
+            device._antenna_fqdns = (
+                list(device.AntennaFQDNs) if device.AntennaFQDNs is not None else []
+            )
             device._beam_fqdns = []
             device._transient_buffer_fqdn = ""
             device._delay_centre = []

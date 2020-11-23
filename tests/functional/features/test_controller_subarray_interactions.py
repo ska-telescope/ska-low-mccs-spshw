@@ -36,10 +36,10 @@ def devices_to_load():
             "tile_0003",
             "tile_0004",
             "apiu_001",
-            "antenna_000001",
-            "antenna_000002",
-            "antenna_000003",
-            "antenna_000004",
+            # "antenna_000001",  # workaround for MCCS-244
+            # "antenna_000002",
+            # "antenna_000003",
+            # "antenna_000004",
         ],
     }
 
@@ -85,11 +85,13 @@ def devices(tango_context):
         "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
         "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
         "apiu_001": tango_context.get_device("low-mccs/apiu/001"),
-        "antenna_000001": tango_context.get_device("low-mccs/antenna/000001"),
-        "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
-        "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
-        "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
+        # workaround for MCCS-244
+        # "antenna_000001": tango_context.get_device("low-mccs/antenna/000001"),
+        # "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
+        # "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
+        # "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
     }
+
     # Bypass the cache because stationFQDNs etc are polled attributes,
     # and having written to them, we don't want to have to wait a
     # polling period to test that the write has stuck.

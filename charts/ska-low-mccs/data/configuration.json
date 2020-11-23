@@ -71,7 +71,7 @@
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002"
                             ],
-                            "AntennaFQDNs": [
+                            "MCCS-244_AntennaFQDNs": [
                                 "low-mccs/antenna/000001",
                                 "low-mccs/antenna/000002"
                             ],
@@ -93,7 +93,7 @@
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
                             ],
-                            "AntennaFQDNs": [
+                            "MCCS-244_AntennaFQDNs": [
                                 "low-mccs/antenna/000003",
                                 "low-mccs/antenna/000004"
                             ],

@@ -659,8 +659,10 @@ class MccsController(SKAMaster):
             super().do()
 
             device = self.target
+            device._command_result = None
             device._build_state = release.get_release_info()
             device._version_id = release.version
+            device.set_change_event("commandResult", True, False)
 
             if device.MccsSubarrays is None:
                 device._subarray_fqdns = list()
@@ -819,6 +821,21 @@ class MccsController(SKAMaster):
         self.push_change_event("healthState", health)
 
     @attribute(
+        dtype="DevLong",
+        format="%i",
+        polling_period=1000,
+        doc="Result code from the previously completed command",
+    )
+    def commandResult(self):
+        """
+        Return the commandResult attribute.
+
+        :return: commandResult attribute
+        :rtype: :py:class:`~ska.base.commands.ResultCode`
+        """
+        return self._command_result
+
+    @attribute(
         dtype="DevUShort",
         label="Command progress percentage",
         polling_period=3000,
@@ -859,6 +876,29 @@ class MccsController(SKAMaster):
     # Commands
     # --------
 
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
+    def On(self):
+        """
+        Turn the controller on
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        :return: Attribute :py:attr:`onResultCode` published to subscribers
+        :rtype: :py:class:`~ska.base.commands.ResultCode`
+        """
+        command = self.get_command_object("On")
+        (result_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
+
     class OnCommand(SKABaseDevice.OnCommand):
         """
         Class for handling the On command.
@@ -886,6 +926,29 @@ class MccsController(SKAMaster):
                     return (ResultCode.FAILED, "On command failed")
             except PowerManagerError as pme:
                 return (ResultCode.FAILED, f"On command failed: {pme}")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
+    def Off(self):
+        """
+        Turn the controller off
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        :return: Attribute :py:attr:`offResultCode` published to subscribers
+        :rtype: :py:class:`~ska.base.commands.ResultCode`
+        """
+        command = self.get_command_object("Off")
+        (result_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
@@ -959,8 +1022,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyLow")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
+        (result_code, message) = handler()
+        return [[result_code], [message]]
 
     class StandbyFullCommand(ResponseCommand):
         """
@@ -1005,8 +1068,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyFull")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
+        (result_code, message) = handler()
+        return [[result_code], [message]]
 
     class OperateCommand(ResponseCommand):
         """
@@ -1061,8 +1124,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Operate")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
+        (result_code, message) = handler()
+        return [[result_code], [message]]
 
     def is_Operate_allowed(self):
         """
@@ -1119,6 +1182,8 @@ class MccsController(SKAMaster):
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :return: Attribute :py:attr:`allocateResultCode` published to subscribers
+        :rtype: :py:class:`~ska.base.commands.ResultCode`
 
         :example:
 
@@ -1134,10 +1199,11 @@ class MccsController(SKAMaster):
                 )
             )
         """
-
         handler = self.get_command_object("Allocate")
-        (resultcode, message) = handler(argin)
-        return [[resultcode], [message]]
+        (result_code, message) = handler(argin)
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
 
     class AllocateCommand(ResponseCommand):
         """
@@ -1165,10 +1231,12 @@ class MccsController(SKAMaster):
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
 
+            controllerdevice = self.target
+
             args = json.loads(argin)
             subarray_id = args["subarray_id"]
             station_ids = args["station_ids"]
-            controllerdevice = self.target
+
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
             # Allocation request checks
@@ -1334,10 +1402,14 @@ class MccsController(SKAMaster):
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :return: Attribute :py:attr:`releaseResultCode` published to subscribers
+        :rtype: :py:class:`~ska.base.commands.ResultCode`
         """
         handler = self.get_command_object("Release")
-        (resultcode, message) = handler(argin)
-        return [[resultcode], [message]]
+        (result_code, message) = handler(argin)
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
 
     class ReleaseCommand(ResponseCommand):
         """
@@ -1494,8 +1566,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Maintenance")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
+        (result_code, message) = handler()
+        return [[result_code], [message]]
 
 
 # ----------

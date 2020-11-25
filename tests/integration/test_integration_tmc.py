@@ -156,15 +156,13 @@ class TestMccsIntegrationTmc:
         assert devices["station_001"].State() == DevState.ON
         assert devices["station_002"].State() == DevState.ON
 
-        # # A second call to On should have no side-effects
-        # self.async_command(
-        #     device=devices["controller"], command="On", expected_result=None
-        # )
-        # assert devices["controller"].State() == DevState.ON
-        # assert devices["subarray_01"].State() == DevState.OFF
-        # assert devices["subarray_02"].State() == DevState.OFF
-        # assert devices["station_001"].State() == DevState.ON
-        # assert devices["station_002"].State() == DevState.ON
+        # A second call to On should have no side-effects
+        self.assert_command(device=devices["controller"], command="On")
+        assert devices["controller"].State() == DevState.ON
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert devices["subarray_02"].State() == DevState.OFF
+        assert devices["station_001"].State() == DevState.ON
+        assert devices["station_002"].State() == DevState.ON
 
     def test_controller_off(self, devices):
         """

@@ -1,6 +1,6 @@
 """
 This module contains pytest fixtures and other test setups for the
-ska.low.mccs unit tests
+ska.low.mccs unit tests.
 """
 import backoff
 from collections import defaultdict
@@ -15,7 +15,7 @@ def pytest_itemcollected(item):
     """
     pytest hook implementation; add the "forked" custom mark to all
     tests that use the `device_context` fixture, causing them to be
-    sandboxed in their own process
+    sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
     :type item: a collected test
@@ -44,14 +44,14 @@ def mock_factory(mocker):
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
     overridden by test modules/classes to provide mocks with specified
-    behaviours
+    behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
     :type mocker: wrapper for :py:mod:`unittest.mock`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`Mock` (the class itself, not an instance)
+    :rtype: :py:class:`unittest.Mock` (the class itself, not an instance)
     """
     return mocker.Mock
 
@@ -60,7 +60,7 @@ def mock_factory(mocker):
 def mock_device_proxies(mocker, mock_factory, initial_mocks):
     """
     Fixture that patches :py:class:`tango.DeviceProxy` to always return
-    the same mock for each fqdn
+    the same mock for each fqdn.
 
     :param mocker: fixture that wraps unittest.Mock
     :type mocker: wrapper for :py:mod:`unittest.mock`

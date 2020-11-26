@@ -7,7 +7,7 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains unit tests for the ska.low.mccs.events module
+This module contains unit tests for the ska.low.mccs.events module.
 """
 from contextlib import nullcontext
 import pytest
@@ -38,8 +38,7 @@ class TestEventSubscriptionHandler:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdn = "mock/mock/1"
         mock_device_proxy = tango.DeviceProxy(fqdn)
@@ -58,7 +57,7 @@ class TestEventSubscriptionHandler:
         """
         Test that when an instance's push_event subscription callback
         method is called, it passes the event on by invoking its own
-        registered callbacks
+        registered callbacks.
 
         :param mocker: fixture that wraps unittest.mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -68,8 +67,7 @@ class TestEventSubscriptionHandler:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdn = "mock/mock/1"
         event_name = "mock_event"
@@ -123,8 +121,7 @@ class TestEventSubscriptionHandler:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdn = "mock/mock/1"
         event_name = "mock_event"
@@ -144,7 +141,7 @@ class TestEventSubscriptionHandler:
 
 class TestDeviceEventManager:
     """
-    This class contains unit tests for the DeviceEventManager class
+    This class contains unit tests for the DeviceEventManager class.
     """
 
     @pytest.mark.parametrize(
@@ -179,10 +176,10 @@ class TestDeviceEventManager:
 
         :param allowed_events: list of allowed events to pass during
             initialisation of the instance under test
-        :type allowed_events: list of str or None
+        :type allowed_events: list(str) or None
         :param event_spec: specification of the event or events to try
             to subscribe to
-        :type event_spec: str, or list of str, or None
+        :type event_spec: str or list(str) or None
         :param raise_context: a context indicating whether this test
             should raise a Value error or not
         :type raise_context: context
@@ -194,8 +191,7 @@ class TestDeviceEventManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         device_event_manager = DeviceEventManager("mock/mock/1", logger, allowed_events)
 
@@ -204,10 +200,10 @@ class TestDeviceEventManager:
 
     def test_subscription(self, mocker, mock_device_proxies, logger):
         """
-        Test subscription: specifically, test that when a
-        a client subscribes to a specified event from a
-        DeviceEventManager, the device managed by that DeviceEventManager
-        receives a subscribe_event call for the specified event.
+        Test subscription: specifically, test that when a a client
+        subscribes to a specified event from a DeviceEventManager, the
+        device managed by that DeviceEventManager receives a
+        subscribe_event call for the specified event.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -217,8 +213,7 @@ class TestDeviceEventManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdn = "mock/mock/1"
         device_event_manager = DeviceEventManager(fqdn, logger)
@@ -242,10 +237,10 @@ class TestDeviceEventManager:
 
     def test_event_pushing(self, mocker, mock_device_proxies, logger):
         """
-        Test that when a EventSubscriptionHandler's push_event
-        callback method is called, this DeviceEventMonitor receives the
-        event and passes it down the change by invoking its own
-        registered callbacks
+        Test that when a EventSubscriptionHandler's push_event callback
+        method is called, this DeviceEventMonitor receives the event and
+        passes it down the change by invoking its own registered
+        callbacks.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -255,8 +250,7 @@ class TestDeviceEventManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
 
         event_count = 2  # test should pass for any positive number
@@ -295,7 +289,7 @@ class TestDeviceEventManager:
 
 class TestEventManager:
     """
-    This class contains unit tests for the EventManager class
+    This class contains unit tests for the EventManager class.
     """
 
     @pytest.mark.parametrize(
@@ -338,10 +332,10 @@ class TestEventManager:
 
         :param allowed_fqdns: list of FQDNs to pass during
             initialisation of the instance under test
-        :type allowed_fqdns: list of str or None
+        :type allowed_fqdns: list(str) or None
         :param fqdn_spec: specification of the fqdn/s of device/s to
             attempt event subscription against
-        :type fqdn_spec: str, or list of str, or None
+        :type fqdn_spec: str or list(str) or None
         :param raise_context: a context indicating whether this test
             should raise a Value error or not
         :type raise_context: context
@@ -353,8 +347,7 @@ class TestEventManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         event_manager = EventManager(logger, fqdns=allowed_fqdns)
 
@@ -365,10 +358,10 @@ class TestEventManager:
 
     def test_subscribe(self, mocker, mock_device_proxies, logger):
         """
-        Test subscription: specifically, test that when a
-        a client uses an EventManager to subscribe to a specified event
-        from a specified device, the device receives a subscribe_event
-        call for the specified event.
+        Test subscription: specifically, test that when a a client uses
+        an EventManager to subscribe to a specified event from a
+        specified device, the device receives a subscribe_event call for
+        the specified event.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -378,8 +371,7 @@ class TestEventManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number
@@ -408,8 +400,8 @@ class TestEventManager:
     def test_event_pushing(self, mocker, mock_device_proxies, logger):
         """
         Test that when an device pushes an event, the event moves down
-        the tree and eventually causes the EventManager instance to
-        call its own callbacks
+        the tree and eventually causes the EventManager instance to call
+        its own callbacks.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -419,8 +411,7 @@ class TestEventManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number

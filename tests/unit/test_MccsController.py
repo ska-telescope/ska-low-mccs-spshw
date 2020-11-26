@@ -9,7 +9,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """
-Contains the tests for the MccsController Tango device_under_test prototype.
+Contains the tests for the MccsController Tango device_under_test
+prototype.
 """
 
 import json
@@ -53,7 +54,7 @@ class ControllerWithFailableDevices(MccsController):
     def simulateHealthStateChange(self, argin):
         """
         Makes this controller think that a device that it manages has
-        had a change of healthState
+        had a change of healthState.
 
         :param argin: JSON-encode dict with "fqdn" and "health" values
         :type argin: str
@@ -70,7 +71,7 @@ class ControllerWithFailableDevices(MccsController):
     def simulateAdminModeChange(self, argin):
         """
         Makes this controller think that a device that it manages has
-        had a change of adminMode
+        had a change of adminMode.
 
         :param argin: JSON-encode dict with "fqdn" and "adminMode" values
         :type argin: str
@@ -87,7 +88,7 @@ class ControllerWithFailableDevices(MccsController):
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -106,7 +107,7 @@ def mock_factory(mocker):
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
     overridden by test modules/classes to provide mocks with specified
-    behaviours
+    behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -193,7 +194,7 @@ class TestMccsController:
 
     def test_State(self, device_under_test):
         """
-        Test for State
+        Test for State.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -204,7 +205,7 @@ class TestMccsController:
 
     def test_Status(self, device_under_test):
         """
-        Test for Status
+        Test for Status.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -215,7 +216,7 @@ class TestMccsController:
 
     def test_GetVersionInfo(self, device_under_test):
         """
-        Test for GetVersionInfo
+        Test for GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -228,7 +229,7 @@ class TestMccsController:
     @pytest.mark.skip(reason="have to work out how this works")
     def test_isCapabilityAchievable(self, device_under_test):
         """
-        Test for isCapabilityAchievable
+        Test for isCapabilityAchievable.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -240,7 +241,7 @@ class TestMccsController:
     @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(self, device_under_test):
         """
-        Test for Reset
+        Test for Reset.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -316,7 +317,7 @@ class TestMccsController:
 
     def test_StandbyLow(self, device_under_test):
         """
-        Test for StandbyLow
+        Test for StandbyLow.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -329,7 +330,7 @@ class TestMccsController:
 
     def test_StandbyFull(self, device_under_test):
         """
-        Test for StandbyFull
+        Test for StandbyFull.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -342,7 +343,7 @@ class TestMccsController:
 
     def test_Operate(self, device_under_test):
         """
-        Test for Operate
+        Test for Operate.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -356,7 +357,7 @@ class TestMccsController:
 
     def test_Maintenance(self, device_under_test):
         """
-        Test for Maintenance
+        Test for Maintenance.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -457,7 +458,8 @@ class TestMccsController:
 
         def test_Allocate(self, device_under_test, mocker):
             """
-            Test the Allocate command (including end of command event testing).
+            Test the Allocate command (including end of command event
+            testing).
 
             :param device_under_test: fixture that provides a
                 :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -764,7 +766,7 @@ class TestMccsController:
 
     def test_buildState(self, device_under_test):
         """
-        Test for buildState
+        Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -776,7 +778,7 @@ class TestMccsController:
 
     def test_versionId(self, device_under_test):
         """
-        Test for versionId
+        Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -787,7 +789,7 @@ class TestMccsController:
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -847,7 +849,7 @@ class TestMccsController:
 
     def test_controlMode(self, device_under_test):
         """
-        Test for controlMode
+        Test for controlMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -858,7 +860,7 @@ class TestMccsController:
 
     def test_simulationMode(self, device_under_test):
         """
-        Test for simulationMode
+        Test for simulationMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -869,7 +871,7 @@ class TestMccsController:
 
     def test_testMode(self, device_under_test):
         """
-        Test for testMode
+        Test for testMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -880,7 +882,7 @@ class TestMccsController:
 
     def test_commandProgress(self, device_under_test):
         """
-        Test for commandProgress
+        Test for commandProgress.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -891,7 +893,7 @@ class TestMccsController:
 
     def test_commandDelayExpected(self, device_under_test):
         """
-        Test for commandDelayExpected
+        Test for commandDelayExpected.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -902,7 +904,7 @@ class TestMccsController:
 
     def test_maxCapabilities(self, device_under_test):
         """
-        Test for maxCapabilities
+        Test for maxCapabilities.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -913,7 +915,7 @@ class TestMccsController:
 
     def test_availableCapabilities(self, device_under_test):
         """
-        Test for availableCapabilities
+        Test for availableCapabilities.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -925,16 +927,15 @@ class TestMccsController:
 
 class TestControllerPowerManager:
     """
-    This class contains tests of the
-    `:py:class:~ska.low.mccs.controller.controller_device.ControllerPowerManager`
-    class.
+    This class contains tests of the `:py:class:~ska.low.mccs.controller
+    .controller_device.ControllerPowerManager` class.
     """
 
     @pytest.fixture()
     def logger(self):
         """
         Fixture that returns a logger for the power manager under test
-        (or its components) to use
+        (or its components) to use.
 
         :return: a logger for the power manager under test to use
         :rtype: :py:class:`logging.Logger` or an object that implement
@@ -946,7 +947,7 @@ class TestControllerPowerManager:
     def power_manager(self):
         """
         Fixture that returns a power manager with no hardware manager
-        and no subservient devices
+        and no subservient devices.
 
         :return: a power manager with no hardware manager and no
             subservient devices
@@ -958,7 +959,7 @@ class TestControllerPowerManager:
     def state_model(self, logger):
         """
         Fixture that returns a state model for the command under test to
-        use
+        use.
 
         :param logger: a logger for the state model to use
         :type logger: an instance of :py:class:`logging.Logger`, or
@@ -1073,26 +1074,24 @@ class TestControllerPowerManager:
 
 class TestControllerResourceManager:
     """
-    This class contains tests of the
-    `:py:class:~ska.low.mccs.controller.controller_device.ControllerResourceManager`
-    class.
+    This class contains tests of the `:py:class:~ska.low.mccs.controller
+    .controller_device.ControllerResourceManager` class.
 
-    This class is already exercised through the Tango commands of Controller,
-    but here we simulate some scenarios not covered.
+    This class is already exercised through the Tango commands of
+    Controller, but here we simulate some scenarios not covered.
     """
 
     @pytest.fixture()
     def resource_manager(self, device_under_test, logger):
         """
-        Fixture that returns a resource manager with 2 managed stations
+        Fixture that returns a resource manager with 2 managed stations.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
 
         :return: a resource manager with 2 subservient station devices
         :rtype:
@@ -1113,7 +1112,8 @@ class TestControllerResourceManager:
         return manager
 
     def test_assign(self, resource_manager):
-        """Test assignment operations of the ControllerResourceManager
+        """
+        Test assignment operations of the ControllerResourceManager.
 
         :param resource_manager: test fixture providing a manager object
         :type resource_manager: ControllerResourceManager
@@ -1184,7 +1184,7 @@ class TestInitCommand:
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new HangableInitCommand instance
+            Create a new HangableInitCommand instance.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -1193,11 +1193,11 @@ class TestInitCommand:
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
@@ -1206,15 +1206,15 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device, fqdns):
             """
-            Initialise the health model for this device (overridden
-            here to inject a call trace attribute).
+            Initialise the health model for this device (overridden here
+            to inject a call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
-            :type: list of str
+            :type: list(str)
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device, fqdns)
@@ -1232,7 +1232,7 @@ class TestInitCommand:
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device manages power
-            :type: list of str
+            :type: list(str)
             """
             self._initialise_power_management_called = True
             super()._initialise_power_management(device, fqdns)
@@ -1240,7 +1240,7 @@ class TestInitCommand:
     def test_interrupt(self, mocker):
         """
         Test that the command's interrupt method will cause a running
-        thread to stop prematurely
+        thread to stop prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

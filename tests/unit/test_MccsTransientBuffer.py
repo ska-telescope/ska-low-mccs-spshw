@@ -20,7 +20,7 @@ from ska.base.control_model import HealthState
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -39,7 +39,7 @@ class TestMccsTransientBuffer(object):
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -65,7 +65,7 @@ class TestMccsTransientBuffer(object):
 
     def test_stationId(self, device_under_test):
         """
-        Test for stationId
+        Test for stationId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -76,7 +76,7 @@ class TestMccsTransientBuffer(object):
 
     def test_transientBufferJobId(self, device_under_test):
         """
-        Test for transientBufferJobId
+        Test for transientBufferJobId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -87,7 +87,7 @@ class TestMccsTransientBuffer(object):
 
     def test_transientFrequencyWindow(self, device_under_test):
         """
-        Test for transientFrequencyWindow
+        Test for transientFrequencyWindow.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -98,7 +98,7 @@ class TestMccsTransientBuffer(object):
 
     def test_resamplingBits(self, device_under_test):
         """
-        Test for resamplingBits
+        Test for resamplingBits.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -109,7 +109,7 @@ class TestMccsTransientBuffer(object):
 
     def test_nStations(self, device_under_test):
         """
-        Test for test_nStations
+        Test for test_nStations.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -120,7 +120,7 @@ class TestMccsTransientBuffer(object):
 
     def test_stationIds(self, device_under_test):
         """
-        Test for stationIds
+        Test for stationIds.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

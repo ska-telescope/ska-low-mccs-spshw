@@ -28,7 +28,7 @@ from ska.low.mccs.utils import call_with_json
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -46,7 +46,7 @@ def mock_factory(mocker):
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
     overridden by test modules/classes to provide mocks with specified
-    behaviours
+    behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -104,7 +104,7 @@ def mock_factory(mocker):
 # pylint: disable=invalid-name
 class TestMccsSubarray:
     """
-    Test class for MccsSubarray tests
+    Test class for MccsSubarray tests.
     """
 
     # tests of general methods
@@ -136,7 +136,7 @@ class TestMccsSubarray:
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -164,7 +164,7 @@ class TestMccsSubarray:
 
     def test_GetVersionInfo(self, device_under_test):
         """
-        Test for GetVersionInfo
+        Test for GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -176,7 +176,7 @@ class TestMccsSubarray:
 
     def test_AssignResources(self, device_under_test):
         """
-        Test for AssignResources
+        Test for AssignResources.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -199,7 +199,7 @@ class TestMccsSubarray:
     # tests of MccsSubarray commands
     def test_sendTransientBuffer(self, device_under_test):
         """
-        Test for sendTransientBuffer
+        Test for sendTransientBuffer.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -216,7 +216,7 @@ class TestMccsSubarray:
     # tests of overridden base class attributes
     def test_buildState(self, device_under_test):
         """
-        Test for buildState
+        Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -228,7 +228,7 @@ class TestMccsSubarray:
 
     def test_versionId(self, device_under_test):
         """
-        Test for versionId
+        Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -240,7 +240,7 @@ class TestMccsSubarray:
     # tests of MccsSubarray attributes
     def test_scanId(self, device_under_test):
         """
-        Test for scanID attribute
+        Test for scanID attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -251,7 +251,7 @@ class TestMccsSubarray:
 
     def test_stationFQDNs(self, device_under_test):
         """
-        Test for stationFQDNs attribute
+        Test for stationFQDNs attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

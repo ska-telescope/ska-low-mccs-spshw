@@ -9,9 +9,9 @@
 
 """
 This module contains classes that support the MCCS Tile device's
-management of hardware
+management of hardware.
 """
-__all__ = ["TileHardwareHealthEvaluator", "TileHardwareManager"]
+__all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
 from ska.base.control_model import SimulationMode
 from ska.low.mccs.hardware import (
@@ -38,34 +38,34 @@ class TileHardwareHealthEvaluator(HardwareHealthEvaluator):
 
 class TileHardwareFactory(SimulableHardwareFactory):
     """
-    A hardware factory for tile hardware. At present, this returns a
+    A hardware factory for tile hardware.
+
+    At present, this returns a
     :py:class:`~ska.low.mccs.tile.tpm_simulator.TpmSimulator` object
-    when in simulation mode, and raises
-    :py:exception:`NotImplementedError` if the hardware is sought whilst
-    not in simulation mode
+    when in simulation mode, and raises :py:exc:`NotImplementedError` if
+    the hardware is sought whilst not in simulation mode
     """
 
     def __init__(self, simulation_mode, logger):
         """
-        Create a new factory instance
+        Create a new factory instance.
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode:
             :py:class:`~ska.base.control_model.SimulationMode`
         :param logger: the logger to be used by this hardware manager.
-        :type logger: a logger that implements the standard library
-            logger interface
+        :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
         super().__init__(simulation_mode)
 
     def _create_simulator(self):
         """
-        Returns a hardware simulator
+        Returns a hardware simulator.
 
         :return: a hardware simulator for the tile
-        :rtype: :py:class:`TpmSimulator`
+        :rtype: :py:class:`ska.low.mccs.tile.tpm_simulator.TpmSimulator`
         """
         return TpmSimulator(self._logger)
 
@@ -77,7 +77,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def __init__(self, simulation_mode, logger, _factory=None):
         """
-        Initialise a new TileHardwareManager instance
+        Initialise a new TileHardwareManager instance.
 
         :param simulation_mode: the initial simulation mode for this
             tile hardware manager
@@ -88,7 +88,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
-        :type _factory: :py:class:`TileHardwareFactory`
+        :type _factory: :py:class:`.TileHardwareFactory`
         """
         hardware_factory = _factory or TileHardwareFactory(
             simulation_mode == SimulationMode.TRUE, logger
@@ -99,7 +99,7 @@ class TileHardwareManager(SimulableHardwareManager):
     def firmware_available(self):
         """
         Return specifications of the firmware stored on the hardware and
-        available for use
+        available for use.
 
         :return: specifications of the firmware stored on the hardware
         :rtype: dict
@@ -109,7 +109,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def firmware_name(self):
         """
-        Return the name of the firmware running on the hardware
+        Return the name of the firmware running on the hardware.
 
         :return: the name of the firmware
         :rtype: str
@@ -119,7 +119,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def firmware_version(self):
         """
-        Returns the name of the firmware running on the hardware
+        Returns the name of the firmware running on the hardware.
 
         :return: the name of the firmware
         :rtype: str
@@ -128,7 +128,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def download_firmware(self, bitfile):
         """
-        Download firmware to the board
+        Download firmware to the board.
 
         :param bitfile: the bitfile to be downloaded
         :type bitfile: str
@@ -137,7 +137,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def cpld_flash_write(self, bitfile):
         """
-        Write a program to the CPLD flash
+        Write a program to the CPLD flash.
 
         :param bitfile: the bitfile to be flashed
         :type bitfile: str
@@ -147,7 +147,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def voltage(self):
         """
-        The voltage of the hardware
+        The voltage of the hardware.
 
         :return: the voltage of the hardware
         :rtype: float
@@ -157,7 +157,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def current(self):
         """
-        The current of the hardware
+        The current of the hardware.
 
         :return: the current of the hardware
         :rtype: float
@@ -167,7 +167,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def board_temperature(self):
         """
-        The temperature of the main board of the hardware
+        The temperature of the main board of the hardware.
 
         :return: the temperature of the main board of the hardware
         :rtype: float
@@ -177,7 +177,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def fpga1_temperature(self):
         """
-        The temperature of FPGA 1
+        The temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
         :rtype: float
@@ -187,7 +187,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def fpga2_temperature(self):
         """
-        The temperature of FPGA 2
+        The temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
         :rtype: float
@@ -197,7 +197,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def fpga1_time(self):
         """
-        The FPGA 1 time
+        The FPGA 1 time.
 
         :return: the FPGA 1 time
         :rtype: int
@@ -207,7 +207,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def fpga2_time(self):
         """
-        The FPGA 2 time
+        The FPGA 2 time.
 
         :return: the FPGA 2 time
         :rtype: int
@@ -217,7 +217,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def pps_delay(self):
         """
-        Returns the PPS delay of the TPM
+        Returns the PPS delay of the TPM.
 
         :return: PPS delay
         :rtype: float
@@ -227,7 +227,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def is_programmed(self):
         """
-        Return whether the TPM is programmed or not
+        Return whether the TPM is programmed or not.
 
         :return: whether the TPM is programmed of not
         :rtype: bool
@@ -237,17 +237,17 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def adc_rms(self):
         """
-        Return the RMS power of the TPM's analogue-to-digital converter
+        Return the RMS power of the TPM's analogue-to-digital converter.
 
         :return: the RMS power of the TPM's ADC
-        :rtype: tuple of float
+        :rtype: tuple(float)
         """
         return self._factory.hardware.adc_rms
 
     @property
     def current_tile_beamformer_frame(self):
         """
-        Return the current beamformer frame of the tile
+        Return the current beamformer frame of the tile.
 
         :return: the tile's current beamformer frame
         :rtype: int
@@ -257,16 +257,16 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def is_beamformer_running(self):
         """
-        Check if beamformer is running
+        Check if beamformer is running.
 
         :return: whether the beamformer is running
-        :rtype: boolean
+        :rtype: bool
         """
         return self._factory.hardware.is_beamformer_running
 
     def start_beamformer(self, start_time=None, duration=None):
         """
-        Start the beamformer at the specified time
+        Start the beamformer at the specified time.
 
         :param start_time: time at which to start the beamformer,
             defaults to 0
@@ -281,14 +281,14 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def stop_beamformer(self):
         """
-        Stop the beamformer
+        Stop the beamformer.
         """
         self._factory.hardware.stop_beamformer()
 
     @property
     def phase_terminal_count(self):
         """
-        Get phase terminal count
+        Get phase terminal count.
 
         :return: phase terminal count
         :rtype: int
@@ -298,7 +298,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @phase_terminal_count.setter
     def phase_terminal_count(self, value):
         """
-        Set the phase terminal count
+        Set the phase terminal count.
 
         :param value: the phase terminal count
         :type value: int
@@ -307,23 +307,23 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def initialise(self):
         """
-        Initialise the TPM
+        Initialise the TPM.
         """
         self._factory.hardware.initialise()
 
     @property
     def register_list(self):
         """
-        Return a list of registers available on each device
+        Return a list of registers available on each device.
 
         :return: list of registers
-        :rtype: list of str
+        :rtype: list(str)
         """
         return self._factory.hardware.register_list
 
     def read_register(self, register_name, nb_read, offset, device):
         """
-        Read the values in a register
+        Read the values in a register.
 
         :param register_name: name of the register
         :type register_name: str
@@ -343,7 +343,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def write_register(self, register_name, values, offset, device):
         """
-        Read the values in a register
+        Read the values in a register.
 
         :param register_name: name of the register
         :type register_name: str
@@ -358,7 +358,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def read_address(self, address, nvalues):
         """
-        Returns a list of values from a given address
+        Returns a list of values from a given address.
 
         :param address: address of start of read
         :type address: int
@@ -366,18 +366,18 @@ class TileHardwareManager(SimulableHardwareManager):
         :type nvalues: int
 
         :return: values at the address
-        :rtype: list of int
+        :rtype: list(int)
         """
         return self._factory.hardware.read_address(address, nvalues)
 
     def write_address(self, address, values):
         """
-        Write a list of values to a given address
+        Write a list of values to a given address.
 
         :param address: address of start of read
         :type address: int
         :param values: values to write
-        :type values: list of int
+        :type values: list(int)
         """
         self._factory.hardware.write_address(address, values)
 
@@ -385,7 +385,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
         """
-        Configure the 40G code
+        Configure the 40G code.
 
         :param core_id: id of the core
         :type core_id: int
@@ -408,7 +408,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def get_40g_configuration(self, core_id=-1):
         """
-        Return a 40G configuration
+        Return a 40G configuration.
 
         :param core_id: id of the core for which a configuration is to
             be return. Defaults to -1, in which case all cores
@@ -416,7 +416,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :type core_id: int, optional
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list of dict
+        :rtype: dict or list(dict)
         """
         return self._factory.hardware.get_40g_configuration(core_id)
 
@@ -431,7 +431,7 @@ class TileHardwareManager(SimulableHardwareManager):
     ):
         """
         Specify whether control data will be transmitted over 1G or 40G
-        networks
+        networks.
 
         :param mode: "1g" or "10g"
         :type mode: str
@@ -458,31 +458,31 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def set_channeliser_truncation(self, array):
         """
-        Set the channeliser coefficients to modify the bandpass
+        Set the channeliser coefficients to modify the bandpass.
 
         :param array: an N * M array, where N is the number of input
             channels, and M is the number of frequency channels. This is
             encoded as a list comprising N, then M, then the flattened
             array
-        :type array: list of int
+        :type array: list(int)
         """
         self._factory.hardware.set_channeliser_truncation(array)
 
     def set_beamformer_regions(self, regions):
         """
-        Set the frequency regions to be beamformed into a single beam
+        Set the frequency regions to be beamformed into a single beam.
 
         :param regions: a list encoding up to 16 regions, with each
             region containing a start channel, the size of the region
             (which must be a multiple of 8), and a beam index (between 0
             and 7)
-        :type regions: list of int
+        :type regions: list(int)
         """
         self._factory.hardware.set_beamformer_regions(regions)
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
-        Initialise the beamformer
+        Initialise the beamformer.
 
         :param start_channel: the start channel
         :type start_channel: int
@@ -507,7 +507,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :type antenna: int
         :param calibration_coeffs: a bidirectional complex array of
             coefficients, flattened into a list
-        :type calibration_coeffs: list of int
+        :type calibration_coeffs: list(int)
         """
         self._factory.hardware.load_calibration_coefficients(
             antenna, calibration_coeffs
@@ -515,21 +515,21 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def load_beam_angle(self, angle_coeffs):
         """
-        Load the beam angle
+        Load the beam angle.
 
         :param angle_coeffs: list containing angle coefficients for each
             beam
-        :type angle_coeffs: list of double
+        :type angle_coeffs: list(float)
         """
         self._factory.hardware.load_beam_angle(angle_coeffs)
 
     def load_antenna_tapering(self, tapering_coeffs):
         """
-        Loat the antenna tapering coefficients
+        Loat the antenna tapering coefficients.
 
         :param tapering_coeffs: list of tapering coefficients for each
             antenna
-        :type tapering_coeffs: list of double
+        :type tapering_coeffs: list(float)
         """
         self._factory.hardware.load_antenna_tapering(tapering_coeffs)
 
@@ -547,12 +547,13 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in seconds/second.
-        The delay_array specifies the delay and delay rate for each antenna.
-        beam_index specifies which beam is desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in
+        seconds/second. The delay_array specifies the delay and delay
+        rate for each antenna. beam_index specifies which beam is
+        desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
-        :type delay_array: list of float
+        :type delay_array: list(float)
         :param beam_index: the beam to which the pointing delay should
             be applied
         :type beam_index: int
@@ -561,7 +562,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def load_pointing_delay(self, load_time):
         """
-        Load the pointing delay at a specified time
+        Load the pointing delay at a specified time.
 
         :param load_time: time at which to load the pointing delay
         :type load_time: int
@@ -571,7 +572,7 @@ class TileHardwareManager(SimulableHardwareManager):
     def configure_integrated_channel_data(self, integration_time=None):
         """
         Configure the transmission of integrated channel data with the
-        provided integration time
+        provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -582,8 +583,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def configure_integrated_beam_data(self, integration_time=None):
         """
-        Configure the transmission of integrated beam data with the provided
-        integration time
+        Configure the transmission of integrated beam data with the
+        provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -596,7 +597,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self, sync=False, period=None, timeout=None, timestamp=None, seconds=None
     ):
         """
-        Transmit a snapshot containing raw antenna data
+        Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
@@ -692,7 +693,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def send_beam_data(self, period=None, timeout=None, timestamp=None, seconds=None):
         """
-        Transmit a snapshot containing beamformed data
+        Transmit a snapshot containing beamformed data.
 
         :param period: period of time, in seconds, to send data, defaults to 0
         :type period: int, optional
@@ -709,7 +710,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def stop_data_transmission(self):
         """
-        Stop data transmission
+        Stop data transmission.
         """
         self._factory.hardware.stop_data_transmission()
 
@@ -722,7 +723,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def start_acquisition(self, start_time=None, delay=None):
         """
-        Start data acquisitiong
+        Start data acquisitiong.
 
         :param start_time: the time at which to start data acquisition,
             defaults to None
@@ -734,7 +735,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def set_time_delays(self, delays):
         """
-        Set coarse zenith delay for input ADC streams
+        Set coarse zenith delay for input ADC streams.
 
         :param delays: the delay in samples, specified in nanoseconds.
             A positive delay adds delay to the signal stream
@@ -744,7 +745,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def set_csp_rounding(self, rounding):
         """
-        Set output rounding for CSP
+        Set output rounding for CSP.
 
         :param rounding: the output rounding
         :type rounding: float
@@ -762,7 +763,7 @@ class TileHardwareManager(SimulableHardwareManager):
         lmc_mac=None,
     ):
         """
-        Configure link and size of control data
+        Configure link and size of control data.
 
         :param mode: '1g' or '10g'
         :type mode: str
@@ -795,7 +796,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self, period=None, timeout=None, timestamp=None, seconds=None
     ):
         """
-        Send synchronised raw data
+        Send synchronised raw data.
 
         :param period: period of time in seconds, defaults to 0
         :type period: int, optional
@@ -812,7 +813,7 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def check_pending_data_requests(self):
         """
-        Check the TPM for pending data requests
+        Check the TPM for pending data requests.
 
         :return: whether the TPM has pending data requests
         :rtype: bool
@@ -830,7 +831,7 @@ class TileHardwareManager(SimulableHardwareManager):
         seconds=None,
     ):
         """
-        Continuously send channelised data from a single channel
+        Continuously send channelised data from a single channel.
 
         This is a special mode used for UAV campaigns.
 
@@ -868,7 +869,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def phase_terminal_count(self):
         """
-        Return the phase terminal count
+        Return the phase terminal count.
 
         :return: the phase terminal count
         :rtype: int
@@ -878,7 +879,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @phase_terminal_count.setter
     def phase_terminal_count(self, value):
         """
-        Set the phase terminal count
+        Set the phase terminal count.
 
         :param value: the phase terminal count
         :type value: int
@@ -887,19 +888,19 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def post_synchronisation(self):
         """
-        Perform post tile configuration synchronization
+        Perform post tile configuration synchronization.
         """
         self._factory.hardware.post_synchronisation()
 
     def sync_fpgas(self):
         """
-        Synchronise the FPGAs
+        Synchronise the FPGAs.
         """
         self._factory.hardware.sync_fpgas()
 
     def calculate_delay(self, current_delay, current_tc, ref_lo, ref_hi):
         """
-        Calculate the delay
+        Calculate the delay.
 
         :param current_delay: the current delay
         :type current_delay: float

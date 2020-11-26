@@ -31,7 +31,7 @@ from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -48,13 +48,13 @@ class TestMccsTile(object):
     Test class for MccsTile tests.
 
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
-    Tests conducted herein aim to exercise the currently defined MCCS Tile
-    device server methods.
+    Tests conducted herein aim to exercise the currently defined MCCS
+    Tile device server methods.
     """
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -311,7 +311,7 @@ class TestMccsTile(object):
 
 class TestMccsTileCommands:
     """
-    Tests of MccsTile device commands
+    Tests of MccsTile device commands.
     """
 
     @pytest.mark.parametrize(
@@ -472,7 +472,8 @@ class TestMccsTileCommands:
         assert getattr(mock_tpm_simulator, tpm_command).called_once_with(*args)
 
     def test_On(self, device_under_test):
-        """Test for On
+        """
+        Test for On.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -485,7 +486,8 @@ class TestMccsTileCommands:
 
     def test_GetFirmwareAvailable(self, device_under_test):
         """
-        Test for
+        Test for.
+
         * GetFirmwareAvailable command
         * firmwareName attribute
         * firmwareVersion attribute
@@ -510,8 +512,8 @@ class TestMccsTileCommands:
 
     def test_DownloadFirmware(self, device_under_test):
         """
-        Test for DownloadFirmware.
-        Also functions as the test for the isProgrammed property
+        Test for DownloadFirmware. Also functions as the test for the
+        isProgrammed property.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -527,7 +529,7 @@ class TestMccsTileCommands:
 
     def test_GetRegisterList(self, device_under_test):
         """
-        Test for GetRegisterList
+        Test for GetRegisterList.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -541,7 +543,7 @@ class TestMccsTileCommands:
 
     def test_ReadRegister(self, device_under_test):
         """
-        Test for ReadRegister
+        Test for ReadRegister.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -571,7 +573,7 @@ class TestMccsTileCommands:
 
     def test_WriteRegister(self, device_under_test):
         """
-        Test for WriteRegister
+        Test for WriteRegister.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -602,7 +604,7 @@ class TestMccsTileCommands:
 
     def test_ReadAddress(self, device_under_test):
         """
-        Test for ReadAddress
+        Test for ReadAddress.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -621,7 +623,7 @@ class TestMccsTileCommands:
 
     def WriteAddress(self, device_under_test):
         """
-        Test for WriteAddress
+        Test for WriteAddress.
 
         This is a very weak test but the
         :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`'s
@@ -641,7 +643,8 @@ class TestMccsTileCommands:
 
     def test_Configure40GCore(self, device_under_test):
         """
-        Test for
+        Test for.
+
         * Configure40GCore command
         * fortyGDestinationIps attribute
         * fortyGDestinationMacs attribute
@@ -696,7 +699,7 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize("frequencies", (1, 2, 3))
     def test_SetChanneliserTruncation(self, device_under_test, channels, frequencies):
         """
-        Test for SetChanneliserTruncation
+        Test for SetChanneliserTruncation.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -719,7 +722,7 @@ class TestMccsTileCommands:
 
     def test_LoadCalibrationCoefficients(self, device_under_test):
         """
-        Test for LoadCalibrationCoefficients
+        Test for LoadCalibrationCoefficients.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -748,7 +751,8 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(self, device_under_test, start_time, duration):
         """
-        Test for
+        Test for.
+
         * StartBeamformer command
         * StopBeamformer command
         * isBeamformerRunning attribute
@@ -789,7 +793,7 @@ class InitCommand:
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new HangableInitCommand instance
+            Create a new HangableInitCommand instance.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -798,11 +802,11 @@ class InitCommand:
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
@@ -827,8 +831,8 @@ class InitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden
-            here to inject a call trace attribute).
+            Initialise the health model for this device (overridden here
+            to inject a call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -840,7 +844,7 @@ class InitCommand:
     def test_interrupt(self, mocker):
         """
         Test that the command's interrupt method will cause a running
-        thread to stop prematurely
+        thread to stop prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

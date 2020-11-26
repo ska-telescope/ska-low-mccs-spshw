@@ -18,7 +18,7 @@ class PowerManagerError(ValueError):
     """
     Exception class for a ValueError thrown by the PowerManager, for
     example because the calling class has tried to turn it off when
-    already off, or on when already on
+    already off, or on when already on.
     """
 
     pass
@@ -36,14 +36,14 @@ class PowerManager:
 
     def __init__(self, hardware, device_fqdns):
         """
-        Initialise a new PowerManager object
+        Initialise a new PowerManager object.
 
         :param hardware: an object encapsulating the device hardware,
             with on() and off() commands
         :type hardware: object
         :param device_fqdns: the FQDNs of the devices that are
             subservient, for power-management purposes, to this manager
-        :type device_fqdns: list of str
+        :type device_fqdns: list(str)
         """
         self._is_on = False
 
@@ -56,10 +56,11 @@ class PowerManager:
     def off(self):
         """
         Turn this device off, by first turning off own hardware, and
-        then telling all subservient devices to turn off
+        then telling all subservient devices to turn off.
 
-        :return: Whether the command succeeded or not
-        :rtype: boolean, or None if there was nothing to do
+        :return: Whether the command succeeded or not, or None if there
+            was nothing to do
+        :rtype: bool or None
         """
         if not self._is_on:
             return
@@ -74,10 +75,11 @@ class PowerManager:
     def on(self):
         """
         Turn this device on, by first telling all subservient devices to
-        turn on, and then turning on own hardware
+        turn on, and then turning on own hardware.
 
-        :return: Whether the command succeeded or not
-        :rtype: boolean, or None if there was nothing to do
+        :return: Whether the command succeeded or not, or None if there
+            was nothing to do
+        :rtype: bool or None
         """
         if self._is_on:
             return
@@ -91,7 +93,7 @@ class PowerManager:
 
     def is_on(self):
         """
-        Whether this PowerManager object is currently on or not
+        Whether this PowerManager object is currently on or not.
 
         :return: whether currently on
         :rtype: bool

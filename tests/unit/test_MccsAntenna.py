@@ -33,7 +33,7 @@ from ska.low.mccs.hardware import HardwareFactory
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -52,7 +52,7 @@ def hardware_driver():
     device is supposed to drive the APIU tango device, which drives the
     APIU hardware (driver or simulator), which drives the Antenna
     hardware (driver or simulator). But for unit testing, we bypass all
-    that and drive an antenna simulator directly
+    that and drive an antenna simulator directly.
 
     :return: an antenna hardware driver
     :rtype:
@@ -64,7 +64,7 @@ def hardware_driver():
 @pytest.fixture()
 def hardware_factory(hardware_driver):
     """
-    Return a hardware factory for antenna hardware
+    Return a hardware factory for antenna hardware.
 
     :param hardware_driver: the antenna hardware driver that the factory
         will return
@@ -78,20 +78,20 @@ def hardware_factory(hardware_driver):
 
     class BasicAntennaHardwareFactory(HardwareFactory):
         """
-        A simple hardware factory that always returns the same,
-        pre-created hardware driver
+        A simple hardware factory that always returns the same, pre-
+        created hardware driver.
         """
 
         def __init__(self):
             """
-            Create a new instance
+            Create a new instance.
             """
             self._hardware = hardware_driver
 
         @property
         def hardware(self):
             """
-            Return a hardware driver created by this factory
+            Return a hardware driver created by this factory.
 
             :return: a hardware driver created by this factory
             :rtype:
@@ -105,7 +105,7 @@ def hardware_factory(hardware_driver):
 @pytest.fixture()
 def hardware_manager(hardware_factory):
     """
-    Return a hardware manager for antenna hardware
+    Return a hardware manager for antenna hardware.
 
     :param hardware_factory: a factory that gives us control over, and
         access to, the hardware driver that it returns, for testing
@@ -129,8 +129,8 @@ class TestAntennaHardwareManager:
 
     def test_on_off(self, hardware_driver, hardware_manager, mocker):
         """
-        Test that the hardware manager receives updated values,
-        and re-evaluates device health, each time it polls the hardware
+        Test that the hardware manager receives updated values, and re-
+        evaluates device health, each time it polls the hardware.
 
         :param hardware_driver: the antenna hardware driver
         :type hardware_driver:
@@ -196,7 +196,7 @@ class TestMccsAntenna:
 
     def test_PowerOn(self, device_under_test, mock_device_proxies):
         """
-        Test for PowerOn
+        Test for PowerOn.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -217,7 +217,7 @@ class TestMccsAntenna:
 
     def test_PowerOff(self, device_under_test, mock_device_proxies):
         """
-        Test for PowerOff
+        Test for PowerOff.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -238,8 +238,8 @@ class TestMccsAntenna:
 
     def test_Reset(self, device_under_test):
         """
-        Test for Reset.
-        Expected to fail as can't reset in the Off state
+        Test for Reset. Expected to fail as can't reset in the Off
+        state.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -251,7 +251,7 @@ class TestMccsAntenna:
 
     def test_antennaId(self, device_under_test):
         """
-        Test for antennaId
+        Test for antennaId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -262,7 +262,7 @@ class TestMccsAntenna:
 
     def test_gain(self, device_under_test):
         """
-        Test for gain
+        Test for gain.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -273,7 +273,7 @@ class TestMccsAntenna:
 
     def test_rms(self, device_under_test):
         """
-        Test for rms
+        Test for rms.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -285,7 +285,7 @@ class TestMccsAntenna:
     @pytest.mark.parametrize("voltage", [19.0])
     def test_voltage(self, device_under_test, mock_device_proxies, voltage):
         """
-        Test for voltage
+        Test for voltage.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -308,7 +308,7 @@ class TestMccsAntenna:
     @pytest.mark.parametrize("current", [4.5])
     def test_current(self, device_under_test, mock_device_proxies, current):
         """
-        Test for current
+        Test for current.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -331,7 +331,7 @@ class TestMccsAntenna:
     @pytest.mark.parametrize("temperature", [37.4])
     def test_temperature(self, device_under_test, mock_device_proxies, temperature):
         """
-        Test for temperature
+        Test for temperature.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -353,7 +353,7 @@ class TestMccsAntenna:
 
     def test_xPolarisationFaulty(self, device_under_test):
         """
-        Test for xPolarisationFaulty
+        Test for xPolarisationFaulty.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -365,7 +365,7 @@ class TestMccsAntenna:
 
     def test_yPolarisationFaulty(self, device_under_test):
         """
-        Test for yPolarisationFaulty
+        Test for yPolarisationFaulty.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -377,7 +377,7 @@ class TestMccsAntenna:
 
     def test_fieldNodeLongitude(self, device_under_test):
         """
-        Test for fieldNodeLongitude
+        Test for fieldNodeLongitude.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -388,7 +388,7 @@ class TestMccsAntenna:
 
     def test_fieldNodeLatitude(self, device_under_test):
         """
-        Test for fieldNodeLatitude
+        Test for fieldNodeLatitude.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -399,7 +399,7 @@ class TestMccsAntenna:
 
     def test_altitude(self, device_under_test):
         """
-        Test for altitude
+        Test for altitude.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -410,7 +410,7 @@ class TestMccsAntenna:
 
     def test_xDisplacement(self, device_under_test):
         """
-        Test for xDisplacement
+        Test for xDisplacement.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -421,7 +421,7 @@ class TestMccsAntenna:
 
     def test_yDisplacement(self, device_under_test):
         """
-        Test for yDisplacement
+        Test for yDisplacement.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -432,7 +432,7 @@ class TestMccsAntenna:
 
     def test_timestampOfLastSpectrum(self, device_under_test):
         """
-        Test for timestampOfLastSpectrum
+        Test for timestampOfLastSpectrum.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -443,7 +443,7 @@ class TestMccsAntenna:
 
     def test_loggingLevel(self, device_under_test):
         """
-        Test for loggingLevel
+        Test for loggingLevel.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -454,7 +454,7 @@ class TestMccsAntenna:
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -480,7 +480,7 @@ class TestMccsAntenna:
 
     def test_controlMode(self, device_under_test):
         """
-        Test for controlMode
+        Test for controlMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -491,7 +491,7 @@ class TestMccsAntenna:
 
     def test_simulationMode(self, device_under_test):
         """
-        Test for simulationMode
+        Test for simulationMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -507,7 +507,7 @@ class TestMccsAntenna:
 
     def test_logicalAntennaId(self, device_under_test):
         """
-        Test for logicalAntennaId
+        Test for logicalAntennaId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -518,7 +518,7 @@ class TestMccsAntenna:
 
     def test_xPolarisationScalingFactor(self, device_under_test):
         """
-        Test for xPolarisationScalingFactor
+        Test for xPolarisationScalingFactor.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -529,7 +529,7 @@ class TestMccsAntenna:
 
     def test_yPolarisationScalingFactor(self, device_under_test):
         """
-        Test for yPolarisationScalingFactor
+        Test for yPolarisationScalingFactor.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -540,7 +540,7 @@ class TestMccsAntenna:
 
     def test_calibrationCoefficient(self, device_under_test):
         """
-        Test for calibrationCoefficient
+        Test for calibrationCoefficient.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -551,7 +551,7 @@ class TestMccsAntenna:
 
     def test_pointingCoefficient(self, device_under_test):
         """
-        Test for pointingCoefficient
+        Test for pointingCoefficient.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -562,7 +562,7 @@ class TestMccsAntenna:
 
     def test_spectrumX(self, device_under_test):
         """
-        Test for spectrumX
+        Test for spectrumX.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -573,7 +573,7 @@ class TestMccsAntenna:
 
     def test_spectrumY(self, device_under_test):
         """
-        Test for spectrumY
+        Test for spectrumY.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -584,7 +584,7 @@ class TestMccsAntenna:
 
     def test_position(self, device_under_test):
         """
-        Test for position
+        Test for position.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -595,7 +595,7 @@ class TestMccsAntenna:
 
     def test_loggingTargets(self, device_under_test):
         """
-        Test for loggingTargets
+        Test for loggingTargets.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -606,7 +606,7 @@ class TestMccsAntenna:
 
     def test_delays(self, device_under_test):
         """
-        Test for delays
+        Test for delays.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -617,7 +617,7 @@ class TestMccsAntenna:
 
     def test_delayRates(self, device_under_test):
         """
-        Test for delayRates
+        Test for delayRates.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -628,7 +628,7 @@ class TestMccsAntenna:
 
     def test_bandpassCoefficient(self, device_under_test):
         """
-        Test for bandpassCoefficient
+        Test for bandpassCoefficient.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -656,7 +656,7 @@ class TestInitCommand:
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new HangableInitCommand instance
+            Create a new HangableInitCommand instance.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -665,11 +665,11 @@ class TestInitCommand:
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
@@ -694,8 +694,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden
-            here to inject a call trace attribute).
+            Initialise the health model for this device (overridden here
+            to inject a call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -707,7 +707,7 @@ class TestInitCommand:
     def test_interrupt(self, mocker):
         """
         Test that the command's interrupt method will cause a running
-        thread to stop prematurely
+        thread to stop prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

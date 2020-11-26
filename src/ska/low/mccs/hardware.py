@@ -44,19 +44,19 @@ The classes fall into three groups:
 
 * The "base" classes comprise:
 
-  * :py:class:`HardwareDriver`: a base class for hardware drivers. The
+  * :py:class:`.HardwareDriver`: a base class for hardware drivers. The
     only functionality it specifies is an
     :py:meth:`~HardwareDriver.is_connected` property, which captures
     whether or not the hardware driver has established a connection to
     the hardware.
 
-  * :py:class:`HardwareFactory`: a base class for hardware factories.
+  * :py:class:`.HardwareFactory`: a base class for hardware factories.
 
-  * :py:class:`HardwareHealthEvaluator`: a base class for hardware
+  * :py:class:`.HardwareHealthEvaluator`: a base class for hardware
     health evaluators. The policy implemented determines health solely
     on the basis of whether there is a connection to the hardware.
 
-  * :py:class:`HardwareManager`: a base class for hardware managers. Its
+  * :py:class:`.HardwareManager`: a base class for hardware managers. Its
     main function is to ensure that the hardware health evaluator is
     regularly polled.
 
@@ -64,41 +64,52 @@ The classes fall into three groups:
   between an actual hardware driver and a hardware simulator. They
   comprise:
 
-  * :py:class:`HardwareSimulator`: a base class for hardware simulators.
+  * :py:class:`.HardwareSimulator`: a base class for hardware simulators.
     This implements the :py:meth:`~HardwareSimulator.is_connected`
     property, and provides a
     :py:meth:`~HardwareSimulator.simulate_connection_failure` method by
     which failure of the connection to the hardware can be simulated.
 
-  * :py:class:`SimulableHardwareFactory`: a hardware factory that can
+  * :py:class:`.SimulableHardwareFactory`: a hardware factory that can
     switch between returning a hardware driver or a hardware simulator,
     depending on its simulation mode
 
-  * :py:class:`SimulableHardwareManager`: a hardware manager that
+  * :py:class:`.SimulableHardwareManager`: a hardware manager that
     manages a device's
-    :py:class:`~ska.base.SKABaseDevice.simulationMode` attribute,
+    :py:attr:`~ska.base.SKABaseDevice.simulationMode` attribute,
     allowing switching between hardware driver and hardware simulator
 
 * The "on/off" group of classes extend the base classes to handle the
   common case of hardware that can be turned off and on. They comprise
 
-  * :py:class:`OnOffHardwareDriver`: extends the hardware driver
+  * :py:class:`.OnOffHardwareDriver`: extends the hardware driver
     interface with :py:meth:`~OnOffHardwareDriver.off` and
     :py:meth:`~OnOffHardwareDriver.on` methods, and an
     :py:meth:`~OnOffHardwareDriver.is_on` property.
 
-  * :py:class:`OnOffHardwareSimulator`: provides
+  * :py:class:`.OnOffHardwareSimulator`: provides
     a software implementation of the
-    :py:meth:`~OnOffHardwareSimulator.off` and
-    :py:meth:`~OnOffHardwareSimulator.on` methods, and the
-    :py:meth:`~OnOffHardwareSimulator.is_on` property
+    :py:meth:`~.OnOffHardwareSimulator.off` and
+    :py:meth:`~.OnOffHardwareSimulator.on` methods, and the
+    :py:meth:`~.OnOffHardwareSimulator.is_on` property
 
-  * :py:class:`OnOffHardwareManager`: extends the hardware manager to
-    allow access to the :py:meth:`~OnOffHardwareManager.off` and
-    :py:meth:`~OnOffHardwareManager.on` methods, and the
-    :py:meth:`~OnOffHardwareManager.is_on` property.
+  * :py:class:`.OnOffHardwareManager`: extends the hardware manager to
+    allow access to the :py:meth:`~.OnOffHardwareManager.off` and
+    :py:meth:`~.OnOffHardwareManager.on` methods, and the
+    :py:meth:`~.OnOffHardwareManager.is_on` property.
 """
-__all__ = ["HardwareDriver", "HardwareSimulator", "HardwareManager"]
+__all__ = [
+    "HardwareDriver",
+    "HardwareFactory",
+    "HardwareHealthEvaluator",
+    "HardwareSimulator",
+    "HardwareManager",
+    "OnOffHardwareDriver",
+    "OnOffHardwareManager",
+    "OnOffHardwareSimulator",
+    "SimulableHardwareFactory",
+    "SimulableHardwareManager",
+]
 
 
 from ska.base.control_model import HealthState, SimulationMode
@@ -108,7 +119,7 @@ class HardwareDriver:
     """
     An abstract base class for hardware drivers. A hardware driver
     provides a python interface to hardware, hiding details of the
-    actual control interface of the hardware
+    actual control interface of the hardware.
 
     The only functionality it mandates is the ability to check whether
     this driver is connected to hardware.
@@ -143,9 +154,10 @@ class HardwareDriver:
 class HardwareHealthEvaluator:
     """
     An simple base class that implements a policy by which a hardware
-    manager evaluates the health of its hardware. This evaluator treads
-    the hardware as failed if the connection to the hardware is broken,
-    and OK otherwise.
+    manager evaluates the health of its hardware.
+
+    This evaluator treads the hardware as failed if the connection to
+    the hardware is broken, and OK otherwise.
     """
 
     def evaluate_health(self, hardware):
@@ -154,7 +166,7 @@ class HardwareHealthEvaluator:
 
         :param hardware: the hardware driver for which health is being
             evaluated
-        :type hardware: :py:class:`HardwareDriver`
+        :type hardware: :py:class:`.HardwareDriver`
 
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska.base.control_model.HealthState`
@@ -172,7 +184,7 @@ class HardwareFactory:
     @property
     def hardware(self):
         """
-        Return the hardware
+        Return the hardware.
 
         :raises NotImplementedError: because this method need to be
             implemented by a concrete subclass
@@ -203,15 +215,15 @@ class HardwareManager:
 
     def __init__(self, hardware_factory, health_evaluator):
         """
-        Initialise a new HardwareManager instance
+        Initialise a new HardwareManager instance.
 
         :param hardware_factory: a factory that provides access to the
             hardware
-        :type hardware_factory: :py:class:`HardwareFactory`
+        :type hardware_factory: :py:class:`.HardwareFactory`
         :param health_evaluator: a class that implements a policy for
             deciding on hardware health, defaults to
-            :py:class:`HardwareHealthEvaluator`
-        :type health_evaluator: :py:class:`HardwareHealthEvaluator`
+            :py:class:`.HardwareHealthEvaluator`
+        :type health_evaluator: :py:class:`.HardwareHealthEvaluator`
         """
         self._factory = hardware_factory
         self._health = HealthState.UNKNOWN
@@ -221,7 +233,7 @@ class HardwareManager:
 
     def poll(self):
         """
-        Poll the hardware and respond to external events/changes
+        Poll the hardware and respond to external events/changes.
         """
         self._update_health()
 
@@ -229,7 +241,7 @@ class HardwareManager:
     def health(self):
         """
         Getter for health property; returns the health of the hardware,
-        as evaluated by this manager
+        as evaluated by this manager.
 
         :return: the health of the hardware
         :rtype: :py:class:`~ska.base.control_model.HealthState`
@@ -239,7 +251,7 @@ class HardwareManager:
     def _update_health(self):
         """
         Update the health of this hardware, ensuring that any registered
-        callbacks are called
+        callbacks are called.
         """
         health = self._health_evaluator.evaluate_health(self._factory.hardware)
         if self._health == health:
@@ -251,10 +263,10 @@ class HardwareManager:
     def register_health_callback(self, callback):
         """
         Register a callback to be called when the health of the hardware
-        changes
+        changes.
 
-        :param callback: A callback to be called when the health of the
-            hardware changes
+        :param callback: function handle to be called when the health of
+            the hardware changes
         :type callback: callable
         """
         self._health_callbacks.append(callback)
@@ -272,7 +284,7 @@ class HardwareSimulator(HardwareDriver):
 
     def __init__(self, fail_connect=False):
         """
-        Initialise a new instance
+        Initialise a new instance.
 
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
@@ -294,7 +306,7 @@ class HardwareSimulator(HardwareDriver):
     def simulate_connection_failure(self, fail):
         """
         Set whether this hardware simulator is simulating failure to
-        connect to the hardware
+        connect to the hardware.
 
         :param fail: whether or not this hardware simulator should
             simulate failure to connect to the hardware
@@ -305,14 +317,15 @@ class HardwareSimulator(HardwareDriver):
 
 class SimulableHardwareFactory(HardwareFactory):
     """
-    A hardware factory for hardware that is simulable. It returns either
-    a :py:class:`HardwareDriver` or a :py:class:`HardwareSimulator`,
-    depending on the simulation mode.
+    A hardware factory for hardware that is simulable.
+
+    It returns either a :py:class:`.HardwareDriver` or a
+    :py:class:`.HardwareSimulator`, depending on the simulation mode.
     """
 
     def __init__(self, simulation_mode, _driver=None, _simulator=None):
         """
-        Create a new instance
+        Create a new instance.
 
         :param simulation_mode: the initial simulation mode of this
             hardware factory
@@ -321,12 +334,12 @@ class SimulableHardwareFactory(HardwareFactory):
             this factory when not in simulation mode (rather than this
             factory creating one itself)
         :type _driver:
-            :py:class:`HardwareDriver`
+            :py:class:`.HardwareDriver`
         :param _simulator: For testing purposes, a simulator to be
             returned by this factory when in simulation mode (rather
             than this factory creating one itself)
         :type _simulator:
-            :py:class:`HardwareSimulator`
+            :py:class:`.HardwareSimulator`
         """
         self._simulation_mode = simulation_mode
         self._driver = _driver
@@ -338,17 +351,17 @@ class SimulableHardwareFactory(HardwareFactory):
     @property
     def hardware(self):
         """
-        Return the hardware created by this factory
+        Return the hardware created by this factory.
 
         :return: the hardware created by this factory
-        :rtype: :py:class:`HardwareDriver`
+        :rtype: :py:class:`.HardwareDriver`
         """
         return self._hardware
 
     @property
     def simulation_mode(self):
         """
-        Return the simulation mode
+        Return the simulation mode.
 
         :return: the simulation mode
         :rtype: bool
@@ -358,7 +371,7 @@ class SimulableHardwareFactory(HardwareFactory):
     @simulation_mode.setter
     def simulation_mode(self, mode):
         """
-        Set the simulation mode
+        Set the simulation mode.
 
         :param mode: the new simulation mode
         :type mode: bool
@@ -368,11 +381,11 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _get_driver(self):
         """
-        Helper method to return a :py:class:`HardwareDriver` to drive
-        the hardware
+        Helper method to return a :py:class:`.HardwareDriver` to drive
+        the hardware.
 
         :return: a hardware driver to driver the hardware
-        :rtype: :py:class:`HardwareDriver`
+        :rtype: :py:class:`.HardwareDriver`
         """
         if self._driver is None:
             self._driver = self._create_driver()
@@ -380,8 +393,8 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _create_driver(self):
         """
-        Helper method to create a :py:class:`HardwareDriver` to drive
-        the hardware
+        Helper method to create a :py:class:`.HardwareDriver` to drive
+        the hardware.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a concrete subclass
@@ -392,12 +405,12 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _get_simulator(self):
         """
-        Helper method to return a :py:class:`HardwareSimulator` to
-        simulate the hardware
+        Helper method to return a :py:class:`.HardwareSimulator` to
+        simulate the hardware.
 
         :return: the simulator, just created, to be used by this
-            :py:class:`HardwareManager`
-        :rtype: :py:class:`HardwareSimulator`
+            :py:class:`.HardwareManager`
+        :rtype: :py:class:`.HardwareSimulator`
         """
         if self._simulator is None:
             self._simulator = self._create_simulator()
@@ -405,8 +418,8 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _create_simulator(self):
         """
-        Helper method to create a :py:class:`HardwareSimulator` to drive
-        the hardware
+        Helper method to create a :py:class:`.HardwareSimulator` to
+        drive the hardware.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a concrete subclass
@@ -424,7 +437,7 @@ class SimulableHardwareManager(HardwareManager):
     @property
     def simulation_mode(self):
         """
-        Property getter for simulation_mode
+        Property getter for simulation_mode.
 
         :return: the simulation mode
         :rtype: :py:class:`~ska.base.control_model.SimulationMode`
@@ -437,7 +450,7 @@ class SimulableHardwareManager(HardwareManager):
     @simulation_mode.setter
     def simulation_mode(self, mode):
         """
-        Property setter for simulation_mode
+        Property setter for simulation_mode.
 
         :param mode: new value for simulation mode
         :type mode: :py:class:`~ska.base.control_model.SimulationMode`
@@ -447,7 +460,7 @@ class SimulableHardwareManager(HardwareManager):
 
     def simulate_connection_failure(self, is_fail):
         """
-        Tell the hardware whether or not to simulate connection failure
+        Tell the hardware whether or not to simulate connection failure.
 
         :param is_fail: whether to simulate connection failure
         :type is_fail: bool
@@ -462,12 +475,12 @@ class SimulableHardwareManager(HardwareManager):
 class OnOffHardwareDriver(HardwareDriver):
     """
     A mixin that adds on() and off() commands to the abstract
-    :py:class:`HardwareDriver` class.
+    :py:class:`.HardwareDriver` class.
     """
 
     def on(self):
         """
-        Turn me on
+        Turn me on.
 
         :raises NotImplementedError: if this method is not implemented
             by a subclass
@@ -476,7 +489,7 @@ class OnOffHardwareDriver(HardwareDriver):
 
     def off(self):
         """
-        Turn the hardware off
+        Turn the hardware off.
 
         :raises NotImplementedError: if this method is not implemented
             by a subclass
@@ -486,7 +499,7 @@ class OnOffHardwareDriver(HardwareDriver):
     @property
     def is_on(self):
         """
-        Return whether I am on or off
+        Return whether I am on or off.
 
         :raises NotImplementedError: if this method is not implemented
             by a subclass
@@ -511,13 +524,13 @@ class OnOffHardwareDriver(HardwareDriver):
 
 class OnOffHardwareSimulator(HardwareSimulator, OnOffHardwareDriver):
     """
-    Adds on() and off() commands to the :py:class:`HardwareSimulator`
-    base class
+    Adds on() and off() commands to the :py:class:`.HardwareSimulator`
+    base class.
     """
 
     def __init__(self, fail_connect=False, is_on=False):
         """
-        Initialise a new OnOffHardwareSimulator instance
+        Initialise a new OnOffHardwareSimulator instance.
 
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
@@ -531,14 +544,14 @@ class OnOffHardwareSimulator(HardwareSimulator, OnOffHardwareDriver):
 
     def off(self):
         """
-        Turn me off
+        Turn me off.
         """
         self._check_connected()
         self._is_on = False
 
     def on(self):
         """
-        Turn me on
+        Turn me on.
         """
         self._check_connected()
         self._is_on = True
@@ -546,7 +559,7 @@ class OnOffHardwareSimulator(HardwareSimulator, OnOffHardwareDriver):
     @property
     def is_on(self):
         """
-        Return whether I am on or off
+        Return whether I am on or off.
 
         :return: whether I am on or off
         :rtype: bool
@@ -557,16 +570,16 @@ class OnOffHardwareSimulator(HardwareSimulator, OnOffHardwareDriver):
 
 class OnOffHardwareManager(HardwareManager):
     """
-    A :py:class:`HardwareManager` mixin that adds on() and off()
-    commands
+    A :py:class:`.HardwareManager` mixin that adds on() and off()
+    commands.
     """
 
     def off(self):
         """
-        Turn the hardware off
+        Turn the hardware off.
 
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
+        :return: whether successful, or None if there was nothing to do
+        :rtype: bool or None
         """
         if not self._factory.hardware.is_on:
             return
@@ -577,10 +590,10 @@ class OnOffHardwareManager(HardwareManager):
 
     def on(self):
         """
-        Turn the hardware on
+        Turn the hardware on.
 
-        :return: whether successful
-        :rtype: boolean, or None if there was nothing to do.
+        :return: whether successful, or None if there was nothing to do.
+        :rtype: bool or None
         """
         if self._factory.hardware.is_on:
             return
@@ -592,9 +605,9 @@ class OnOffHardwareManager(HardwareManager):
     @property
     def is_on(self):
         """
-        Whether the hardware is on or not
+        Whether the hardware is on or not.
 
         :return: whether the hardware is on or not
-        :rtype: boolean
+        :rtype: bool
         """
         return self._factory.hardware.is_on

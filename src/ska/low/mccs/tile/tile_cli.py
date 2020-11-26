@@ -44,12 +44,12 @@ class CliMeta(type):
 
 def command_result_as_string(method):
     """
-    Wrapper to format device command results as a two-line string
+    Wrapper to format device command results as a two-line string.
 
-    :param method: the method to wrap
+    :param method: function handle of the method to wrap
     :type method: callable
 
-    :return: the wrapped method
+    :return: function handle of the wrapped method
     :rtype: callable
     """
 
@@ -72,7 +72,7 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def connect(self):
         """
-        Connect to the hardware
+        Connect to the hardware.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -83,7 +83,7 @@ class MccsTileCli(metaclass=CliMeta):
 
     def subarrayid(self):
         """
-        Return the id of the subarray the tile has been allocated to
+        Return the id of the subarray the tile has been allocated to.
 
         :return: subarray ID
         :rtype: int

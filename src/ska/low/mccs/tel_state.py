@@ -7,7 +7,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MccsTelState Tango device prototype
+"""
+MccsTelState Tango device prototype.
 
 MccsTelState TANGO device class for the MccsTelState prototype
 """
@@ -64,13 +65,13 @@ class MccsTelState(SKATelState):
     # ---------------
     class InitCommand(SKATelState.InitCommand):
         """
-        Command class for device initialisation
+        Command class for device initialisation.
         """
 
         def do(self):
             """
             Stateless hook for initialisation of the attributes and
-            properties of the `MccsTelState`.
+            properties of the :py:class:`.MccsTelState`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -97,18 +98,20 @@ class MccsTelState(SKATelState):
             return (result_code, message)
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
 
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.tel_state.MccsTelState.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.tel_state.MccsTelState.InitCommand` class.
+        :py:meth:`~.MccsTelState.InitCommand.do` method of the nested
+        :py:class:`~.MccsTelState.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.tel_state.MccsTelState.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsTelState.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ------------------
@@ -173,7 +176,7 @@ class MccsTelState(SKATelState):
         :todo: What is this? TBD
 
         :return: the algorithms attribute
-        :rtype: string
+        :rtype: str
         """
         return self._algorithms
 
@@ -192,17 +195,17 @@ class MccsTelState(SKATelState):
     @attribute(dtype="DevString", doc="The algorithmsVersion of the MccsTelState class")
     def algorithmsVersion(self):
         """
-        Return the algorithm version
+        Return the algorithm version.
 
         :return: the algorithm version
-        :rtype: string
+        :rtype: str
         """
         return self._algorithms_version
 
     @algorithmsVersion.write
     def algorithmsVersion(self, value):
         """
-        Set the algorithm version
+        Set the algorithm version.
 
         :param value: the new value for the algorithm version
         :type value: str
@@ -221,7 +224,7 @@ class MccsTelState(SKATelState):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.tel_state` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

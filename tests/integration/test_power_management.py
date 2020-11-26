@@ -22,7 +22,7 @@ from conftest import confirm_initialised
 @pytest.fixture()
 def devices_to_load():
     """
-    Fixture that specifies the devices to be loaded for testing
+    Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     :rtype: dict
@@ -51,12 +51,13 @@ def devices_to_load():
 
 class TestPowerManagement:
     """
-    Integration test cases for MCCS subsystem's power management
+    Integration test cases for MCCS subsystem's power management.
     """
 
     def test_power_on_off(self, device_context):
         """
-        Test that a MccsController device can enable an MccsSubarray device.
+        Test that a MccsController device can enable an MccsSubarray
+        device.
 
         :param device_context: a test context for a set of tango devices
         :type device_context: :py:class:`tango.MultiDeviceTestContext`

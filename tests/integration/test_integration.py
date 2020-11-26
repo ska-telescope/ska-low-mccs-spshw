@@ -15,7 +15,7 @@ from conftest import confirm_initialised
 @pytest.fixture()
 def devices_to_load():
     """
-    Fixture that specifies the devices to be loaded for testing
+    Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     :rtype: dict
@@ -44,7 +44,7 @@ def devices_to_load():
 
 class TestMccsIntegration:
     """
-    Integration test cases for the Mccs device classes
+    Integration test cases for the Mccs device classes.
     """
 
     def test_controller_allocate_subarray(self, device_context):
@@ -160,8 +160,8 @@ class TestMccsIntegration:
 
     def test_controller_release_subarray(self, device_context):
         """
-        Test that an MccsController device can release the resources of an
-        MccsSubarray device.
+        Test that an MccsController device can release the resources of
+        an MccsSubarray device.
 
         :param device_context: a test context for a set of tango devices
         :type device_context: :py:class:`tango.MultiDeviceTestContext`

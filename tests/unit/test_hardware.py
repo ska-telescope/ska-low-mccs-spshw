@@ -7,7 +7,7 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska.low.mccs.hardware module
+This module contains the tests for the ska.low.mccs.hardware module.
 """
 from contextlib import nullcontext
 
@@ -29,7 +29,7 @@ from ska.low.mccs.hardware import (
 @pytest.fixture()
 def hardware_health_evaluator():
     """
-    Return the hardware health evaluator under test
+    Return the hardware health evaluator under test.
 
     :return: the hardware health evaluator under test
     :rtype: :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
@@ -54,8 +54,8 @@ def hardware_driver():
 @pytest.fixture()
 def hardware_factory(hardware_driver):
     """
-    Fixture that provides a basic hardware factory that always returns
-    a pre-defined hardware driver
+    Fixture that provides a basic hardware factory that always returns a
+    pre-defined hardware driver.
 
     :param hardware_driver: the hardware driver for this factory to
         return
@@ -69,12 +69,12 @@ def hardware_factory(hardware_driver):
 
     class BasicHardwareFactory(HardwareFactory):
         """
-        A basic hardware factory that always returns the same hardware
+        A basic hardware factory that always returns the same hardware.
         """
 
         def __init__(self, hardware):
             """
-            Create a new instance
+            Create a new instance.
 
             :param hardware: the hardware that this factory will always
                 return
@@ -86,7 +86,7 @@ def hardware_factory(hardware_driver):
         @property
         def hardware(self):
             """
-            Return this factory's hardware
+            Return this factory's hardware.
 
             :return: this factory's hardware
             :rtype:
@@ -100,6 +100,7 @@ def hardware_factory(hardware_driver):
 class TestBaseHardware:
     """
     Contains tests of the hardware base classes:
+
     * :py:class:`ska.low.mccs.hardware.HardwareDriver`
     * :py:class:`ska.low.mccs.hardware.HardwareFactory`
     * :py:class:`ska.low.mccs.hardware.HardwareHealthEvaluator`
@@ -142,7 +143,7 @@ class TestBaseHardware:
             self, hardware_health_evaluator, mocker, is_connected, expected_health
         ):
             """
-            Test the output of the health evaluation
+            Test the output of the health evaluation.
 
             :param hardware_health_evaluator: the hardware health evaluator
                 under test
@@ -228,6 +229,7 @@ class TestBaseHardware:
 class TestSimulableHardware:
     """
     Contains tests of the hardware classes that support simulation:
+
     * :py:class:`ska.low.mccs.hardware.HardwareSimulator`
     * :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
     * :py:class:`ska.low.mccs.hardware.SimulableHardwareManager`
@@ -236,7 +238,7 @@ class TestSimulableHardware:
     @pytest.fixture()
     def hardware_simulator(self, request):
         """
-        Fixture that returns a hardware simulator for testing
+        Fixture that returns a hardware simulator for testing.
 
         :param request: A pytest object giving access to the requesting test
             context.
@@ -252,7 +254,7 @@ class TestSimulableHardware:
     @pytest.fixture()
     def hardware_factory(self, request, hardware_driver, hardware_simulator):
         """
-        Fixture that returns a hardware factory for simulable hardware
+        Fixture that returns a hardware factory for simulable hardware.
 
         :param request: A pytest object giving access to the requesting test
             context.
@@ -298,8 +300,8 @@ class TestSimulableHardware:
         """
         This class contains the tests for the HardwareSimulator class.
 
-        (The HardwareSimulator class is a software-only representation of a
-        hardware driver.
+        (The HardwareSimulator class is a software-only representation
+        of a hardware driver.
         """
 
         @pytest.mark.parametrize(
@@ -309,7 +311,7 @@ class TestSimulableHardware:
         )
         def test_init(self, hardware_simulator, is_connected):
             """
-            Test initialisation of this hardware simulator
+            Test initialisation of this hardware simulator.
 
             :param hardware_simulator: the hardware simulator under test
             :type hardware_simulator:
@@ -323,7 +325,7 @@ class TestSimulableHardware:
         def test_simulate_connection_failure(self, hardware_simulator):
             """
             Test that simulating connection failure causes the hardware
-            simulator to think its connection has been lost
+            simulator to think its connection has been lost.
 
             :param hardware_simulator: the hardware simulator under test
             :type hardware_simulator:
@@ -347,7 +349,7 @@ class TestSimulableHardware:
         ):
             """
             Test that different hardware is returned depending on
-            simulation mode
+            simulation mode.
 
             :param hardware_driver: the hardware driver that the
                 hardware factory returns when not in simulation mode
@@ -392,7 +394,7 @@ class TestSimulableHardware:
         ):
             """
             Test that changing simulation mode, where the simulator is
-            simulating connection failure, causes changes in health
+            simulating connection failure, causes changes in health.
 
             :param hardware_driver: the hardware driver (simulated for
                 testing purposes)
@@ -444,7 +446,7 @@ class TestOnOffHardware:
     @pytest.fixture()
     def hardware_simulator(self, request):
         """
-        Fixture that returns a hardware simulator for testing
+        Fixture that returns a hardware simulator for testing.
 
         :param request: A pytest object giving access to the requesting test
             context.
@@ -468,11 +470,12 @@ class TestOnOffHardware:
 
         :param hardware_factory: the hardware driver factory used by
             this hardware manager
-        :type hardware_factory: :py:class:`HardwareFactory`
+        :type hardware_factory:
+            :py:class:`~ska.low.mccs.hardware.HardwareFactory`
         :param hardware_health_evaluator: the hardware health evaluator
             used by this hardware manager
         :type hardware_health_evaluator:
-            :py:class:`HardwareHealthEvaluator`
+            :py:class:`ska.low.mccs.hardware.HardwareHealthEvaluator`
 
         :return: a hardware manager
         :rtype: :py:class:`~ska.low.mccs.hardware.OnOffHardwareManager`
@@ -482,10 +485,11 @@ class TestOnOffHardware:
 
     class TestOnOffHardwareSimulator:
         """
-        This class contains the tests for the OnOffHardwareSimulator class.
+        This class contains the tests for the OnOffHardwareSimulator
+        class.
 
-        (The OnOffHardwareSimulator class is a software representation of
-        hardware that can be turned on and off.)
+        (The OnOffHardwareSimulator class is a software representation
+        of hardware that can be turned on and off.)
         """
 
         @pytest.mark.parametrize(
@@ -510,7 +514,7 @@ class TestOnOffHardware:
         )
         def test_init(self, hardware_simulator, is_connected, is_on):
             """
-            Test initialisation of this hardware simulator
+            Test initialisation of this hardware simulator.
 
             :param hardware_simulator: the hardware simulator under test
             :type hardware_simulator:
@@ -535,8 +539,8 @@ class TestOnOffHardware:
 
         def test_on_off(self, hardware_simulator):
             """
-            Test that we can turn a hardware simulator off and on, as long
-            as its connection to the hardware hasn't failed.
+            Test that we can turn a hardware simulator off and on, as
+            long as its connection to the hardware hasn't failed.
 
             :param hardware_simulator: the hardware simulator under
                 test
@@ -566,16 +570,17 @@ class TestOnOffHardware:
 
     class TestOnOffHardwareManager:
         """
-        This class contains the tests for the OnOffHardwareManager class.
+        This class contains the tests for the OnOffHardwareManager
+        class.
 
         (The OnOffHardwareManager class is a base class for classes that
-        manage, on behalf of a device, hardware (or software simulator of
-        hardware) that can be turned on and off.
+        manage, on behalf of a device, hardware (or software simulator
+        of hardware) that can be turned on and off.
         """
 
         def test(self, hardware_driver, hardware_manager):
             """
-            Test that
+            Test that.
 
             * the hardware can be turned off and on when not failed
             * when the hardware fails and cannot be turned off and on, the

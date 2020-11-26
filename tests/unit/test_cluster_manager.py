@@ -24,11 +24,11 @@ from ska.low.mccs.cluster_manager.cluster_manager_device import ClusterManager
 @pytest.fixture()
 def cluster_simulator():
     """
-    Fixture that returns a cluster simulator
+    Fixture that returns a cluster simulator.
 
     :return: a cluster simulator
     :rtype:
-        :py:class:`ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
+        :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
     """
     return ClusterSimulator()
 
@@ -37,24 +37,26 @@ def cluster_simulator():
 def cluster_manager():
     """
     Fixture that returns a cluster manager for the MCCS cluster manager
-    device, in hardware simulation mode
+    device, in hardware simulation mode.
 
     :return: a cluster manager for the MCCS cluster manager device, in
         hardware simulation mode
     :rtype:
-        :py:class:`ska.low.mccs.cluster_manager.cluster_manager_device.ClusterManager`
+        :py:class:`~ska.low.mccs.cluster_manager.cluster_manager_device.ClusterManager`
     """
     return ClusterManager(simulation_mode=SimulationMode.TRUE)
 
 
 class TestClusterCommon:
     """
-    Because the ClusterManager is designed to pass commands through
-    to the ClusterSimulator or ClusterDriver that it is driving, many
+    Because the ClusterManager is designed to pass commands through to
+    the ClusterSimulator or ClusterDriver that it is driving, many
     commands are common to ClusterManager and ClusterSimulator, and they
     will also be common to the ClusterDriver when we eventually
-    implement it. Therefore this class contains common tests,
-    parametrised to test against each class
+    implement it.
+
+    Therefore this class contains common tests, parametrised to test
+    against each class
     """
 
     @pytest.fixture(params=["cluster_simulator", "cluster_manager"])
@@ -99,7 +101,7 @@ class TestClusterCommon:
     )
     def test_configuration(self, cluster, resource):
         """
-        Test of resources that are stored
+        Test of resources that are stored.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -136,7 +138,7 @@ class TestClusterCommon:
     @pytest.mark.parametrize("status", ("staging", "starting", "running", "killing"))
     def test_open_jobs_stats(self, cluster, status):
         """
-        Test of the open job stats, including
+        Test of the open job stats, including.
 
         * that it is consistent with the results of
           :py:meth:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator.clear_job_stats`
@@ -181,7 +183,7 @@ class TestClusterCommon:
     )
     def test_resource_stats(self, cluster, resource):
         """
-        Test of resources that are stored
+        Test of resources that are stored.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -227,7 +229,7 @@ class TestClusterCommon:
     )
     def test_computed_resources(self, cluster, resource, expected_value):
         """
-        Test of resources that are computed
+        Test of resources that are computed.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -289,7 +291,7 @@ class TestClusterCommon:
     def test_submit_job(self, cluster):
         """
         Test that when we submit a job, we get a job id for it, and the
-        status of the job is STAGING
+        status of the job is STAGING.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -301,7 +303,7 @@ class TestClusterCommon:
 
     def test_start_job(self, cluster):
         """
-        Test that when we start a job, that job starts running
+        Test that when we start a job, that job starts running.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -320,7 +322,7 @@ class TestClusterCommon:
 
     def test_stop_job(self, cluster):
         """
-        Test that we can stop a job
+        Test that we can stop a job.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -338,13 +340,13 @@ class TestClusterCommon:
 
 class TestClusterSimulator:
     """
-    Contains tests specific to ClusterSimulator
+    Contains tests specific to ClusterSimulator.
     """
 
     def test_node_failure(self, cluster_simulator):
         """
         Test for the master node id is as expected, and that it changes
-        if we simulate node failure
+        if we simulate node failure.
 
         We're going to repeatedly make the master node fail, and watch
         the cluster choose a new master from the master pool, until
@@ -383,13 +385,13 @@ class TestClusterSimulator:
 
 class TestClusterManager:
     """
-    Contains tests specific to ClusterManager
+    Contains tests specific to ClusterManager.
     """
 
     def test_init_simulation_mode(self):
         """
         Test that we can't create an hardware manager that isn't in
-        simulation mode
+        simulation mode.
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -399,7 +401,7 @@ class TestClusterManager:
     def test_simulation_mode(self, cluster_manager):
         """
         Test that we can't take the cluster manager out of simulation
-        mode
+        mode.
 
         :param cluster_manager: a manager for an external cluster
         :type cluster_manager:

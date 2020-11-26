@@ -34,7 +34,7 @@ def _load_data_from_json(path):
 
     :param path: path to the JSON file from which the dataset is to be
         loaded.
-    :type path: string
+    :type path: str
 
     :return: data loaded and deserialised from a JSON data file
     :rtype: anything JSON-serialisable
@@ -49,10 +49,10 @@ def _load_devices(path, device_names):
     specified JSON configuration file.
 
     :param path: path to the JSON configuration file
-    :type path: string
+    :type path: str
     :param device_names: names of the devices for which configuration
         data should be loaded
-    :type device_names: list of string
+    :type device_names: list(str)
 
     :return: a devices_info spec in a format suitable for use by as
         input to a :py:class:`tango.test_context.MultiDeviceTestContext`
@@ -162,7 +162,6 @@ def logger():
     Fixture that returns a default logger
 
     :return: a logger
-    :rtype: a logger that implements the standard library
-        :py:class:`logging.Logger` interface
+    :rtype logger: :py:class:`logging.Logger`
     """
     return logging.getLogger()

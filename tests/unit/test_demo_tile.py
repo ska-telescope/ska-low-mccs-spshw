@@ -8,7 +8,7 @@
 ########################################################################
 """
 This module contains the tests for the ska.low.mccs.tile.demo_tile
-module
+module.
 """
 import pytest
 
@@ -19,7 +19,7 @@ from ska.low.mccs.tile.demo_tile_device import DemoTile
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -34,14 +34,13 @@ def device_to_load():
 
 class TestDemoTile:
     """
-    This class contains the tests for the DemoTile device
-    class.
+    This class contains the tests for the DemoTile device class.
     """
 
     def test_health(self, device_under_test):
         """
         Test that device health changes to failed when we simulate
-        connection failure
+        connection failure.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

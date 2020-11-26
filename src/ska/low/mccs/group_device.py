@@ -7,8 +7,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" Grouping of MCCS devices
-
+"""
+Grouping of MCCS devices.
 """
 __all__ = ["MccsGroupDevice", "main"]
 
@@ -43,13 +43,14 @@ class MccsGroupDevice(SKABaseDevice):
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Group Device
+        Class that implements device initialisation for the MCCS Group
+        Device.
         """
 
         def do(self):
             """
             Initialises the attributes and properties of the
-            `MccsGroupDevice`.
+            :py:class:`.MccsGroupDevice`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -65,19 +66,20 @@ class MccsGroupDevice(SKABaseDevice):
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
 
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.group_device.MccsGroupDevice.InitCommand.do` method of
-        the nested :py:class:`~ska.low.mccs.group_device.MccsGroupDevice.InitCommand`
-        class.
+        :py:meth:`~.MccsGroupDevice.InitCommand.do` method of the nested
+        :py:class:`~.MccsGroupDevice.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.group_device.MccsGroupDevice.InitCommand.do` method to
-        be released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsGroupDevice.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -90,10 +92,10 @@ class MccsGroupDevice(SKABaseDevice):
     )
     def memberStates(self):
         """
-        Return the states of this device group
+        Return the states of this device group.
 
         :return: states of members of this device group
-        :rtype: list of :py:class:`tango.DevState`
+        :rtype: list(:py:class:`tango.DevState`)
         """
         return self._member_states
 
@@ -104,10 +106,10 @@ class MccsGroupDevice(SKABaseDevice):
     )
     def memberList(self):
         """
-        Return a list of members of this group
+        Return a list of members of this group.
 
         :return: FQDNs of members of this device group
-        :rtype: list of string
+        :rtype: list(str)
         """
         return self._member_list
 
@@ -135,10 +137,10 @@ class MccsGroupDevice(SKABaseDevice):
         def do(self, argin):
             """
             Stateless do-hook for the
-            :py:meth:`MccsGroupDevice.AddMember` command
+            :py:meth:`ska.low.mccs.group_device.MccsGroupDevice.AddMember` command
 
             :param argin: name of the device to add
-            :type argin: string
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -157,10 +159,10 @@ class MccsGroupDevice(SKABaseDevice):
     @DebugIt()
     def AddMember(self, argin):
         """
-        Registers this device as a member of this composite group
+        Registers this device as a member of this composite group.
 
         :param argin: The device name to register eg. low-mccs/station/001
-        :type argin: :py:class:`tango.DevString`
+        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -173,16 +175,16 @@ class MccsGroupDevice(SKABaseDevice):
 
     class RemoveMemberCommand(ResponseCommand):
         """
-        Class for handling the RemoveMember(argin) command
+        Class for handling the RemoveMember(argin) command.
         """
 
         def do(self, argin):
             """
             Stateless do-hook for the
-            :py:meth:`MccsGroupDevice.RemoveMember` command
+            :py:meth:`ska.low.mccs.group_device.MccsGroupDevice.RemoveMember` command
 
             :param argin: name of the device to remove
-            :type argin: string
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -200,10 +202,10 @@ class MccsGroupDevice(SKABaseDevice):
     @DebugIt()
     def RemoveMember(self, argin):
         """
-        De-registers a device as a memnber of this composite group
+        De-registers a device as a memnber of this composite group.
 
         :param argin: The name of the device to de-register
-        :type argin: :py:class:`tango.DevString`
+        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -216,16 +218,16 @@ class MccsGroupDevice(SKABaseDevice):
 
     class RunCommand(ResponseCommand):
         """
-        Class for handling the Run(argin) command
+        Class for handling the Run(argin) command.
         """
 
         def do(self, argin):
             """
             Stateless do-hook for the
-            :py:meth:`MccsGroupDevice.Run` command
+            :py:meth:`ska.low.mccs.group_device.MccsGroupDevice.Run` command
 
             :param argin: the command to run
-            :type argin: string
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -243,11 +245,11 @@ class MccsGroupDevice(SKABaseDevice):
     @DebugIt()
     def Run(self, argin):
         """
-        A wrapper around running commands on a group proxy for this group of
-        devices
+        A wrapper around running commands on a group proxy for this
+        group of devices.
 
         :param argin: The command to run
-        :type argin: :py:class:`tango.DevString`
+        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -266,7 +268,7 @@ class MccsGroupDevice(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.group_device` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

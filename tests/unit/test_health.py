@@ -7,7 +7,7 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska.low.mccs.health module
+This module contains the tests for the ska.low.mccs.health module.
 """
 import pytest
 
@@ -33,7 +33,7 @@ def mock_factory(mocker):
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
     overridden by test modules/classes to provide mocks with specified
-    behaviours
+    behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -91,6 +91,7 @@ def mock_factory(mocker):
 class TestDeviceHealthPolicy:
     """
     This class contains the tests for the DeviceHealthPolicy class.
+
     (The DeviceHealthPolicy class implements a policy by which a
     supervising device evaluates the health of a subservient device, on
     the basis of its self-reported health state, and on its admin mode,
@@ -135,17 +136,18 @@ class TestDeviceHealthPolicy:
     )
     def test_policy(self, admin_mode, health_state, expected_health):
         """
-        Test that this policy computes health as expected
+        Test that this policy computes health as expected.
 
         :param admin_mode: the adminMode of the device
         :type admin_mode: AdminMode
         :param health_state: the reported healthState of the device
         :type health_state: HealthState
         :param expected_health: the expected value for health, as
-            evaluated by the policy under test
-        :type expected_health: HealthState, or None if the policy should
-            determine that the health state of the device should be
-            ignored.
+            evaluated by the policy under test, or None if the policy
+            should determine that the health state of the device should
+            be ignored.
+        :type expected_health:
+            :py:class:`~ska.base.control_model.HealthState`
         """
         assert (
             DeviceHealthPolicy.compute_health(admin_mode, health_state)
@@ -203,23 +205,25 @@ class TestDeviceHealthRollupPolicy:
     )
     def test_policy(self, hardware_health, device_healths, expected_health):
         """
-        Test that this policy computes health as expected
+        Test that this policy computes health as expected.
 
         :param hardware_health: the health of the hardware managed under
-            this policy
-        :type hardware_health: HealthState, or None if no hardware is
-            managed under this policy
+            this policy, or None if no hardware is managed under this
+            policy
+        :type hardware_health: HealthState
         :param device_healths: the reported healthState values of the
-            devices managed by this policy
-        :type device_healths: list, or None if no
-            devices are managed under this policy. If a list is provided,
-            the elements must be health values, or None if the health of
+            devices managed by this policy, or None if no devices are
+            managed under this policy. If a list is provided, the
+            elements must be health values, or None if the health of
             a given device should be ignored
+        :type device_healths:
+            list(:py:class:`~ska.base.control_model.HealthState`)
         :param expected_health: the expected value for health, as
-            evaluated by the policy under test
-        :type expected_health: HealthState, or None if the policy should
-            determine that the health state of the device should be
-            ignored.
+            evaluated by the policy under test, or None if the policy
+            should determine that the health state of the device should
+            be ignored.
+        :type expected_health:
+            :py:class:`~ska.base.control_model.HealthState`
         """
         assert (
             DeviceHealthRollupPolicy().compute_health(hardware_health, device_healths)
@@ -237,7 +241,7 @@ class TestDeviceHealthMonitor:
     def test(self, mocker, mock_device_proxies, logger):
         """
         Test that a DeviceHealthMonitor registers a change in device
-        health when the device emits relevant events
+        health when the device emits relevant events.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -247,8 +251,7 @@ class TestDeviceHealthMonitor:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdn = "mock/mock/1"
         event_manager = EventManager(logger)
@@ -294,7 +297,7 @@ class TestHealthMonitor:
     def test(self, mocker, mock_device_proxies, logger):
         """
         Test that a HealthMonitor registers changes in device health
-        when devices emit relevant events
+        when devices emit relevant events.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -304,8 +307,7 @@ class TestHealthMonitor:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
         event_manager = EventManager(logger)
@@ -348,7 +350,8 @@ class TestHealthModel:
     """
     This class contains tests of the HealthModel class.
 
-    (The HealthModel class represents and manages the health of a device.)
+    (The HealthModel class represents and manages the health of a
+    device.)
     """
 
     @pytest.mark.parametrize(
@@ -372,8 +375,7 @@ class TestHealthModel:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"] if with_devices else None
@@ -414,7 +416,7 @@ class TestMutableHealthMonitor:
     def test(self, mocker, mock_device_proxies, logger):
         """
         Test that one can add and remove device, and a
-        MutableHealthMonitor behaves as expected
+        MutableHealthMonitor behaves as expected.
 
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -424,8 +426,7 @@ class TestMutableHealthMonitor:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
 
@@ -499,8 +500,7 @@ class TestMutableHealthModel:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"]

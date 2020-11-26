@@ -7,7 +7,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MCCS Station
+"""
+MCCS Station.
 
 MccsStation is the Tango device class for the MCCS Station prototype.
 """
@@ -40,18 +41,19 @@ class StationPowerManager(PowerManager):
 
     def __init__(self, fqdns):
         """
-        Initialise a new StationPowerManager
+        Initialise a new StationPowerManager.
 
         :param fqdns: the FQDNs of the devices that this controller
             device manages
-        :type fqdns: list of string
+        :type fqdns: list(str)
         """
         super().__init__(None, fqdns)
 
 
 class MccsStation(SKAObsDevice):
     """
-    MccsStation is the Tango device class for the MCCS Station prototype.
+    MccsStation is the Tango device class for the MCCS Station
+    prototype.
 
     This is a subclass of :py:class:`ska.base.SKAObsDevice`.
 
@@ -79,8 +81,8 @@ class MccsStation(SKAObsDevice):
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS
-        Station is managed under the hood; the basic sequence is:
+        Class that implements device initialisation for the MCCS Station
+        is managed under the hood; the basic sequence is:
 
         1. Device state is set to INIT
         2. The do() method is run
@@ -90,7 +92,7 @@ class MccsStation(SKAObsDevice):
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new InitCommand
+            Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -99,11 +101,11 @@ class MccsStation(SKAObsDevice):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -114,7 +116,7 @@ class MccsStation(SKAObsDevice):
         def do(self):
             """
             Initialises the attributes and properties of the
-            `MccsStation`.
+            :py:class:`.MccsStation`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -168,7 +170,7 @@ class MccsStation(SKAObsDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices to which
                 this device must maintain connections
-            :type: list of str
+            :type: list(str)
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -195,7 +197,7 @@ class MccsStation(SKAObsDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
-            :type: list of str
+            :type: list(str)
             """
             device.event_manager = EventManager(self.logger)
 
@@ -214,7 +216,7 @@ class MccsStation(SKAObsDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device manages power
-            :type: list of str
+            :type: list(str)
             """
             device.power_manager = StationPowerManager(fqdns)
 
@@ -242,13 +244,13 @@ class MccsStation(SKAObsDevice):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.station.MccsStation.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.station.MccsStation.InitCommand` class.
+        :py:meth:`~.MccsStation.InitCommand.do` method of the nested
+        :py:class:`~.MccsStation.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.station.MccsStation.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsStation.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -325,11 +327,11 @@ class MccsStation(SKAObsDevice):
     def isCalibrated(self):
         """
         Return a flag indicating whether this station is currently
-            calibrated or not.
+        calibrated or not.
 
         :return: a flag indicating whether this station is currently
             calibrated or not.
-        :rtype: boolean
+        :rtype: bool
         """
         return self._is_calibrated
 
@@ -342,11 +344,11 @@ class MccsStation(SKAObsDevice):
     def isConfigured(self):
         """
         Return a flag indicating whether this station is currently
-            configured or not.
+        configured or not.
 
         :return: a flag indicating whether this station is currently
             configured or not.
-        :rtype: boolean
+        :rtype: bool
         """
         return self._is_configured
 
@@ -357,7 +359,7 @@ class MccsStation(SKAObsDevice):
     )
     def calibrationJobId(self):
         """
-        Return the calibration job id
+        Return the calibration job id.
 
         :return: the calibration job id
         :rtype: int
@@ -371,7 +373,7 @@ class MccsStation(SKAObsDevice):
     )
     def daqJobId(self):
         """
-        Return the DAQ job id
+        Return the DAQ job id.
 
         :return: the DAQ job id
         :rtype: int
@@ -386,10 +388,10 @@ class MccsStation(SKAObsDevice):
     def dataDirectory(self):
         """
         Return the data directory (the parent directory for all files
-            generated by this station)
+        generated by this station)
 
         :return: the data directory
-        :rtype: string
+        :rtype: str
         """
         return self._data_directory
 
@@ -405,7 +407,7 @@ class MccsStation(SKAObsDevice):
         Return the FQDNs of station beams associated with this station.
 
         :return: the FQDNs of station beams associated with this station
-        :rtype: sequence of str
+        :rtype: list(str)
         """
         return self._beam_fqdns
 
@@ -416,7 +418,7 @@ class MccsStation(SKAObsDevice):
     )
     def delayCentre(self):
         """
-        Return the WGS84 position of the delay centre of the station
+        Return the WGS84 position of the delay centre of the station.
 
         :todo: WGS84 is a datum. What is the coordinate system?
             Latitude and longitude? Or is it SUTM50 eastings and
@@ -424,17 +426,17 @@ class MccsStation(SKAObsDevice):
             too?
 
         :return: the WGS84 position of the delay centre of the station
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._delay_centre
 
     @delayCentre.write
     def delayCentre(self, value):
         """
-        Set the delay centre of the station
+        Set the delay centre of the station.
 
         :param value: WGS84 position
-        :type value: sequence of float
+        :type value: list(float)
         """
         self._delay_centre = value
 
@@ -454,7 +456,7 @@ class MccsStation(SKAObsDevice):
             channel. But how many channels?
 
         :return: the calibration coefficients
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._calibration_coefficients
 
@@ -463,7 +465,7 @@ class MccsStation(SKAObsDevice):
     # --------
     def init_command_objects(self):
         """
-        Set up the handler objects for Commands
+        Set up the handler objects for Commands.
         """
         # Technical debt -- forced to register base class stuff rather than
         # calling super(), because On() and Off() are registered on a
@@ -485,8 +487,9 @@ class MccsStation(SKAObsDevice):
 
         def do(self):
             """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`MccsStation.On` command
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.On` command for
+            this :py:class:`.MccsStation` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -510,8 +513,9 @@ class MccsStation(SKAObsDevice):
 
         def do(self):
             """
-            Stateless do-hook for implementing the functionality of the
-            :py:meth:`MccsStation.Off` command
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
+            for this :py:class:`.MccsStation` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -536,10 +540,10 @@ class MccsStation(SKAObsDevice):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            :py:meth:`MccsStation.Configure` command
+            :py:meth:`.MccsStation.Configure` command
 
             :param argin: Configuration specification dict as a json string
-            :type argin: json string
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -567,7 +571,7 @@ class MccsStation(SKAObsDevice):
         Configure the station with all relevant parameters.
 
         :param argin: Configuration parameters encoded in a json string
-        :type argin: :py:class:`tango.DevString`
+        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -591,7 +595,7 @@ class MccsStation(SKAObsDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            :py:meth:`MccsStation.InitialSetup` command
+            :py:meth:`.MccsStation.InitialSetup` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -621,7 +625,7 @@ class MccsStation(SKAObsDevice):
     )
     def InitialSetup(self):
         """
-        Initial setup the station
+        Initial setup the station.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -643,7 +647,7 @@ class MccsStation(SKAObsDevice):
 # ----------
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.station` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

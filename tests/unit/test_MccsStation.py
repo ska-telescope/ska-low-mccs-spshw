@@ -36,7 +36,7 @@ from ska.low.mccs.station import StationPowerManager
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -54,7 +54,7 @@ def mock_factory(mocker):
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
     overridden by test modules/classes to provide mocks with specified
-    behaviours
+    behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -112,13 +112,13 @@ def mock_factory(mocker):
 
 class TestMccsStation:
     """
-    Test class for MccsStation tests
+    Test class for MccsStation tests.
     """
 
     def test_InitDevice(self, device_under_test):
         """
-        Test for Initial state.
-        A freshly initialised station device has no assigned resources
+        Test for Initial state. A freshly initialised station device has
+        no assigned resources.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -152,7 +152,7 @@ class TestMccsStation:
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -186,7 +186,7 @@ class TestMccsStation:
     # overridden base class attributes
     def test_buildState(self, device_under_test):
         """
-        Test for buildState
+        Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -199,7 +199,7 @@ class TestMccsStation:
     # overridden base class commands
     def test_GetVersionInfo(self, device_under_test):
         """
-        Test for GetVersionInfo
+        Test for GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -211,7 +211,7 @@ class TestMccsStation:
 
     def test_versionId(self, device_under_test):
         """
-        Test for versionId
+        Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -223,7 +223,7 @@ class TestMccsStation:
     # MccsStation attributes
     def test_subarrayId(self, device_under_test):
         """
-        Test for subarrayId attribute
+        Test for subarrayId attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -254,7 +254,7 @@ class TestMccsStation:
 
     def test_beamFQDNs(self, device_under_test):
         """
-        Test for beamFQDNs attribute
+        Test for beamFQDNs attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -265,7 +265,7 @@ class TestMccsStation:
 
     def test_transientBufferFQDN(self, device_under_test):
         """
-        Test for transientBufferFQDN attribute
+        Test for transientBufferFQDN attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -303,7 +303,7 @@ class TestMccsStation:
 
     def test_calibrationCoefficients(self, device_under_test):
         """
-        Test for calibrationCoefficients attribute
+        Test for calibrationCoefficients attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -314,7 +314,7 @@ class TestMccsStation:
 
     def test_isCalibrated(self, device_under_test):
         """
-        Test for isCalibrated attribute
+        Test for isCalibrated attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -325,7 +325,7 @@ class TestMccsStation:
 
     def test_isConfigured(self, device_under_test):
         """
-        Test for isConfigured attribute
+        Test for isConfigured attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -336,7 +336,7 @@ class TestMccsStation:
 
     def test_calibrationJobId(self, device_under_test):
         """
-        Test for calibrationJobId attribute
+        Test for calibrationJobId attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -347,7 +347,7 @@ class TestMccsStation:
 
     def test_daqJobId(self, device_under_test):
         """
-        Test for daqJobId attributes
+        Test for daqJobId attributes.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -358,7 +358,7 @@ class TestMccsStation:
 
     def test_dataDirectory(self, device_under_test):
         """
-        Test for dataDirectory attribute
+        Test for dataDirectory attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -369,7 +369,7 @@ class TestMccsStation:
 
     def test_configure(self, device_under_test):
         """
-        Test for configure command
+        Test for configure command.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -385,15 +385,15 @@ class TestMccsStation:
 
 class TestStationPowerManager:
     """
-    This class contains tests of the ska.low.mccs.station.StationPowerManager
-    class
+    This class contains tests of the
+    :py:class:`ska.low.mccs.station.StationPowerManager` class
     """
 
     @pytest.fixture()
     def logger(self):
         """
         Fixture that returns a logger for the power manager under test
-        (or its components) to use
+        (or its components) to use.
 
         :return: a logger for the power manager under test to use
         :rtype: :py:class:`logging.Logger` or something that implements
@@ -404,12 +404,12 @@ class TestStationPowerManager:
     @pytest.fixture()
     def power_manager(self):
         """
-        Fixture that returns a power manager with no subservient devices
+        Fixture that returns a power manager with no subservient
+        devices.
 
         :return: a power manager with no hardware and no subservient
             devices
         :rtype: :py:class:`ska.low.mccs.power.PowerManager`
-
         """
         return StationPowerManager([])
 
@@ -417,7 +417,7 @@ class TestStationPowerManager:
     def state_model(self, logger):
         """
         Fixture that returns a state model for the command under test to
-        use
+        use.
 
         :param logger: a logger for the state model to use
         :type logger: an instance of :py:class:`logging.Logger`, or
@@ -548,7 +548,7 @@ class TestInitCommand:
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new HangableInitCommand instance
+            Create a new HangableInitCommand instance.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -557,11 +557,11 @@ class TestInitCommand:
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
@@ -570,14 +570,14 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device, fqdns):
             """
-            Initialise the health model for this device (overridden
-            here to inject a call trace attribute).
+            Initialise the health model for this device (overridden here
+            to inject a call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: FQDNs of subservient devices
-            :type fqdns: list of str
+            :type fqdns: list(str)
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device, fqdns)
@@ -594,7 +594,7 @@ class TestInitCommand:
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: FQDNs of subservient devices
-            :type fqdns: list of str
+            :type fqdns: list(str)
             """
             self._initialise_power_management_called = True
             super()._initialise_power_management(device, fqdns)
@@ -602,7 +602,7 @@ class TestInitCommand:
     def test_interrupt(self, mocker):
         """
         Test that the command's interrupt method will cause a running
-        thread to stop prematurely
+        thread to stop prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

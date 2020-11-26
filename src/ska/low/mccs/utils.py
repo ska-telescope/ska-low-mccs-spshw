@@ -1,5 +1,5 @@
 """
-Module for MCCS utils
+Module for MCCS utils.
 """
 from functools import wraps
 import inspect
@@ -17,7 +17,7 @@ import tango
 def backoff_connect(fqdn):
     """
     Attempts connection to a specified device, using an exponential
-    backoff-retry scheme in case of failure
+    backoff-retry scheme in case of failure.
 
     :param fqdn: the fully qualified device name of the device for
         which this DeviceEventManager will manage change events
@@ -77,10 +77,11 @@ def call_with_json(func, **kwargs):
     Allows the calling of a command that accepts a JSON string as input,
     with the actual unserialised parameters.
 
-    For example, suppose you need to use `MccsController.Allocate()` to
-    command a controller device to allocate certain stations and tiles
-    to a subarray. Allocate() accepts a single JSON string argument.
-    Instead of
+    For example, suppose you need to use
+    :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate()`
+    to command a controller device to allocate certain stations and
+    tiles to a subarray. `Allocate()` accepts a single JSON string
+    argument. Instead of
 
     Example::
 
@@ -94,10 +95,10 @@ def call_with_json(func, **kwargs):
 
         call_with_json(controller.Allocate, id=id, stations=stations, tiles=tiles)
 
-    :param func: the function to call
+    :param func: the function handle to call
     :type func: callable
     :param kwargs: parameters to be jsonified and passed to func
-    :type kwargs: any
+    :type kwargs: dict[str]
 
     :return: the return value of func
     """
@@ -136,7 +137,7 @@ class json_input:  # noqa: N801
         :param schema_path: an optional path to a schema against which
             the JSON should be validated. Not working at the moment, so
             leave it None.
-        :type schema_path: string
+        :type schema_path: str
         """
         self.schema = None
 
@@ -153,16 +154,16 @@ class json_input:  # noqa: N801
         returned.
 
         :param func: The target of the decorator
-        :type func: function
+        :type func: callable
 
-        :return: the wrapped method
+        :return: function handle of the wrapped method
         :rtype: callable
         """
 
         @wraps(func)
         def wrapped(obj, json_string):
             """
-            The wrapped function
+            The wrapped function.
 
             :param obj: the object that owns the method to be wrapped
                 i.e. the value passed into the method as "self"

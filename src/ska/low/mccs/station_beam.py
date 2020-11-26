@@ -7,7 +7,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" MCCS Station Beam TANGO device prototype
+"""
+MCCS Station Beam TANGO device prototype.
 
 Prototype TANGO device server for the MCSS Station Beam
 """
@@ -56,7 +57,8 @@ class StationBeamHealthEvaluator(HardwareHealthEvaluator):
 
         :param hardware: the "hardware" for which health is being
             evaluated
-        :type hardware: :py:class:`HardwareDriver`
+        :type hardware:
+            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska.base.control_model.HealthState`
@@ -82,7 +84,7 @@ class StationBeamDriver(HardwareDriver):
 
     def __init__(self, is_locked=False):
         """
-        Create a new driver for station beam hardware
+        Create a new driver for station beam hardware.
 
         :param is_locked: initial value for whether this beam is locked
         :type is_locked: bool
@@ -104,7 +106,7 @@ class StationBeamDriver(HardwareDriver):
     @property
     def is_locked(self):
         """
-        Whether the station beam is locked
+        Whether the station beam is locked.
 
         :return: whether the station beam is locked
         :rtype: bool
@@ -114,7 +116,7 @@ class StationBeamDriver(HardwareDriver):
     @is_locked.setter
     def is_locked(self, value):
         """
-        Setter for the is_locked property
+        Setter for the is_locked property.
 
         :param value: whether the station beam is locked
         :type value: bool
@@ -138,7 +140,7 @@ class StationBeamHardwareFactory(HardwareFactory):
 
     def __init__(self, is_locked):
         """
-        Create a new factory instance
+        Create a new factory instance.
 
         :param is_locked: initial value for whether this beam is locked
         :type is_locked: bool
@@ -148,7 +150,7 @@ class StationBeamHardwareFactory(HardwareFactory):
     @property
     def hardware(self):
         """
-        Return a station beam driver created by this factory
+        Return a station beam driver created by this factory.
 
         :return: an station beam driver created by this factory
         :rtype: :py:class:`StationBeamDriver`
@@ -172,7 +174,7 @@ class StationBeamHardwareManager(HardwareManager):
 
     def __init__(self, is_locked=False, _factory=None):
         """
-        Initialise a new TileHardwareManager instance
+        Initialise a new TileHardwareManager instance.
 
         :param is_locked: initial value for whether this beam is locked
         :type is_locked: bool
@@ -187,7 +189,7 @@ class StationBeamHardwareManager(HardwareManager):
     @property
     def is_locked(self):
         """
-        Whether the station beam is locked
+        Whether the station beam is locked.
 
         :return: whether the station beam is locked
         :rtype: bool
@@ -197,7 +199,7 @@ class StationBeamHardwareManager(HardwareManager):
     @is_locked.setter
     def is_locked(self, value):
         """
-        Setter for the is_locked property
+        Setter for the is_locked property.
 
         :param value: whether the station beam is locked
         :type value: bool
@@ -227,16 +229,15 @@ class MccsStationBeam(SKAObsDevice):
     # ---------------
     class InitCommand(SKAObsDevice.InitCommand):
         """
-        A class for :py:class:`~ska.low.mccs.station_beam.MccsStationBeam`'s Init
-        command.
-        The :py:meth:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand.do` method
-        below is called upon :py:class:`~ska.low.mccs.station_beam.MccsStationBeam`'s
-        initialisation.
+        A class for :py:class:`~.MccsStationBeam`'s Init command.
+
+        The :py:meth:`~.MccsStationBeam.InitCommand.do` method below is
+        called upon :py:class:`~.MccsStationBeam`'s initialisation.
         """
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new InitCommand
+            Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -245,11 +246,11 @@ class MccsStationBeam(SKAObsDevice):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -260,7 +261,7 @@ class MccsStationBeam(SKAObsDevice):
         def do(self):
             """
             Initialises the attributes and properties of the
-            `MccsStationBeam`.
+            :py:class:`.MccsStationBeam`.
 
             State is managed under the hood; the basic sequence is:
 
@@ -329,7 +330,7 @@ class MccsStationBeam(SKAObsDevice):
             """
             Initialise the connection to the hardware being managed by
             this device. May also register commands that depend upon a
-            connection to that hardware
+            connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -388,14 +389,14 @@ class MccsStationBeam(SKAObsDevice):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand.do` method of
-        the nested :py:class:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand`
+        :py:meth:`~.MccsStationBeam.InitCommand.do` method of
+        the nested :py:class:`~.MccsStationBeam.InitCommand`
         class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.station_beam.MccsStationBeam.InitCommand.do` method to
-        be released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsStationBeam.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -418,7 +419,7 @@ class MccsStationBeam(SKAObsDevice):
     @attribute(dtype="DevLong", format="%i", polling_period=1000, doc="ID of the beam")
     def beamId(self):
         """
-        Return the beam id
+        Return the beam id.
 
         :return: the beam id
         :rtype: int
@@ -433,7 +434,7 @@ class MccsStationBeam(SKAObsDevice):
     )
     def stationIds(self):
         """
-        Return the station ids
+        Return the station ids.
 
         :return: the station ids
         :rtype: List[int]
@@ -443,7 +444,7 @@ class MccsStationBeam(SKAObsDevice):
     @stationIds.write
     def stationIds(self, station_ids):
         """
-        Set the station ids
+        Set the station ids.
 
         :param station_ids: ids of the stations for this beam
         :type station_ids: List[int]
@@ -459,7 +460,7 @@ class MccsStationBeam(SKAObsDevice):
     )
     def logicalBeamId(self):
         """
-        Return the logical beam id
+        Return the logical beam id.
 
         :todo: this documentation needs to differentiate logical beam id
             from beam id
@@ -472,7 +473,7 @@ class MccsStationBeam(SKAObsDevice):
     @logicalBeamId.write
     def logicalBeamId(self, logical_beam_id):
         """
-        Set the logical beam id
+        Set the logical beam id.
 
         :param logical_beam_id: the logical beam id
         :type logical_beam_id: int
@@ -489,10 +490,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def updateRate(self):
         """
-        Return the update rate (in hertz) for this station beam
+        Return the update rate (in hertz) for this station beam.
 
         :return: the update rate for this station beam
-        :rtype: double
+        :rtype: float
         """
         return self._update_rate
 
@@ -503,7 +504,7 @@ class MccsStationBeam(SKAObsDevice):
     )
     def isBeamLocked(self):
         """
-        Return a flag indicating whether the beam is locked or not
+        Return a flag indicating whether the beam is locked or not.
 
         :return: whether the beam is locked or not
         :rtype: bool
@@ -513,10 +514,10 @@ class MccsStationBeam(SKAObsDevice):
     @isBeamLocked.write
     def isBeamLocked(self, value):
         """
-        Set a flag indicating whether the beam is locked or not
+        Set a flag indicating whether the beam is locked or not.
 
         :param value: whether the beam is locked or not
-        :type value: boolean
+        :type value: bool
         """
         self.hardware_manager.is_locked = value
 
@@ -533,7 +534,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the ids of the channels configured for this beam.
 
         :return: channel ids
-        :rtype: sequence of int
+        :rtype: list(int)
         """
         return self._channels
 
@@ -553,7 +554,7 @@ class MccsStationBeam(SKAObsDevice):
         Return the desired pointing of this beam.
 
         :return: the desired point of this beam
-        :rtype: sequence of doubles conforming to the Sky Coordinate Set
+        :rtype: list(float) conforming to the Sky Coordinate Set
             definition
         """
         return self._desired_pointing
@@ -561,16 +562,17 @@ class MccsStationBeam(SKAObsDevice):
     @desiredPointing.write
     def desiredPointing(self, values):
         """
-        Set the desired pointing of this beam
+        Set the desired pointing of this beam.
+
         * activation time (s) -- value range 0-10^37
         * azimuth position (deg) -- value range 0-360
         * azimuth speed (deg/s) -- value range 0-10^37
         * elevation position (deg) -- value range 0-90
         * elevation rate (deg/s) -- value range 0-10^37
 
-        :param values: the desired pointing of this beam
-        :type values: sequence of doubles conforming to the Sky
-            Coordinate set definition
+        :param values: the desired pointing of this beam, expressed as a
+            sky coordinate set
+        :type values: list(float)
         """
         self._desired_pointing = values
 
@@ -581,10 +583,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def pointingDelay(self):
         """
-        Return the pointing delay per antenna
+        Return the pointing delay per antenna.
 
         :return: the pointing delay per antenna
-        :rtype: sequence of double
+        :rtype: list(float)
         """
         return self._pointing_delay
 
@@ -595,10 +597,10 @@ class MccsStationBeam(SKAObsDevice):
     )
     def pointingDelayRate(self):
         """
-        Return the pointing delay rate for each antenna
+        Return the pointing delay rate for each antenna.
 
         :return: the pointing delay rate per antenna
-        :rtype: sequence of double
+        :rtype: list(float)
         """
         return self._pointing_delay_rate
 
@@ -610,20 +612,20 @@ class MccsStationBeam(SKAObsDevice):
     )
     def antennaWeights(self):
         """
-        Return the antenna weights
+        Return the antenna weights.
 
         :return: the antenna weights
-        :rtype: sequence of double
+        :rtype: list(float)
         """
         return self._antenna_weights
 
     @antennaWeights.write
     def antennaWeights(self, value):
         """
-        Set the antenna weights
+        Set the antenna weights.
 
         :param value: the new antenna weights
-        :type value: sequence of double
+        :type value: list(float)
         """
         self._antenna_weights = value
 
@@ -632,22 +634,22 @@ class MccsStationBeam(SKAObsDevice):
     # --------
     class ConfigureCommand(ResponseCommand):
         """
-        Class for handling the Configure(argin) command
+        Class for handling the Configure(argin) command.
         """
 
         def do(self, argin):
             """
             Stateless do-hook for the
-            :py:meth:`MccsStationBeam.Configure`
-            command
+            :py:meth:`.MccsStationBeam.Configure` command
 
-            :param argin: Configuration specification dict as a json string
-            :type argin: json string
+            :param argin: Configuration specification dict as a json
+                string
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
             device = self.target
@@ -675,12 +677,12 @@ class MccsStationBeam(SKAObsDevice):
                 "update_rate": 0.0,
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
                 }
-        :type argin: :py:class:`tango.DevString`
+        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.command.ResultCode`, str)
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
         (result_code, message) = handler(argin)
@@ -692,7 +694,7 @@ class MccsStationBeam(SKAObsDevice):
 # ----------
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.station_beam` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-An implementation of a TPM simulator
+An implementation of a TPM simulator.
 """
 import copy
 
@@ -9,7 +9,7 @@ from ska.low.mccs.hardware import HardwareSimulator
 
 class TpmSimulator(HardwareSimulator):
     """
-    A simulator for a TPM
+    A simulator for a TPM.
     """
 
     VOLTAGE = 4.7
@@ -36,7 +36,7 @@ class TpmSimulator(HardwareSimulator):
 
     def __init__(self, logger, fail_connect=False):
         """
-        Initialise a new TPM simulator instance
+        Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
         :type logger: an instance of :py:class:`logging.Logger`, or
@@ -72,7 +72,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def firmware_available(self):
         """
-        Return the firmware list for this TPM simulator
+        Return the firmware list for this TPM simulator.
 
         :return: the firmware list
         :rtype: dict
@@ -84,7 +84,7 @@ class TpmSimulator(HardwareSimulator):
     def firmware_name(self):
         """
         Return the name of the firmware that this TPM simulator is
-        running
+        running.
 
         :return: firmware name
         :rtype: str
@@ -96,7 +96,7 @@ class TpmSimulator(HardwareSimulator):
     def firmware_version(self):
         """
         Return the name of the firmware that this TPM simulator is
-        running
+        running.
 
         :return: firmware version (major.minor)
         :rtype: str
@@ -119,10 +119,10 @@ class TpmSimulator(HardwareSimulator):
 
     def download_firmware(self, bitfile):
         """
-        Download the provided firmware bitfile onto the TPM
+        Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: a binary firmware blob
-        :type bitfile: data
+        :type bitfile: bytes
         """
         self.logger.debug("TpmSimulator: download_firmware")
         self._is_programmed = True
@@ -133,7 +133,7 @@ class TpmSimulator(HardwareSimulator):
         device).
 
         :param bitfile: the program to be flashed
-        :type bitfile: data
+        :type bitfile: bytes
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -156,7 +156,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def board_temperature(self):
         """
-        Return the temperature of the TPM
+        Return the temperature of the TPM.
 
         :return: the temperature of the TPM
         :rtype: float
@@ -167,7 +167,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def voltage(self):
         """
-        Return the voltage of the TPM
+        Return the voltage of the TPM.
 
         :return: the voltage of the TPM
         :rtype: float
@@ -178,7 +178,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def current(self):
         """
-        Return the current of the TPM
+        Return the current of the TPM.
 
         :return: the current of the TPM
         :rtype: float
@@ -189,7 +189,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def fpga1_temperature(self):
         """
-        Return the temperature of FPGA 1
+        Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
         :rtype: float
@@ -200,7 +200,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def fpga2_temperature(self):
         """
-        Return the temperature of FPGA 2
+        Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
         :rtype: float
@@ -211,10 +211,10 @@ class TpmSimulator(HardwareSimulator):
     @property
     def adc_rms(self):
         """
-        Return the RMS power of the TPM's analog-to-digital converter
+        Return the RMS power of the TPM's analog-to-digital converter.
 
         :return: the RMS power of the TPM's ADC
-        :rtype: list of float
+        :rtype: list(float)
         """
         self.logger.debug("TpmSimulator: adc_rms")
         return tuple(self._adc_rms)
@@ -223,7 +223,7 @@ class TpmSimulator(HardwareSimulator):
     def fpga1_time(self):
         """
         Return the FPGA1 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc
+        propagation delays, contamination delays, etc.
 
         :return: the FPGA1 clock time
         :rtype: int
@@ -235,7 +235,7 @@ class TpmSimulator(HardwareSimulator):
     def fpga2_time(self):
         """
         Return the FPGA2 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc
+        propagation delays, contamination delays, etc.
 
         :return: the FPGA2 clock time
         :rtype: int
@@ -246,7 +246,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def pps_delay(self):
         """
-        Returns the PPS delay of the TPM
+        Returns the PPS delay of the TPM.
 
         :return: PPS delay
         :rtype: float
@@ -257,16 +257,16 @@ class TpmSimulator(HardwareSimulator):
     @property
     def register_list(self):
         """
-        Return a list of registers available on each device
+        Return a list of registers available on each device.
 
         :return: list of registers
-        :rtype: list of str
+        :rtype: list(str)
         """
         return list(self._register_map[0].keys())
 
     def read_register(self, register_name, nb_read, offset, device):
         """
-        Read the values in a register
+        Read the values in a register.
 
         :param register_name: name of the register
         :type register_name: str
@@ -278,7 +278,7 @@ class TpmSimulator(HardwareSimulator):
         :type device: int
 
         :return: values read from the register
-        :rtype: list of int
+        :rtype: list(int)
         """
         address_map = self._register_map[device].get(register_name, None)
         if address_map is None:
@@ -291,7 +291,7 @@ class TpmSimulator(HardwareSimulator):
 
     def write_register(self, register_name, values, offset, device):
         """
-        Read the values in a register
+        Read the values in a register.
 
         :param register_name: name of the register
         :type register_name: str
@@ -311,7 +311,7 @@ class TpmSimulator(HardwareSimulator):
 
     def read_address(self, address, nvalues):
         """
-        Returns a list of values from a given address
+        Returns a list of values from a given address.
 
         :param address: address of start of read
         :type address: int
@@ -319,7 +319,7 @@ class TpmSimulator(HardwareSimulator):
         :type nvalues: int
 
         :return: values at the address
-        :rtype: list of int
+        :rtype: list(int)
         """
         values = []
         for i in range(nvalues):
@@ -329,12 +329,12 @@ class TpmSimulator(HardwareSimulator):
 
     def write_address(self, address, values):
         """
-        Write a list of values to a given address
+        Write a list of values to a given address.
 
         :param address: address of start of read
         :type address: int
         :param values: values to write
-        :type values: list of int
+        :type values: list(int)
         """
         for i, value in enumerate(values):
             key = str(address + i)
@@ -344,7 +344,7 @@ class TpmSimulator(HardwareSimulator):
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
         """
-        Configure the 40G code
+        Configure the 40G code.
 
         :param core_id: id of the core
         :type core_id: int
@@ -374,7 +374,7 @@ class TpmSimulator(HardwareSimulator):
 
     def get_40g_configuration(self, core_id=-1):
         """
-        Return a 40G configuration
+        Return a 40G configuration.
 
         :param core_id: id of the core for which a configuration is to
             be return. Defaults to -1, in which case all cores
@@ -382,7 +382,7 @@ class TpmSimulator(HardwareSimulator):
         :type core_id: int, optional
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list of dict
+        :rtype: dict or list(dict)
         """
         if core_id == -1:
             return self._forty_gb_core_list
@@ -402,7 +402,7 @@ class TpmSimulator(HardwareSimulator):
     ):
         """
         Specify whether control data will be transmitted over 1G or 40G
-        networks
+        networks.
 
         :param mode: "1g" or "10g"
         :type mode: str
@@ -426,13 +426,13 @@ class TpmSimulator(HardwareSimulator):
 
     def set_channeliser_truncation(self, array):
         """
-        Set the channeliser coefficients to modify the bandpass
+        Set the channeliser coefficients to modify the bandpass.
 
         :param array: an N * M array, where N is the number of input
             channels, and M is the number of frequency channels. This is
             encoded as a list comprising N, then M, then the flattened
             array
-        :type array: list of int
+        :type array: list(int)
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -442,13 +442,13 @@ class TpmSimulator(HardwareSimulator):
 
     def set_beamformer_regions(self, regions):
         """
-        Set the frequency regions to be beamformed into a single beam
+        Set the frequency regions to be beamformed into a single beam.
 
         :param regions: a list encoding up to 16 regions, with each
             region containing a start channel, the size of the region
             (which must be a multiple of 8), and a beam index (between 0
             and 7)
-        :type regions: list of int
+        :type regions: list(int)
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -458,7 +458,7 @@ class TpmSimulator(HardwareSimulator):
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
-        Initialise the beamformer
+        Initialise the beamformer.
 
         :param start_channel: the start channel
         :type start_channel: int
@@ -485,7 +485,7 @@ class TpmSimulator(HardwareSimulator):
         :type antenna: int
         :param calibration_coeffs: a bidirectional complex array of
             coefficients, flattened into a list
-        :type calibration_coeffs: list of int
+        :type calibration_coeffs: list(int)
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -495,11 +495,11 @@ class TpmSimulator(HardwareSimulator):
 
     def load_beam_angle(self, angle_coeffs):
         """
-        Load the beam angle
+        Load the beam angle.
 
         :param angle_coeffs: list containing angle coefficients for each
             beam
-        :type angle_coeffs: list of double
+        :type angle_coeffs: list(float)
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -509,11 +509,11 @@ class TpmSimulator(HardwareSimulator):
 
     def load_antenna_tapering(self, tapering_coeffs):
         """
-        Loat the antenna tapering coefficients
+        Loat the antenna tapering coefficients.
 
         :param tapering_coeffs: list of tapering coefficients for each
             antenna
-        :type tapering_coeffs: list of double
+        :type tapering_coeffs: list(float)
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -539,12 +539,13 @@ class TpmSimulator(HardwareSimulator):
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in seconds/second.
-        The delay_array specifies the delay and delay rate for each antenna.
-        beam_index specifies which beam is desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in
+        seconds/second. The delay_array specifies the delay and delay
+        rate for each antenna. beam_index specifies which beam is
+        desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
-        :type delay_array: list of float
+        :type delay_array: list(float)
         :param beam_index: the beam to which the pointing delay should
             be applied
         :type beam_index: int
@@ -557,7 +558,7 @@ class TpmSimulator(HardwareSimulator):
 
     def load_pointing_delay(self, load_time):
         """
-        Load the pointing delay at a specified time
+        Load the pointing delay at a specified time.
 
         :param load_time: time at which to load the pointing delay
         :type load_time: int
@@ -570,7 +571,7 @@ class TpmSimulator(HardwareSimulator):
 
     def start_beamformer(self, start_time=0, duration=-1):
         """
-        Start the beamformer at the specified time
+        Start the beamformer at the specified time.
 
         :param start_time: time at which to start the beamformer,
             defaults to 0
@@ -584,7 +585,7 @@ class TpmSimulator(HardwareSimulator):
 
     def stop_beamformer(self):
         """
-        Stop the beamformer
+        Stop the beamformer.
         """
         self.logger.debug("TpmSimulator: Stop beamformer")
         self._is_beamformer_running = False
@@ -592,7 +593,7 @@ class TpmSimulator(HardwareSimulator):
     def configure_integrated_channel_data(self, integration_time=0.5):
         """
         Configure the transmission of integrated channel data with the
-        provided integration time
+        provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -605,8 +606,8 @@ class TpmSimulator(HardwareSimulator):
 
     def configure_integrated_beam_data(self, integration_time=0.5):
         """
-        Configure the transmission of integrated beam data with the provided
-        integration time
+        Configure the transmission of integrated beam data with the
+        provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -621,7 +622,7 @@ class TpmSimulator(HardwareSimulator):
         self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
     ):
         """
-        Transmit a snapshot containing raw antenna data
+        Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
@@ -708,7 +709,7 @@ class TpmSimulator(HardwareSimulator):
 
     def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
         """
-        Transmit a snapshot containing beamformed data
+        Transmit a snapshot containing beamformed data.
 
         :param period: period of time, in seconds, to send data, defaults to 0
         :type period: int, optional
@@ -727,7 +728,7 @@ class TpmSimulator(HardwareSimulator):
 
     def stop_data_transmission(self):
         """
-        Stop data transmission
+        Stop data transmission.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -748,7 +749,7 @@ class TpmSimulator(HardwareSimulator):
 
     def start_acquisition(self, start_time=None, delay=2):
         """
-        Start data acquisitiong
+        Start data acquisitiong.
 
         :param start_time: the time at which to start data acquisition,
             defaults to None
@@ -764,7 +765,7 @@ class TpmSimulator(HardwareSimulator):
 
     def set_time_delays(self, delays):
         """
-        Set coarse zenith delay for input ADC streams
+        Set coarse zenith delay for input ADC streams.
 
         :param delays: the delay in samples, specified in nanoseconds.
             A positive delay adds delay to the signal stream
@@ -778,7 +779,7 @@ class TpmSimulator(HardwareSimulator):
 
     def set_csp_rounding(self, rounding):
         """
-        Set output rounding for CSP
+        Set output rounding for CSP.
 
         :param rounding: the output rounding
         :type rounding: float
@@ -800,7 +801,7 @@ class TpmSimulator(HardwareSimulator):
         lmc_mac=None,
     ):
         """
-        Configure link and size of control data
+        Configure link and size of control data.
 
         :param mode: '1g' or '10g'
         :type mode: str
@@ -829,7 +830,7 @@ class TpmSimulator(HardwareSimulator):
         self, period=0, timeout=0, timestamp=None, seconds=0.2
     ):
         """
-        Send synchronised raw data
+        Send synchronised raw data.
 
         :param period: period of time in seconds, defaults to 0
         :type period: int, optional
@@ -849,7 +850,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def current_tile_beamformer_frame(self):
         """
-        Return current frame, in units of 256 ADC frames
+        Return current frame, in units of 256 ADC frames.
 
         :return: current tile beamformer frame
         :rtype: int
@@ -860,7 +861,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def is_beamformer_running(self):
         """
-        Whether the beamformer is currently running
+        Whether the beamformer is currently running.
 
         :return: whether the beamformer is currently running
         :rtype: bool
@@ -870,7 +871,7 @@ class TpmSimulator(HardwareSimulator):
 
     def check_pending_data_requests(self):
         """
-        Check for pending data requests
+        Check for pending data requests.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -889,7 +890,7 @@ class TpmSimulator(HardwareSimulator):
         seconds=0.2,
     ):
         """
-        Continuously send channelised data from a single channel
+        Continuously send channelised data from a single channel.
 
         This is a special mode used for UAV campaigns.
 
@@ -933,7 +934,7 @@ class TpmSimulator(HardwareSimulator):
     @property
     def phase_terminal_count(self):
         """
-        Return the phase terminal count
+        Return the phase terminal count.
 
         :return: the phase terminal count
         :rtype: int
@@ -944,7 +945,7 @@ class TpmSimulator(HardwareSimulator):
     @phase_terminal_count.setter
     def phase_terminal_count(self, value):
         """
-        Set the phase terminal count
+        Set the phase terminal count.
 
         :param value: the phase terminal count
         :type value: int
@@ -954,7 +955,7 @@ class TpmSimulator(HardwareSimulator):
 
     def post_synchronisation(self):
         """
-        Perform post tile configuration synchronization
+        Perform post tile configuration synchronization.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -964,7 +965,7 @@ class TpmSimulator(HardwareSimulator):
 
     def sync_fpgas(self):
         """
-        Synchronise the FPGAs
+        Synchronise the FPGAs.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -975,7 +976,7 @@ class TpmSimulator(HardwareSimulator):
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):
         """
-        Calculate the delay
+        Calculate the delay.
 
         :param current_delay: the current delay
         :type current_delay: float

@@ -42,7 +42,7 @@ __all__ = [
 def create_return(success, action):
     """
     Helper function to package up a boolean result into a
-    (:py:class:`~ska.base.commands.ResultCode`, message) tuple
+    (:py:class:`~ska.base.commands.ResultCode`, message) tuple.
 
     :param success: whether execution of the action was successful. This
         may be None, in which case the action was not performed due to
@@ -68,8 +68,9 @@ def create_return(success, action):
 class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
     A placeholder for a class that implements a policy by which the
-    antenna hardware manager evaluates the health of its hardware. At
-    present this just inherits from the base class unchanged.
+    antenna hardware manager evaluates the health of its hardware.
+
+    At present this just inherits from the base class unchanged.
     """
 
     pass
@@ -77,16 +78,17 @@ class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
 
 class APIUHardwareFactory(SimulableHardwareFactory):
     """
-    A hardware factory for APIU hardware. At present, this returns a
+    A hardware factory for APIU hardware.
+
+    At present, this returns a
     :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator` object
-    when in simulation mode, and raises
-    :py:exception:`NotImplementedError` if the hardware is sought whilst
-    not in simulation mode
+    when in simulation mode, and raises :py:exc:`NotImplementedError`
+    if the hardware is sought whilst not in simulation mode
     """
 
     def __init__(self, simulation_mode):
         """
-        Create a new factory instance
+        Create a new factory instance.
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager
@@ -97,10 +99,11 @@ class APIUHardwareFactory(SimulableHardwareFactory):
 
     def _create_simulator(self):
         """
-        Returns a hardware simulator
+        Returns a hardware simulator.
 
         :return: a hardware simulator for the tile
-        :rtype: :py:class:`TpmSimulator`
+        :rtype:
+            :py:class:`ska.low.mccs.apiu.apiu_simulator.ApiuSimulator`
         """
         return APIUSimulator()
 
@@ -115,7 +118,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def __init__(self, simulation_mode, _factory=None):
         """
-        Initialise a new APIUHardwareManager instance
+        Initialise a new APIUHardwareManager instance.
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager
@@ -129,7 +132,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     @property
     def voltage(self):
         """
-        The voltage of the hardware
+        The voltage of the hardware.
 
         :return: the voltage of the hardware
         :rtype: float
@@ -139,7 +142,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     @property
     def current(self):
         """
-        The current of the hardware
+        The current of the hardware.
 
         :return: the current of the hardware
         :rtype: float
@@ -149,7 +152,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     @property
     def temperature(self):
         """
-        The temperature of the hardware
+        The temperature of the hardware.
 
         :return: the temperature of the hardware
         :rtype: float
@@ -159,7 +162,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     @property
     def humidity(self):
         """
-        The humidity of the hardware
+        The humidity of the hardware.
 
         :return: the humidity of the hardware
         :rtype: float
@@ -168,7 +171,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def turn_off_antenna(self, logical_antenna_id):
         """
-        Turn off a specified antenna
+        Turn off a specified antenna.
 
         :param logical_antenna_id: the APIU's internal id for the
             antenna to be turned off
@@ -184,7 +187,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def turn_on_antenna(self, logical_antenna_id):
         """
-        Turn on a specified antenna
+        Turn on a specified antenna.
 
         :param logical_antenna_id: the APIU's internal id for the
             antenna to be turned on
@@ -200,7 +203,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def is_antenna_on(self, logical_antenna_id):
         """
-        Gets whether a specified antenna is turned on
+        Gets whether a specified antenna is turned on.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna being queried
@@ -213,7 +216,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def get_antenna_current(self, logical_antenna_id):
         """
-        Get the current of a specified antenna
+        Get the current of a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna for which the current is requested
@@ -226,7 +229,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def get_antenna_voltage(self, logical_antenna_id):
         """
-        Get the voltage of a specified antenna
+        Get the voltage of a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna for which the voltage is requested
@@ -239,7 +242,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def get_antenna_temperature(self, logical_antenna_id):
         """
-        Get the temperature of a specified antenna
+        Get the temperature of a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna for which the temperature is requested
@@ -265,12 +268,12 @@ class MccsAPIU(SKABaseDevice):
     class InitCommand(SKABaseDevice.InitCommand):
         """
         Class that implements device initialisation for the MCCS APIU
-        device
+        device.
         """
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new InitCommand
+            Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -279,11 +282,11 @@ class MccsAPIU(SKABaseDevice):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -294,7 +297,7 @@ class MccsAPIU(SKABaseDevice):
         def do(self):
             """
             Initialises the attributes and properties of the
-            :py:class:`MccsAPIU`.
+            :py:class:`.MccsAPIU`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -356,7 +359,7 @@ class MccsAPIU(SKABaseDevice):
             """
             Initialise the connection to the hardware being managed by
             this device. May also register commands that depend upon a
-            connection to that hardware
+            connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -409,23 +412,22 @@ class MccsAPIU(SKABaseDevice):
             return True
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.apiu.apiu_device.MccsAPIU.InitCommand.do`
-        method of the nested
-        :py:class:`~ska.low.mccs.apiu.apiu_device.MccsAPIU.InitCommand`
-        class.
+        :py:meth:`~.MccsAPIU.InitCommand.do` method of the nested
+        :py:class:`~.MccsAPIU.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.apiu.apiu_device.MccsAPIU.InitCommand.do`
-        method to be released. This method is called by the device
-        destructor, and by the Init command when the Tango device server
-        is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsAPIU.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -451,7 +453,7 @@ class MccsAPIU(SKABaseDevice):
         Return the voltage attribute.
 
         :return: the voltage attribute
-        :rtype: double
+        :rtype: float
         """
         return self.hardware_manager.voltage
 
@@ -461,7 +463,7 @@ class MccsAPIU(SKABaseDevice):
         Return the current attribute.
 
         :return: the current value of the current attribute
-        :rtype: double
+        :rtype: float
         """
         return self.hardware_manager.current
 
@@ -471,7 +473,7 @@ class MccsAPIU(SKABaseDevice):
         Return the temperature attribute.
 
         :return: the value of the temperature attribute
-        :rtype: double
+        :rtype: float
         """
         return self.hardware_manager.temperature
 
@@ -488,27 +490,27 @@ class MccsAPIU(SKABaseDevice):
         Return the humidity attribute.
 
         :return: the value of the humidity attribute
-        :rtype: double
+        :rtype: float
         """
         return self.hardware_manager.humidity
 
     @attribute(dtype="DevBoolean", label="Is alive?")
     def isAlive(self):
         """
-        Return the isAlive attribute
+        Return the isAlive attribute.
 
         :return: the value of the isAlive attribute
-        :rtype: boolean
+        :rtype: bool
         """
         return self._isAlive
 
     @attribute(dtype="DevDouble", label="Over current threshold", unit="Amp")
     def overCurrentThreshold(self):
         """
-        Return the overCurrentThreshold attribute
+        Return the overCurrentThreshold attribute.
 
         :return: the value of the overCurrentThreshold attribute
-        :rtype: double
+        :rtype: float
         """
         return self._overCurrentThreshold
 
@@ -518,17 +520,17 @@ class MccsAPIU(SKABaseDevice):
         Set the overCurrentThreshold attribute.
 
         :param value: new value for the overCurrentThreshold attribute
-        :type value: double
+        :type value: float
         """
         self._overCurrentThreshold = value
 
     @attribute(dtype="DevDouble", label="Over Voltage threshold", unit="Volt")
     def overVoltageThreshold(self):
         """
-        Return the overVoltageThreshold attribute
+        Return the overVoltageThreshold attribute.
 
         :return: the value of the overVoltageThreshold attribute
-        :rtype: double
+        :rtype: float
         """
         return self._overVoltageThreshold
 
@@ -538,17 +540,17 @@ class MccsAPIU(SKABaseDevice):
         Set the overVoltageThreshold attribute.
 
         :param value: new value for the overVoltageThreshold attribute
-        :type value: double
+        :type value: float
         """
         self._overVoltageThreshold = value
 
     @attribute(dtype="DevDouble", label="Humidity threshold", unit="percent")
     def humidityThreshold(self):
         """
-        Return the humidity threshold
+        Return the humidity threshold.
 
         :return: the value of the humidityThreshold attribute
-        :rtype: double
+        :rtype: float
         """
         return self._humidityThreshold
 
@@ -558,7 +560,7 @@ class MccsAPIU(SKABaseDevice):
         Set the humidityThreshold attribute.
 
         :param value: new value for the humidityThreshold attribute
-        :type value: double
+        :type value: float
         """
         self._humidityThreshold = value
 
@@ -568,13 +570,13 @@ class MccsAPIU(SKABaseDevice):
 
     class IsAntennaOnCommand(BaseCommand):
         """
-        The command class for the IsAntennaOn command
+        The command class for the IsAntennaOn command.
         """
 
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsAPIU.IsAntennaOn` command functionality.
+            :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
 
             :param argin: the logical antenna id of the antenna to power
                 up
@@ -590,7 +592,7 @@ class MccsAPIU(SKABaseDevice):
     @DebugIt()
     def IsAntennaOn(self, argin):
         """
-        Power up the antenna
+        Power up the antenna.
 
         :param argin: the logical antenna id of the antenna to power
             up
@@ -604,13 +606,13 @@ class MccsAPIU(SKABaseDevice):
 
     class PowerUpAntennaCommand(ResponseCommand):
         """
-        The command class for the PowerDownAntenna command
+        The command class for the PowerDownAntenna command.
         """
 
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsAPIU.PowerUpAntenna`
+            :py:meth:`.MccsAPIU.PowerUpAntenna`
             command functionality.
 
             :param argin: the logical antenna id of the antenna to power
@@ -635,7 +637,7 @@ class MccsAPIU(SKABaseDevice):
     @DebugIt()
     def PowerUpAntenna(self, argin):
         """
-        Power up the antenna
+        Power up the antenna.
 
         :param argin: the logical antenna id of the antenna to power
             up
@@ -652,13 +654,13 @@ class MccsAPIU(SKABaseDevice):
 
     class PowerDownAntennaCommand(ResponseCommand):
         """
-        The command class for the PowerDownAntenna command
+        The command class for the PowerDownAntenna command.
         """
 
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsAPIU.PowerDownAntenna`
+            :py:meth:`.MccsAPIU.PowerDownAntenna`
             command functionality.
 
             :param argin: the logical antenna id of the antenna to power
@@ -683,7 +685,7 @@ class MccsAPIU(SKABaseDevice):
     @DebugIt()
     def PowerDownAntenna(self, argin):
         """
-        Power down the antenna
+        Power down the antenna.
 
         :param argin: the logical antenna id of the antenna to power
             down
@@ -709,7 +711,7 @@ class MccsAPIU(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsAPIU.PowerUp` command
+            :py:meth:`.MccsAPIU.PowerUp` command
             functionality.
 
             :return: A tuple containing a return code and a string
@@ -728,7 +730,7 @@ class MccsAPIU(SKABaseDevice):
     @DebugIt()
     def PowerUp(self):
         """
-        Power up
+        Power up.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -750,7 +752,7 @@ class MccsAPIU(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsAPIU.PowerDown`
+            :py:meth:`.MccsAPIU.PowerDown`
             command functionality.
 
             :return: A tuple containing a return code and a string
@@ -769,7 +771,7 @@ class MccsAPIU(SKABaseDevice):
     @DebugIt()
     def PowerDown(self):
         """
-        Power down
+        Power down.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -782,7 +784,7 @@ class MccsAPIU(SKABaseDevice):
 
     def _update_health_state(self, health_state):
         """
-        Update and push a change event for the healthState attribute
+        Update and push a change event for the healthState attribute.
 
         :param health_state: The new health state
         :type health_state: :py:class:`ska.base.control_model.HealthState`
@@ -799,7 +801,7 @@ class MccsAPIU(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.apiu.apiu_device` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

@@ -31,7 +31,7 @@ class TestPowerManager:
             """
             self._is_on = False
 
-        def On(self):
+        def On(self):  # noqa: N802
             """
             Turn the mock object on
             """
@@ -43,7 +43,7 @@ class TestPowerManager:
             """
             self._is_on = True
 
-        def Off(self):
+        def Off(self):  # noqa: N802
             """
             Turn the mock object off
             """

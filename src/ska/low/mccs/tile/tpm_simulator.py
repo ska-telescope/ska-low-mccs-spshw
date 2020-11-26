@@ -340,7 +340,7 @@ class TpmSimulator(HardwareSimulator):
             key = str(address + i)
             self._address_map.update({key: value})
 
-    def configure_40G_core(
+    def configure_40g_core(
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
         """
@@ -372,7 +372,7 @@ class TpmSimulator(HardwareSimulator):
         }
         self._forty_gb_core_list.append(core_dict)
 
-    def get_40G_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1):
         """
         Return a 40G configuration
 

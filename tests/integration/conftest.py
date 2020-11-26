@@ -58,19 +58,19 @@ def device_context(mocker, devices_info):
         s.close()
         return port
 
-    HOST = get_host_ip()
-    PORT = _get_open_port()
+    host = get_host_ip()
+    port = _get_open_port()
 
-    _DeviceProxy = tango.DeviceProxy
+    device_proxy_class = tango.DeviceProxy
     mocker.patch(
         "tango.DeviceProxy",
-        wraps=lambda fqdn, *args, **kwargs: _DeviceProxy(
-            f"tango://{HOST}:{PORT}/{fqdn}#dbase=no", *args, **kwargs
+        wraps=lambda fqdn, *args, **kwargs: device_proxy_class(
+            f"tango://{host}:{port}/{fqdn}#dbase=no", *args, **kwargs
         ),
     )
 
     with MultiDeviceTestContext(
-        devices_info, process=True, host=HOST, port=PORT
+        devices_info, process=True, host=host, port=port
     ) as context:
         yield context
 

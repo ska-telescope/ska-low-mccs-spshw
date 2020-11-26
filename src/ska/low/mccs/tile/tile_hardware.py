@@ -381,7 +381,7 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         self._factory.hardware.write_address(address, values)
 
-    def configure_40G_core(
+    def configure_40g_core(
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
         """
@@ -402,11 +402,11 @@ class TileHardwareManager(SimulableHardwareManager):
         :param dst_port: port of the destination
         :type dst_port: int
         """
-        self._factory.hardware.configure_40G_core(
+        self._factory.hardware.configure_40g_core(
             core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
         )
 
-    def get_40G_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1):
         """
         Return a 40G configuration
 
@@ -418,7 +418,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :return: core configuration or list of core configurations
         :rtype: dict or list of dict
         """
-        return self._factory.hardware.get_40G_configuration(core_id)
+        return self._factory.hardware.get_40g_configuration(core_id)
 
     def set_lmc_download(
         self,

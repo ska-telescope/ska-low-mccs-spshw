@@ -64,7 +64,7 @@ def mock_factory(mocker):
     :rtype: :py:class:`unittest.Mock` (the class itself, not an
         instance)
     """
-    _VALUES = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
+    _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
 
     def _mock_attribute(name, *args, **kwargs):
         """
@@ -89,7 +89,7 @@ def mock_factory(mocker):
         """
         mock = mocker.Mock()
         mock.name = name
-        mock.value = _VALUES.get(name, "MockValue")
+        mock.value = _values.get(name, "MockValue")
         mock.quality = "MockQuality"
         return mock
 
@@ -530,7 +530,7 @@ class TestStationPowerManager:
         assert state_model.op_state == DevState.OFF
 
 
-class TestMccsStation_InitCommand:
+class TestInitCommand:
     """
     Contains the tests of :py:class:`~ska.low.mccs.MccsStation`'s
     :py:class:`~ska.low.mccs.MccsStation.InitCommand`.

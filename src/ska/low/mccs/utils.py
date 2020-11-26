@@ -104,7 +104,7 @@ def call_with_json(func, **kwargs):
     return func(json.dumps(kwargs))
 
 
-class json_input:
+class json_input:  # noqa: N801
     """
     Method decorator that parses and validates JSON input into a python
     dictionary, which is then passed to the method as kwargs. The

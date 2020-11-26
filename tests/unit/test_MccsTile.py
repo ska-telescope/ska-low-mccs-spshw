@@ -770,7 +770,7 @@ class TestMccsTileCommands:
         assert not device_under_test.isBeamformerRunning
 
 
-class TestMccsTile_InitCommand:
+class InitCommand:
     """
     Contains the tests of :py:class:`~ska.low.mccs.MccsTile`'s
     :py:class:`~ska.low.mccs.MccsTile.InitCommand`.

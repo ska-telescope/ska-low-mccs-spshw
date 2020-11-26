@@ -282,7 +282,8 @@ class TestMccsAntenna:
         """
         assert device_under_test.rms == 0.0
 
-    def test_voltage(self, device_under_test, mock_device_proxies):
+    @pytest.mark.parametrize("voltage", [19.0])
+    def test_voltage(self, device_under_test, mock_device_proxies, voltage):
         """
         Test for voltage
 
@@ -294,16 +295,18 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict
+        :param voltage: a voltage value to use for testing
+        :type voltage: float
         """
-        VOLTAGE = 19.0
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.get_antenna_voltage.return_value = VOLTAGE
+        mock_apiu.get_antenna_voltage.return_value = voltage
 
         device_under_test.PowerOn()
-        assert device_under_test.voltage == VOLTAGE
+        assert device_under_test.voltage == voltage
         assert mock_apiu.get_antenna_voltage.called_once_with(1)
 
-    def test_current(self, device_under_test, mock_device_proxies):
+    @pytest.mark.parametrize("current", [4.5])
+    def test_current(self, device_under_test, mock_device_proxies, current):
         """
         Test for current
 
@@ -315,16 +318,18 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict
+        :param current: a current value to use for testing
+        :type current: float
         """
-        CURRENT = 4.5
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.get_antenna_current.return_value = CURRENT
+        mock_apiu.get_antenna_current.return_value = current
 
         device_under_test.PowerOn()
-        assert device_under_test.current == CURRENT
+        assert device_under_test.current == current
         assert mock_apiu.get_antenna_current.called_once_with(1)
 
-    def test_temperature(self, device_under_test, mock_device_proxies):
+    @pytest.mark.parametrize("temperature", [37.4])
+    def test_temperature(self, device_under_test, mock_device_proxies, temperature):
         """
         Test for temperature
 
@@ -336,13 +341,14 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
         :type mock_device_proxies: dict
+        :param temperature: a temperature value to use for testing
+        :type temperature: float
         """
-        TEMPERATURE = 37.4
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.get_antenna_temperature.return_value = TEMPERATURE
+        mock_apiu.get_antenna_temperature.return_value = temperature
 
         device_under_test.PowerOn()
-        assert device_under_test.temperature == TEMPERATURE
+        assert device_under_test.temperature == temperature
         assert mock_apiu.get_antenna_temperature.called_once_with(1)
 
     def test_xPolarisationFaulty(self, device_under_test):
@@ -632,7 +638,7 @@ class TestMccsAntenna:
         assert list(device_under_test.bandpassCoefficient) == [0.0]
 
 
-class TestMccsAntenna_InitCommand:
+class TestInitCommand:
     """
     Contains the tests of :py:class:`~ska.low.mccs.MccsAntenna`'s
     :py:class:`~ska.low.mccs.MccsAntenna.InitCommand`.

@@ -822,7 +822,7 @@ class MccsTile(SKABaseDevice):
         :rtype: sequence of str
         """
         return tuple(
-            item["DstIP"] for item in self.hardware_manager.get_40G_configuration()
+            item["DstIP"] for item in self.hardware_manager.get_40g_configuration()
         )
 
     @attribute(
@@ -839,7 +839,7 @@ class MccsTile(SKABaseDevice):
         :rtype: sequence of str
         """
         return tuple(
-            item["DstMac"] for item in self.hardware_manager.get_40G_configuration()
+            item["DstMac"] for item in self.hardware_manager.get_40g_configuration()
         )
 
     @attribute(
@@ -856,7 +856,7 @@ class MccsTile(SKABaseDevice):
         :rtype: sequence of int
         """
         return tuple(
-            item["DstPort"] for item in self.hardware_manager.get_40G_configuration()
+            item["DstPort"] for item in self.hardware_manager.get_40g_configuration()
         )
 
     @attribute(
@@ -1531,7 +1531,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("DstPort is a mandatory parameter")
 
             hardware_manager = self.target
-            hardware_manager.configure_40G_core(
+            hardware_manager.configure_40g_core(
                 core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
             )
             return (ResultCode.OK, "Configure40GCore command completed OK")
@@ -1599,7 +1599,7 @@ class MccsTile(SKABaseDevice):
             """
             core_id = argin
             hardware_manager = self.target
-            item = hardware_manager.get_40G_configuration(core_id)
+            item = hardware_manager.get_40g_configuration(core_id)
             if item is not None:
                 return json.dumps(item.pop("CoreID"))
             raise ValueError("Invalid core id specified")

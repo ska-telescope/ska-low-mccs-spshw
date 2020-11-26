@@ -36,7 +36,7 @@ setuptools.setup(
     entry_points={
         "console_scripts": [
             "MccsAntenna=ska.low.mccs.antenna:main",
-            "MccsAPIU=ska.low.mccs.apiu:main",
+            "MccsAPIU=ska.low.mccs.apiu.apiu_device:main",
             "MccsController=ska.low.mccs.controller:main",
             "MccsSubarray=ska.low.mccs.subarray:main",
             "MccsStation=ska.low.mccs.station:main",

@@ -17,8 +17,8 @@ from tango import DevFailed, DevState, AttrQuality, EventType
 
 from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
-from ska.low.mccs.apiu import APIUHardwareManager
-from ska.low.mccs.apiu_simulator import AntennaHardwareSimulator, APIUHardwareSimulator
+from ska.low.mccs.apiu.apiu_device import APIUHardwareManager
+from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator, APIUSimulator
 
 
 @pytest.fixture()
@@ -47,7 +47,8 @@ class TestAntennaHardwareSimulator:
         Return a simulator for antenna hardware
 
         :return: a simulator for antenna hardware
-        :rtype: :py:class:`~ska.low.mccs.apiu.AntennaHardwareSimulator`
+        :rtype:
+            :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         """
         return AntennaHardwareSimulator()
 
@@ -58,7 +59,7 @@ class TestAntennaHardwareSimulator:
         :param antenna_hardware_simulator: a simulator for antenna
             hardware
         :type antenna_hardware_simulator:
-            :py:class:`~ska.low.mccs.apiu.AntennaHardwareSimulator`
+            :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         """
         assert not antenna_hardware_simulator.is_on
         with pytest.raises(ValueError, match="Antenna hardware is turned off"):
@@ -87,9 +88,9 @@ class TestAntennaHardwareSimulator:
             _ = antenna_hardware_simulator.temperature
 
 
-class TestAPIUHardwareSimulator:
+class TestAPIUSimulator:
     """
-    Contains tests of the APIUHardwareSimulator
+    Contains tests of the APIUSimulator
     """
 
     @pytest.fixture()
@@ -98,9 +99,10 @@ class TestAPIUHardwareSimulator:
         Return a simulator for APIU hardware
 
         :return: a simulator for APIU hardware
-        :rtype: :py:class:`~ska.low.mccs.apiu.APIUHardwareSimulator`
+        :rtype:
+            :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
-        return APIUHardwareSimulator()
+        return APIUSimulator()
 
     def test_apiu_on_off(self, apiu_simulator):
         """
@@ -109,7 +111,8 @@ class TestAPIUHardwareSimulator:
         the antennas get turned on.
 
         :param apiu_simulator: a simulator for APIU hardware
-        :type apiu_simulator: :py:class:`~ska.low.mccs.apiu.APIUHardwareSimulator`
+        :type apiu_simulator:
+            :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
         assert not apiu_simulator.is_on
         with pytest.raises(ValueError, match="APIU hardware is turned off"):
@@ -118,16 +121,16 @@ class TestAPIUHardwareSimulator:
             _ = apiu_simulator.current
         with pytest.raises(ValueError, match="APIU hardware is turned off"):
             _ = apiu_simulator.temperature
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             with pytest.raises(ValueError, match="APIU hardware is turned off"):
                 assert apiu_simulator.is_antenna_on(antenna_id + 1) is None
 
         apiu_simulator.on()
         assert apiu_simulator.is_on
-        assert apiu_simulator.voltage == APIUHardwareSimulator.VOLTAGE
-        assert apiu_simulator.current == APIUHardwareSimulator.CURRENT
-        assert apiu_simulator.temperature == APIUHardwareSimulator.TEMPERATURE
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        assert apiu_simulator.voltage == APIUSimulator.VOLTAGE
+        assert apiu_simulator.current == APIUSimulator.CURRENT
+        assert apiu_simulator.temperature == APIUSimulator.TEMPERATURE
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
 
         apiu_simulator.off()
@@ -138,7 +141,7 @@ class TestAPIUHardwareSimulator:
             _ = apiu_simulator.current
         with pytest.raises(ValueError, match="APIU hardware is turned off"):
             _ = apiu_simulator.temperature
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             with pytest.raises(ValueError, match="APIU hardware is turned off"):
                 assert apiu_simulator.is_antenna_on(antenna_id + 1) is None
 
@@ -152,10 +155,11 @@ class TestAPIUHardwareSimulator:
         * when we turn the APIU off, the antennas get turned off too
 
         :param apiu_simulator: a simulator for APIU hardware
-        :type apiu_simulator: :py:class:`~ska.low.mccs.apiu.APIUHardwareSimulator`
+        :type apiu_simulator:
+            :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
         apiu_simulator.on()
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
             with pytest.raises(ValueError, match="Antenna hardware is turned off"):
                 _ = apiu_simulator.get_antenna_current(antenna_id + 1)
@@ -184,12 +188,12 @@ class TestAPIUHardwareSimulator:
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
 
         apiu_simulator.off()
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             with pytest.raises(ValueError, match="APIU hardware is turned off"):
                 apiu_simulator.turn_on_antenna(antenna_id + 1)
 
         apiu_simulator.on()
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
             with pytest.raises(ValueError, match="Antenna hardware is turned off"):
                 _ = apiu_simulator.get_antenna_current(antenna_id + 1)
@@ -210,7 +214,8 @@ class TestAPIUHardwareManager:
         Return a manager for APIU hardware
 
         :return: a manager for APIU hardware
-        :rtype: :py:class:`~ska.low.mccs.apiu.APIUHardwareManager`
+        :rtype:
+            :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         """
         return APIUHardwareManager(SimulationMode.TRUE)
 
@@ -230,7 +235,8 @@ class TestAPIUHardwareManager:
         mode
 
         :param hardware_manager: a hardware manager for APIU hardware
-        :type hardware_manager: :py:class:`~ska.low.mccs.apiu.APIUHardwareManager`
+        :type hardware_manager:
+            :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -243,7 +249,8 @@ class TestAPIUHardwareManager:
         and re-evaluates device health, each time it polls the hardware
 
         :param hardware_manager: a hardware manager for APIU hardware
-        :type hardware_manager: :py:class:`~ska.low.mccs.apiu.APIUHardwareManager`
+        :type hardware_manager:
+            :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -308,14 +315,15 @@ class TestAPIUHardwareManager:
         turning them on and off.
 
         :param hardware_manager: a hardware manager for APIU hardware
-        :type hardware_manager: :py:class:`~ska.low.mccs.apiu.APIUHardwareManager`
+        :type hardware_manager:
+            :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         assert not hardware_manager.is_on
 
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             with pytest.raises(ValueError, match="APIU hardware is turned off"):
                 _ = hardware_manager.is_antenna_on(antenna_id + 1)
             with pytest.raises(ValueError, match="APIU hardware is turned off"):
@@ -331,7 +339,7 @@ class TestAPIUHardwareManager:
 
         hardware_manager.on()
 
-        for antenna_id in range(APIUHardwareSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not hardware_manager.is_antenna_on(antenna_id + 1)
             with pytest.raises(ValueError, match="Antenna hardware is turned off"):
                 _ = hardware_manager.get_antenna_current(antenna_id + 1)
@@ -419,10 +427,10 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.PowerUp()
-        assert device_under_test.temperature == APIUHardwareSimulator.TEMPERATURE
-        assert device_under_test.humidity == APIUHardwareSimulator.HUMIDITY
-        assert device_under_test.voltage == APIUHardwareSimulator.VOLTAGE
-        assert device_under_test.current == APIUHardwareSimulator.CURRENT
+        assert device_under_test.temperature == APIUSimulator.TEMPERATURE
+        assert device_under_test.humidity == APIUSimulator.HUMIDITY
+        assert device_under_test.voltage == APIUSimulator.VOLTAGE
+        assert device_under_test.current == APIUSimulator.CURRENT
         assert device_under_test.isAlive
         assert device_under_test.overCurrentThreshold == 0.0
         assert device_under_test.overVoltageThreshold == 0.0

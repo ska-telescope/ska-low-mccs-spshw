@@ -130,7 +130,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
         self._temperature = temperature
 
 
-class APIUHardwareSimulator(OnOffHardwareSimulator):
+class APIUSimulator(OnOffHardwareSimulator):
     """
     A simulator of APIU hardware
     """
@@ -143,7 +143,7 @@ class APIUHardwareSimulator(OnOffHardwareSimulator):
 
     def __init__(self):
         """
-        Initialise a new APIUHardwareSimulator instance
+        Initialise a new APIUSimulator instance
         """
         self._voltage = None
         self._current = None

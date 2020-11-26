@@ -26,7 +26,7 @@ from ska.low.mccs.hardware import (
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
-from ska.low.mccs.apiu_simulator import APIUHardwareSimulator
+from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
 from ska.low.mccs.health import HealthModel
 
 
@@ -78,9 +78,10 @@ class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
 class APIUHardwareFactory(SimulableHardwareFactory):
     """
     A hardware factory for APIU hardware. At present, this returns a
-    :py:class:`~ska.low.mccs.apiu_simulator.APIUSimulator` object when
-    in simulation mode, and raises :py:exception:`NotImplementedError`
-    if the hardware is sought whilst not in simulation mode
+    :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator` object
+    when in simulation mode, and raises
+    :py:exception:`NotImplementedError` if the hardware is sought whilst
+    not in simulation mode
     """
 
     def __init__(self, simulation_mode):
@@ -101,7 +102,7 @@ class APIUHardwareFactory(SimulableHardwareFactory):
         :return: a hardware simulator for the tile
         :rtype: :py:class:`TpmSimulator`
         """
-        return APIUHardwareSimulator()
+        return APIUSimulator()
 
 
 class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
@@ -415,13 +416,16 @@ class MccsAPIU(SKABaseDevice):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.apiu.MccsAPIU.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.apiu.MccsAPIU.InitCommand` class.
+        :py:meth:`~ska.low.mccs.apiu.apiu_device.MccsAPIU.InitCommand.do`
+        method of the nested
+        :py:class:`~ska.low.mccs.apiu.apiu_device.MccsAPIU.InitCommand`
+        class.
 
         This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.apiu.MccsAPIU.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        :py:meth:`~ska.low.mccs.apiu.apiu_device.MccsAPIU.InitCommand.do`
+        method to be released. This method is called by the device
+        destructor, and by the Init command when the Tango device server
+        is re-initialised.
         """
 
     # ----------
@@ -795,7 +799,7 @@ class MccsAPIU(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.apiu` module.
+    Main function of the :py:mod:`ska.low.mccs.apiu.apiu_device` module.
 
     :param args: positional arguments
     :type args: list

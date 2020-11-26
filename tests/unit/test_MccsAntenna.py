@@ -26,7 +26,7 @@ from ska.base.control_model import (
 from ska.base.commands import ResultCode
 
 from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
-from ska.low.mccs.apiu_simulator import AntennaHardwareSimulator
+from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator
 from ska.low.mccs.hardware import HardwareFactory
 
 
@@ -56,7 +56,7 @@ def hardware_driver():
 
     :return: an antenna hardware driver
     :rtype:
-        :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+        :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
     """
     return AntennaHardwareSimulator()
 
@@ -69,7 +69,7 @@ def hardware_factory(hardware_driver):
     :param hardware_driver: the antenna hardware driver that the factory
         will return
     :type hardware_driver:
-        :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+        :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
 
     :return: a hardware factory for antenna hardware
     :rtype:
@@ -95,7 +95,7 @@ def hardware_factory(hardware_driver):
 
             :return: a hardware driver created by this factory
             :rtype:
-                :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+                :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
             """
             return self._hardware
 
@@ -134,7 +134,7 @@ class TestAntennaHardwareManager:
 
         :param hardware_driver: the antenna hardware driver
         :type hardware_driver:
-            :py:class:`~ska.low.mccs.apiu_simulator.AntennaHardwareSimulator`
+            :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         :param hardware_manager: a hardware manager for antenna hardware
         :type hardware_manager:
             :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`

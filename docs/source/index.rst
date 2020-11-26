@@ -33,7 +33,7 @@ prototype for the `Square Kilometre Array`_.
    api/tel_state
    api/tile_device
    api/transient_buffer
-   api/demo_tile
+   api/demo_tile_device
 
 .. toctree::
    :maxdepth: 1

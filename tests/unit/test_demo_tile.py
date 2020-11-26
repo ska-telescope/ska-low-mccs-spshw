@@ -13,7 +13,7 @@ module
 import pytest
 
 from ska.base.control_model import HealthState, SimulationMode
-from ska.low.mccs.tile.demo_tile import DemoTile
+from ska.low.mccs.tile.demo_tile_device import DemoTile
 
 
 @pytest.fixture()

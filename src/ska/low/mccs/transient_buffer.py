@@ -15,12 +15,12 @@ architecture in SKA-TEL-LFAA-06000052-02.
 
 # PyTango imports
 from tango.server import attribute
-from ska.low.mccs import MccsDevice
 
 # Additional import
 from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState
 
+from ska.low.mccs import MccsDevice
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 

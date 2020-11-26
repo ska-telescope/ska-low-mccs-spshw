@@ -23,8 +23,9 @@ from tango import AttrQuality, DevFailed, EventType
 from ska.base import DeviceStateModel
 from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import ResultCode
+from ska.low.mccs import MccsTile
 from ska.low.mccs.hardware import SimulableHardwareFactory
-from ska.low.mccs.tile import MccsTile, TileHardwareManager, TpmSimulator
+from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
 
 
 @pytest.fixture()

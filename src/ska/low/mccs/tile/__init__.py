@@ -16,7 +16,7 @@ __all__ = [
     "TileHardwareManager",
     "TilePowerManager",
     "TpmSimulator",
-    "demo_tile",
+    "demo_tile_device",
     "tile_device",
     "tile_hardware",
     "tile_cli",

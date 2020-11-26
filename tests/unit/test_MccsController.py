@@ -31,12 +31,12 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import (
+from ska.low.mccs.controller import (
     MccsController,
     ControllerPowerManager,
     ControllerResourceManager,
-    release,
 )
+from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel

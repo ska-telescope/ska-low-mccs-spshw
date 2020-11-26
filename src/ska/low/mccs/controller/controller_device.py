@@ -611,9 +611,12 @@ class MccsController(SKAMaster):
 
     class InitCommand(SKAMaster.InitCommand):
         """
-        A class for :py:class:`~ska.low.mccs.controller.MccsController`'s Init command.
-        The :py:meth:`~ska.low.mccs.controller.MccsController.InitCommand.do` method
-        below is called upon :py:class:`~ska.low.mccs.controller.MccsController`'s
+        A class for
+        :py:class:`~ska.low.mccs.controller.controller_device.MccsController`'s
+        Init command. The
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand.do`
+        method below is called during
+        :py:class:`~ska.low.mccs.controller.controller_device.MccsController`'s
         initialisation.
         """
 
@@ -794,13 +797,15 @@ class MccsController(SKAMaster):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.controller.MccsController.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.controller.MccsController.InitCommand` class.
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand.do`
+        method of the nested
+        :py:class:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand`
+        class.
 
         This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.controller.MccsController.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand.do`
+        method to be released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -1577,7 +1582,7 @@ class MccsController(SKAMaster):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.controller` module.
+    Main function of the :py:mod:`ska.low.mccs.controller.controller_device` module.
 
     :param args: positional arguments
     :type args: list

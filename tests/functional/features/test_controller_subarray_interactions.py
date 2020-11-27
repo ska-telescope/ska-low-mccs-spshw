@@ -124,7 +124,7 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
         assert result[0] == expected_result
 
 
-@scenario("controller_subarray_interactions.feature", "Start up low telescope")
+@scenario("controller_subarray_interactions.feature", "MCCS Start up low telescope")
 def test_start_up_low_telescope(devices):
     """
     This is run at the end of the scenario.
@@ -250,7 +250,7 @@ def check_reset_state(devices):
     assert devices["station_002"].subarrayId == 0
 
 
-@scenario("controller_subarray_interactions.feature", "Allocate subarray")
+@scenario("controller_subarray_interactions.feature", "MCCS Allocate subarray")
 def test_allocate_subarray(devices):
     """
     This is run at the end of the scenario.
@@ -405,7 +405,7 @@ def subarray_obsstate_is_not_changed(devices, cached_obsstate):
     assert devices["subarray_02"].obsstate == cached_obsstate["subarray_02"]
 
 
-@scenario("controller_subarray_interactions.feature", "Configure a subarray")
+@scenario("controller_subarray_interactions.feature", "MCCS Configure a subarray")
 def test_configure_a_subarray(devices):
     """
     This is run at the end of the scenario.
@@ -534,7 +534,7 @@ def subarray_health_is_good(devices):
     assert devices["subarray_01"].healthState == HealthState.OK
 
 
-@scenario("controller_subarray_interactions.feature", "Perform a scan on subarray")
+@scenario("controller_subarray_interactions.feature", "MCCS Perform a scan on subarray")
 def test_perform_a_scan_on_subarray(devices):
     """
     This is run at the end of the scenario.

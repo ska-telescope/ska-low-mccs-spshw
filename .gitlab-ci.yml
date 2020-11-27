@@ -22,6 +22,7 @@ stages:
   - test
   - build
   - integration
+  - post_test
   - docs
   - pages
   - publish
@@ -204,3 +205,16 @@ publish-chart:
   only:
     refs:
       - tags
+
+xray_report:
+  stage: post_test
+  tags:
+  - docker-executor
+  script:
+    - 'curl -X POST -H "Content-type: application/json" --fail
+         -H "Authorization: Basic $JIRA_AUTH"
+         --data @./test-results/cucumber.json
+         https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
+  when: always
+  only: [master]
+  retry: 2

@@ -142,18 +142,24 @@ Installing Docker should be fairly simple on any operating system.
 
 Windows-specific instructions
 `````````````````````````````
-The program you need to install is "Docker Desktop for Windows".
+On Windows, it is highly recommended to set up WSL2 first, as Docker
+runs faster when integrated with WSL2. To set up WSL2, follow the
+instructions at
+https://docs.microsoft.com/en-us/windows/wsl/install-win10.
 
-Before installing, ensure that any older Docker versions (such as Docker
-Toolbox) are fully uninstalled, and that all Docker environment variables
-have been deleted.
+The Docker package to be installed on Windows is "Docker Desktop for
+Windows". Before installing, ensure that any older Docker versions (such
+as Docker Toolbox) are fully uninstalled, and that all Docker
+environment variables have been deleted. Installing is very
+straight-forward: simply download and run the installer.
 
-Installing is very straight-forward: simply download and run the installer.
+Warning: By default, Docker Desktop enables the Hyper-V feature of
+Windows. Some people find that this interferes in the operation of other
+hypervisors such as VirtualBox.
 
-Warning: Docker Desktop enables the Hyper-V feature of Windows. Some people
-find that this interferes in the operation of other hypervisors such as
-VirtualBox.
-
+If using WLS2, open the Docker Desktop for Windows dashboard, go into
+Settings | Resources | WSL Integration, and ensure Docker is integrated
+with your chosen WSL2 distro.
 
 Ubuntu-specific instructions
 ````````````````````````````

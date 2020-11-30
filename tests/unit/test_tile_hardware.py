@@ -406,11 +406,11 @@ class TestCommon:
         hardware_under_test.stop_beamformer()
         assert not hardware_under_test.is_beamformer_running
 
-    def test_40G_configuration(self, hardware_under_test):
+    def test_40g_configuration(self, hardware_under_test):
         """
         Test of
-        * the configure_40G_core command
-        * the get_40G_configuration command
+        * the configure_40g_core command
+        * the get_40g_configuration command
 
         :param hardware_under_test: the hardware object under test. This
             could be a TpmSimulator, or a TileHardwareManager, or, when
@@ -419,10 +419,10 @@ class TestCommon:
         :type hardware_under_test: object
         """
 
-        assert hardware_under_test.get_40G_configuration(-1) == []
-        assert hardware_under_test.get_40G_configuration("mock_core_id") is None
+        assert hardware_under_test.get_40g_configuration(-1) == []
+        assert hardware_under_test.get_40g_configuration("mock_core_id") is None
 
-        hardware_under_test.configure_40G_core(
+        hardware_under_test.configure_40g_core(
             "mock_core_id",
             "mock_src_mac",
             "mock_src_ip",
@@ -442,6 +442,6 @@ class TestCommon:
             "DstPort": "mock_dst_port",
         }
 
-        assert hardware_under_test.get_40G_configuration(-1) == [expected]
-        assert hardware_under_test.get_40G_configuration("mock_core_id") == expected
-        assert hardware_under_test.get_40G_configuration("another_core_id") is None
+        assert hardware_under_test.get_40g_configuration(-1) == [expected]
+        assert hardware_under_test.get_40g_configuration("mock_core_id") == expected
+        assert hardware_under_test.get_40g_configuration("another_core_id") is None

@@ -42,7 +42,7 @@ class CliMeta(type):
         return wrapper
 
 
-def commandResultAsString(method):
+def command_result_as_string(method):
     """
     Wrapper to format device command results as a two-line string
 
@@ -69,7 +69,7 @@ class MccsTileCli(metaclass=CliMeta):
         self.tile_number = 1
         self._dp = tango.DeviceProxy(f"low-mccs/tile/{self.tile_number:04}")
 
-    @commandResultAsString
+    @command_result_as_string
     def connect(self):
         """
         Connect to the hardware
@@ -105,7 +105,7 @@ class MccsTileCli(metaclass=CliMeta):
             self._dp.logginglevel = elevel
         return self._dp.logginglevel.name
 
-    @commandResultAsString
+    @command_result_as_string
     def SendBeamData(self, period=0, timeout=0, timestamp=None, seconds=0.2):
         args = {
             "Period": period,
@@ -116,21 +116,21 @@ class MccsTileCli(metaclass=CliMeta):
         jstr = json.dumps(args)
         return self._dp.command_inout("SendBeamData", jstr)
 
-    @commandResultAsString
+    @command_result_as_string
     def SendChannelisedDataContinuous(
         self,
-        channelID=None,
-        nSamples=128,
-        waitSeconds=0,
+        channel_id=None,
+        num_samples=128,
+        wait_seconds=0,
         timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
         try:
             args = {
-                "ChannelID": channelID,
-                "NSamples": nSamples,
-                "WaitSeconds": waitSeconds,
+                "ChannelID": channel_id,
+                "NSamples": num_samples,
+                "WaitSeconds": wait_seconds,
                 "Timeout": timeout,
                 "Timestamp": timestamp,
                 "Seconds": seconds,
@@ -140,21 +140,21 @@ class MccsTileCli(metaclass=CliMeta):
         except tango.DevFailed:
             raise RuntimeError("ChannelID mandatory argument...cannot be a NULL value")
 
-    @commandResultAsString
+    @command_result_as_string
     def SendChannelisedData(
         self,
-        nSamples=128,
-        firstChannel=0,
-        lastChannel=511,
+        num_samples=128,
+        first_channel=0,
+        last_channel=511,
         period=0,
         timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
         args = {
-            "NSamples": nSamples,
-            "FirstChannel": firstChannel,
-            "LastChannel": lastChannel,
+            "NSamples": num_samples,
+            "FirstChannel": first_channel,
+            "LastChannel": last_channel,
             "Period": period,
             "Timeout": timeout,
             "Timestamp": timestamp,
@@ -163,7 +163,7 @@ class MccsTileCli(metaclass=CliMeta):
         jstr = json.dumps(args)
         return self._dp.command_inout("SendChannelisedData", jstr)
 
-    @commandResultAsString
+    @command_result_as_string
     def SendRawData(self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2):
         args = {
             "Sync": sync,
@@ -175,27 +175,27 @@ class MccsTileCli(metaclass=CliMeta):
         jstr = json.dumps(args)
         return self._dp.command_inout("SendRawData", jstr)
 
-    @commandResultAsString
+    @command_result_as_string
     def ConfigureIntegratedBeamData(self, integration_time=0.5):
         return self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
-    @commandResultAsString
+    @command_result_as_string
     def ConfigureIntegratedChannelData(self, integration_time=0.5):
         return self._dp.command_inout(
             "ConfigureIntegratedChannelData", integration_time
         )
 
-    @commandResultAsString
-    def StartBeamformer(self, startTime=0, duration=-1):
-        args = {"StartTime": startTime, "Duration": duration}
+    @command_result_as_string
+    def StartBeamformer(self, start_time=0, duration=-1):
+        args = {"StartTime": start_time, "Duration": duration}
         jstr = json.dumps(args)
         return self._dp.command_inout("StartBeamformer", jstr)
 
-    @commandResultAsString
+    @command_result_as_string
     def StopBeamformer(self):
         return self._dp.command_inout("StopBeamformer")
 
-    @commandResultAsString
+    @command_result_as_string
     def LoadPointingDelay(self, load_time=0):
         return self._dp.command_inout("LoadPointingDelay", load_time)
 

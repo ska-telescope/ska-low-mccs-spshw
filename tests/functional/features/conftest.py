@@ -14,6 +14,19 @@ from tango import DevState
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 
+def pytest_configure(config):
+    """
+    Register custom markers to avoid pytest warnings
+
+    :param config: the pytest config object
+    :type config: pytest config class
+    """
+    config.addinivalue_line("markers", "XTP-1170: XRay BDD test marker")
+    config.addinivalue_line("markers", "XTP-1257: XRay BDD test marker")
+    config.addinivalue_line("markers", "XTP-1260: XRay BDD test marker")
+    config.addinivalue_line("markers", "XTP-1261: XRay BDD test marker")
+
+
 @contextmanager
 def _tango_true_context():
     """

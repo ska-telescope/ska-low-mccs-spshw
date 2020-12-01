@@ -13,8 +13,12 @@ This module contains the tests of the cluster simulator.
 import pytest
 
 from ska.base.control_model import HealthState, SimulationMode
-from ska.low.mccs.cluster_simulator import ClusterSimulator, JobConfig, JobStatus
-from ska.low.mccs.cluster_manager import ClusterManager
+from ska.low.mccs.cluster_manager.cluster_simulator import (
+    ClusterSimulator,
+    JobConfig,
+    JobStatus,
+)
+from ska.low.mccs.cluster_manager.cluster_manager_device import ClusterManager
 
 
 @pytest.fixture()
@@ -23,7 +27,8 @@ def cluster_simulator():
     Fixture that returns a cluster simulator
 
     :return: a cluster simulator
-    :rtype: :py:class:`ska.low.mccs.cluster_simulator.ClusterSimulator`
+    :rtype:
+        :py:class:`ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
     """
     return ClusterSimulator()
 
@@ -36,7 +41,8 @@ def cluster_manager():
 
     :return: a cluster manager for the MCCS cluster manager device, in
         hardware simulation mode
-    :rtype: :py:class:`ska.low.mccs.cluster_manager.ClusterManager`
+    :rtype:
+        :py:class:`ska.low.mccs.cluster_manager.cluster_manager_device.ClusterManager`
     """
     return ClusterManager(simulation_mode=SimulationMode.TRUE)
 
@@ -61,10 +67,10 @@ class TestClusterCommon:
 
         :param cluster_simulator: the cluster simulator to return
         :type cluster_simulator:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         :param cluster_manager: the cluster manager to return
         :type cluster_manager:
-            :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_manager_device.ClusterManager`
         :param request: A pytest object giving access to the requesting test
             context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
@@ -97,7 +103,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         :param resource: the name of the configuration resource under
             test
         :type resource: str
@@ -110,11 +116,11 @@ class TestClusterCommon:
     def test_closed_jobs_stats(self, cluster, status):
         """
         Test of the stats on closed jobs, including that they is cleared by
-        :py:meth:`~ska.low.mccs.cluster_simulator.ClusterSimulator.clear_job_stats`.
+        :py:meth:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator.clear_job_stats`.
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         :param status: the job status for which stats reporting is under
             test
         :type status: str
@@ -133,17 +139,17 @@ class TestClusterCommon:
         Test of the open job stats, including
 
         * that it is consistent with the results of
-          :py:meth:`~ska.low.mccs.cluster_simulator.ClusterSimulator.clear_job_stats`
+          :py:meth:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator.clear_job_stats`
 
         * that the number of jobs of a given status decrements if an
           job with that status is killed; and
 
         * that it is NOT cleared by
-          :py:meth:`~ska.low.mccs.cluster_simulator.ClusterSimulator.clear_job_stats`.
+          :py:meth:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator.clear_job_stats`.
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         :param status: the job status for which stats reporting is under
             test
         :type status: str
@@ -179,7 +185,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         :param resource: the name of the resource for which stats
             reporting is under test
         :type resource: str
@@ -225,7 +231,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         :param resource: the name of the resource for which stats
             reporting is under test
         :type resource: str
@@ -244,7 +250,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         """
         assert cluster.memory_avail + cluster.memory_used == pytest.approx(
             cluster.memory_total
@@ -272,7 +278,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         """
         with pytest.raises(
             NotImplementedError,
@@ -287,7 +293,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         """
         job_config = JobConfig()
         job_id = cluster.submit_job(job_config)
@@ -299,7 +305,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         """
         with pytest.raises(ValueError, match="No such job"):
             cluster.start_job("no_such_job_id")
@@ -318,7 +324,7 @@ class TestClusterCommon:
 
         :param cluster: the simulated cluster
         :type cluster:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         """
         with pytest.raises(ValueError, match="No such job"):
             cluster.stop_job("no_such_job_id")
@@ -347,7 +353,7 @@ class TestClusterSimulator:
 
         :param cluster_simulator: the simulated cluster
         :type cluster_simulator:
-            :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
         """
         master_node_id = None
         assert (
@@ -397,7 +403,7 @@ class TestClusterManager:
 
         :param cluster_manager: a manager for an external cluster
         :type cluster_manager:
-            :py:class:`~ska.low.mccs.cluster_manager.ClusterManager`
+            :py:class:`~ska.low.mccs.cluster_manager.cluster_manager_device.ClusterManager`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")

@@ -31,12 +31,12 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import (
+from ska.low.mccs.controller import (
     MccsController,
     ControllerPowerManager,
     ControllerResourceManager,
-    release,
 )
+from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
@@ -925,8 +925,9 @@ class TestMccsController:
 
 class TestControllerPowerManager:
     """
-    This class contains tests of the ska.low.mccs.controller.ControllerPowerManager
-    class
+    This class contains tests of the
+    `:py:class:~ska.low.mccs.controller.controller_device.ControllerPowerManager`
+    class.
     """
 
     @pytest.fixture()
@@ -1072,7 +1073,8 @@ class TestControllerPowerManager:
 
 class TestControllerResourceManager:
     """
-    This class contains tests of the ska.low.mccs.controller.ControllerResourceManager
+    This class contains tests of the
+    `:py:class:~ska.low.mccs.controller.controller_device.ControllerResourceManager`
     class.
 
     This class is already exercised through the Tango commands of Controller,
@@ -1093,7 +1095,8 @@ class TestControllerResourceManager:
             :py:class:`logging.Logger` interface
 
         :return: a resource manager with 2 subservient station devices
-        :rtype: :py:class:`ska.low.mccs.controller.ControllerResourceManager`
+        :rtype:
+            :py:class:`ska.low.mccs.controller.controller_device.ControllerResourceManager`
         """
         self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
 

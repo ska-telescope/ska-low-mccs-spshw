@@ -17,7 +17,7 @@ import time
 import pytest
 
 from ska.base.control_model import HealthState
-from ska.low.mccs.tile.demo_tile import DemoTile
+from ska.low.mccs.tile.demo_tile_device import DemoTile
 from ska.low.mccs.utils import call_with_json
 from conftest import confirm_initialised
 

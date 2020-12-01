@@ -10,43 +10,52 @@ Monitoring Control and Calibration Subsystem (MCCS).
 """
 
 __all__ = [
-    "MccsAPIU",
-    "MccsController",
-    "ControllerPowerManager",
-    "ControllerResourceManager",
-    "MccsSubarray",
-    "MccsStation",
-    "StationPowerManager",
-    "MccsStationBeam",
-    "MccsTile",
-    "TileHardwareManager",
-    "TilePowerManager",
     "MccsAntenna",
-    "MccsTelState",
-    "MccsTransientBuffer",
+    "MccsAPIU",
     "MccsClusterManagerDevice",
-    "apiu_simulator",
-    "cluster_simulator",
+    "MccsController",
+    "MccsDevice",
+    "MccsGroupDevice",
+    "MccsStation",
+    "MccsStationBeam",
+    "MccsSubarray",
+    "MccsTelState",
+    "MccsTile",
+    "MccsTransientBuffer",
+    # abstract device modules
+    "device",
+    "group_device",
+    # concrete device subpackages
+    "apiu",
+    "cluster_manager",
+    "controller",
+    "tile",
+    # concrete devices modules
+    "antenna",
+    "station",
+    "station_beam",
+    "subarray",
+    "tel_state",
+    "transient_buffer",
+    # non-device modules
     "events",
     "hardware",
     "health",
     "power",
-    "tile",
+    "utils",
 ]
 
-from .device import MccsDevice  # noqa: F401
-from .group_device import MccsGroupDevice  # noqa: F401
+from .device import MccsDevice
+from .group_device import MccsGroupDevice
+
 from .apiu import MccsAPIU
-from .controller import (
-    MccsController,
-    ControllerPowerManager,
-    ControllerResourceManager,
-)
-from .subarray import MccsSubarray
-from .station import MccsStation, StationPowerManager
-from .station_beam import MccsStationBeam
-from .tile import MccsTile, TileHardwareManager, TilePowerManager
+from .cluster_manager import MccsClusterManagerDevice
+from .controller import MccsController
+from .tile import MccsTile
+
 from .antenna import MccsAntenna
+from .station import MccsStation
+from .station_beam import MccsStationBeam
+from .subarray import MccsSubarray
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer
-from .cluster_manager import MccsClusterManagerDevice

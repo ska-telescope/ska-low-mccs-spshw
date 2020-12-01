@@ -22,9 +22,9 @@ prototype for the `Square Kilometre Array`_.
    :caption: Devices
 
    api/antenna
-   api/apiu
-   api/cluster_manager
-   api/controller
+   api/apiu_device
+   api/cluster_manager_device
+   api/controller_device
    api/device
    api/group_device
    api/station
@@ -33,7 +33,7 @@ prototype for the `Square Kilometre Array`_.
    api/tel_state
    api/tile_device
    api/transient_buffer
-   api/demo_tile
+   api/demo_tile_device
 
 .. toctree::
    :maxdepth: 1

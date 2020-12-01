@@ -21,7 +21,11 @@ from tango.server import attribute, command, AttrWriteType
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.base.control_model import HealthState, SimulationMode
 from ska.low.mccs import MccsGroupDevice
-from ska.low.mccs.cluster_simulator import ClusterSimulator, JobStatus, JobConfig
+from ska.low.mccs.cluster_manager.cluster_simulator import (
+    ClusterSimulator,
+    JobStatus,
+    JobConfig,
+)
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
@@ -85,8 +89,8 @@ class ClusterHealthEvaluator(HardwareHealthEvaluator):
 class ClusterFactory(SimulableHardwareFactory):
     """
     A hardware factory for cluster hardware. At present, this returns a
-    :py:class:`~ska.low.mccs.cluster_simulator.ClusterSimulator` object
-    when in simulation mode, and raises
+    :py:class:`~ska.low.mccs.cluster_manager.cluster_simulator.ClusterSimulator`
+    object when in simulation mode, and raises
     :py:exception:`NotImplementedError` if the hardware is sought whilst
     not in simulation mode
     """
@@ -644,13 +648,13 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.cluster_manager.MccsClusterManagerDevice.InitCommand.do`
+        :py:meth:`~ska.low.mccs.cluster_manager.cluster_manager_device.MccsClusterManagerDevice.InitCommand.do`
         method of the nested
-        :py:class:`~ska.low.mccs.cluster_manager.MccsClusterManagerDevice.InitCommand`
+        :py:class:`~ska.low.mccs.cluster_manager.cluster_manager_device.MccsClusterManagerDevice.InitCommand`
         class.
 
         This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.cluster_manager.MccsClusterManagerDevice.InitCommand.do`
+        :py:meth:`~ska.low.mccs.cluster_manager.cluster_manager_device.MccsClusterManagerDevice.InitCommand.do`
         method to be released. This method is called by the device destructor,
         and by the Init command when the Tango device server is re-initialised.
         """
@@ -1158,7 +1162,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :param argin: the job id
             :type argin: :py:class:`tango.DevString`
             :return: The status of the job
-            :rtype: :py:class:`ska.low.mccs.cluster_simulator.JobStatus`
+            :rtype:
+                :py:class:`ska.low.mccs.cluster_manager.cluster_simulator.JobStatus`
             """
             cluster_manager = self.target
             try:
@@ -1293,7 +1298,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.cluster_manager` module.
+    Main function of the
+    :py:mod:`ska.low.mccs.cluster_manager.cluster_manager_device`
+    module.
 
     :param args: positional arguments
     :type args: list

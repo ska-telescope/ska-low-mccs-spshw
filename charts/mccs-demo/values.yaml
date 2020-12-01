@@ -36,4 +36,4 @@ ska-low-mccs:
     configuration_file: data/demo_configuration.json
   deviceServers:
     tiles:
-      command: "python3 -m ska.low.mccs.tile.demo_tile"
+      command: "python3 -m ska.low.mccs.tile.demo_tile_device"

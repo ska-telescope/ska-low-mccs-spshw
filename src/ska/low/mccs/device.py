@@ -9,7 +9,7 @@
 
 """
 This module implements the MCCS Base Device, a base class for all MCCS
-devices
+devices.
 """
 __all__ = ["MccsDevice", "main"]
 
@@ -53,7 +53,7 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
-            attributes and properties of the `MccsDevice`.
+            attributes and properties of the :py:class:`.MccsDevice`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -85,7 +85,7 @@ class MccsDevice(SKABaseDevice):
 
     def init_command_objects(self):
         """
-        Set up the handler objects for Commands
+        Set up the handler objects for Commands.
         """
         super().init_command_objects()
 
@@ -113,16 +113,18 @@ class MccsDevice(SKABaseDevice):
         )
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
 
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.device.MccsDevice.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.device.MccsDevice.InitCommand` class.
+        :py:meth:`~.MccsDevice.InitCommand.do` method of the nested
+        :py:class:`~.MccsDevice.InitCommand` class.
 
         This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.device.MccsDevice.InitCommand.do` method to be
+        :py:meth:`~.MccsDevice.InitCommand.do` method to be
         released. This method is called by the device destructor, and by the Init
         command when the Tango device server is re-initialised.
         """
@@ -144,7 +146,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def isHardwareDevice(self):
         """
-        Return whether this device manages hardware
+        Return whether this device manages hardware.
 
         :return: whether this device mamages hardware
         :rtype: bool
@@ -159,30 +161,30 @@ class MccsDevice(SKABaseDevice):
         :todo: What does this mean?
 
         :return: the value of the diagMode attribute
-        :rtype: boolean
+        :rtype: bool
         """
         return self._diag_mode
 
     @attribute(dtype="DevBoolean")
     def calledUndefinedDevice(self):
         """
-        Return a flag indicating whether this device has tried to call
-            a device that is not defined in the device database
+        Return a flag indicating whether this device has tried to call a
+        device that is not defined in the device database.
 
         :return: whether this device has tried to call a device that is
             not defined in the device database
-        :rtype: boolean
+        :rtype: bool
         """
         return self._called_undefined_device
 
     @attribute(dtype="DevBoolean")
     def calledDeadServer(self):
         """
-        Return a flag indicating whether this device has tried to call
-            a dead server
+        Return a flag indicating whether this device has tried to call a
+        dead server.
 
         :return: whether this device has tried to call a dead server
-        :rtype: boolean
+        :rtype: bool
         """
         return self._called_dead_server
 
@@ -190,22 +192,22 @@ class MccsDevice(SKABaseDevice):
     def detectedDeadServer(self):
         """
         Return a flag indicating whether this device has detected a dead
-            server
+        server.
 
         :return: whether this device has detected a dead server
-        :rtype: boolean
+        :rtype: bool
         """
         return self._detected_dead_server
 
     @attribute(dtype="DevBoolean")
     def calledNonRunningDevice(self):
         """
-        Return a flag indicating whether this device has tried to call
-            a device that is not running
+        Return a flag indicating whether this device has tried to call a
+        device that is not running.
 
         :return: whether this device has tried to call a device that is
             not running
-        :rtype: boolean
+        :rtype: bool
         """
         return self._called_non_running_device
 
@@ -213,10 +215,10 @@ class MccsDevice(SKABaseDevice):
     def callTimeout(self):
         """
         Return a flag indicating whether this device has experienced a
-            call timeout
+        call timeout.
 
         :return: whether this device has had a call timeout
-        :rtype: boolean
+        :rtype: bool
         """
         return self._call_timeout
 
@@ -224,11 +226,11 @@ class MccsDevice(SKABaseDevice):
     def callCommFailed(self):
         """
         Return a flag indicating whether this device has had a call fail
-            due to communications failure
+        due to communications failure.
 
         :return: whether this device has had a call fail due to
             communications failure
-        :rtype: boolean
+        :rtype: bool
         """
         return self._call_comm_failed
 
@@ -236,25 +238,25 @@ class MccsDevice(SKABaseDevice):
     def invalidAsynId(self):
         """
         Return a flag indicating whether this device has had a call fail
-            due to an invalid "asyn" id
+        due to an invalid "asyn" id.
 
         :todo: what is an "asyn" id?
 
         :return: whether this device has had a call fail due to an
             invalid asyn id
-        :rtype: boolean
+        :rtype: bool
         """
         return self._invalid_asyn_id
 
     @attribute(dtype="DevBoolean")
     def calledInexistentCallback(self):
         """
-        Return a flag indicating whether this device has tried to call
-            a nonexistent callback
+        Return a flag indicating whether this device has tried to call a
+        nonexistent callback.
 
         :return: whether this device has tried to call a nonexistent
             callback
-        :rtype: boolean
+        :rtype: bool
         """
         return self._called_inexistent_callback
 
@@ -262,11 +264,11 @@ class MccsDevice(SKABaseDevice):
     def requestIdMismatch(self):
         """
         Return a flag indicating whether this device has experienced a
-            request id mismatch
+        request id mismatch.
 
         :return: whether this device has experienced a request id
             mismatch
-        :rtype: boolean
+        :rtype: bool
         """
         return self._request_id_mismatch
 
@@ -274,11 +276,11 @@ class MccsDevice(SKABaseDevice):
     def expectedReplyNotReady(self):
         """
         Return a flag indicating whether this device has experienced an
-            expected reply not being ready
+        expected reply not being ready.
 
         :return: whether this device has experienced an expected reply
             not being ready
-        :rtype: boolean
+        :rtype: bool
         """
         return self._expected_reply_not_ready
 
@@ -286,11 +288,11 @@ class MccsDevice(SKABaseDevice):
     def experiencedSubscriptionFailure(self):
         """
         Return a flag indicating whether this device has experienced a
-            subscription failure
+        subscription failure.
 
         :return: whether this device has experienced a subscription
             failure
-        :rtype: boolean
+        :rtype: bool
         """
         return self._experienced_subscription_failure
 
@@ -298,11 +300,11 @@ class MccsDevice(SKABaseDevice):
     def invalidEventId(self):
         """
         Return a flag indicating whether this device has errored due to
-            an invalid event id
+        an invalid event id.
 
         :return: whether this device has errored due to an invalid event
             id
-        :rtype: boolean
+        :rtype: bool
         """
         return self._invalid_event_id
 
@@ -321,7 +323,7 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.ExceptionCallback`
+            :py:meth:`ska.low.mccs.device.MccsDevice.ExceptionCallback`
             command functionality.
 
             :return: A tuple containing a return code and a string
@@ -335,7 +337,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def ExceptionCallback(self):
         """
-        ExceptionCallback Command
+        ExceptionCallback Command.
 
         :todo: What does this command do?
 
@@ -359,7 +361,7 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.DefaultAlarmOnCallback`
+            :py:meth:`ska.low.mccs.device.MccsDevice.DefaultAlarmOnCallback`
             command functionality.
 
             :return: A tuple containing a return code and a string
@@ -373,7 +375,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def DefaultAlarmOnCallback(self):
         """
-        DefaultAlarmOnCallback Command
+        DefaultAlarmOnCallback Command.
 
         :todo: What does this command do?
 
@@ -397,7 +399,7 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.DefaultAlarmOffCallback`
+            :py:meth:`ska.low.mccs.device.MccsDevice.DefaultAlarmOffCallback`
             command functionality.
 
             :return: A tuple containing a return code and a string
@@ -411,7 +413,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def DefaultAlarmOffCallback(self):
         """
-        DefaultAlarmOffCallback Command
+        DefaultAlarmOffCallback Command.
 
         :todo: What does this command do?
 
@@ -432,7 +434,7 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.GetFullReport` command
+            :py:meth:`ska.low.mccs.device.MccsDevice.GetFullReport` command
             functionality.
 
             :return: A tuple containing a return code and a string
@@ -446,7 +448,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetFullReport(self):
         """
-        GetFullReport Command
+        GetFullReport Command.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -464,11 +466,11 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.GetCommandReport`
+            :py:meth:`ska.low.mccs.device.MccsDevice.GetCommandReport`
             command functionality.
 
             :return: a command report
-            :rtype: sequence of str
+            :rtype: list(str)
             """
             return [""]
 
@@ -476,10 +478,10 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetCommandReport(self):
         """
-        GetCommandReport Command
+        GetCommandReport Command.
 
         :return: a command report
-        :rtype: sequence of string
+        :rtype: list(str)
         """
         handler = self.get_command_object("GetCommandReport")
         return handler()
@@ -492,7 +494,7 @@ class MccsDevice(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.GetAttributeReport`
+            :py:meth:`ska.low.mccs.device.MccsDevice.GetAttributeReport`
             command functionality.
 
             :return: A tuple containing a return code and a string
@@ -506,17 +508,18 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetAttributeReport(self):
         """
-        GetAttributeReport Command
+        GetAttributeReport Command.
 
         :return: an attribute report
-        :rtype: sequence of string
+        :rtype: list(str)
         """
         handler = self.get_command_object("GetAttributeReport")
         return handler()
 
     class ConstructDeviceProxyAddressCommand(ResponseCommand):
         """
-        Class for handling the ConstructDeviceProxyAddress(argin) command.
+        Class for handling the ConstructDeviceProxyAddress(argin)
+        command.
 
         :todo: What does this command do? It sounds like it constructs
             an address, but if so it doesn't return it.
@@ -525,11 +528,11 @@ class MccsDevice(SKABaseDevice):
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsDevice.ConstructDeviceProxyAddress`
+            :py:meth:`ska.low.mccs.device.MccsDevice.ConstructDeviceProxyAddress`
             command functionality.
 
             :param argin: TODO: what argument does this take
-            :type argin: string
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -546,7 +549,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def ConstructDeviceProxyAddress(self, argin):
         """
-        ConstructDeviceProxyAddress Command
+        ConstructDeviceProxyAddress Command.
 
         :param argin: 'DevString'
 
@@ -567,7 +570,7 @@ class MccsDevice(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.device` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

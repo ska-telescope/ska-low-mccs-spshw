@@ -24,7 +24,7 @@ from ska.low.mccs.cluster_manager.cluster_simulator import ClusterSimulator, Job
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -43,7 +43,7 @@ class TestMccsClusterManagerDevice:
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -69,7 +69,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsErrored(self, device_under_test):
         """
-        Test for jobsErrored
+        Test for jobsErrored.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -83,7 +83,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsFailed(self, device_under_test):
         """
-        Test for jobsFailed
+        Test for jobsFailed.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -96,7 +96,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsFinished(self, device_under_test):
         """
-        Test for jobsFinished
+        Test for jobsFinished.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -110,7 +110,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsKilled(self, device_under_test):
         """
-        Test for test_jobsKilled
+        Test for test_jobsKilled.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -123,7 +123,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsKilling(self, device_under_test):
         """
-        Test for jobsKilling
+        Test for jobsKilling.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -136,7 +136,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsLost(self, device_under_test):
         """
-        Test for jobsLost
+        Test for jobsLost.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -147,7 +147,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsRunning(self, device_under_test):
         """
-        Test for jobsRunning
+        Test for jobsRunning.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -160,7 +160,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsStaging(self, device_under_test):
         """
-        Test for jobsStaging
+        Test for jobsStaging.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -173,7 +173,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsStarting(self, device_under_test):
         """
-        Test for jobsStarting
+        Test for jobsStarting.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -186,7 +186,7 @@ class TestMccsClusterManagerDevice:
 
     def test_jobsUnreachable(self, device_under_test):
         """
-        Test for jobsUnreachable
+        Test for jobsUnreachable.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -199,7 +199,7 @@ class TestMccsClusterManagerDevice:
 
     def test_memoryTotal(self, device_under_test):
         """
-        Test for memoryTotal
+        Test for memoryTotal.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -213,7 +213,7 @@ class TestMccsClusterManagerDevice:
 
     def test_memoryAvail(self, device_under_test):
         """
-        Test for memoryAvail
+        Test for memoryAvail.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -227,7 +227,7 @@ class TestMccsClusterManagerDevice:
 
     def test_memoryUsed(self, device_under_test):
         """
-        Test for memoryUsed
+        Test for memoryUsed.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -241,7 +241,7 @@ class TestMccsClusterManagerDevice:
 
     def test_nodesInUse(self, device_under_test):
         """
-        Test for nodesInUse
+        Test for nodesInUse.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -255,7 +255,7 @@ class TestMccsClusterManagerDevice:
 
     def test_nodesAvail(self, device_under_test):
         """
-        Test for nodesAvail
+        Test for nodesAvail.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -269,7 +269,7 @@ class TestMccsClusterManagerDevice:
 
     def test_nodesTotal(self, device_under_test):
         """
-        Test for nodesTotal
+        Test for nodesTotal.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -283,7 +283,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterNodeId(self, device_under_test):
         """
-        Test for masterNodeId
+        Test for masterNodeId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -297,7 +297,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterCpusAllocatedPercent(self, device_under_test):
         """
-        Test for masterCpusAllocatedPercent
+        Test for masterCpusAllocatedPercent.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -313,7 +313,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterCpusUsed(self, device_under_test):
         """
-        Test for masterCpusUsed
+        Test for masterCpusUsed.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -327,7 +327,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterCpusTotal(self, device_under_test):
         """
-        Test for masterCpusTotal
+        Test for masterCpusTotal.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -341,7 +341,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterDiskPercent(self, device_under_test):
         """
-        Test for masterDiskPercent
+        Test for masterDiskPercent.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -357,7 +357,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterDiskUsed(self, device_under_test):
         """
-        Test for masterDiskUsed
+        Test for masterDiskUsed.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -371,7 +371,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterDiskTotal(self, device_under_test):
         """
-        Test for masterDiskTotal
+        Test for masterDiskTotal.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -385,7 +385,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterMemPercent(self, device_under_test):
         """
-        Test for masterMemPercent
+        Test for masterMemPercent.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -401,7 +401,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterMemUsed(self, device_under_test):
         """
-        Test for masterMemUsed
+        Test for masterMemUsed.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -415,7 +415,7 @@ class TestMccsClusterManagerDevice:
 
     def test_masterMemTotal(self, device_under_test):
         """
-        Test for masterMemTotal
+        Test for masterMemTotal.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -429,7 +429,7 @@ class TestMccsClusterManagerDevice:
 
     def test_shadowMasterPoolNodeIds(self, device_under_test):
         """
-        Test for shadowMasterPoolNodeIds
+        Test for shadowMasterPoolNodeIds.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -443,7 +443,7 @@ class TestMccsClusterManagerDevice:
 
     def test_shadowMasterPoolStatus(self, device_under_test):
         """
-        Test for shadowMasterPoolStatus
+        Test for shadowMasterPoolStatus.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -456,7 +456,7 @@ class TestMccsClusterManagerDevice:
 
     def test_StartJob(self, device_under_test):
         """
-        Test for StartJob
+        Test for StartJob.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -476,7 +476,7 @@ class TestMccsClusterManagerDevice:
 
     def test_StopJob(self, device_under_test):
         """
-        Test for StopJob
+        Test for StopJob.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -494,7 +494,7 @@ class TestMccsClusterManagerDevice:
 
     def test_SubmitJob(self, device_under_test):
         """
-        Test for SubmitJob
+        Test for SubmitJob.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -508,7 +508,7 @@ class TestMccsClusterManagerDevice:
 
     def test_GetJobStatus(self, device_under_test):
         """
-        Test for GetJobStatus
+        Test for GetJobStatus.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -520,7 +520,7 @@ class TestMccsClusterManagerDevice:
 
     def test_ClearJobStats(self, device_under_test):
         """
-        Test for ClearJobStats
+        Test for ClearJobStats.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -533,7 +533,7 @@ class TestMccsClusterManagerDevice:
 
     def test_PingMasterPool(self, device_under_test):
         """
-        Test for PingMasterPool
+        Test for PingMasterPool.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

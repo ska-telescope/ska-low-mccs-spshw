@@ -10,9 +10,10 @@
 #########################################################################
 """
 This module contains the tests of the tile hardware, including the
-TileHardwareManager class and the TpmSimulator. When we eventually have
-a TpmDriver that drives real hardware, this module could also be used to
-test that.
+TileHardwareManager class and the TpmSimulator.
+
+When we eventually have a TpmDriver that drives real hardware, this
+module could also be used to test that.
 """
 import logging
 from unittest.mock import Mock
@@ -26,7 +27,7 @@ from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
 @pytest.fixture()
 def tpm_simulator():
     """
-    Fixture that returns a TPM simulator
+    Fixture that returns a TPM simulator.
 
     :return: a TPM simulator
     :rtype: :py:class:`ska.low.mccs.tile.tpm_simulator.TpmSimulator`
@@ -38,7 +39,7 @@ def tpm_simulator():
 def tile_hardware_manager():
     """
     Fixture that returns a hardware manager for the MCCS tile device, in
-    hardware simulation mode
+    hardware simulation mode.
 
     :return: a hardware manager for the MCCS tile device, in hardware
         simulation mode
@@ -51,13 +52,13 @@ def tile_hardware_manager():
 
 class TestTileHardwareManager:
     """
-    Contains tests specific to TileHardwareManager
+    Contains tests specific to TileHardwareManager.
     """
 
     def test_init_simulation_mode(self):
         """
         Test that we can't create an hardware manager that isn't in
-        simulation mode
+        simulation mode.
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -67,7 +68,7 @@ class TestTileHardwareManager:
     def test_simulation_mode(self, tile_hardware_manager):
         """
         Test that we can't take the tile hardware manager out of
-        simulation mode
+        simulation mode.
 
         :param tile_hardware_manager: a manager for tile hardware
         :type tile_hardware_manager:
@@ -85,6 +86,7 @@ class TestCommon:
     to the TpmSimulator or TpmDriver that it is driving, many commands
     are common to TileHardwareManager and TpmSimulator, and they will
     also be common to the TpmDriver when we eventually implement it.
+
     Therefore this class contains common tests, parametrised to test
     against each class
     """
@@ -254,6 +256,7 @@ class TestCommon:
     def test_download_firmware(self, hardware_under_test, mocker):
         """
         Test of:
+
         * the download_firmware command.
         * the is_programmed attribute
 
@@ -288,7 +291,7 @@ class TestCommon:
         write_values,
     ):
         """
-        Test of
+        Test of.
 
         * read_register command
         * write_register command
@@ -309,7 +312,7 @@ class TestCommon:
         :param write_offset: offset to start write at
         :type write_offset: int
         :param write_values: values to write to the register
-        :type write_values: array
+        :type write_values: list
         """
         buffer_size = max(read_offset + read_length, write_offset + len(write_values))
         buffer = [0] * buffer_size
@@ -337,7 +340,7 @@ class TestCommon:
         read_length,
     ):
         """
-        Test of
+        Test of.
 
         * read_address command
         * write_address command
@@ -363,7 +366,7 @@ class TestCommon:
         def buffer_slice(address, length):
             """
             Helper function that returns a slice that tells you where to
-            read from or write to the buffer
+            read from or write to the buffer.
 
             :param address: the start address being read from or written
                 to
@@ -388,6 +391,7 @@ class TestCommon:
     def test_start_stop_beamformer(self, hardware_under_test, mocker):
         """
         Test of:
+
         * the start_beamformer command.
         * the stop_beamformer command.
         * the is_beamformer_running attribute
@@ -408,7 +412,8 @@ class TestCommon:
 
     def test_40g_configuration(self, hardware_under_test):
         """
-        Test of
+        Test of.
+
         * the configure_40g_core command
         * the get_40g_configuration command
 

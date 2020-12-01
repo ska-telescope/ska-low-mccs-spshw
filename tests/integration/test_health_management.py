@@ -25,7 +25,7 @@ from conftest import confirm_initialised
 @pytest.fixture()
 def devices_to_load():
     """
-    Fixture that specifies the devices to be loaded for testing
+    Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     :rtype: dict
@@ -71,7 +71,7 @@ def sleep(seconds=0.1):
 
 def test_controller_health_rollup(device_context):
     """
-    Test that health rolls up to the controller
+    Test that health rolls up to the controller.
 
     :param device_context: fixture that provides a tango context of some
         sort
@@ -177,7 +177,7 @@ def test_controller_health_rollup(device_context):
 
 def test_subarray_health_rollup(device_context):
     """
-    Test that health rolls up to the subarray
+    Test that health rolls up to the subarray.
 
     :param device_context: fixture that provides a tango context of some
         sort

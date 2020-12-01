@@ -7,7 +7,6 @@
 """
 This module implements infrastructure for event management in the MCCS
 subsystem.
-
 """
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
@@ -22,18 +21,18 @@ from ska.low.mccs.utils import backoff_connect
 def _parse_spec(spec, allowed):
     """
     Helper function that implements parsing of a specification (of
-    events or fqdns) against which to register a callback
+    events or fqdns) against which to register a callback.
 
     :param spec: specification (of events or fqdns) against which to
         register a callback. This is either a list of items, or a single
         item, or None. If None, it means all allowed items
-    :type spec: list of str, or str, or None
+    :type spec: list(str), or str, or None
     :param allowed: specification of the full set of allowed items
         from which the specification specifies items
-    :type allowed: list of str, or None
+    :type allowed: list(str), or None
 
     :return: a list of items (events or fqdns)
-    :rtype: list of str
+    :rtype: list(str)
 
     :raises ValueError: if nothing was specified by the
         specification, or if an item was specified that is not in the
@@ -60,29 +59,29 @@ def _parse_spec(spec, allowed):
 class EventSubscriptionHandler:
     """
     This class handles subscription to change events on a single
-    attribute from a single device. It allows registration of multiple
-    callbacks.
+    attribute from a single device.
+
+    It allows registration of multiple callbacks.
     """
 
     def __init__(self, device_proxy, fqdn, event_name, logger):
         """
-        Initialise a new EventSubscriptionHandler
+        Initialise a new EventSubscriptionHandler.
 
         :param device_proxy: proxy to the device upon which the change
             event is subscribed
         :type device_proxy: :py:class:`tango.DeviceProxy`
-        :param fqdn: fqdn of the device_proxy (this is pass as a
+        :param fqdn: fqdn of the device_proxy (this is passed as a
             workaround for the problem that
             :py:meth:`tango.DeviceProxy.get_fqdn()` returns an empty
             string when run under a
-            :py:class:`tango.test_context.MultiDeviceTestContext`.)
+            :py:class:`tango.test_context.MultiDeviceTestContext`).
         :type fqdn: str
         :param event_name: name of the event; that is, the name of the
             attribute for which change events are subscribed.
         :type event_name: str
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
 
@@ -147,10 +146,10 @@ class EventSubscriptionHandler:
 
     def _call(self, callback, attribute_data):
         """
-        Call the callback with unpacked attribute data
+        Call the callback with unpacked attribute data.
 
-        :param callback: the callback to be called
-        :type callback: function
+        :param callback: function handle for the callback
+        :type callback: callable
         :param attribute_data: the attribute data to be unpacked and
             used to call the callback
         :type attribute_data: :py:class:`tango.DeviceAttribute`
@@ -159,11 +158,10 @@ class EventSubscriptionHandler:
 
     def register_callback(self, callback):
         """
-        Register a callback for events handled by this handler
+        Register a callback for events handled by this handler.
 
-        :param callback: callable to be called when an event is received
-            by this event handler. The callable will be called with
-            three positional arguments: event name, value and quality.
+        :param callback: function handle of the form
+            ``callback(name, value, quality)``.
         :type callback: callable
         """
         self._callbacks.append(callback)
@@ -183,7 +181,7 @@ class EventSubscriptionHandler:
 
     def _unsubscribe(self):
         """
-        Unsubscribe from the event
+        Unsubscribe from the event.
         """
         if self._subscription_id is not None:
             self._device.unsubscribe_event(self._subscription_id)
@@ -191,7 +189,7 @@ class EventSubscriptionHandler:
 
     def __del__(self):
         """
-        Cleanup before destruction
+        Cleanup before destruction.
         """
         self._unsubscribe()
 
@@ -204,14 +202,13 @@ class DeviceEventManager:
 
     def __init__(self, fqdn, logger, events=None):
         """
-        Initialise a new DeviceEventManager object
+        Initialise a new DeviceEventManager object.
 
         :param fqdn: the fully qualified device name of the device for
             which this DeviceEventManager will manage change events
         :type fqdn: str
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         :param events: Names of events handled by this instance. If
             provided, this instance will reject attempts to subscribe
             to events not in this list
@@ -228,17 +225,16 @@ class DeviceEventManager:
     def register_callback(self, callback, event_spec=None):
         """
         Register a callback for an event (or events) handled by this
-        handler
+        handler.
 
-        :param callback: callable to be called when an event is received
-            by this event handler. The callable will be called with
-            three positional arguments: event name, value and quality.
+        :param callback: function handle of the form
+            ``callback(name, value, quality)``.
         :type callback: callable
         :param event_spec: a specification of the event or events for
             which change events are subscribed. This may be the name of
             a single event, or a list of such names, or None, in which
             case the events provided at initialisation are used
-        :type event_spec: str or list of str or None
+        :type event_spec: str or list(str) or None
 
         :raises ValueError: if the event is not in the list
             of allowed events
@@ -256,30 +252,31 @@ class DeviceEventManager:
 
     def _create_event_subscription_handler(self, event):
         """
-        Create a new event subscription handler for a given event
+        Create a new event subscription handler for a given event.
 
         :param event: the event for which change events are subscribed.
         :type event: str
 
         :return: a device event manager for the device at a given FQDN
-        :rtype: :py:class:`DeviceEventManager`
+        :rtype: :py:class:`.DeviceEventManager`
         """
         return EventSubscriptionHandler(self._device, self._fqdn, event, self._logger)
 
 
 class EventManager:
     """
-    Class EventManager is used to handle events from the tango subsystem.
+    Class EventManager is used to handle events from the tango
+    subsystem.
+
     It supports and manages multiple event types from multiple devices.
     """
 
     def __init__(self, logger, fqdns=None, events=None):
         """
-        Initialise a new EventManager object
+        Initialise a new EventManager object.
 
         :param logger: the logger to be used by the object under test
-        :type logger: a logger that implements the standard library
-            :py:class:`logging.Logger` interface
+        :type logger: :py:class:`logging.Logger`
         :param fqdns: FQDNs of devices handled by this instance. If
             provided, this instance will reject attempts to subscribe
             to events from devices whose FQDN is not in this list
@@ -298,21 +295,21 @@ class EventManager:
     def register_callback(self, callback, fqdn_spec=None, event_spec=None):
         """
         Register a callback for a particular event from a particularly
-        device
+        device.
 
-        :param callback: callable to be called with args (fqdn, name,
-            value, quality) whenever the event is received
+        :param callback: function handle of the form
+            ``callback(fqdn, name, value, quality)``.
         :type callback: callable
         :param fqdn_spec: specification of the devices upon which the
             callback is registered. This specification may be the FQDN
             of a device, or a list of such FQDNs, or None, in which case
             the FQDNs provided at initialisation are used.
-        :type fqdn_spec: str, or list of str, or None
+        :type fqdn_spec: str or list(str) or None
         :param event_spec: a specification of the event or events for
             which change events are subscribed. This may be the name of
             a single event, or a list of such names, or None, in which
             case the events provided at initialisation are used
-        :type event_spec: str, or list of str, or None
+        :type event_spec: str or list(str) or None
 
         :raises ValueError: if the FQDN and event are not in
             the lists of allowed FQDNs and allowed events respectively
@@ -331,13 +328,13 @@ class EventManager:
 
     def _create_device_event_manager(self, fqdn):
         """
-        Create a new device event manager for a given FQDN
+        Create a new device event manager for a given FQDN.
 
         :param fqdn: FQDN of the device for which we are creating a
             device event manager
         :type fqdn: str
 
         :return: a device event manager for the device at a given FQDN
-        :rtype: :py:class:`DeviceEventManager`
+        :rtype: :py:class:`.DeviceEventManager`
         """
         return DeviceEventManager(fqdn, self._logger, self._allowed_events)

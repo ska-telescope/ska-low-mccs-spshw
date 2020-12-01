@@ -49,7 +49,7 @@ def _tango_true_context():
             Returns a device proxy to the specified device
 
             :param fqdn: the fully qualified domain name of the server
-            :type fqdn: string
+            :type fqdn: str
 
             :return: a DeviceProxy to the device with the given fqdn
             :rtype: :py:class:`tango.DeviceProxy`
@@ -115,7 +115,7 @@ def _load_data_from_json(path):
 
     :param path: path to the JSON file from which the dataset is to be
         loaded.
-    :type path: string
+    :type path: str
 
     :return: data loaded and deserialised from a JSON data file
     :rtype: anything JSON-serialisable
@@ -130,10 +130,10 @@ def _load_devices(path, device_names):
     specified JSON configuration file.
 
     :param path: path to the JSON configuration file
-    :type path: string
+    :type path: str
     :param device_names: names of the devices for which configuration
         data should be loaded
-    :type device_names: list of string
+    :type device_names: list(str)
 
     :return: a devices_info spec in a format suitable for use by as
         input to a :py:class:`tango.test_context.MultiDeviceTestContext`

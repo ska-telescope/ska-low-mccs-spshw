@@ -22,24 +22,25 @@ from ska.low.mccs.utils import call_with_json, json_input, tango_raise
 
 class TestUtils:
     """
-    Test cases for ska.low.mccs.utils module
+    Test cases for ska.low.mccs.utils module.
     """
 
     def test_tango_raise_device(self):
         """
-        Test for correct execution of `tango_raise` helper function when used
-        in a tango device class method.
+        Test for correct execution of `tango_raise` helper function when
+        used in a tango device class method.
         """
 
         class DummyDevice(Device):
             """
             A dummy device with a `method_to_raise` method that uses the
-            `tango_raise` helper function to raise a DevFailed exception
+            `tango_raise` helper function to raise a DevFailed
+            exception.
             """
 
             def __init__(self, device_class, device_name):
                 """
-                Initialises a new dummy device
+                Initialises a new dummy device.
 
                 :param device_class: the class of the device
                 :type device_class: type
@@ -52,7 +53,7 @@ class TestUtils:
             def method_to_raise(self):
                 """
                 A dummy command that uses the `tango_raise` helper
-                function to raise a DevFailed exception
+                function to raise a DevFailed exception.
                 """
                 tango_raise("raise me")
 
@@ -66,19 +67,19 @@ class TestUtils:
 
     def test_tango_raise_not_device(self):
         """
-        Test that use of `tango_raise` helper function fails in a non-device
-        class with default argument (`origin=None`)
+        Test that use of `tango_raise` helper function fails in a non-
+        device class with default argument (`origin=None`)
         """
 
         class NonDevice:
             """
-            Dummy class, not a tango Device
+            Dummy class, not a tango Device.
             """
 
             def illegal_use(self):
                 """
                 Dummy method that tries to use the `tango_raise` helper
-                function to raise a tango DevFailed exception
+                function to raise a tango DevFailed exception.
                 """
                 tango_raise("Never happens")
 
@@ -94,11 +95,11 @@ class TestUtils:
     )
     def test_tango_raise_with_args(self, origin, severity):
         """
-        Test for correct execution of `tango_raise` helper function when used
-        with optional parameters
+        Test for correct execution of `tango_raise` helper function when
+        used with optional parameters.
 
         :param origin: the source of this exception
-        :type origin: string
+        :type origin: str
         :param severity: The severity of this error
         :type severity: :py:class:`tango.ErrSeverity`
         """
@@ -157,7 +158,7 @@ class TestUtils:
 
     def test_call_with_json_posargs(self):
         """
-        Test for `call_with_json` with posargs provided
+        Test for `call_with_json` with posargs provided.
         """
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
@@ -170,7 +171,7 @@ class TestUtils:
 
     def test_call_with_json_kwargs(self):
         """
-        Test for `call_with_json` with kwargs dictionary provided
+        Test for `call_with_json` with kwargs dictionary provided.
         """
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
@@ -214,7 +215,7 @@ class TestUtils:
     )
     def test_json_input_schema(self, json_arg_string):
         """
-        Test for method decorated with json_input with a schema
+        Test for method decorated with json_input with a schema.
 
         :param json_arg_string: a JSON string to be passed to the
             `json_input` decorator

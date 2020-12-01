@@ -24,7 +24,7 @@ from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator, APIUSimul
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -38,13 +38,13 @@ def device_to_load():
 
 class TestAntennaHardwareSimulator:
     """
-    Contains tests of the AntennaHardwareSimulator
+    Contains tests of the AntennaHardwareSimulator.
     """
 
     @pytest.fixture()
     def antenna_hardware_simulator(self):
         """
-        Return a simulator for antenna hardware
+        Return a simulator for antenna hardware.
 
         :return: a simulator for antenna hardware
         :rtype:
@@ -54,7 +54,7 @@ class TestAntennaHardwareSimulator:
 
     def test_off_on(self, antenna_hardware_simulator):
         """
-        Test that we can turn the antenna hardware off and on
+        Test that we can turn the antenna hardware off and on.
 
         :param antenna_hardware_simulator: a simulator for antenna
             hardware
@@ -90,13 +90,13 @@ class TestAntennaHardwareSimulator:
 
 class TestAPIUSimulator:
     """
-    Contains tests of the APIUSimulator
+    Contains tests of the APIUSimulator.
     """
 
     @pytest.fixture()
     def apiu_simulator(self):
         """
-        Return a simulator for APIU hardware
+        Return a simulator for APIU hardware.
 
         :return: a simulator for APIU hardware
         :rtype:
@@ -147,7 +147,7 @@ class TestAPIUSimulator:
 
     def test_antenna_on_off(self, apiu_simulator):
         """
-        Test that
+        Test that.
 
         * when the APIU is on, we can turn antennas on and off
         * when the APIO is on, but an antenna is off, we can't read
@@ -205,13 +205,13 @@ class TestAPIUSimulator:
 
 class TestAPIUHardwareManager:
     """
-    Contains tests of the APIUHardwareManager
+    Contains tests of the APIUHardwareManager.
     """
 
     @pytest.fixture()
     def hardware_manager(self):
         """
-        Return a manager for APIU hardware
+        Return a manager for APIU hardware.
 
         :return: a manager for APIU hardware
         :rtype:
@@ -222,7 +222,7 @@ class TestAPIUHardwareManager:
     def test_init_simulation_mode(self):
         """
         Test that we can't create an hardware manager that isn't in
-        simulation mode
+        simulation mode.
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -232,7 +232,7 @@ class TestAPIUHardwareManager:
     def test_simulation_mode(self, hardware_manager):
         """
         Test that we can't take the hardware manager out of simulation
-        mode
+        mode.
 
         :param hardware_manager: a hardware manager for APIU hardware
         :type hardware_manager:
@@ -245,8 +245,8 @@ class TestAPIUHardwareManager:
 
     def test_on_off(self, hardware_manager, mocker):
         """
-        Test that the hardware manager receives updated values,
-        and re-evaluates device health, each time it polls the hardware
+        Test that the hardware manager receives updated values, and re-
+        evaluates device health, each time it polls the hardware.
 
         :param hardware_manager: a hardware manager for APIU hardware
         :type hardware_manager:
@@ -393,7 +393,7 @@ class TestMccsAPIU(object):
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -419,7 +419,7 @@ class TestMccsAPIU(object):
 
     def test_attributes(self, device_under_test):
         """
-        Test of attributes
+        Test of attributes.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -445,7 +445,7 @@ class TestMccsAPIU(object):
 
     def test_PowerUp(self, device_under_test):
         """
-        Test for PowerUp
+        Test for PowerUp.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -462,7 +462,7 @@ class TestMccsAPIU(object):
 
     def test_PowerDown(self, device_under_test):
         """
-        Test for PowerDown
+        Test for PowerDown.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -481,7 +481,7 @@ class TestMccsAPIU(object):
 
     def test_PowerUpAntenna(self, device_under_test):
         """
-        Test for PowerUpAntenna
+        Test for PowerUpAntenna.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -503,7 +503,7 @@ class TestMccsAPIU(object):
 
     def test_PowerDownAntenna(self, device_under_test):
         """
-        Test for PowerDownAntenna
+        Test for PowerDownAntenna.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

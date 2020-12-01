@@ -14,7 +14,7 @@ __all__ = [
     "MccsController",
     "ControllerPowerManager",
     "ControllerResourceManager",
-    "controller_device",
+    # "controller_device",
 ]
 
 from .controller_device import (

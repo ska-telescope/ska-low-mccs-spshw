@@ -1,9 +1,13 @@
-"""Test for release module"""
+"""
+Test for release module.
+"""
 from ska.low.mccs import release
 
 
 def test_release():
-    """Test that all setup attributes have been set"""
+    """
+    Test that all setup attributes have been set.
+    """
     release_keys = [
         "author",
         "author_email",

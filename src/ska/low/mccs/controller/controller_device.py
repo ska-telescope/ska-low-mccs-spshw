@@ -47,32 +47,33 @@ class ControllerPowerManager(PowerManager):
 
     def __init__(self, station_fqdns):
         """
-        Initialise a new ControllerPowerManager
+        Initialise a new ControllerPowerManager.
 
         :param station_fqdns: the FQDNs of the stations that this controller
             device manages
-        :type station_fqdns: list of string
+        :type station_fqdns: list(str)
         """
         super().__init__(None, station_fqdns)
 
 
 class ControllerResourceManager:
     """
-    This class implements a resource manger for the MCCS controller device
+    This class implements a resource manger for the MCCS controller
+    device.
 
-    Initialize with a list of FQDNs of devices to be managed.
-    The ControllerResourceManager holds the FQDN and the (1-based) ID
-    of the device that owns each managed device.
+    Initialize with a list of FQDNs of devices to be managed. The
+    ControllerResourceManager holds the FQDN and the (1-based) ID of the
+    device that owns each managed device.
     """
 
     class ResourceState(Enum):
         """
         This enum describes a resource's assigned state.
 
-        A resource which is UNAVAILABLE cannot be assigned.
-        A resource which is AVAILABLE can be assigned.
-        A resource which is ASSIGNED cannot be assigned until the original
-        assignment has been released.
+        * A resource which is UNAVAILABLE cannot be assigned.
+        * A resource which is AVAILABLE can be assigned.
+        * A resource which is ASSIGNED cannot be assigned until the
+          original assignment has been released.
         """
 
         UNAVAILABLE = 1
@@ -103,7 +104,7 @@ class ControllerResourceManager:
 
         def __init__(self, allocatable_health_states=[HealthState.OK]):
             """
-            Create a new instance
+            Create a new instance.
 
             :param allocatable_health_states: list of health states that
                 are to be regarded as okay to allocate, defaults to only
@@ -130,33 +131,34 @@ class ControllerResourceManager:
             Set the health states allowed for allocation.
 
             :param health_states: Allowed health states
-            :type health_states: list of int
+            :type health_states: list(int)
             """
             self._allocatable_health_states = list(health_states)
 
         def reset(self):
-            """Reset to the default set of states
-            allowed for allocation.
+            """
+            Reset to the default set of states allowed for allocation.
             """
             self._allocatable_health_states = [HealthState.OK]
 
     class Resource:
         """
-        This inner class implements state recording for a managed resource.
+        This inner class implements state recording for a managed
+        resource.
 
         Initialise with a device id number.
         """
 
         def __init__(self, availability_policy, fqdn):
             """
-            Initialise a new Resource instance
+            Initialise a new Resource instance.
 
             :param availability_policy: the policy associated with this
                 device
             :type availability_policy:
-                :py:class:`ResourceAvailabilityPolicy`
+                :py:class:`.ResourceAvailabilityPolicy`
             :param fqdn: FQDN of supervised device
-            :type fqdn: string
+            :type fqdn: str
             """
             self._resource_availability_policy = availability_policy
             self._fqdn = fqdn
@@ -166,7 +168,7 @@ class ControllerResourceManager:
 
         def assigned_to(self):
             """
-            Get the ID to which this resource is assigned
+            Get the ID to which this resource is assigned.
 
             :return: Device ID
             :rtype: int
@@ -175,7 +177,7 @@ class ControllerResourceManager:
 
         def is_assigned(self):
             """
-            Check if this resource is assigned
+            Check if this resource is assigned.
 
             :return: True if assigned
             :rtype: bool
@@ -199,7 +201,7 @@ class ControllerResourceManager:
 
         def is_unavailable(self):
             """
-            Check if this resource is UNAVAILABLE
+            Check if this resource is UNAVAILABLE.
 
             :return: True if unavailable
             :rtype: bool
@@ -211,8 +213,8 @@ class ControllerResourceManager:
 
         def is_not_available(self):
             """
-            Check if this resource is not available
-            A resource is not available if it is ASSIGNED or UNAVAILABLE
+            Check if this resource is not available A resource is not
+            available if it is ASSIGNED or UNAVAILABLE.
 
             :return: True if not unavailable
             :rtype: bool
@@ -236,7 +238,7 @@ class ControllerResourceManager:
 
         def _health_changed(self, fqdn, event_value):
             """
-            Update the health state of the resource
+            Update the health state of the resource.
 
             :param fqdn: FQDN of the device for which healthState has
                 changed
@@ -250,7 +252,7 @@ class ControllerResourceManager:
 
         def assign(self, owner):
             """
-            Assign a resource to an owner
+            Assign a resource to an owner.
 
             :param owner: Device ID of the owner
             :type owner: int
@@ -281,7 +283,8 @@ class ControllerResourceManager:
                 raise ValueError(f"{self._fqdn} is unavailable")
 
         def release(self):
-            """Release the resource from assignment
+            """
+            Release the resource from assignment.
 
             :raises ValueError: if the resource was unassigned
             """
@@ -303,7 +306,7 @@ class ControllerResourceManager:
 
         def make_unavailable(self):
             """
-            Mark the resource as unavailable for assignment
+            Mark the resource as unavailable for assignment.
             """
             # Change resource state to unavailable
             # If it was previously AVAILABLE (not ASSIGNED) we can just switch
@@ -320,7 +323,7 @@ class ControllerResourceManager:
 
         def make_available(self):
             """
-            Mark the resource as available for assignment
+            Mark the resource as available for assignment.
             """
             # Change resource state to available
             # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
@@ -335,14 +338,15 @@ class ControllerResourceManager:
 
     def __init__(self, health_monitor, managername, fqdns):
         """
-        Initialize new ControllerResourceManager instance
+        Initialize new ControllerResourceManager instance.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: HealthMonitor object
+        :type health_monitor:
+            :py:class:`~ska.low.mccs.health.HealthMonitor`
         :param managername: Name for this manager (imformation only)
-        :type managername: string
+        :type managername: str
         :param fqdns: A list of device FQDNs
-        :type fqdns: list of string
+        :type fqdns: list(str)
         """
         self._managername = managername
         self._resources = dict()
@@ -360,11 +364,11 @@ class ControllerResourceManager:
 
     def _except_on_unmanaged(self, fqdns):
         """
-        Raise an exception if any of the listed FQDNs
-        are not being managed by this manager.
+        Raise an exception if any of the listed FQDNs are not being
+        managed by this manager.
 
         :param fqdns: The FQDNs to check
-        :type fqdns: list of str
+        :type fqdns: list(str)
         :raises ValueError: if an FQDN is not managed by this
         """
         # Are these keys all managed?
@@ -377,22 +381,22 @@ class ControllerResourceManager:
 
     def get_all_fqdns(self):
         """
-        Get all FQDNs managed by this resource manager
+        Get all FQDNs managed by this resource manager.
 
         :return: List of FQDNs managed
-        :rtype: list of strings
+        :rtype: list(str)
         """
         return self._resources.keys()
 
     def get_assigned_fqdns(self, owner_id):
         """
-        Get the FQDNs assigned to a given owner id
+        Get the FQDNs assigned to a given owner id.
 
         :param owner_id: 1-based device id that we check for ownership
         :type owner_id: int
 
         :return: List of FQDNs assigned to owner_id
-        :rtype: list of strings
+        :rtype: list(str)
         """
 
         return [
@@ -403,13 +407,14 @@ class ControllerResourceManager:
 
     def query_allocation(self, fqdns, new_owner):
         """
-        Test if a (re)allocation is allowed, and if so, return lists of FQDNs
-        to assign and to release. If the allocation is not permitted due to some
-        FQDNs being allocated to another owner already, the list of blocking
-        FQDNs is returned as the ReleaseList.
+        Test if a (re)allocation is allowed, and if so, return lists of
+        FQDNs to assign and to release. If the allocation is not
+        permitted due to some FQDNs being allocated to another owner
+        already, the list of blocking FQDNs is returned as the
+        ReleaseList.
 
         :param fqdns: The list of FQDNs we would like to assign
-        :type fqdns: list of string
+        :type fqdns: list(str)
         :param new_owner: 1-based device id that would take ownership
         :type new_owner: int
 
@@ -418,7 +423,7 @@ class ControllerResourceManager:
             Allowed (bool): True if this (re)allocation is allowed
             AssignList (list): The list of FQDNs to allocate, or None
             ReleaseList (list): The list of FQDNs to release, or None
-        :rtype: tuple (bool, list of strings, list of strings)
+        :rtype: tuple(bool, list(str), list(str))
         """
 
         self._except_on_unmanaged(fqdns)
@@ -466,7 +471,7 @@ class ControllerResourceManager:
         Take a list of device FQDNs and assign them to a new owner id.
 
         :param fqdns: The list of device FQDNs to assign
-        :type fqdns: list of string
+        :type fqdns: list(str)
         :param new_owner: 1-based id of the new owner
         :type new_owner: int
         :raises ValueError: if any of the FQDNs are unavailable or not healthy
@@ -484,7 +489,7 @@ class ControllerResourceManager:
         Take a list of device FQDNs and flag them as unassigned.
 
         :param fqdns: The list of device FQDNs to release
-        :type fqdns: list of string
+        :type fqdns: list(str)
         :raises ValueError: if any of the FQDNs are not being managed
         """
         self._except_on_unmanaged(fqdns)
@@ -496,11 +501,11 @@ class ControllerResourceManager:
 
     def make_unavailable(self, fqdns):
         """
-        For each resource in the given list of FQDNs make its availability state
-        unavailable
+        For each resource in the given list of FQDNs make its
+        availability state unavailable.
 
         :param fqdns: The list of device FQDNs to make unavailable
-        :type fqdns: list of string
+        :type fqdns: list(str)
         """
         self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
@@ -508,11 +513,11 @@ class ControllerResourceManager:
 
     def make_available(self, fqdns):
         """
-        For each resource in the given list of FQDNs make its availability state
-        available
+        For each resource in the given list of FQDNs make its
+        availability state available.
 
         :param fqdns: The list of device FQDNs to make unavailable
-        :type fqdns: list of string
+        :type fqdns: list(str)
         """
         self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
@@ -520,13 +525,13 @@ class ControllerResourceManager:
 
     def fqdn_from_id(self, devid):
         """
-        Find a device FQDN by searching on its id number
+        Find a device FQDN by searching on its id number.
 
         :param devid: The device ID to find
         :type devid: int
         :raises ValueError: if the devid is not being managed
         :return: fqdn
-        :rtype: string
+        :rtype: str
         """
 
         for fqdn, res in self._resources.items():
@@ -535,17 +540,22 @@ class ControllerResourceManager:
         raise ValueError(f"Device ID {devid} is not managed by {self._managername}")
 
     def assign_allocatable_health_states(self, health_states):
-        """Assign a list of health states which permit allocation.
+        """
+        Assign a list of health states which permit allocation.
 
         :param health_states: The list of allowed states
-        :type health_states: list if int
+        :type health_states:
+            list(:py:class:`~ska.base.control_model.HealthState`)
         """
         self.resource_availability_policy.assign_allocatable_health_states = (
             health_states
         )
 
     def reset_resource_availability_policy(self):
-        """Reset to the default list of health states which permit allocation."""
+        """
+        Reset to the default list of health states which permit
+        allocation.
+        """
         self.resource_availability_policy.reset()
 
 
@@ -560,19 +570,19 @@ class MccsController(SKAMaster):
     - Device Property
         MccsSubarrays
             - The FQDNs of the Mccs sub-arrays
-            - Type: :py:class:`~tango.DevVarStringArray`
+            - Type: list(str)
         MccsStations
             - List of MCCS station  TANGO Device names
-            - Type: :py:class:`~tango.DevVarStringArray`
+            - Type: list(str)
         MccsStationBeams
             - List of MCCS station beam TANGO Device names
-            - Type: :py:class:`~tango.DevVarStringArray`
+            - Type: list(str)
         MccsTiles
             - List of MCCS Tile TANGO Device names.
-            - Type: :py:class:`~tango.DevVarStringArray`
+            - Type: list(str)
         MccsAntenna
             - List of MCCS Antenna TANGO Device names
-            - Type: :py:class:`~tango.DevVarStringArray`
+            - Type: list(str)
     """
 
     # -----------------
@@ -611,18 +621,16 @@ class MccsController(SKAMaster):
 
     class InitCommand(SKAMaster.InitCommand):
         """
-        A class for
-        :py:class:`~ska.low.mccs.controller.controller_device.MccsController`'s
-        Init command. The
-        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand.do`
-        method below is called during
-        :py:class:`~ska.low.mccs.controller.controller_device.MccsController`'s
-        initialisation.
+        A class for :py:class:`~.MccsController`'s Init command.
+
+        The
+        :py:meth:`~.MccsController.InitCommand.do` method below is
+        called during :py:class:`~.MccsController`'s initialisation.
         """
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new InitCommand
+            Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -631,11 +639,11 @@ class MccsController(SKAMaster):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -646,8 +654,8 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Initialises the attributes and properties of the
-            `MccsController`.
-            State is managed under the hood; the basic sequence is:
+            `MccsController`. State is managed under the hood; the basic
+            sequence is:
 
             1. Device state is set to INIT
             2. The do() method is run
@@ -694,7 +702,7 @@ class MccsController(SKAMaster):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices to which
                 this device must maintain connections
-            :type: list of str
+            :type: list(str)
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -726,7 +734,7 @@ class MccsController(SKAMaster):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
-            :type: list of str
+            :type: list(str)
             """
             device.event_manager = EventManager(self.logger, device._station_fqdns)
 
@@ -745,7 +753,7 @@ class MccsController(SKAMaster):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device manages power
-            :type: list of str
+            :type: list(str)
             """
             device.power_manager = ControllerPowerManager(device._station_fqdns)
             power_args = (device.power_manager, device.state_model, device.logger)
@@ -761,7 +769,7 @@ class MccsController(SKAMaster):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices allocation of which
                 is managed by this device
-            :type: list of str
+            :type: list(str)
             """
             health_monitor = device.health_model._health_monitor
 
@@ -797,14 +805,12 @@ class MccsController(SKAMaster):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand.do`
-        method of the nested
-        :py:class:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand`
-        class.
+        :py:meth:`~.MccsController.InitCommand.do` method of the nested
+        :py:class:`~.MccsController.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand.do`
-        method to be released. This method is called by the device destructor, and by
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsController.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
 
@@ -888,15 +894,13 @@ class MccsController(SKAMaster):
     @DebugIt()
     def On(self):
         """
-        Turn the controller on
+        Turn the controller on.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         :rtype:
             (:py:class:`~ska.base.commands.ResultCode`, str)
-        :return: Attribute :py:attr:`onResultCode` published to subscribers
-        :rtype: :py:class:`~ska.base.commands.ResultCode`
         """
         command = self.get_command_object("On")
         (result_code, message) = command()
@@ -912,7 +916,7 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless do hook for implementing the functionality of the
-            :py:meth:`MccsController.On` command.
+            :py:meth:`.MccsController.On` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -939,15 +943,13 @@ class MccsController(SKAMaster):
     @DebugIt()
     def Off(self):
         """
-        Turn the controller off
+        Turn the controller off.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         :rtype:
             (:py:class:`~ska.base.commands.ResultCode`, str)
-        :return: Attribute :py:attr:`offResultCode` published to subscribers
-        :rtype: :py:class:`~ska.base.commands.ResultCode`
         """
         command = self.get_command_object("Off")
         (result_code, message) = command()
@@ -963,7 +965,7 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless do-hook for implementing the functionality of the
-            :py:meth:`MccsController.Off` command
+            :py:meth:`.MccsController.Off` command
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -994,7 +996,7 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless do-hook for implementing the functionality of the
-            :py:meth:`MccsController.StandbyLow` command.
+            :py:meth:`.MccsController.StandbyLow` command.
 
             Transitions the MCCS system to the low-power STANDBY_LOW_POWER
             operating state.
@@ -1017,7 +1019,7 @@ class MccsController(SKAMaster):
     @DebugIt()
     def StandbyLow(self):
         """
-        StandbyLow Command
+        StandbyLow Command.
 
         :todo: What does this command do?
 
@@ -1041,7 +1043,7 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless do-hook for implementing the functionality of the
-            :py:meth:`MccsController.StandbyFull` command.
+            :py:meth:`.MccsController.StandbyFull` command.
 
             Transition the MCCS system to the STANDBY_FULL_POWER operating state.
 
@@ -1063,7 +1065,7 @@ class MccsController(SKAMaster):
     @DebugIt()
     def StandbyFull(self):
         """
-        StandbyFull Command
+        StandbyFull Command.
 
         :todo: What does this command do?
 
@@ -1087,7 +1089,7 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`MccsController.Operate` command
+            :py:meth:`.MccsController.Operate` command
             functionality.
 
             :return: A tuple containing a return code and a string
@@ -1104,11 +1106,11 @@ class MccsController(SKAMaster):
         def check_allowed(self):
             """
             Whether this command is allowed to be run in current device
-            state
+            state.
 
             :return: True if this command is allowed to be run in
                 current device state
-            :rtype: boolean
+            :rtype: bool
             """
             return self.state_model.op_state == DevState.OFF
 
@@ -1119,7 +1121,8 @@ class MccsController(SKAMaster):
     @DebugIt()
     def Operate(self):
         """
-        Transit to the OPERATE operating state, ready for signal processing.
+        Transit to the OPERATE operating state, ready for signal
+        processing.
 
         :todo: What does this command do?
 
@@ -1135,11 +1138,11 @@ class MccsController(SKAMaster):
     def is_Operate_allowed(self):
         """
         Whether this command is allowed to be run in current device
-        state
+        state.
 
         :return: True if this command is allowed to be run in
             current device state
-        :rtype: boolean
+        :rtype: bool
         """
         handler = self.get_command_object("Operate")
         if not handler.check_allowed():
@@ -1154,8 +1157,10 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            :py:meth:`MccsController.Reset` command. This
-            implementation resets the MCCS system as a whole as an
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Reset` command
+            for this :py:class:`.MccsController` device.
+
+            This implementation resets the MCCS system as a whole as an
             attempt to clear a FAULT state.
 
             :return: A tuple containing a return code and a string
@@ -1176,9 +1181,10 @@ class MccsController(SKAMaster):
     )
     def Allocate(self, argin):
         """
-        Allocate a set of unallocated MCCS resources to a sub-array.
-        The JSON argument specifies the overall sub-array composition in
-        terms of which stations should be allocated to the specified Sub-Array.
+        Allocate a set of unallocated MCCS resources to a sub-array. The
+        JSON argument specifies the overall sub-array composition in
+        terms of which stations should be allocated to the specified
+        Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and station_beam_ids.
@@ -1187,8 +1193,6 @@ class MccsController(SKAMaster):
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        :return: Attribute :py:attr:`allocateResultCode` published to subscribers
-        :rtype: :py:class:`~ska.base.commands.ResultCode`
 
         :example:
 
@@ -1213,14 +1217,16 @@ class MccsController(SKAMaster):
     class AllocateCommand(ResponseCommand):
         """
         Allocate a set of unallocated MCCS resources to a sub-array.
+
         The JSON argument specifies the overall sub-array composition in
-        terms of which stations should be allocated to the specified Sub-Array.
+        terms of which stations should be allocated to the specified
+        Sub-Array.
         """
 
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            :py:meth:`MccsController.Allocate` command
+            :py:meth:`.MccsController.Allocate` command
 
             Allocate a set of unallocated MCCS resources to a sub-array.
             The JSON argument specifies the overall sub-array composition in
@@ -1323,17 +1329,18 @@ class MccsController(SKAMaster):
 
         def check_allowed(self):
             """
-            Whether this command is allowed to be run in current device state
+            Whether this command is allowed to be run in current device
+            state.
 
             :return: True if this command is allowed to be run in
                 current device state
-            :rtype: boolean
+            :rtype: bool
             """
             return self.state_model.op_state == DevState.ON
 
         def _enable_subarray(self, argin):
             """
-            Method to enable the specified subarray
+            Method to enable the specified subarray.
 
             :param argin: the subarray id
             :type argin: int
@@ -1378,11 +1385,11 @@ class MccsController(SKAMaster):
     def is_Allocate_allowed(self):
         """
         Whether this command is allowed to be run in current device
-        state
+        state.
 
         :return: True if this command is allowed to be run in
             current device state
-        :rtype: boolean
+        :rtype: bool
         """
         handler = self.get_command_object("Allocate")
         if not handler.check_allowed():
@@ -1397,7 +1404,7 @@ class MccsController(SKAMaster):
     )
     def Release(self, argin):
         """
-        Release resources from an MCCS Sub-Array
+        Release resources from an MCCS Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, a release all flag and array resources (TBD).
@@ -1407,8 +1414,6 @@ class MccsController(SKAMaster):
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        :return: Attribute :py:attr:`releaseResultCode` published to subscribers
-        :rtype: :py:class:`~ska.base.commands.ResultCode`
         """
         handler = self.get_command_object("Release")
         (result_code, message) = handler(argin)
@@ -1419,14 +1424,13 @@ class MccsController(SKAMaster):
     class ReleaseCommand(ResponseCommand):
         """
         Release a sub-array's Capabilities and resources (stations),
-        marking the resources and Capabilities as unassigned and
-        idle.
+        marking the resources and Capabilities as unassigned and idle.
         """
 
         def do(self, argin):
             """
             Stateless do hook for the
-            :py:meth:`MccsController.Release` command
+            :py:meth:`.MccsController.Release` command
 
             :param argin: JSON-formatted string containing an integer
                 subarray_id, a release all flag and array resources (TBD).
@@ -1481,17 +1485,17 @@ class MccsController(SKAMaster):
         def check_allowed(self):
             """
             Whether this command is allowed to be run in current device
-            state
+            state.
 
             :return: True if this command is allowed to be run in
                 current device state
-            :rtype: boolean
+            :rtype: bool
             """
             return self.state_model.op_state == DevState.ON
 
         def _disable_subarray(self, argin):
             """
-            Method to disable the specified subarray
+            Method to disable the specified subarray.
 
             :param argin: the subarray id
             :type argin: int
@@ -1521,11 +1525,11 @@ class MccsController(SKAMaster):
     def is_Release_allowed(self):
         """
         Whether this command is allowed to be run in current device
-        state
+        state.
 
         :return: True if this command is allowed to be run in
             current device state
-        :rtype: boolean
+        :rtype: bool
         """
         handler = self.get_command_object("Release")
         if not handler.check_allowed():
@@ -1535,7 +1539,7 @@ class MccsController(SKAMaster):
     class MaintenanceCommand(ResponseCommand):
         """
         Class for handling the
-        :py:meth:`MccsController.Maintenance` command.
+        :py:meth:`.MccsController.Maintenance` command.
 
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
@@ -1544,7 +1548,7 @@ class MccsController(SKAMaster):
         def do(self):
             """
             Stateless do-hook for handling the
-            :py:meth:`MccsController.Maintenance` command.
+            :py:meth:`.MccsController.Maintenance` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1582,7 +1586,7 @@ class MccsController(SKAMaster):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.controller.controller_device` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

@@ -10,7 +10,13 @@
 This module contains an implementation of the SKA Low MCCS Antenna
 Device Server, based on the architecture in SKA-TEL-LFAA-06000052-02.
 """
-__all__ = ["AntennaHardwareManager", "MccsAntenna", "main"]
+__all__ = [
+    "AntennaHardwareDriver",
+    "AntennaHardwareFactory",
+    "AntennaHardwareManager",
+    "MccsAntenna",
+    "main",
+]
 
 import threading
 
@@ -36,7 +42,7 @@ from ska.low.mccs.utils import backoff_connect, tango_raise
 def create_return(success, action):
     """
     Helper function to package up a boolean result into a
-    (:py:class:`~ska.base.commands.ResultCode`, message) tuple
+    (:py:class:`~ska.base.commands.ResultCode`, message) tuple.
 
     :param success: whether execution of the action was successful. This
         may be None, in which case the action was not performed due to
@@ -62,8 +68,9 @@ def create_return(success, action):
 class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
     A placeholder for a class that implements a policy by which the
-    antenna hardware manager evaluates the health of its hardware. At
-    present this just inherits from the base class unchanged.
+    antenna hardware manager evaluates the health of its hardware.
+
+    At present this just inherits from the base class unchanged.
     """
 
     pass
@@ -71,15 +78,17 @@ class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
 
 class AntennaAPIUProxy(OnOffHardwareDriver):
     """
-    A proxy to the APIU. The MccsAntenna device server manages antenna
-    hardware, but indirectly, via the MccsAPIU and MccsTile devices.
-    This class is a proxy to the APIU device that the MccsAntenna can
-    use to drive the antenna hardware
+    A proxy to the APIU.
+
+    The MccsAntenna device server manages antenna hardware, but
+    indirectly, via the MccsAPIU and MccsTile devices. This class is a
+    proxy to the APIU device that the MccsAntenna can use to drive the
+    antenna hardware
     """
 
     def __init__(self, apiu_fqdn, logical_antenna_id):
         """
-        Initialise a new APIU proxy instance
+        Initialise a new APIU proxy instance.
 
         :param apiu_fqdn: the FQDN of the APIU
         :type apiu_fqdn: str
@@ -130,7 +139,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
     @property
     def current(self):
         """
-        This antenna's current
+        This antenna's current.
 
         :return: the current of this antenna
         :rtype: float
@@ -141,7 +150,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
     @property
     def voltage(self):
         """
-        This antenna's voltage
+        This antenna's voltage.
 
         :return: the voltage of this antenna
         :rtype: float
@@ -152,7 +161,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
     @property
     def temperature(self):
         """
-        This antenna's temperature
+        This antenna's temperature.
 
         :return: the temperature of this antenna
         :rtype: float
@@ -163,16 +172,18 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
 
 class AntennaTileProxy(HardwareDriver):
     """
-    A proxy to the Tile. The MccsAntenna device server manages antenna
-    hardware, but indirectly, via the MccsAPIU and MccsTile devices.
-    This class is a proxy to the MccsTile device that the MccsAntenna
-    can use to drive the antenna hardware. At present it is an unused,
-    unimplemented placeholder.
+    A proxy to the Tile.
+
+    The MccsAntenna device server manages antenna hardware, but
+    indirectly, via the MccsAPIU and MccsTile devices. This class is a
+    proxy to the MccsTile device that the MccsAntenna can use to drive
+    the antenna hardware. At present it is an unused, unimplemented
+    placeholder.
     """
 
     def __init__(self, tile_fqdn, logical_antenna_id):
         """
-        Create a new Tile proxy instance
+        Create a new Tile proxy instance.
 
         :param tile_fqdn: the FQDN of the tile that manages the antenna
             hardware for this antenna device
@@ -197,17 +208,18 @@ class AntennaTileProxy(HardwareDriver):
 
 class AntennaHardwareDriver(OnOffHardwareDriver):
     """
-    A hardware driver for antenna hardware. Actually antenna hardware
-    cannot be directly monitored or controlled; it must be monitored and
-    controlled via the APIU and Tile devices. So this driver acts as a
-    proxy to these other devices.
+    A hardware driver for antenna hardware.
+
+    Actually antenna hardware cannot be directly monitored or
+    controlled; it must be monitored and controlled via the APIU and
+    Tile devices. So this driver acts as a proxy to these other devices.
     """
 
     def __init__(
         self, apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
     ):
         """
-        Create a new driver for antenna hardware
+        Create a new driver for antenna hardware.
 
         :param apiu_fqdn: the FQDN of the APIU to which the antenna is
             attached
@@ -237,20 +249,20 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
 
     def on(self):
         """
-        Turn the antenna hardware on
+        Turn the antenna hardware on.
         """
         self._apiu.on()
 
     def off(self):
         """
-        Turn the antenna hardware off
+        Turn the antenna hardware off.
         """
         self._apiu.off()
 
     @property
     def is_on(self):
         """
-        Whether the antenna hardware is turned on
+        Whether the antenna hardware is turned on.
 
         :return: whether the antenna hardware is turned on
         :rtype: bool
@@ -260,7 +272,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
     @property
     def current(self):
         """
-        Return the current of the antenna
+        Return the current of the antenna.
 
         :return: the current of the antenna
         :rtype: float
@@ -270,7 +282,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
     @property
     def voltage(self):
         """
-        Return the voltage of the antenna
+        Return the voltage of the antenna.
 
         :return: the voltage of the antenna
         :rtype: float
@@ -280,7 +292,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
     @property
     def temperature(self):
         """
-        Return the temperature of the antenna
+        Return the temperature of the antenna.
 
         :return: the temperature of the antenna
         :rtype: float
@@ -290,14 +302,14 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
 
 class AntennaHardwareFactory(HardwareFactory):
     """
-    A factory that returns a hardware driver for the antenna hardware
+    A factory that returns a hardware driver for the antenna hardware.
     """
 
     def __init__(
         self, apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
     ):
         """
-        Create a new antenna hardware factory instance
+        Create a new antenna hardware factory instance.
 
         :param apiu_fqdn: the FQDN of the APIU to which the antenna is
             attached
@@ -317,10 +329,10 @@ class AntennaHardwareFactory(HardwareFactory):
     @property
     def hardware(self):
         """
-        Return an antenna hardware driver created by this factory
+        Return an antenna hardware driver created by this factory.
 
         :return: an antenna hardware driver created by this factory
-        :rtype: :py:class:`AntennaHardwareDriver`
+        :rtype: :py:class:`.AntennaHardwareDriver`
         """
         return self._hardware
 
@@ -344,7 +356,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
         _factory=None,
     ):
         """
-        Initialise a new AntennaHardwareManager instance
+        Initialise a new AntennaHardwareManager instance.
 
         :param apiu_fqdn: the FQDN of the APIU to which the antenna is
             attached
@@ -359,7 +371,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
-        :type _factory: :py:class:`AntennaHardwareFactory`
+        :type _factory: :py:class:`.AntennaHardwareFactory`
         """
         super().__init__(
             _factory
@@ -372,7 +384,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
     @property
     def voltage(self):
         """
-        The voltage of the hardware
+        The voltage of the hardware.
 
         :return: the voltage of the hardware
         :rtype: float
@@ -382,7 +394,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
     @property
     def current(self):
         """
-        The current of the hardware
+        The current of the hardware.
 
         :return: the current of the hardware
         :rtype: float
@@ -392,7 +404,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
     @property
     def temperature(self):
         """
-        Return the temperature of the hardware
+        Return the temperature of the hardware.
 
         :return: the temperature of the hardware
         :rtype: float
@@ -402,8 +414,8 @@ class AntennaHardwareManager(OnOffHardwareManager):
 
 class MccsAntenna(SKABaseDevice):
     """
-    An implementation of the Antenna Device Server for the MCCS based upon
-    architecture in SKA-TEL-LFAA-06000052-02.
+    An implementation of the Antenna Device Server for the MCCS based
+    upon architecture in SKA-TEL-LFAA-06000052-02.
 
     This class is a subclass of :py:class:`ska.base.SKABaseDevice`.
     """
@@ -427,7 +439,7 @@ class MccsAntenna(SKABaseDevice):
 
         def __init__(self, target, state_model, logger=None):
             """
-            Create a new InitCommand
+            Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
@@ -436,11 +448,11 @@ class MccsAntenna(SKABaseDevice):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model: :py:class:`DeviceStateModel`
+            :type state_model:
+                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: a logger that implements the standard library
-                logger interface
+            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -451,7 +463,7 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
-            attributes and properties of the :py:class:`MccsAntenna`.
+            attributes and properties of the :py:class:`.MccsAntenna`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -546,7 +558,7 @@ class MccsAntenna(SKABaseDevice):
             """
             Initialise the connection to the hardware being managed by
             this device. May also register commands that depend upon a
-            connection to that hardware
+            connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -599,20 +611,22 @@ class MccsAntenna(SKABaseDevice):
             return True
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.antenna.MccsAntenna.InitCommand.do` method of the
-        nested :py:class:`~ska.low.mccs.antenna.MccsAntenna.InitCommand` class.
+        :py:meth:`~.MccsAntenna.InitCommand.do` method of the nested
+        :py:class:`~.MccsAntenna.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.antenna.MccsAntenna.InitCommand.do` method to be
-        released. This method is called by the device destructor, and by the Init
-        command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsAntenna.InitCommand.do` method to be
+        released. This method is called by the device destructor, and by
+        the Init command when the Tango device server is re-initialised.
         """
 
     # ----------
@@ -637,7 +651,7 @@ class MccsAntenna(SKABaseDevice):
     @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
     def simulationMode(self):
         """
-        Return the simulation mode of this device
+        Return the simulation mode of this device.
 
         :return: the simulation mode of this device
         :rtype: :py:class:`~ska.base.control_model.SimulationMode`
@@ -647,7 +661,7 @@ class MccsAntenna(SKABaseDevice):
     @simulationMode.write
     def simulationMode(self, value):
         """
-        Set the simulation mode of this device
+        Set the simulation mode of this device.
 
         :param value: the new simulation mode
         :type value: :py:class:`~ska.base.control_model.SimulationMode`
@@ -735,7 +749,7 @@ class MccsAntenna(SKABaseDevice):
         Return the xPolarisationFaulty attribute.
 
         :return: the x-polarisation faulty flag
-        :rtype: boolean
+        :rtype: bool
         """
         return self._xPolarisationFaulty
 
@@ -745,7 +759,7 @@ class MccsAntenna(SKABaseDevice):
         Return the yPolarisationFaulty attribute.
 
         :return: the y-polarisation faulty flag
-        :rtype: boolean
+        :rtype: bool
         """
         return self._yPolarisationFaulty
 
@@ -850,7 +864,7 @@ class MccsAntenna(SKABaseDevice):
         Return the logical antenna ID attribute.
 
         :return: the x polarisation scaling factor
-        :rtype: sequence of int
+        :rtype: list(int)
         """
         return self._xPolarisationScalingFactor
 
@@ -860,7 +874,7 @@ class MccsAntenna(SKABaseDevice):
         Return the yPolarisationScalingFactor attribute.
 
         :return: the y polarisation scaling factor
-        :rtype: sequence of int
+        :rtype: list(int)
         """
         return self._yPolarisationScalingFactor
 
@@ -874,11 +888,11 @@ class MccsAntenna(SKABaseDevice):
     )
     def calibrationCoefficient(self):
         """
-        Return theCalibration coefficient to be applied for the next frequency
-        channel in the calibration cycle
+        Return theCalibration coefficient to be applied for the next
+        frequency channel in the calibration cycle.
 
         :return: the calibration coefficients
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._calibrationCoefficient
 
@@ -888,7 +902,7 @@ class MccsAntenna(SKABaseDevice):
         Return the pointingCoefficient attribute.
 
         :return: the pointing coefficients
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._pointingCoefficient
 
@@ -898,7 +912,7 @@ class MccsAntenna(SKABaseDevice):
         Return the spectrumX attribute.
 
         :return: x spectrum
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._spectrumX
 
@@ -908,7 +922,7 @@ class MccsAntenna(SKABaseDevice):
         Return the spectrumY attribute.
 
         :return: y spectrum
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._spectrumY
 
@@ -918,7 +932,7 @@ class MccsAntenna(SKABaseDevice):
         Return the position attribute.
 
         :return: positions
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._position
 
@@ -934,7 +948,7 @@ class MccsAntenna(SKABaseDevice):
         Return the delays attribute.
 
         :return: delay for each beam
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._delays
 
@@ -950,7 +964,7 @@ class MccsAntenna(SKABaseDevice):
         Return the delayRates attribute.
 
         :return: delay rate for each beam
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._delayRates
 
@@ -966,7 +980,7 @@ class MccsAntenna(SKABaseDevice):
         Return the bandpassCoefficient attribute.
 
         :return: bandpass coefficients
-        :rtype: sequence of float
+        :rtype: list(float)
         """
         return self._bandpassCoefficient
 
@@ -981,9 +995,8 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            :py:meth:`MccsAntenna.Reset` command.
-            This implementation resets the MCCS system as a whole as an
-            attempt to clear a FAULT state.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Reset` command
+            for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1004,7 +1017,7 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of the
-            :py:meth:`MccsAntenna.PowerOn` command
+            :py:meth:`.MccsAntenna.PowerOn` command
             functionality.
 
             :return: A tuple containing a return code and a string
@@ -1043,7 +1056,7 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook for implementation of the
-            :py:meth:`MccsAntenna.PowerOff` command
+            :py:meth:`.MccsAntenna.PowerOff` command
             functionality.
 
             :return: A tuple containing a return code and a string
@@ -1082,7 +1095,7 @@ class MccsAntenna(SKABaseDevice):
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.antenna` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

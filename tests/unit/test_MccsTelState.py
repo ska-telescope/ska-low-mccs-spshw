@@ -21,7 +21,7 @@ from ska.low.mccs import release
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -35,7 +35,9 @@ def device_to_load():
 
 # Device test case
 class TestMccsTelState(object):
-    """Tests for MccsTelState device."""
+    """
+    Tests for MccsTelState device.
+    """
 
     def test_InitDevice(self, device_under_test):
         """
@@ -53,7 +55,7 @@ class TestMccsTelState(object):
 
     def test_State(self, device_under_test):
         """
-        Test for State
+        Test for State.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -64,7 +66,7 @@ class TestMccsTelState(object):
 
     def test_Status(self, device_under_test):
         """
-        Test for Status
+        Test for Status.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -75,7 +77,7 @@ class TestMccsTelState(object):
 
     def test_GetVersionInfo(self, device_under_test):
         """
-        The of GetVersionInfo
+        The of GetVersionInfo.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -88,7 +90,7 @@ class TestMccsTelState(object):
     # @pytest.mark.skip(reason="too weak a test to count")
     def test_Reset(self, device_under_test):
         """
-        Test for Reset
+        Test for Reset.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -102,7 +104,7 @@ class TestMccsTelState(object):
 
     def test_buildState(self, device_under_test):
         """
-        Test for buildState
+        Test for buildState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -114,7 +116,7 @@ class TestMccsTelState(object):
 
     def test_versionId(self, device_under_test):
         """
-        Test for versionId
+        Test for versionId.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -125,7 +127,7 @@ class TestMccsTelState(object):
 
     def test_loggingLevel(self, device_under_test):
         """
-        Test for loggingLevel
+        Test for loggingLevel.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -136,7 +138,7 @@ class TestMccsTelState(object):
 
     def test_healthState(self, device_under_test, mocker):
         """
-        Test for healthState
+        Test for healthState.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -162,7 +164,7 @@ class TestMccsTelState(object):
 
     def test_controlMode(self, device_under_test):
         """
-        Test for controlMode
+        Test for controlMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -173,7 +175,7 @@ class TestMccsTelState(object):
 
     def test_simulationMode(self, device_under_test):
         """
-        Test for simulationMode
+        Test for simulationMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -184,7 +186,7 @@ class TestMccsTelState(object):
 
     def test_testMode(self, device_under_test):
         """
-        Test for testMode
+        Test for testMode.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -195,7 +197,7 @@ class TestMccsTelState(object):
 
     def test_elementsStates(self, device_under_test):
         """
-        Test for elementsStates
+        Test for elementsStates.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -209,7 +211,7 @@ class TestMccsTelState(object):
 
     def test_observationsStates(self, device_under_test):
         """
-        Test for observationsStates
+        Test for observationsStates.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -223,7 +225,7 @@ class TestMccsTelState(object):
 
     def test_algorithms(self, device_under_test):
         """
-        Test for algorithms
+        Test for algorithms.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -237,7 +239,7 @@ class TestMccsTelState(object):
 
     def test_algorithmsVersion(self, device_under_test):
         """
-        Test for algorithmsVersion
+        Test for algorithmsVersion.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -251,7 +253,7 @@ class TestMccsTelState(object):
 
     def test_loggingTargets(self, device_under_test):
         """
-        Test for loggingTargets
+        Test for loggingTargets.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

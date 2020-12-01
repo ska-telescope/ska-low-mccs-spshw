@@ -21,7 +21,9 @@ __all__ = ["ConnectionFailableDevice"]
 class ConnectionFailableDevice(Device):
     """
     A tango device mixin that adds a single simulate_connection_failure
-    command. This can be used with any tango device that has a
+    command.
+
+    This can be used with any tango device that has a
     hardware_manager attribute that is an instance of
     :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager`.
     """
@@ -29,7 +31,7 @@ class ConnectionFailableDevice(Device):
     def is_SimulateConnectionFailure_allowed(self):
         """
         Return whether the SimulateConnectionFailure command is allowed
-        to be called
+        to be called.
 
         :return: whether the SimulateConnectionFailure command is
             allowed to be called
@@ -51,8 +53,8 @@ class ConnectionFailableDevice(Device):
 
 class DemoTile(MccsTile, ConnectionFailableDevice):
     """
-    A version of the MccsTile tango device with extra functionality
-    for testing/demos:
+    A version of the MccsTile tango device with extra functionality for
+    testing/demos:
 
     * an additional command that can be used, when the device is in
       simulation mode, to tell the simulator to simulate connection
@@ -64,8 +66,9 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
 
     def init_device(self):
         """
-        Tango hook for initialisation code. Overridden here to log the
-        fact that this is a demo tile.
+        Tango hook for initialisation code.
+
+        Overridden here to log the fact that this is a demo tile.
         """
         super().init_device()
         self.logger.warn("I am a DEMO tile!")
@@ -73,8 +76,9 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
     @command()
     def TakeOffline(self):
         """
-        Disable the tile and put it into admin mode OFFLINE. Implemented
-        this way because webjive.
+        Disable the tile and put it into admin mode OFFLINE.
+
+        Implemented this way because webjive.
         """
         if self.get_state() == DevState.ON:
             self.Off()
@@ -85,6 +89,7 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
     def PutOnline(self):
         """
         Put the tile into admin mode ONLINE, then enable it.
+
         Implemented this way because webjive.
         """
         self.write_adminMode(AdminMode.ONLINE)
@@ -97,7 +102,7 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
 # ----------
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.tile.demo_tile` module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

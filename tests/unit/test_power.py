@@ -7,7 +7,7 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska.low.mccs.power module
+This module contains the tests for the ska.low.mccs.power module.
 """
 import pytest
 
@@ -16,51 +16,51 @@ from ska.low.mccs.power import PowerManager
 
 class TestPowerManager:
     """
-    This class contains the tests for the ska.low.mccs.power.PowerManager
-    class
+    This class contains the tests for the
+    ska.low.mccs.power.PowerManager class.
     """
 
     class _OnOffMock:
         """
-        Mock class that can be turned off and on
+        Mock class that can be turned off and on.
         """
 
         def __init__(self):
             """
-            Initialise a new _OnOffMock object
+            Initialise a new _OnOffMock object.
             """
             self._is_on = False
 
         def On(self):  # noqa: N802
             """
-            Turn the mock object on
+            Turn the mock object on.
             """
             self._is_on = True
 
         def on(self):
             """
-            Turn the mock object on
+            Turn the mock object on.
             """
             self._is_on = True
 
         def Off(self):  # noqa: N802
             """
-            Turn the mock object off
+            Turn the mock object off.
             """
             self._is_on = False
 
         def off(self):
             """
-            Turn the mock object off
+            Turn the mock object off.
             """
             self._is_on = False
 
         def is_on(self):
             """
-            Returns whether this mock object is on or not
+            Returns whether this mock object is on or not.
 
             :return: whether this mock object is on or not
-            :rtype: boolean
+            :rtype: bool
             """
             return self._is_on
 
@@ -92,7 +92,7 @@ class TestPowerManager:
         power manager under test as its subservient devices. It is
         paramerised to return three results: None, 0 and 2. Thus it
         covers the cases of a power manager with or without subservient
-        devices
+        devices.
 
         :param request: A pytest object giving access to the requesting test
             context.
@@ -100,8 +100,9 @@ class TestPowerManager:
         :param mock_device_proxies: fixture that mocks out tango.DeviceProxy.
         :type mock_device_proxies: dict
 
-        :return: a list of devices that can be turned on and off
-        :rtype: list of objects, or None if no devices are provided
+        :return: a list of devices that can be turned on and off, or
+            None if no devices are provided
+        :rtype: list or None
         """
         num_devices = request.param
         if num_devices is None:
@@ -115,7 +116,7 @@ class TestPowerManager:
     @pytest.fixture()
     def power_manager(self, hardware_manager, devices):
         """
-        Fixture that returns a power manager
+        Fixture that returns a power manager.
 
         :param hardware_manager: fixture that returns a hardware manager:
             something that can be turned off and on.
@@ -129,7 +130,7 @@ class TestPowerManager:
 
     def test_power_manager(self, power_manager):
         """
-        Test the PowerManager class
+        Test the PowerManager class.
 
         :param power_manager: fixture that returns the power manager
             under test
@@ -139,12 +140,12 @@ class TestPowerManager:
         def assert_on(is_on):
             """
             Helper function that asserts the off/on status of the power
-            manager under test
+            manager under test.
 
             :param is_on: the off/on status being asserted. If true, we
                 are asserting that the power manager is on; if false, we
                 are asserting that it is off
-            :type is_on: boolean
+            :type is_on: bool
             """
             assert power_manager.is_on() == is_on
             if power_manager.hardware is not None:

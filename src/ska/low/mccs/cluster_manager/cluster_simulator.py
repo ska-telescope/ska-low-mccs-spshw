@@ -17,12 +17,12 @@ from ska.base.control_model import HealthState
 from ska.low.mccs.hardware import HardwareSimulator
 
 
-__all__ = ["ClusterSimulator"]
+__all__ = ["ClusterSimulator", "JobConfig", "JobStatus"]
 
 
 class JobStatus(IntEnum):
     """
-    An enumerated type for cluster job status
+    An enumerated type for cluster job status.
 
     :todo: Once we start implementing a real cluster driver, this will
         need to be part of the shared interface
@@ -87,15 +87,16 @@ class JobStatus(IntEnum):
 
 class JobConfig:
     """
-    Stub for a job configuration specification. This is unimplemented at
-    present. Should eventually contain resource requirements (such as
-    walltime, cpu, vmem, disk usage, etc) and a pointer to the job to be
-    run.
+    Stub for a job configuration specification.
+
+    This is unimplemented at present. Should eventually contain resource
+    requirements (such as walltime, cpu, vmem, disk usage, etc) and a
+    pointer to the job to be run.
     """
 
     def __init__(self, **kwargs):
         """
-        Create a new JobConfig instance
+        Create a new JobConfig instance.
 
         :param kwargs: dummy kwargs
         :type kwargs: dict
@@ -105,12 +106,12 @@ class JobConfig:
 
 class JobIdGenerator:
     """
-    A generator of job ids
+    A generator of job ids.
     """
 
     def __init__(self, id_format="sim.{}", start=1):
         """
-        Create a new instance
+        Create a new instance.
 
         :param id_format: a format for the job id
         :type id_format: str
@@ -122,7 +123,7 @@ class JobIdGenerator:
 
     def __next__(self):
         """
-        Return the next job id
+        Return the next job id.
 
         :return: the next job id
         :rtype: str
@@ -199,7 +200,7 @@ class ClusterSimulator(HardwareSimulator):
 
     def __init__(self):
         """
-        Initialise a new ClusterSimulator instance
+        Initialise a new ClusterSimulator instance.
         """
 
         self._configuration = dict(self.CONFIGURATION)
@@ -214,7 +215,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_errored(self):
         """
-        Return the number of jobs that have errored
+        Return the number of jobs that have errored.
 
         :return: the number of jobs that have errored
         :rtype: int
@@ -224,7 +225,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_failed(self):
         """
-        Return the number of jobs that have failed
+        Return the number of jobs that have failed.
 
         :return: the number of jobs that have failed
         :rtype: int
@@ -234,7 +235,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_finished(self):
         """
-        Return the number of jobs that have finished
+        Return the number of jobs that have finished.
 
         :return: the number of jobs that have finished
         :rtype: int
@@ -244,7 +245,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_killed(self):
         """
-        Return the number of jobs that have been killed
+        Return the number of jobs that have been killed.
 
         :return: the number of jobs that have been killed
         :rtype: int
@@ -254,7 +255,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_lost(self):
         """
-        Return the number of jobs that have been lost
+        Return the number of jobs that have been lost.
 
         :return: the number of jobs that have been lost
         :rtype: int
@@ -264,11 +265,11 @@ class ClusterSimulator(HardwareSimulator):
     def _num_open_jobs_by_status(self, status):
         """
         Helper method to return the number of open jobs with a given
-        status
+        status.
 
         :param status: the job status for which the number of open jobs
             are sought
-        :type status: :py:class:`JobStatus`
+        :type status: :py:class:`.JobStatus`
 
         :return: the number of open jobs with a given status
         :rtype: int
@@ -278,7 +279,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_staging(self):
         """
-        Return the number of jobs that are currently staging
+        Return the number of jobs that are currently staging.
 
         :return: the number of jobs that are currently staging
         :rtype: int
@@ -288,7 +289,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_starting(self):
         """
-        Return the number of jobs that are currently starting
+        Return the number of jobs that are currently starting.
 
         :return: the number of jobs that are currently starting
         :rtype: int
@@ -298,7 +299,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_running(self):
         """
-        Return the number of jobs that are currently running
+        Return the number of jobs that are currently running.
 
         :return: the number of jobs that are currently running
         :rtype: int
@@ -308,7 +309,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_killing(self):
         """
-        Return the number of jobs that are currently being killed
+        Return the number of jobs that are currently being killed.
 
         :return: the number of jobs that are currently being killed
         :rtype: int
@@ -318,7 +319,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def jobs_unreachable(self):
         """
-        Return the number of jobs that are currently unreachable
+        Return the number of jobs that are currently unreachable.
 
         :return: the number of jobs that are currently unreachable
         :rtype: int
@@ -328,7 +329,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def memory_total(self):
         """
-        Return the total memory of the cluster
+        Return the total memory of the cluster.
 
         :return: the total memory of the cluster
         :rtype: float
@@ -338,7 +339,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def memory_used(self):
         """
-        Return the used memory of the cluster
+        Return the used memory of the cluster.
 
         :return: the used memory of the cluster
         :rtype: float
@@ -348,7 +349,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def memory_avail(self):
         """
-        Return the available memory of the cluster
+        Return the available memory of the cluster.
 
         :return: the available memory of the cluster
         :rtype: float
@@ -358,7 +359,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def nodes_total(self):
         """
-        Return the total number of nodes in the cluster
+        Return the total number of nodes in the cluster.
 
         :return: the total number of nodes in the cluster
         :rtype: int
@@ -368,7 +369,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def nodes_in_use(self):
         """
-        Return the number of nodes in use in the cluster
+        Return the number of nodes in use in the cluster.
 
         :return: the number of nodes in use in the cluster
         :rtype: int
@@ -378,7 +379,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def nodes_avail(self):
         """
-        Return the number of available nodes in the cluster
+        Return the number of available nodes in the cluster.
 
         :return: the number of available nodes in the cluster
         :rtype: int
@@ -388,7 +389,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_cpus_total(self):
         """
-        Return the total number of CPUs on the master node
+        Return the total number of CPUs on the master node.
 
         :return: the total number of CPUs on the master node
         :rtype: int
@@ -398,7 +399,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_cpus_used(self):
         """
-        Return the total number of CPUs in use on the master node
+        Return the total number of CPUs in use on the master node.
 
         :return: the total number of CPUs in use on the master node
         :rtype: int
@@ -408,7 +409,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_cpus_allocated_percent(self):
         """
-        Return the percent of CPUs allocated on master
+        Return the percent of CPUs allocated on master.
 
         :return: the percent of CPUs allocated on master
         :rtype: float
@@ -418,7 +419,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_disk_total(self):
         """
-        Return the total disk size on the master node
+        Return the total disk size on the master node.
 
         :return: the total disk size on the master node
         :rtype: float
@@ -428,7 +429,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_disk_used(self):
         """
-        Return the total disk usage on the master node
+        Return the total disk usage on the master node.
 
         :return: the total disk usage on the master node
         :rtype: float
@@ -438,7 +439,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_disk_percent(self):
         """
-        Return the percent of disk used on master
+        Return the percent of disk used on master.
 
         :return: the percent of disk used on master
         :rtype: float
@@ -448,7 +449,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_mem_total(self):
         """
-        Return the total memory size on the master node
+        Return the total memory size on the master node.
 
         :return: the total memory size on the master node
         :rtype: float
@@ -458,7 +459,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_mem_used(self):
         """
-        Return the total memory usage on the master node
+        Return the total memory usage on the master node.
 
         :return: the total memory usage on the master node
         :rtype: float
@@ -468,7 +469,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_mem_percent(self):
         """
-        Return the percent of memory used on master
+        Return the percent of memory used on master.
 
         :return: the percent of memory used on master
         :rtype: float
@@ -478,7 +479,7 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def master_node_id(self):
         """
-        Return the id of the master node
+        Return the id of the master node.
 
         :return: the id of the master node
         :rtype: int
@@ -488,20 +489,20 @@ class ClusterSimulator(HardwareSimulator):
     @property
     def shadow_master_pool_node_ids(self):
         """
-        Return the ids of nodes in the shadow master pool
+        Return the ids of nodes in the shadow master pool.
 
         :return: the ids of nodes in the shadow master pool
-        :rtype: tuple of int
+        :rtype: tuple(int)
         """
         return self._configuration["shadow_master_pool_node_ids"]
 
     @property
     def shadow_master_pool_status(self):
         """
-        Return the statuses of nodes in the shadow master pool
+        Return the statuses of nodes in the shadow master pool.
 
         :return: the statuses of nodes in the shadow master pool
-        :rtype: tuple of HealthState
+        :rtype: tuple(py:class:`~ska.base.control_model.HealthState`)
         """
         return tuple(
             self._node_statuses[node_id] for node_id in self.shadow_master_pool_node_ids
@@ -509,8 +510,8 @@ class ClusterSimulator(HardwareSimulator):
 
     def ping_master_pool(self):
         """
-        Ping the master pool nodes to make sure they are ok.
-        This has not been implemented.
+        Ping the master pool nodes to make sure they are ok. This has
+        not been implemented.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -521,14 +522,14 @@ class ClusterSimulator(HardwareSimulator):
 
     def clear_job_stats(self):
         """
-        Clear stats for closed jobs
+        Clear stats for closed jobs.
         """
         for status in JobStatus:
             self._job_stats[status] = 0
 
     def get_job_status(self, job_id):
         """
-        Return the status of an open job
+        Return the status of an open job.
 
         :param job_id: the id of the job
         :type job_id: str
@@ -548,7 +549,7 @@ class ClusterSimulator(HardwareSimulator):
         job, registers it as a STAGING job, and returns the job id.
 
         :param job_config: specification of the submitted job
-        :type job_config: :py:class:`JobConfig`
+        :type job_config: :py:class:`.JobConfig`
 
         :return: the job_id
         :rtype: int
@@ -559,7 +560,7 @@ class ClusterSimulator(HardwareSimulator):
 
     def start_job(self, job_id):
         """
-        Start a specified job
+        Start a specified job.
 
         :param job_id: The id of the job to be started
         :type job_id: str
@@ -572,7 +573,7 @@ class ClusterSimulator(HardwareSimulator):
 
     def stop_job(self, job_id):
         """
-        Start a specified job
+        Start a specified job.
 
         :param job_id: The id of the job to be started
         :type job_id: str
@@ -587,7 +588,8 @@ class ClusterSimulator(HardwareSimulator):
 
     def simulate_node_failure(self, node_id, failed):
         """
-        Tells this simulator to simulate the failure of one of its nodes
+        Tells this simulator to simulate the failure of one of its
+        nodes.
 
         :param node_id: id of the node whose failure status is to be
             changed
@@ -605,7 +607,7 @@ class ClusterSimulator(HardwareSimulator):
     def _update_master_node(self):
         """
         Helper method to update the master node after we have simulated
-        failure of the previous master node
+        failure of the previous master node.
         """
         if self._node_statuses[self.master_node_id] != HealthState.OK:
             try:

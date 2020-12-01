@@ -4,7 +4,9 @@
 #
 #
 #
-"""Release information for SKA MCCS Python Package"""
+"""
+Release information for SKA MCCS Python Package.
+"""
 import sys
 
 name = """ska.low.mccs"""
@@ -21,12 +23,13 @@ copyright = (  # noqa: A001
 
 
 def get_release_info(clsname=None):
-    """Return a formatted release info string.
+    """
+    Return a formatted release info string.
 
     :param clsname: optional name of class to add to the info
-    :type clsname: string
+    :type clsname: str
 
-    :return: string
+    :return: str
     """
     rmod = sys.modules[__name__]
     info = ", ".join((rmod.name, rmod.version, rmod.description))

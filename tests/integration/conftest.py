@@ -1,6 +1,6 @@
 """
 This module contains pytest fixtures and other test setups for the
-ska.low.mccs lightweight integration tests
+ska.low.mccs lightweight integration tests.
 """
 
 import backoff
@@ -15,7 +15,7 @@ def pytest_itemcollected(item):
     """
     pytest hook implementation; add the "forked" custom mark to all
     tests that use the `device_context` fixture, causing them to be
-    sandboxed in their own process
+    sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
     :type item: a collected test
@@ -42,7 +42,8 @@ def device_context(mocker, devices_info):
 
     def _get_open_port():
         """
-        Helper function that returns an available port on the local machine
+        Helper function that returns an available port on the local
+        machine.
 
         Note the possibility of a race condition here. By the time the
         calling method tries to make use of this port, it might already

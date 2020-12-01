@@ -21,9 +21,11 @@ from ska.low.mccs.hardware import OnOffHardwareSimulator
 
 class AntennaHardwareSimulator(OnOffHardwareSimulator):
     """
-    A simulator of the APIU-managed aspects of antenna hardware. This is
-    part of the apiu module because the physical antenna is not directly
-    monitorable, but must rather be monitored (in part) via the APIU.
+    A simulator of the APIU-managed aspects of antenna hardware.
+
+    This is part of the apiu module because the physical antenna is not
+    directly monitorable, but must rather be monitored (in part) via the
+    APIU.
     """
 
     VOLTAGE = 3.3
@@ -32,7 +34,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
     def __init__(self):
         """
-        Initialise a new instance
+        Initialise a new instance.
         """
         self._voltage = None
         self._current = None
@@ -41,7 +43,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
     def off(self):
         """
-        Turn me off
+        Turn me off.
         """
         super().off()
         self._voltage = None
@@ -50,7 +52,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
     def on(self):
         """
-        Turn me on
+        Turn me on.
         """
         super().on()
         self._voltage = self.VOLTAGE
@@ -60,7 +62,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
     @property
     def voltage(self):
         """
-        Return my voltage
+        Return my voltage.
 
         :return: my voltage
         :rtype: float
@@ -71,7 +73,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
     @property
     def current(self):
         """
-        Return my current
+        Return my current.
 
         :return: my current
         :rtype: float
@@ -82,7 +84,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
     @property
     def temperature(self):
         """
-        Return my temperature
+        Return my temperature.
 
         :return: my temperature
         :rtype: float
@@ -104,7 +106,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
     def simulate_current(self, current):
         """
-        Simulate a change in antenna current
+        Simulate a change in antenna current.
 
         :param current: the new antenna current value to be simulated
         :type current: float
@@ -113,7 +115,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
     def simulate_voltage(self, voltage):
         """
-        Simulate a change in antenna voltage
+        Simulate a change in antenna voltage.
 
         :param voltage: the new antenna voltage value to be simulated
         :type voltage: float
@@ -122,7 +124,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
     def simulate_temperature(self, temperature):
         """
-        Simulate a change in antenna temperature
+        Simulate a change in antenna temperature.
 
         :param temperature: the new antenna temperature value to be simulated
         :type temperature: float
@@ -132,7 +134,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
 class APIUSimulator(OnOffHardwareSimulator):
     """
-    A simulator of APIU hardware
+    A simulator of APIU hardware.
     """
 
     VOLTAGE = 3.4
@@ -143,7 +145,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def __init__(self):
         """
-        Initialise a new APIUSimulator instance
+        Initialise a new APIUSimulator instance.
         """
         self._voltage = None
         self._current = None
@@ -157,7 +159,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def off(self):
         """
-        Turn me off
+        Turn me off.
         """
         super().off()
         self._voltage = None
@@ -170,7 +172,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def on(self):
         """
-        Turn me on
+        Turn me on.
         """
         super().on()
         self._voltage = self.VOLTAGE
@@ -183,7 +185,7 @@ class APIUSimulator(OnOffHardwareSimulator):
     @property
     def voltage(self):
         """
-        Return my voltage
+        Return my voltage.
 
         :return: my voltage
         :rtype: float
@@ -194,7 +196,7 @@ class APIUSimulator(OnOffHardwareSimulator):
     @property
     def current(self):
         """
-        Return my current
+        Return my current.
 
         :return: my current
         :rtype: float
@@ -205,7 +207,7 @@ class APIUSimulator(OnOffHardwareSimulator):
     @property
     def temperature(self):
         """
-        Return my temperature
+        Return my temperature.
 
         :return: my temperature
         :rtype: float
@@ -216,7 +218,7 @@ class APIUSimulator(OnOffHardwareSimulator):
     @property
     def humidity(self):
         """
-        Return my humidity
+        Return my humidity.
 
         :return: my humidity
         :rtype: float
@@ -226,7 +228,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def is_antenna_on(self, logical_antenna_id):
         """
-        Return whether a specified antenna is turned on
+        Return whether a specified antenna is turned on.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna to be turned off
@@ -241,7 +243,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def turn_off_antenna(self, logical_antenna_id):
         """
-        Turn off a specified antenna
+        Turn off a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna to be turned off
@@ -252,7 +254,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def turn_on_antenna(self, logical_antenna_id):
         """
-        Turn on a specified antenna
+        Turn on a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna to be turned on
@@ -263,7 +265,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def get_antenna_current(self, logical_antenna_id):
         """
-        Get the current of a specified antenna
+        Get the current of a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna for which the current is requested
@@ -277,7 +279,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def get_antenna_voltage(self, logical_antenna_id):
         """
-        Get the voltage of a specified antenna
+        Get the voltage of a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna for which the voltage is requested
@@ -291,7 +293,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def get_antenna_temperature(self, logical_antenna_id):
         """
-        Get the temperature of a specified antenna
+        Get the temperature of a specified antenna.
 
         :param logical_antenna_id: this APIU's internal id for the
             antenna for which the temperature is requested

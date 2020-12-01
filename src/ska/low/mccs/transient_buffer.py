@@ -7,10 +7,11 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-""" LFAA Transient Buffer Device Server
+"""
+LFAA Transient Buffer Device Server.
 
-An implementation of the Transient Buffer Device Server for the MCCS based upon
-architecture in SKA-TEL-LFAA-06000052-02.
+An implementation of the Transient Buffer Device Server for the MCCS
+based upon architecture in SKA-TEL-LFAA-06000052-02.
 """
 
 # PyTango imports
@@ -29,9 +30,8 @@ __all__ = ["MccsTransientBuffer", "main"]
 
 class MccsTransientBuffer(MccsDevice):
     """
-    MccsTelState TANGO device class for the MccsTransientBuffer prototype.
-
-    This is a subclass of :py:class:`ska.low.mccs.device.MccsDevice`.
+    MccsTransientBuffer TANGO device class for the SKA Low MCCS
+    prototype.
 
     **Properties:**
 
@@ -48,13 +48,13 @@ class MccsTransientBuffer(MccsDevice):
 
     class InitCommand(MccsDevice.InitCommand):
         """
-        Command class for device initialisation
+        Command class for device initialisation.
         """
 
         def do(self):
             """
             Initialises the attributes and properties of the
-            `MccsTransientBuffer`.
+            :py:class:`.MccsTransientBuffer`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -80,20 +80,21 @@ class MccsTransientBuffer(MccsDevice):
             return (ResultCode.OK, "Init command succeeded")
 
     def always_executed_hook(self):
-        """Method always executed before any TANGO command is executed."""
+        """
+        Method always executed before any TANGO command is executed.
+        """
 
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~ska.low.mccs.transient_buffer.MccsTransientBuffer.InitCommand.do`
-        method of the nested
-        :py:class:`~ska.low.mccs.transient_buffer.MccsTransientBuffer.InitCommand`
-        class.
+        :py:meth:`~.MccsTransientBuffer.InitCommand.do` method of the
+        nested :py:class:`~.MccsTransientBuffer.InitCommand` class.
 
-        This method allows for any memory or other resources allocated in the
-        :py:meth:`~ska.low.mccs.transient_buffer.MccsTransientBuffer.InitCommand.do`
-        method to be released. This method is called by the device destructor,
-        and by the Init command when the Tango device server is re-initialised.
+        This method allows for any memory or other resources allocated
+        in the :py:meth:`~.MccsTransientBuffer.InitCommand.do` method to
+        be released. This method is called by the device destructor, and
+        by the Init command when the Tango device server is
+        re-initialised.
         """
 
     # ----------
@@ -116,7 +117,7 @@ class MccsTransientBuffer(MccsDevice):
     @attribute(dtype="DevString", label="stationId", polling_period=1000)
     def stationId(self):
         """
-        Return the station id
+        Return the station id.
 
         :return: the station id
         :rtype: int
@@ -126,7 +127,7 @@ class MccsTransientBuffer(MccsDevice):
     @attribute(dtype="DevString", label="transientBufferJobId", polling_period=1000)
     def transientBufferJobId(self):
         """
-        Return the transient buffer job id
+        Return the transient buffer job id.
 
         :return: the transient buffer job id
         :rtype: int
@@ -136,7 +137,7 @@ class MccsTransientBuffer(MccsDevice):
     @attribute(dtype="DevLong", label="resamplingBits", polling_period=1000)
     def resamplingBits(self):
         """
-        Return the resampling bit depth
+        Return the resampling bit depth.
 
         :return: the resampling bit depth
         :rtype: int
@@ -146,7 +147,7 @@ class MccsTransientBuffer(MccsDevice):
     @attribute(dtype="DevShort", label="nStations", polling_period=1000)
     def nStations(self):
         """
-        Return the number of stations
+        Return the number of stations.
 
         :return: the number of stations
         :rtype: int
@@ -161,10 +162,10 @@ class MccsTransientBuffer(MccsDevice):
     )
     def transientFrequencyWindow(self):
         """
-        Return the transient frequency window
+        Return the transient frequency window.
 
         :return: the transient frequency window
-        :rtype: sequence of double
+        :rtype: list(float)
         """
         return self._transient_frequency_window
 
@@ -173,18 +174,17 @@ class MccsTransientBuffer(MccsDevice):
     )
     def stationIds(self):
         """
-        Return the station ids
+        Return the station ids.
 
         :return: the station ids
-        :rtype: sequence of str
+        :rtype: list(str)
         """
         return self._station_ids
 
 
 def main(args=None, **kwargs):
     """
-    Main function of the :py:mod:`ska.low.mccs.transient_buffer`
-    module.
+    Entry point for module.
 
     :param args: positional arguments
     :type args: list

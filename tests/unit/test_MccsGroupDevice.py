@@ -22,7 +22,7 @@ from ska.base.control_model import HealthState, ControlMode, SimulationMode, Tes
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing
+    Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -56,7 +56,7 @@ class TestMccsGroupDevice(object):
 
     def test_AddMember(self, device_under_test):
         """
-        Test for AddMember
+        Test for AddMember.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -69,7 +69,7 @@ class TestMccsGroupDevice(object):
 
     def test_RemoveMember(self, device_under_test):
         """
-        Test for RemoveMember
+        Test for RemoveMember.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -82,7 +82,7 @@ class TestMccsGroupDevice(object):
 
     def test_RunCommand(self, device_under_test):
         """
-        Test for RunCommand
+        Test for RunCommand.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -95,7 +95,7 @@ class TestMccsGroupDevice(object):
 
     def test_memberStates(self, device_under_test):
         """
-        Test for memberStates
+        Test for memberStates.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -106,7 +106,7 @@ class TestMccsGroupDevice(object):
 
     def test_memberList(self, device_under_test):
         """
-        Test for memberList
+        Test for memberList.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

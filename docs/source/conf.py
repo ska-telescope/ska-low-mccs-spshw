@@ -72,6 +72,12 @@ copyright = "2020, SKA MCCS Team"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+nitpick_ignore = [
+    ("py:class", "callable"),
+    ("py:class", "optional"),
+    ("py:class", "tango.test_context.MultiDeviceTestContext")  # workaround for pytango bug
+]
+
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",

@@ -9,9 +9,10 @@
 # See LICENSE.txt for more info.
 
 """
-The command line interface for the MCCS Controller device server. Functionality
-to handle passing variables to be added as functionality is added to the
-Controller DS.
+The command line interface for the MCCS Controller device server.
+
+Functionality to handle passing variables to be added as functionality
+is added to the Controller DS.
 """
 import types
 import functools
@@ -50,12 +51,12 @@ class CliMeta(type):
 
 def format_wrapper(method):
     """
-    Wrapper to format device command results as a two-line string
+    Wrapper to format device command results as a two-line string.
 
-    :param method: the method to be wrapped
+    :param method: function handle of the method to be wrapped
     :type method: callable
 
-    :return: the wrapped method
+    :return: function handle of the wrapped method
     :rtype: callable
     """
 
@@ -71,13 +72,13 @@ def format_wrapper(method):
 
 class MccsControllerCli(metaclass=CliMeta):
     """
-    Command-line tool to access the :py:class:`ska.low.mccs.MccsController`
-    tango device
+    Command-line tool to access the
+    :py:class:`ska.low.mccs.MccsController` tango device.
     """
 
     def __init__(self, fqdn="low-mccs/control/control"):
         """
-        Initialise a new CLI instance
+        Initialise a new CLI instance.
 
         :param fqdn: the FQDN of the controller device, defaults to
             "low-mccs/control/control"
@@ -90,7 +91,7 @@ class MccsControllerCli(metaclass=CliMeta):
 
     def adminmode(self):
         """
-        Show the admin mode
+        Show the admin mode.
 
         :todo: make writable
 
@@ -101,7 +102,7 @@ class MccsControllerCli(metaclass=CliMeta):
 
     def controlmode(self):
         """
-        Show the control mode
+        Show the control mode.
 
         :todo: make writable
 
@@ -112,7 +113,7 @@ class MccsControllerCli(metaclass=CliMeta):
 
     def simulationmode(self):
         """
-        Show the control mode
+        Show the control mode.
 
         :todo: make writable
 
@@ -123,7 +124,7 @@ class MccsControllerCli(metaclass=CliMeta):
 
     def healthstate(self):
         """
-        Show the health state
+        Show the health state.
 
         :return: health state
         :rtype: str
@@ -172,12 +173,12 @@ class MccsControllerCli(metaclass=CliMeta):
     @format_wrapper
     def allocate(self, subarray_id=0, station_ids=None):
         """
-        Allocate stations to a subarray
+        Allocate stations to a subarray.
 
         :param subarray_id: the subarray id, defaults to 0
         :type subarray_id: int, optional
         :param station_ids: the station ids, defaults to None
-        :type station_ids: list of int, optional
+        :type station_ids: list(int), optional
 
         :return: a result message
         :rtype: str
@@ -199,7 +200,7 @@ class MccsControllerCli(metaclass=CliMeta):
     @format_wrapper
     def release(self, subarray_id):
         """
-        Release resources from a a subarray
+        Release resources from a a subarray.
 
         :param subarray_id: the subarray id, defaults to 0
         :type subarray_id: int, optional

@@ -3,13 +3,7 @@
 # Not in the VSCode container!
 #
 git clone https://gitlab.com/ska-telescope/TANGO-grafana.git
-git clone https://gitlab.com/ska-telescope/skampi.git
-cd skampi
-make deploy HELM_CHART=tango-base
-
-if [ $(kubectl get all -n kube-system | grep -c traefik) != 4 ];then
-        make traefik EXTERNAL_IP=$(kubectl config view | gawk 'match($0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
-fi
+make install-traefik
 cd ../TANGO-grafana
 git submodule update --init --recursive
 make install-chart
@@ -20,10 +14,9 @@ kubectl wait --all-namespaces --for=condition=ready --timeout=800s --all pods
 
 # Create an ska-low-mccs:latest docker image reflecting the repository
 make devimage
-# Set environment variable to prevent tango-base being deployed again
-export TANGO_BASE_ENABLED=false
+
 # Starts up mccs
-make deploy
+make install-chart
 echo
 echo 2 of 3: Waiting for all pods to be created and ready to use
 kubectl wait -n integration --for=condition=ready --timeout=300s --all pods

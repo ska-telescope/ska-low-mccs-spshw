@@ -28,7 +28,8 @@ tango-base:
     enabled: true
 
 webjive:
-  enabled: false
+  enabled: true
+  minikube: true
 
 # example overrides
 # ska-low-mccs:
@@ -39,4 +40,3 @@ webjive:
 #     # change controller command
 #     controller:
 #       command: "SimController"
-  

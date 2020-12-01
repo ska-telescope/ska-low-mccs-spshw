@@ -9,3 +9,7 @@ tango-base:
 ska-low-mccs:
   cli:
     enabled: false
+
+webjive:
+  enabled: false
+  minikube: false

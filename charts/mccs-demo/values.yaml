@@ -28,7 +28,8 @@ tango-base:
     enabled: true
 
 webjive:
-  enabled: false
+  enabled: true
+  minikube: true
 
 ska-low-mccs:
   dsconfig:

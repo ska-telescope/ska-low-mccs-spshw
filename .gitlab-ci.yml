@@ -210,12 +210,15 @@ publish-chart:
 xray_report:
   stage: post_test
   tags:
-  - docker-executor
+    - docker-executor
   script:
+    - python3 .wait_for_report_file.py
     - 'curl -X POST -H "Content-type: application/json" --fail
          -H "Authorization: Basic $JIRA_AUTH"
          --data @./test-results/cucumber.json
          https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
+  dependencies:
+    - functional_test
   when: always
-  only: [master]
+  only: [MCCS-322]
   retry: 2

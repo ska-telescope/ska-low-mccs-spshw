@@ -8,7 +8,7 @@ import os.path
 import time
 import sys
 
-TIME_TO_WAIT = 60
+TIME_TO_WAIT = 600
 TIME_COUNTER = 0
 FILE_PATH = "./test-results/cucumber.json"
 
@@ -20,7 +20,7 @@ while not os.path.exists(FILE_PATH):
 
 if TIME_COUNTER != TIME_TO_WAIT:
     if os.path.isfile(FILE_PATH):
-        print("File exists")
+        print(f"File appeared after {TIME_COUNTER} seconds")
         sys.exit(0)
     else:
         print(f"{FILE_PATH} isn't a file")

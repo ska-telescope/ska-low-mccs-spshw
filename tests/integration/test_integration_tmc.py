@@ -76,20 +76,20 @@ class TestMccsIntegrationTmc:
         :rtype: dict<string, :py:class:`tango.DeviceProxy`>
         """
         device_dict = {
-            "controller": device_context.get_device("low-mccs/control/control"),
-            "subarray_01": device_context.get_device("low-mccs/subarray/01"),
-            "subarray_02": device_context.get_device("low-mccs/subarray/02"),
-            "station_001": device_context.get_device("low-mccs/station/001"),
-            "station_002": device_context.get_device("low-mccs/station/002"),
-            "tile_0001": device_context.get_device("low-mccs/tile/0001"),
-            "tile_0002": device_context.get_device("low-mccs/tile/0002"),
-            "tile_0003": device_context.get_device("low-mccs/tile/0003"),
-            "tile_0004": device_context.get_device("low-mccs/tile/0004"),
+            "controller": device_context.get_device("controller"),
+            "subarray_01": device_context.get_device("subarray_01"),
+            "subarray_02": device_context.get_device("subarray_02"),
+            "station_001": device_context.get_device("station_001"),
+            "station_002": device_context.get_device("station_002"),
+            "tile_0001": device_context.get_device("tile_0001"),
+            "tile_0002": device_context.get_device("tile_0002"),
+            "tile_0003": device_context.get_device("tile_0003"),
+            "tile_0004": device_context.get_device("tile_0004"),
             # workaround for MCCS-244
-            # "antenna_000001": device_context.get_device("low-mccs/antenna/000001"),
-            # "antenna_000002": device_context.get_device("low-mccs/antenna/000002"),
-            # "antenna_000003": device_context.get_device("low-mccs/antenna/000003"),
-            # "antenna_000004": device_context.get_device("low-mccs/antenna/000004"),
+            # "antenna_000001": device_context.get_device("antenna_000001"),
+            # "antenna_000002": device_context.get_device("antenna_000002"),
+            # "antenna_000003": device_context.get_device("antenna_000003"),
+            # "antenna_000004": device_context.get_device("antenna_000004"),
         }
         confirm_initialised(device_dict.values())
         return device_dict

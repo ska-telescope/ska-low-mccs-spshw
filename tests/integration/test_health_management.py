@@ -50,10 +50,10 @@ def devices_to_load():
             # "antenna_000004",
         ],
         "patch": {
-            "low-mccs/tile/0001": DemoTile,
-            "low-mccs/tile/0002": DemoTile,
-            "low-mccs/tile/0003": DemoTile,
-            "low-mccs/tile/0004": DemoTile,
+            "tile_0001": DemoTile,
+            "tile_0002": DemoTile,
+            "tile_0003": DemoTile,
+            "tile_0004": DemoTile,
         },
     }
 
@@ -80,20 +80,20 @@ def test_controller_health_rollup(device_context):
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
     """
-    controller = device_context.get_device("low-mccs/control/control")
-    station_1 = device_context.get_device("low-mccs/station/001")
-    station_2 = device_context.get_device("low-mccs/station/002")
-    tile_1 = device_context.get_device("low-mccs/tile/0001")
-    tile_2 = device_context.get_device("low-mccs/tile/0002")
-    tile_3 = device_context.get_device("low-mccs/tile/0003")
-    tile_4 = device_context.get_device("low-mccs/tile/0004")
-    apiu_1 = device_context.get_device("low-mccs/apiu/001")
+    controller = device_context.get_device("controller")
+    station_1 = device_context.get_device("station_001")
+    station_2 = device_context.get_device("station_002")
+    tile_1 = device_context.get_device("tile_0001")
+    tile_2 = device_context.get_device("tile_0002")
+    tile_3 = device_context.get_device("tile_0003")
+    tile_4 = device_context.get_device("tile_0004")
+    apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
-    # antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-    # antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-    # antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-    # antenna_4 = device_context.get_device("low-mccs/antenna/000004")
+    # antenna_1 = device_context.get_device("antenna_000001")
+    # antenna_2 = device_context.get_device("antenna_000002")
+    # antenna_3 = device_context.get_device("antenna_000003")
+    # antenna_4 = device_context.get_device("antenna_000004")
 
     confirm_initialised(
         [
@@ -186,22 +186,22 @@ def test_subarray_health_rollup(device_context):
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
     """
-    controller = device_context.get_device("low-mccs/control/control")
-    subarray_1 = device_context.get_device("low-mccs/subarray/01")
-    subarray_2 = device_context.get_device("low-mccs/subarray/02")
-    station_1 = device_context.get_device("low-mccs/station/001")
-    station_2 = device_context.get_device("low-mccs/station/002")
-    tile_1 = device_context.get_device("low-mccs/tile/0001")
-    tile_2 = device_context.get_device("low-mccs/tile/0002")
-    tile_3 = device_context.get_device("low-mccs/tile/0003")
-    tile_4 = device_context.get_device("low-mccs/tile/0004")
-    apiu_1 = device_context.get_device("low-mccs/apiu/001")
+    controller = device_context.get_device("controller")
+    subarray_1 = device_context.get_device("subarray_01")
+    subarray_2 = device_context.get_device("subarray_02")
+    station_1 = device_context.get_device("station_001")
+    station_2 = device_context.get_device("station_002")
+    tile_1 = device_context.get_device("tile_0001")
+    tile_2 = device_context.get_device("tile_0002")
+    tile_3 = device_context.get_device("tile_0003")
+    tile_4 = device_context.get_device("tile_0004")
+    apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
-    # antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-    # antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-    # antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-    # antenna_4 = device_context.get_device("low-mccs/antenna/000004")
+    # antenna_1 = device_context.get_device("antenna_000001")
+    # antenna_2 = device_context.get_device("antenna_000002")
+    # antenna_3 = device_context.get_device("antenna_000003")
+    # antenna_4 = device_context.get_device("antenna_000004")
 
     confirm_initialised(
         [

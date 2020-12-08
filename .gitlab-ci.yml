@@ -210,7 +210,7 @@ publish-chart:
 xray_report:
   stage: post_test
   tags:
-    - docker-executor
+    - k8srunner
   script:
     - python3 .wait_for_report_file.py
     - 'curl -X POST -H "Content-type: application/json" --fail

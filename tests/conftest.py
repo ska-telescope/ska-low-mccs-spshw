@@ -6,11 +6,10 @@ import backoff
 from collections import defaultdict
 import json
 import logging
-import socket
 
 import pytest
 import tango
-from tango.test_context import MultiDeviceTestContext, get_host_ip
+from tango.test_context import MultiDeviceTestContext
 
 
 def pytest_addoption(parser):
@@ -76,7 +75,6 @@ class MCCSDeviceInfo:
                 properties = device_spec[class_name][fqdn]["properties"]
 
                 if patch is None:
-                    # klass = importlib.import_module(f".{class_name}", self._package)
                     package = __import__(self._package, fromlist=[class_name])
                     klass = getattr(package, class_name)
                 else:
@@ -203,19 +201,46 @@ class MCCSDeviceTestContext:
         self._source_setting = source
 
     @backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
+    def _backoff_retry_ready(self, unready_devices):
+        """
+        Implements exponential backoff-retry loop checking remaining
+        unready devices for readiness.
+
+        :param unready_devices: list of unready devices. This has to be a
+            mutable container (e.g. don't pass a tuple) because devices
+            are removed from it as they become ready
+        :type unready_devices: list
+
+        :return: whether all devices are ready
+        :rtype: bool
+        """
+        unready_devices[:] = [
+            device for device in unready_devices if not self._ready_condition(device)
+        ]
+        return not unready_devices
+
     def _check_ready(self):
+        """
+        Ensure that all included devices are checked against the
+        provided ready condition.
+        """
         if self._ready_condition is None:
-            return True
-        return all(
-            self._ready_condition(self.get_device(device_name))
+            return
+
+        unready = [
+            self.get_device(device_name)
             for device_name in self._devices_info.device_names
-        )
+        ]
+        self._backoff_retry_ready(unready)
 
     def _set_source(self):
+        """
+        Ensure that all included devices have the required source
+        setting applied.
+        """
         if self._source_setting is None:
             return
         for device_name in self._devices_info.device_names:
-            print(f"SETTING SOURCE FOR {device_name}")
             self.get_device(device_name).set_source(self._source_setting)
 
     def __enter__(self):
@@ -267,76 +292,25 @@ class MCCSDeviceTestContext:
 
 
 @pytest.fixture()
-def patch_device_proxy(mocker):
-    """
-    Fixture that monkeypatches :py:class:`tango.DeviceProxy` as a
-    workaround for a bug in
-    :py:class:`tango.MultiDeviceTestContext`, then returns the host and
-    port used by the patch.
-
-    :param mocker: fixture that wraps :py:mod:`unittest.mock` package
-    :type mocker: obj
-
-    :return: the host and port used by the patch
-    :rtype: tuple
-    """
-
-    def _get_open_port():
-        """
-        Helper function that returns an available port on the local
-        machine.
-
-        Note the possibility of a race condition here. By the time the
-        calling method tries to make use of this port, it might already
-        have been taken by another process.
-
-        :return: An open port
-        :rtype: int
-        """
-        print("IN BASE PATCH DEVICE PROXY")
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("", 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-        s.close()
-        return port
-
-    host = get_host_ip()
-    port = _get_open_port()
-
-    device_proxy_class = tango.DeviceProxy
-    mocker.patch(
-        "tango.DeviceProxy",
-        wraps=lambda fqdn, *args, **kwargs: device_proxy_class(
-            f"tango://{host}:{port}/{fqdn}#dbase=no", *args, **kwargs
-        ),
-    )
-    return (host, port)
-
-
-@pytest.fixture()
-def tango_config(patch_device_proxy):
+def tango_config(mock_device_proxies):
     """
     Fixture that returns configuration information that specified how
     the Tango system should be established and run.
 
-    This implementation entures that :py:class:`tango.DeviceProxy` is
-    monkeypatched as a workaround for a bug in
-    :py:class:`tango.MultiDeviceTestContext`, then returns the host and
-    port used by the patch.
+    This implementation - for unit testing - ensures that mocking of
+    device proxies is set up, and that Tango is run in a thread
+    (necessary for mocks to work).
 
-    :param patch_device_proxy: a fixture that handles monkeypatching of
-        :py:class:`tango.DeviceProxy` as a workaround for a bug in
-        :py:class:`tango.MultiDeviceTestContext`, and returns the host
-        and port used in the patch
-    :type patch_device_proxy: tuple
+    :param mock_device_proxies: fixture that patches
+        :py:class:`tango.DeviceProxy` to always return the same mock
+        for each fqdn
+    :type mock_device_proxies: dict
 
     :returns: tango configuration information: a dictionary with keys
         "process", "host" and "port".
     :rtype: dict
     """
-    (host, port) = patch_device_proxy
-    return {"process": True, "host": host, "port": port}
+    return {"process": True, "host": None, "port": 0}
 
 
 @pytest.fixture()

@@ -19,15 +19,15 @@ before_script:
   - python3 -m pip install pipdeptree
 
 stages:
-  #- linting
-  #- test
+  - linting
+  - test
   - build
   - integration
   - post_test
-  #- docs
-  #- pages
-  #- publish
-  #- release
+  - docs
+  - pages
+  - publish
+  - release
 
 # The YAML file defines a set of jobs with constraints stating when they should be run.
 # You can specify an unlimited number of jobs which are defined as top-level elements with an arbitrary name and always
@@ -35,38 +35,38 @@ stages:
 # In this case we have only the test job which produces a coverage report and the unittest output (see setup.cfg), and
 #  the coverage xml report is moved to the reports directory while the html output is persisted for use by the pages
 #  job. TODO: possibly a candidate for refactor / renaming later on.
-#test:
-#  stage: test
-#  tags:
-#    - k8srunner
-#  script:
-#    - tox -e py37
-#  artifacts:
-#    paths:
-#      - ./build
+test:
+  stage: test
+  tags:
+    - k8srunner
+  script:
+    - tox -e py37
+  artifacts:
+    paths:
+      - ./build
 
-#list_dependencies:
-#  stage: test
-#  script:
-#    - pipdeptree --json >> pip_deps.json
-#    - pipdeptree >> pip_deps.txt
-#    - dpkg -l >> system_deps.txt
-#    - awk 'FNR>5 {print $2 ", " $3}' system_deps.txt >> system_deps.csv
-#    - mkdir .public
-#    - cp pip_deps.txt .public/
-#    - cp pip_deps.json .public/
-#    - cp system_deps.txt .public/
-#    - cp system_deps.csv .public/
-#    - mv .public public
-#  artifacts:
-#    paths:
-#      - public
+list_dependencies:
+  stage: test
+  script:
+    - pipdeptree --json >> pip_deps.json
+    - pipdeptree >> pip_deps.txt
+    - dpkg -l >> system_deps.txt
+    - awk 'FNR>5 {print $2 ", " $3}' system_deps.txt >> system_deps.csv
+    - mkdir .public
+    - cp pip_deps.txt .public/
+    - cp pip_deps.json .public/
+    - cp system_deps.txt .public/
+    - cp system_deps.csv .public/
+    - mv .public public
+  artifacts:
+    paths:
+      - public
 
 build-image:
   stage: build
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  #dependencies:
-  #  - test
+  dependencies:
+    - test
   tags:
     - k8srunner
   script:
@@ -111,94 +111,94 @@ functional_test_tear_down:
     - make uninstall-chart
     - make delete_namespace
 
-#linting:
-#  tags:
-#    - k8srunner
-#  stage: linting
-#  script:
-#    - tox -e lint
-#  when: always
-#  artifacts:
-#    paths:
-#      - ./build
+linting:
+  tags:
+    - k8srunner
+  stage: linting
+  script:
+    - tox -e lint
+  when: always
+  artifacts:
+    paths:
+      - ./build
 
-#docs:
-#  tags:
-#    - k8srunner
-#  stage: docs
-#  before_script:
-#    - echo "error" > .docs_status
-#    - python3 -m pip install -r requirements-dev.txt
-#    - python3 -m pip install anybadge
-#  script:
-#    - tox -e docs
-#    - echo "pass" > .docs_status
-#  after_script:
-#    - mkdir -p build/badges
-#    - anybadge --label=docs --value=$(cat .docs_status) --file=build/badges/docs.svg pass=green error=red
-#  artifacts:
-#    paths:
-#      - ./build
-#      - ./docs/build/html
-#    when: always
-#    expire_in: 7 days
+docs:
+  tags:
+    - k8srunner
+  stage: docs
+  before_script:
+    - echo "error" > .docs_status
+    - python3 -m pip install -r requirements-dev.txt
+    - python3 -m pip install anybadge
+  script:
+    - tox -e docs
+    - echo "pass" > .docs_status
+  after_script:
+    - mkdir -p build/badges
+    - anybadge --label=docs --value=$(cat .docs_status) --file=build/badges/docs.svg pass=green error=red
+  artifacts:
+    paths:
+      - ./build
+      - ./docs/build/html
+    when: always
+    expire_in: 7 days
 
-#pages:
-#  stage: pages
-#  tags:
-#    - k8srunner
-#  dependencies:
-#    - test
-#  script:
-#    - ls -la
-#    - mkdir .public
-#    - cp -r ./build/htmlcov/* .public
-#    - mv .public public
-#  allow_failure: true
-#  when: always
-#  artifacts:
-#    paths:
-#      - public
-#    expire_in: 30 days
+pages:
+  stage: pages
+  tags:
+    - k8srunner
+  dependencies:
+    - test
+  script:
+    - ls -la
+    - mkdir .public
+    - cp -r ./build/htmlcov/* .public
+    - mv .public public
+  allow_failure: true
+  when: always
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
 
-#publish package to nexus:
-#  stage: publish
-#  tags:
-#    - k8srunner
-#  variables:
-#    TWINE_USERNAME: $TWINE_USERNAME
-#    TWINE_PASSWORD: $TWINE_PASSWORD
-#    PACKAGE_TAG: $CI_COMMIT_SHORT_SHA
-#  script:
-#    - python3 -m pip install twine
-#    - tox -e package # takes $PACKAGE_TAG as input
-#    - twine upload --repository-url $PYPI_REPOSITORY_URL dist/*
-#  when: on_success
-#  only:
-#    refs:
-#      - tags
-#    variables:
-#      # Confirm tag message exists
-#      - $CI_COMMIT_MESSAGE =~ /^.+$/
-#      # Confirm semantic versioning of tag
-#      - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
+publish package to nexus:
+  stage: publish
+  tags:
+    - k8srunner
+  variables:
+    TWINE_USERNAME: $TWINE_USERNAME
+    TWINE_PASSWORD: $TWINE_PASSWORD
+    PACKAGE_TAG: $CI_COMMIT_SHORT_SHA
+  script:
+    - python3 -m pip install twine
+    - tox -e package # takes $PACKAGE_TAG as input
+    - twine upload --repository-url $PYPI_REPOSITORY_URL dist/*
+  when: on_success
+  only:
+    refs:
+      - tags
+    variables:
+      # Confirm tag message exists
+      - $CI_COMMIT_MESSAGE =~ /^.+$/
+      # Confirm semantic versioning of tag
+      - $CI_COMMIT_TAG =~ /^((([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$/
 
-#release docker image to nexus:
-#  stage: publish
-#  image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-#  before_script:
-#    - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
-#  tags:
-#    - k8srunner
-#  # don't inherit artefacts to prevent dirty image
-#  dependencies: []
-#  script:
-#    - make build
-#    - make push
-#  when: on_success
-#  only:
-#    refs:
-#      - tags
+release docker image to nexus:
+  stage: publish
+  image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
+  before_script:
+    - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
+  tags:
+    - k8srunner
+  # don't inherit artefacts to prevent dirty image
+  dependencies: []
+  script:
+    - make build
+    - make push
+  when: on_success
+  only:
+    refs:
+      - tags
 
 include:
   # Create Gitlab CI badges from CI metrics
@@ -210,11 +210,11 @@ include:
   - project: "ska-telescope/templates-repository"
     file: "gitlab-ci/includes/helm_publish.yml"
 
-#publish-chart:
-#  when: on_success
-#  only:
-#    refs:
-#      - tags
+publish-chart:
+  when: on_success
+  only:
+    refs:
+      - tags
 
 xray_report:
   stage: post_test

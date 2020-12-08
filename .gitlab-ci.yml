@@ -23,6 +23,8 @@ stages:
   - test
   - build
   - integration
+  - collection
+  - teardown
   - docs
   - pages
   - publish
@@ -98,9 +100,25 @@ functional_test:
       - ./test-results
     when: always
 
+xray_report:
+  stage: collection
+  tags:
+    - k8srunner
+  script:
+    - python3 .wait_for_report_file.py
+    - 'curl -X POST -H "Content-type: application/json" --fail
+         -H "Authorization: Basic $JIRA_AUTH"
+         --data @./test-results/cucumber.json
+         https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
+  dependencies:
+    - functional_test
+  when: always
+  only: [MCCS-322]
+  retry: 2
+
 # functional testing teardown on new kubernetes runners
 functional_test_tear_down:
-  stage: integration
+  stage: teardown
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
   tags:
     - k8srunner
@@ -215,19 +233,3 @@ publish-chart:
   only:
     refs:
       - tags
-
-xray_report:
-  stage: integration
-  tags:
-    - k8srunner
-  script:
-    - python3 .wait_for_report_file.py
-    - 'curl -X POST -H "Content-type: application/json" --fail
-         -H "Authorization: Basic $JIRA_AUTH"
-         --data @./test-results/cucumber.json
-         https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
-  dependencies:
-    - functional_test
-  when: always
-  only: [MCCS-322]
-  retry: 2

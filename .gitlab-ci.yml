@@ -23,7 +23,6 @@ stages:
   - test
   - build
   - integration
-  - post_test
   - docs
   - pages
   - publish
@@ -97,6 +96,7 @@ functional_test:
   artifacts:
     paths:
       - ./test-results
+    when: always
 
 # functional testing teardown on new kubernetes runners
 functional_test_tear_down:
@@ -217,7 +217,7 @@ publish-chart:
       - tags
 
 xray_report:
-  stage: post_test
+  stage: integration
   tags:
     - k8srunner
   script:

@@ -83,10 +83,10 @@ build-image:
 functional_test:
   stage: integration
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  tags:
-    - k8srunner
   dependencies:
     - build-image # no point running when image hasn't been built (tests fail)
+  tags:
+    - k8srunner
   script:
     # test
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
@@ -100,18 +100,19 @@ functional_test:
       - ./test-results
     when: always
 
+# Wait for report and send to Jira
 xray_report:
   stage: collection
   tags:
     - k8srunner
+  dependencies:
+    - functional_test
   script:
     - python3 .wait_for_report_file.py
     - 'curl -X POST -H "Content-type: application/json" --fail
          -H "Authorization: Basic $JIRA_AUTH"
          --data @./test-results/cucumber.json
          https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
-  dependencies:
-    - functional_test
   when: always
   only: [MCCS-322]
   retry: 2
@@ -120,10 +121,10 @@ xray_report:
 functional_test_tear_down:
   stage: teardown
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  tags:
-    - k8srunner
   dependencies:
     - xray_report
+  tags:
+    - k8srunner
   script:
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
     - make uninstall-chart

@@ -19,7 +19,6 @@ import pytest
 from ska.base.control_model import HealthState
 from ska.low.mccs.tile.demo_tile_device import DemoTile
 from ska.low.mccs.utils import call_with_json
-from conftest import confirm_initialised
 
 
 @pytest.fixture()
@@ -87,30 +86,13 @@ def test_controller_health_rollup(device_context):
     tile_2 = device_context.get_device("tile_0002")
     tile_3 = device_context.get_device("tile_0003")
     tile_4 = device_context.get_device("tile_0004")
-    apiu_1 = device_context.get_device("apiu_001")
+    # apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
     # antenna_1 = device_context.get_device("antenna_000001")
     # antenna_2 = device_context.get_device("antenna_000002")
     # antenna_3 = device_context.get_device("antenna_000003")
     # antenna_4 = device_context.get_device("antenna_000004")
-
-    confirm_initialised(
-        [
-            controller,
-            station_1,
-            station_2,
-            tile_1,
-            tile_2,
-            tile_3,
-            tile_4,
-            apiu_1,
-            # antenna_1,  # workaround for MCCS-244
-            # antenna_2,
-            # antenna_3,
-            # antenna_4,
-        ]
-    )
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -195,32 +177,13 @@ def test_subarray_health_rollup(device_context):
     tile_2 = device_context.get_device("tile_0002")
     tile_3 = device_context.get_device("tile_0003")
     tile_4 = device_context.get_device("tile_0004")
-    apiu_1 = device_context.get_device("apiu_001")
+    # apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
     # antenna_1 = device_context.get_device("antenna_000001")
     # antenna_2 = device_context.get_device("antenna_000002")
     # antenna_3 = device_context.get_device("antenna_000003")
     # antenna_4 = device_context.get_device("antenna_000004")
-
-    confirm_initialised(
-        [
-            controller,
-            subarray_1,
-            subarray_2,
-            station_1,
-            station_2,
-            tile_1,
-            tile_2,
-            tile_3,
-            tile_4,
-            apiu_1,
-            # antenna_1,  # workaround for MCCS-244
-            # antenna_2,
-            # antenna_3,
-            # antenna_4,
-        ]
-    )
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK

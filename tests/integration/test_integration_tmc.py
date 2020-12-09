@@ -17,8 +17,6 @@ from tango import (
 from ska.base.commands import ResultCode
 from ska.base.control_model import ObsState
 
-from conftest import confirm_initialised
-
 
 @pytest.fixture()
 def devices_to_load():
@@ -91,7 +89,6 @@ class TestMccsIntegrationTmc:
             # "antenna_000003": device_context.get_device("antenna_000003"),
             # "antenna_000004": device_context.get_device("antenna_000004"),
         }
-        confirm_initialised(device_dict.values())
         return device_dict
 
     def set_all_dev_source(self, devices):

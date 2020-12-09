@@ -9,8 +9,6 @@ from tango import DevSource
 from ska.base.commands import ResultCode
 from ska.low.mccs.utils import call_with_json
 
-from conftest import confirm_initialised
-
 
 @pytest.fixture()
 def devices_to_load():
@@ -77,20 +75,6 @@ class TestMccsIntegration:
         tile_2.set_source(DevSource.DEV)
         tile_3.set_source(DevSource.DEV)
         tile_4.set_source(DevSource.DEV)
-
-        confirm_initialised(
-            [
-                controller,
-                subarray_1,
-                subarray_2,
-                station_1,
-                station_2,
-                tile_1,
-                tile_2,
-                tile_3,
-                tile_4,
-            ]
-        )
 
         # check initial state
         assert subarray_1.stationFQDNs is None
@@ -189,20 +173,6 @@ class TestMccsIntegration:
         tile_3.set_source(DevSource.DEV)
         tile_4.set_source(DevSource.DEV)
 
-        confirm_initialised(
-            [
-                controller,
-                subarray_1,
-                subarray_2,
-                station_1,
-                station_2,
-                tile_1,
-                tile_2,
-                tile_3,
-                tile_4,
-            ]
-        )
-
         controller.On()
 
         # allocate stations 1 to subarray 1
@@ -288,8 +258,6 @@ class TestMccsIntegration:
         station.set_source(DevSource.DEV)
         tile_1.set_source(DevSource.DEV)
         tile_2.set_source(DevSource.DEV)
-
-        confirm_initialised([station, tile_1, tile_2])
 
         # check initial state
         assert station.subarrayId == 0

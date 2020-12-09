@@ -16,8 +16,6 @@ management functionality of the SKA Low MCCS system.
 import pytest
 from tango import DevState
 
-from conftest import confirm_initialised
-
 
 @pytest.fixture()
 def devices_to_load():
@@ -69,10 +67,6 @@ class TestPowerManagement:
         tile_2 = device_context.get_device("tile_0002")
         tile_3 = device_context.get_device("tile_0003")
         tile_4 = device_context.get_device("tile_0004")
-
-        confirm_initialised(
-            [controller, station_1, station_2, tile_1, tile_2, tile_3, tile_4]
-        )
 
         assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF

@@ -9,6 +9,7 @@ image: nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest
 #  paths:
 
 variables:
+  MINIKUBE: "false"
   CHARTS_TO_PUBLISH: ska-low-mccs
 
 # before_script is used to define the command that should be run before all jobs, including deploy jobs, but after the restoration of artifacts.

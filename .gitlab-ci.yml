@@ -23,7 +23,8 @@ stages:
   - test
   - build
   - integration
-  - post_test
+  - collection
+  - teardown
   - docs
   - pages
   - publish
@@ -82,10 +83,10 @@ build-image:
 functional_test:
   stage: integration
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  tags:
-    - k8srunner
   dependencies:
     - build-image # no point running when image hasn't been built (tests fail)
+  tags:
+    - k8srunner
   script:
     # test
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
@@ -94,13 +95,39 @@ functional_test:
     - make template-chart
     - make wait
     - make functional_test
-  after_script:
-    - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
-    - make uninstall-chart
-    - make delete_namespace
   artifacts:
     paths:
       - ./test-results
+    when: always
+
+# Wait for report and send to Jira
+xray_report:
+  stage: collection
+  tags:
+    - k8srunner
+  dependencies:
+    - functional_test
+  script:
+    - 'curl -X POST -H "Content-type: application/json" --fail
+         -H "Authorization: Basic $JIRA_AUTH"
+         --data @./test-results/cucumber.json
+         https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
+  when: always
+  only: [MCCS-322]
+  retry: 2
+
+# functional testing teardown on new kubernetes runners
+functional_test_tear_down:
+  stage: teardown
+  image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
+  dependencies:
+    - xray_report
+  tags:
+    - k8srunner
+  script:
+    - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
+    - make uninstall-chart
+    - make delete_namespace
 
 linting:
   tags:
@@ -206,16 +233,3 @@ publish-chart:
   only:
     refs:
       - tags
-
-xray_report:
-  stage: post_test
-  tags:
-  - docker-executor
-  script:
-    - 'curl -X POST -H "Content-type: application/json" --fail
-         -H "Authorization: Basic $JIRA_AUTH"
-         --data @./test-results/cucumber.json
-         https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
-  when: always
-  only: [master]
-  retry: 2

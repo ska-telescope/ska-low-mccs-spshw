@@ -158,17 +158,20 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 # run helm  test 
 functional_test helm_test test: ## test the application on K8s
 	@helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
-	retcode=$$?; \
+	test_retcode=$$?; \
 	test -n $(RDEBUG) && kubectl -n $(KUBE_NAMESPACE) describe pod functional-$(HELM_CHART)-$(RELEASE_NAME); \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
-	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=30s -f $$yaml >/dev/null; \
-	mkdir -p $(TEST_RESULTS_DIR); kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR) > /dev/null; \
-	kubectl -n $(KUBE_NAMESPACE) delete pod -l transient > /dev/null; \
-	kubectl -n $(KUBE_NAMESPACE) delete -f $$yaml --now; rm $$yaml; \
+	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -f $$yaml; \
+	mkdir -p $(TEST_RESULTS_DIR); kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR) \
+	python3 .wait_for_report_file.py; \
+	report_retcode=$$?; \
 	echo "test report:"; \
-	cat $(TEST_RESULTS_DIR)/*; echo; exit $$retcode
+	cat $(TEST_RESULTS_DIR)/*; echo; \
+	kubectl -n $(KUBE_NAMESPACE) delete pod -l transient; \
+	kubectl -n $(KUBE_NAMESPACE) delete -f $$yaml --now; rm $$yaml; \
+	exit $$test_retcode || $$report_retcode
 
 wait:
 	@echo "Waiting for device servers to be ready"

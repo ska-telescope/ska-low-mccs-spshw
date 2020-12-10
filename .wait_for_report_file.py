@@ -8,7 +8,7 @@ import os.path
 import time
 import sys
 
-TIME_TO_WAIT = 600
+TIME_TO_WAIT = 60
 TIME_COUNTER = 0
 FILE_PATH = "./test-results/cucumber.json"
 

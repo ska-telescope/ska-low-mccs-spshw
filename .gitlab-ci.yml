@@ -108,7 +108,6 @@ xray_report:
   dependencies:
     - functional_test
   script:
-    - python3 .wait_for_report_file.py
     - 'curl -X POST -H "Content-type: application/json" --fail
          -H "Authorization: Basic $JIRA_AUTH"
          --data @./test-results/cucumber.json

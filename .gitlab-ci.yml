@@ -217,5 +217,5 @@ xray_report:
          --data @./test-results/cucumber.json
          https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
   when: always
-  only: [MCCS-323]
+  only: [master]
   retry: 2

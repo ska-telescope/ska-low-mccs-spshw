@@ -23,7 +23,7 @@ stages:
   - test
   - build
   - integration
-  - collection
+  - upload_results
   - teardown
   - docs
   - pages
@@ -102,11 +102,11 @@ functional_test:
 
 # Wait for report and send to Jira
 xray_report:
-  stage: collection
-  tags:
-    - k8srunner
+  stage: upload_results
   dependencies:
     - functional_test
+  tags:
+    - k8srunner
   script:
     - 'curl -X POST -H "Content-type: application/json" --fail
          -H "Authorization: Basic $JIRA_AUTH"

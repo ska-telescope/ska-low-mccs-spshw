@@ -163,7 +163,7 @@ functional_test helm_test test: ## test the application on K8s
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
 	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -f $$yaml; \
-	mkdir -p $(TEST_RESULTS_DIR); kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR) \
+	mkdir -p $(TEST_RESULTS_DIR); kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
 	python3 .wait_for_report_file.py; \
 	report_retcode=$$?; \
 	echo "test report:"; \

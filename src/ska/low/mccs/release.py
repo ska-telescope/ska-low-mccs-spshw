@@ -10,7 +10,7 @@ Release information for SKA MCCS Python Package.
 import sys
 
 name = """ska.low.mccs"""
-version = "0.3.0"
+version = "0.4.0"
 version_info = version.split(".")
 description = """A set of Low MCCS tango devices for the SKA Telescope."""
 author = "Team MCCS"

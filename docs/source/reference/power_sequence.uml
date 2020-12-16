@@ -1,0 +1,19 @@
+participant "Power\nsupply\nto MCCS" as Supply
+participant "Telescope\nManager\n(TM)" as TM
+participant Controller
+participant "SPS Cabinet\nControl\nBoard <c>" as Cabinet
+participant "Switch <s>" as Subrack
+participant "SPS Subrack\nControl\nBoard <r>" as Subrack
+participant "TPM <t>" as TPM
+participant "APIU <p>" as APIU
+participant "Antenna <a>" as Antenna
+Supply --> Cabinet: <power>
+TM --> Controller: StartUp()
+Controller -> Cabinet: On()
+Cabinet -> Switch: <power>
+Cabinet -> Switch: On()
+Cabinet --> Subrack: <power>
+Cabinet --> Subrack: On()
+Subrack --> TPM: <power>
+Subrack --> APIU: <power>
+APIU --> Antenna: <power>

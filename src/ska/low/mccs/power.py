@@ -11,6 +11,7 @@ subsystem, separate from or common to all devices.
 Each device will have its own implementation of power management, but
 hopefully built on this infrastructure
 """
+from ska.low.mccs.hardware import PowerMode
 from ska.low.mccs.utils import backoff_connect
 
 
@@ -48,7 +49,7 @@ class PowerManager:
         :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
-        self._is_on = False
+        self._power_mode = PowerMode.OFF
 
         self.hardware = hardware
         if device_fqdns is None:
@@ -65,14 +66,34 @@ class PowerManager:
             was nothing to do
         :rtype: bool or None
         """
-        if not self._is_on:
+        if self._power_mode == PowerMode.OFF:
             return
         if self.hardware is not None:
             self.hardware.off()
         if self.devices is not None:
             for device in self.devices:
                 device.Off()
-        self._is_on = False
+        self._power_mode = PowerMode.OFF
+        return True
+
+    def standby(self):
+        """
+        Put this device into low-power standby mode, by first do so to
+        its own hardware, and then telling all subservient devices to do
+        so.
+
+        :return: Whether the command succeeded or not, or None if there
+            was nothing to do
+        :rtype: bool or None
+        """
+        if self._power_mode == PowerMode.STANDBY:
+            return
+        if self.hardware is not None:
+            self.hardware.standby()
+        if self.devices is not None:
+            for device in self.devices:
+                device.Standby()
+        self._power_mode = PowerMode.STANDBY
         return True
 
     def on(self):
@@ -84,21 +105,22 @@ class PowerManager:
             was nothing to do
         :rtype: bool or None
         """
-        if self._is_on:
+        if self._power_mode == PowerMode.ON:
             return
         if self.devices is not None:
             for device in self.devices:
                 device.On()
         if self.hardware is not None:
             self.hardware.on()
-        self._is_on = True
+        self._power_mode = PowerMode.ON
         return True
 
-    def is_on(self):
+    @property
+    def power_mode(self):
         """
-        Whether this PowerManager object is currently on or not.
+        Return the power mode of this PowerManager object.
 
-        :return: whether currently on
-        :rtype: bool
+        :return: the power mode of thei PowerManager object
+        :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
-        return self._is_on
+        return self._power_mode

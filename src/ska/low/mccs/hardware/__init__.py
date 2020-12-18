@@ -79,27 +79,81 @@ The classes fall into three groups:
     :py:attr:`~ska.base.SKABaseDevice.simulationMode` attribute,
     allowing switching between hardware driver and hardware simulator
 
-* The "on/off" group of classes extend the base classes to handle the
-  common case of hardware that can be turned off and on. They comprise
+* The "power mode" group of classes extend the base classes to handle
+  the common case of hardware for which power mode can be managed e.g.
+  they can be turned off and on. To be precise, such devices have an
+  "on" power mode, in which they are fully powered, and an
+  :py:meth:`~.BasePowerModeHardwareDriver.on`
+  command.
 
-  * :py:class:`.OnOffHardwareDriver`: extends the hardware driver
-    interface with :py:meth:`~OnOffHardwareDriver.off` and
-    :py:meth:`~OnOffHardwareDriver.on` methods, and an
-    :py:meth:`~OnOffHardwareDriver.is_on` property.
+  In addition they must have at least one other power mode that serves
+  as a counterpoint to the "on" power mode: "off" (powered off) or
+  "standby" (in a low-power standby mode) or both. These classes are
+  therefore mostly implemented as mixins:
 
-  * :py:class:`.OnOffHardwareSimulator`: provides
-    a software implementation of the
-    :py:meth:`~.OnOffHardwareSimulator.off` and
-    :py:meth:`~.OnOffHardwareSimulator.on` methods, and the
-    :py:meth:`~.OnOffHardwareSimulator.is_on` property
+  * A private
+    :py:class:`~.BasePowerModeHardwareDriver`
+    base class provides for an
+    :py:meth:`~.BasePowerModeHardwareDriver.on`
+    method and a
+    :py:meth:`~.BasePowerModeHardwareDriver.power_mode`
+    property
 
-  * :py:class:`.OnOffHardwareManager`: extends the hardware manager to
-    allow access to the :py:meth:`~.OnOffHardwareManager.off` and
-    :py:meth:`~.OnOffHardwareManager.on` methods, and the
-    :py:meth:`~.OnOffHardwareManager.is_on` property.
+  * :py:class:`.OnOffHardwareDriver` adds an
+      :py:meth:`~OnOffHardwareDriver.off` method.
+
+  * :py:class:`.OnStandbyHardwareDriver` add a
+      :py:meth:`~OnStandbyHardwareDriver.standby` method.
+
+  * :py:class:`.OnStandbyOffHardwareDriver` combines the two and thus
+      supports both :py:meth:`~OnOffHardwareDriver.off` and
+      :py:meth:`~OnStandbyHardwareDriver.standby` methods. (It is really
+      just syntactic sugar.)
+
+  * A private
+    :py:class:`~.BasePowerModeHardwareSimulator`
+    base class provides a software implementation of the
+    :py:meth:`~.BasePowerModeHardwareSimulator.on`
+    method and
+    :py:meth:`~.BasePowerModeHardwareSimulator.power_mode`
+    property.
+
+  * :py:class:`.OnOffHardwareSimulator`: adds a software implementation
+    of the :py:meth:`~.OnOffHardwareSimulator.off` method
+
+  * :py:class:`.OnStandbyHardwareSimulator`: adds a software
+    implementation of the :py:meth:`~.OnStandbyHardwareSimulator.standby`
+    method
+
+  * :py:class:`.OnStandbyOffHardwareSimulator` combines the two and thus
+      supports both :py:meth:`~OnOffHardwareSimulator.off` and
+      :py:meth:`~OnStandbyHardwareSimulator.standby` methods. (It is
+      really just syntactic sugar.)
+
+  * A private
+    :py:class:`~.BasePowerModeHardwareManager`
+    base class extends the hardware manager with an
+    :py:meth:`~.BasePowerModeHardwareManager.on`
+    method and a
+    :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareManager.power_mode`
+    property.
+
+  * :py:class:`.OnOffHardwareManager`: add an
+    :py:meth:`~.OnOffHardwareManager.off` method.
+
+  * :py:class:`.OnStandbyHardwareManager`: add an
+    :py:meth:`~.OnStandbyHardwareManager.standby` method.
+
+  * :py:class:`.OnStandbyOffHardwareManager` combines the two and thus
+      supports both :py:meth:`~OnOffHardwareManager.off` and
+      :py:meth:`~OnStandbyHardwareManager.standby` methods. (It is
+      really just syntactic sugar.)
 """
 
 __all__ = [
+    "BasePowerModeHardwareDriver",
+    "BasePowerModeHardwareSimulator",
+    "BasePowerModeHardwareManager",
     "HardwareDriver",
     "HardwareFactory",
     "HardwareHealthEvaluator",
@@ -108,8 +162,16 @@ __all__ = [
     "OnOffHardwareDriver",
     "OnOffHardwareManager",
     "OnOffHardwareSimulator",
+    "OnStandbyHardwareDriver",
+    "OnStandbyHardwareManager",
+    "OnStandbyHardwareSimulator",
+    "OnStandbyOffHardwareDriver",
+    "OnStandbyOffHardwareManager",
+    "OnStandbyOffHardwareSimulator",
+    "PowerMode",
     "SimulableHardwareFactory",
     "SimulableHardwareManager",
+    "power_mode_hardware",
 ]
 
 from .base_hardware import (
@@ -126,7 +188,17 @@ from .simulable_hardware import (
 )
 
 from .power_mode_hardware import (
+    BasePowerModeHardwareDriver,
+    BasePowerModeHardwareSimulator,
+    BasePowerModeHardwareManager,
     OnOffHardwareDriver,
     OnOffHardwareManager,
     OnOffHardwareSimulator,
+    OnStandbyHardwareDriver,
+    OnStandbyHardwareManager,
+    OnStandbyHardwareSimulator,
+    OnStandbyOffHardwareDriver,
+    OnStandbyOffHardwareManager,
+    OnStandbyOffHardwareSimulator,
+    PowerMode,
 )

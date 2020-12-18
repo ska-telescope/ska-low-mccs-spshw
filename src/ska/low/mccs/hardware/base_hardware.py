@@ -5,8 +5,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements base classes for hardware management in the
-MCCS subsystem.
+This module implements base classes for hardware management in the MCCS
+subsystem.
 """
 __all__ = [
     "HardwareDriver",
@@ -38,7 +38,7 @@ class HardwareDriver:
         """
         raise NotImplementedError
 
-    def _check_connected(self, error=None):
+    def check_connected(self, error=None):
         """
         Helper method to check that a connection is in place, and raise
         a suitable error if it is not.

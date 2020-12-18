@@ -39,6 +39,7 @@ from ska.low.mccs.controller import (
 from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
 from ska.low.mccs.events import EventManager
+from ska.low.mccs.hardware import PowerMode
 from ska.low.mccs.health import HealthModel
 
 
@@ -1027,7 +1028,7 @@ class TestControllerPowerManager:
         :type state_model: :py:class:`~ska.base.DeviceStateModel`
         """
         on_command = MccsController.OnCommand(power_manager, state_model)
-        assert not power_manager.is_on()
+        assert power_manager.power_mode == PowerMode.OFF
 
         # in all states except OFF, the on command is not permitted,
         # should not be allowed, should fail, should have no side-effect
@@ -1041,7 +1042,7 @@ class TestControllerPowerManager:
         with pytest.raises(CommandError):
             on_command()
 
-        assert not power_manager.is_on()
+        assert power_manager.power_mode == PowerMode.OFF
         assert state_model.op_state == DevState.DISABLE
 
         # now push to OFF, the state in which the On command IS allowed
@@ -1051,7 +1052,7 @@ class TestControllerPowerManager:
 
         assert on_command.is_allowed()
         assert on_command() == (ResultCode.OK, "On command completed OK")
-        assert power_manager.is_on()
+        assert power_manager.power_mode == PowerMode.ON
         assert state_model.op_state == DevState.ON
 
     def test_OffCommand(self, power_manager, state_model):
@@ -1076,7 +1077,7 @@ class TestControllerPowerManager:
         """
         off_command = MccsController.OffCommand(power_manager, state_model)
         power_manager.on()
-        assert power_manager.is_on()
+        assert power_manager.power_mode == PowerMode.ON
 
         # The Off command is allowed in states DISABLE, STANDBY and ON.
         # It is disallowed in states INIT and FAULT.
@@ -1093,7 +1094,7 @@ class TestControllerPowerManager:
         with pytest.raises(CommandError):
             off_command()
 
-        assert power_manager.is_on()
+        assert power_manager.power_mode == PowerMode.ON
         assert state_model.op_state == DevState.FAULT
 
         # now push to STANDBY, a state in which the Off command IS
@@ -1104,7 +1105,7 @@ class TestControllerPowerManager:
 
         assert off_command.is_allowed()
         assert off_command() == (ResultCode.OK, "Off command completed OK")
-        assert not power_manager.is_on()
+        assert power_manager.power_mode == PowerMode.OFF
         assert state_model.op_state == DevState.OFF
 
 

@@ -19,6 +19,7 @@ from ska.base.control_model import ControlMode, HealthState, SimulationMode, Tes
 from ska.base.commands import ResultCode
 from ska.low.mccs.apiu.apiu_device import APIUHardwareManager
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator, APIUSimulator
+from ska.low.mccs.hardware import PowerMode
 
 
 @pytest.fixture()
@@ -61,16 +62,16 @@ class TestAntennaHardwareSimulator:
         :type antenna_hardware_simulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         """
-        assert not antenna_hardware_simulator.is_on
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        assert antenna_hardware_simulator.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.voltage
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.current
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.temperature
 
         antenna_hardware_simulator.on()
-        assert antenna_hardware_simulator.is_on
+        assert antenna_hardware_simulator.power_mode == PowerMode.ON
         assert antenna_hardware_simulator.voltage == AntennaHardwareSimulator.VOLTAGE
         assert antenna_hardware_simulator.current == AntennaHardwareSimulator.CURRENT
         assert (
@@ -79,12 +80,12 @@ class TestAntennaHardwareSimulator:
         )
 
         antenna_hardware_simulator.off()
-        assert not antenna_hardware_simulator.is_on
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        assert antenna_hardware_simulator.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.voltage
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.current
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.temperature
 
 
@@ -114,19 +115,19 @@ class TestAPIUSimulator:
         :type apiu_simulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
-        assert not apiu_simulator.is_on
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        assert apiu_simulator.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.voltage
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.current
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.temperature
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 assert apiu_simulator.is_antenna_on(antenna_id + 1) is None
 
         apiu_simulator.on()
-        assert apiu_simulator.is_on
+        assert apiu_simulator.power_mode == PowerMode.ON
         assert apiu_simulator.voltage == APIUSimulator.VOLTAGE
         assert apiu_simulator.current == APIUSimulator.CURRENT
         assert apiu_simulator.temperature == APIUSimulator.TEMPERATURE
@@ -134,15 +135,15 @@ class TestAPIUSimulator:
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
 
         apiu_simulator.off()
-        assert not apiu_simulator.is_on
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        assert apiu_simulator.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.voltage
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.current
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.temperature
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 assert apiu_simulator.is_antenna_on(antenna_id + 1) is None
 
     def test_antenna_on_off(self, apiu_simulator):
@@ -161,11 +162,11 @@ class TestAPIUSimulator:
         apiu_simulator.on()
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = apiu_simulator.get_antenna_current(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = apiu_simulator.get_antenna_voltage(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = apiu_simulator.get_antenna_temperature(antenna_id + 1)
 
             apiu_simulator.turn_on_antenna(antenna_id + 1)
@@ -189,17 +190,17 @@ class TestAPIUSimulator:
 
         apiu_simulator.off()
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 apiu_simulator.turn_on_antenna(antenna_id + 1)
 
         apiu_simulator.on()
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not apiu_simulator.is_antenna_on(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = apiu_simulator.get_antenna_current(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = apiu_simulator.get_antenna_voltage(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = apiu_simulator.get_antenna_temperature(antenna_id + 1)
 
 
@@ -262,14 +263,14 @@ class TestAPIUHardwareManager:
 
         hardware = hardware_manager._factory.hardware
 
-        assert not hardware_manager.is_on
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        assert hardware_manager.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.current
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.voltage
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.temperature
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.humidity
         assert hardware_manager.health == HealthState.OK
 
@@ -279,7 +280,7 @@ class TestAPIUHardwareManager:
         mock_health_callback.reset_mock()
 
         hardware_manager.on()
-        assert hardware_manager.is_on
+        assert hardware_manager.power_mode == PowerMode.ON
         assert hardware_manager.health == HealthState.OK
         mock_health_callback.assert_not_called()
 
@@ -296,17 +297,17 @@ class TestAPIUHardwareManager:
         assert hardware_manager.humidity == humidity
 
         hardware_manager.off()
-        assert not hardware_manager.is_on
+        assert hardware_manager.power_mode == PowerMode.OFF
         assert hardware_manager.health == HealthState.OK
         mock_health_callback.assert_not_called()
 
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.current
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.voltage
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.temperature
-        with pytest.raises(ValueError, match="APIU hardware is turned off"):
+        with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.humidity
 
     def test_antenna_on_off(self, hardware_manager, mocker):
@@ -321,31 +322,31 @@ class TestAPIUHardwareManager:
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
-        assert not hardware_manager.is_on
+        assert hardware_manager.power_mode == PowerMode.OFF
 
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.is_antenna_on(antenna_id + 1)
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.get_antenna_current(antenna_id + 1)
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.get_antenna_voltage(antenna_id + 1)
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.get_antenna_temperature(antenna_id + 1)
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.turn_off_antenna(antenna_id + 1)
-            with pytest.raises(ValueError, match="APIU hardware is turned off"):
+            with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.turn_on_antenna(antenna_id + 1)
 
         hardware_manager.on()
 
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
             assert not hardware_manager.is_antenna_on(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = hardware_manager.get_antenna_current(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = hardware_manager.get_antenna_voltage(antenna_id + 1)
-            with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+            with pytest.raises(ValueError, match="Antenna hardware is not ON."):
                 _ = hardware_manager.get_antenna_temperature(antenna_id + 1)
 
             assert hardware_manager.turn_off_antenna(antenna_id + 1) is None
@@ -488,7 +489,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        with pytest.raises(DevFailed, match="APIU hardware is turned off"):
+        with pytest.raises(DevFailed, match="APIU hardware is not ON."):
             _ = device_under_test.PowerUpAntenna(0)
 
         _ = device_under_test.PowerUp()
@@ -511,7 +512,7 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
 
-        with pytest.raises(DevFailed, match="APIU hardware is turned off"):
+        with pytest.raises(DevFailed, match="APIU hardware is not ON."):
             _ = device_under_test.PowerDownAntenna(0)
 
         _ = device_under_test.PowerUp()

@@ -2,6 +2,7 @@
 This module contains the pytest-bdd implementation of the Gherkin BDD
 tests for TMC and MCCS interactions.
 """
+import backoff
 import json
 
 import pytest
@@ -11,7 +12,30 @@ from tango import DevState, DevSource
 from ska.base.commands import ResultCode
 from ska.base.control_model import AdminMode, ObsState, HealthState
 
-from conftest import confirm_initialised
+
+# TODO: This has been temporarily moved from the conftest.py file
+# because of a weird pytest bug -- pytest tries to import it from a
+# different conftest.py, and throws an ImportError.
+# Besides, it's commonly considered bad practice to input from conftest
+# anyhow:
+# https://github.com/pytest-dev/pytest/issues/3272#issuecomment-369252005
+# This will be fixed when we get around to doing MCCS-329.
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
+def confirm_initialised(devices):
+    """
+    Helper function that tries to confirm that a device has completed
+    its initialisation and transitioned out of INIT state, using an
+    exponential backoff-retry scheme in case of failure.
+
+    :param devices: the devices that we are waiting to initialise
+    :type devices: :py:class:`tango.DeviceProxy`
+
+    :returns: whether the devices are all initialised or not
+    :rtype: bool
+    """
+    return all(
+        device.state() not in [DevState.UNKNOWN, DevState.INIT] for device in devices
+    )
 
 
 @pytest.fixture(scope="module")

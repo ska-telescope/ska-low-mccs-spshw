@@ -34,6 +34,7 @@ from ska.low.mccs.hardware import (
     OnOffHardwareDriver,
     HardwareFactory,
     OnOffHardwareManager,
+    PowerMode,
 )
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.utils import backoff_connect, tango_raise
@@ -118,7 +119,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         Turn the antenna on (by telling the APIU to turn the right
         antenna on)
         """
-        self._check_connected()
+        self.check_connected()
         self._apiu.turn_on_antenna(self._logical_antenna_id)
 
     def off(self):
@@ -126,19 +127,20 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         Turn the antenna off (by telling the APIU to turn the right
         antenna off)
         """
-        self._check_connected()
+        self.check_connected()
         self._apiu.turn_off_antenna(self._logical_antenna_id)
 
     @property
-    def is_on(self):
+    def power_mode(self):
         """
-        Whether this antenna is on (determined by asking the APIU
-        whether a certain antenna is on)
+        Return the power mode of this antenna (determined by asking the
+        APIU whether a certain antenna is on)
 
-        :return: whether the antenna is on
-        :rtype: bool
+        :return: the power mode of this antenna
+        :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
-        return self._apiu.is_antenna_on(self._logical_antenna_id)
+        is_on = self._apiu.is_antenna_on(self._logical_antenna_id)
+        return PowerMode.ON if is_on else PowerMode.OFF
 
     @property
     def current(self):
@@ -148,7 +150,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the current of this antenna
         :rtype: float
         """
-        self._check_connected()
+        self.check_connected()
         return self._apiu.get_antenna_current(self._logical_antenna_id)
 
     @property
@@ -159,7 +161,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the voltage of this antenna
         :rtype: float
         """
-        self._check_connected()
+        self.check_connected()
         return self._apiu.get_antenna_voltage(self._logical_antenna_id)
 
     @property
@@ -170,7 +172,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the temperature of this antenna
         :rtype: float
         """
-        self._check_connected()
+        self.check_connected()
         return self._apiu.get_antenna_temperature(self._logical_antenna_id)
 
 
@@ -261,29 +263,32 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
             to the hardware
         :rtype: bool
         """
-        return self._apiu.is_connected and self._tile._is_connected
+        return (
+            self._antenna_apiu_proxy.is_connected
+            and self._antenna_tile_proxy._is_connected
+        )
 
     def on(self):
         """
         Turn the antenna hardware on.
         """
-        self._apiu.on()
+        self._antenna_apiu_proxy.on()
 
     def off(self):
         """
         Turn the antenna hardware off.
         """
-        self._apiu.off()
+        self._antenna_apiu_proxy.off()
 
     @property
-    def is_on(self):
+    def power_mode(self):
         """
-        Whether the antenna hardware is turned on.
+        Whether the power mode of the antenna hardware (off or on).
 
-        :return: whether the antenna hardware is turned on
-        :rtype: bool
+        :return: the power mode of the AP
+        :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
         """
-        return self._apiu.is_on
+        return self._antenna_apiu_proxy.power_mode
 
     @property
     def current(self):
@@ -293,7 +298,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :return: the current of the antenna
         :rtype: float
         """
-        return self._apiu.current
+        return self._antenna_apiu_proxy.current
 
     @property
     def voltage(self):
@@ -303,7 +308,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :return: the voltage of the antenna
         :rtype: float
         """
-        return self._apiu.voltage
+        return self._antenna_apiu_proxy.voltage
 
     @property
     def temperature(self):
@@ -313,7 +318,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :return: the temperature of the antenna
         :rtype: float
         """
-        return self._apiu.temperature
+        return self._antenna_apiu_proxy.temperature
 
 
 class AntennaHardwareFactory(HardwareFactory):

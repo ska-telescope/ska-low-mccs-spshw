@@ -7,10 +7,8 @@ from contextlib import contextmanager
 import json
 import socket
 
-import backoff
 import pytest
 import tango
-from tango import DevState
 from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 
@@ -248,21 +246,3 @@ def tango_context(request, devices_info, module_mocker):
     else:
         with _tango_test_context(devices_info, module_mocker) as context:
             yield context
-
-
-@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
-def confirm_initialised(devices):
-    """
-    Helper function that tries to confirm that a device has completed
-    its initialisation and transitioned out of INIT state, using an
-    exponential backoff-retry scheme in case of failure.
-
-    :param devices: the devices that we are waiting to initialise
-    :type devices: :py:class:`tango.DeviceProxy`
-
-    :returns: whether the devices are all initialised or not
-    :rtype: bool
-    """
-    return all(
-        device.state() not in [DevState.UNKNOWN, DevState.INIT] for device in devices
-    )

@@ -13,6 +13,7 @@ import pytest
 from tango import DevState
 
 from ska.low.mccs.power import PowerManager
+from ska.low.mccs.hardware import PowerMode
 
 
 class TestPowerManager:
@@ -21,49 +22,66 @@ class TestPowerManager:
     ska.low.mccs.power.PowerManager class.
     """
 
-    class _OnOffMock:
+    class _OnStandbyOffMock:
         """
-        Mock class that can be turned off and on.
+        Mock class that can be put into off, standby and on power modes.
         """
 
-        def __init__(self):
+        def __init__(self, power_mode=PowerMode.UNKNOWN):
             """
-            Initialise a new _OnOffMock object.
+            Initialise a new instance.
+
+            :param power_mode: the initial power mode of this mock
+                object
+            :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
             """
-            self._is_on = False
+            self._power_mode = power_mode
 
         def On(self):  # noqa: N802
             """
             Turn the mock object on.
             """
-            self._is_on = True
+            self._power_mode = PowerMode.ON
 
         def on(self):
             """
             Turn the mock object on.
             """
-            self._is_on = True
+            self._power_mode = PowerMode.ON
 
         def Off(self):  # noqa: N802
             """
             Turn the mock object off.
             """
-            self._is_on = False
+            self._power_mode = PowerMode.OFF
 
         def off(self):
             """
             Turn the mock object off.
             """
-            self._is_on = False
+            self._power_mode = PowerMode.OFF
 
-        def is_on(self):
+        def Standby(self):  # noqa: N802
             """
-            Returns whether this mock object is on or not.
+            Put the mock object into standby mode.
+            """
+            self._power_mode = PowerMode.STANDBY
 
-            :return: whether this mock object is on or not
-            :rtype: bool
+        def standby(self):
             """
-            return self._is_on
+            Turn the mock object off.
+            """
+            self._power_mode = PowerMode.STANDBY
+
+        @property
+        def power_mode(self):
+            """
+            Returns the power mode of this mock object.
+
+            :return: the power mode of this mock object.
+            :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
+            """
+            return self._power_mode
 
         def ping(self):
             """
@@ -102,7 +120,9 @@ class TestPowerManager:
         :rtype: object, or None
         """
         has_hardware = request.param
-        return self._OnOffMock() if has_hardware else None
+        return (
+            self._OnStandbyOffMock(power_mode=PowerMode.OFF) if has_hardware else None
+        )
 
     @pytest.fixture(params=[None, 0, 2])
     def devices(self, request, mock_device_proxies):
@@ -128,7 +148,10 @@ class TestPowerManager:
             return None
 
         mock_device_proxies.update(
-            {f"mock/mock/{i+1}": self._OnOffMock() for i in range(num_devices)}
+            {
+                f"mock/mock/{i+1}": self._OnStandbyOffMock(power_mode=PowerMode.OFF)
+                for i in range(num_devices)
+            }
         )
         return mock_device_proxies.keys()
 
@@ -159,31 +182,29 @@ class TestPowerManager:
         :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
         """
 
-        def assert_on(is_on):
+        def assert_power_mode(power_mode):
             """
-            Helper function that asserts the off/on status of the power
+            Helper function that asserts the power mode of the power
             manager under test.
 
-            :param is_on: the off/on status being asserted. If true, we
-                are asserting that the power manager is on; if false, we
-                are asserting that it is off
-            :type is_on: bool
+            :param power_mode: the power mode being asserted.
+            :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
             """
-            assert power_manager.is_on() == is_on
+            assert power_manager.power_mode == power_mode
             if power_manager.hardware is not None:
-                assert power_manager.hardware.is_on() == is_on
+                assert power_manager.hardware.power_mode == power_mode
             if power_manager.devices is not None:
                 for device in power_manager.devices:
-                    assert device.is_on() == is_on
+                    assert device.power_mode == power_mode
 
-        assert_on(False)
+        assert_power_mode(PowerMode.OFF)
 
         assert power_manager.on()
-        assert_on(True)
+        assert_power_mode(PowerMode.ON)
         assert power_manager.on() is None
-        assert_on(True)
+        assert_power_mode(PowerMode.ON)
 
         assert power_manager.off()
-        assert_on(False)
+        assert_power_mode(PowerMode.OFF)
         assert power_manager.off() is None
-        assert_on(False)
+        assert_power_mode(PowerMode.OFF)

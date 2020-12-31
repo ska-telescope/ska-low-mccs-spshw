@@ -47,9 +47,13 @@ Boot-up
 When power is first applied to MCCS, the following minimal bootup
 sequence is followed:
 
-#. Power is applied to all cabinets, but the cabinet management boards
-   for the SPS cabinets are configured to remain off, as are the cabinet
-   management boards for all but one of the MCCS cabinets.
+#. Power is applied to all cabinets. All the cabinet management boards are on, 
+   as they are the primary control points for the cabinet subsystems. Switches and
+   subelements for the SPS cabinets are configured to remain off, as are the 
+   subelements for all but one of the MCCS cabinets. 
+
+#. Power is applied to the APIU in the field nodes. All the antennas are configured 
+   to remain off. 
 
 #. The cabinet management board for the MCCS cabinet that houses the
    MCCS controller node is configured to start up the cabinet's 1Gb
@@ -68,15 +72,19 @@ Power-on
 ========
 
 When TM sends the MCCS Controller the Startup command, the MCCS
-Controller must start up - the rest of MCCS - the SPS cabinets - the SPS
-field equipment
+Controller must start up:
+
+#. the rest of MCCS 
+#. the SPS subrack management boards and switches
+#. the SPS TPMs 
+#. the field equipment
 
 Prototype status
 ================
 
 In the current prototype implementation, all of MCCS is deployed
 immediately on startup, so that when TM sends the MCCS Controller the
-Startup command, it need only start up the SPS cabinerts and field
+Startup command, it need only start up the SPS cabinets and field
 equipment.
 
 .. uml:: power_sequence.uml

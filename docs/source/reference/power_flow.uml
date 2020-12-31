@@ -31,12 +31,18 @@ management
 board;
 split
 (/);
+note right
+MccsCabinet.TurnSwitchOn()
+end note
 -> 1..2;
 :switch;
 detach
 split again
 (/);
--> 1..2;
+note right
+MccsCabinet.TurnSubrackOn()
+end note
+-> 1..4;
 :SPS
 subrack
 management

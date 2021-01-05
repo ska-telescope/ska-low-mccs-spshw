@@ -121,7 +121,8 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     if expected_result is None:
         assert result is None
     else:
-        assert result[0] == expected_result
+        ((result_code,), (_,)) = result
+        assert result_code == expected_result
 
 
 @scenario("controller_subarray_interactions.feature", "MCCS Start up low telescope")

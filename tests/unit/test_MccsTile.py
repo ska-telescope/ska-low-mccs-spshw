@@ -561,7 +561,7 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
         values = device_under_test.ReadRegister(json_arg)
-        assert (values == [0 for i in range(num_values)]).all()
+        assert list(values) == [0] * num_values
 
         for exclude_key in arg.keys():
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}

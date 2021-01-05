@@ -126,7 +126,8 @@ class TestMccsIntegrationTmc:
             if expected_result is None:
                 assert result is None
             else:
-                assert result[0] == expected_result
+                ((result_code,), (_,)) = result
+                assert result_code == expected_result
         except AsynReplyNotArrived as err:
             assert False, f"AsyncReplyNotArrived: {err}"
         except (AsynCall, CommunicationFailed, DevFailed) as err:

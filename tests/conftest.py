@@ -12,6 +12,16 @@ import tango
 from tango.test_context import MultiDeviceTestContext
 
 
+def pytest_sessionstart(session):
+    """
+    Pytest hook; prints info about tango version
+
+    :param session: a pytest Session object
+    :type session: :py:class:`pytest.Session`
+    """
+    print(tango.utils.info())
+
+
 def pytest_addoption(parser):
     """
     Pytest hook; implemented to add the `--true-context` option, used to

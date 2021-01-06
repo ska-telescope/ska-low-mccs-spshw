@@ -7,7 +7,6 @@ import json
 import pytest
 from tango import (
     DevState,
-    DevSource,
     AsynCall,
     AsynReplyNotArrived,
     CommunicationFailed,
@@ -91,19 +90,6 @@ class TestMccsIntegrationTmc:
         }
         return device_dict
 
-    def set_all_dev_source(self, devices):
-        """
-        Set all of the devices to DevSource.DEV source.
-
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        """
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        for device in devices.values():
-            device.set_source(DevSource.DEV)
-
     def assert_command(
         self, device, command, argin=None, expected_result=ResultCode.OK
     ):
@@ -141,8 +127,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         assert devices["controller"].State() == DevState.OFF
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF
@@ -173,8 +157,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
@@ -195,8 +177,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         # Turn on controller and stations
         self.assert_command(device=devices["controller"], command="On")
         assert devices["subarray_01"].State() == DevState.OFF
@@ -246,8 +226,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         # Turn on controller and stations
         self.assert_command(device=devices["controller"], command="On")
         assert devices["subarray_01"].State() == DevState.OFF

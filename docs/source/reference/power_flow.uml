@@ -47,16 +47,17 @@ end note
 subrack
 management
 board;
-split
 (/);
 note right
 MccsSubrack.TurnTPMOn()
 end note
 -> 1..8;
 :TPM;
+end split
 detach
 split again
 |Field equipment|
+-> 1..256;
 (/);
 note right
 MccsAPIU.On()
@@ -70,5 +71,4 @@ end note
 -> 1..64;
 :Antenna;
 detach
-end split
 end split

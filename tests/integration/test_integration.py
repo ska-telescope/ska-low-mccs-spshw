@@ -4,7 +4,6 @@ particularly tango devices.
 """
 
 import pytest
-from tango import DevSource
 
 from ska.base.commands import ResultCode
 from ska.low.mccs.utils import call_with_json
@@ -62,19 +61,6 @@ class TestMccsIntegration:
         tile_2 = device_context.get_device("tile_0002")
         tile_3 = device_context.get_device("tile_0003")
         tile_4 = device_context.get_device("tile_0004")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        controller.set_source(DevSource.DEV)
-        subarray_1.set_source(DevSource.DEV)
-        subarray_2.set_source(DevSource.DEV)
-        station_1.set_source(DevSource.DEV)
-        station_2.set_source(DevSource.DEV)
-        tile_1.set_source(DevSource.DEV)
-        tile_2.set_source(DevSource.DEV)
-        tile_3.set_source(DevSource.DEV)
-        tile_4.set_source(DevSource.DEV)
 
         # check initial state
         assert subarray_1.stationFQDNs is None
@@ -160,19 +146,6 @@ class TestMccsIntegration:
         tile_3 = device_context.get_device("tile_0003")
         tile_4 = device_context.get_device("tile_0004")
 
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period so test that the write has stuck.
-        controller.set_source(DevSource.DEV)
-        subarray_1.set_source(DevSource.DEV)
-        subarray_2.set_source(DevSource.DEV)
-        station_1.set_source(DevSource.DEV)
-        station_2.set_source(DevSource.DEV)
-        tile_1.set_source(DevSource.DEV)
-        tile_2.set_source(DevSource.DEV)
-        tile_3.set_source(DevSource.DEV)
-        tile_4.set_source(DevSource.DEV)
-
         controller.On()
 
         # allocate stations 1 to subarray 1
@@ -251,13 +224,6 @@ class TestMccsIntegration:
         station = device_context.get_device("station_001")
         tile_1 = device_context.get_device("tile_0001")
         tile_2 = device_context.get_device("tile_0002")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period so test that the write has stuck.
-        station.set_source(DevSource.DEV)
-        tile_1.set_source(DevSource.DEV)
-        tile_2.set_source(DevSource.DEV)
 
         # check initial state
         assert station.subarrayId == 0

@@ -44,11 +44,13 @@ clusters of Docker containers.
    copies of minikube and its environment:
 
    .. code-block:: bash
+
       find / -name minikube 2>/dev/null
       sudo rm -f <path/minikube>
       rm -rf ~/.minikube
 
    .. code-block:: bash
+
       git clone git@gitlab.com:ska-telescope/sdi/deploy-minikube.git
       cd deploy-minikube
       make setup  # installs everything needed
@@ -214,25 +216,24 @@ Note: It may be necessary to explicitly add a port number if you get a 404 error
       As part of make install in the deploy-minikube project, the port that Traefik is listening
       on is output in the listing:
 
-.. code-block:: bash
-   make[1]: Entering directory '/home/button/deploy-minikube'
-   "stable" has been added to your repositories
-   Hang tight while we grab the latest from your chart repositories...
-   ...Successfully got an update from the "stable" chart repository
-   Update Complete. ⎈Happy Helming!⎈
-   Release "traefik0" does not exist. Installing it now.
-   WARNING: This chart is deprecated
-   NAME: traefik0
-   LAST DEPLOYED: Tue Jan 5 13:39:46 2021
-   NAMESPACE: kube-system
-   STATUS: deployed
-   REVISION: 1
-   TEST SUITE: None
-   NOTES:
-   1. Traefik is listening on the following ports on the host machine:
+make[1]: Entering directory '/home/button/deploy-minikube'
+"stable" has been added to your repositories
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "stable" chart repository
+Update Complete. ⎈Happy Helming!⎈
+Release "traefik0" does not exist. Installing it now.
+WARNING: This chart is deprecated
+NAME: traefik0
+LAST DEPLOYED: Tue Jan 5 13:39:46 2021
+NAMESPACE: kube-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+1. Traefik is listening on the following ports on the host machine:
 
-      http - 30081 <-- PORT NUMBER THAT TRAEFIK IS LISTENING ON
-      https - 30444
+   http - 30081 <-- PORT NUMBER THAT TRAEFIK IS LISTENING ON
+   https - 30444
 
 Use the port number from above when addressing WebJive in your browser (use an incognito tab in Chrome):
 http://integration.engageska-portugal.pt:30081/testdb/devices

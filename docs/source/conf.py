@@ -75,7 +75,6 @@ copyright = "2020, SKA MCCS Team"
 nitpick_ignore = [
     ("py:class", "callable"),
     ("py:class", "optional"),
-    ("py:class", "tango.test_context.MultiDeviceTestContext")  # workaround for pytango bug
 ]
 
 extensions = [

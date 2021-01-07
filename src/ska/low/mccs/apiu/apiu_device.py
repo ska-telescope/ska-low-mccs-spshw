@@ -26,8 +26,9 @@ from ska.low.mccs.hardware import (
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
-from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
 from ska.low.mccs.health import HealthModel
+from ska.low.mccs.power import PowerManager
+from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
 
 
 __all__ = [
@@ -169,6 +170,16 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         return self._factory.hardware.humidity
 
+    @property
+    def antenna_count(self):
+        """
+        Return the number of antennas managed by this APIU.
+
+        :return: the number of antennas managed by this APIU
+        :rtype: int
+        """
+        return self._factory.hardware.NUMBER_OF_ANTENNAS
+
     def turn_off_antenna(self, logical_antenna_id):
         """
         Turn off a specified antenna.
@@ -200,6 +211,46 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
             return None
         self._factory.hardware.turn_on_antenna(logical_antenna_id)
         return self._factory.hardware.is_antenna_on(logical_antenna_id)
+
+    def turn_off_antennas(self):
+        """
+        Turn off all antennas.
+
+        :return: whether successful, or None if there was nothing to do
+        :rtype: bool or None
+        """
+        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
+            if self._factory.hardware.is_antenna_on(antenna_id + 1):
+                break
+        else:
+            return None
+
+        self._factory.hardware.turn_off_antennas()
+
+        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
+            if self._factory.hardware.is_antenna_on(antenna_id + 1):
+                return False
+        return True
+
+    def turn_on_antennas(self):
+        """
+        Turn on all antennas.
+
+        :return: whether successful, or None if there was nothing to do
+        :rtype: bool or None
+        """
+        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
+            if not self._factory.hardware.is_antenna_on(antenna_id + 1):
+                break
+        else:
+            return None
+
+        self._factory.hardware.turn_on_antennas()
+
+        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
+            if not self._factory.hardware.is_antenna_on(antenna_id + 1):
+                return False
+        return True
 
     def is_antenna_on(self, logical_antenna_id):
         """
@@ -264,6 +315,21 @@ class MccsAPIU(SKABaseDevice):
 
     - Device Property
     """
+
+    def init_command_objects(self):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
+        # Technical debt -- forced to register base class stuff rather than
+        # calling super(), because Disable(), Standby() and Off() are registered on a
+        # thread, and we don't want the super() method clobbering them.
+        args = (self, self.state_model, self.logger)
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object(
+            "GetVersionInfo", self.GetVersionInfoCommand(*args)
+        )
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
@@ -352,6 +418,11 @@ class MccsAPIU(SKABaseDevice):
                     self._thread = None
                     self._interrupt = False
                     return
+                self._initialise_power_management(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
                 with self._lock:
                     self.succeeded()
 
@@ -366,6 +437,7 @@ class MccsAPIU(SKABaseDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             device.hardware_manager = APIUHardwareManager(device._simulation_mode)
+            device.hardware_manager.on()
 
             args = (device.hardware_manager, device.state_model, self.logger)
 
@@ -398,6 +470,24 @@ class MccsAPIU(SKABaseDevice):
                 device.event_manager,
                 device.health_changed,
             )
+
+        def _initialise_power_management(self, device):
+            """
+            Initialise power management for this device.
+
+            :param device: the device for which power management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device.power_manager = PowerManager(device.hardware_manager, None)
+            power_args = (device.power_manager, device.state_model, device.logger)
+            device.register_command_object(
+                "Disable", device.DisableCommand(*power_args)
+            )
+            device.register_command_object(
+                "Standby", device.StandbyCommand(*power_args)
+            )
+            device.register_command_object("Off", device.OffCommand(*power_args))
 
         def interrupt(self):
             """
@@ -567,6 +657,94 @@ class MccsAPIU(SKABaseDevice):
     # --------
     # Commands
     # --------
+    class DisableCommand(SKABaseDevice.DisableCommand):
+        """
+        Class for handling the Disable() command.
+
+        :todo: We assume for now that the APIU hardware has control of
+            its own power mode i.e. is able to turn itself off and on.
+            Actually it is more likely that some upstream hardware would
+            turn the APIU off and on, in which case this command would be
+            implemented by passing the command to the tango device that manages
+            the upstream hardware
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable` command
+            for this :py:class:`.MccsAPIU` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = (
+                hardware_manager.off()
+            )  # because DISABLE is the state of lowest device readiness
+            return create_return(success, "disable")
+
+    class StandbyCommand(SKABaseDevice.StandbyCommand):
+        """
+        Class for handling the Standby() command.
+
+        Actually the APIU hardware has no standby mode, so when this
+        device is told to go to standby mode, it switches on / remains
+        on.
+
+        :todo: We assume for now that the APIU hardware has control of
+            its own power mode i.e. is able to turn itself off and on.
+            Actually it is more likely that some upstream hardware would
+            turn the APIU off and on, in which case this command would
+            be implemented by passing the command to the tango device
+            that manages the upstream hardware.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby` command
+            for this :py:class:`.MccsAPIU` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.on()
+            return create_return(success, "standby")
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """
+        Class for handling the Off() command.
+
+        :todo: We assume for now that the APIU hardware has control of
+            its own power mode i.e. is able to turn itself off and on.
+            Actually it is more likely that some upstream hardware
+            would turn the APIU off and on, in which case this command
+            would be implemented by passing the command to the tango
+            device that manages the upstream hardware.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
+            for this :py:class:`.MccsAPIU` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = (
+                hardware_manager.on()
+            )  # because the OFF state is a state of high device readiness
+            return create_return(success, "off")
 
     class IsAntennaOnCommand(BaseCommand):
         """
@@ -601,7 +779,7 @@ class MccsAPIU(SKABaseDevice):
         :return: whether the specified antenna is on or not
         :rtype: bool
         """
-        handler = self.get_command_object("PowerUpAntenna")
+        handler = self.get_command_object("IsAntennaOn")
         return handler(argin)
 
     class PowerUpAntennaCommand(ResponseCommand):
@@ -704,8 +882,8 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the PowerUp() command.
 
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
+        The PowerUp command turns on all of the antennas that are
+        powered by this APIU.
         """
 
         def do(self):
@@ -720,7 +898,7 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.on()
+            success = hardware_manager.turn_on_antennas()
             return create_return(success, "power-up")
 
     @command(
@@ -745,8 +923,8 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the PowerDown() command.
 
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
+        The PowerDown command turns on all of the antennas that are
+        powered by this APIU.
         """
 
         def do(self):
@@ -761,7 +939,7 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.off()
+            success = hardware_manager.turn_off_antennas()
             return create_return(success, "power-down")
 
     @command(

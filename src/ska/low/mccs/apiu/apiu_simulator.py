@@ -285,6 +285,22 @@ class APIUSimulator(OnOffHardwareSimulator):
         self.check_power_mode(PowerMode.ON)
         self._antennas[logical_antenna_id - 1].on()
 
+    def turn_off_antennas(self):
+        """
+        Turn off all antennas.
+        """
+        self.check_power_mode(PowerMode.ON)
+        for antenna in self._antennas:
+            antenna.off()
+
+    def turn_on_antennas(self):
+        """
+        Turn on all antennas.
+        """
+        self.check_power_mode(PowerMode.ON)
+        for antenna in self._antennas:
+            antenna.on()
+
     def get_antenna_current(self, logical_antenna_id):
         """
         Get the current of a specified antenna.

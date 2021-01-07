@@ -40,10 +40,15 @@ clusters of Docker containers.
    A config file will be build the first time you run minikube.
 
 2. Install minikube and helm. Again there are various way to do this. The recommended 
-   way is to use the SKA provided `make` system:
+   way is to use the SKA provided `make` system. But first, ensure you remove any old
+   copies of minikube and its environment:
 
    .. code-block:: bash
+      find / -name minikube 2>/dev/null
+      sudo rm -f <path/minikube>
+      rm -rf ~/.minikube
 
+   .. code-block:: bash
       git clone git@gitlab.com:ska-telescope/sdi/deploy-minikube.git
       cd deploy-minikube
       make setup  # installs everything needed
@@ -168,10 +173,6 @@ To start up a cluster:
 
 .. code-block:: bash
 
-   # Check the server IP address using
-   kubectl config view
-   # My config switched between x.x.x.3 and x.x.x.4, where only .3 worked
-   # In this case, tear-down and restart minikube
    # Export Docker environment variables to Bash
    eval $(minikube docker-env)
 
@@ -180,10 +181,10 @@ Now deploy mccs-umbrella chart to the cluster:
 
 .. code-block:: bash
 
-  cd ska-low-mccs
-  make devimage
-  make install-chart
-  make watch
+   cd ska-low-mccs
+   make devimage
+   make install-chart
+   make watch
 
 If everything went smoothly, when all the pods are running...
 
@@ -198,16 +199,43 @@ the above returns `172.17.0.3`, add
 .. code-block:: text
 
    172.17.0.3  integration.engageska-portugal.pt # webjive
-   172.17.0.3	grafana.integration.engageska-portugal.pt
-   172.17.0.3	tangogql-proxy.integration.engageska-portugal.pt
+   172.17.0.3  grafana.integration.engageska-portugal.pt
+   172.17.0.3  tangogql-proxy.integration.engageska-portugal.pt
 
-**Note** that once this has been done the "official" instances cand no longer
-be accessed until these lines have been commented out.
+**Note** that once this has been done the "official" (online) instances can no
+longer be accessed until these lines have been commented out.
 
 WebJive
 -------
 When the pod has been created and is ready, on the local machine navigate to:
 http://integration.engageska-portugal.pt/testdb/devices
+
+Note: It may be necessary to explicitly add a port number if you get a 404 error at the above.
+      As part of make install in the deploy-minikube project, the port that Traefik is listening
+      on is output in the listing:
+
+.. code-block:: bash
+   make[1]: Entering directory '/home/button/deploy-minikube'
+   "stable" has been added to your repositories
+   Hang tight while we grab the latest from your chart repositories...
+   ...Successfully got an update from the "stable" chart repository
+   Update Complete. ⎈Happy Helming!⎈
+   Release "traefik0" does not exist. Installing it now.
+   WARNING: This chart is deprecated
+   NAME: traefik0
+   LAST DEPLOYED: Tue Jan 5 13:39:46 2021
+   NAMESPACE: kube-system
+   STATUS: deployed
+   REVISION: 1
+   TEST SUITE: None
+   NOTES:
+   1. Traefik is listening on the following ports on the host machine:
+
+      http - 30081 <-- PORT NUMBER THAT TRAEFIK IS LISTENING ON
+      https - 30444
+
+Use the port number from above when addressing WebJive in your browser (use an incognito tab in Chrome):
+http://integration.engageska-portugal.pt:30081/testdb/devices
 
 Login with credentials found here: https://github.com/ska-telescope/ska-engineering-ui-compose-utils
 Once you are successfully logged in, to add the MCCS dashboard, select the
@@ -218,11 +246,11 @@ Click on on the **play** button to activate the dashboard.
 You can then open the CLI to interact with the controller and observe changes
 in the dashboard.
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      make cli
-      mccs-controller on
-      mccs-controller off
+   make cli
+   mccs-controller on
+   mccs-controller off
 
 Grafana
 -------

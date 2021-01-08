@@ -29,7 +29,7 @@ from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
-from ska.low.mccs.power import PowerManager, PowerManagerError
+from ska.low.mccs.power import PowerManager
 from ska.low.mccs.tile import TileHardwareManager
 
 
@@ -377,8 +377,13 @@ class MccsTile(SKABaseDevice):
             )
 
             power_args = (device.power_manager, device.state_model, self.logger)
+            device.register_command_object(
+                "Disable", device.DisableCommand(*power_args)
+            )
+            device.register_command_object(
+                "Standby", device.StandbyCommand(*power_args)
+            )
             device.register_command_object("Off", device.OffCommand(*power_args))
-            device.register_command_object("On", device.OnCommand(*power_args))
 
         def interrupt(self):
             """
@@ -392,37 +397,59 @@ class MccsTile(SKABaseDevice):
             self._interrupt = True
             return True
 
-    class OnCommand(SKABaseDevice.OnCommand):
+    class DisableCommand(SKABaseDevice.DisableCommand):
         """
-        Class for handling the On command.
-
-        :todo: What is this command supposed to do? It takes no
-            argument, and returns nothing.
+        Class for handling the Disable() command.
         """
 
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.On` command for
-            this :py:class:`.MccsTile` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable` command
+            for this :py:class:`.MccsTile` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            power_manager = self.target
-            try:
-                result = power_manager.on()
-                if result is None:
-                    return (ResultCode.OK, "On command redundant; already on")
-                elif result:
-                    return (ResultCode.OK, "On command completed OK")
-                else:
-                    return (ResultCode.FAILED, "On command failed")
-            except PowerManagerError as pme:
-                return (ResultCode.FAILED, f"On command failed: {pme}")
+            # TODO: This will need to ensure that the TPM is turned off.
+            # However the TPM cannot turn itself off. Instead, this needs
+            # to be implemented as
+            #
+            # return self.target.subrack_proxy.turn_off_tpm(self._logical_tile_id)
+            #
+            # once we have a subrack device!
+            return (ResultCode.OK, "Not implemented")
+
+    class StandbyCommand(SKABaseDevice.StandbyCommand):
+        """
+        Class for handling the Standby() command.
+
+        Actually the TPM has no standby mode, so when this
+        device is told to go to standby mode, it switches on / remains
+        on.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby` command
+            for this :py:class:`.MccsTile` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            # TODO: This will need to ensure that the TPM is turned off.
+            # However the TPM cannot turn itself off. Instead, this needs
+            # to be implemented as
+            #
+            # return self.target.subrack_proxy.turn_off_tpm(self._logical_tile_id)
+            #
+            # once we have a subrack device!
+            return (ResultCode.OK, "Not implemented")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -460,7 +487,7 @@ class MccsTile(SKABaseDevice):
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
-        Class for handling the Off command.
+        Class for handling the Off() command.
         """
 
         def do(self):
@@ -472,20 +499,16 @@ class MccsTile(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            power_manager = self.target
-            try:
-                result = power_manager.off()
-                if result is None:
-                    return (ResultCode.OK, "Off command redundant; already off")
-                elif result:
-                    return (ResultCode.OK, "Off command completed OK")
-                else:
-                    return (ResultCode.FAILED, "Off command failed")
-            except PowerManagerError as pme:
-                return (ResultCode.FAILED, f"Off command failed: {pme}")
+            # TODO: This will need to ensure that the TPM is turned on.
+            # However the TPM cannot turn itself on. Instead, this needs
+            # to be implemented as
+            #
+            # return self.target.subrack_proxy.turn_off_tpm(self._logical_tile_id)
+            #
+            # once we have a subrack device!
+            return (ResultCode.OK, "Not implemented")
 
     def always_executed_hook(self):
         """
@@ -1023,8 +1046,7 @@ class MccsTile(SKABaseDevice):
         # calling super(), because On() and Off() are registered on a
         # thread, and we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*args))
-        self.register_command_object("Standby", self.StandbyCommand(*args))
+        self.register_command_object("On", self.OnCommand(*args))
         self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)

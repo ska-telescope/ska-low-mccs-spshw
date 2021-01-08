@@ -7,7 +7,7 @@ spec:
     - name: test-fetcher
       image: busybox
       command: ["sleep"]
-      args: ["1000"]
+      args: ["5000"]
       volumeMounts:
         - name: test-storage
           mountPath: /results

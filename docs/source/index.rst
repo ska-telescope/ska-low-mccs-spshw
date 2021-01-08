@@ -19,6 +19,12 @@ prototype for the `Square Kilometre Array`_.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Reference material
+
+   reference/power
+
+.. toctree::
+   :maxdepth: 1
    :caption: Devices
 
    api/antenna

@@ -1,5 +1,6 @@
 backoff
+jsonschema >= 3.2.0
+numpy == 1.17.2
+plantweb
 Sphinx == 3.0.1
 sphinx-rtd-theme >= 0.4.3
-numpy == 1.17.2
-jsonschema >= 3.2.0

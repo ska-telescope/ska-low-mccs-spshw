@@ -468,6 +468,21 @@ class MccsAntenna(SKABaseDevice):
     TileId = device_property(dtype=int)
     LogicalTileAntennaId = device_property(dtype=int)
 
+    def init_command_objects(self):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
+        # Technical debt -- forced to register base class stuff rather than
+        # calling super(), because Disable(), Standby() and Off() are registered on a
+        # thread, and we don't want the super() method clobbering them.
+        args = (self, self.state_model, self.logger)
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object(
+            "GetVersionInfo", self.GetVersionInfoCommand(*args)
+        )
+
     # ---------------
     # General methods
     # ---------------
@@ -619,6 +634,13 @@ class MccsAntenna(SKABaseDevice):
             device.register_command_object(
                 "PowerOff", device.PowerOffCommand(*hardware_args)
             )
+            device.register_command_object(
+                "Disable", device.DisableCommand(*hardware_args)
+            )
+            device.register_command_object(
+                "Standby", device.StandbyCommand(*hardware_args)
+            )
+            device.register_command_object("Off", device.OffCommand(*hardware_args))
 
         def _initialise_health_monitoring(self, device):
             """
@@ -1028,6 +1050,70 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
+    class DisableCommand(SKABaseDevice.DisableCommand):
+        """
+        Class for handling the Disable() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable` command
+            for this :py:class:`.MccsAntenna` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.off()
+            return create_return(success, "disable")
+
+    class StandbyCommand(SKABaseDevice.StandbyCommand):
+        """
+        Class for handling the Standby() command.
+
+        Actually the Antenna hardware has no standby mode, so when this
+        device is told to go to standby mode, it switches on / remains
+        on.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby` command
+            for this :py:class:`.MccsAntenna` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.on()
+            return create_return(success, "standby")
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """
+        Class for handling the Off() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
+            for this :py:class:`.MccsAntenna` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.off()
+            return create_return(success, "off")
+
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.

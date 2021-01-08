@@ -33,7 +33,7 @@ def device_to_load():
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
-        "device": "beam_01",
+        "device": "beam_001",
     }
 
 

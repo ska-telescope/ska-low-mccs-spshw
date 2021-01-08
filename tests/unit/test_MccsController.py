@@ -512,14 +512,14 @@ class TestMccsController:
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_event_data_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+                mock_callback=mock_callback, name="commandResult", result=None
             )
 
             # check that the mock subarray_1 was told to assign that resource
             mock_subarray_1.On.assert_called_once_with()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/001"]})
+                json.dumps({"stations": ["low-mccs/station/001"], "station_beams": []})
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -537,7 +537,7 @@ class TestMccsController:
             )
             assert result_code == ResultCode.FAILED
             TestMccsController._callback_event_data_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+                mock_callback=mock_callback, name="commandResult", result=None
             )
 
             # check no side-effects
@@ -553,19 +553,23 @@ class TestMccsController:
             # allocating stations 1 and 2 to subarray 1 should succeed,
             # because the already allocated station is allocated to the same
             # subarray
+            mock_subarray_1.AssignResources.side_effect = (
+                (ResultCode.OK, "Resources assigned"),
+            )
+
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate, subarray_id=1, station_ids=[1, 2]
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_event_data_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+                mock_callback=mock_callback, name="commandResult", result=None
             )
 
             # check
             mock_subarray_1.On.assert_not_called()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/002"]})
+                json.dumps({"stations": ["low-mccs/station/002"], "station_beams": []})
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -640,7 +644,10 @@ class TestMccsController:
             mock_subarray_2.ReleaseResources.assert_not_called()
             mock_subarray_2.AssignResources.assert_called_once_with(
                 json.dumps(
-                    {"stations": ["low-mccs/station/001", "low-mccs/station/002"]}
+                    {
+                        "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                        "station_beams": [],
+                    }
                 )
             )
             assert mock_station_1.subarrayId == 2

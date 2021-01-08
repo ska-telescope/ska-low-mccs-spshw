@@ -43,6 +43,7 @@ __all__ = [
     "health",
     "power",
     "utils",
+    "resource",
 ]
 
 from .device import MccsDevice

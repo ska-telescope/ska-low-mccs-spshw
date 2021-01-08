@@ -558,6 +558,13 @@ class MutableHealthMonitor(HealthMonitor):
         for fqdn in fqdns:
             del self._device_health_monitors[fqdn]
 
+    def remove_all_devices(self):
+        """
+        Remove all items from the list of devices to be monitored.
+        """
+        fqdns = list(self._device_health_monitors.keys())
+        self.remove_devices(fqdns)
+
 
 class MutableHealthModel(HealthModel):
     """

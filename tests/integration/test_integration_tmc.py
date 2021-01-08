@@ -43,6 +43,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
     }
 
@@ -87,6 +91,10 @@ class TestMccsIntegrationTmc:
             # "antenna_000002": device_context.get_device("antenna_000002"),
             # "antenna_000003": device_context.get_device("antenna_000003"),
             # "antenna_000004": device_context.get_device("antenna_000004"),
+            "beam_001": device_context.get_device("beam_001"),
+            "beam_002": device_context.get_device("beam_002"),
+            "beam_003": device_context.get_device("beam_003"),
+            "beam_004": device_context.get_device("beam_004"),
         }
         return device_dict
 
@@ -191,6 +199,7 @@ class TestMccsIntegrationTmc:
             "channels": [1, 2, 3, 4, 5, 6, 7, 8],
             "station_beam_ids": [1],
         }
+        devices["beam_001"].isBeamLocked = True
         json_string = json.dumps(parameters)
         self.assert_command(
             device=devices["controller"], command="Allocate", argin=json_string
@@ -199,6 +208,7 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].State() == DevState.ON
         assert devices["subarray_01"].obsState == ObsState.IDLE
+        assert len(devices["subarray_01"].stationFQDNs) == 2
 
         # Release Resources
         release_config = {"subarray_id": 1, "release_all": True}

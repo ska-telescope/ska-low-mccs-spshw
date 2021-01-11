@@ -237,7 +237,7 @@ the port that Traefik is listening on is output in the listing:
    TEST SUITE: None
    NOTES:
    1. Traefik is listening on the following ports on the host machine:
-      http - 30081
+      http - 30081  <-- PORT NUMBER THAT TRAEFIK IS LISTENING ON
       https - 30444
 
 Use the port number from above when addressing WebJive in your browser:

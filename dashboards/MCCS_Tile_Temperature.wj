@@ -1,0 +1,260 @@
+{
+  "id": "5ffc7728ed4340001916239a",
+  "name": "MCCS Tile Temperatures",
+  "version": "1.0.4",
+  "user": "user1",
+  "insertTime": "2021-01-11T16:04:56.002Z",
+  "updateTime": "2021-01-11T16:07:54.180Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "user1",
+  "widget": [
+    {
+      "id": "1",
+      "x": 1,
+      "y": 3,
+      "canvas": "0",
+      "width": 18,
+      "height": 19,
+      "type": "ATTRIBUTE_PLOT",
+      "inputs": {
+        "timeWindow": 120,
+        "showZeroLine": true,
+        "logarithmic": false,
+        "attributes": [
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0001",
+              "attribute": "board_temperature",
+              "label": "board_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0002",
+              "attribute": "board_temperature",
+              "label": "board_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0003",
+              "attribute": "board_temperature",
+              "label": "board_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0004",
+              "attribute": "board_temperature",
+              "label": "board_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          }
+        ]
+      },
+      "order": 0
+    },
+    {
+      "id": "2",
+      "x": 20,
+      "y": 3,
+      "canvas": "0",
+      "width": 19,
+      "height": 19,
+      "type": "ATTRIBUTE_PLOT",
+      "inputs": {
+        "timeWindow": 120,
+        "showZeroLine": true,
+        "logarithmic": false,
+        "attributes": [
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0001",
+              "attribute": "fpga1_temperature",
+              "label": "fpga1_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0002",
+              "attribute": "fpga1_temperature",
+              "label": "fpga1_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0003",
+              "attribute": "fpga1_temperature",
+              "label": "fpga1_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0004",
+              "attribute": "fpga1_temperature",
+              "label": "fpga1_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          }
+        ]
+      },
+      "order": 1
+    },
+    {
+      "id": "3",
+      "x": 40,
+      "y": 3,
+      "canvas": "0",
+      "width": 19,
+      "height": 19,
+      "type": "ATTRIBUTE_PLOT",
+      "inputs": {
+        "timeWindow": 120,
+        "showZeroLine": true,
+        "logarithmic": false,
+        "attributes": [
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0001",
+              "attribute": "fpga2_temperature",
+              "label": "fpga2_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0002",
+              "attribute": "fpga2_temperature",
+              "label": "fpga2_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0003",
+              "attribute": "fpga2_temperature",
+              "label": "fpga2_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          },
+          {
+            "attribute": {
+              "device": "low-mccs/tile/0004",
+              "attribute": "fpga2_temperature",
+              "label": "fpga2_temperature"
+            },
+            "showAttribute": "Label",
+            "yAxis": "left"
+          }
+        ]
+      },
+      "order": 2
+    },
+    {
+      "id": "4",
+      "x": 1,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 3
+    },
+    {
+      "id": "5",
+      "x": 16,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0002",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 4
+    },
+    {
+      "id": "6",
+      "x": 31,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0003",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 5
+    },
+    {
+      "id": "7",
+      "x": 46,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0004",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 6
+    }
+  ]
+}

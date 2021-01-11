@@ -1,0 +1,933 @@
+{
+  "id": "5ffc6536ed4340001915f5db",
+  "name": "MCCS Tile Connectivity",
+  "version": "1.0.4",
+  "user": "user1",
+  "insertTime": "2021-01-11T14:48:23.000Z",
+  "updateTime": "2021-01-11T16:00:21.535Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "user1",
+  "widget": [
+    {
+      "id": "1",
+      "x": 1,
+      "y": 2,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "cspdestinationip",
+          "label": "cspDestinationIp"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 0
+    },
+    {
+      "id": "2",
+      "x": 1,
+      "y": 4,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "cspdestinationmac",
+          "label": "cspDestinationMac"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 1
+    },
+    {
+      "id": "3",
+      "x": 1,
+      "y": 6,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "cspdestinationport",
+          "label": "cspDestinationPort"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 2
+    },
+    {
+      "id": "4",
+      "x": 1,
+      "y": 0,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 3
+    },
+    {
+      "id": "5",
+      "x": 17,
+      "y": 0,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0002",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 4
+    },
+    {
+      "id": "6",
+      "x": 33,
+      "y": 0,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0003",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 5
+    },
+    {
+      "id": "7",
+      "x": 49,
+      "y": 0,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0004",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 6
+    },
+    {
+      "id": "8",
+      "x": 17,
+      "y": 2,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "cspdestinationip",
+          "label": "cspDestinationIp"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 7
+    },
+    {
+      "id": "9",
+      "x": 17,
+      "y": 4,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "cspdestinationmac",
+          "label": "cspDestinationMac"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 8
+    },
+    {
+      "id": "10",
+      "x": 17,
+      "y": 6,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "cspdestinationport",
+          "label": "cspDestinationPort"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 9
+    },
+    {
+      "id": "11",
+      "x": 33,
+      "y": 2,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "cspdestinationip",
+          "label": "cspDestinationIp"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 10
+    },
+    {
+      "id": "12",
+      "x": 33,
+      "y": 4,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "cspdestinationmac",
+          "label": "cspDestinationMac"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 11
+    },
+    {
+      "id": "13",
+      "x": 33,
+      "y": 6,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "cspdestinationport",
+          "label": "cspDestinationPort"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 12
+    },
+    {
+      "id": "14",
+      "x": 49,
+      "y": 2,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "cspdestinationip",
+          "label": "cspDestinationIp"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 13
+    },
+    {
+      "id": "15",
+      "x": 49,
+      "y": 4,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "cspdestinationmac",
+          "label": "cspDestinationMac"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 14
+    },
+    {
+      "id": "16",
+      "x": 49,
+      "y": 6,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "cspdestinationport",
+          "label": "cspDestinationPort"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 15
+    },
+    {
+      "id": "17",
+      "x": 17,
+      "y": 11,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "logicaltileid",
+          "label": "logicalTileId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 16
+    },
+    {
+      "id": "18",
+      "x": 17,
+      "y": 13,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "stationid",
+          "label": "stationId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 17
+    },
+    {
+      "id": "19",
+      "x": 17,
+      "y": 15,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "subarrayid",
+          "label": "subarrayId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 18
+    },
+    {
+      "id": "20",
+      "x": 17,
+      "y": 8,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "checkpendingdatarequests",
+          "label": "checkPendingDataRequests"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 19
+    },
+    {
+      "id": "21",
+      "x": 17,
+      "y": 18,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 20
+    },
+    {
+      "id": "22",
+      "x": 49,
+      "y": 11,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "logicaltileid",
+          "label": "logicalTileId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 21
+    },
+    {
+      "id": "23",
+      "x": 49,
+      "y": 13,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "stationid",
+          "label": "stationId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 22
+    },
+    {
+      "id": "24",
+      "x": 49,
+      "y": 15,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "subarrayid",
+          "label": "subarrayId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 23
+    },
+    {
+      "id": "25",
+      "x": 49,
+      "y": 8,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "checkpendingdatarequests",
+          "label": "checkPendingDataRequests"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 24
+    },
+    {
+      "id": "26",
+      "x": 49,
+      "y": 18,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 25
+    },
+    {
+      "id": "27",
+      "x": 33,
+      "y": 11,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "logicaltileid",
+          "label": "logicalTileId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 26
+    },
+    {
+      "id": "28",
+      "x": 33,
+      "y": 13,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "stationid",
+          "label": "stationId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 27
+    },
+    {
+      "id": "29",
+      "x": 33,
+      "y": 15,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "subarrayid",
+          "label": "subarrayId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 28
+    },
+    {
+      "id": "30",
+      "x": 33,
+      "y": 8,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "checkpendingdatarequests",
+          "label": "checkPendingDataRequests"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 29
+    },
+    {
+      "id": "31",
+      "x": 33,
+      "y": 18,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 30
+    },
+    {
+      "id": "32",
+      "x": 1,
+      "y": 11,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "logicaltileid",
+          "label": "logicalTileId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 31
+    },
+    {
+      "id": "33",
+      "x": 1,
+      "y": 13,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "stationid",
+          "label": "stationId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 32
+    },
+    {
+      "id": "34",
+      "x": 1,
+      "y": 15,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "subarrayid",
+          "label": "subarrayId"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 33
+    },
+    {
+      "id": "35",
+      "x": 1,
+      "y": 8,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "checkpendingdatarequests",
+          "label": "checkPendingDataRequests"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 34
+    },
+    {
+      "id": "36",
+      "x": 1,
+      "y": 18,
+      "canvas": "0",
+      "width": 15,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 35
+    }
+  ]
+}

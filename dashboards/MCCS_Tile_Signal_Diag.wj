@@ -1,0 +1,805 @@
+{
+  "id": "5ff82648ed4340001915edcd",
+  "name": "MCCS Tile Signal Diagnostics",
+  "version": "1.0.4",
+  "user": "user1",
+  "insertTime": "2021-01-08T09:30:48.582Z",
+  "updateTime": "2021-01-11T15:57:35.736Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "user1",
+  "widget": [
+    {
+      "id": "2",
+      "x": 1,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 0
+    },
+    {
+      "id": "3",
+      "x": 0,
+      "y": 2,
+      "canvas": "0",
+      "width": 13,
+      "height": 11,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "adcpower",
+          "label": "adcPower"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 1
+    },
+    {
+      "id": "4",
+      "x": 16,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0002",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 2
+    },
+    {
+      "id": "5",
+      "x": 31,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0003",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 3
+    },
+    {
+      "id": "6",
+      "x": 46,
+      "y": 0,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/tile/0004",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": true,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 4
+    },
+    {
+      "id": "7",
+      "x": 15,
+      "y": 2,
+      "canvas": "0",
+      "width": 13,
+      "height": 11,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "adcpower",
+          "label": "adcPower"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 5
+    },
+    {
+      "id": "8",
+      "x": 30,
+      "y": 2,
+      "canvas": "0",
+      "width": 13,
+      "height": 11,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "adcpower",
+          "label": "adcPower"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 6
+    },
+    {
+      "id": "9",
+      "x": 45,
+      "y": 2,
+      "canvas": "0",
+      "width": 13,
+      "height": 11,
+      "type": "SPECTRUM",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "adcpower",
+          "label": "adcPower"
+        },
+        "showAttribute": "Label",
+        "showTitle": true,
+        "inelastic": true
+      },
+      "order": 7
+    },
+    {
+      "id": "11",
+      "x": 1,
+      "y": 14,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "voltage",
+          "label": "voltage"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 8
+    },
+    {
+      "id": "12",
+      "x": 1,
+      "y": 16,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "current",
+          "label": "current"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 9
+    },
+    {
+      "id": "13",
+      "x": 1,
+      "y": 18,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "board_temperature",
+          "label": "board_temperature"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 10
+    },
+    {
+      "id": "14",
+      "x": 1,
+      "y": 20,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 11
+    },
+    {
+      "id": "15",
+      "x": 1,
+      "y": 22,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "isbeamformerrunning",
+          "label": "isBeamformerRunning"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 12
+    },
+    {
+      "id": "16",
+      "x": 16,
+      "y": 14,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "voltage",
+          "label": "voltage"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 13
+    },
+    {
+      "id": "17",
+      "x": 16,
+      "y": 16,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "current",
+          "label": "current"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 14
+    },
+    {
+      "id": "18",
+      "x": 16,
+      "y": 18,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "board_temperature",
+          "label": "board_temperature"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 15
+    },
+    {
+      "id": "19",
+      "x": 16,
+      "y": 20,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 16
+    },
+    {
+      "id": "20",
+      "x": 16,
+      "y": 22,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0002",
+          "attribute": "isbeamformerrunning",
+          "label": "isBeamformerRunning"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 17
+    },
+    {
+      "id": "21",
+      "x": 31,
+      "y": 14,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "voltage",
+          "label": "voltage"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 18
+    },
+    {
+      "id": "22",
+      "x": 31,
+      "y": 16,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "current",
+          "label": "current"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 19
+    },
+    {
+      "id": "23",
+      "x": 31,
+      "y": 18,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "board_temperature",
+          "label": "board_temperature"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 20
+    },
+    {
+      "id": "24",
+      "x": 31,
+      "y": 20,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 21
+    },
+    {
+      "id": "25",
+      "x": 31,
+      "y": 22,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0003",
+          "attribute": "isbeamformerrunning",
+          "label": "isBeamformerRunning"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 22
+    },
+    {
+      "id": "26",
+      "x": 46,
+      "y": 14,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "voltage",
+          "label": "voltage"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 23
+    },
+    {
+      "id": "27",
+      "x": 46,
+      "y": 16,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "current",
+          "label": "current"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 24
+    },
+    {
+      "id": "28",
+      "x": 46,
+      "y": 18,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "board_temperature",
+          "label": "board_temperature"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 25
+    },
+    {
+      "id": "29",
+      "x": 46,
+      "y": 20,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "ppsdelay",
+          "label": "ppsDelay"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 26
+    },
+    {
+      "id": "30",
+      "x": 46,
+      "y": 22,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0004",
+          "attribute": "isbeamformerrunning",
+          "label": "isBeamformerRunning"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 27
+    },
+    {
+      "id": "31",
+      "x": 1,
+      "y": 24,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "currenttilebeamformerframe",
+          "label": "currentTileBeamformerFrame"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 28
+    },
+    {
+      "id": "32",
+      "x": 16,
+      "y": 24,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "currenttilebeamformerframe",
+          "label": "currentTileBeamformerFrame"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 29
+    },
+    {
+      "id": "33",
+      "x": 31,
+      "y": 24,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "currenttilebeamformerframe",
+          "label": "currentTileBeamformerFrame"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 30
+    },
+    {
+      "id": "34",
+      "x": 46,
+      "y": 24,
+      "canvas": "0",
+      "width": 13,
+      "height": 2,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/tile/0001",
+          "attribute": "currenttilebeamformerframe",
+          "label": "currentTileBeamformerFrame"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 31
+    }
+  ]
+}

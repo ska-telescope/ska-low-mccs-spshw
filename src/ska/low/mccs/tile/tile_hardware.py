@@ -530,15 +530,13 @@ class TileHardwareManager(SimulableHardwareManager):
             coefficients, flattened into a list
         :type calibration_coeffs: list(int)
         """
-        self._factory.hardware.load_calibration_curve(
-                antenna,beam, calibration_coeffs)
+        self._factory.hardware.load_calibration_curve(antenna, beam, calibration_coeffs)
 
     def load_beam_angle(self, angle_coeffs):
         """
         Load the beam angle.
 
-        :param angle_coeffs: list containing angle coefficients for each
-            beam
+        :param angle_coeffs: list containing angle coefficients for each beam
         :type angle_coeffs: list(float)
         """
         self._factory.hardware.load_beam_angle(angle_coeffs)
@@ -573,9 +571,6 @@ class TileHardwareManager(SimulableHardwareManager):
         gain curves, tapering weigths and beam angles, load them in the
         hardware. It must be followed by switch_calibration_bank()
         to make these active
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self._factory.hardware.compute_calibration_coefs()
 

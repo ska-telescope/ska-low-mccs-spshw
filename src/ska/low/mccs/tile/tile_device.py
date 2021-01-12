@@ -1824,7 +1824,7 @@ class MccsTile(SKABaseDevice):
             if len(argin) < 4:
                 self.logger.error("Insufficient parameters specified")
                 raise ValueError("Insufficient parameters specified")
-            if len(argin) > 48*4:
+            if len(argin) > 192:
                 self.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
             if len(argin) % 4 != 0:
@@ -1835,10 +1835,8 @@ class MccsTile(SKABaseDevice):
             for i in range(0, len(argin), 4):
                 region = argin[i : i + 4]  # noqa: E203
                 start_channel = region[0]
-                if start_channel %2 != 0:
-                    self.logger.error(
-                        "Start channel in region must be even"
-                    )
+                if start_channel % 2 != 0:
+                    self.logger.error("Start channel in region must be even")
                     raise ValueError("Start channel in region must be even")
                 nchannels = region[1]
                 if nchannels % 8 != 0:
@@ -1878,7 +1876,7 @@ class MccsTile(SKABaseDevice):
         * start_channel - (int) region starting channel, must be even in range 0 to 510
         * num_channels - (int) size of the region, must be a multiple of 8
         * beam_index - (int) beam used for this region with range 0 to 47
-        * substation_id - (int) Substation 
+        * substation_id - (int) Substation
 
         :type argin: list(int)
 
@@ -2115,7 +2113,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Incomplete specification of coefficient")
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
-            beam    = int(argin[1])
+            beam = int(argin[1])
             calib_coeffs = [
                 [
                     complex(argin[i], argin[i + 1]),
@@ -2141,15 +2139,15 @@ class MccsTile(SKABaseDevice):
         """
         Load calibration curve. This is the frequency dependent response
         for a single antenna and beam, as a function of frequency.
-        It will be combined together with tapering coefficients 
-        and beam angles by ComputeCalibrationCoefficients, which will 
+        It will be combined together with tapering coefficients
+        and beam angles by ComputeCalibrationCoefficients, which will
         also make them active like SwitchCalibrationBank. The calibration
         coefficients do not include the geometric delay.
 
         :param argin: list comprises:
 
         * antenna - (int) is the antenna to which the coefficients will be applied.
-        * beam    - (int) is the beam to which the coefficients will be applied. 
+        * beam    - (int) is the beam to which the coefficients will be applied.
         * calibration_coefficients - [array] a bidimensional complex array comprising
             calibration_coefficients[channel, polarization], with each element
             representing a normalized coefficient, with (1.0, 0.0) being the
@@ -2293,7 +2291,7 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) < self._antennas_per_tile+1:
+            if len(argin) < self._antennas_per_tile + 1:
                 self.logger.error(
                     f"Insufficient coefficients should be {self._antennas_per_tile+1}"
                 )
@@ -2301,14 +2299,10 @@ class MccsTile(SKABaseDevice):
                     f"Insufficient coefficients should be {self._antennas_per_tile+1}"
                 )
 
-            beam=int(argin[0])
-            if beam <0 or beam > 47:
-                self.logger.error(
-                    f"Beam index should be in range 0 to 47"
-                )
-                raise ValueError(
-                    f"Beam index should be in range 0 to 47"
-                )
+            beam = int(argin[0])
+            if beam < 0 or beam > 47:
+                self.logger.error("Beam index should be in range 0 to 47")
+                raise ValueError("Beam index should be in range 0 to 47")
 
             tapering = argin[1:]
             hardware_manager = self.target

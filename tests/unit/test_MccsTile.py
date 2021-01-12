@@ -758,7 +758,7 @@ class TestMccsTileCommands:
         """
         device_under_test.On()
         antenna = 2
-        beam    = 0
+        beam = 0
         complex_coeffs = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
         ] * 5

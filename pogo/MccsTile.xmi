@@ -215,9 +215,27 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
+    <commands name="LoadCalibrationCurve" description="Loads calibration curve. This is the frequency dependent response for a single antenna and beam, as a function of frequency.  It will be combined together with tapering coefficients and beam angles by ComputeCalibrationCoefficients, and made active by SwitchCalibrationBank. The calibration coefficients do not include the geometric delay. antenna is the antenna to which the coefficients will be applied. beam is the beam to which the coefficients will be applied. calibration_coefficients is a bidimensional complex array of the form calibration_coefficients[channel, polarization], with each element representing a normalized coefficient, with (1.0, 0.0) being the normal, expected response for an ideal antenna. channel is the index specifying the channels at the beamformer output, i.e. considering only those channels actually processed and beam assignments. The polarization index ranges from 0 to 3. 0: X polarization direct element 1: X->Y polarization cross element 2: Y->X polarization cross element 3: Y polarization direct element The calibration coefficients may include any rotation matrix (e.g. the parallactic angle), but do not include the geometric delay" execMethod="load_calibration_curve" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+      <argin description="antenna, beam, calibration_coefficients">
+        <type xsi:type="pogoDsl:EncodedType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </commands>
     <commands name="LoadCalibrationCoefficients" description="Loads calibration coefficients (but does not apply them, this is performed by switch_calibration_bank). antenna is the antenna to which the coefficients will be applied. calibration_coefficients is a bidimensional complex array of the form calibration_coefficients[channel, polarization], with each element representing a normalized coefficient, with (1.0, 0.0) being the normal, expected response for an ideal antenna. channel is the index specifying the channels at the beamformer output, i.e. considering only those channels actually processed and beam assignments. The polarization index ranges from 0 to 3. 0: X polarization direct element 1: X->Y polarization cross element 2: Y->X polarization cross element 3: Y polarization direct element The calibration coefficients may include any rotation matrix (e.g. the parallactic angle), but do not include the geometric delay" execMethod="load_calibration_coefficients" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="antenna, calibration_coefficients">
         <type xsi:type="pogoDsl:EncodedType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </commands>
+    <commands name="ComputeCalibrationCoefficients" description="Compute the calibration coefficients from previously specified gain curves, tapering weigths and beam angles, load them in the hardware. It must be followed by SwitchCalibrationBank to make these active" execMethod="compute_calibration_coefs" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+      <argin description="">
+        <type xsi:type="pogoDsl:VoidType"/>
       </argin>
       <argout description="">
         <type xsi:type="pogoDsl:VoidType"/>

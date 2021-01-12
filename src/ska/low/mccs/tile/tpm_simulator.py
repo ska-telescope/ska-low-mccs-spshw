@@ -516,7 +516,7 @@ class TpmSimulator(HardwareSimulator):
         :param regions: a list encoding up to 48 regions, with each
             region containing a start channel, the size of the region
             (which must be a multiple of 8), a beam index (between 0 and 7)
-            and a substation ID. 
+            and a substation ID.
         :type regions: list(int)
 
         :raises NotImplementedError: because this method is not yet
@@ -567,7 +567,7 @@ class TpmSimulator(HardwareSimulator):
         Load calibration curve. This is the frequency dependent response
         for a single antenna and beam, as a function of frequency.
         It will be combined together with tapering coefficients
-        and beam angles by ComputeCalibrationCoefficients, 
+        and beam angles by ComputeCalibrationCoefficients,
         and made active by SwitchCalibrationBank.
         The calibration coefficients do not include the geometric delay.
 
@@ -633,9 +633,9 @@ class TpmSimulator(HardwareSimulator):
 
     def compute_calibration_coefs(self):
         """
-        Compute the calibration coefficients from previously specified 
+        Compute the calibration coefficients from previously specified
         gain curves, tapering weigths and beam angles, load them in the
-        hardware. It must be followed by switch_calibration_bank() 
+        hardware. It must be followed by switch_calibration_bank()
         to make these active
 
         :raises NotImplementedError: because this method is not yet
@@ -643,7 +643,6 @@ class TpmSimulator(HardwareSimulator):
         """
         self.logger.debug("TpmSimulator: compute_calibration_coefs")
         raise NotImplementedError
-
 
     def set_pointing_delay(self, delay_array, beam_index):
         """

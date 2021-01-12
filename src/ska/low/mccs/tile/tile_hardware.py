@@ -513,6 +513,26 @@ class TileHardwareManager(SimulableHardwareManager):
             antenna, calibration_coeffs
         )
 
+    def load_calibration_curve(self, antenna, beam, calibration_coeffs):
+        """
+        Load calibration curve. This is the frequency dependent response
+        for a single antenna and beam, as a function of frequency.
+        It will be combined together with tapering coefficients
+        and beam angles by ComputeCalibrationCoefficients, which will
+        also make them active like SwitchCalibrationBank. The calibration
+        coefficients do not include the geometric delay.
+
+        :param antenna: the antenna to which the coefficients apply
+        :type antenna: int
+        :param beam: the beam to which the coefficients apply
+        :type beam: int
+        :param calibration_coeffs: a bidirectional complex array of
+            coefficients, flattened into a list
+        :type calibration_coeffs: list(int)
+        """
+        self._factory.hardware.load_calibration_curve(
+                antenna,beam, calibration_coeffs)
+
     def load_beam_angle(self, angle_coeffs):
         """
         Load the beam angle.
@@ -523,15 +543,17 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         self._factory.hardware.load_beam_angle(angle_coeffs)
 
-    def load_antenna_tapering(self, tapering_coeffs):
+    def load_antenna_tapering(self, beam, tapering_coeffs):
         """
         Loat the antenna tapering coefficients.
 
+        :param beam: beam index
+        :type beam: int
         :param tapering_coeffs: list of tapering coefficients for each
             antenna
         :type tapering_coeffs: list(float)
         """
-        self._factory.hardware.load_antenna_tapering(tapering_coeffs)
+        self._factory.hardware.load_antenna_tapering(beam, tapering_coeffs)
 
     def switch_calibration_bank(self, switch_time=None):
         """
@@ -544,6 +566,18 @@ class TileHardwareManager(SimulableHardwareManager):
         :type switch_time: int, optional
         """
         self._factory.hardware.switch_calibration_bank(switch_time=switch_time)
+
+    def compute_calibration_coefs(self):
+        """
+        Compute the calibration coefficients from previously specified
+        gain curves, tapering weigths and beam angles, load them in the
+        hardware. It must be followed by switch_calibration_bank()
+        to make these active
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self._factory.hardware.compute_calibration_coefs()
 
     def set_pointing_delay(self, delay_array, beam_index):
         """

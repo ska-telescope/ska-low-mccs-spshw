@@ -40,6 +40,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
     }
 
@@ -90,6 +94,10 @@ def devices(tango_context):
         # "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
         # "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
         # "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
+        "beam_001": tango_context.get_device("low-mccs/beam/001"),
+        "beam_002": tango_context.get_device("low-mccs/beam/002"),
+        "beam_003": tango_context.get_device("low-mccs/beam/003"),
+        "beam_004": tango_context.get_device("low-mccs/beam/004"),
     }
 
     # Bypass the cache because stationFQDNs etc are polled attributes,

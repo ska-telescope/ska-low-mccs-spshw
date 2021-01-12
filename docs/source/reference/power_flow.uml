@@ -1,0 +1,74 @@
+|Power supply|
+start
+split
+-> 1..4;
+|MCCS Cabinet|
+:MCCS
+cabinet
+management
+board;
+split
+(/);
+:1 Gb switch;
+detach
+split again
+(/);
+-> 1..2;
+:100 Gb switch;
+detach
+split again
+(/);
+-> 1..17-18;
+:MCCS node;
+detach
+end split
+split again
+|SPS Cabinet|
+-> 1..256;
+:SPS
+cabinet
+management
+board;
+split
+(/);
+note right
+MccsCabinet.TurnSwitchOn()
+end note
+-> 1..2;
+:switch;
+detach
+split again
+(/);
+note right
+MccsCabinet.TurnSubrackOn()
+end note
+-> 1..4;
+:SPS
+subrack
+management
+board;
+(/);
+note right
+MccsSubrack.TurnTPMOn()
+end note
+-> 1..8;
+:TPM;
+end split
+detach
+split again
+|Field equipment|
+-> 1..256;
+(/);
+note right
+MccsAPIU.On()
+end note
+-> 1;
+:APIU;
+(/);
+note right
+MccsAPIU.TurnAntennaOn(n)
+end note
+-> 1..64;
+:Antenna;
+detach
+end split

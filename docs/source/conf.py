@@ -75,20 +75,18 @@ copyright = "2020, SKA MCCS Team"
 nitpick_ignore = [
     ("py:class", "callable"),
     ("py:class", "optional"),
-    ("py:class", "tango.test_context.MultiDeviceTestContext")  # workaround for pytango bug
 ]
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.doctest",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.todo",
     "sphinx.ext.coverage",
-    "sphinx.ext.mathjax",
+    "sphinx.ext.doctest",
     "sphinx.ext.ifconfig",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    # 'sphinx.ext.githubpages',
-    # 'm2r'
+    "plantweb.directive",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -174,7 +174,7 @@ class StationBeamHardwareManager(HardwareManager):
 
     def __init__(self, is_locked=False, _factory=None):
         """
-        Initialise a new TileHardwareManager instance.
+        Initialise a new StationBeamHardwareManager instance.
 
         :param is_locked: initial value for whether this beam is locked
         :type is_locked: bool

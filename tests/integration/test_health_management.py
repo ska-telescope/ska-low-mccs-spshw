@@ -47,6 +47,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
         "patch": {
             "tile_0001": DemoTile,
@@ -93,6 +97,11 @@ def test_controller_health_rollup(device_context):
     # antenna_2 = device_context.get_device("antenna_000002")
     # antenna_3 = device_context.get_device("antenna_000003")
     # antenna_4 = device_context.get_device("antenna_000004")
+
+    # beam_1 = device_context.get_device("low-mccs/beam/001")
+    # beam_2 = device_context.get_device("low-mccs/beam/002")
+    # beam_3 = device_context.get_device("low-mccs/beam/003")
+    # beam_4 = device_context.get_device("low-mccs/beam/004")
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -184,6 +193,10 @@ def test_subarray_health_rollup(device_context):
     # antenna_2 = device_context.get_device("antenna_000002")
     # antenna_3 = device_context.get_device("antenna_000003")
     # antenna_4 = device_context.get_device("antenna_000004")
+    # beam_1 = device_context.get_device("low-mccs/beam/001")
+    # beam_2 = device_context.get_device("low-mccs/beam/002")
+    # beam_3 = device_context.get_device("low-mccs/beam/003")
+    # beam_4 = device_context.get_device("low-mccs/beam/004")
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -201,8 +214,12 @@ def test_subarray_health_rollup(device_context):
 
     _ = controller.On()
 
-    _ = call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
-    _ = call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
+    _ = call_with_json(
+        controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]
+    )
+    _ = call_with_json(
+        controller.Allocate, subarray_id=2, station_ids=[2], station_beams=[2]
+    )
 
     sleep()
 

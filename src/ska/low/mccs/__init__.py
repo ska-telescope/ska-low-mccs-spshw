@@ -19,6 +19,7 @@ __all__ = [
     "MccsStation",
     "MccsStationBeam",
     "MccsSubarray",
+    "MccsSubarrayBeam",
     "MccsTelState",
     "MccsTile",
     "MccsTransientBuffer",
@@ -35,6 +36,7 @@ __all__ = [
     "station",
     "station_beam",
     "subarray",
+    "subarray_beam",
     "tel_state",
     "transient_buffer",
     # non-device modules
@@ -58,5 +60,6 @@ from .antenna import MccsAntenna
 from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
+from .subarray_beam import MccsSubarrayBeam
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer

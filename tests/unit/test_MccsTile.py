@@ -513,7 +513,7 @@ class TestMccsTileCommands:
     def test_DownloadFirmware(self, device_under_test):
         """
         Test for DownloadFirmware. Also functions as the test for the
-        isProgrammed property.
+        isProgrammed and the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -523,9 +523,10 @@ class TestMccsTileCommands:
         device_under_test.On()
 
         assert not device_under_test.isProgrammed
-        bitfile = "test_bitload_firmware"
+        bitfile = "/path/to/bitfile/test_firmware_bitfile_Vivado.bit"
         device_under_test.DownloadFirmware(bitfile)
         assert device_under_test.isProgrammed
+        assert device_under_test.firmwareName == bitfile
 
     def test_GetRegisterList(self, device_under_test):
         """

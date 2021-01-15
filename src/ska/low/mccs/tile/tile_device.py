@@ -1034,9 +1034,7 @@ class MccsTile(SKABaseDevice):
         each firmware, a dictionary containing the following keys with
         their respective values should be provided: ‘design’, which is a
         textual name for the firmware, ‘major’, which is the major
-        version number, and.
-
-        ‘minor’.
+        version number, and ‘minor’.
 
         :return: a JSON-encoded dictionary of firmware details
         :rtype: str
@@ -1122,7 +1120,7 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.ProgramCPLD` command
             functionality.
 
-            :param argin: path to the butfile to be loaded
+            :param argin: path to the bitfile to be loaded
             :type argin: str
 
             :return: A tuple containing a return code and a string

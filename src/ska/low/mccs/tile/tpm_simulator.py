@@ -125,6 +125,7 @@ class TpmSimulator(HardwareSimulator):
         :type bitfile: bytes
         """
         self.logger.debug("TpmSimulator: download_firmware")
+        self._firmware_name = bitfile
         self._is_programmed = True
 
     def cpld_flash_write(self, bitfile):

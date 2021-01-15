@@ -17,6 +17,7 @@ __all__ = ["MccsTile", "main"]
 import json
 import numpy as np
 import threading
+import os.path
 
 from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
@@ -1034,9 +1035,7 @@ class MccsTile(SKABaseDevice):
         each firmware, a dictionary containing the following keys with
         their respective values should be provided: ‘design’, which is a
         textual name for the firmware, ‘major’, which is the major
-        version number, and.
-
-        ‘minor’.
+        version number, and ‘minor’.
 
         :return: a JSON-encoded dictionary of firmware details
         :rtype: str
@@ -1076,8 +1075,11 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             bitfile = argin
-            hardware_manager.download_firmware(bitfile)
-            return (ResultCode.OK, "DownloadFirmware command completed OK")
+            if os.path.isfile(bitfile):
+                hardware_manager.download_firmware(bitfile)
+                return (ResultCode.OK, "DownloadFirmware command completed OK")
+            else:
+                return (ResultCode.FAILED, f"{bitfile} doesn't exist")
 
     @command(
         dtype_in="DevString",
@@ -1122,7 +1124,7 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.ProgramCPLD` command
             functionality.
 
-            :param argin: path to the butfile to be loaded
+            :param argin: path to the bitfile to be loaded
             :type argin: str
 
             :return: A tuple containing a return code and a string

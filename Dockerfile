@@ -5,4 +5,5 @@ FROM nexus.engageska-portugal.pt/ska-docker/ska-python-runtime:9.3.3.1 AS runtim
 RUN ipython profile create
 ENV PATH=/home/tango/.local/bin:$PATH
 RUN python3 -m pip install --extra-index-url https://nexus.engageska-portugal.pt/repository/pypi/simple -rrequirements.txt .
+RUN python3 -m pip install ./pyfabil-1.0-py3-none-any.whl
 #CMD ["MccsController", "01"]

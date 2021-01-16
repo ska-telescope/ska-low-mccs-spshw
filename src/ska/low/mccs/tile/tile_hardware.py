@@ -42,7 +42,8 @@ class TileHardwareFactory(SimulableHardwareFactory):
 
     At present, this returns a
     :py:class:`~ska.low.mccs.tile.tpm_simulator.TpmSimulator` object
-    when in simulation mode, and raises :py:exc:`NotImplementedError` if
+    when in simulation mode, and a
+    :py:class:`~ska.low.mccs.tile.tpm_driver.TpmDriver` object if
     the hardware is sought whilst not in simulation mode
     """
 

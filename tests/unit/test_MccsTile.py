@@ -460,7 +460,7 @@ class TestMccsTileCommands:
         mock_tpm_simulator = mocker.Mock()
         hardware_factory = SimulableHardwareFactory(True, _simulator=mock_tpm_simulator)
         hardware_manager = TileHardwareManager(
-            SimulationMode.TRUE, logger, _factory=hardware_factory
+            SimulationMode.TRUE, logger, "10.0.10.2", 10000, _factory=hardware_factory
         )
 
         command_class = getattr(MccsTile, f"{device_command}Command")

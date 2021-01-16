@@ -46,7 +46,10 @@ def tile_hardware_manager():
     :rtype: TileHardwareManager
     """
     return TileHardwareManager(
-        simulation_mode=SimulationMode.TRUE, logger=logging.getLogger()
+        simulation_mode=SimulationMode.TRUE,
+        logger=logging.getLogger(),
+        tile_ip="10.0.10.2",
+        tpm_cpld_port=10000,
     )
 
 
@@ -57,27 +60,26 @@ class TestTileHardwareManager:
 
     def test_init_simulation_mode(self):
         """
-        Test that we can't create an hardware manager that isn't in
+        Test that we can create an hardware manager that isn't in
         simulation mode.
         """
-        with pytest.raises(
-            NotImplementedError, match=("._create_driver method not implemented.")
-        ):
-            _ = TileHardwareManager(SimulationMode.FALSE, logger=logging.getLogger())
+        _ = TileHardwareManager(
+            SimulationMode.FALSE,
+            logger=logging.getLogger(),
+            tile_ip="10.0.10.2",
+            tpm_cpld_port=10000,
+        )
 
     def test_simulation_mode(self, tile_hardware_manager):
         """
-        Test that we can't take the tile hardware manager out of
+        Test that we can take the tile hardware manager out of
         simulation mode.
 
         :param tile_hardware_manager: a manager for tile hardware
         :type tile_hardware_manager:
             :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         """
-        with pytest.raises(
-            NotImplementedError, match=("._create_driver method not implemented.")
-        ):
-            tile_hardware_manager.simulation_mode = SimulationMode.FALSE
+        tile_hardware_manager.simulation_mode = SimulationMode.FALSE
 
 
 class TestCommon:
@@ -119,7 +121,7 @@ class TestCommon:
         elif request.param == "tile_hardware_manager":
             return tile_hardware_manager
         # elif request.param == "tpm_driver":
-        #     raise NotImplementedError
+        #     return tpm_driver
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),

@@ -67,9 +67,10 @@ class MccsTile(SKABaseDevice):
 
     # TODO: These properties are not currently being used in any way.
     # Can they be removed, or do they need to be handled somehow?
-    # TileId = device_property(dtype=int, default_value=0)
-    # TileIP = device_property(dtype=str, default_value="0.0.0.0")
-    # TpmCpldPort = device_property(dtype=int, default_value=20000)
+    TileId = device_property(dtype=int, default_value=0)
+    TileIP = device_property(dtype=str, default_value="10.0.10.2")
+    TpmCpldPort = device_property(dtype=int, default_value=10000)
+    #
     # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
     # DstPort = device_property(dtype=int, default_value=30000)
 
@@ -136,6 +137,8 @@ class MccsTile(SKABaseDevice):
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
             device.hardware_manager = None
+            device.tile_ip = device.TileIP
+            device.tpm_cpld_port = device.TpmCpldPort
 
             device._logical_tile_id = 0
             device._subarray_id = 0
@@ -194,7 +197,10 @@ class MccsTile(SKABaseDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             device.hardware_manager = TileHardwareManager(
-                device._simulation_mode, device.logger
+                device._simulation_mode,
+                device.logger,
+                device.tile_ip,
+                device.tpm_cpld_port,
             )
             args = (device.hardware_manager, device.state_model, device.logger)
             device.register_command_object(

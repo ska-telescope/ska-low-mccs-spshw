@@ -16,13 +16,19 @@ __all__ = [
     "TileHardwareManager",
     "TilePowerManager",
     "TpmSimulator",
+    "TpmDriver",
+    "HwTile",
     "demo_tile_device",
     "tile_device",
     "tile_hardware",
     "tile_cli",
     "tpm_simulator",
+    "tpm_driver",
+    "hw_tile",
 ]
 
+from .hw_tile import HwTile
 from .tpm_simulator import TpmSimulator
+from .tpm_driver import TpmDriver
 from .tile_hardware import TileHardwareManager
 from .tile_device import MccsTile, TilePowerManager

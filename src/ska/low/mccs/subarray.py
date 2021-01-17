@@ -585,8 +585,14 @@ class MccsSubarray(SKASubarray):
             (inherited) :py:meth:`ska.base.SKASubarray.AssignResources`
             command for this :py:class:`.MccsSubarray` device.
 
-            :param argin: The resources to be assigned
-            :type argin: list(str)
+            :param argin: json string with the resources to be assigned
+                {"mccs":{
+                        "subarray_id": 1,
+                        "station_ids": [1,2],
+                        "channels": [1,2,3,4,5,6,7,8],
+                        "station_beam_ids": [1],
+                }}
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -707,6 +713,14 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
+                {"mccs":{
+                    "stations":[{"station_id": 1},{"station_id": 2}],
+                    "station_beams":[{"station_beam_id":1,"station_id":[1,2],
+                    "channels": [1,2,3,4,5,6,7,8],
+                    "update_rate": 0.0,
+                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                    }
+                }
             :type argin: str
 
             :return: A tuple containing a return code and a string
@@ -715,10 +729,26 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
+            kwargs = json.loads(argin)
+            stations = kwargs["mccs"]["stations"]
+            station_beam_pool_manager = self.target._station_beam_pool_manager
+            for station in stations:
+                # This is here for future expansion of json strings
+                station.get("station_id")
+
+            station_beams = kwargs["mccs"]["station_beams"]
+            for station_beam in station_beams:
+                station_beam_id = station_beam.get("station_beam_id")
+                if station_beam_id:
+                    station_beam_fqdn = station_beam_pool_manager.fqdn_from_id(
+                        station_beam_id
+                    )
+                    if station_beam_fqdn:
+                        dp = tango.DeviceProxy(station_beam_fqdn)
+                        dp.configure(station_beam)
+
             result_code = ResultCode.OK
             message = "Configure command completed successfully"
-
-            # MCCS-specific stuff goes here
             return (result_code, message)
 
         def check_allowed(self):

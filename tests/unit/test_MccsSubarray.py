@@ -528,4 +528,6 @@ class TestMccsSubarray:
             [[result_code], [message]] = device_under_test.Configure(json_str)
             assert result_code == ResultCode.OK
             assert message == "Configure command completed successfully"
-            mock_station_beam.configure.assert_called_with(expected)
+            # remove preceeding "call(\" and trailing "\)"
+            output = str(mock_station_beam.configure.call_args)[6:-2]
+            assert json.loads(output) == expected

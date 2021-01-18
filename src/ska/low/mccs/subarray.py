@@ -748,7 +748,8 @@ class MccsSubarray(SKASubarray):
                     )
                     if station_beam_fqdn:
                         dp = tango.DeviceProxy(station_beam_fqdn)
-                        dp.configure(station_beam)
+                        json_str = json.dumps(station_beam)
+                        dp.configure(json_str)
 
             result_code = ResultCode.OK
             message = "Configure command completed successfully"

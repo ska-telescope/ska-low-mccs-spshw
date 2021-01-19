@@ -43,6 +43,8 @@ prototype for the `Square Kilometre Array`_.
    api/cluster_simulator
    api/tile_hardware
    api/tpm_simulator
+   api/tpm_driver
+   api/hw_tile
 
 .. toctree::
    :maxdepth: 1

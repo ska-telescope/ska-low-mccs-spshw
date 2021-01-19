@@ -107,6 +107,22 @@ class MccsTileCli(metaclass=CliMeta):
 
     @command_result_as_string
     def SendBeamData(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+        """
+        Transmit a snapshot containing beamformed data.
+
+        :param period: period of time, in seconds, to send data, defaults to 0
+        :type period: int, optional
+        :param timeout: wqhen to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         args = {
             "Period": period,
             "Timeout": timeout,
@@ -126,6 +142,25 @@ class MccsTileCli(metaclass=CliMeta):
         timestamp=None,
         seconds=0.2,
     ):
+        """
+        :param channel_id: index of channel to send
+        :type channel_id: int
+        :param num_samples: number of spectra to send, defaults to 1024
+        :type num_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: float
+        :param timeout: wqhen to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :raises RuntimeError: if a general failure occurred in device
+        """
         try:
             args = {
                 "ChannelID": channel_id,
@@ -151,6 +186,29 @@ class MccsTileCli(metaclass=CliMeta):
         timestamp=None,
         seconds=0.2,
     ):
+        """
+        Transmit a snapshot containing channelized data totalling
+        number_of_samples spectra.
+
+        :param num_samples: number of spectra to send, defaults to 1024
+        :type num_samples: int, optional
+        :param first_channel: first channel to send, defaults to 0
+        :type first_channel: int, optional
+        :param last_channel: last channel to send, defaults to 511
+        :type last_channel: int, optional
+        :param period: period of time, in seconds, to send data, defaults to 0
+        :type period: int, optional
+        :param timeout: wqhen to stop, defaults to 0
+        :type timeout: int, optional
+        :param timestamp: when to start(?), defaults to None
+        :type timestamp: int, optional
+        :param seconds: when to synchronise, defaults to 0.2
+        :type seconds: float, optional
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         args = {
             "NSamples": num_samples,
             "FirstChannel": first_channel,

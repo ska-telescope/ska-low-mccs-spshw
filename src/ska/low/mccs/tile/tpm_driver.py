@@ -144,7 +144,7 @@ class TpmDriver(HardwareDriver):
         :type bitfile: bytes
         """
         self.logger.debug("TpmSimulator: download_firmware")
-        self.tile.download_firmware(self, bitfile)
+        self.tile.program_fpgas(bitfile)
         self._is_programmed = True
 
     def cpld_flash_write(self, bitfile):
@@ -305,13 +305,13 @@ class TpmDriver(HardwareDriver):
         :return: values read from the register
         :rtype: list(int)
         """
-        address_map = self._register_map[device].get(register_name, None)
-        if address_map is None:
-            return tuple()
-        values = []
-        for i in range(nb_read):
-            key = str(offset + i)
-            values.append(address_map.get(key, 0))
+        if device == 1:
+            devname = "fpga1."
+        else:
+            devname = "fpga2."
+        regname = devname + register_name
+        values = [0] * nb_read
+        values = self.tile[regname]
         return tuple(values)
 
     def write_register(self, register_name, values, offset, device):
@@ -327,12 +327,12 @@ class TpmDriver(HardwareDriver):
         :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
         :type device: int
         """
-        address_map = self._register_map[device].get(register_name, None)
-        if address_map is None:
-            return
-        for i, value in enumerate(values):
-            key = str(offset + i)
-            address_map.update({key: value})
+        if device == 1:
+            devname = "fpga1."
+        else:
+            devname = "fpga2."
+        regname = devname + register_name
+        self.tile[regname] = values
 
     def read_address(self, address, nvalues):
         """
@@ -346,10 +346,8 @@ class TpmDriver(HardwareDriver):
         :return: values at the address
         :rtype: list(int)
         """
-        values = []
-        for i in range(nvalues):
-            key = str(address + i)
-            values.append(self._address_map.get(key, 0))
+        values = [0] * nvalues
+        values = self.tile[address]
         return tuple(values)
 
     def write_address(self, address, values):
@@ -361,9 +359,13 @@ class TpmDriver(HardwareDriver):
         :param values: values to write
         :type values: list(int)
         """
-        for i, value in enumerate(values):
-            key = str(address + i)
-            self._address_map.update({key: value})
+        # this is inefficient
+        # TODO use list write method for tile
+        #
+        current_address = address & 0xFFFFFFFC
+        for value in values:
+            self.tile[current_address] = value
+            current_address = current_address + 4
 
     def configure_40g_core(
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port

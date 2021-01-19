@@ -19,7 +19,7 @@ import numpy as np
 import threading
 
 from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command
+from tango.server import attribute, command, AttrWriteType
 from tango.server import device_property
 
 from ska.base import SKABaseDevice
@@ -951,6 +951,22 @@ class MccsTile(SKABaseDevice):
         :rtype: int
         """
         return self.hardware_manager.pps_delay
+
+    simulationmode = attribute(
+        label="simulationMode",
+        dtype=SimulationMode,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        fget="read_simulationMode",
+        fset="write_simulationMode",
+        doc="Reports the simulation mode of the device. "
+        "Some devices may implement both modes,\n"
+        "while others will have simulators that set simulationMode "
+        "to True while the real\ndevices always set simulationMode to False.",
+    )
+
+    def read_simulationMode(self):
+        return super().read_simulationMode()
 
     def write_simulationMode(self, value):
         super().write_simulationMode(value)

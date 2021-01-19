@@ -714,15 +714,13 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
-                    {
-                    "mccs":
-                    {
-                    "stations":[{"station_id": 1},{"station_id": 2}],
-                    "station_beams":[{"station_beam_id":1,"station_id":[1,2],
-                    "channels": [1,2,3,4,5,6,7,8],
-                    "update_rate": 0.0,
-                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
-                    }
+                    {"mccs":{
+                        "stations":[{"station_id": 1},{"station_id": 2}],
+                        "station_beams":[{"station_beam_id":1,"station_id":[1,2],
+                        "channels": [1,2,3,4,5,6,7,8],
+                        "update_rate": 0.0,
+                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                        }
                     }
             :type argin: str
 
@@ -733,13 +731,13 @@ class MccsSubarray(SKASubarray):
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             kwargs = json.loads(argin)
-            stations = kwargs["mccs"]["stations"]
+            stations = kwargs.get("mccs").get("stations")
             station_beam_pool_manager = self.target._station_beam_pool_manager
             for station in stations:
                 # This is here for future expansion of json strings
                 station.get("station_id")
 
-            station_beams = kwargs["mccs"]["station_beams"]
+            station_beams = kwargs.get("mccs").get("station_beams")
             for station_beam in station_beams:
                 station_beam_id = station_beam.get("station_beam_id")
                 if station_beam_id:

@@ -586,13 +586,6 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: json string with the resources to be assigned
-                    {
-                    "mccs":{
-                    "subarray_id": 1,
-                    "station_ids": [1,2],
-                    "channels": [1,2,3,4,5,6,7,8],
-                    "station_beam_ids": [1]
-                    }}
             :type argin: str
 
             :return: A tuple containing a return code and a string
@@ -714,14 +707,14 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
-                    {"mccs":{
-                    "stations":[{"station_id": 1},{"station_id": 2}],
-                    "station_beams":[{"station_beam_id":1,"station_id":[1,2],
-                    "channels": [1,2,3,4,5,6,7,8],
-                    "update_rate": 0.0,
-                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
-                    }
-                    }
+                        {"mccs":{
+                        "stations":[{"station_id": 1},{"station_id": 2}],
+                        "station_beams":[{"station_beam_id":1,"station_id":[1,2],
+                        "channels": [1,2,3,4,5,6,7,8],
+                        "update_rate": 0.0,
+                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                        }
+                        }
             :type argin: str
 
             :return: A tuple containing a return code and a string

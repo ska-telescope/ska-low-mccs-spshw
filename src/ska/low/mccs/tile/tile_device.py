@@ -137,8 +137,6 @@ class MccsTile(SKABaseDevice):
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
             device.hardware_manager = None
-            device.tile_ip = device.TileIP
-            device.tpm_cpld_port = device.TpmCpldPort
 
             device._logical_tile_id = 0
             device._subarray_id = 0

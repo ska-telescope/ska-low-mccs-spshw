@@ -10,7 +10,7 @@ from ska.low.mccs.tile import HwTile
 
 class TpmDriver(HardwareDriver):
     """
-    A simulator for a TPM.
+    Hardware driver for a TPM.
     """
 
     VOLTAGE = 4.7
@@ -125,6 +125,12 @@ class TpmDriver(HardwareDriver):
         return self._is_programmed
 
     def is_connected(self):
+        """
+        Check if TPM is connected
+
+        :return: Connection status
+        :rtype: bool
+        """
         connected = True
         if self.tile.tpm is None:
             connected = False

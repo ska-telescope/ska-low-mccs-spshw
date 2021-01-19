@@ -26,6 +26,11 @@ def connected(f):
 
 
 class HwTile(object):
+    """
+    Tile hardware interface library. Streamlined and edited verson
+    of the AAVS Tile object
+    """
+
     def __init__(
         self,
         logger=None,
@@ -35,6 +40,23 @@ class HwTile(object):
         lmc_port=4660,
         sampling_rate=800e6,
     ):
+        """
+        HwTile initialization
+
+        :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+        :type logger: :py:class:`logging.Logger`
+        :param ip: IP address of the hardware
+        :type ip: str
+        :param port: UCP Port address of the hardware port
+        :type port: int
+        :param lmc_ip: IP address of the MCCS DAQ recevier
+        :type lmc_ip: str
+        :param lmc_port: UCP Port address of the MCCS DAQ receiver
+        :type lmc_port: int
+        :param sampling_rate: ADC sampling rate
+        :type sampling_rate: float
+        """
         self.logger = logger
         self._lmc_port = lmc_port
         self._lmc_ip = socket.gethostbyname(lmc_ip)
@@ -76,7 +98,16 @@ class HwTile(object):
     # ---------------------------- Main functions ------------------------------------
 
     def connect(self, initialise=False, simulation=False, enable_ada=False):
+        """
+        Connect to the hardware and loads initial configuration
 
+        :param initialise: Initialises the TPM object
+        :type initialise: bool
+        :param simulation: Uses simulated hardware
+        :type simulation: bool
+        :param enable_ada: Enbale ADC amplifier
+        :type enable_ada: bool
+        """
         # Try to connect to board, if it fails then set tpm to None
         self.tpm = TPM()
 
@@ -229,12 +260,34 @@ class HwTile(object):
             return 0
 
     def __str__(self):
+        """
+        Produces list of tile information
+
+        :return: Information string
+        :rtype: str
+        """
         return str(self.tpm)
 
     def __getitem__(self, key):
+        """
+        read a register using indexing syntax: value=tile['registername']
+
+        :param key: register address, symbolic or numeric
+        :type key: str
+        :return: indexed register content
+        :rtype: int
+        """
         return self.tpm[key]
 
     def __setitem__(self, key, value):
+        """
+        Set a register to a value
+
+        :param key: register address, symbolic or numeric
+        :type key: str
+        :param value: value to be written into register
+        :type value: int
+        """
         self.tpm[key] = value
 
     def __getattr__(self, name):

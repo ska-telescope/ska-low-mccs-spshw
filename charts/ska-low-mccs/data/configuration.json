@@ -183,7 +183,13 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
-                            ]
+                            ],
+			    "TpmIp": [
+				"10.0.10.2"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
+			    ]
                         }
                     }
                 }
@@ -200,6 +206,12 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+			    "TpmIp": [
+				"10.0.10.3"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
                             ]
                         }
                     }
@@ -209,7 +221,7 @@
                 "MccsTile": {
                     "low-mccs/tile/0003": {
                         "properties": {
-                            "TileId": [
+                            "TpmIp": [
                                 "3"
                             ],
                             "AntennasPerTile": [
@@ -217,6 +229,12 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+			    "TpmIp": [
+				"10.0.10.4"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
                             ]
                         }
                     }
@@ -234,6 +252,12 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+			    "TileIp": [
+				"10.0.10.5"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
                             ]
                         }
                     }

@@ -153,12 +153,12 @@ class HwTile(object):
             return
 
         # Initialise firmware plugin
-        for firmware in self.tpm.tpm_test_firmware:
-            firmware.initialise_firmware()
+        # for firmware in self.tpm.tpm_test_firmware:
+        #     firmware.initialise_firmware()
 
         # AAVS-only - swap polarisations due to remapping performed by preadu
-        self.tpm["fpga1.jesd204_if.regfile_pol_switch"] = 0b00001111
-        self.tpm["fpga2.jesd204_if.regfile_pol_switch"] = 0b00001111
+        # self.tpm["fpga1.jesd204_if.regfile_pol_switch"] = 0b00001111
+        # self.tpm["fpga2.jesd204_if.regfile_pol_switch"] = 0b00001111
 
     def program_fpgas(self, bitfile):
         """
@@ -214,7 +214,9 @@ class HwTile(object):
         :return: board supply current
         :rtype: float
         """
-        return self.tpm.current()
+        # not implemented in 1.2
+        # return self.tpm.current()
+        return 0.0
 
     @connected
     def get_adc_rms(self):

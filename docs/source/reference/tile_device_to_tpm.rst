@@ -30,6 +30,8 @@ Ask for Gianni's input here.
 - LmcIp - What is this used for?
 - DstPort - What is this used for?
 
+.. uml:: spo_943_sequence.uml
+
 *******************
  Firmware Download
 *******************

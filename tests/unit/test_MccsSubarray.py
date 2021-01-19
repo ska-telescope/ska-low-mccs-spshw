@@ -487,9 +487,8 @@ class TestMccsSubarray:
 
             assert result_code == ResultCode.OK
             assert message == "AssignResources command completed successfully"
-            assert sorted(list(device_under_test.stationFQDNs)) == sorted(
-                [station_fqdns[0]]
-            )
+            assert sorted(list(device_under_test.stationFQDNs)) == [station_fqdns[0]]
+
             assert mock_station_beam.stationIds == [1]
 
             mock_station_1.InitialSetup.assert_called_once_with()

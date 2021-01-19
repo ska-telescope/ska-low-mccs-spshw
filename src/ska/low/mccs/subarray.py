@@ -715,12 +715,12 @@ class MccsSubarray(SKASubarray):
 
             :param argin: JSON configuration specification
                     {"mccs":{
-                        "stations":[{"station_id": 1},{"station_id": 2}],
-                        "station_beams":[{"station_beam_id":1,"station_id":[1,2],
-                        "channels": [1,2,3,4,5,6,7,8],
-                        "update_rate": 0.0,
-                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
-                        }
+                    "stations":[{"station_id": 1},{"station_id": 2}],
+                    "station_beams":[{"station_beam_id":1,"station_id":[1,2],
+                    "channels": [1,2,3,4,5,6,7,8],
+                    "update_rate": 0.0,
+                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                    }
                     }
             :type argin: str
 

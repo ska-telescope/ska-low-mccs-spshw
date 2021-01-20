@@ -30,7 +30,27 @@ Ask for Gianni's input here.
 - LmcIp - What is this used for?
 - DstPort - What is this used for?
 
-.. uml:: spo_943_sequence.uml
+Ursula's Sequence Diagram
+=========================
+.. uml:: spo_943_sequence_1.uml
+
+Ross' Proposal
+==============
+.. uml:: spo_943_sequence_2.uml
+
+Notes
+-----
+* Station devices holds filepath of firmware Vivado bitfile
+
+* Tile devices hold specific information about the TPM's IP address
+
+* DownloadFirmware() call will be asynchronous as programming takes several seconds
+
+    - For the demo, the Tango device will be made to spin while it waits for programming completion
+
+* What does the call to TPM Driver Initialise() do?
+
+* After this sequence has finished, the Tile WebJive pages can be queried to return values read from the TPM hardware
 
 *******************
  Firmware Download

@@ -1,20 +1,26 @@
+@startuml
 participant "Construction\nInitiator" as Constructor
-participant "Init\nCommand\nClass" as Init_cmd
+participant "Tile's Init\nCommand\nClass" as Init_cmd
 participant "Tile\nHardware\nManager" as Tile_HW_Man
+participant "Tile\nHardware\nFactory" as Tile_HW_Factory
 participant "Simulable\nHardware\nFactory" as Sim_HW_Factory
-participant "Cluster\nFactory" as Cluster_Factory
-participant "Cluster\nSimulator" as Cluster_Sim
+participant "TPM\nSimulator" as TPM_Sim
 
 Constructor -> Init_cmd: Init()
 Init_cmd -> Init_cmd: do()
 Init_cmd -> Init_cmd: _initialise_connections()
 Init_cmd -> Init_cmd: _initialise_hardware_management()
-Init_cmd -> Tile_HW_Man: <<construct>>
-Tile_HW_Man -> Sim_HW_Factory: <<construct>>
-Sim_HW_Factory -> Sim_HW_Factory: _get_simulator()
-Sim_HW_Factory -> Cluster_Factory: _create_simulator()
-Cluster_Factory -> Cluster_Sim: <<construct>>
-
-Cluster_Factory <-- Cluster_Sim: TPMSimulator
-Sim_HW_Factory <-- Cluster_Factory: self._hardware = TPMSimulator
-Tile_HW_Man <-- Sim_HW_Factory: device.hardware_manager = TileHardwareManager
+Init_cmd -> Tile_HW_Man: __init__()
+Tile_HW_Man -> Tile_HW_Factory: __init__()
+Tile_HW_Factory -> Sim_HW_Factory: __init__()
+Sim_HW_Factory -> Sim_HW_Factory: self._hardware = _get_simulator()
+Sim_HW_Factory -> Tile_HW_Factory: self._simulator = self._create_simulator()
+Tile_HW_Factory -> TPM_Sim: __init__()
+Tile_HW_Factory <-- TPM_Sim:
+Sim_HW_Factory <-- Tile_HW_Factory:
+Sim_HW_Factory <-- Sim_HW_Factory:
+Tile_HW_Factory <-- Sim_HW_Factory:
+Tile_HW_Man <-- Tile_HW_Factory:
+Init_cmd <-- Tile_HW_Man:
+Constructor <-- Init_cmd:
+@enduml

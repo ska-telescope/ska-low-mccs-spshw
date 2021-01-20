@@ -12,56 +12,49 @@ The decision whether to use the TPM simulator or a real hardware driver is made
 with the simulation_mode flag. This is currently hardcoded to SimulationMode.TRUE
 in tile_device.py. This means that either the TPM simulator or the real hardware
 driver is available as soon as the Tile Tango device is ready for use.
+You can swicth between simulation and real TPM driver by writing to the Tile device's
+simulation_mode attribute. This will reset the Tile's TPM object.
 
+TPM Simulator Construction
+==========================
 .. uml:: tile_construction.uml
 
-*******************
- Connection to TPM
-*******************
+TPM Driver Construction
+=======================
+.. uml:: tile_construction_driver.uml
 
-There is missing implementation in hardware.py, class HardwareDriver to determine
-whether we are connected to real hardware. This currently raises a 'NotImplementedError' exception.
-
-WIP: Which of these attributes is required so we can make a connection to a TPM?
-Ask for Gianni's input here.
-
-- TileIP - Seems an obvious requirement so we can address the specific TPM hardware
-- TpmCpldPort - The TPM has a CPLD that is used for programming the firmware. It is rarely updated.
-- LmcIp - What is this used for?
-- DstPort - What is this used for?
-
-Ursula's Sequence Diagram
-=========================
-.. uml:: spo_943_sequence_1.uml
-
-Ross' Proposal
-==============
-.. uml:: spo_943_sequence_2.uml
-
-Notes
------
-* Station devices holds filepath of firmware Vivado bitfile
-
-* Tile devices hold specific information about the TPM's IP address
-
-* DownloadFirmware() call will be asynchronous as programming takes several seconds
-
-    - For the demo, the Tango device will be made to spin while it waits for programming completion
-
-* What does the call to TPM Driver Initialise() do?
-
-* After this sequence has finished, the Tile WebJive pages can be queried to return values read from the TPM hardware
-
-*******************
- Firmware Download
-*******************
+***************************************
+ Connection to TPM & Firmware Download
+***************************************
 
 The firmware download is available via a command to the Tile Tango device.
 A path and name of a Vivado bit file are passed via the Tile's 'DownloadFirmware' command to the TPM.
 The code checks that the file exists and then passes this file path down to the hardware
 (either real or simulated).
 
-.. uml:: tile_program_firmware.uml
+Ursula's Sequence Diagram
+=========================
+.. uml:: spo_943_sequence_1.uml
+
+Gianni's Code (Modified to hook into Ursula's sequence)
+=======================================================
+.. uml:: spo_943_sequence_2.uml
+
+Notes
+-----
+* Station devices holds Vivado firmware bitfile name
+
+* Tile devices hold specific information about the TPM's IP address
+
+* DownloadFirmware() call will be asynchronous as programming takes several seconds
+
+    - For the demo, does the Tango Tile device need to spin while it waits for programming completion?
+
+    - Or, could we keep this a synchronous call and the MCCS objects will just wait for command completion?
+
+* It doesn't look like TPM initialise is called
+
+* After this sequence has finished, the Tile WebJive pages can be queried to return values read from the TPM hardware
 
 ***********************
  Tile Power Management

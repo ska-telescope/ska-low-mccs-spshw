@@ -9,7 +9,9 @@
 """
 This module contains the tests for MccsSubarray.
 """
+import json
 import pytest
+
 import tango
 from tango import AttrQuality, EventType
 
@@ -238,11 +240,12 @@ class TestMccsSubarray:
         """
         assert device_under_test.stationFQDNs is None
 
-    class TestAllocateRelease:
+    class TestAllocateAndConfigure:
         """
         Class containing fixtures and tests of the MccsController's
         :py:meth:`~ska.low.mccs.MccsController.Allocate` and
         :py:meth:`~ska.low.mccs.MccsController.Release` commands
+        :py:meth:`~ska.low.mccs.MccsController.Configure` commands
         """
 
         @pytest.fixture()
@@ -254,6 +257,7 @@ class TestMccsSubarray:
             them by the controller as part of the controller's
             :py:meth:`~ska.low.mccs.MccsController.Allocate` and
             :py:meth:`~ska.low.mccs.MccsController.Release` commands
+            :py:meth:`~ska.low.mccs.MccsController.Configure` commands
 
             :param mock_factory: a factory for
                 :py:class:`tango.DeviceProxy` mocks
@@ -269,8 +273,9 @@ class TestMccsSubarray:
                 device. The returned mock will respond suitably to
                 actions taken on it by the controller as part of the
                 controller's
-                :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-                :py:meth:`~ska.low.mccs.MccsController.Release`
+                :py:meth:`~ska.low.mccs.MccsController.Allocate`,
+                :py:meth:`~ska.low.mccs.MccsController.Release` and
+                :py:meth:`~ska.low.mccs.MccsController.Configure`
                 commands.
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
@@ -286,6 +291,10 @@ class TestMccsSubarray:
                 mock.AssignResources.return_value = (
                     ResultCode.OK,
                     "Resources assigned",
+                )
+                mock.Configure.return_value = (
+                    ResultCode.OK,
+                    "Configure command completed successfully",
                 )
                 mock.ReleaseResources.return_value = (
                     ResultCode.OK,
@@ -321,7 +330,7 @@ class TestMccsSubarray:
             def _beam_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsStation`
+                connects to an :py:class:`~ska.low.mccs.MccsStationBeam`
                 device. The returned mock will respond suitably to
                 actions taken on it by the subarray as part of the
                 subarray's
@@ -336,6 +345,7 @@ class TestMccsSubarray:
                 """
                 mock = mock_factory()
                 mock.healthState = HealthState.OK
+                mock._update_rate = 0.0
                 return mock
 
             return {
@@ -451,3 +461,72 @@ class TestMccsSubarray:
 
             assert mock_station_beam_1.stationIds == []
             assert mock_station_beam_2.stationIds == []
+
+        def test_configure(self, device_under_test):
+            """
+            Test for Configure.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            """
+            station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
+            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
+            station_beam_fqdn = "low-mccs/beam/001"
+            mock_station_beam = tango.DeviceProxy(station_beam_fqdn)
+
+            device_under_test.On()
+            assert mock_station_beam.healthState == HealthState.OK
+
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=[station_fqdns[0]],
+                station_beams=[station_beam_fqdn],
+            )
+
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(list(device_under_test.stationFQDNs)) == [station_fqdns[0]]
+
+            assert mock_station_beam.stationIds == [1]
+
+            mock_station_1.InitialSetup.assert_called_once_with()
+
+            device_under_test.ReleaseAllResources()
+            assert mock_station_beam.stationIds == []
+
+            # now assign station beam to both stations...
+            device_under_test.On()
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=station_fqdns,
+                station_beams=[station_beam_fqdn],
+            )
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
+            assert mock_station_beam.stationIds == [1, 2]
+
+            config_dict = {
+                "mccs": {
+                    "stations": [{"station_id": 1}, {"station_id": 2}],
+                    "station_beams": [
+                        {
+                            "station_beam_id": 1,
+                            "station_id": [1, 2],
+                            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+                            "update_rate": 3.14,
+                            "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
+                        }
+                    ],
+                }
+            }
+            json_str = json.dumps(config_dict)
+            expected = config_dict["mccs"]["station_beams"][0]
+            [[result_code], [message]] = device_under_test.Configure(json_str)
+            assert result_code == ResultCode.OK
+            assert message == "Configure command completed successfully"
+            # remove preceeding "call(\" and trailing "\)"
+            output = str(mock_station_beam.configure.call_args)[6:-2]
+            assert json.loads(output) == expected

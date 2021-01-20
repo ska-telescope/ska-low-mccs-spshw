@@ -261,23 +261,18 @@ class TestMccsIntegrationTmc:
 
         # Configure the subarray
         configuration = {
-            "stations": [{"station_id": 1}, {"station_id": 2}],
-            "station_beam_pointings": [
-                {
-                    "station_beam_id": 1,  # should correspond to one in the
-                    # station_beam_ids in the resources
-                    "target": {
-                        "system": "HORIZON",  # Target coordinate system
-                        "name": "DriftScan",  # Source name - metadata only,
-                        # does not need to be resolved
-                        "Az": 180.0,  # This is in degrees
-                        "El": 45.0,  # Ditto
-                    },
-                    "update_rate": 0.0,  # seconds - never update for a drift scan
-                    # should be a subset of the channels in the resources
-                    "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-                }
-            ],
+            "mccs": {
+                "stations": [{"station_id": 1}, {"station_id": 2}],
+                "station_beams": [
+                    {
+                        "station_beam_id": 1,
+                        "station_id": [1, 2],
+                        "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "update_rate": 0.0,
+                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                    }
+                ],
+            }
         }
         json_string = json.dumps(configuration)
         self.assert_command(

@@ -7,7 +7,6 @@ import json
 import pytest
 from tango import (
     DevState,
-    DevSource,
     AsynCall,
     AsynReplyNotArrived,
     CommunicationFailed,
@@ -16,8 +15,6 @@ from tango import (
 
 from ska.base.commands import ResultCode
 from ska.base.control_model import ObsState
-
-from conftest import confirm_initialised
 
 
 @pytest.fixture()
@@ -46,6 +43,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
     }
 
@@ -76,36 +77,26 @@ class TestMccsIntegrationTmc:
         :rtype: dict<string, :py:class:`tango.DeviceProxy`>
         """
         device_dict = {
-            "controller": device_context.get_device("low-mccs/control/control"),
-            "subarray_01": device_context.get_device("low-mccs/subarray/01"),
-            "subarray_02": device_context.get_device("low-mccs/subarray/02"),
-            "station_001": device_context.get_device("low-mccs/station/001"),
-            "station_002": device_context.get_device("low-mccs/station/002"),
-            "tile_0001": device_context.get_device("low-mccs/tile/0001"),
-            "tile_0002": device_context.get_device("low-mccs/tile/0002"),
-            "tile_0003": device_context.get_device("low-mccs/tile/0003"),
-            "tile_0004": device_context.get_device("low-mccs/tile/0004"),
+            "controller": device_context.get_device("controller"),
+            "subarray_01": device_context.get_device("subarray_01"),
+            "subarray_02": device_context.get_device("subarray_02"),
+            "station_001": device_context.get_device("station_001"),
+            "station_002": device_context.get_device("station_002"),
+            "tile_0001": device_context.get_device("tile_0001"),
+            "tile_0002": device_context.get_device("tile_0002"),
+            "tile_0003": device_context.get_device("tile_0003"),
+            "tile_0004": device_context.get_device("tile_0004"),
             # workaround for MCCS-244
-            # "antenna_000001": device_context.get_device("low-mccs/antenna/000001"),
-            # "antenna_000002": device_context.get_device("low-mccs/antenna/000002"),
-            # "antenna_000003": device_context.get_device("low-mccs/antenna/000003"),
-            # "antenna_000004": device_context.get_device("low-mccs/antenna/000004"),
+            # "antenna_000001": device_context.get_device("antenna_000001"),
+            # "antenna_000002": device_context.get_device("antenna_000002"),
+            # "antenna_000003": device_context.get_device("antenna_000003"),
+            # "antenna_000004": device_context.get_device("antenna_000004"),
+            "beam_001": device_context.get_device("beam_001"),
+            "beam_002": device_context.get_device("beam_002"),
+            "beam_003": device_context.get_device("beam_003"),
+            "beam_004": device_context.get_device("beam_004"),
         }
-        confirm_initialised(device_dict.values())
         return device_dict
-
-    def set_all_dev_source(self, devices):
-        """
-        Set all of the devices to DevSource.DEV source.
-
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        """
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        for device in devices.values():
-            device.set_source(DevSource.DEV)
 
     def assert_command(
         self, device, command, argin=None, expected_result=ResultCode.OK
@@ -129,7 +120,8 @@ class TestMccsIntegrationTmc:
             if expected_result is None:
                 assert result is None
             else:
-                assert result[0] == expected_result
+                ((result_code,), (_,)) = result
+                assert result_code == expected_result
         except AsynReplyNotArrived as err:
             assert False, f"AsyncReplyNotArrived: {err}"
         except (AsynCall, CommunicationFailed, DevFailed) as err:
@@ -143,8 +135,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         assert devices["controller"].State() == DevState.OFF
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF
@@ -175,8 +165,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
@@ -197,8 +185,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         # Turn on controller and stations
         self.assert_command(device=devices["controller"], command="On")
         assert devices["subarray_01"].State() == DevState.OFF
@@ -213,6 +199,7 @@ class TestMccsIntegrationTmc:
             "channels": [1, 2, 3, 4, 5, 6, 7, 8],
             "station_beam_ids": [1],
         }
+        devices["beam_001"].isBeamLocked = True
         json_string = json.dumps(parameters)
         self.assert_command(
             device=devices["controller"], command="Allocate", argin=json_string
@@ -221,6 +208,7 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].State() == DevState.ON
         assert devices["subarray_01"].obsState == ObsState.IDLE
+        assert len(devices["subarray_01"].stationFQDNs) == 2
 
         # Release Resources
         release_config = {"subarray_id": 1, "release_all": True}
@@ -248,8 +236,6 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        self.set_all_dev_source(devices)
-
         # Turn on controller and stations
         self.assert_command(device=devices["controller"], command="On")
         assert devices["subarray_01"].State() == DevState.OFF
@@ -275,23 +261,18 @@ class TestMccsIntegrationTmc:
 
         # Configure the subarray
         configuration = {
-            "stations": [{"station_id": 1}, {"station_id": 2}],
-            "station_beam_pointings": [
-                {
-                    "station_beam_id": 1,  # should correspond to one in the
-                    # station_beam_ids in the resources
-                    "target": {
-                        "system": "HORIZON",  # Target coordinate system
-                        "name": "DriftScan",  # Source name - metadata only,
-                        # does not need to be resolved
-                        "Az": 180.0,  # This is in degrees
-                        "El": 45.0,  # Ditto
-                    },
-                    "update_rate": 0.0,  # seconds - never update for a drift scan
-                    # should be a subset of the channels in the resources
-                    "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-                }
-            ],
+            "mccs": {
+                "stations": [{"station_id": 1}, {"station_id": 2}],
+                "station_beams": [
+                    {
+                        "station_beam_id": 1,
+                        "station_id": [1, 2],
+                        "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "update_rate": 0.0,
+                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                    }
+                ],
+            }
         }
         json_string = json.dumps(configuration)
         self.assert_command(

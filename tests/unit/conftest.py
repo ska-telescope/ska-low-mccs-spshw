@@ -2,20 +2,15 @@
 This module contains pytest fixtures and other test setups for the
 ska.low.mccs unit tests.
 """
-import backoff
 from collections import defaultdict
 import pytest
-
-# import tango
-from tango import DevSource, DevState
-from tango.test_context import DeviceTestContext
 
 
 def pytest_itemcollected(item):
     """
     pytest hook implementation; add the "forked" custom mark to all
-    tests that use the `device_context` fixture, causing them to be
-    sandboxed in their own process.
+    tests that use the :py:meth:`device_context` fixture, causing them
+    to be sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
     :type item: a collected test
@@ -46,9 +41,8 @@ def mock_factory(mocker):
     overridden by test modules/classes to provide mocks with specified
     behaviours.
 
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
-        `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :param mocker: a wrapper around the :py:mod:`unittest.mock` package
+    :type mocker: obj
 
     :return: a factory for device proxy mocks
     :rtype: :py:class:`unittest.Mock` (the class itself, not an instance)
@@ -82,53 +76,76 @@ def mock_device_proxies(mocker, mock_factory, initial_mocks):
     return mocks
 
 
-@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
-def _confirm_initialised(device):
+@pytest.fixture()
+def tango_config(mock_device_proxies):
     """
-    Helper function that tries to confirm that a group of devices have
-    all completed initialisation and transitioned out of INIT state,
-    using an exponential backoff-retry scheme in case of failure.
+    Fixture that returns configuration information that specified how
+    the Tango system should be established and run.
 
-    :param device: the device that we are waiting to initialise
-    :type device: :py:class:`tango.DeviceProxy`
+    This implementation - for unit testing - ensures that mocking of
+    device proxies is set up, and that Tango is run in a thread
+    (necessary for mocks to work).
 
-    :returns: whether the device is initialised or not
-    :rtype: bool
+    :param mock_device_proxies: fixture that patches
+        :py:class:`tango.DeviceProxy` to always return the same mock
+        for each fqdn
+    :type mock_device_proxies: dict
+
+    :returns: tango configuration information: a dictionary with keys
+        "process", "host" and "port".
+    :rtype: dict
     """
-    return device.state() != DevState.INIT
+    return {"process": False, "host": None, "port": 0}
 
 
 @pytest.fixture()
-def device_under_test(request, device_info, mock_device_proxies):
+def devices_to_load(device_to_load):
+    """
+    Fixture that provides specifications of devices to load.
+
+    In this case, it maps the simpler single-device spec returned by the
+    "device_to_load" fixture used in unit testing, onto the more
+    general multi-device spec.
+
+    :param device_to_load: fixture that provides a specification of a
+        single devic to load; used only in unit testing where tests will
+        only ever stand up one device at a time.
+    :type device_to_load: dict
+
+    :return: specification of the devices (in this case, just one
+        device) to load
+    :rtype: dict
+    """
+    spec = {
+        "path": device_to_load["path"],
+        "package": device_to_load["package"],
+        "devices": [device_to_load["device"]],
+    }
+    if "patch" in device_to_load:
+        spec["patch"] = {device_to_load["device"]: device_to_load["patch"]}
+    return spec
+
+
+@pytest.fixture()
+def device_under_test(device_context, device_to_load):
     """
     Creates and returns a proxy to the device under test, in a
-    DeviceTestContext. In addition, tango.DeviceProxy is mocked out,
+    DeviceTestContext.
+
+    In addition, tango.DeviceProxy is mocked out,
     since these are unit tests and there is neither any reason nor any
     ability for device to be talking to each other.
 
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
-    :param device_info: Information about the device under test that is
-        needed to stand the device up in a DeviceTestContext, such as
-        the device class and properties
-    :type device_info: dict
-    :param mock_device_proxies: fixture that mocks out tango.DeviceProxy.
-        Since these are unit tests, we will always want to mock this out.
-    :type mock_device_proxies: a dictionary (but don't access it
-        directly, access it through :py:class:`tango.DeviceProxy` calls)
+    :param device_context: a test context for a set of tango devices
+    :type device_context: :py:class:`tango.MultiDeviceTestContext`
+    :param device_to_load: fixture that provides a specification of a
+        single device to load; used only in unit testing where tests
+        will only ever stand up one device at a time.
+    :type device_to_load: dict
 
-    :raises TimeoutError: if the device does not complete initialisation
-        within a reasonable time.
-    :yields: a DeviceProxy under a DeviceTestContext
+    :returns: a :py:class:`tango.DeviceProxy` under a
+        :py:class:`tango.test_context.MultiDeviceTestContext`
+    :rtype: :py:class:`tango.DeviceProxy`
     """
-    try:
-        with DeviceTestContext(
-            device_info["class"], properties=device_info["properties"]
-        ) as device_under_test:
-            device_under_test.set_source(DevSource.DEV)
-            if not _confirm_initialised(device_under_test):
-                raise TimeoutError("Device has not completed initialisation")
-            yield device_under_test
-    except Exception as e:
-        print(e)
+    device = device_context.get_device(device_to_load["device"])
+    return device

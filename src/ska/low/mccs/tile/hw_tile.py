@@ -30,7 +30,6 @@ class HwTile(object):
     Tile hardware interface library. Streamlined and edited verson
     of the AAVS Tile object
     """
-
     def __init__(
         self,
         logger=None,

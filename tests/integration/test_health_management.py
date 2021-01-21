@@ -19,7 +19,6 @@ import pytest
 from ska.base.control_model import HealthState
 from ska.low.mccs.tile.demo_tile_device import DemoTile
 from ska.low.mccs.utils import call_with_json
-from conftest import confirm_initialised
 
 
 @pytest.fixture()
@@ -48,12 +47,16 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
         "patch": {
-            "low-mccs/tile/0001": DemoTile,
-            "low-mccs/tile/0002": DemoTile,
-            "low-mccs/tile/0003": DemoTile,
-            "low-mccs/tile/0004": DemoTile,
+            "tile_0001": DemoTile,
+            "tile_0002": DemoTile,
+            "tile_0003": DemoTile,
+            "tile_0004": DemoTile,
         },
     }
 
@@ -80,37 +83,25 @@ def test_controller_health_rollup(device_context):
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
     """
-    controller = device_context.get_device("low-mccs/control/control")
-    station_1 = device_context.get_device("low-mccs/station/001")
-    station_2 = device_context.get_device("low-mccs/station/002")
-    tile_1 = device_context.get_device("low-mccs/tile/0001")
-    tile_2 = device_context.get_device("low-mccs/tile/0002")
-    tile_3 = device_context.get_device("low-mccs/tile/0003")
-    tile_4 = device_context.get_device("low-mccs/tile/0004")
-    apiu_1 = device_context.get_device("low-mccs/apiu/001")
+    controller = device_context.get_device("controller")
+    station_1 = device_context.get_device("station_001")
+    station_2 = device_context.get_device("station_002")
+    tile_1 = device_context.get_device("tile_0001")
+    tile_2 = device_context.get_device("tile_0002")
+    tile_3 = device_context.get_device("tile_0003")
+    tile_4 = device_context.get_device("tile_0004")
+    # apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
-    # antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-    # antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-    # antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-    # antenna_4 = device_context.get_device("low-mccs/antenna/000004")
+    # antenna_1 = device_context.get_device("antenna_000001")
+    # antenna_2 = device_context.get_device("antenna_000002")
+    # antenna_3 = device_context.get_device("antenna_000003")
+    # antenna_4 = device_context.get_device("antenna_000004")
 
-    confirm_initialised(
-        [
-            controller,
-            station_1,
-            station_2,
-            tile_1,
-            tile_2,
-            tile_3,
-            tile_4,
-            apiu_1,
-            # antenna_1,  # workaround for MCCS-244
-            # antenna_2,
-            # antenna_3,
-            # antenna_4,
-        ]
-    )
+    # beam_1 = device_context.get_device("low-mccs/beam/001")
+    # beam_2 = device_context.get_device("low-mccs/beam/002")
+    # beam_3 = device_context.get_device("low-mccs/beam/003")
+    # beam_4 = device_context.get_device("low-mccs/beam/004")
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -186,41 +177,26 @@ def test_subarray_health_rollup(device_context):
         requirement is that it provide a "get_device(fqdn)" method that
         returns a DeviceProxy.
     """
-    controller = device_context.get_device("low-mccs/control/control")
-    subarray_1 = device_context.get_device("low-mccs/subarray/01")
-    subarray_2 = device_context.get_device("low-mccs/subarray/02")
-    station_1 = device_context.get_device("low-mccs/station/001")
-    station_2 = device_context.get_device("low-mccs/station/002")
-    tile_1 = device_context.get_device("low-mccs/tile/0001")
-    tile_2 = device_context.get_device("low-mccs/tile/0002")
-    tile_3 = device_context.get_device("low-mccs/tile/0003")
-    tile_4 = device_context.get_device("low-mccs/tile/0004")
-    apiu_1 = device_context.get_device("low-mccs/apiu/001")
+    controller = device_context.get_device("controller")
+    subarray_1 = device_context.get_device("subarray_01")
+    subarray_2 = device_context.get_device("subarray_02")
+    station_1 = device_context.get_device("station_001")
+    station_2 = device_context.get_device("station_002")
+    tile_1 = device_context.get_device("tile_0001")
+    tile_2 = device_context.get_device("tile_0002")
+    tile_3 = device_context.get_device("tile_0003")
+    tile_4 = device_context.get_device("tile_0004")
+    # apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
-    # antenna_1 = device_context.get_device("low-mccs/antenna/000001")
-    # antenna_2 = device_context.get_device("low-mccs/antenna/000002")
-    # antenna_3 = device_context.get_device("low-mccs/antenna/000003")
-    # antenna_4 = device_context.get_device("low-mccs/antenna/000004")
-
-    confirm_initialised(
-        [
-            controller,
-            subarray_1,
-            subarray_2,
-            station_1,
-            station_2,
-            tile_1,
-            tile_2,
-            tile_3,
-            tile_4,
-            apiu_1,
-            # antenna_1,  # workaround for MCCS-244
-            # antenna_2,
-            # antenna_3,
-            # antenna_4,
-        ]
-    )
+    # antenna_1 = device_context.get_device("antenna_000001")
+    # antenna_2 = device_context.get_device("antenna_000002")
+    # antenna_3 = device_context.get_device("antenna_000003")
+    # antenna_4 = device_context.get_device("antenna_000004")
+    # beam_1 = device_context.get_device("low-mccs/beam/001")
+    # beam_2 = device_context.get_device("low-mccs/beam/002")
+    # beam_3 = device_context.get_device("low-mccs/beam/003")
+    # beam_4 = device_context.get_device("low-mccs/beam/004")
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -238,8 +214,12 @@ def test_subarray_health_rollup(device_context):
 
     _ = controller.On()
 
-    _ = call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
-    _ = call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
+    _ = call_with_json(
+        controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]
+    )
+    _ = call_with_json(
+        controller.Allocate, subarray_id=2, station_ids=[2], station_beams=[2]
+    )
 
     sleep()
 

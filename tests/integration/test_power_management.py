@@ -16,8 +16,6 @@ management functionality of the SKA Low MCCS system.
 import pytest
 from tango import DevState
 
-from conftest import confirm_initialised
-
 
 @pytest.fixture()
 def devices_to_load():
@@ -62,17 +60,13 @@ class TestPowerManagement:
         :param device_context: a test context for a set of tango devices
         :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
-        controller = device_context.get_device("low-mccs/control/control")
-        station_1 = device_context.get_device("low-mccs/station/001")
-        station_2 = device_context.get_device("low-mccs/station/002")
-        tile_1 = device_context.get_device("low-mccs/tile/0001")
-        tile_2 = device_context.get_device("low-mccs/tile/0002")
-        tile_3 = device_context.get_device("low-mccs/tile/0003")
-        tile_4 = device_context.get_device("low-mccs/tile/0004")
-
-        confirm_initialised(
-            [controller, station_1, station_2, tile_1, tile_2, tile_3, tile_4]
-        )
+        controller = device_context.get_device("controller")
+        station_1 = device_context.get_device("station_001")
+        station_2 = device_context.get_device("station_002")
+        tile_1 = device_context.get_device("tile_0001")
+        tile_2 = device_context.get_device("tile_0002")
+        tile_3 = device_context.get_device("tile_0003")
+        tile_4 = device_context.get_device("tile_0004")
 
         assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF

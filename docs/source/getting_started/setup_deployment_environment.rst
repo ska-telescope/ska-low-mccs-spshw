@@ -23,11 +23,11 @@ Initial setup
 As with all SKA subsystems, SKA Low MCCS uses Helm to deploy Kubernetes
 clusters of Docker containers.
 
-1. If you are setting up on a machine that has not already been set up
+#. If you are setting up on a machine that has not already been set up
    with a development environment, then you will need to install Docker,
    install Git, and clone our repo; follow the instructions at
    :doc:`setup_development_environment`.
-2. Install kubectl. There are various ways to do this. On Ubuntu, one
+#. Install kubectl. There are various ways to do this. On Ubuntu, one
    way is:
 
    .. code-block:: bash
@@ -39,8 +39,15 @@ clusters of Docker containers.
    Don't be alarmed if running `kubectl` results in a config file error.
    A config file will be build the first time you run minikube.
 
-2. Install minikube and helm. Again there are various way to do this. The recommended 
-   way is to use the SKA provided `make` system:
+#. Install minikube and helm. Again, there are various ways to do this. The recommended
+   way is to use the SKA provided `make` system. But first, ensure you remove any old
+   copies of minikube and its environment:
+
+   .. code-block:: bash
+
+      find / -name minikube 2>/dev/null
+      sudo rm -f <path/minikube>
+      rm -rf ~/.minikube
 
    .. code-block:: bash
 
@@ -51,7 +58,7 @@ clusters of Docker containers.
 
 Start the cluster manager
 -------------------------
-1. Start minikube, still in the deploy-minikube directory:
+#. Start minikube, still in the deploy-minikube directory:
 
    .. code-block:: bash
 
@@ -61,7 +68,7 @@ Start the cluster manager
    case you will only need to re-run this command after a machine
    reboot.
 
-2. **IMPORTANT** Because we are using docker as our driver, the
+#. **IMPORTANT** Because we are using docker as our driver, the
    environment must be set in your terminal. This command must be run in
    each new terminal:
 
@@ -85,7 +92,7 @@ Kubernetes / helm interaction is facilitated through `make`. There are
 quite a few `make` commands. Back in the ska-low-mccs repo, the main sequence for 
 deploying is:
 
-1. Build the development image ready for deployment to the cluster:
+#. Build the development image ready for deployment to the cluster:
 
    .. code-block:: bash
 
@@ -94,7 +101,7 @@ deploying is:
    This command must be rerun whenever the code is edited. The first
    time this command is run it can take a very long time because it has
    to download gigabytes of data. It may time out: just restart it.
-2. Deploy the built image to the cluster:
+#. Deploy the built image to the cluster:
 
    .. code-block:: bash
 
@@ -111,7 +118,7 @@ deploying is:
       make UMBRELLA_CHART_PATH=charts/mccs-demo/ install-chart
 
 
-3. Monitor the cluster to make sure it comes up okay. There are two
+#. Monitor the cluster to make sure it comes up okay. There are two
    tools available for this:
 
    * To monitor the cluster yourself:
@@ -168,10 +175,6 @@ To start up a cluster:
 
 .. code-block:: bash
 
-   # Check the server IP address using
-   kubectl config view
-   # My config switched between x.x.x.3 and x.x.x.4, where only .3 worked
-   # In this case, tear-down and restart minikube
    # Export Docker environment variables to Bash
    eval $(minikube docker-env)
 
@@ -180,10 +183,10 @@ Now deploy mccs-umbrella chart to the cluster:
 
 .. code-block:: bash
 
-  cd ska-low-mccs
-  make devimage
-  make install-chart
-  make watch
+   cd ska-low-mccs
+   make devimage
+   make install-chart
+   make watch
 
 If everything went smoothly, when all the pods are running...
 
@@ -198,31 +201,63 @@ the above returns `172.17.0.3`, add
 .. code-block:: text
 
    172.17.0.3  integration.engageska-portugal.pt # webjive
-   172.17.0.3	grafana.integration.engageska-portugal.pt
-   172.17.0.3	tangogql-proxy.integration.engageska-portugal.pt
+   172.17.0.3  grafana.integration.engageska-portugal.pt
+   172.17.0.3  tangogql-proxy.integration.engageska-portugal.pt
 
-**Note** that once this has been done the "official" instances cand no longer
-be accessed until these lines have been commented out.
+**Note** that once this has been done the "official" (online) instances can no
+longer be accessed until these lines have been commented out.
 
 WebJive
 -------
 When the pod has been created and is ready, on the local machine navigate to:
 http://integration.engageska-portugal.pt/testdb/devices
 
+**Note** It may be necessary to explicitly add a port number if you get a 404
+error at the above. As part of `make install` in the deploy-minikube project,
+the port that Traefik is listening on is output in the listing:
+
+.. code-block:: console
+  :emphasize-lines: 19
+
+   me@local:~$ make install
+
+   ...
+
+   "stable" has been added to your repositories
+   Hang tight while we grab the latest from your chart repositories...
+   ...Successfully got an update from the "stable" chart repository
+   Update Complete. ⎈Happy Helming!⎈
+   Release "traefik0" does not exist. Installing it now.
+   WARNING: This chart is deprecated
+   NAME: traefik0
+   LAST DEPLOYED: Tue Jan 5 13:39:46 2021
+   NAMESPACE: kube-system
+   STATUS: deployed
+   REVISION: 1
+   TEST SUITE: None
+   NOTES:
+   1. Traefik is listening on the following ports on the host machine:
+      http - 30081  <-- PORT NUMBER THAT TRAEFIK IS LISTENING ON
+      https - 30444
+
+Use the port number from above when addressing WebJive in your browser:
+http://integration.engageska-portugal.pt:30081/testdb/devices
+
 Login with credentials found here: https://github.com/ska-telescope/ska-engineering-ui-compose-utils
-Once you are successfully logged in, to add the MCCS dashboard, select the
-**dashboard** tab and then on the right-hand side of the window, import the
-dashboard from file which is called `dashboards/MCCS_webjive_health.wj`.
-Click on on the **play** button to activate the dashboard.
+Once you are successfully logged in, to add the MCCS dashboard:
+
+#. Select the **dashboard** tab on the right-hand side of the window.
+#. Import the dashboard from file which is called `dashboards/MCCS_webjive_health.wj`.
+#. Click on on the **play** button to activate the dashboard.
 
 You can then open the CLI to interact with the controller and observe changes
 in the dashboard.
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      make cli
-      mccs-controller on
-      mccs-controller off
+   make cli
+   mccs-controller on
+   mccs-controller off
 
 Grafana
 -------
@@ -235,12 +270,12 @@ Grafana
 
 To monitor MCCS with Grafana:
 
-1. Navigate to http://grafana.integration.engageska-portugal.pt
+#. Navigate to http://grafana.integration.engageska-portugal.pt
    (admin:admin).
-2. Open Dashboards -> Manage -> examples -> MCCS Device Dashboard
-3. Select device: low-mccs/control/control (default)
-4. Change dashboard time-span: From: now-5s To: now
-5. You can then open the CLI to interact with the controller and observe changes
+#. Open Dashboards -> Manage -> examples -> MCCS Device Dashboard
+#. Select device: low-mccs/control/control (default)
+#. Change dashboard time-span: From: now-5s To: now
+#. You can then open the CLI to interact with the controller and observe changes
    in Grafana dashboard
 
    .. code-block:: bash

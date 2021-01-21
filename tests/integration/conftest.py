@@ -2,13 +2,10 @@
 This module contains pytest fixtures and other test setups for the
 ska.low.mccs lightweight integration tests.
 """
-
-import backoff
 import pytest
 import socket
-
 import tango
-from tango.test_context import MultiDeviceTestContext, get_host_ip
+from tango.test_context import get_host_ip
 
 
 def pytest_itemcollected(item):
@@ -25,19 +22,18 @@ def pytest_itemcollected(item):
 
 
 @pytest.fixture()
-def device_context(mocker, devices_info):
+def patch_device_proxy(mocker):
     """
-    Creates and returns a TANGO MultiDeviceTestContext object, with a
-    tango.DeviceProxy patched to a work around a name resolving issue.
+    Fixture that monkeypatches :py:class:`tango.DeviceProxy` as a
+    workaround for a bug in
+    :py:class:`tango.MultiDeviceTestContext`, then returns the host and
+    port used by the patch.
 
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
-        `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
-    :param devices_info: Information about the devices under test that
-        are needed to stand the device up in a DeviceTestContext, such
-        as the device classes and properties
-    :type devices_info: dict
-    :yield: a tango testing context
+    :param mocker: fixture that wraps :py:mod:`unittest.mock` package
+    :type mocker: obj
+
+    :return: the host and port used by the patch
+    :rtype: tuple
     """
 
     def _get_open_port():
@@ -69,24 +65,29 @@ def device_context(mocker, devices_info):
             f"tango://{host}:{port}/{fqdn}#dbase=no", *args, **kwargs
         ),
     )
-
-    with MultiDeviceTestContext(
-        devices_info, process=True, host=host, port=port
-    ) as context:
-        yield context
+    return (host, port)
 
 
-@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
-def confirm_initialised(devices):
+@pytest.fixture()
+def tango_config(patch_device_proxy):
     """
-    Helper function that tries to confirm that a group of devices have
-    all completed initialisation and transitioned out of INIT state,
-    using an exponential backoff-retry scheme in case of failure.
+    Fixture that returns configuration information that specified how
+    the Tango system should be established and run.
 
-    :param devices: the devices that we are waiting to initialise
-    :type devices: :py:class:`tango.DeviceProxy`
+    This implementation entures that :py:class:`tango.DeviceProxy` is
+    monkeypatched as a workaround for a bug in
+    :py:class:`tango.MultiDeviceTestContext`, then returns the host and
+    port used by the patch.
 
-    :returns: whether the devices are all initialised or not
-    :rtype: bool
+    :param patch_device_proxy: a fixture that handles monkeypatching of
+        :py:class:`tango.DeviceProxy` as a workaround for a bug in
+        :py:class:`tango.MultiDeviceTestContext`, and returns the host
+        and port used in the patch
+    :type patch_device_proxy: tuple
+
+    :returns: tango configuration information: a dictionary with keys
+        "process", "host" and "port".
+    :rtype: dict
     """
-    return all(device.state() != tango.DevState.INIT for device in devices)
+    (host, port) = patch_device_proxy
+    return {"process": True, "host": host, "port": port}

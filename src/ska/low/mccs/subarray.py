@@ -9,7 +9,12 @@
 This module provides MccsSubarray, the Tango device class for the MCCS
 Subarray prototype.
 """
-__all__ = ["MccsSubarray", "main"]
+__all__ = [
+    "MccsSubarray",
+    "StationsResourceManager",
+    "StationBeamsResourceManager",
+    "main",
+]
 
 # imports
 import json
@@ -28,71 +33,219 @@ from ska.base.control_model import HealthState, ObsState
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import MutableHealthModel
 import ska.low.mccs.release as release
+from ska.low.mccs.resource import ResourceManager
 
 
-class StationPoolManager:
+class StationsResourceManager(ResourceManager):
     """
     A simple manager for the pool of stations that are assigned to a
     subarray.
 
-    The current implementation allows to assign and release stations,
-    and get a list of the FQDNs of the assigned stations.
+    Inherits from ResourceManager.
     """
 
-    def __init__(self):
+    def __init__(self, health_monitor, station_fqdns):
         """
-        Create a new StationPoolManager.
-        """
-        self._stations = {}
+        Initialise a new StationsResourceManager.
 
-    def __len__(self):
+        :param health_monitor: Provides for monitoring of health states
+        :type health_monitor: :py:class:`ska.low.mccs.health.HealthModel` object
+        :param station_fqdns: the FQDNs of the stations that this
+            subarray manages
+        :type station_fqdns: list(str)
         """
-        Return the number of stations assigned to this station pool
-        manager.
+        self._devices = dict()
+        stations = {}
+        for station_fqdn in station_fqdns:
+            station_id = int(station_fqdn.split("/")[-1:][0])
+            stations[station_id] = station_fqdn
+        super().__init__(health_monitor, "Stations Resource Manager", stations)
 
-        :return: the number of stations assigned to this station pool
-            manager
-        :rtype: int
+    def items(self):
         """
-        return len(self._stations)
+        Return the stations managed by this device.
 
-    def assign(self, stations):
+        :return: A dictionary of Station IDs, FQDNs managed by this
+            StationsResourceManager
+        :rtype: dict
         """
-        Assign stations to this station pool manager.
+        devices = dict()
+        for key, resource in self._resources.items():
+            devices[key] = resource._fqdn
+        return devices
 
-        :param stations: list of FQDNs of stations to be assigned
-        :type stations: list(str)
+    def add_to_managed(self, stations):
         """
-        for fqdn in stations:
-            if fqdn not in self._stations:
-                station = tango.DeviceProxy(fqdn)
+        Add new stations(s) to be managed by this resource manager, will
+        also run InitialSetup() on stations.
+
+        :param stations: The IDs and FQDNs of devices to add
+        :type stations: dict
+        """
+        for station_fqdn in stations.values():
+            if station_fqdn not in self.station_fqdns:
+                station = tango.DeviceProxy(station_fqdn)
                 station.InitialSetup()
-                self._stations[fqdn] = station
-
-    def release(self, stations):
-        """
-        Release stations from this station pool manager.
-
-        :param stations: list of FQDNs of stations to be released
-        :type stations: list(str)
-        """
-        (self._stations.pop(station, None) for station in stations)
+                self._devices[station_fqdn] = station
+        super()._add_to_managed(stations)
 
     def release_all(self):
         """
-        Release all stations from this station pool manager.
+        Remove all stations from this resource manager.
         """
-        self._stations.clear()
+        self._remove_from_managed(self.get_all_fqdns())
 
     @property
-    def fqdns(self):
+    def station_fqdns(self):
         """
         Returns the FQDNs of currently assigned stations.
 
         :return: FQDNs of currently assigned stations
         :rtype: list(str)
         """
-        return sorted(self._stations)
+        return sorted(self.get_all_fqdns())
+
+    @property
+    def station_ids(self):
+        """
+        Returns the device IDs of currently assigned stations.
+
+        :return: IDs of currently assigned stations
+        :rtype: list(str)
+        """
+        return sorted(self._resources.keys())
+
+
+class StationBeamsResourceManager(ResourceManager):
+    """
+    A simple manager for the pool of station beams that are assigned to
+    a subarray.
+
+    Inherits from ResourceManager.
+    """
+
+    def __init__(self, health_monitor, station_beam_fqdns, stations_manager):
+        """
+        Initialise a new StationBeamsResourceManager.
+
+        :param health_monitor: Provides for monitoring of health states
+        :type health_monitor: :py:class:`ska.low.mccs.health.HealthMonitor`
+        :param station_beam_fqdns: the FQDNs of the station beams that this
+            subarray manages
+        :type station_beam_fqdns: list(str)
+        :param stations_manager: the StationResourceManager holding the station
+            devices belonging to the parent Subarray
+        :type stations_manager:
+            :py:class:`ska.low.mccs.subarray.StationsResourceManager` object
+        """
+        self._stations = stations_manager
+        station_beams = {}
+        for station_beam_fqdn in station_beam_fqdns:
+            station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
+            station_beams[station_beam_id] = station_beam_fqdn
+        super().__init__(
+            health_monitor,
+            "Station Beams Resource Manager",
+            station_beams,
+            [HealthState.OK],
+        )
+
+    def __len__(self):
+        """
+        Return the number of stations assigned to this subarray resource
+        manager.
+
+        :return: the number of stations assigned to this subarray resource
+            manager
+        :rtype: int
+        """
+        return len(self.get_all_fqdns())
+
+    def assign(self, station_beam_fqdns, station_fqdns):
+        """
+        Assign devices to this subarray resource manager.
+
+        :param station_beam_fqdns: list of FQDNs of station beams to be assigned
+        :type station_beam_fqdns: list(str)
+        :param station_fqdns: list of FQDNs of stations to be assigned
+        :type station_fqdns: list(str)
+        """
+
+        stations = {}
+        for station_fqdn in station_fqdns:
+            station_id = int(station_fqdn.split("/")[-1:][0])
+            stations[station_id] = station_fqdn
+            if station_fqdn not in self._stations.station_fqdns:
+                self._stations.add_to_managed(stations)
+
+        station_beams = {}
+        for station_beam_fqdn in station_beam_fqdns:
+            station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
+            station_beams[station_beam_id] = station_beam_fqdn
+            station_beam = tango.DeviceProxy(station_beam_fqdn)
+            station_beam.stationIds = sorted(stations.keys())
+
+        self._add_to_managed(station_beams)
+        for station_beam_fqdn in station_beam_fqdns:
+            station_beam = tango.DeviceProxy(station_beam_fqdn)
+            station_beam.isBeamLocked = True
+            self.update_resource_health(station_beam_fqdn, station_beam.healthState)
+
+        super().assign(station_beams, list(stations.keys()))
+
+    def release(self, station_beam_fqdns, station_fqdns):
+        """
+        Release devices from this subarray resource manager.
+
+        :param station_beam_fqdns: list of  FQDNs of station beams to be released
+        :type station_beam_fqdns: list(str)
+        :param station_fqdns: list of  FQDNs of the stations which if assigned to,
+            station beams should be released
+        :type station_fqdns: list(str)
+        """
+        station_ids_to_release = []
+        # release station beams assigned to station_fqdns
+        for station_id, station_fqdn in self._stations.items().items():
+            if station_fqdn in station_fqdns:
+                station_ids_to_release.append(station_id)
+        for station_beam in self._resources.values():
+            if station_beam._assigned_to in station_ids_to_release:
+                if station_beam.fqdn not in station_beam_fqdns:
+                    station_beam_fqdns.append(station_beam.fqdn)
+
+        # release station beams by given fqdns
+        for station_beam_fqdn in station_beam_fqdns:
+            station_beam = tango.DeviceProxy(station_beam_fqdn)
+            station_beam.stationIds = []
+        super().release(station_beam_fqdns)
+
+    def release_all(self):
+        """
+        Release all devices from this subarray resource manager.
+        """
+        devices = self.get_all_fqdns()
+        self.release(devices, list())
+        self._stations.release_all()
+
+    @property
+    def station_beam_fqdns(self):
+        """
+        Returns the FQDNs of currently assigned station beams.
+
+        :return: FQDNs of currently assigned station beams
+        :rtype: list(str)
+        """
+        return sorted(self.get_all_fqdns())
+
+    @property
+    def station_fqdns(self):
+        """
+        Returns the FQDNs of currently assigned stations.
+
+        :return: FQDNs of currently assigned stations
+        :rtype: list(str)
+        """
+        return sorted(self._stations.values())
 
 
 class TransientBufferManager:
@@ -177,10 +330,11 @@ class MccsSubarray(SKASubarray):
             (result_code, message) = super().do()
 
             device = self.target
-            device._station_pool_manager = StationPoolManager()
+            device._scan_id = -1
             device._transient_buffer_manager = TransientBufferManager()
 
-            device._scan_id = -1
+            device._station_fqdns = list()
+            device._station_beam_fqdns = list()
 
             device.set_change_event("stationFQDNs", True, True)
             device.set_archive_event("stationFQDNs", True, True)
@@ -191,7 +345,6 @@ class MccsSubarray(SKASubarray):
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
-
             with self._lock:
                 self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
@@ -208,6 +361,11 @@ class MccsSubarray(SKASubarray):
             # #using-clients-with-multithreading
             with EnsureOmniThread():
                 self._initialise_health_monitoring(device)
+                if self._interrupt:
+                    self._thread = None
+                    self._interrupt = False
+                    return
+                self._initialise_resource_management(device)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -230,25 +388,50 @@ class MccsSubarray(SKASubarray):
                 None, [], device.event_manager, device.health_changed
             )
 
+        def _initialise_resource_management(self, device):
+            """
+            Initialise the resource management for this device.
+
+            :param device: the device for which the health model is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            """
+            device._station_pool_manager = StationsResourceManager(
+                device.health_model._health_monitor, device._station_fqdns
+            )
+            device._station_beam_pool_manager = StationBeamsResourceManager(
+                device.health_model._health_monitor,
+                device._station_beam_fqdns,
+                device._station_pool_manager,
+            )
+            resourcing_args = (
+                device._station_beam_pool_manager,
+                device.state_model,
+                device.logger,
+            )
+            device.register_command_object(
+                "AssignResources", device.AssignResourcesCommand(*resourcing_args)
+            )
+            device.register_command_object(
+                "ReleaseResources", device.ReleaseResourcesCommand(*resourcing_args)
+            )
+            device.register_command_object(
+                "ReleaseAllResources",
+                device.ReleaseAllResourcesCommand(*resourcing_args),
+            )
+
     def init_command_objects(self):
         """
         Initialises the command handlers for commands supported by this
         device.
         """
-        super().init_command_objects()
-
+        # Technical debt -- forced to register base class stuff rather than
+        # calling super(), because AssignResources(), ReleaseResources() and
+        # ReleaseAllResources() are registered on a thread, and
+        # we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)
         self.register_command_object("On", self.OnCommand(*args))
         self.register_command_object("Off", self.OffCommand(*args))
-        self.register_command_object(
-            "AssignResources", self.AssignResourcesCommand(*args)
-        )
-        self.register_command_object(
-            "ReleaseResources", self.ReleaseResourcesCommand(*args)
-        )
-        self.register_command_object(
-            "ReleaseAllResources", self.ReleaseAllResourcesCommand(*args)
-        )
         self.register_command_object("Configure", self.ConfigureCommand(*args))
         self.register_command_object("Scan", self.ScanCommand(*args))
         self.register_command_object("EndScan", self.EndScanCommand(*args))
@@ -261,6 +444,9 @@ class MccsSubarray(SKASubarray):
             self.SendTransientBufferCommand(
                 self._transient_buffer_manager, self.state_model, self.logger
             ),
+        )
+        self.register_command_object(
+            "GetVersionInfo", self.GetVersionInfoCommand(*args)
         )
 
     def always_executed_hook(self):
@@ -338,7 +524,7 @@ class MccsSubarray(SKASubarray):
         :return: FQDNs of stations assigned to this subarray
         :rtype: list(str)
         """
-        return self._station_pool_manager.fqdns
+        return sorted(self._station_pool_manager.station_fqdns)
 
     # -------------------------------------------
     # Base class command and gatekeeper overrides
@@ -399,8 +585,8 @@ class MccsSubarray(SKASubarray):
             (inherited) :py:meth:`ska.base.SKASubarray.AssignResources`
             command for this :py:class:`.MccsSubarray` device.
 
-            :param argin: The resources to be assigned
-            :type argin: list(str)
+            :param argin: json string with the resources to be assigned
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -410,10 +596,12 @@ class MccsSubarray(SKASubarray):
             """
             # deliberately not calling super() -- we're passing a different
             # target object
-            stations = json.loads(argin)["stations"]
-            device = self.target
-            device.health_model.add_devices(stations)
-            device._station_pool_manager.assign(stations)
+            kwargs = json.loads(argin)
+            stations = kwargs.get("stations", [])
+            station_beams = kwargs.get("station_beams", [])
+            station_beam_pool_manager = self.target
+            station_beam_pool_manager.assign(station_beams, stations)
+
             return [ResultCode.OK, "AssignResources command completed successfully"]
 
         def succeeded(self):
@@ -421,7 +609,7 @@ class MccsSubarray(SKASubarray):
             Action to take on successful completion of a resourcing
             command.
             """
-            if len(self.target._station_pool_manager) == 0:
+            if len(self.target) == 0:
                 action = "resourcing_succeeded_no_resources"
             else:
                 action = "resourcing_succeeded_some_resources"
@@ -449,10 +637,11 @@ class MccsSubarray(SKASubarray):
             """
             # deliberately not calling super() -- we're passing a different
             # target object
-            stations = json.loads(argin)["stations"]
-            device = self.target
-            device._station_pool_manager.release(stations)
-            device.health_model.remove_devices(stations)
+            kwargs = json.loads(argin)
+            stations = kwargs.get("station_fqdns", [])
+            station_beams = kwargs.get("station_beam_fqdns", [])
+            station_beam_pool_manager = self.target
+            station_beam_pool_manager.release(station_beams, stations)
             return [ResultCode.OK, "ReleaseResources command completed successfully"]
 
         def succeeded(self):
@@ -460,7 +649,7 @@ class MccsSubarray(SKASubarray):
             Action to take on successful completion of a resourcing
             command.
             """
-            if len(self.target._station_pool_manager):
+            if len(self.target):
                 action = "resourcing_succeeded_some_resources"
             else:
                 action = "resourcing_succeeded_no_resources"
@@ -487,9 +676,12 @@ class MccsSubarray(SKASubarray):
             # deliberately not calling super() -- we're passing a different
             # target object
             device = self.target
-            device._station_pool_manager.release_all()
-            device.health_model.remove_all_devices()
+            try:
+                device.release_all()
+            except ValueError as val:
+                return (ResultCode.FAILED, f"ReleaseAllResources command failed: {val}")
 
+            device._health_monitor.remove_all_devices()
             return (ResultCode.OK, "ReleaseAllResources command completed successfully")
 
         def succeeded(self):
@@ -497,7 +689,7 @@ class MccsSubarray(SKASubarray):
             Action to take on successful completion of a resourcing
             command.
             """
-            if len(self.target._station_pool_manager):
+            if len(self.target):
                 action = "resourcing_succeeded_some_resources"
             else:
                 action = "resourcing_succeeded_no_resources"
@@ -515,6 +707,14 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
+                        {"mccs":{
+                        "stations":[{"station_id": 1},{"station_id": 2}],
+                        "station_beams":[{"station_beam_id":1,"station_id":[1,2],
+                        "channels": [1,2,3,4,5,6,7,8],
+                        "update_rate": 0.0,
+                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                        }
+                        }
             :type argin: str
 
             :return: A tuple containing a return code and a string
@@ -523,10 +723,27 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
+            kwargs = json.loads(argin)
+            stations = kwargs.get("mccs").get("stations")
+            station_beam_pool_manager = self.target._station_beam_pool_manager
+            for station in stations:
+                # This is here for future expansion of json strings
+                station.get("station_id")
+
+            station_beams = kwargs.get("mccs").get("station_beams")
+            for station_beam in station_beams:
+                station_beam_id = station_beam.get("station_beam_id")
+                if station_beam_id:
+                    station_beam_fqdn = station_beam_pool_manager.fqdn_from_id(
+                        station_beam_id
+                    )
+                    if station_beam_fqdn:
+                        dp = tango.DeviceProxy(station_beam_fqdn)
+                        json_str = json.dumps(station_beam)
+                        dp.configure(json_str)
+
             result_code = ResultCode.OK
             message = "Configure command completed successfully"
-
-            # MCCS-specific stuff goes here
             return (result_code, message)
 
         def check_allowed(self):

@@ -1,19 +1,32 @@
 """
-This module contains pytest fixtures and other test setups common to
-all ska.low.mccs tests: unit, integration and functional (BDD)
+This module contains pytest fixtures and other test setups common to all
+ska.low.mccs tests: unit, integration and functional (BDD)
 """
+import backoff
 from collections import defaultdict
 import json
 import logging
 
 import pytest
+import tango
+from tango.test_context import MultiDeviceTestContext
+
+
+def pytest_sessionstart(session):
+    """
+    Pytest hook; prints info about tango version
+
+    :param session: a pytest Session object
+    :type session: :py:class:`pytest.Session`
+    """
+    print(tango.utils.info())
 
 
 def pytest_addoption(parser):
     """
     Pytest hook; implemented to add the `--true-context` option, used to
     indicate that a true Tango subsystem is available, so there is no
-    need for a MultiDeviceTestContext
+    need for a :py:class:`tango.MultiDeviceTestContext`.
 
     :param parser: the command line options parser
     :type parser: :py:class:`argparse.ArgumentParser`
@@ -28,138 +41,320 @@ def pytest_addoption(parser):
     )
 
 
-def _load_data_from_json(path):
+class MCCSDeviceInfo:
     """
-    Loads a dataset from a named json file.
-
-    :param path: path to the JSON file from which the dataset is to be
-        loaded.
-    :type path: str
-
-    :return: data loaded and deserialised from a JSON data file
-    :rtype: anything JSON-serialisable
+    Data structure class that loads and holds information about devices,
+    and can provide that information in the format required by
+    :py:class:`tango.test_context.MultiDeviceTestContext`.
     """
-    with open(path, "r") as json_file:
-        return json.load(json_file)
+
+    def __init__(self, source_path, package):
+        """
+        Create a new instance.
+
+        :param source_path: the path to the configuration file that
+            contains information about all available devices.
+        :type source_path: str
+        :param package: name of the package from which to draw classes
+        :type package: str
+        """
+        with open(source_path, "r") as json_file:
+            self._source_data = json.load(json_file)
+        self._package = package
+        self._devices = {}
+
+    def include_device(self, device_name, patch=None):
+        """
+        Include a device in this specification.
+
+        :param device_name: the name of the device to be included. The
+            source data must contain configuration informatino for a
+            device listed under this name
+        :type device_name: str
+        :param patch: a class with which to patch the named device
+        :type patch: obj
+
+        :raises ValueError: if the named device does not exist in the
+            source configuration data
+        """
+        for server in self._source_data["servers"]:
+            if device_name in self._source_data["servers"][server]:
+                device_spec = self._source_data["servers"][server][device_name]
+                class_name = next(iter(device_spec))
+                fqdn = next(iter(device_spec[class_name]))
+                properties = device_spec[class_name][fqdn]["properties"]
+
+                if patch is None:
+                    package = __import__(self._package, fromlist=[class_name])
+                    klass = getattr(package, class_name)
+                else:
+                    klass = patch
+
+                self._devices[device_name] = {
+                    "server": server,
+                    "class": klass,
+                    "fqdn": fqdn,
+                    "properties": properties,
+                }
+                break
+        else:
+            raise ValueError(f"Device {device_name} not found in source data.")
+
+    @property
+    def fqdn_map(self):
+        """
+        A dictionary that maps device names onto FQDNs.
+
+        :return: a mapping from device names to FQDNs
+        :rtype: dict
+        """
+        return {name: self._devices[name]["fqdn"] for name in self._devices}
+
+    @property
+    def device_names(self):
+        """
+        The names of devices included in this data structure.
+
+        :return: the names of included devices
+        :rtype: list
+        """
+        return self._devices.keys()
+
+    def as_mdtc_device_info(self):
+        """
+        Return this device info in a format required by
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+
+        :return: device info in a format required by
+            :py:class:`tango.test_context.MultiDeviceTestContext`.
+        :rtype: dict
+        """
+        devices_by_class = defaultdict(list)
+        for device in self._devices.values():
+            devices_by_class[device["class"]].append(
+                {"name": device["fqdn"], "properties": device["properties"]}
+            )
+        mdtc_device_info = [
+            {"class": klass, "devices": devices}
+            for klass, devices in devices_by_class.items()
+        ]
+        return mdtc_device_info
 
 
-def _load_devices(path, device_names):
+class MCCSDeviceTestContext:
     """
-    Loads device configuration data for specified devices from a
-    specified JSON configuration file.
+    MCCS wrapper for a tango.test_context.MultiDeviceTestContext.
 
-    :param path: path to the JSON configuration file
-    :type path: str
-    :param device_names: names of the devices for which configuration
-        data should be loaded
-    :type device_names: list(str)
-
-    :return: a devices_info spec in a format suitable for use by as
-        input to a :py:class:`tango.test_context.MultiDeviceTestContext`
-    :rtype: dict
+    It allows for devices to be accessed by MCCS device names, rather
+    than the device FQDNs.
     """
-    configuration = _load_data_from_json(path)
-    devices_by_class = {}
 
-    servers = configuration["servers"]
-    for server in servers:
-        for device_name in servers[server]:
-            if device_name in device_names:
-                for class_name, device_info in servers[server][device_name].items():
-                    if class_name not in devices_by_class:
-                        devices_by_class[class_name] = []
-                    for fqdn, device_specs in device_info.items():
-                        devices_by_class[class_name].append(
-                            {"name": fqdn, **device_specs}
-                        )
+    def _load_devices(self, devices_to_load):
+        """
+        Loads device configuration data for specified devices from a
+        specified JSON configuration file.
 
-    devices_info = []
-    for device_class in devices_by_class:
-        device_info = []
-        for device in devices_by_class[device_class]:
-            device_info.append(device)
+        :param devices_to_load: fixture that provides a specification of the
+            devices that are to be included in the devices_info dictionary
+        :type devices_to_load: dictionary
 
-        devices_info.append({"class": device_class, "devices": device_info})
+        :return: a devices_info spec in a format suitable for use by as
+            input to a :py:class:`tango.test_context.MultiDeviceTestContext`
+        :rtype: dict
+        """
+        device_info = MCCSDeviceInfo(
+            devices_to_load["path"], devices_to_load["package"]
+        )
+        patches = devices_to_load["patch"] if "patch" in devices_to_load else {}
 
-    return devices_info
+        for device_name in devices_to_load["devices"]:
+            patch = patches[device_name] if device_name in patches else None
+            device_info.include_device(device_name, patch=patch)
+
+        return device_info
+
+    def __init__(
+        self,
+        devices_to_load,
+        ready_condition=None,
+        source=None,
+        process=False,
+        host=None,
+        port=None,
+    ):
+        """
+        Create a new instance.
+
+        :param devices_to_load: fixture that provides a specification of the
+            devices that are to be included in the devices_info dictionary
+        :type devices_to_load: dictionary
+        :param ready_condition: function to run against each device
+            after creating the test context. The context will not be
+            returned until all functions return True
+        :type ready_condition: callable
+        :param source: a source value to be set on all devices
+        :type source: :py:class:`tango.DevSource`, optional
+        :param process: whether to run the test context in its own
+            process; if False, it is run on a thread.
+        :type: bool
+        :param host: hostname of the machine hosting the devices
+        :type host: str
+        :param port: port for the tango subsystem
+        :type port: int
+        """
+        self._devices_info = self._load_devices(devices_to_load)
+        mdtc_devices_info = self._devices_info.as_mdtc_device_info()
+        self._multi_device_test_context = MultiDeviceTestContext(
+            mdtc_devices_info, process=process, host=host, port=port
+        )
+        self._ready_condition = ready_condition
+        self._source_setting = source
+
+    @backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
+    def _backoff_retry_ready(self, unready_devices):
+        """
+        Implements exponential backoff-retry loop checking remaining
+        unready devices for readiness.
+
+        :param unready_devices: list of unready devices. This has to be a
+            mutable container (e.g. don't pass a tuple) because devices
+            are removed from it as they become ready
+        :type unready_devices: list
+
+        :return: whether all devices are ready
+        :rtype: bool
+        """
+        unready_devices[:] = [
+            device for device in unready_devices if not self._ready_condition(device)
+        ]
+        return not unready_devices
+
+    def _check_ready(self):
+        """
+        Ensure that all included devices are checked against the
+        provided ready condition.
+        """
+        if self._ready_condition is None:
+            return
+
+        unready = [
+            self.get_device(device_name)
+            for device_name in self._devices_info.device_names
+        ]
+        self._backoff_retry_ready(unready)
+
+    def _set_source(self):
+        """
+        Ensure that all included devices have the required source
+        setting applied.
+        """
+        if self._source_setting is None:
+            return
+        for device_name in self._devices_info.device_names:
+            self.get_device(device_name).set_source(self._source_setting)
+
+    def __enter__(self):
+        """
+        Entry method for "with" context.
+
+        :return: the context object
+        :rtype: `MCCSDeviceTestContext`
+        """
+        self._multi_device_test_context.__enter__()
+        self._set_source()
+        self._check_ready()
+        return self
+
+    def __exit__(self, exc_type, exception, trace):
+        """
+        Exit method for "with" context.
+
+        :param exc_type: the type of exception thrown in the with block
+        :type: obj
+        :param exception: the exception thrown in the with block
+        :type exception: obj
+        :param trace: a traceback
+        :type trace: obj
+        """
+        self._multi_device_test_context.__exit__(exc_type, exception, trace)
+
+    def get_device(self, name):
+        """
+        Returns a :py:class:`tango.DeviceProxy` to a device as specified
+        by the device name provided in the configuration file.
+
+        This method also patches a bug in :py:class:`tango.DeviceProxy`,
+        namely that it's :py:meth:`~tango.DeviceProxy.get_fqdn` method
+        returns " " when run under a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+
+        :param name: the name of the device for which a
+            :py:class:`tango.DeviceProxy` is sought.
+        :type name: str
+
+        :return: a :py:class:`tango.DeviceProxy` to the named device
+        :rtype: :py:class:`tango.DeviceProxy`
+        """
+        fqdn = self._devices_info.fqdn_map[name]
+        device = self._multi_device_test_context.get_device(fqdn)
+        device.get_fqdn = lambda: fqdn
+        return device
 
 
 @pytest.fixture()
-def device_info(device_to_load):
+def tango_config(mock_device_proxies):
     """
-    Constructs a device_info dictionary in the form required by
-    tango.test_context.DeviceTestContext, with the device as specified
-    by the device_to_load fixture
+    Fixture that returns configuration information that specified how
+    the Tango system should be established and run.
 
-    :param device_to_load: fixture that provides a specification of the
-        device that is to be included in the devices_info dictionary
-    :type device_to_load: dictionary
+    This implementation - for unit testing - ensures that mocking of
+    device proxies is set up, and that Tango is run in a thread
+    (necessary for mocks to work).
 
-    :return: a specification of devices
+    :param mock_device_proxies: fixture that patches
+        :py:class:`tango.DeviceProxy` to always return the same mock
+        for each fqdn
+    :type mock_device_proxies: dict
+
+    :returns: tango configuration information: a dictionary with keys
+        "process", "host" and "port".
     :rtype: dict
     """
-    devices = _load_devices(
-        path=device_to_load["path"], device_names=[device_to_load["device"]]
-    )
-
-    if "patch" in device_to_load:
-        device_class = device_to_load["patch"]
-    else:
-        class_to_import = devices[0]["class"]
-        package = __import__(device_to_load["package"], fromlist=class_to_import)
-        device_class = getattr(package, devices[0]["class"])
-
-    return {"class": device_class, "properties": devices[0]["devices"][0]["properties"]}
+    return {"process": True, "host": None, "port": 0}
 
 
 @pytest.fixture()
-def devices_info(devices_to_load):
+def device_context(devices_to_load, tango_config):
     """
-    Constructs a devices_info dictionary in the form required by
-    tango.test_context.MultiDeviceTestContext, with devices as specified
-    by the devices_to_load fixture
+    Creates and returns a TANGO MultiDeviceTestContext object, with a
+    tango.DeviceProxy patched to a work around a name resolving issue.
 
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
     :type devices_to_load: dictionary
+    :param tango_config: fixture that returns configuration information
+        that specifies how the Tango system should be established and
+        run.
+    :type tango_config: dict
 
-    :return: a specification of devices
-    :rtype: dict
+    :yield: a tango testing context
     """
-    devices = _load_devices(
-        path=devices_to_load["path"], device_names=devices_to_load["devices"]
-    )
-
-    patches = devices_to_load["patch"] if "patch" in devices_to_load else {}
-
-    devices_to_patch = defaultdict(list)
-    devices_to_import = defaultdict(list)
-
-    for group in devices:
-        for device in group["devices"]:
-            if device["name"] in patches:
-                patch = patches[device["name"]]
-                devices_to_patch[patch].append(device)
-            else:
-                devices_to_import[group["class"]].append(device)
-
-    patched_devices = [
-        {"class": cls, "devices": devices_to_patch[cls]} for cls in devices_to_patch
-    ]
-
-    package = __import__(devices_to_load["package"], fromlist=devices_to_import.keys())
-    imported_devices = [
-        {"class": getattr(package, cls), "devices": devices_to_import[cls]}
-        for cls in devices_to_import
-    ]
-
-    return imported_devices + patched_devices
+    with MCCSDeviceTestContext(
+        devices_to_load,
+        ready_condition=lambda device: device.state()
+        not in [tango.DevState.UNKNOWN, tango.DevState.INIT],
+        source=tango.DevSource.DEV,
+        process=tango_config["process"],
+        host=tango_config["host"],
+        port=tango_config["port"],
+    ) as context:
+        yield context
 
 
 @pytest.fixture()
 def logger():
     """
-    Fixture that returns a default logger
+    Fixture that returns a default logger.
 
     :return: a logger
     :rtype logger: :py:class:`logging.Logger`

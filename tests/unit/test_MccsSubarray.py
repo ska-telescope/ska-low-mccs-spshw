@@ -9,7 +9,9 @@
 """
 This module contains the tests for MccsSubarray.
 """
+import json
 import pytest
+
 import tango
 from tango import AttrQuality, EventType
 
@@ -174,28 +176,6 @@ class TestMccsSubarray:
         version_info = release.get_release_info(device_under_test.info().dev_class)
         assert device_under_test.GetVersionInfo() == [version_info]
 
-    def test_AssignResources(self, device_under_test):
-        """
-        Test for AssignResources.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        station_fqdn = "low-mccs/station/001"
-        mock_station = tango.DeviceProxy(station_fqdn)
-
-        device_under_test.On()
-        [[result_code], [message]] = call_with_json(
-            device_under_test.AssignResources, stations=[station_fqdn]
-        )
-        assert result_code == ResultCode.OK
-        assert message == "AssignResources command completed successfully"
-        assert list(device_under_test.stationFQDNs) == [station_fqdn]
-
-        mock_station.InitialSetup.assert_called_once_with()
-
     # tests of MccsSubarray commands
     def test_sendTransientBuffer(self, device_under_test):
         """
@@ -259,3 +239,294 @@ class TestMccsSubarray:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.stationFQDNs is None
+
+    class TestAllocateAndConfigure:
+        """
+        Class containing fixtures and tests of the MccsController's
+        :py:meth:`~ska.low.mccs.MccsController.Allocate` and
+        :py:meth:`~ska.low.mccs.MccsController.Release` commands
+        :py:meth:`~ska.low.mccs.MccsController.Configure` commands
+        """
+
+        @pytest.fixture()
+        def initial_mocks(self, mock_factory):
+            """
+            Fixture that registers device proxy mocks prior to patching.
+            The default fixture is overridden here to ensure that mock
+            subarrays and stations respond suitably to actions taken on
+            them by the controller as part of the controller's
+            :py:meth:`~ska.low.mccs.MccsController.Allocate` and
+            :py:meth:`~ska.low.mccs.MccsController.Release` commands
+            :py:meth:`~ska.low.mccs.MccsController.Configure` commands
+
+            :param mock_factory: a factory for
+                :py:class:`tango.DeviceProxy` mocks
+            :type mock_factory: object
+            :return: a dictionary of mocks, keyed by FQDN
+            :rtype: dict
+            """
+
+            def _subarray_mock():
+                """
+                Sets up a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an :py:class:`~ska.low.mccs.MccsSubarray`
+                device. The returned mock will respond suitably to
+                actions taken on it by the controller as part of the
+                controller's
+                :py:meth:`~ska.low.mccs.MccsController.Allocate`,
+                :py:meth:`~ska.low.mccs.MccsController.Release` and
+                :py:meth:`~ska.low.mccs.MccsController.Configure`
+                commands.
+
+                :return: a mock for a :py:class:`tango.DeviceProxy` that
+                    connects to an
+                    :py:class:`~ska.low.mccs.MccsSubarray` device.
+                :rtype: :py:class:`unittest.Mock`
+                """
+                mock = mock_factory()
+                mock.On.return_value = (
+                    ResultCode.OK,
+                    "On command completed successfully",
+                )
+                mock.AssignResources.return_value = (
+                    ResultCode.OK,
+                    "Resources assigned",
+                )
+                mock.Configure.return_value = (
+                    ResultCode.OK,
+                    "Configure command completed successfully",
+                )
+                mock.ReleaseResources.return_value = (
+                    ResultCode.OK,
+                    "Resources released",
+                )
+                mock.ReleaseAllResources.return_value = (
+                    ResultCode.OK,
+                    "Resources released",
+                )
+                mock.Off.return_value = (ResultCode.OK, "Subarray switched off")
+                return mock
+
+            def _station_mock():
+                """
+                Sets up a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an :py:class:`~ska.low.mccs.MccsStation`
+                device. The returned mock will respond suitably to
+                actions taken on it by the controller as part of the
+                controller's
+                :py:meth:`~ska.low.mccs.MccsController.Allocate` and
+                :py:meth:`~ska.low.mccs.MccsController.Release`
+                commands.
+
+                :return: a mock for a :py:class:`tango.DeviceProxy` that
+                    connects to an
+                    :py:class:`~ska.low.mccs.MccsStation` device.
+                :rtype: :py:class:`unittest.Mock`
+                """
+                mock = mock_factory()
+                mock.subarrayId = 0
+                return mock
+
+            def _beam_mock():
+                """
+                Sets up a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an :py:class:`~ska.low.mccs.MccsStationBeam`
+                device. The returned mock will respond suitably to
+                actions taken on it by the subarray as part of the
+                subarray's
+                :py:meth:`~ska.low.mccs.MccsSubarray.Allocate` and
+                :py:meth:`~ska.low.mccs.MccsSubarray.Release`
+                commands.
+
+                :return: a mock for a :py:class:`tango.DeviceProxy` that
+                    connects to an
+                    :py:class:`~ska.low.mccs.MccsStationBeam` device.
+                :rtype: :py:class:`unittest.Mock`
+                """
+                mock = mock_factory()
+                mock.healthState = HealthState.OK
+                mock._update_rate = 0.0
+                return mock
+
+            return {
+                "low-mccs/subarray/01": _subarray_mock(),
+                "low-mccs/subarray/02": _subarray_mock(),
+                "low-mccs/station/001": _station_mock(),
+                "low-mccs/station/002": _station_mock(),
+                "low-mccs/beam/001": _beam_mock(),
+                "low-mccs/beam/002": _beam_mock(),
+            }
+
+        def test_AllocateResources(self, device_under_test):
+            """
+            Test for AllocateResources.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            """
+            station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
+            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
+            station_beam_fqdn = "low-mccs/beam/001"
+            mock_station_beam = tango.DeviceProxy(station_beam_fqdn)
+
+            device_under_test.On()
+            assert mock_station_beam.healthState == HealthState.OK
+
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=[station_fqdns[0]],
+                station_beams=[station_beam_fqdn],
+            )
+
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(list(device_under_test.stationFQDNs)) == sorted(
+                [station_fqdns[0]]
+            )
+            assert mock_station_beam.stationIds == [1]
+
+            mock_station_1.InitialSetup.assert_called_once_with()
+
+            device_under_test.ReleaseAllResources()
+            assert mock_station_beam.stationIds == []
+
+            # now assign station beam to both stations...
+            device_under_test.On()
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=station_fqdns,
+                station_beams=[station_beam_fqdn],
+            )
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
+            assert mock_station_beam.stationIds == [1, 2]
+
+        def test_ReleaseAllResources(self, device_under_test):
+            """
+            Test for ReleaseAllResources.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            """
+            station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
+            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
+            mock_station_2 = tango.DeviceProxy(station_fqdns[1])
+            station_beam_fqdns = ["low-mccs/beam/001", "low-mccs/beam/002"]
+            mock_station_beam_1 = tango.DeviceProxy(station_beam_fqdns[0])
+            mock_station_beam_2 = tango.DeviceProxy(station_beam_fqdns[1])
+
+            device_under_test.On()
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=station_fqdns,
+                station_beams=station_beam_fqdns,
+            )
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(list(device_under_test.stationFQDNs)) == sorted(station_fqdns)
+
+            mock_station_1.InitialSetup.assert_called_once_with()
+            mock_station_2.InitialSetup.assert_called_once_with()
+
+            assert mock_station_beam_1.stationIds == [1, 2]
+            assert mock_station_beam_2.stationIds == [1, 2]
+
+            [[result_code], [message]] = call_with_json(
+                device_under_test.ReleaseResources,
+                station_beam_fqdns=[station_beam_fqdns[0]],
+            )
+            assert result_code == ResultCode.OK
+            assert message == "ReleaseResources command completed successfully"
+
+            assert mock_station_beam_1.stationIds == []
+            assert mock_station_beam_2.stationIds == [1, 2]
+
+            # reassign
+            call_with_json(
+                device_under_test.AssignResources,
+                stations=[station_fqdns[1]],
+                station_beams=[station_beam_fqdns[0]],
+            )
+            assert mock_station_beam_1.stationIds == [2]
+
+            # ReleaseAll again
+            [[result_code], [message]] = device_under_test.ReleaseAllResources()
+            assert result_code == ResultCode.OK
+            assert message == "ReleaseAllResources command completed successfully"
+
+            assert mock_station_beam_1.stationIds == []
+            assert mock_station_beam_2.stationIds == []
+
+        def test_configure(self, device_under_test):
+            """
+            Test for Configure.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            """
+            station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
+            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
+            station_beam_fqdn = "low-mccs/beam/001"
+            mock_station_beam = tango.DeviceProxy(station_beam_fqdn)
+
+            device_under_test.On()
+            assert mock_station_beam.healthState == HealthState.OK
+
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=[station_fqdns[0]],
+                station_beams=[station_beam_fqdn],
+            )
+
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(list(device_under_test.stationFQDNs)) == [station_fqdns[0]]
+
+            assert mock_station_beam.stationIds == [1]
+
+            mock_station_1.InitialSetup.assert_called_once_with()
+
+            device_under_test.ReleaseAllResources()
+            assert mock_station_beam.stationIds == []
+
+            # now assign station beam to both stations...
+            device_under_test.On()
+            [[result_code], [message]] = call_with_json(
+                device_under_test.AssignResources,
+                stations=station_fqdns,
+                station_beams=[station_beam_fqdn],
+            )
+            assert result_code == ResultCode.OK
+            assert message == "AssignResources command completed successfully"
+            assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
+            assert mock_station_beam.stationIds == [1, 2]
+
+            config_dict = {
+                "mccs": {
+                    "stations": [{"station_id": 1}, {"station_id": 2}],
+                    "station_beams": [
+                        {
+                            "station_beam_id": 1,
+                            "station_id": [1, 2],
+                            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+                            "update_rate": 3.14,
+                            "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
+                        }
+                    ],
+                }
+            }
+            json_str = json.dumps(config_dict)
+            expected = config_dict["mccs"]["station_beams"][0]
+            [[result_code], [message]] = device_under_test.Configure(json_str)
+            assert result_code == ResultCode.OK
+            assert message == "Configure command completed successfully"
+            # remove preceeding "call(\" and trailing "\)"
+            output = str(mock_station_beam.configure.call_args)[6:-2]
+            assert json.loads(output) == expected

@@ -16,7 +16,7 @@ import threading
 
 import pytest
 
-from tango import AttrQuality, DevFailed, DevSource, EventType
+from tango import AttrQuality, DevFailed, EventType
 from ska.base.control_model import (
     ControlMode,
     LoggingLevel,
@@ -360,7 +360,6 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         assert device_under_test.xPolarisationFaulty is False
 
     def test_yPolarisationFaulty(self, device_under_test):
@@ -372,7 +371,6 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.set_source(DevSource.DEV)
         assert device_under_test.yPolarisationFaulty is False
 
     def test_fieldNodeLongitude(self, device_under_test):

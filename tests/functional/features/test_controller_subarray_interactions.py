@@ -40,6 +40,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
     }
 
@@ -90,6 +94,10 @@ def devices(tango_context):
         # "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
         # "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
         # "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
+        "beam_001": tango_context.get_device("low-mccs/beam/001"),
+        "beam_002": tango_context.get_device("low-mccs/beam/002"),
+        "beam_003": tango_context.get_device("low-mccs/beam/003"),
+        "beam_004": tango_context.get_device("low-mccs/beam/004"),
     }
 
     # Bypass the cache because stationFQDNs etc are polled attributes,
@@ -121,7 +129,8 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     if expected_result is None:
         assert result is None
     else:
-        assert result[0] == expected_result
+        ((result_code,), (_,)) = result
+        assert result_code == expected_result
 
 
 @scenario("controller_subarray_interactions.feature", "MCCS Start up low telescope")
@@ -456,23 +465,18 @@ def configure_subarray(devices):
     """
     # Configure the subarray
     configuration = {
-        "stations": [{"station_id": 1}, {"station_id": 2}],
-        "station_beam_pointings": [
-            {
-                "station_beam_id": 1,  # should correspond to one in the
-                # station_beam_ids in the resources
-                "target": {
-                    "system": "HORIZON",  # Target coordinate system
-                    "name": "DriftScan",  # Source name - metadata only,
-                    # does not need to be resolved
-                    "Az": 180.0,  # This is in degrees
-                    "El": 45.0,  # Ditto
-                },
-                "update_rate": 0.0,  # seconds - never update for a drift scan
-                # should be a subset of the channels in the resources
-                "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-            }
-        ],
+        "mccs": {
+            "stations": [{"station_id": 1}, {"station_id": 2}],
+            "station_beams": [
+                {
+                    "station_beam_id": 1,
+                    "station_id": [1, 2],
+                    "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+                    "update_rate": 0.0,
+                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                }
+            ],
+        }
     }
     json_string = json.dumps(configuration)
     assert_command(

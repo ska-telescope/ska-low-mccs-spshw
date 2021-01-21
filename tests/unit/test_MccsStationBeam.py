@@ -33,7 +33,7 @@ def device_to_load():
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
-        "device": "beam_01",
+        "device": "beam_001",
     }
 
 
@@ -327,8 +327,12 @@ class TestMccsStationBeam:
         [[result_code], [message]] = device_under_test.Configure(json_str)
         assert result_code == ResultCode.OK
         assert device_under_test.updateRate == 3.14
-        assert (device_under_test.stationIds == [1, 2]).all()
-        assert (device_under_test.channels == [1, 2, 3, 4, 5, 6, 7, 8]).all()
-        assert (
-            device_under_test.desiredPointing == [1585619550.0, 192.0, 2.0, 27.0, 1.0]
-        ).all()
+        assert list(device_under_test.stationIds) == [1, 2]
+        assert list(device_under_test.channels) == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert list(device_under_test.desiredPointing) == [
+            1585619550.0,
+            192.0,
+            2.0,
+            27.0,
+            1.0,
+        ]

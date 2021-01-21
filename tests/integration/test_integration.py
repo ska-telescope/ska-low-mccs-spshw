@@ -4,12 +4,9 @@ particularly tango devices.
 """
 
 import pytest
-from tango import DevSource
 
 from ska.base.commands import ResultCode
 from ska.low.mccs.utils import call_with_json
-
-from conftest import confirm_initialised
 
 
 @pytest.fixture()
@@ -38,6 +35,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
+            "beam_001",
+            "beam_002",
+            "beam_003",
+            "beam_004",
         ],
     }
 
@@ -55,42 +56,15 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
-        controller = device_context.get_device("low-mccs/control/control")
-        subarray_1 = device_context.get_device("low-mccs/subarray/01")
-        subarray_2 = device_context.get_device("low-mccs/subarray/02")
-        station_1 = device_context.get_device("low-mccs/station/001")
-        station_2 = device_context.get_device("low-mccs/station/002")
-        tile_1 = device_context.get_device("low-mccs/tile/0001")
-        tile_2 = device_context.get_device("low-mccs/tile/0002")
-        tile_3 = device_context.get_device("low-mccs/tile/0003")
-        tile_4 = device_context.get_device("low-mccs/tile/0004")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        controller.set_source(DevSource.DEV)
-        subarray_1.set_source(DevSource.DEV)
-        subarray_2.set_source(DevSource.DEV)
-        station_1.set_source(DevSource.DEV)
-        station_2.set_source(DevSource.DEV)
-        tile_1.set_source(DevSource.DEV)
-        tile_2.set_source(DevSource.DEV)
-        tile_3.set_source(DevSource.DEV)
-        tile_4.set_source(DevSource.DEV)
-
-        confirm_initialised(
-            [
-                controller,
-                subarray_1,
-                subarray_2,
-                station_1,
-                station_2,
-                tile_1,
-                tile_2,
-                tile_3,
-                tile_4,
-            ]
-        )
+        controller = device_context.get_device("controller")
+        subarray_1 = device_context.get_device("subarray_01")
+        subarray_2 = device_context.get_device("subarray_02")
+        station_1 = device_context.get_device("station_001")
+        station_2 = device_context.get_device("station_002")
+        tile_1 = device_context.get_device("tile_0001")
+        tile_2 = device_context.get_device("tile_0002")
+        tile_3 = device_context.get_device("tile_0003")
+        tile_4 = device_context.get_device("tile_0004")
 
         # check initial state
         assert subarray_1.stationFQDNs is None
@@ -105,13 +79,13 @@ class TestMccsIntegration:
         controller.On()
 
         # allocate station_1 to subarray_1
-        (result_code, message) = call_with_json(
-            controller.Allocate, subarray_id=1, station_ids=[1]
+        ((result_code,), (message,)) = call_with_json(
+            controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]
         )
         assert result_code == ResultCode.OK
 
         # check that station_1 and only station_1 is allocated
-        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
+        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -122,13 +96,13 @@ class TestMccsIntegration:
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
-        (result_code, message) = call_with_json(
-            controller.Allocate, subarray_id=2, station_ids=[1]
+        ((result_code,), (_,)) = call_with_json(
+            controller.Allocate, subarray_id=2, station_ids=[1], station_beams=[1]
         )
         assert result_code == ResultCode.FAILED
 
         # check no side-effects
-        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
+        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -140,15 +114,15 @@ class TestMccsIntegration:
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
         # subarray
-        (result_code, message) = call_with_json(
+        ((result_code,), (_,)) = call_with_json(
             controller.Allocate, subarray_id=1, station_ids=[1, 2]
         )
         assert result_code == ResultCode.OK
 
         # check
         assert list(subarray_1.stationFQDNs) == [
-            "low-mccs/station/001",
-            "low-mccs/station/002",
+            station_1.get_fqdn(),
+            station_2.get_fqdn(),
         ]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
@@ -166,54 +140,31 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
-        controller = device_context.get_device("low-mccs/control/control")
-        subarray_1 = device_context.get_device("low-mccs/subarray/01")
-        subarray_2 = device_context.get_device("low-mccs/subarray/02")
-        station_1 = device_context.get_device("low-mccs/station/001")
-        station_2 = device_context.get_device("low-mccs/station/002")
-        tile_1 = device_context.get_device("low-mccs/tile/0001")
-        tile_2 = device_context.get_device("low-mccs/tile/0002")
-        tile_3 = device_context.get_device("low-mccs/tile/0003")
-        tile_4 = device_context.get_device("low-mccs/tile/0004")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period so test that the write has stuck.
-        controller.set_source(DevSource.DEV)
-        subarray_1.set_source(DevSource.DEV)
-        subarray_2.set_source(DevSource.DEV)
-        station_1.set_source(DevSource.DEV)
-        station_2.set_source(DevSource.DEV)
-        tile_1.set_source(DevSource.DEV)
-        tile_2.set_source(DevSource.DEV)
-        tile_3.set_source(DevSource.DEV)
-        tile_4.set_source(DevSource.DEV)
-
-        confirm_initialised(
-            [
-                controller,
-                subarray_1,
-                subarray_2,
-                station_1,
-                station_2,
-                tile_1,
-                tile_2,
-                tile_3,
-                tile_4,
-            ]
-        )
+        controller = device_context.get_device("controller")
+        subarray_1 = device_context.get_device("subarray_01")
+        subarray_2 = device_context.get_device("subarray_02")
+        station_1 = device_context.get_device("station_001")
+        station_2 = device_context.get_device("station_002")
+        tile_1 = device_context.get_device("tile_0001")
+        tile_2 = device_context.get_device("tile_0002")
+        tile_3 = device_context.get_device("tile_0003")
+        tile_4 = device_context.get_device("tile_0004")
 
         controller.On()
 
         # allocate stations 1 to subarray 1
-        call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
+        call_with_json(
+            controller.Allocate, subarray_id=1, station_ids=[1], station_beam_ids=[1]
+        )
 
         # allocate station 2 to subarray 2
-        call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
+        call_with_json(
+            controller.Allocate, subarray_id=2, station_ids=[2], station_beam_ids=[2]
+        )
 
         # check initial state
-        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
-        assert list(subarray_2.stationFQDNs) == ["low-mccs/station/002"]
+        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
+        assert list(subarray_2.stationFQDNs) == [station_2.get_fqdn()]
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 2
         assert tile_1.subarrayId == 1
@@ -222,13 +173,13 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 2
 
         # release resources of subarray_2
-        (result_code, message) = call_with_json(
+        ((result_code,), (_,)) = call_with_json(
             controller.Release, subarray_id=2, release_all=True
         )
         assert result_code == ResultCode.OK
 
         # check
-        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
+        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -238,13 +189,13 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should fail
-        (result_code, message) = call_with_json(
+        ((result_code,), (_,)) = call_with_json(
             controller.Release, subarray_id=2, release_all=True
         )
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
-        assert list(subarray_1.stationFQDNs) == ["low-mccs/station/001"]
+        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -254,7 +205,7 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         # release resources of subarray_1
-        (result_code, message) = call_with_json(
+        ((result_code,), (_,)) = call_with_json(
             controller.Release, subarray_id=1, release_all=True
         )
         assert result_code == ResultCode.OK
@@ -278,18 +229,9 @@ class TestMccsIntegration:
         :param device_context: a test context for a set of tango devices
         :type device_context: :py:class:`tango.MultiDeviceTestContext`
         """
-        station = device_context.get_device("low-mccs/station/001")
-        tile_1 = device_context.get_device("low-mccs/tile/0001")
-        tile_2 = device_context.get_device("low-mccs/tile/0002")
-
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period so test that the write has stuck.
-        station.set_source(DevSource.DEV)
-        tile_1.set_source(DevSource.DEV)
-        tile_2.set_source(DevSource.DEV)
-
-        confirm_initialised([station, tile_1, tile_2])
+        station = device_context.get_device("station_001")
+        tile_1 = device_context.get_device("tile_0001")
+        tile_2 = device_context.get_device("tile_0002")
 
         # check initial state
         assert station.subarrayId == 0

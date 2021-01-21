@@ -19,9 +19,16 @@
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
                             ],
+                            "MccsStationBeams": [
+                                "low-mccs/beam/001",
+                                "low-mccs/beam/002",
+                                "low-mccs/beam/003",
+                                "low-mccs/beam/004"
+                            ],
                             "LoggingLevelDefault": [
                                 "3"
                             ]
+                            
                         }
                     }
                 }
@@ -106,9 +113,9 @@
             }
         },
         "MccsStationBeam": {
-            "beam_01": {
+            "beam_001": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/01": {
+                    "low-mccs/beam/001": {
                         "properties": {
                             "BeamId": [
                                 "1"
@@ -120,9 +127,9 @@
                     }
                 }
             },
-            "beam_02": {
+            "beam_002": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/02": {
+                    "low-mccs/beam/002": {
                         "properties": {
                             "BeamId": [
                                 "2"
@@ -134,9 +141,9 @@
                     }
                 }
             },
-            "beam_03": {
+            "beam_003": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/03": {
+                    "low-mccs/beam/003": {
                         "properties": {
                             "BeamId": [
                                 "3"
@@ -148,9 +155,9 @@
                     }
                 }
             },
-            "beam_04": {
+            "beam_004": {
                 "MccsStationBeam": {
-                    "low-mccs/beam/04": {
+                    "low-mccs/beam/004": {
                         "properties": {
                             "BeamId": [
                                 "4"

@@ -15,23 +15,55 @@ TMC -> MCCS_Controller: On()
 MCCS_Controller -> MCCS_Station_1: On()
 MCCS_Station_1 -> MCCS_Tile_1: On()
 MCCS_Station_1 <-- MCCS_Tile_1:
+MCCS_Station_1 -> MCCS_Tile_1: Initialise()
+MCCS_Tile_1 -> Tile_HW_Man: initialise()
 
-MCCS_Station_1 -> MCCS_Tile_1: DownloadFirmware(bitfile)
-MCCS_Tile_1 -> Tile_HW_Man: download_firmware(bitfile)
-Tile_HW_Man -> TPM_Drv: download_firmware(bitfile)
-TPM_Drv -> HW_Tile: program_fpgas(bitfile)
-HW_Tile -> HW_Tile: connect()
+Tile_HW_Man -> TPM_Drv: initialise()
+TPM_Drv -> HW_Tile: perform_connectivity_checks()
+TPM_Drv <-- HW_Tile:
+TPM_Drv -> HW_Tile: connect(simulation=True)
 HW_Tile -> TPM: TPM()
 HW_Tile <-- TPM:
-HW_Tile -> TPM: connect(...)
+HW_Tile -> TPM: tpm.connect(...)
 HW_Tile <-- TPM:
+TPM_Drv <-- HW_Tile:
+TPM_Drv -> TPM: tpm.is_programmed()
+TPM_Drv <-- TPM: <no>
+
+TPM_Drv -> HW_Tile: program_fpgas()
+HW_Tile -> HW_Tile: connect(simulation=True)
+activate HW_Tile
+HW_Tile -> TPM: TPM()
+HW_Tile <-- TPM:
+HW_Tile -> TPM: tpm.connect(...)
+HW_Tile <-- TPM:
+HW_Tile <-- HW_Tile:
+deactivate HW_Tile
 HW_Tile -> TPM: download_firmware(Device.FPGA_1, bitfile)
 HW_Tile <-- TPM:
 TPM_Drv <-- HW_Tile:
+
+TPM_Drv -> HW_Tile: initialise()
+
+HW_Tile -> HW_Tile: connect(initialise=True)
+activate HW_Tile
+HW_Tile -> TPM: TPM()
+HW_Tile <-- TPM:
+HW_Tile -> TPM: tpm.connect(...)
+HW_Tile <-- TPM:
+HW_Tile <-- HW_Tile:
+deactivate HW_Tile
+TPM_Drv <-- HW_Tile:
+
+TPM_Drv -> TPM: tpm.is_programmed()
+TPM_Drv <-- TPM: <yes>
+
+TPM_Drv -> HW_Tile: perform_health_check()
+TPM_Drv <-- HW_Tile:
+
 Tile_HW_Man <-- TPM_Drv:
 MCCS_Tile_1 <-- Tile_HW_Man:
 MCCS_Station_1 <-- MCCS_Tile_1:
-
 MCCS_Controller <-- MCCS_Station_1:
 TMC <-- MCCS_Controller:
 Jupyter <-- TMC:

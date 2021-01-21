@@ -6,6 +6,7 @@ import copy
 
 from ska.low.mccs.hardware import HardwareDriver
 from ska.low.mccs.tile import HwTile
+from pyfabil.base.definitions import Device
 
 
 class TpmDriver(HardwareDriver):
@@ -217,7 +218,7 @@ class TpmDriver(HardwareDriver):
         :rtype: float
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        # self._fpga1_temperature = self.tile.get_fpga0_temperature()
+        self._fpga1_temperature = self.tile.get_fpga0_temperature()
         return self._fpga1_temperature
 
     @property
@@ -229,7 +230,7 @@ class TpmDriver(HardwareDriver):
         :rtype: float
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        # self._fpga2_temperature = self.tile.get_fpga2_temperature()
+        self._fpga2_temperature = self.tile.get_fpga2_temperature()
         return self._fpga2_temperature
 
     @property
@@ -241,7 +242,7 @@ class TpmDriver(HardwareDriver):
         :rtype: list(float)
         """
         self.logger.debug("TpmDriver: adc_rms")
-        # self._adc_rms = self.tile.get_adc_rms()
+        self._adc_rms = self.tile.get_adc_rms()
         return tuple(self._adc_rms)
 
     @property
@@ -253,7 +254,8 @@ class TpmDriver(HardwareDriver):
         :return: the FPGA1 clock time
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: fpga1_time")
+        self.logger.debug("TpmDriver: fpga1_time")
+        self._fpga1_time = self.tile.get_fpga_time(Device.FPGA_1)
         return self._fpga1_time
 
     @property
@@ -265,7 +267,8 @@ class TpmDriver(HardwareDriver):
         :return: the FPGA2 clock time
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: fpga2_time")
+        self.logger.debug("TpmDriver: fpga2_time")
+        self._fpga2_time = self.tile.get_fpga_time(Device.FPGA_2)
         return self._fpga2_time
 
     @property
@@ -276,7 +279,8 @@ class TpmDriver(HardwareDriver):
         :return: PPS delay
         :rtype: float
         """
-        self.logger.debug("TpmSimulator: get_pps_delay")
+        self.logger.debug("TpmDriver: get_pps_delay")
+        self._pps_delay = self.tile.get_pps_delay()
         return self._pps_delay
 
     @property

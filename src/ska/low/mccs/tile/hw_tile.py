@@ -125,15 +125,21 @@ class HwTile(object):
         )
 
         # Load tpm test firmware for both FPGAs (no need to load in simulation)
-        # if not simulation and self.tpm.is_programmed():
-        #  self.tpm.load_plugin(
-        #    "TpmTestFirmware", device=Device.FPGA_1, fsample=self._sampling_rate
-        #  )
-        #  self.tpm.load_plugin(
-        #    "TpmTestFirmware", device=Device.FPGA_2, fsample=self._sampling_rate
-        #  )
-        # elif not self.tpm.is_programmed():
-        #    self.logger.warn("TPM is not programmed! No plugins loaded")
+        if not simulation and self.tpm.is_programmed():
+            self.tpm.load_plugin(
+                "TpmTestFirmware",
+                device=Device.FPGA_1,
+                fsample=self._sampling_rate,
+                logger=self.logger,
+            )
+            self.tpm.load_plugin(
+                "TpmTestFirmware",
+                device=Device.FPGA_2,
+                fsample=self._sampling_rate,
+                logger=self.logger,
+            )
+        elif not self.tpm.is_programmed():
+            self.logger.warn("TPM is not programmed! No plugins loaded")
 
     def initialise(self, enable_ada=False, enable_test=False):
         """
@@ -153,8 +159,8 @@ class HwTile(object):
             return
 
         # Initialise firmware plugin
-        # for firmware in self.tpm.tpm_test_firmware:
-        #     firmware.initialise_firmware()
+        for firmware in self.tpm.tpm_test_firmware:
+            firmware.initialise_firmware()
 
         # AAVS-only - swap polarisations due to remapping performed by preadu
         # self.tpm["fpga1.jesd204_if.regfile_pol_switch"] = 0b00001111
@@ -220,7 +226,8 @@ class HwTile(object):
 
     @connected
     def get_adc_rms(self):
-        """Get ADC power
+        """
+        Get ADC power
         :return: ADC RMS power
         :rtype: list(float)
         """
@@ -260,6 +267,40 @@ class HwTile(object):
             return self.tpm.tpm_sysmon[1].get_fpga_temperature()
         else:
             return 0
+
+    @connected
+    def get_fpga_time(self, device):
+        """
+        Return time from FPGA
+        :param device: FPGA to get time from
+        :type device: int
+        :return: Internal time for FPGA
+        :rtype: int
+        :raises LibraryError: Invalid value for device
+        """
+        if device == Device.FPGA_1:
+            return self["fpga1.pps_manager.curr_time_read_val"]
+        elif device == Device.FPGA_2:
+            return self["fpga2.pps_manager.curr_time_read_val"]
+        else:
+            raise LibraryError("Invalid device specified")
+
+    @connected
+    def get_fpga_timestamp(self, device=Device.FPGA_1):
+        """
+        Get timestamp from FPGA
+        :param device: FPGA to read timestamp from
+        :type device: int
+        :return: PPS time
+        :rtype: int
+        :raises LibraryError: Invalid value for device
+        """
+        if device == Device.FPGA_1:
+            return self["fpga1.pps_manager.timestamp_read_val"]
+        elif device == Device.FPGA_2:
+            return self["fpga2.pps_manager.timestamp_read_val"]
+        else:
+            raise LibraryError("Invalid device specified")
 
     def __str__(self):
         """

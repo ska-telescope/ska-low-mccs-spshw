@@ -18,6 +18,7 @@ __all__ = [
     "TpmSimulator",
     "TpmDriver",
     "HwTile",
+    "TpmTestFirmware",
     "demo_tile_device",
     "tile_device",
     "tile_hardware",

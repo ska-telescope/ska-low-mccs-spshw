@@ -64,6 +64,9 @@ TPM_Drv <-- HW_Tile:
 
 Tile_HW_Man <-- TPM_Drv:
 MCCS_Tile_1 <-- Tile_HW_Man:
+MCCS_Station_1 <-- MCCS_Tile_1:
+
+MCCS_Station_1 -> MCCS_Tile_1: Off()
 note over MCCS_Tile_1: state = OFF
 MCCS_Station_1 <-- MCCS_Tile_1:
 

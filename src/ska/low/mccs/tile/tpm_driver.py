@@ -3,6 +3,7 @@
 An implementation of a TPM simulator.
 """
 import copy
+import numpy as np
 
 from ska.low.mccs.hardware import HardwareDriver
 from ska.low.mccs.tile import HwTile
@@ -27,7 +28,7 @@ class TpmDriver(HardwareDriver):
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "tpm_test"
     FIRMWARE_AVAILABLE = {
-        "firmware1": {"design": "model1", "major": 2, "minor": 3},
+        "tpm_test": {"design": "tpm_test", "major": 2, "minor": 3},
         "firmware2": {"design": "model2", "major": 3, "minor": 7},
         "firmware3": {"design": "model3", "major": 2, "minor": 6},
     }
@@ -121,8 +122,8 @@ class TpmDriver(HardwareDriver):
         :return: whether this TPM is programmed
         :rtype: bool
         """
-        self._is_programmed = self.tile.tpm.is_programmed()
         self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
+        self._is_programmed = self.tile.tpm.is_programmed()
         return self._is_programmed
 
     def is_connected(self):
@@ -145,7 +146,8 @@ class TpmDriver(HardwareDriver):
         :type bitfile: bytes
         """
         self.logger.debug("TpmSimulator: download_firmware")
-        self.tile.program_fpgas(bitfile)
+        self.tile.program_fpgas(bitfile + ".bit")
+        self._firmware_name = bitfile
         self._is_programmed = True
 
     def cpld_flash_write(self, bitfile):
@@ -168,7 +170,7 @@ class TpmDriver(HardwareDriver):
 
         """
         self.logger.debug("Tpmdriver: initialise")
-        if not self.tile.tpm.is_programmed():
+        if self.tile.tpm is None or not self.tile.tpm.is_programmed():
             self.tile.program_fpgas(self._firmware_name + ".bit")
             self._is_programmed = True
         self.tile.initialise()
@@ -230,7 +232,7 @@ class TpmDriver(HardwareDriver):
         :rtype: float
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        self._fpga2_temperature = self.tile.get_fpga2_temperature()
+        self._fpga2_temperature = self.tile.get_fpga1_temperature()
         return self._fpga2_temperature
 
     @property
@@ -291,11 +293,15 @@ class TpmDriver(HardwareDriver):
         :return: list of registers
         :rtype: list(str)
         """
-        return list(self._register_map[0].keys())
+        regmap = self.tile.tpm.find_register("")
+        reglist = []
+        for reg in regmap:
+            reglist.append(reg.name)
+        return reg
 
     def read_register(self, register_name, nb_read, offset, device):
         """
-        Read the values in a register.
+        Read the values in a register. Named register returns
 
         :param register_name: name of the register
         :type register_name: str
@@ -303,7 +309,7 @@ class TpmDriver(HardwareDriver):
         :type nb_read: int
         :param offset: offset from which to start reading
         :type offset: int
-        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2
+        :param device: The device number: 1 = FPGA 1, 2 = FPGA 2, other = none
         :type device: int
 
         :return: values read from the register
@@ -311,12 +317,17 @@ class TpmDriver(HardwareDriver):
         """
         if device == 1:
             devname = "fpga1."
-        else:
+        elif device == 2:
             devname = "fpga2."
+        else:
+            devname = ""
         regname = devname + register_name
-        values = [0] * nb_read
-        values = self.tile[regname]
-        return tuple(values)
+        if len(self.tile.tpm.find_registers(regname)) == 0:
+            self.logger.error("Register '" + regname + "' not present")
+            value = None
+        else:
+            value = self.tile[regname]
+        return value
 
     def write_register(self, register_name, values, offset, device):
         """
@@ -333,10 +344,15 @@ class TpmDriver(HardwareDriver):
         """
         if device == 1:
             devname = "fpga1."
-        else:
+        elif device == 2:
             devname = "fpga2."
+        else:
+            devname = ""
         regname = devname + register_name
-        self.tile[regname] = values
+        if len(self.tile.tpm.find_registers(regname)) == 0:
+            self.logger.error("Register '" + regname + "' not present")
+        else:
+            self.tile[regname] = values
 
     def read_address(self, address, nvalues):
         """
@@ -350,8 +366,15 @@ class TpmDriver(HardwareDriver):
         :return: values at the address
         :rtype: list(int)
         """
-        values = [0] * nvalues
-        values = self.tile[address]
+        values = []
+        # this is inefficient
+        # TODO use list write method for tile
+        #
+        current_address = address & 0xFFFFFFFC
+        for i in range(nvalues):
+            self.logger.debug("Reading address " + str(current_address))
+            values.append(self.tile[current_address])
+            current_address = current_address + 4
         return tuple(values)
 
     def write_address(self, address, values):
@@ -459,17 +482,16 @@ class TpmDriver(HardwareDriver):
         """
         Set the channeliser coefficients to modify the bandpass.
 
-        :param array: an N * M array, where N is the number of input
-            channels, and M is the number of frequency channels. This is
-            encoded as a list comprising N, then M, then the flattened
-            array
-        :type array: list(int)
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :param array: an N * M numpy.array, where N is the number of input
+            channels, and M is the number of frequency channels.
+        :type array: list(list(int))
         """
         self.logger.debug("TpmSimulator: set_channeliser_truncation")
-        raise NotImplementedError
+        [nb_chan, nb_freq] = np.shape(array)
+        for chan in range(nb_chan):
+            trunc = [0] * 512
+            trunc[0:nb_freq] = array[chan]
+            self.tile.set_channeliser_truncation(trunc, chan)
 
     def set_beamformer_regions(self, regions):
         """
@@ -480,12 +502,9 @@ class TpmDriver(HardwareDriver):
             (which must be a multiple of 8), and a beam index (between 0
             and 7)
         :type regions: list(int)
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_beamformer_regions")
-        raise NotImplementedError
+        self.tile.set_beamformer_regions(regions)
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
@@ -499,12 +518,9 @@ class TpmDriver(HardwareDriver):
         :type is_first: bool
         :param is_last: whether this is the last (?)
         :type is_last: bool
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: initialise_beamformer")
-        raise NotImplementedError
+        self.tile.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
 
     def load_calibration_coefficients(self, antenna, calibration_coeffs):
         """
@@ -531,12 +547,9 @@ class TpmDriver(HardwareDriver):
         :param angle_coeffs: list containing angle coefficients for each
             beam
         :type angle_coeffs: list(float)
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_beam_angle")
-        raise NotImplementedError
+        self.tile.load_beam_angle(angle_coeffs)
 
     def load_antenna_tapering(self, tapering_coeffs):
         """
@@ -561,12 +574,9 @@ class TpmDriver(HardwareDriver):
         :param switch_time: an optional time at which to perform the
             switch
         :type switch_time: int, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: switch_calibration_band")
-        raise NotImplementedError
+        self.tile.switch_calibration_bank(switch_time=0)
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
@@ -593,12 +603,9 @@ class TpmDriver(HardwareDriver):
 
         :param load_time: time at which to load the pointing delay
         :type load_time: int
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_pointing_delay")
-        raise NotImplementedError
+        self.tile.load_pointing_delay(load_time)
 
     def start_beamformer(self, start_time=0, duration=-1):
         """
@@ -612,13 +619,15 @@ class TpmDriver(HardwareDriver):
         :type duration: int, optional
         """
         self.logger.debug("TpmSimulator: Start beamformer")
-        self._is_beamformer_running = True
+        if self.tile.start_beamformer(start_time, duration):
+            self._is_beamformer_running = True
 
     def stop_beamformer(self):
         """
         Stop the beamformer.
         """
         self.logger.debug("TpmSimulator: Stop beamformer")
+        self.tile.stop_beamformer()
         self._is_beamformer_running = False
 
     def configure_integrated_channel_data(self, integration_time=0.5):
@@ -771,12 +780,9 @@ class TpmDriver(HardwareDriver):
         """
         Compute the calibration coefficients and load them into the
         hardware.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: compute_calibration_coefficients")
-        raise NotImplementedError
+        self.tile.compute_calibration_coefficients()
 
     def start_acquisition(self, start_time=None, delay=2):
         """
@@ -798,15 +804,12 @@ class TpmDriver(HardwareDriver):
         """
         Set coarse zenith delay for input ADC streams.
 
-        :param delays: the delay in samples, specified in nanoseconds.
+        :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
-        :type delays: int
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :type delays: list(int)
         """
         self.logger.debug("TpmSimulator: set_time_delays")
-        raise NotImplementedError
+        self.tile.set_time_delays(delays)
 
     def set_csp_rounding(self, rounding):
         """
@@ -887,28 +890,28 @@ class TpmDriver(HardwareDriver):
         :rtype: int
         """
         self.logger.debug("TpmSimulator: current_tile_beamformer_frame")
+        self._current_tile_beamformer_frame = self.tile.current_tile_beamformer_frame()
         return self._current_tile_beamformer_frame
 
     @property
     def is_beamformer_running(self):
         """
         Whether the beamformer is currently running.
-
         :return: whether the beamformer is currently running
         :rtype: bool
         """
         self.logger.debug("TpmSimulator: beamformer_is_running")
+        self._is_beamformer_running = self.tile.beamformer_is_running()
         return self._is_beamformer_running
 
     def check_pending_data_requests(self):
         """
         Check for pending data requests.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :return: whether there are pending send data requests
+        :rtype: bool
         """
         self.logger.debug("TpmSimulator: check_pending_data_requests")
-        raise NotImplementedError
+        return self.tile.check_pending_data_requests()
 
     def send_channelised_data_narrowband(
         self,

@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+"""
+Hardware functions for the TPM 1.2 hardware
+This is derived from pyaavs.Tile object and depends heavily on the
+pyfabil low level software and specific hardware module plugins
+"""
 import functools
 import socket
 import time
@@ -5,7 +18,7 @@ from builtins import str
 import numpy as np
 import logging
 
-from pyfabil.base.definitions import Device, LibraryError
+from pyfabil.base.definitions import Device, LibraryError, BoardError
 from pyfabil.boards.tpm import TPM
 
 
@@ -28,7 +41,7 @@ def connected(f):
 
 class HwTile(object):
     """
-    Tile hardware interface library. Streamlined and edited verson
+    Tile hardware interface library. Streamlined and edited version
     of the AAVS Tile object
     """
 
@@ -103,15 +116,15 @@ class HwTile(object):
 
     # ---------------------------- Main functions ------------------------------------
 
-    def connect(self, initialise=False, simulation=False, enable_ada=False):
+    def connect(self, initialise=False, load_plugin=True, enable_ada=False):
         """
         Connect to the hardware and loads initial configuration
 
         :param initialise: Initialises the TPM object
         :type initialise: bool
-        :param simulation: Uses simulated hardware
-        :type simulation: bool
-        :param enable_ada: Enbale ADC amplifier
+        :param load_plugin: loads software plugins
+        :type load_plugin: bool
+        :param enable_ada: Enbale ADC amplifier (usually not present)
         :type enable_ada: bool
         """
         # Try to connect to board, if it fails then set tpm to None
@@ -124,31 +137,35 @@ class HwTile(object):
         # tf = __import__("ska.low.mccs.tile.tpm_test_firmware", fromlist=[None])
         # self.tpm.add_plugin_directory(os.path.dirname(tf.__file__))
 
-        self.tpm.connect(
-            ip=self._ip,
-            port=self._port,
-            initialise=initialise,
-            simulator=simulation,
-            enable_ada=enable_ada,
-            fsample=self._sampling_rate,
-        )
+        # Connect using tpm object.
+        # simulator parameter is used not to load the TPM specific plugins,
+        # no actual simulation is performed.
+        try:
+            self.tpm.connect(
+                ip=self._ip,
+                port=self._port,
+                initialise=initialise,
+                simulator=not load_plugin,
+                enable_ada=enable_ada,
+                fsample=self._sampling_rate,
+            )
+        except BoardError:
+            self.tpm = None
+            self.logger.error("Failed to connect to board at " + self._ip)
+            return
 
         # Load tpm test firmware for both FPGAs (no need to load in simulation)
-        if not simulation and self.tpm.is_programmed():
-            self.tpm.load_plugin(
-                "TpmTestFirmware",
-                device=Device.FPGA_1,
-                fsample=self._sampling_rate,
-                logger=self.logger,
-            )
-            self.tpm.load_plugin(
-                "TpmTestFirmware",
-                device=Device.FPGA_2,
-                fsample=self._sampling_rate,
-                logger=self.logger,
-            )
-        elif not self.tpm.is_programmed():
-            self.logger.warn("TPM is not programmed! No plugins loaded")
+        if load_plugin:
+            if self.tpm.is_programmed():
+                for device in [Device.FPGA_1, Device.FPGA_2]:
+                    self.tpm.load_plugin(
+                        "TpmTestFirmware",
+                        device=device,
+                        fsample=self._sampling_rate,
+                        logger=self.logger,
+                    )
+            else:
+                self.logger.warn("TPM is not programmed! No plugins loaded")
 
     def initialise(self, enable_ada=False, enable_test=False):
         """
@@ -160,7 +177,7 @@ class HwTile(object):
         """
         # Before initialing, check if TPM is programmed
         if self.tpm is None or not self.tpm.is_programmed():
-            self.logger.info("Cannot initialise board is not programmed")
+            self.logger.waring("Cannot initialise; board is not programmed")
             return
 
         # Connect to board
@@ -202,6 +219,7 @@ class HwTile(object):
         self.tpm.tpm_f2f[1].initialise_core("fpga1->fpga2")
 
         # AAVS-only - swap polarisations due to remapping performed by preadu
+        # TODO verify if this is required on final hardware
         # self.tpm["fpga1.jesd204_if.regfile_pol_switch"] = 0b00001111
         # self.tpm["fpga2.jesd204_if.regfile_pol_switch"] = 0b00001111
 
@@ -241,18 +259,22 @@ class HwTile(object):
 
     def program_fpgas(self, bitfile):
         """
-        Program FPGA with specified firmware
+        Program both FPGAs with specified firmware
         :param bitfile: Bitfile to load
         :type bitfile: str
         """
-        self.connect(simulation=True)
-        self.logger.info("Downloading bitfile " + bitfile + " to board")
+        self.connect(load_plugin=False)
         if self.tpm is not None:
+            self.logger.info("Downloading bitfile " + bitfile + " to board")
             self.tpm.download_firmware(Device.FPGA_1, bitfile)
+        else:
+            self.logger.warning(
+                "Can not download bitfile " + bitfile + ": board not connected"
+            )
 
     @connected
     def erase_fpga(self):
-        """
+        """h
         Erase FPGA configuration memory
         """
         self.tpm.erase_fpga()
@@ -264,7 +286,7 @@ class HwTile(object):
         :param bitfile: Bitfile where to dump CPLD firmware
         :type bitfile: str
         """
-        self.logger.info("Reading bitstream from  CPLD FLASH")
+        self.logger.info("Reading bitstream from CPLD FLASH")
         self.tpm.tpm_cpld.cpld_flash_read(bitfile)
 
     def get_ip(self):
@@ -300,7 +322,7 @@ class HwTile(object):
         :return: board supply current
         :rtype: float
         """
-        # not implemented in 1.2
+        # Current meter not implemented in hardware in TPM 1.2
         # return self.tpm.current()
         return 0.0
 
@@ -349,7 +371,7 @@ class HwTile(object):
             return 0
 
     @connected
-    def get_fpga_time(self, device):
+    def get_fpga_time(self, device=Device.FPGA_1):
         """
         Return time from FPGA
         :param device: FPGA to get time from
@@ -847,16 +869,17 @@ class HwTile(object):
         :rtype bool:
         """
 
+        mask = 0xFFFFF8  # Impose a time multiple of 8 frames
         if self.beamformer_is_running():
             return False
 
         if start_time == 0:
             start_time = self.current_station_beamformer_frame() + 40
 
-        start_time &= 0xFFFFFFF8  # Impose a start time multiple of 8 frames
+        start_time &= mask
 
         if duration != -1:
-            duration = duration & 0xFFFFFFF8
+            duration = duration & mask
 
         ret1 = self.tpm.station_beamf[0].start(start_time, duration)
         ret2 = self.tpm.station_beamf[1].start(start_time, duration)

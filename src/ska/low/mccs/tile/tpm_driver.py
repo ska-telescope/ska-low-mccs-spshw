@@ -171,11 +171,14 @@ class TpmDriver(HardwareDriver):
         Download firmware, if not already downloaded, and initializes tile
 
         """
-        self.logger.debug("Tpmdriver: initialise")
+        self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
             self.tile.program_fpgas(self._firmware_name + ".bit")
+        if self.tile.tpm.is_programmed():
             self._is_programmed = True
-        self.tile.initialise()
+            self.tile.initialise()
+        else:
+            self.logger.error("TpmDriver: Cannot initialise board")
 
     @property
     def tile_id(self):

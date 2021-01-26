@@ -55,6 +55,8 @@ class TpmDriver(HardwareDriver):
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
 
+        self._tile_id = 0
+        self._station_id = 0
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
         self._board_temperature = self.BOARD_TEMPERATURE
@@ -174,6 +176,44 @@ class TpmDriver(HardwareDriver):
             self.tile.program_fpgas(self._firmware_name + ".bit")
             self._is_programmed = True
         self.tile.initialise()
+
+    @property
+    def tile_id(self):
+        """
+        Tile ID
+        :return: assigned tile Id value
+        :rtype: int
+        """
+        return self._tile_id
+
+    @tile_id.setter
+    def tile_id(self, value):
+        """
+        Set Tile ID
+        :param value: assigned tile Id value
+        :type value: int
+        """
+        self._tile_id = value
+        self.tile.set_station_id(self._station_id, self._tile_id)
+
+    @property
+    def station_id(self):
+        """
+        Station ID
+        :return: assigned station Id value
+        :rtype: int
+        """
+        return self._station_id
+
+    @station_id.setter
+    def station_id(self, value):
+        """
+        Set Station ID
+        :param value: assigned station Id value
+        :type value: int
+        """
+        self._station_id = value
+        self.tile.set_station_id(self._station_id, self._tile_id)
 
     @property
     def board_temperature(self):
@@ -322,12 +362,18 @@ class TpmDriver(HardwareDriver):
         else:
             devname = ""
         regname = devname + register_name
-        if len(self.tile.tpm.find_registers(regname)) == 0:
+        if len(self.tile.tpm.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
             value = None
         else:
             value = self.tile[regname]
-        return value
+        if type(value) == list:
+            value = tuple(value)
+        else:
+            value = tuple([value])
+        nmin = min(len(value) - 1, offset)
+        nmax = min(len(value), nmin + nb_read)
+        return value[nmin:nmax]
 
     def write_register(self, register_name, values, offset, device):
         """
@@ -349,7 +395,7 @@ class TpmDriver(HardwareDriver):
         else:
             devname = ""
         regname = devname + register_name
-        if len(self.tile.tpm.find_registers(regname)) == 0:
+        if len(self.tile.tpm.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
         else:
             self.tile[regname] = values
@@ -370,9 +416,14 @@ class TpmDriver(HardwareDriver):
         # this is inefficient
         # TODO use list write method for tile
         #
-        current_address = address & 0xFFFFFFFC
+        current_address = int(address & 0xFFFFFFFC)
         for i in range(nvalues):
-            self.logger.debug("Reading address " + str(current_address))
+            self.logger.debug(
+                "Reading address "
+                + str(current_address)
+                + "of type "
+                + str(type(current_address))
+            )
             values.append(self.tile[current_address])
             current_address = current_address + 4
         return tuple(values)
@@ -389,7 +440,7 @@ class TpmDriver(HardwareDriver):
         # this is inefficient
         # TODO use list write method for tile
         #
-        current_address = address & 0xFFFFFFFC
+        current_address = int(address & 0xFFFFFFFC)
         for value in values:
             self.tile[current_address] = value
             current_address = current_address + 4

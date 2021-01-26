@@ -68,7 +68,7 @@ class MccsTile(SKABaseDevice):
     # TODO: These properties are not currently being used in any way.
     # Can they be removed, or do they need to be handled somehow?
     TileId = device_property(dtype=int, default_value=0)
-    TpmIp = device_property(dtype=str, default_value="10.0.10.2")
+    TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     #
     # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
@@ -499,7 +499,7 @@ class MccsTile(SKABaseDevice):
         :return: the logical tile id
         :rtype: int
         """
-        return self._logical_tile_id
+        return self.hardware_manager.tile_id
 
     @logicalTileId.write
     def logicalTileId(self, value):
@@ -512,7 +512,7 @@ class MccsTile(SKABaseDevice):
         :param value: the new logical tile id
         :type value: int
         """
-        self._logical_tile_id = value
+        self.hardware_manager.tile_id = value
 
     @attribute(dtype="DevLong", doc="The identifier of the associated subarray.")
     def subarrayId(self):
@@ -542,7 +542,7 @@ class MccsTile(SKABaseDevice):
         :return: the id of the station to which this tile is assigned
         :rtype: int
         """
-        return self._station_id
+        return self.hardware_manager.station_id
 
     @stationId.write
     def stationId(self, value):
@@ -552,7 +552,7 @@ class MccsTile(SKABaseDevice):
         :param value: the station id
         :type value: int
         """
-        self._station_id = value
+        self.hardware_manager.station_id = value
 
     @attribute(
         dtype="DevString",

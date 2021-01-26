@@ -230,7 +230,8 @@ class HwTile(object):
         self.initialise_beamformer(64, 384, True, True)
         self.set_first_last_tile(True, True)
         self.define_spead_header(0, 0, 16, -1, 0)
-        self.start_beamformer(start_time=0, duration=-1)
+        # Do not start beamformer as default
+        # self.start_beamformer(start_time=0, duration=-1)
 
         # Perform synchronisation
         self.post_synchronisation()
@@ -863,9 +864,8 @@ class HwTile(object):
         if ret1 and ret2:
             return True
         else:
-            self.abort()
-
-        return False
+            # self.abort()
+            return False
 
     def stop_beamformer(self):
         """
@@ -1149,6 +1149,56 @@ class HwTile(object):
                     return new_tc
             else:
                 return current_tc
+
+    @connected
+    def set_station_id(self, station_id, tile_id):
+        """
+        Set station ID
+        :param station_id: Station ID
+        :param tile_id: Tile ID within station
+        """
+        fpgas = ["fpga1", "fpga2"]
+        if len(self.tpm.find_register("fpga1.regfile.station_id")) > 0:
+            self["fpga1.regfile.station_id"] = station_id
+            self["fpga2.regfile.station_id"] = station_id
+            self["fpga1.regfile.tpm_id"] = tile_id
+            self["fpga2.regfile.tpm_id"] = tile_id
+        else:
+            for f in fpgas:
+                self[f + ".dsp_regfile.config_id.station_id"] = station_id
+                self[f + ".dsp_regfile.config_id.tpm_id"] = tile_id
+
+    @connected
+    def get_station_id(self):
+        """
+        Get station ID
+        :return: station ID programmed in HW
+        :rtype: int
+        """
+        if not self.tpm.is_programmed():
+            return -1
+        else:
+            if len(self.tpm.find_register("fpga1.regfile.station_id")) > 0:
+                tile_id = self["fpga1.regfile.station_id"]
+            else:
+                tile_id = self["fpga1.dsp_regfile.config_id.station_id"]
+            return tile_id
+
+    @connected
+    def get_tile_id(self):
+        """
+        Get tile ID
+        :return: station ID programmed in HW
+        :rtype: int
+        """
+        if not self.tpm.is_programmed():
+            return -1
+        else:
+            if len(self.tpm.find_register("fpga1.regfile.station_id")) > 0:
+                tile_id = self["fpga1.regfile.tpm_id"]
+            else:
+                tile_id = self["fpga1.dsp_regfile.config_id.tpm_id"]
+            return tile_id
 
     def __str__(self):
         """

@@ -49,6 +49,8 @@ class TpmSimulator(HardwareSimulator):
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+        self._station_id = 0
+        self._tile_id = 0
 
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -152,6 +154,42 @@ class TpmSimulator(HardwareSimulator):
         """
         self.logger.debug("TpmSimulator: initialise")
         raise NotImplementedError
+
+    @property
+    def tile_id(self):
+        """
+        Tile ID
+        :return: assigned tile Id value
+        :rtype: int
+        """
+        return self._tile_id
+
+    @tile_id.setter
+    def tile_id(self, value):
+        """
+        Set Tile ID
+        :param value: assigned tile Id value
+        :type value: int
+        """
+        self._tile_id = value
+
+    @property
+    def station_id(self):
+        """
+        Station ID
+        :return: assigned station Id value
+        :rtype: int
+        """
+        return self._station_id
+
+    @station_id.setter
+    def station_id(self, value):
+        """
+        Set Station ID
+        :param value: assigned station Id value
+        :type value: int
+        """
+        self._station_id = value
 
     @property
     def board_temperature(self):

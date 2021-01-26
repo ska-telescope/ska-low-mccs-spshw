@@ -112,7 +112,7 @@ class MccsTileCli(metaclass=CliMeta):
 
         :param period: period of time, in seconds, to send data, defaults to 0
         :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
+        :param timeout: when to stop, defaults to 0
         :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
@@ -149,7 +149,7 @@ class MccsTileCli(metaclass=CliMeta):
         :type num_samples: int, optional
         :param wait_seconds: wait time before sending data
         :type wait_seconds: float
-        :param timeout: wqhen to stop, defaults to 0
+        :param timeout: when to stop, defaults to 0
         :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
@@ -198,7 +198,7 @@ class MccsTileCli(metaclass=CliMeta):
         :type last_channel: int, optional
         :param period: period of time, in seconds, to send data, defaults to 0
         :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
+        :param timeout: when to stop, defaults to 0
         :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional

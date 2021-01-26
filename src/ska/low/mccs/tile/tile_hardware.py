@@ -168,6 +168,42 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.cpld_flash_write(bitfile)
 
     @property
+    def tile_id(self):
+        """
+        Tile ID
+        :return: assigned tile Id value
+        :rtype: int
+        """
+        return self._factory.hardware.tile_id
+
+    @tile_id.setter
+    def tile_id(self, value):
+        """
+        Set Tile ID
+        :param value: assigned tile Id value
+        :type value: int
+        """
+        self._factory.hardware.tile_id = value
+
+    @property
+    def station_id(self):
+        """
+        Station ID
+        :return: assigned station Id value
+        :rtype: int
+        """
+        return self._factory.hardware.station_id
+
+    @station_id.setter
+    def station_id(self, value):
+        """
+        Set Station ID
+        :param value: assigned station Id value
+        :type value: int
+        """
+        self._factory.hardware.station_id = value
+
+    @property
     def voltage(self):
         """
         The voltage of the hardware.

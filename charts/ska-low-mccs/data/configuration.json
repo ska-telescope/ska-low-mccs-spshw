@@ -221,7 +221,7 @@
                 "MccsTile": {
                     "low-mccs/tile/0003": {
                         "properties": {
-                            "TpmIp": [
+                            "TileIp": [
                                 "3"
                             ],
                             "AntennasPerTile": [

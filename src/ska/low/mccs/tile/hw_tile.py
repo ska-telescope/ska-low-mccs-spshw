@@ -48,9 +48,9 @@ class HwTile(object):
     def __init__(
         self,
         logger=None,
-        ip="10.0.10.2",
+        ip="0.0.0.0",
         port=10000,
-        lmc_ip="10.0.10.1",
+        lmc_ip="0.0.0.0",
         lmc_port=4660,
         sampling_rate=800e6,
     ):
@@ -245,9 +245,21 @@ class HwTile(object):
 
         # Initialise beamformer
         self.logger.info("Initialising beamformer")
-        self.initialise_beamformer(64, 384, True, True)
-        self.set_first_last_tile(True, True)
-        self.define_spead_header(0, 0, 16, -1, 0)
+        self.initialise_beamformer(
+            start_channel=64,  # 50 MHz
+            nof_channels=384,  # 300 MHz bandwidth
+            is_first=False,  # usually a tile is not the first
+            is_last=False,  # or the last in the station chain
+        )
+        self.set_first_last_tile(False, False)
+        # TODO Use meaningful numbers instead of just magic
+        self.define_spead_header(
+            station_id=0,
+            subarray_id=0,
+            nof_atennas=16,
+            ref_epoch=-1,
+            start_time=0,
+        )
         # Do not start beamformer as default
         # self.start_beamformer(start_time=0, duration=-1)
 
@@ -435,6 +447,7 @@ class HwTile(object):
     def wait_pps_event(self):
         """
         Wait for a PPS edge
+        TODO Add a timeout feature, to avoid potential lock
         """
         t0 = self.get_fpga_time(Device.FPGA_1)
         while t0 == self.get_fpga_time(Device.FPGA_1):

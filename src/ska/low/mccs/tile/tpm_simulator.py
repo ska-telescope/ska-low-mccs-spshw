@@ -121,10 +121,11 @@ class TpmSimulator(HardwareSimulator):
         """
         Download the provided firmware bitfile onto the TPM.
 
-        :param bitfile: a binary firmware blob
-        :type bitfile: bytes
+        :param bitfile: the bitfile to be downloaded
+        :type bitfile: str
         """
         self.logger.debug("TpmSimulator: download_firmware")
+        self._firmware_name = bitfile
         self._is_programmed = True
 
     def cpld_flash_write(self, bitfile):
@@ -147,7 +148,7 @@ class TpmSimulator(HardwareSimulator):
         initialises the TPM. We'll just assert the _is_programmed flag.
         """
         self.logger.debug("TpmSimulator: initialise")
-        self.download_firmware("dummy_bitfile.bit")
+        self.download_firmware("firmware1")
 
     @property
     def board_temperature(self):

@@ -1,0 +1,29 @@
+@startuml
+participant "Construction\nInitiator" as Constructor
+participant "Tile's Init\nCommand\nClass" as Init_cmd
+participant "Tile\nHardware\nManager" as Tile_HW_Man
+participant "Tile\nHardware\nFactory" as Tile_HW_Factory
+participant "Simulable\nHardware\nFactory" as Sim_HW_Factory
+participant "TPM\nDriver" as TPM_Drv
+participant "Hardware\nTile" as HW_Tile
+
+Constructor -> Init_cmd: Init()
+Init_cmd -> Init_cmd: do(): device = self.target (the Tile)
+Init_cmd -> Init_cmd: _initialise_connections(device)
+Init_cmd -> Init_cmd: _initialise_hardware_management(device)
+Init_cmd -> Tile_HW_Man: __init__(..., device.tpm_ip, device.tpm_cpld_port)
+Tile_HW_Man -> Tile_HW_Factory: __init__(..., tpm_ip, tpm_cpld_port)
+Tile_HW_Factory -> Sim_HW_Factory: __init__()
+Sim_HW_Factory -> Sim_HW_Factory: self._hardware = _get_driver()
+Sim_HW_Factory -> Tile_HW_Factory: self._simulator = self._create_driver()
+Tile_HW_Factory -> TPM_Drv: __init__(..., tpm_ip, tpm_cpld_port)
+TPM_Drv -> HW_Tile: self.tile = __init__(ip, port, ...)
+TPM_Drv <-- HW_Tile:
+Tile_HW_Factory <-- TPM_Drv:
+Sim_HW_Factory <-- Tile_HW_Factory:
+Sim_HW_Factory <-- Sim_HW_Factory:
+Tile_HW_Factory <-- Sim_HW_Factory:
+Tile_HW_Man <-- Tile_HW_Factory:
+Init_cmd <-- Tile_HW_Man:
+Constructor <-- Init_cmd:
+@enduml

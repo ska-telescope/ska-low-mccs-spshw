@@ -405,7 +405,6 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize(
         ("device_command", "arg", "tpm_command"),
         (
-            ("Initialise", None, "initialise"),
             ("ProgramCPLD", "test_bitload_cpld", "cpld_flash_write"),
             ("SwitchCalibrationBank", 19, "switch_calibration_bank"),
             ("LoadPointingDelay", 0.5, "load_pointing_delay"),
@@ -471,6 +470,19 @@ class TestMccsTileCommands:
         command_object(*args)
         assert getattr(mock_tpm_simulator, tpm_command).called_once_with(*args)
 
+    def test_Initialise(self, device_under_test):
+        """
+        Test for Initialise.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        [[result_code], [message]] = device_under_test.Initialise()
+        assert result_code == ResultCode.OK
+        assert message == "Initialise command completed OK"
+
     def test_On(self, device_under_test):
         """
         Test for On.
@@ -513,19 +525,41 @@ class TestMccsTileCommands:
     def test_DownloadFirmware(self, device_under_test):
         """
         Test for DownloadFirmware. Also functions as the test for the
-        isProgrammed property.
+        isProgrammed and the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.On()
-
         assert not device_under_test.isProgrammed
-        bitfile = "test_bitload_firmware"
-        device_under_test.DownloadFirmware(bitfile)
+        bitfile = "tests/unit/testdata/Vivado_test_firmware_bitfile.bit"
+        [[result_code], [message]] = device_under_test.DownloadFirmware(bitfile)
+        assert message == "DownloadFirmware command completed OK"
+        assert result_code == ResultCode.OK
         assert device_under_test.isProgrammed
+        assert device_under_test.firmwareName == bitfile
+
+    def test_MissingDownloadFirmwareFile(self, device_under_test):
+        """
+        Test for a missing firmware download. Also functions as the test for the
+        isProgrammed and the firmwareName properties.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert not device_under_test.isProgrammed
+        invalid_bitfile_path = "this/folder/and/file/doesnt/exist.bit"
+        existing_firmware_name = device_under_test.firmwareName
+        [[result_code], [message]] = device_under_test.DownloadFirmware(
+            invalid_bitfile_path
+        )
+        assert message != "DownloadFirmware command completed OK"
+        assert result_code == ResultCode.FAILED
+        assert not device_under_test.isProgrammed
+        assert device_under_test.firmwareName == existing_firmware_name
 
     def test_GetRegisterList(self, device_under_test):
         """

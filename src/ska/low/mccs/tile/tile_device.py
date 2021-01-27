@@ -47,7 +47,7 @@ class TilePowerManager(PowerManager):
             hardware
         :type tile_hardware_manager: object
         """
-        self._tile_hardware_manager = tile_hardware_manager
+        self.tile_hardware_manager = tile_hardware_manager
         super().__init__(None, None)
 
 
@@ -402,11 +402,11 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-
-            # RCL: Intercept the On command and call initialise
-            # and off and then carry on!
             power_manager = self.target
-            power_manager._tile_hardware_manager.initialise()
+            # The On() command to Tile needs to first program the firmware
+            # which is done via the initialise() call to the tile hardware
+            # manager.
+            power_manager.tile_hardware_manager.initialise()
             power_manager.off()
             try:
                 result = power_manager.on()

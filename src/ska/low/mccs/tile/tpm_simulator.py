@@ -145,7 +145,8 @@ class TpmSimulator(HardwareSimulator):
     def initialise(self):
         """
         Real TPM driver performs connectivity checks, programs and
-        initialises the TPM. We'll just assert the _is_programmed flag.
+        initialises the TPM. The simulator will emulate programming
+        the firmware.
         """
         self.logger.debug("TpmSimulator: initialise")
         self.download_firmware("firmware1")

@@ -202,7 +202,6 @@ class TestCommon:
         ("command_name", "num_args"),
         (
             ("cpld_flash_write", 1),
-            # ("initialise", 0),
             ("set_channeliser_truncation", 1),
             ("set_beamformer_regions", 1),
             ("initialise_beamformer", 4),
@@ -253,7 +252,7 @@ class TestCommon:
         with pytest.raises(NotImplementedError):
             getattr(hardware_under_test, command_name)(*args)
 
-    def test_initialise(self, hardware_under_test, mocker):
+    def test_initialise(self, hardware_under_test):
         """
         Test of:
 
@@ -265,8 +264,6 @@ class TestCommon:
             TPM
         :type hardware_under_test: object
             :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
-        :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         assert not hardware_under_test.is_programmed
         hardware_under_test.initialise()

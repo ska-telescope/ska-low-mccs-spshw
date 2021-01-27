@@ -47,12 +47,12 @@ class HwTile(object):
 
     def __init__(
         self,
-        logger=None,
-        ip="0.0.0.0",
+        ip,
         port=10000,
         lmc_ip="0.0.0.0",
         lmc_port=4660,
         sampling_rate=800e6,
+        logger=None,
     ):
         """
         HwTile initialization
@@ -256,7 +256,7 @@ class HwTile(object):
         self.define_spead_header(
             station_id=0,
             subarray_id=0,
-            nof_atennas=16,
+            nof_antennas=16,
             ref_epoch=-1,
             start_time=0,
         )

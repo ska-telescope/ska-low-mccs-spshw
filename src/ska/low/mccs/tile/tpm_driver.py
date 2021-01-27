@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-An implementation of a TPM simulator.
+An implementation of a TPM driver.
+The class is basically a wrapper around the HwTile class, in order to have
+a consistent interface for driver and simulator.
+This is an initial version. Some methods are still simulated. A warning is
+issued in this case, or a NotImplementedError exception raised
 """
 import copy
 import numpy as np
@@ -15,6 +19,8 @@ class TpmDriver(HardwareDriver):
     Hardware driver for a TPM.
     """
 
+    # TODO Remove all unnecessary variables and constants after
+    # all methods are completed and tested
     VOLTAGE = 4.7
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
@@ -87,7 +93,8 @@ class TpmDriver(HardwareDriver):
         :return: the firmware list
         :rtype: dict
         """
-        self.logger.debug("TpmSimulator: firmware_available")
+        self.logger.debug("TpmDriver: firmware_available")
+        self.logger.info("TpmDriver: FirmwareAvailable method partially implemented")
         return copy.deepcopy(self._firmware_available)
 
     @property
@@ -99,7 +106,7 @@ class TpmDriver(HardwareDriver):
         :return: firmware name
         :rtype: str
         """
-        self.logger.debug("TpmSimulator: firmware_name")
+        self.logger.debug("TpmDriver: firmware_name")
         return self._firmware_name
 
     @property
@@ -111,7 +118,8 @@ class TpmDriver(HardwareDriver):
         :return: firmware version (major.minor)
         :rtype: str
         """
-        self.logger.debug("TpmSimulator: firmware_version")
+        self.logger.debug("TpmDriver: firmware_version")
+        self.logger.info("TpmDriver: FirmwareVersion method partially implemented")
         firmware = self._firmware_available[self._firmware_name]
         return "{major}.{minor}".format(**firmware)  # noqa: FS002
 
@@ -124,7 +132,7 @@ class TpmDriver(HardwareDriver):
         :return: whether this TPM is programmed
         :rtype: bool
         """
-        self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
+        self.logger.debug(f"TpmDriver: is_programmed {self._is_programmed}")
         self._is_programmed = self.tile.tpm.is_programmed()
         return self._is_programmed
 
@@ -135,6 +143,7 @@ class TpmDriver(HardwareDriver):
         :return: Connection status
         :rtype: bool
         """
+        self.logger.debug("TpmDriver: is_connected")
         connected = True
         if self.tile.tpm is None:
             connected = False
@@ -147,7 +156,7 @@ class TpmDriver(HardwareDriver):
         :param bitfile: a binary firmware blob
         :type bitfile: bytes
         """
-        self.logger.debug("TpmSimulator: download_firmware")
+        self.logger.debug("TpmDriver: download_firmware")
         self.tile.program_fpgas(bitfile + ".bit")
         self._firmware_name = bitfile
         self._is_programmed = True
@@ -163,7 +172,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: program_cpld")
+        self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
     def initialise(self):
@@ -336,6 +345,7 @@ class TpmDriver(HardwareDriver):
         :return: list of registers
         :rtype: list(str)
         """
+        self.logger.warning("TpmDriver: register_list too big to be transmitted")
         regmap = self.tile.tpm.find_register("")
         reglist = []
         for reg in regmap:
@@ -478,6 +488,7 @@ class TpmDriver(HardwareDriver):
             "DstIP": dst_ip,
             "DstPort": dst_port,
         }
+        self.logger.warning("TpmDriver: configure_40g_core is simulated")
         self._forty_gb_core_list.append(core_dict)
 
     def get_40g_configuration(self, core_id=-1):
@@ -492,6 +503,7 @@ class TpmDriver(HardwareDriver):
         :return: core configuration or list of core configurations
         :rtype: dict or list(dict)
         """
+        self.logger.warning("TpmDriver: get_40g_configuration is simulated")
         if core_id == -1:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
@@ -529,7 +541,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: set_lmc_download")
+        self.logger.debug("TpmDriver: set_lmc_download")
         raise NotImplementedError
 
     def set_channeliser_truncation(self, array):
@@ -540,7 +552,7 @@ class TpmDriver(HardwareDriver):
             channels, and M is the number of frequency channels.
         :type array: list(list(int))
         """
-        self.logger.debug("TpmSimulator: set_channeliser_truncation")
+        self.logger.debug("TpmDriver: set_channeliser_truncation")
         [nb_chan, nb_freq] = np.shape(array)
         for chan in range(nb_chan):
             trunc = [0] * 512
@@ -557,7 +569,7 @@ class TpmDriver(HardwareDriver):
             and 7)
         :type regions: list(int)
         """
-        self.logger.debug("TpmSimulator: set_beamformer_regions")
+        self.logger.debug("TpmDriver: set_beamformer_regions")
         self.tile.set_beamformer_regions(regions)
 
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
@@ -573,7 +585,7 @@ class TpmDriver(HardwareDriver):
         :param is_last: whether this is the last (?)
         :type is_last: bool
         """
-        self.logger.debug("TpmSimulator: initialise_beamformer")
+        self.logger.debug("TpmDriver: initialise_beamformer")
         self.tile.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
 
     def load_calibration_coefficients(self, antenna, calibration_coeffs):
@@ -591,7 +603,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: load_calibration_coefficients")
+        self.logger.debug("TpmDriver: load_calibration_coefficients")
         raise NotImplementedError
 
     def load_beam_angle(self, angle_coeffs):
@@ -602,7 +614,7 @@ class TpmDriver(HardwareDriver):
             beam
         :type angle_coeffs: list(float)
         """
-        self.logger.debug("TpmSimulator: load_beam_angle")
+        self.logger.debug("TpmDriver: load_beam_angle")
         self.tile.load_beam_angle(angle_coeffs)
 
     def load_antenna_tapering(self, tapering_coeffs):
@@ -616,7 +628,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: load_antenna_tapering")
+        self.logger.debug("TpmDriver: load_antenna_tapering")
         raise NotImplementedError
 
     def switch_calibration_bank(self, switch_time=0):
@@ -629,7 +641,7 @@ class TpmDriver(HardwareDriver):
             switch
         :type switch_time: int, optional
         """
-        self.logger.debug("TpmSimulator: switch_calibration_band")
+        self.logger.debug("TpmDriver: switch_calibration_band")
         self.tile.switch_calibration_bank(switch_time=0)
 
     def set_pointing_delay(self, delay_array, beam_index):
@@ -648,7 +660,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: set_pointing_delay")
+        self.logger.debug("TpmDriver: set_pointing_delay")
         raise NotImplementedError
 
     def load_pointing_delay(self, load_time):
@@ -658,7 +670,7 @@ class TpmDriver(HardwareDriver):
         :param load_time: time at which to load the pointing delay
         :type load_time: int
         """
-        self.logger.debug("TpmSimulator: load_pointing_delay")
+        self.logger.debug("TpmDriver: load_pointing_delay")
         self.tile.load_pointing_delay(load_time)
 
     def start_beamformer(self, start_time=0, duration=-1):
@@ -672,7 +684,7 @@ class TpmDriver(HardwareDriver):
             defaults to -1 (run forever)
         :type duration: int, optional
         """
-        self.logger.debug("TpmSimulator: Start beamformer")
+        self.logger.debug("TpmDriver: Start beamformer")
         if self.tile.start_beamformer(start_time, duration):
             self._is_beamformer_running = True
 
@@ -680,7 +692,7 @@ class TpmDriver(HardwareDriver):
         """
         Stop the beamformer.
         """
-        self.logger.debug("TpmSimulator: Stop beamformer")
+        self.logger.debug("TpmDriver: Stop beamformer")
         self.tile.stop_beamformer()
         self._is_beamformer_running = False
 
@@ -695,7 +707,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: configure_integrated_channel_data")
+        self.logger.debug("TpmDriver: configure_integrated_channel_data")
         raise NotImplementedError
 
     def configure_integrated_beam_data(self, integration_time=0.5):
@@ -709,7 +721,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: configure_integrated_beam_data")
+        self.logger.debug("TpmDriver: configure_integrated_beam_data")
         raise NotImplementedError
 
     def send_raw_data(
@@ -732,7 +744,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: send_raw_data")
+        self.logger.debug("TpmDriver: send_raw_data")
         raise NotImplementedError
 
     def send_channelised_data(
@@ -767,7 +779,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: send_channelised_data")
+        self.logger.debug("TpmDriver: send_channelised_data")
         raise NotImplementedError
 
     def send_channelised_data_continuous(
@@ -798,7 +810,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: send_channelised_data_continuous")
+        self.logger.debug("TpmDriver: send_channelised_data_continuous")
         raise NotImplementedError
 
     def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
@@ -817,7 +829,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: send_beam_data")
+        self.logger.debug("TpmDriver: send_beam_data")
         raise NotImplementedError
 
     def stop_data_transmission(self):
@@ -827,7 +839,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: stop_data_transmission")
+        self.logger.debug("TpmDriver: stop_data_transmission")
         raise NotImplementedError
 
     def compute_calibration_coefficients(self):
@@ -835,7 +847,7 @@ class TpmDriver(HardwareDriver):
         Compute the calibration coefficients and load them into the
         hardware.
         """
-        self.logger.debug("TpmSimulator: compute_calibration_coefficients")
+        self.logger.debug("TpmDriver: compute_calibration_coefficients")
         self.tile.compute_calibration_coefficients()
 
     def start_acquisition(self, start_time=None, delay=2):
@@ -851,7 +863,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator:Start acquisition")
+        self.logger.debug("TpmDriver:Start acquisition")
         raise NotImplementedError
 
     def set_time_delays(self, delays):
@@ -862,7 +874,7 @@ class TpmDriver(HardwareDriver):
             A positive delay adds delay to the signal stream
         :type delays: list(int)
         """
-        self.logger.debug("TpmSimulator: set_time_delays")
+        self.logger.debug("TpmDriver: set_time_delays")
         self.tile.set_time_delays(delays)
 
     def set_csp_rounding(self, rounding):
@@ -875,7 +887,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: set_csp_rounding")
+        self.logger.debug("TpmDriver: set_csp_rounding")
         raise NotImplementedError
 
     def set_lmc_integrated_download(
@@ -911,7 +923,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: set_lmc_integrated_download")
+        self.logger.debug("TpmDriver: set_lmc_integrated_download")
         raise NotImplementedError
 
     def send_raw_data_synchronised(
@@ -932,7 +944,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: send_raw_data_synchronised")
+        self.logger.debug("TpmDriver: send_raw_data_synchronised")
         raise NotImplementedError
 
     @property
@@ -943,7 +955,7 @@ class TpmDriver(HardwareDriver):
         :return: current tile beamformer frame
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: current_tile_beamformer_frame")
+        self.logger.debug("TpmDriver: current_tile_beamformer_frame")
         self._current_tile_beamformer_frame = self.tile.current_tile_beamformer_frame()
         return self._current_tile_beamformer_frame
 
@@ -954,7 +966,7 @@ class TpmDriver(HardwareDriver):
         :return: whether the beamformer is currently running
         :rtype: bool
         """
-        self.logger.debug("TpmSimulator: beamformer_is_running")
+        self.logger.debug("TpmDriver: beamformer_is_running")
         self._is_beamformer_running = self.tile.beamformer_is_running()
         return self._is_beamformer_running
 
@@ -964,7 +976,7 @@ class TpmDriver(HardwareDriver):
         :return: whether there are pending send data requests
         :rtype: bool
         """
-        self.logger.debug("TpmSimulator: check_pending_data_requests")
+        self.logger.debug("TpmDriver: check_pending_data_requests")
         return self.tile.check_pending_data_requests()
 
     def send_channelised_data_narrowband(
@@ -1000,7 +1012,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: send_channelised_data_narrowband")
+        self.logger.debug("TpmDriver: send_channelised_data_narrowband")
         raise NotImplementedError
 
     #
@@ -1016,7 +1028,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: tweak_transceivers")
+        self.logger.debug("TpmDriver: tweak_transceivers")
         raise NotImplementedError
 
     @property
@@ -1027,7 +1039,8 @@ class TpmDriver(HardwareDriver):
         :return: the phase terminal count
         :rtype: int
         """
-        self.logger.debug("TpmSimulator: get_phase_terminal_count")
+        self.logger.debug("TpmDriver: get_phase_terminal_count")
+        self.logger.debug("TpmDriver: get_phase_terminal_count is simulated")
         return self._phase_terminal_count
 
     @phase_terminal_count.setter
@@ -1038,7 +1051,8 @@ class TpmDriver(HardwareDriver):
         :param value: the phase terminal count
         :type value: int
         """
-        self.logger.debug("TpmSimulator: set_phase_terminal_count")
+        self.logger.debug("TpmDriver: set_phase_terminal_count")
+        self.logger.debug("TpmDriver: set_phase_terminal_count is simulated")
         self._phase_terminal_count = value
 
     def post_synchronisation(self):
@@ -1048,7 +1062,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: post_synchronisation")
+        self.logger.debug("TpmDriver: post_synchronisation")
         raise NotImplementedError
 
     def sync_fpgas(self):
@@ -1058,7 +1072,7 @@ class TpmDriver(HardwareDriver):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmSimulator: sync_fpgas")
+        self.logger.debug("TpmDriver: sync_fpgas")
         raise NotImplementedError
 
     @staticmethod

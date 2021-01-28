@@ -65,12 +65,12 @@ class MccsTile(SKABaseDevice):
     # -----------------
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
-    # TODO: These properties are not currently being used in any way.
-    # Can they be removed, or do they need to be handled somehow?
     TileId = device_property(dtype=int, default_value=0)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     #
+    # TODO: These properties are not currently being used in any way.
+    # Can they be removed, or do they need to be handled somehow?
     # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
     # DstPort = device_property(dtype=int, default_value=30000)
 

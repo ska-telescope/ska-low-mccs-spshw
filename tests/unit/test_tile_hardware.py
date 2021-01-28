@@ -48,7 +48,7 @@ def tile_hardware_manager():
     return TileHardwareManager(
         simulation_mode=SimulationMode.TRUE,
         logger=logging.getLogger(),
-        tpm_ip="10.0.10.2",
+        tpm_ip="0.0.0.0",
         tpm_cpld_port=10000,
     )
 

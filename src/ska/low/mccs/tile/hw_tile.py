@@ -124,7 +124,7 @@ class HwTile(object):
         :type initialise: bool
         :param load_plugin: loads software plugins
         :type load_plugin: bool
-        :param enable_ada: Enbale ADC amplifier (usually not present)
+        :param enable_ada: Enable ADC amplifier (usually not present)
         :type enable_ada: bool
         """
         # Try to connect to board, if it fails then set tpm to None
@@ -149,11 +149,10 @@ class HwTile(object):
                 enable_ada=enable_ada,
                 fsample=self._sampling_rate,
             )
-        except BoardError:
+        except (BoardError, LibraryError):
             self.tpm = None
             self.logger.error("Failed to connect to board at " + self._ip)
             return
-
         # Load tpm test firmware for both FPGAs (no need to load in simulation)
         if load_plugin:
             if self.tpm.is_programmed():
@@ -448,10 +447,17 @@ class HwTile(object):
         """
         Wait for a PPS edge
         TODO Add a timeout feature, to avoid potential lock
+        :raises BoardError: Hardware PPS stuck
         """
+        timeout = 1100
         t0 = self.get_fpga_time(Device.FPGA_1)
         while t0 == self.get_fpga_time(Device.FPGA_1):
-            pass
+            if timeout > 0:
+                time.sleep(0.001)
+                timeout = timeout - 1
+                pass
+            else:
+                raise BoardError("TPM PPS counter does not advance")
 
     @connected
     def check_pending_data_requests(self):
@@ -499,9 +505,9 @@ class HwTile(object):
 
         sync_time = t0 + delay
         # Write start time
+        for station_beamformer in self.tpm.station_beamf:
+            station_beamformer.set_epoch(sync_time)
         for f in devices:
-            for station_beamformer in self.tpm.station_beamf:
-                station_beamformer.set_epoch(sync_time)
             self.tpm[f + ".pps_manager.sync_time_val"] = sync_time
 
     @connected

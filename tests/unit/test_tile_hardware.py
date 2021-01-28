@@ -254,9 +254,7 @@ class TestCommon:
 
     def test_initialise(self, hardware_under_test):
         """
-        Test of:
-
-        * the initialise command.
+        Test of the initialise command, which programs the TPM.
 
         :param hardware_under_test: the hardware object under test. This
             could be a TpmSimulator, or a TileHardwareManager, or, when
@@ -268,6 +266,7 @@ class TestCommon:
         assert not hardware_under_test.is_programmed
         hardware_under_test.initialise()
         assert hardware_under_test.is_programmed
+        assert hardware_under_test.firmware_name == "firmware1"
 
     def test_download_firmware(self, hardware_under_test, mocker):
         """

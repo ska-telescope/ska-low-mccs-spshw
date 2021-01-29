@@ -19,7 +19,7 @@ import numpy as np
 import threading
 import os.path
 
-from tango import DebugIt, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread, DevState
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -422,6 +422,40 @@ class MccsTile(SKABaseDevice):
                     return (ResultCode.FAILED, "On command failed")
             except PowerManagerError as pme:
                 return (ResultCode.FAILED, f"On command failed: {pme}")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
+    def On(self):
+        """
+        Turn device on and program TPM firmware.
+
+        This command will transition a Tile from Off/Standby to
+        On and program the TPM firmware.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        command_sequence = ["On", "Initialise"]
+        if self.state_model.op_state == DevState.STANDBY:
+            command_sequence.insert(0, "Off")
+
+        # Execute the following commands to:
+        # 1. Off - Transition out of Standby state (if required)
+        # 2. On - Turn the power on to the Tile
+        # 3. Initialise - Download TPM firmware and initialise
+        return_code = ResultCode.UNKNOWN
+        message = ""
+        for step in command_sequence:
+            command = self.get_command_object(step)
+            (return_code, message) = command()
+            if return_code == ResultCode.FAILED:
+                return [[return_code], [message]]
+        return [[return_code], ["On command completed OK"]]
 
     class OffCommand(SKABaseDevice.OffCommand):
         """

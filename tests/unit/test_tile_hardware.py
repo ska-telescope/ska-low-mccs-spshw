@@ -204,7 +204,6 @@ class TestCommon:
         ("command_name", "num_args"),
         (
             ("cpld_flash_write", 1),
-            ("initialise", 0),
             ("set_channeliser_truncation", 1),
             ("set_beamformer_regions", 1),
             ("initialise_beamformer", 4),
@@ -254,6 +253,22 @@ class TestCommon:
         args = [Mock()] * num_args
         with pytest.raises(NotImplementedError):
             getattr(hardware_under_test, command_name)(*args)
+
+    def test_initialise(self, hardware_under_test):
+        """
+        Test of the initialise command, which programs the TPM.
+
+        :param hardware_under_test: the hardware object under test. This
+            could be a TpmSimulator, or a TileHardwareManager, or, when
+            we eventually write it, a TpmDriver of an actual hardware
+            TPM
+        :type hardware_under_test: object
+            :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
+        """
+        assert not hardware_under_test.is_programmed
+        hardware_under_test.initialise()
+        assert hardware_under_test.is_programmed
+        assert hardware_under_test.firmware_name == "firmware1"
 
     def test_download_firmware(self, hardware_under_test, mocker):
         """

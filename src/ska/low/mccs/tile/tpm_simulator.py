@@ -146,15 +146,12 @@ class TpmSimulator(HardwareSimulator):
 
     def initialise(self):
         """
-        TODO: What does this method do?
-
-        :todo: what does this method do?
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        Real TPM driver performs connectivity checks, programs and
+        initialises the TPM. The simulator will emulate programming
+        the firmware.
         """
         self.logger.debug("TpmSimulator: initialise")
-        raise NotImplementedError
+        self.download_firmware("firmware1")
 
     @property
     def tile_id(self):

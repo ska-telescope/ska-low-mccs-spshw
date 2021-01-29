@@ -1,0 +1,84 @@
+@startuml
+
+participant "Jupyter\nNotebook\nOET" as Jupyter
+participant "TMC" as TMC
+participant "MCCS\nController" as MCCS_Controller
+participant "MCCS\nStation 1" as MCCS_Station_1
+participant "MCCS\nTile 1\n(On\nCommand)" as MCCS_Tile_1
+participant "Tile\nHardware\nManager" as Tile_HW_Man
+participant "TPM\nDriver" as TPM_Drv
+participant "Hardware\nTile" as HW_Tile
+participant "pyfabil\nTPM" as TPM
+
+Jupyter -> TMC: Startup_Telescope()
+note over MCCS_Controller: state = OFF
+TMC -> MCCS_Controller: On()
+note over MCCS_Station_1: state = OFF
+MCCS_Controller -> MCCS_Station_1: On()
+note over MCCS_Tile_1: state = STANDBY
+MCCS_Station_1 -> MCCS_Tile_1: Initialise()
+MCCS_Tile_1 -> Tile_HW_Man: initialise()
+
+Tile_HW_Man -> TPM_Drv: initialise()
+TPM_Drv -> HW_Tile: perform_connectivity_checks()
+TPM_Drv <-- HW_Tile:
+TPM_Drv -> HW_Tile: connect(simulation=True)
+HW_Tile -> TPM: TPM()
+HW_Tile <-- TPM:
+HW_Tile -> TPM: tpm.connect(...)
+HW_Tile <-- TPM:
+TPM_Drv <-- HW_Tile:
+TPM_Drv -> TPM: tpm.is_programmed()
+TPM_Drv <-- TPM: <no>
+
+TPM_Drv -> HW_Tile: program_fpgas()
+HW_Tile -> HW_Tile: connect(simulation=True)
+activate HW_Tile
+HW_Tile -> TPM: TPM()
+HW_Tile <-- TPM:
+HW_Tile -> TPM: tpm.connect(...)
+HW_Tile <-- TPM:
+HW_Tile <-- HW_Tile:
+deactivate HW_Tile
+HW_Tile -> TPM: download_firmware(Device.FPGA_1, bitfile)
+HW_Tile <-- TPM:
+TPM_Drv <-- HW_Tile:
+
+TPM_Drv -> HW_Tile: initialise()
+
+HW_Tile -> HW_Tile: connect(initialise=True)
+activate HW_Tile
+HW_Tile -> TPM: TPM()
+HW_Tile <-- TPM:
+HW_Tile -> TPM: tpm.connect(...)
+HW_Tile <-- TPM:
+HW_Tile <-- HW_Tile:
+deactivate HW_Tile
+TPM_Drv <-- HW_Tile:
+
+TPM_Drv -> TPM: tpm.is_programmed()
+TPM_Drv <-- TPM: <yes>
+
+TPM_Drv -> HW_Tile: perform_health_check()
+TPM_Drv <-- HW_Tile:
+
+Tile_HW_Man <-- TPM_Drv:
+MCCS_Tile_1 <-- Tile_HW_Man:
+MCCS_Station_1 <-- MCCS_Tile_1:
+
+MCCS_Station_1 -> MCCS_Tile_1: Off()
+note over MCCS_Tile_1: state = OFF
+MCCS_Station_1 <-- MCCS_Tile_1:
+
+MCCS_Station_1 -> MCCS_Tile_1: On()
+note over MCCS_Tile_1: state = ON
+MCCS_Station_1 <-- MCCS_Tile_1:
+note over MCCS_Station_1: state = ON
+
+MCCS_Controller <-- MCCS_Station_1:
+note over MCCS_Controller: state = ON
+
+TMC <-- MCCS_Controller:
+Jupyter <-- TMC:
+
+@enduml

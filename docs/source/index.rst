@@ -22,6 +22,7 @@ prototype for the `Square Kilometre Array`_.
    :caption: Reference material
 
    reference/power
+   reference/tile_device_to_tpm
 
 .. toctree::
    :maxdepth: 1

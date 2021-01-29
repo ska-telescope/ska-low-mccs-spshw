@@ -66,11 +66,12 @@ class MccsTile(SKABaseDevice):
     # -----------------
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
+    TileId = device_property(dtype=int, default_value=0)
+    TpmIp = device_property(dtype=str, default_value="0.0.0.0")
+    TpmCpldPort = device_property(dtype=int, default_value=10000)
+    #
     # TODO: These properties are not currently being used in any way.
     # Can they be removed, or do they need to be handled somehow?
-    # TileId = device_property(dtype=int, default_value=0)
-    # TileIP = device_property(dtype=str, default_value="0.0.0.0")
-    # TpmCpldPort = device_property(dtype=int, default_value=20000)
     # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
     # DstPort = device_property(dtype=int, default_value=30000)
 
@@ -194,8 +195,17 @@ class MccsTile(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
+            device.logger.info(
+                "Initialising hardware manager with ip"
+                + device.TpmIp
+                + ":"
+                + str(device.TpmCpldPort)
+            )
             device.hardware_manager = TileHardwareManager(
-                device._simulation_mode, device.logger
+                device._simulation_mode,
+                device.logger,
+                device.TpmIp,
+                device.TpmCpldPort,
             )
             args = (device.hardware_manager, device.state_model, device.logger)
             device.register_command_object(
@@ -490,7 +500,7 @@ class MccsTile(SKABaseDevice):
         :return: the logical tile id
         :rtype: int
         """
-        return self._logical_tile_id
+        return self.hardware_manager.tile_id
 
     @logicalTileId.write
     def logicalTileId(self, value):
@@ -503,7 +513,7 @@ class MccsTile(SKABaseDevice):
         :param value: the new logical tile id
         :type value: int
         """
-        self._logical_tile_id = value
+        self.hardware_manager.tile_id = value
 
     @attribute(dtype="DevLong", doc="The identifier of the associated subarray.")
     def subarrayId(self):
@@ -533,7 +543,7 @@ class MccsTile(SKABaseDevice):
         :return: the id of the station to which this tile is assigned
         :rtype: int
         """
-        return self._station_id
+        return self.hardware_manager.station_id
 
     @stationId.write
     def stationId(self, value):
@@ -543,7 +553,7 @@ class MccsTile(SKABaseDevice):
         :param value: the station id
         :type value: int
         """
-        self._station_id = value
+        self.hardware_manager.station_id = value
 
     @attribute(
         dtype="DevString",
@@ -714,10 +724,10 @@ class MccsTile(SKABaseDevice):
         dtype="DevDouble",
         doc="The board temperature",
         abs_change=0.1,
-        min_value=25.0,
-        max_value=40.0,
-        min_alarm=26.0,
-        max_alarm=39.0,
+        min_value=15.0,
+        max_value=50.0,
+        min_alarm=16.0,
+        max_alarm=47.0,
         polling_period=1000,
     )
     def board_temperature(self):
@@ -732,10 +742,10 @@ class MccsTile(SKABaseDevice):
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
-        min_value=25.0,
-        max_value=40.0,
-        min_alarm=26.0,
-        max_alarm=39.0,
+        min_value=15.0,
+        max_value=50.0,
+        min_alarm=16.0,
+        max_alarm=47.0,
         polling_period=1000,
     )
     def fpga1_temperature(self):
@@ -749,11 +759,11 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevDouble",
-        abs_change=0.1,
-        min_value=25.0,
-        max_value=40.0,
-        min_alarm=26.0,
-        max_alarm=39.0,
+        abs_change=0.2,
+        min_value=15.0,
+        max_value=50.0,
+        min_alarm=16.0,
+        max_alarm=47.0,
         polling_period=1000,
     )
     def fpga2_temperature(self):
@@ -942,6 +952,28 @@ class MccsTile(SKABaseDevice):
         :rtype: int
         """
         return self.hardware_manager.pps_delay
+
+    @attribute(dtype="DevLong")
+    def simulationMode(self):
+        """
+        Reports the simulation mode of the device.
+        Some devices may implement both modes,
+        while others will have simulators that set simulationMode
+        to True while the real devices always set simulationMode to False.
+        :return: Return the current simulation mode
+        :rtype: int
+        """
+        return super().read_simulationMode()
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode
+        :param value: The simulation mode, as a SimulationMode value
+        """
+        super().write_simulationMode(value)
+        self.logger.info("Switching simulation mode to " + str(value))
+        self.hardware_manager.simulation_mode = self._simulation_mode
 
     # # --------
     # # Commands

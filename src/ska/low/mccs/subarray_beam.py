@@ -19,7 +19,6 @@ import threading
 
 from tango import EnsureOmniThread
 from tango.server import attribute, command
-from tango.server import device_property
 
 from ska.base import SKAObsDevice
 from ska.base.control_model import HealthState
@@ -222,7 +221,7 @@ class MccsSubarrayBeam(SKAObsDevice):
     # -----------------
     # Device Properties
     # -----------------
-    SubarrayBeamId = device_property(dtype=int, default_value=0)
+    # SubarrayBeamId = device_property(dtype=int, default_value=0)
     # BeamId = device_property(dtype=int, default_value=0)
 
     # ---------------

@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-272 - SubArrayBeam device - implement stub device
 
 ## 0.5.0 
 * MCCS-169 - Add configure to subarray

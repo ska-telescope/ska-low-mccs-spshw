@@ -36,6 +36,7 @@ prototype for the `Square Kilometre Array`_.
    api/group_device
    api/station
    api/station_beam
+   api/subarray_beam
    api/subarray
    api/tel_state
    api/tile_device

@@ -222,7 +222,7 @@ class TestMccsController:
         second_event_data = mock_callback.mock_calls[1][1][0].attr_value
         assert first_event_data.name.lower() == name.lower()
         assert second_event_data.name.lower() == name.lower()
-        assert first_event_data.value == 4
+        assert first_event_data.value == ResultCode.UNKNOWN
         assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
         if result is not None:
             assert second_event_data.value == result

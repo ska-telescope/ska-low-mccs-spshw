@@ -265,6 +265,44 @@ def backoff_connect(fqdn, logger):
     return _DeviceConnector(logger).connect(fqdn)
 
 
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
+def _backoff_device_ready(device):
+    """
+    Checks that device is ready to accept commands, using an exponential
+    backoff-retry scheme in case it is still initialising.
+
+    :param device: proxy to the device
+    :type device: :py:class:`tango.DeviceProxy`
+
+    :return: whether the device is ready
+    :rtype: bool
+    """
+    return device.state() != DevState.INIT
+
+
+def backoff_connect(fqdn, wait=True):
+    """
+    Connects to a specified device (using an exponential backoff-retry
+    scheme in case of failure), then (optionally) waits for the device to have
+    completed initialisation.
+
+    :param fqdn: the fully qualified device name of the device for
+        which this DeviceEventManager will manage change events
+    :type fqdn: str
+    :param wait: whether to wait for the target device to complete
+        initialisation before returning
+    :type wait: bool
+
+    :return: a proxy for the device
+    :rtype: :py:class:`tango.DeviceProxy`
+    """
+    device = _backoff_device_proxy(fqdn)
+    if wait and _backoff_device_ready(device):
+        return device
+    else:
+        return None
+
+
 def tango_raise(
     msg, reason="API_CommandFailed", severity=ErrSeverity.ERR, _origin=None
 ):
@@ -314,11 +352,10 @@ def call_with_json(func, **kwargs):
     Allows the calling of a command that accepts a JSON string as input,
     with the actual unserialised parameters.
 
-    For example, suppose you need to use
-    :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate()`
-    to command a controller device to allocate certain stations and
-    tiles to a subarray. `Allocate()` accepts a single JSON string
-    argument. Instead of
+    For example, suppose you need to use `Allocate(resources)` command
+    to tell a controller device to allocate certain stations and tiles
+    to a subarray. `Allocate` accepts a single JSON string argument.
+    Instead of
 
     Example::
 

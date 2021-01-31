@@ -19,8 +19,7 @@ import pytest
 import tango
 from tango import DevState
 
-from ska.base import DeviceStateModel
-from ska.base.commands import CommandError, ResultCode
+from ska.base.commands import ResultCode
 from ska.base.control_model import (
     AdminMode,
     ControlMode,
@@ -29,8 +28,6 @@ from ska.base.control_model import (
     TestMode,
 )
 from ska.low.mccs import MccsStation, release
-from ska.low.mccs.hardware import PowerMode
-from ska.low.mccs.station import StationPowerManager
 
 
 @pytest.fixture()
@@ -105,6 +102,7 @@ def mock_factory(mocker):
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
+        mock.command_inout.return_value = ((ResultCode.OK,), ("mock message",))
         return mock
 
     return _mock_device
@@ -383,145 +381,6 @@ class TestMccsStation:
         assert device_under_test.isConfigured is True
 
 
-class TestStationPowerManager:
-    """
-    This class contains tests of the
-    :py:class:`ska.low.mccs.station.StationPowerManager` class
-    """
-
-    @pytest.fixture()
-    def power_manager(self, logger):
-        """
-        Fixture that returns a power manager with no subservient
-        devices.
-
-        :param logger: a logger for this power manager to use
-        :type logger: an instance of :py:class:`logging.Logger`, or
-            an object that implements the same interface
-
-        :return: a power manager with no hardware and no subservient
-            devices
-        :rtype: :py:class:`ska.low.mccs.power.PowerManager`
-        """
-        return StationPowerManager([], logger)
-
-    @pytest.fixture()
-    def state_model(self, logger):
-        """
-        Fixture that returns a state model for the command under test to
-        use.
-
-        :param logger: a logger for the state model to use
-        :type logger: an instance of :py:class:`logging.Logger`, or
-            an object that implements the same interface
-
-        :return: a state model for the command under test to use
-        :rtype: :py:class:`~ska.base.DeviceStateModel`
-        """
-        return DeviceStateModel(logger)
-
-    def test_OnCommand(self, power_manager, state_model):
-        """
-        Test the working of the On command.
-
-        Because the PowerManager and DeviceStateModel are thoroughly
-        unit-tested elsewhere, here we just need to check that the On
-        command drives them correctly. The scope of this test is: check
-        that the On command is not allowed to run the state model is
-        not in the OFF state; check that such attempts fail with no
-        side-effects; check that On() command IS allowed to run when
-        the state model is in the OFF state; check that running the
-        On() command succeeds, and that the result is the state model
-        moves to state ON, and the power manager thinks it is on.
-
-        :param power_manager: a power manager with no subservient
-            devices
-        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
-        :param state_model: the state model for the device
-        :type state_model: :py:class:`~ska.base.DeviceStateModel`
-        """
-        on_command = MccsStation.OnCommand(power_manager, state_model)
-        assert power_manager.power_mode == PowerMode.OFF
-
-        # in all states except OFF, the on command is not permitted,
-        # should not be allowed, should fail, should have no side-effect
-        # There's no need to check them all though, as that is done in
-        # the lmcbaseclasses testing. Let's just double-check DISABLE
-        state_model._straight_to_state(
-            admin_mode=AdminMode.ONLINE, op_state=DevState.DISABLE
-        )
-
-        assert not on_command.is_allowed()
-        with pytest.raises(CommandError):
-            on_command()
-
-        assert power_manager.power_mode == PowerMode.OFF
-        assert state_model.op_state == DevState.DISABLE
-
-        # now push to OFF, the state in which the On command IS allowed
-        state_model._straight_to_state(
-            admin_mode=AdminMode.ONLINE, op_state=DevState.OFF
-        )
-
-        assert on_command.is_allowed()
-        assert on_command() == (ResultCode.OK, "On command completed OK")
-        assert power_manager.power_mode == PowerMode.ON
-        assert state_model.op_state == DevState.ON
-
-    def test_OffCommand(self, power_manager, state_model):
-        """
-        Test the working of the Off command.
-
-        Because the PowerManager and DeviceStateModel are thoroughly
-        unit-tested elsewhere, here we just need to check that the Off
-        command drives them correctly. The scope of this test is: check
-        that the Off command is not allowed to run if the state model is
-        not in the ON state; check that such attempts fail with no
-        side-effects; check that Off() command IS allowed to run when
-        the state model is in the ON state; check that running the
-        Off() command succeeds, and that the result is the state model
-        moves to state OFF, and the power manager thinks it is off.
-
-        :param power_manager: a power manager with no subservient
-            devices
-        :type power_manager: :py:class:`ska.low.mccs.power.PowerManager`
-        :param state_model: the state model for the device
-        :type state_model: :py:class:`~ska.base.DeviceStateModel`
-        """
-        off_command = MccsStation.OffCommand(power_manager, state_model)
-        power_manager.on()
-        assert power_manager.power_mode == PowerMode.ON
-
-        # The Off command is allowed in states DISABLE, STANDBY and ON.
-        # It is disallowed in states INIT and FAULT.
-
-        # There's no need to check them all though, as that is done in
-        # the lmcbaseclasses testing. Let's just check that the command
-        # is disallowed from FAULT, and allowed from STANDBY
-
-        state_model._straight_to_state(
-            admin_mode=AdminMode.ONLINE, op_state=DevState.FAULT
-        )
-
-        assert not off_command.is_allowed()
-        with pytest.raises(CommandError):
-            off_command()
-
-        assert power_manager.power_mode == PowerMode.ON
-        assert state_model.op_state == DevState.FAULT
-
-        # now push to STANDBY, a state in which the Off command IS
-        # allowed
-        state_model._straight_to_state(
-            admin_mode=AdminMode.ONLINE, op_state=DevState.STANDBY
-        )
-
-        assert off_command.is_allowed()
-        assert off_command() == (ResultCode.OK, "Off command completed OK")
-        assert power_manager.power_mode == PowerMode.OFF
-        assert state_model.op_state == DevState.OFF
-
-
 class TestInitCommand:
     """
     Contains the tests of :py:class:`~ska.low.mccs.MccsStation`'s
@@ -557,8 +416,26 @@ class TestInitCommand:
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
+            self._initialise_device_pool_manager_called = False
             self._initialise_health_monitoring_called = False
-            self._initialise_power_management_called = False
+
+        def _initialise_device_pool_manager(self, device, fqdns):
+            """
+            Initialise the device pool for this device (overridden here
+            to inject a call trace attribute).
+
+            :param device: the device for which the device pool is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices for which
+                this device manages power
+            :type fqdns: list(str)
+            """
+            self._initialise_device_pool_manager_called = True
+            super()._initialise_device_pool_manager(device)
+            with self._hang_lock:
+                # hang until the hang lock is released
+                pass
 
         def _initialise_health_monitoring(self, device, fqdns):
             """
@@ -568,28 +445,12 @@ class TestInitCommand:
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: FQDNs of subservient devices
-            :type fqdns: list(str)
+            :param fqdns: the fqdns of subservient devices for which
+                this device monitors health
+            :type: list(str)
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device, fqdns)
-            with self._hang_lock:
-                # hang until the hang lock is released
-                pass
-
-        def _initialise_power_management(self, device, fqdns):
-            """
-            Initialise the device's power manager (overridden here to
-            inject a call trace attribute).
-
-            :param device: the device for which power management is
-                being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: FQDNs of subservient devices
-            :type fqdns: list(str)
-            """
-            self._initialise_power_management_called = True
-            super()._initialise_power_management(device, fqdns)
 
     def test_interrupt(self, mocker):
         """
@@ -607,15 +468,21 @@ class TestInitCommand:
 
         with init_command._hang_lock:
             init_command()
-            # we got the hang lock first, so the initialisation thread
-            # will hang in health initialisation until we release it
+            time.sleep(0.1)
+
+            # We got the hang lock first, so the initialisation thread will hang in
+            # device pool manager initialisation until we release it.
+
+            assert init_command._initialise_device_pool_manager_called
+            assert not init_command._initialise_health_monitoring_called
+
             init_command.interrupt()
 
         init_command._thread.join()
 
-        # now that we've released the hang lock, the thread can exit
-        # its _initialise_health_monitoring, but before it enters its
-        # _initialise_power_management, it will detect that it has been
+        # Now that we've released the hang lock, the thread can exit its
+        # _initialise_device_pool_manager method, but before it enters its
+        # _initialise_health_monitoring, it will detect that it has been
         # interrupted, and return
-        assert init_command._initialise_health_monitoring_called
-        assert not init_command._initialise_power_management_called
+        assert init_command._initialise_device_pool_manager_called
+        assert not init_command._initialise_health_monitoring_called

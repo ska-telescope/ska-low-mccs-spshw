@@ -250,8 +250,12 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
-        self._apiu = AntennaAPIUProxy(apiu_fqdn, logical_apiu_antenna_id, logger)
-        self._tile = AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
+        self._antenna_apiu_proxy = AntennaAPIUProxy(
+            apiu_fqdn, logical_apiu_antenna_id, logger
+        )
+        self._antenna_tile_proxy = AntennaTileProxy(
+            tile_fqdn, logical_tile_antenna_id, logger
+        )
 
     @property
     def is_connected(self):
@@ -1058,8 +1062,8 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable` command
-            for this :py:class:`.MccsAntenna` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            command for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1082,8 +1086,8 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby` command
-            for this :py:class:`.MccsAntenna` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            command for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

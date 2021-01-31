@@ -60,7 +60,7 @@ class PowerMode(enum.IntEnum):
 class BasePowerModeHardwareDriver(HardwareDriver):
     """
     A mixin that adds an abstract :py:meth:`.on` method and an abstract
-    :py:meth:`.power_mode` property to the abstract
+    :py:attr:`.power_mode` property to the abstract
     :py:class:`.HardwareDriver` class.
     """
 
@@ -149,7 +149,7 @@ class OnStandbyOffHardwareDriver(OnOffHardwareDriver, OnStandbyHardwareDriver):
 
 class BasePowerModeHardwareSimulator(HardwareSimulator, BasePowerModeHardwareDriver):
     """
-    A mixin that add an :py:meth:`.on` method and :py:meth:`.power_mode`
+    A mixin that add an :py:meth:`.on` method and :py:attr:`.power_mode`
     property to a :py:class:`.HardwareSimulator`.
     """
 
@@ -239,7 +239,7 @@ class BasePowerModeHardwareManager(HardwareManager):
     A base class for :py:class:`.HardwareManager` mixins.
 
     Add an
-    :py:meth:`.on` method and a :py:meth:`.power_mode` property.
+    :py:meth:`.on` method and a :py:attr:`.power_mode` property.
     """
 
     def __init__(self, hardware_factory, health_evaluator):

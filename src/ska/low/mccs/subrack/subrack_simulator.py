@@ -31,7 +31,6 @@ Some assumptions of this class are:
   temperature is.
 
 These assumptions are unconfirmed and may need to change in future.
-
 """
 
 from ska.low.mccs.hardware import OnOffHardwareSimulator, PowerMode
@@ -50,7 +49,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
     current; i.e. it can monitor the temperature and current of the
     equipment without talking to that equipment, and even when it is
     turned off.
-
     """
 
     DEFAULT_TEMPERATURE = 40.0
@@ -84,7 +82,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type fail_connect: bool
         :param power_mode: the initial power mode of this module
         :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
-
         """
         self._temperature = temperature
         self._current_when_on = current
@@ -98,7 +95,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
 
         :return: this module's temperature.
         :rtype: float
-
         """
         return self._temperature
 
@@ -108,7 +104,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
 
         :param temperature: the simulated temperature of this module
         :type temperature: float
-
         """
         self._temperature = temperature
 
@@ -119,7 +114,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
 
         :return: this module's current.
         :rtype: float
-
         """
         return self._current_when_on if self.power_mode == PowerMode.ON else 0.0
 
@@ -129,7 +123,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
 
         :param current: the simulated current of this module
         :type current: float
-
         """
         self._current_when_on = current
 
@@ -142,7 +135,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         itself off and on. Actually, this would be done via the SPS
         cabinet. Once we have an SPS cabinet simulator, we should fix
         this.
-
     """
 
     NUMBER_OF_BAYS = 8
@@ -212,7 +204,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             inject our own bays instead of letting this simulator create
             them.
         :type _bays: list of :py:class:`.SubrackBaySimulator`
-
         """
         self._backplane_temperature = backplane_temperature
         self._board_temperature = board_temperature
@@ -233,7 +224,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             turn itself off and on. Actually, this would be done via the
             SPS cabinet. Once we have an SPS cabinet simulator, we
             should delete this method.
-
         """
         super().off()
 
@@ -249,7 +239,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             turn itself off and on. Actually, this would be done via the
             SPS cabinet. Once we have an SPS cabinet simulator, we
             should delete this method.
-
         """
         super().on()
 
@@ -260,7 +249,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the subrack backplane temperature
         :rtype: float
-
         """
         self.check_power_mode(PowerMode.ON)
         return self._backplane_temperature
@@ -273,7 +261,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param backplane_temperature: the simulated backplane
             temperature for this subrack simulator.
         :type backplane_temperature: float
-
         """
         self._backplane_temperature = backplane_temperature
 
@@ -284,7 +271,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the subrack management board temperature
         :rtype: float
-
         """
         self.check_power_mode(PowerMode.ON)
         return self._board_temperature
@@ -296,7 +282,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param board_temperature: the simulated board temperature for
             this subrack simulator.
         :type board_temperature: float
-
         """
         self._board_temperature = board_temperature
 
@@ -307,7 +292,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the subrack management board current
         :rtype: float
-
         """
         self.check_power_mode(PowerMode.ON)
         return self._board_current
@@ -318,7 +302,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :param board_current: the simulated board current for this subrack simulator.
         :type board_current: float
-
         """
         self._board_current = board_current
 
@@ -329,7 +312,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the subrack fan speed (RPMs)
         :rtype: float
-
         """
         self.check_power_mode(PowerMode.ON)
         return self._fan_speed
@@ -340,7 +322,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :param fan_speed: the simulated fan speed for this subrack simulator.
         :type fan_speed: float
-
         """
         self._fan_speed = fan_speed
 
@@ -351,7 +332,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the number of TPMs housed in this subrack
         :rtype: int
-
         """
         return len(self._bays)
 
@@ -362,7 +342,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the temperatures of the TPMs housed in this subrack
         :rtype: list of float
-
         """
         self.check_power_mode(PowerMode.ON)
         return [bay.temperature for bay in self._bays]
@@ -391,7 +370,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :return: the temperatures of the TPMs housed in this subrack
         :rtype: list of float
-
         """
         self.check_power_mode(PowerMode.ON)
         return [bay.current for bay in self._bays]
@@ -424,7 +402,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: whether the TPM is on, or None if the subrack itself
             is off
         :rtype: bool or None
-
         """
         self.check_power_mode(PowerMode.ON)
         return self._bays[logical_tpm_id - 1].power_mode == PowerMode.ON
@@ -436,7 +413,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned off
         :type logical_tpm_id: int
-
         """
         self.check_power_mode(PowerMode.ON)
         self._bays[logical_tpm_id - 1].off()
@@ -448,7 +424,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned on
         :type logical_tpm_id: int
-
         """
         self.check_power_mode(PowerMode.ON)
         self._bays[logical_tpm_id - 1].on()

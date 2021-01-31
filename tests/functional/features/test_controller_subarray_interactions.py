@@ -20,7 +20,7 @@ from ska.base.control_model import AdminMode, ObsState, HealthState
 # anyhow:
 # https://github.com/pytest-dev/pytest/issues/3272#issuecomment-369252005
 # This will be fixed when we get around to doing MCCS-329.
-@backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
+@backoff.on_predicate(backoff.expo, factor=0.1, max_time=180)
 def confirm_initialised(devices):
     """
     Helper function that tries to confirm that a device has completed
@@ -55,12 +55,13 @@ def devices_to_load():
             "subarray_02",
             "station_001",
             "station_002",
+            "subrack_01",
             "tile_0001",
             "tile_0002",
             "tile_0003",
             "tile_0004",
-            "apiu_001",
-            # "antenna_000001",  # workaround for MCCS-244
+            # "apiu_001",  # workaround for MCCS-244
+            # "antenna_000001",
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
@@ -108,12 +109,13 @@ def devices(tango_context):
         "subarray_02": tango_context.get_device("low-mccs/subarray/02"),
         "station_001": tango_context.get_device("low-mccs/station/001"),
         "station_002": tango_context.get_device("low-mccs/station/002"),
+        "subrack_01": tango_context.get_device("low-mccs/subrack/01"),
         "tile_0001": tango_context.get_device("low-mccs/tile/0001"),
         "tile_0002": tango_context.get_device("low-mccs/tile/0002"),
         "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
         "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
-        "apiu_001": tango_context.get_device("low-mccs/apiu/001"),
         # workaround for MCCS-244
+        # "apiu_001": tango_context.get_device("low-mccs/apiu/001"),
         # "antenna_000001": tango_context.get_device("low-mccs/antenna/000001"),
         # "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
         # "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
@@ -193,8 +195,8 @@ def we_have_mvplow_running_an_instance_of(devices, devices_to_load, component_na
         assert False
 
 
-@given(parsers.parse("{component_name} is ready to {direction} an on command"))
-def component_is_ready_to_receive_an_on_command(devices, component_name, direction):
+@given(parsers.parse("{component_name} is ready to {direction} a startup command"))
+def component_is_ready_to_receive_a_startup_command(devices, component_name, direction):
     """
     Asserts that a component is ready to receive an on command.
 
@@ -211,6 +213,17 @@ def component_is_ready_to_receive_an_on_command(devices, component_name, directi
         pass
     else:
         assert False
+
+
+@when(parsers.parse("tmc tells mccs controller to start up"))
+def tmc_tells_mccs_controller_to_start_up(devices):
+    """
+    Start up the MCCS subsystem.
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert_command(device=devices["controller"], command="Startup")
 
 
 @when(parsers.parse("tmc turns mccs controller {device_state}"))
@@ -311,7 +324,7 @@ def component_is_ready_to_action_a_subarray(devices, component_name, action):
     :type action: str
     """
     if component_name == "mccs":
-        tmc_turns_mccs_controller_onoff(devices, "on")
+        tmc_tells_mccs_controller_to_start_up(devices)
         check_mccs_controller_state(devices, "on")
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF

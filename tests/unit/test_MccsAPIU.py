@@ -206,7 +206,7 @@ class TestAPIUSimulator:
 
     def test_antennas_on_off(self, apiu_simulator):
         """
-        Test that we can turn all the antennas on/off at once
+        Test that we can turn all the antennas on/off at once.
 
         :param apiu_simulator: a simulator for APIU hardware
         :type apiu_simulator:

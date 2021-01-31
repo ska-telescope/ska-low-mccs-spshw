@@ -1,9 +1,9 @@
 ===================================
-Power module (ska.low.mccs.power)
+Pool module (ska.low.mccs.pool)
 ===================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.power
+.. automodule:: ska.low.mccs.pool
    :members:

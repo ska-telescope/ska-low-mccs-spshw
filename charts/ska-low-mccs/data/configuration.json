@@ -243,7 +243,11 @@
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002",
                                 "low-mccs/tile/0003",
-                                "low-mccs/tile/0004"
+                                "low-mccs/tile/0004",
+                                "low-mccs/tile/0005",
+                                "low-mccs/tile/0006",
+                                "low-mccs/tile/0007",
+                                "low-mccs/tile/0008"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -259,6 +263,12 @@
                     "low-mccs/tile/0001": {
                         "properties": {
                             "TileId": [
+                                "1"
+                            ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
                                 "1"
                             ],
                             "AntennasPerTile": [
@@ -284,6 +294,12 @@
                             "TileId": [
                                 "2"
                             ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
+                                "2"
+                            ],
                             "AntennasPerTile": [
                                 "16"
                             ],
@@ -307,6 +323,12 @@
                             "TileId": [
                                 "3"
                             ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
+                                "3"
+                            ],
                             "AntennasPerTile": [
                                 "16"
                             ],
@@ -328,6 +350,12 @@
                     "low-mccs/tile/0004": {
                         "properties": {
                             "TileId": [
+                                "4"
+                            ],
+                            "SubrackFQDN": [
+                                "low-mccs/subrack/01"
+                            ],
+                            "SubrackBay": [
                                 "4"
                             ],
                             "AntennasPerTile": [

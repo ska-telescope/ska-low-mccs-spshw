@@ -12,13 +12,11 @@ including a Tango device and a CLI.
 
 __all__ = [
     "MccsController",
-    "ControllerPowerManager",
     "ControllerResourceManager",
     # "controller_device",
 ]
 
 from .controller_device import (
     MccsController,
-    ControllerPowerManager,
     ControllerResourceManager,
 )

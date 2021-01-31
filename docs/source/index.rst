@@ -61,7 +61,7 @@ prototype for the `Square Kilometre Array`_.
    api/events
    api/hardware
    api/health
-   api/power
+   api/pool
    api/utils
 
 

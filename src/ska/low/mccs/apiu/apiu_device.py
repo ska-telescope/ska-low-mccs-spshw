@@ -27,7 +27,6 @@ from ska.low.mccs.hardware import (
     SimulableHardwareManager,
 )
 from ska.low.mccs.health import HealthModel
-from ska.low.mccs.power import PowerManager
 from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
 
 
@@ -418,11 +417,6 @@ class MccsAPIU(SKABaseDevice):
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_power_management(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
                 with self._lock:
                     self.succeeded()
 
@@ -440,6 +434,10 @@ class MccsAPIU(SKABaseDevice):
             device.hardware_manager.on()
 
             args = (device.hardware_manager, device.state_model, self.logger)
+
+            device.register_command_object("Disable", device.DisableCommand(*args))
+            device.register_command_object("Standby", device.StandbyCommand(*args))
+            device.register_command_object("Off", device.OffCommand(*args))
 
             device.register_command_object(
                 "IsAntennaOn", device.IsAntennaOnCommand(*args)
@@ -470,24 +468,6 @@ class MccsAPIU(SKABaseDevice):
                 device.event_manager,
                 device.health_changed,
             )
-
-        def _initialise_power_management(self, device):
-            """
-            Initialise power management for this device.
-
-            :param device: the device for which power management is
-                being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-            """
-            device.power_manager = PowerManager(device.hardware_manager, None)
-            power_args = (device.power_manager, device.state_model, device.logger)
-            device.register_command_object(
-                "Disable", device.DisableCommand(*power_args)
-            )
-            device.register_command_object(
-                "Standby", device.StandbyCommand(*power_args)
-            )
-            device.register_command_object("Off", device.OffCommand(*power_args))
 
         def interrupt(self):
             """
@@ -672,8 +652,8 @@ class MccsAPIU(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable` command
-            for this :py:class:`.MccsAPIU` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            command for this :py:class:`.MccsAPIU` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -681,9 +661,10 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = (
-                hardware_manager.off()
-            )  # because DISABLE is the state of lowest device readiness
+
+            success = hardware_manager.off()
+            # because DISABLE is the state of lowest device readiness
+
             return create_return(success, "disable")
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
@@ -705,8 +686,8 @@ class MccsAPIU(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby` command
-            for this :py:class:`.MccsAPIU` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            command for this :py:class:`.MccsAPIU` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -741,9 +722,10 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = (
-                hardware_manager.on()
-            )  # because the OFF state is a state of high device readiness
+
+            success = hardware_manager.on()
+            # because the OFF state is a state of high device readiness
+
             return create_return(success, "off")
 
     class IsAntennaOnCommand(BaseCommand):

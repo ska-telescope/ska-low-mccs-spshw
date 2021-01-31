@@ -96,7 +96,7 @@ The classes fall into three groups:
     base class provides for an
     :py:meth:`~.BasePowerModeHardwareDriver.on`
     method and a
-    :py:meth:`~.BasePowerModeHardwareDriver.power_mode`
+    :py:attr:`~.BasePowerModeHardwareDriver.power_mode`
     property
 
   * :py:class:`.OnOffHardwareDriver` adds an
@@ -115,7 +115,7 @@ The classes fall into three groups:
     base class provides a software implementation of the
     :py:meth:`~.BasePowerModeHardwareSimulator.on`
     method and
-    :py:meth:`~.BasePowerModeHardwareSimulator.power_mode`
+    :py:attr:`~.BasePowerModeHardwareSimulator.power_mode`
     property.
 
   * :py:class:`.OnOffHardwareSimulator`: adds a software implementation
@@ -135,7 +135,7 @@ The classes fall into three groups:
     base class extends the hardware manager with an
     :py:meth:`~.BasePowerModeHardwareManager.on`
     method and a
-    :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareManager.power_mode`
+    :py:attr:`~ska.low.mccs.hardware.BasePowerModeHardwareManager.power_mode`
     property.
 
   * :py:class:`.OnOffHardwareManager`: add an

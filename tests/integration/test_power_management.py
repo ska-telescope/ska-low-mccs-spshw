@@ -34,6 +34,7 @@ def devices_to_load():
             "subarray_02",
             "station_001",
             "station_002",
+            "subrack_01",
             "tile_0001",
             "tile_0002",
             "tile_0003",
@@ -71,12 +72,15 @@ class TestPowerManagement:
         assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF
         assert station_2.State() == DevState.OFF
-        assert tile_1.State() == DevState.OFF
-        assert tile_2.State() == DevState.OFF
-        assert tile_3.State() == DevState.OFF
-        assert tile_4.State() == DevState.OFF
+        assert tile_1.State() == DevState.DISABLE
+        assert tile_2.State() == DevState.DISABLE
+        assert tile_3.State() == DevState.DISABLE
+        assert tile_4.State() == DevState.DISABLE
 
-        controller.On()
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        controller.Startup()
 
         assert controller.State() == DevState.ON
         assert station_1.State() == DevState.ON

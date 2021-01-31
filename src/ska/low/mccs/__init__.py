@@ -45,7 +45,7 @@ __all__ = [
     "events",
     "hardware",
     "health",
-    "power",
+    "pool",
     "utils",
     "resource",
 ]

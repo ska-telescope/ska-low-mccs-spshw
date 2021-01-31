@@ -26,12 +26,13 @@ def devices_to_load():
             "subarray_02",
             "station_001",
             "station_002",
+            "subrack_01",
             "tile_0001",
             "tile_0002",
             "tile_0003",
             "tile_0004",
-            "apiu_001",
-            # "antenna_000001",  # workaround for MCCS-244
+            # "apiu_001",  # workaround for MCCS-244
+            # "antenna_000001",
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
@@ -76,10 +77,10 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-        controller.On()
+        controller.Startup()
 
         # allocate station_1 to subarray_1
-        ((result_code,), (message,)) = call_with_json(
+        ((result_code,), (_,)) = call_with_json(
             controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]
         )
         assert result_code == ResultCode.OK
@@ -150,7 +151,7 @@ class TestMccsIntegration:
         tile_3 = device_context.get_device("tile_0003")
         tile_4 = device_context.get_device("tile_0004")
 
-        controller.On()
+        controller.Startup()
 
         # allocate stations 1 to subarray 1
         call_with_json(

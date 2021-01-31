@@ -6,9 +6,9 @@ Background:
 
 @XTP-1170
 Scenario: MCCS Start up low telescope
-    Given tmc is ready to issue an on command
-    And mccs is ready to receive an on command
-    When tmc turns mccs controller on
+    Given tmc is ready to issue a startup command
+    And mccs is ready to receive a startup command
+    When tmc tells mccs controller to start up
     Then mccs controller state is on
     And all mccs station states are on
 

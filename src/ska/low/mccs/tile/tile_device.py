@@ -28,28 +28,107 @@ from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska.low.mccs.events import EventManager
+from ska.low.mccs.hardware import PowerMode
 from ska.low.mccs.health import HealthModel
-from ska.low.mccs.power import PowerManager
 from ska.low.mccs.tile import TileHardwareManager
+from ska.low.mccs.utils import backoff_connect
 
 
-class TilePowerManager(PowerManager):
+class TilePowerManager:
     """
-    This class that implements the power manager for the MCCS Tile
+    This class performs tile management on behalf of the MCCS Tile
     device.
+
+    It has a simply job; all it needs to do is talk to the subrack that
+    houses this TPM, to ensure that the TPM is supplied/denied power as
+    required.
     """
 
-    def __init__(self, tile_hardware_manager, logger):
+    def __init__(self, subrack_fqdn, subrack_bay, logger):
         """
         Initialise a new TilePowerManager.
 
-        :param tile_hardware_manager: an object that manages this tile's
-            hardware
-        :type tile_hardware_manager: object
+        :param subrack_fqdn: FQDN of the subrack TANGO device that
+            manages the subrack that houses this Tile device's TPM
+        :type subrack_fqdn: str
+        :param subrack_bay: then number of the subrack bay in which this
+            Tile device's TPM is installed. We count from one, so a
+            value of 1 means the TPM is installed in the first subrack
+            bay
+        :type subrack_bay: int
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         """
-        super().__init__(None, None, logger)
+        self._logger = logger
+        self._power_mode = PowerMode.UNKNOWN
+
+        self._subrack = backoff_connect(subrack_fqdn, logger)
+        self._subrack_bay = subrack_bay
+
+        if not self._subrack.IsTpmOn(self._subrack_bay):
+            self._power_mode = PowerMode.OFF
+        else:
+            self._power_mode = PowerMode.ON
+
+    def off(self):
+        """
+        Turn off power to the TPM.
+
+        :return: whether the command was successful or not, or None if
+            there was nothing to do.
+        :rtype: bool
+
+        :raises NotImplementedError: if our call to PowerOffTpm gets a
+            ResultCode other than OK or FAILED
+        """
+        if not self._subrack.IsTpmOn(self._subrack_bay):
+            return None  # already off
+
+        [[result_code], [_]] = self._subrack.PowerOffTpm(self._subrack_bay)
+        if result_code == ResultCode.OK:
+            self._power_mode = PowerMode.OFF
+            return True
+        elif result_code == ResultCode.FAILED:
+            return False
+        else:
+            raise NotImplementedError(
+                f"Subrack.PowerOffTpm returned unexpected ResultCode {result_code}."
+            )
+
+    def on(self):
+        """
+        Turn on power to the TPM.
+
+        :return: whether the command was successful or not, or None if
+            there was nothing to do.
+        :rtype: bool
+
+        :raises NotImplementedError: if our call to PowerOnTpm gets a
+            ResultCode other than OK or FAILED
+        """
+        if self._subrack.IsTpmOn(self._subrack_bay):
+            return None  # already off
+
+        [[result_code], [_]] = self._subrack.PowerOnTpm(self._subrack_bay)
+        if result_code == ResultCode.OK:
+            self._power_mode = PowerMode.ON
+            return True
+        elif result_code == ResultCode.FAILED:
+            return False
+        else:
+            raise NotImplementedError(
+                f"Subrack.PowerOnTpm returned unexpected ResultCode {result_code}."
+            )
+
+    @property
+    def power_mode(self):
+        """
+        Return the power mode of this PowerManager object.
+
+        :return: the power mode of thei PowerManager object
+        :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        """
+        return self._power_mode
 
 
 class MccsTile(SKABaseDevice):
@@ -68,10 +147,13 @@ class MccsTile(SKABaseDevice):
     # -----------------
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
+    SubrackFQDN = device_property(dtype=str)
+    SubrackBay = device_property(dtype=int)
+
     TileId = device_property(dtype=int, default_value=0)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
-    #
+
     # TODO: These properties are not currently being used in any way.
     # Can they be removed, or do they need to be handled somehow?
     # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
@@ -373,10 +455,10 @@ class MccsTile(SKABaseDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             device.power_manager = TilePowerManager(
-                device.hardware_manager, self.logger
+                device.SubrackFQDN, device.SubrackBay, self.logger
             )
 
-            power_args = (device.power_manager, device.state_model, self.logger)
+            power_args = (device, device.state_model, self.logger)
             device.register_command_object(
                 "Disable", device.DisableCommand(*power_args)
             )
@@ -397,6 +479,23 @@ class MccsTile(SKABaseDevice):
             self._interrupt = True
             return True
 
+        def succeeded(self):
+            """
+            Called when initialisation completes.
+
+            Here we override the base class default implementation to
+            ensure that MccsTile transitions to a state that reflects
+            the state of its hardware
+            """
+            device = self.target
+            if device.power_manager.power_mode == PowerMode.OFF:
+                action = "init_succeeded_disable"
+            elif device.hardware_manager.is_programmed:
+                action = "init_succeeded_on"
+            else:
+                action = "init_succeeded_standby"
+            self.state_model.perform_action(action)
+
     class DisableCommand(SKABaseDevice.DisableCommand):
         """
         Class for handling the Disable() command.
@@ -405,51 +504,68 @@ class MccsTile(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable` command
-            for this :py:class:`.MccsTile` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            command for this :py:class:`.MccsTile` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            # TODO: This will need to ensure that the TPM is turned off.
-            # However the TPM cannot turn itself off. Instead, this needs
-            # to be implemented as
-            #
-            # return self.target.subrack_proxy.turn_off_tpm(self._logical_tile_id)
-            #
-            # once we have a subrack device!
-            return (ResultCode.OK, "Not implemented")
+            result = self.target.power_manager.off()
+            if result is None:
+                return (
+                    ResultCode.OK,
+                    "TPM was already off: nothing to do to disable device.",
+                )
+            if not result:
+                return (
+                    ResultCode.FAILED,
+                    "Failed to disable device: could not turn TPM off",
+                )
+            return (ResultCode.OK, "Device disabled; TPM has been turned off")
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
         """
         Class for handling the Standby() command.
 
-        Actually the TPM has no standby mode, so when this
-        device is told to go to standby mode, it switches on / remains
-        on.
+        Actually the TPM has no standby mode, so when this device is
+        told to go to standby mode, it switches on / remains on.
         """
 
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby` command
-            for this :py:class:`.MccsTile` device.
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            command for this :py:class:`.MccsTile` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            # TODO: This will need to ensure that the TPM is turned off.
-            # However the TPM cannot turn itself off. Instead, this needs
-            # to be implemented as
-            #
-            # return self.target.subrack_proxy.turn_off_tpm(self._logical_tile_id)
-            #
-            # once we have a subrack device!
-            return (ResultCode.OK, "Not implemented")
+            device = self.target
+            result = device.power_manager.on()
+            if result is None:
+                # TODO: The TPM was already powered, so it might already be programmed!
+                # What does it mean to put it into standby?
+                # This needs attention from an expert.
+                # But for now, let's reinitialise.
+                if device.hardware_manager.is_programmed:
+                    # device.hardware_manager.initialise()  # raises NotImplementedError
+                    pass
+
+                return (
+                    ResultCode.OK,
+                    "TPM was re-initialised; device is now on standby.",
+                )
+            if result:
+                return (ResultCode.OK, "TPM has been turned on")
+            if not result:
+                return (
+                    ResultCode.FAILED,
+                    "Failed to go to standby: could not turn TPM on",
+                )
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -501,14 +617,33 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            # TODO: This will need to ensure that the TPM is turned on.
-            # However the TPM cannot turn itself on. Instead, this needs
-            # to be implemented as
-            #
-            # return self.target.subrack_proxy.turn_off_tpm(self._logical_tile_id)
-            #
-            # once we have a subrack device!
-            return (ResultCode.OK, "Not implemented")
+            # TODO: We maybe shouldn't be allowing transition straight
+            # from Disable to Off, without going through Standby.
+            device = self.target
+            result = device.power_manager.on()
+            if result is None:
+                # TODO: The TPM was already powered, but it might not have been
+                # programmed yet. i.e. it might still be in standby mode
+                # What does it mean to put it into "on" mode?
+                # This needs attention from an expert.
+                # But for now, let's pretend to flash some firmware.
+                if not device.hardware_manager.is_programmed:
+                    device.hardware_manager.download_firmware("firmware1")
+                return (ResultCode.OK, "TPM is on and programmed; device is now off.")
+            if result:
+                # TODO: Okay, the TPM was been powered on. Now we need to
+                # get it fully operational.
+                # This needs attention from an expert.
+                # But for now, let's initialise it and pretend to flash some firmware.
+
+                # device.hardware_manager.initialise()  # raises NotImplementedError
+                device.hardware_manager.download_firmware("firmware1")
+                return (ResultCode.OK, "TPM has been turned on")
+            if not result:
+                return (
+                    ResultCode.FAILED,
+                    "Failed to go to standby: could not turn TPM on",
+                )
 
     def always_executed_hook(self):
         """

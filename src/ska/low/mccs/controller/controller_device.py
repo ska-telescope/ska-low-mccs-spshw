@@ -119,6 +119,9 @@ class MccsController(SKAMaster):
         MccsStationBeams
             - List of MCCS station beam TANGO Device names
             - Type: list(str)
+        MccsSubarrayBeams
+            - List of MCCS subarray beam TANGO Device names
+            - Type: list(str)
         MccsTiles
             - List of MCCS Tile TANGO Device names.
             - Type: list(str)
@@ -133,6 +136,7 @@ class MccsController(SKAMaster):
 
     MccsSubarrays = device_property(dtype="DevVarStringArray")
     MccsStations = device_property(dtype="DevVarStringArray")
+    MccsSubarrayBeams = device_property(dtype="DevVarStringArray")
 
     # ---------------
     # General methods

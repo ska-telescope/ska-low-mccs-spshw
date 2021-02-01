@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
-autodoc_mock_imports = ["tango", "PyTango", "PyTango.server", "ska.base"]
+autodoc_mock_imports = ["tango", "PyTango", "PyTango.server", "ska.base", "pyfabil"]
 
 
 autodoc_default_options = {"special-members": "__init__"}

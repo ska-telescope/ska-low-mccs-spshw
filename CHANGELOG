@@ -2,6 +2,7 @@
 
 ## unreleased
 * MCCS-350 - Set commandResult to UNKNOWN before MccsController commands are executed
+* MCCS-272 - SubArrayBeam device - implement stub device
 
 ## 0.5.0 
 * MCCS-169 - Add configure to subarray

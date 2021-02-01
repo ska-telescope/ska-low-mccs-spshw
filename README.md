@@ -58,6 +58,14 @@ Three target environments are available:
 
     root@caa98e8e264d:/app# tox -e py37
 
+To use with actual tile hardware 
+---------------------------
+
+A bitfile for the FPGA (TPM 1.2) is required. It must be renamed "tpm_test.bit"
+in the base directory.
+
+The board(s) to be connected must be accessible from the host. Their IP 
+address is specified in the jive configuration file: 
 License
 -------
 

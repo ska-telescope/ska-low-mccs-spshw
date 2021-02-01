@@ -948,7 +948,14 @@ class MccsSubarray(SKASubarray):
             """
             (result_code, message) = super().do()
 
-            # MCCS-specific stuff goes here
+            # TODO: MCCS-specific stuff goes here
+            # 1. All jobs should be terminated (via the Cluster manager)
+            # 2. All elements should be deconfigured (as if they had just
+            #    been allocated).
+
+            # TODO: Remove this delay. It simply emulates the time to achieve the above.
+            time.sleep(1)
+
             return (result_code, message)
 
         def check_allowed(self):

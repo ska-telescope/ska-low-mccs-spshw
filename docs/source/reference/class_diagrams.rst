@@ -1,7 +1,8 @@
 ###################################
- Class diagrams of MCCS source code
+ MCCS source code class diagrams
 ###################################
 
- APIU
+APIU
 =====
+
 .. uml:: apiu_classes.uml

@@ -441,7 +441,7 @@ class MccsSubarray(SKASubarray):
         self.register_command_object("EndScan", self.EndScanCommand(*args))
         self.register_command_object("End", self.EndCommand(*args))
         self.register_command_object("Abort", self.AbortCommand(*args))
-        self.register_command_object("ObsReset", self.ResetCommand(*args))
+        self.register_command_object("ObsReset", self.ObsResetCommand(*args))
         self.register_command_object("Restart", self.RestartCommand(*args))
         self.register_command_object(
             "SendTransientBuffer",
@@ -885,7 +885,7 @@ class MccsSubarray(SKASubarray):
             # 2. Send Abort to the Cluster Manager to stop all running jobs
 
             # TODO: Remove this delay. It simply emulates the time to achieve the above.
-            time.sleep(3)
+            time.sleep(1)
 
             return (result_code, message)
 
@@ -925,7 +925,7 @@ class MccsSubarray(SKASubarray):
         self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Abort")
         (return_code, message) = command()
-        self._command_result = result_code
+        self._command_result = return_code
         self.push_change_event("commandResult", self._command_result)
         return [[return_code], [message]]
 
@@ -950,6 +950,20 @@ class MccsSubarray(SKASubarray):
 
             # MCCS-specific stuff goes here
             return (result_code, message)
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state.
+
+            TODO: The ObsReset command is currently limited based on the
+            available implementaion of MCCS.
+
+            :return: True if this command is allowed to be run in
+                current device obsstates
+            :rtype: bool
+            """
+            return self.state_model.obs_state in [ObsState.ABORTED]
 
     class RestartCommand(SKASubarray.RestartCommand):
         """

@@ -36,3 +36,8 @@ Scenario: MCCS Perform a scan on subarray
     Given we have a successfully configured subarray
     When tmc starts a scan on subarray
     Then the subarray obsstate is scanning
+
+Scenario: MCCS Perform an abort on a scanning subarray
+    Given we have a successfully scanning subarray
+    When tmc issues an abort on subarray
+    Then the subarray obsstate is aborted

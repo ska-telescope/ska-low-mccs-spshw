@@ -573,9 +573,9 @@ class ClusterSimulator(HardwareSimulator):
 
     def stop_job(self, job_id):
         """
-        Start a specified job.
+        Stop a specified job.
 
-        :param job_id: The id of the job to be started
+        :param job_id: The id of the job to be stopped
         :type job_id: str
         :raises ValueError: If the job does not exist
         """

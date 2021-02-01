@@ -19,10 +19,11 @@ __all__ = [
 # imports
 import json
 import threading
+import time
 
 # PyTango imports
 import tango
-from tango import DebugIt, EnsureOmniThread
+from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
@@ -330,6 +331,9 @@ class MccsSubarray(SKASubarray):
             (result_code, message) = super().do()
 
             device = self.target
+            device._command_result = None
+            device.set_change_event("commandResult", True, False)
+
             device._scan_id = -1
             device._transient_buffer_manager = TransientBufferManager()
 
@@ -482,6 +486,21 @@ class MccsSubarray(SKASubarray):
             return
         self._health_state = health
         self.push_change_event("healthState", health)
+
+    @attribute(
+        dtype="DevLong",
+        format="%i",
+        polling_period=1000,
+        doc="Result code from the previously completed command",
+    )
+    def commandResult(self):
+        """
+        Return the commandResult attribute.
+
+        :return: commandResult attribute
+        :rtype: :py:class:`~ska.base.commands.ResultCode`
+        """
+        return self._command_result
 
     @attribute(
         dtype="DevLong",
@@ -837,6 +856,12 @@ class MccsSubarray(SKASubarray):
             (inherited) :py:meth:`ska.base.SKASubarray.Abort` command
             for this :py:class:`.MccsSubarray` device.
 
+            An abort command will leave the system in an ABORTED state.
+            Output to CSP is stopped, as is the beamformer and all running
+            jobs. The system can then be inspected in the ABORTED state
+            before it's de-configured and returned to the IDLE state by the
+            ObsReset command.
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -845,8 +870,64 @@ class MccsSubarray(SKASubarray):
             """
             (result_code, message) = super().do()
 
-            # MCCS-specific stuff goes here
+            # TODO: MCCS-specific stuff goes here
+            # 1. Interrupt the current running scan, like EndScan
+            #    but with a little more urgency:
+            #    a. Send an Abort to the Subarray Beam
+            #    b. Subarray beam raises an alarm to highlight the Abort
+            #    c. Subarray Beam sends Abort to Station Beams
+            #    d. Station Beam send Abort to Station
+            #    e. Station sends Abort to Tile
+            #    f. Tile sends Abort to the TPM:
+            #       a. Output to CSP is first stopped to avoid invalid data being
+            #          transmitted while aborting the observation
+            #       b. Stop the beam former in the TPM
+            # 2. Send Abort to the Cluster Manager to stop all running jobs
+
+            # TODO: Remove this delay. It simply emulates the time to achieve the above.
+            time.sleep(3)
+
             return (result_code, message)
+
+        def check_allowed(self):
+            """
+            Whether this command is allowed to be run in current device
+            state.
+
+            TODO: The Abort command is currently limited based on the
+            available implementaion of MCCS.
+
+            :return: True if this command is allowed to be run in
+                current device obsstates
+            :rtype: bool
+            """
+            return self.state_model.obs_state in [ObsState.SCANNING]
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
+    def Abort(self):
+        """
+        Abort any long-running command such as ``Configure()`` or
+        ``Scan()``.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        self._command_result = DevState.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
+        command = self.get_command_object("Abort")
+        (return_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[return_code], [message]]
 
     class ObsResetCommand(SKASubarray.ObsResetCommand):
         """

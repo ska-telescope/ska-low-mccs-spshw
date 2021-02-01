@@ -448,6 +448,8 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska.base.commands.ResultCode`, str)
         """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("On")
         (result_code, message) = command()
         self._command_result = result_code
@@ -497,6 +499,8 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska.base.commands.ResultCode`, str)
         """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Off")
         (result_code, message) = command()
         self._command_result = result_code
@@ -754,6 +758,8 @@ class MccsController(SKAMaster):
                 )
             )
         """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
         handler = self.get_command_object("Allocate")
         (result_code, message) = handler(argin)
         self._command_result = result_code
@@ -972,6 +978,8 @@ class MccsController(SKAMaster):
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
         handler = self.get_command_object("Release")
         (result_code, message) = handler(argin)
         self._command_result = result_code

@@ -5,6 +5,7 @@ participant "TMC" as TMC
 participant "MCCS\nController" as MCCS_Controller
 participant "MCCS\nStation 1" as MCCS_Station_1
 participant "MCCS\nTile 1\n(On\nCommand)" as MCCS_Tile_1
+participant "MCCS\nTile\nPower\nManager" as MCCS_Tile_PM
 participant "Tile\nHardware\nManager" as Tile_HW_Man
 participant "TPM\nDriver" as TPM_Drv
 participant "Hardware\nTile" as HW_Tile
@@ -15,8 +16,21 @@ note over MCCS_Controller: state = OFF
 TMC -> MCCS_Controller: On()
 note over MCCS_Station_1: state = OFF
 MCCS_Controller -> MCCS_Station_1: On()
+
 note over MCCS_Tile_1: state = STANDBY
-MCCS_Station_1 -> MCCS_Tile_1: Initialise()
+
+MCCS_Station_1 -> MCCS_Tile_1: On()
+
+MCCS_Tile_1 -> MCCS_Tile_PM: Off()
+MCCS_Tile_1 <-- MCCS_Tile_PM:
+
+note over MCCS_Tile_1: state = OFF
+
+MCCS_Tile_1 -> MCCS_Tile_PM: On()
+MCCS_Tile_1 <-- MCCS_Tile_PM:
+
+note over MCCS_Tile_1: state = ON
+
 MCCS_Tile_1 -> Tile_HW_Man: initialise()
 
 Tile_HW_Man -> TPM_Drv: initialise()
@@ -64,14 +78,7 @@ TPM_Drv <-- HW_Tile:
 
 Tile_HW_Man <-- TPM_Drv:
 MCCS_Tile_1 <-- Tile_HW_Man:
-MCCS_Station_1 <-- MCCS_Tile_1:
 
-MCCS_Station_1 -> MCCS_Tile_1: Off()
-note over MCCS_Tile_1: state = OFF
-MCCS_Station_1 <-- MCCS_Tile_1:
-
-MCCS_Station_1 -> MCCS_Tile_1: On()
-note over MCCS_Tile_1: state = ON
 MCCS_Station_1 <-- MCCS_Tile_1:
 note over MCCS_Station_1: state = ON
 

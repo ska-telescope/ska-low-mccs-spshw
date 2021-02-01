@@ -25,6 +25,12 @@
                                 "low-mccs/beam/003",
                                 "low-mccs/beam/004"
                             ],
+                            "MccsSubarrayBeams": [
+                                "low-mccs/subarraybeam/01",
+                                "low-mccs/subarraybeam/02",
+                                "low-mccs/subarraybeam/03",
+                                "low-mccs/subarraybeam/04"
+                            ],
                             "LoggingLevelDefault": [
                                 "3"
                             ]
@@ -170,6 +176,64 @@
                 }
             }
         },
+        "MccsSubarrayBeam": {
+            "subarraybeam_01": {
+                "MccsSubarrayBeam": {
+                    "low-mccs/subarraybeam/01": {
+                        "properties": {
+                            "SubarrayBeamId": [
+                                "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "subarraybeam_02": {
+                "MccsSubarrayBeam": {
+                    "low-mccs/subarraybeam/02": {
+                        "properties": {
+                            "SubarrayBeamId": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "subarraybeam_03": {
+                "MccsSubarrayBeam": {
+                    "low-mccs/subarraybeam/03": {
+                        "properties": {
+                            "SubarrayBeamId": [
+                                "3"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "subarraybeam_04": {
+                "MccsSubarrayBeam": {
+                    "low-mccs/subarraybeam/04": {
+                        "properties": {
+                            "SubarrayBeamId": [
+                                "4"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "MccsTile": {
             "tile_0001": {
                 "MccsTile": {
@@ -183,7 +247,13 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
-                            ]
+                            ],
+			    "TpmIp": [
+				"10.0.10.2"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
+			    ]
                         }
                     }
                 }
@@ -200,6 +270,12 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+			    "TpmIp": [
+				"10.0.10.3"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
                             ]
                         }
                     }
@@ -217,6 +293,12 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+			    "TpmIp": [
+				"10.0.10.4"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
                             ]
                         }
                     }
@@ -234,6 +316,12 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+			    "TileIp": [
+				"10.0.10.5"
+			    ],
+			    "TpmCpldPort": [
+				"10000"
                             ]
                         }
                     }

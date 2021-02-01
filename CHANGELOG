@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-350 - Set commandResult to UNKNOWN before MccsController commands are executed
 
 ## 0.5.0 
 * MCCS-169 - Add configure to subarray

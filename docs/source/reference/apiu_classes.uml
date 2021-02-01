@@ -1,0 +1,191 @@
+@startuml
+
+package apiu_device {
+  class HardwareHealthEvaluator
+  class APIUHardwareHealthEvaluator
+  class APIUHardwareFactory
+  APIUHardwareFactory : +__init__()
+  APIUHardwareFactory : -_create_simulator()
+  APIUHardwareFactory : +__init__()
+  APIUHardwareFactory : +voltage()
+  APIUHardwareFactory : +current()
+  APIUHardwareFactory : +temperature()
+  APIUHardwareFactory : +humidity()
+  APIUHardwareFactory : +turn_off_antenna()
+  APIUHardwareFactory : +turn_on_antenna()
+  APIUHardwareFactory : +is_antenna_on()
+  APIUHardwareFactory : +get_antenna_current()
+  APIUHardwareFactory : +get_antenna_voltage()
+  APIUHardwareFactory : +get_antenna_temperature()
+  class MccsAPIU
+  MccsAPIU : +__init__()
+  MccsAPIU : -_initialise_connections()
+  MccsAPIU : -_initialise_hardware_management()
+  MccsAPIU : -_initialise_health_monitoring()
+  MccsAPIU : +interrupt()
+  MccsAPIU : +always_executed_hook()
+  MccsAPIU : +delete_device()
+  MccsAPIU : +health_changed()
+  MccsAPIU : +voltage()
+  MccsAPIU : +current()
+  MccsAPIU : +temperature()
+  MccsAPIU : +humidity()
+  MccsAPIU : +isAlive()
+  MccsAPIU : +overCurrentThreshold()
+  MccsAPIU : +overCurrentThreshold()
+  MccsAPIU : +overVoltageThreshold()
+  MccsAPIU : +overVoltageThreshold()
+  MccsAPIU : +humidityThreshold()
+  MccsAPIU : +IsAntennaOn()
+  MccsAPIU : +PowerUpAntenna()
+  MccsAPIU : +PowerDownAntenna()
+  MccsAPIU : +PowerUp()
+  MccsAPIU : +PowerDown()
+  MccsAPIU : -_update_health_state()
+  MccsAPIU : -_thread
+  MccsAPIU : -_lock
+  MccsAPIU : -_interrupt
+  MccsAPIU : -_health_state
+  MccsAPIU : -_overCurrentThreshold
+  MccsAPIU : -_overVoltageThreshold
+  MccsAPIU : -_humidityThreshold
+}
+SKABaseDevice <|- MccsAPIU
+MccsAPIU *-- "1" EventManager
+MccsAPIU *-- "1" APIUHardwareManager
+HardwareHealthEvaluator <|- APIUHardwareHealthEvaluator 
+OnOffHardwareManager <|- APIUHardwareManager
+SimulableHardwareManager <|- APIUHardwareManager
+APIUHardwareManager *-- "1" APIUHardwareFactory
+APIUHardwareManager *-- "1" APIUHardwareHealthEvaluator
+
+package apiu_simulator {
+  class AntennaHardwareSimulator
+  AntennaHardwareSimulator : +__init__()
+  AntennaHardwareSimulator : +off()
+  AntennaHardwareSimulator : +on()
+  AntennaHardwareSimulator : +voltage()
+  AntennaHardwareSimulator : +current()
+  AntennaHardwareSimulator : +temperature()
+  AntennaHardwareSimulator : -_check_on()
+  AntennaHardwareSimulator : +simulate_current()
+  AntennaHardwareSimulator : +simulate_voltage()
+  AntennaHardwareSimulator : +simulate_temperature()
+  class APIUSimulator
+  APIUSimulator : +__init__()
+  APIUSimulator : +off()
+  APIUSimulator : +on()
+  APIUSimulator : +voltage()
+  APIUSimulator : +current()
+  APIUSimulator : +temperature()
+  APIUSimulator : +humidity()
+  APIUSimulator : +is_antenna_on()
+  APIUSimulator : +turn_off_antenna()
+  APIUSimulator : +turn_on_antenna()
+  APIUSimulator : +get_antenna_current()
+  APIUSimulator : +get_antenna_voltage()
+  APIUSimulator : +get_antenna_temperature()
+  APIUSimulator : -_check_on()
+  APIUSimulator : -_voltage
+  APIUSimulator : -_current
+  APIUSimulator : -_temperature
+  APIUSimulator : -_humidity
+  APIUSimulator : -_antennas
+  AntennaHardwareSimulator : -_voltage
+  AntennaHardwareSimulator : -_current
+  AntennaHardwareSimulator : -_temperature
+}
+package antenna {
+  class AntennaHardwareHealthEvaluator
+  class AntennaAPIUProxy
+  AntennaAPIUProxy : +__init__()
+  AntennaAPIUProxy : +on()
+  AntennaAPIUProxy : +off()
+  AntennaAPIUProxy : +is_on()
+  AntennaAPIUProxy : +current()
+  AntennaAPIUProxy : +voltage()
+  AntennaAPIUProxy : +temperature()
+  class AntennaTileProxy
+  AntennaTileProxy : +__init__()
+  class AntennaHardwareDriver
+  AntennaHardwareDriver : +is_connected()
+  AntennaHardwareDriver : +on()
+  AntennaHardwareDriver : +off()
+  AntennaHardwareDriver : +is_on()
+  AntennaHardwareDriver : +current()
+  AntennaHardwareDriver : +voltage()
+  AntennaHardwareDriver : +temperature()
+  class AntennaHardwareFactory
+  AntennaHardwareFactory : +hardware()
+  class AntennaHardwareManager
+  AntennaHardwareManager : +voltage()
+  AntennaHardwareManager : +current()
+  AntennaHardwareManager : +temperature()
+  class MccsAntenna
+  MccsAntenna : +__init__()
+  MccsAntenna : -_initialise_connections()
+  MccsAntenna : -_initialise_hardware_management()
+  MccsAntenna : -_initialise_health_monitoring()
+  MccsAntenna : +interrupt()
+  MccsAntenna : +always_executed_hook()
+  MccsAntenna : +delete_device()
+  MccsAntenna : +health_changed()
+  MccsAntenna : +simulationMode()
+  MccsAntenna : +simulationMode()
+  MccsAntenna : +antennaId()
+  MccsAntenna : +gain()
+  MccsAntenna : +rms()
+  MccsAntenna : +voltage()
+  MccsAntenna : +current()
+  MccsAntenna : +temperature()
+  MccsAntenna : +xPolarisationFaulty()
+  MccsAntenna : +yPolarisationFaulty()
+  MccsAntenna : +fieldNodeLongitude()
+  MccsAntenna : +fieldNodeLatitude()
+  MccsAntenna : +altitude()
+  MccsAntenna : +xDisplacement()
+  MccsAntenna : +yDisplacement()
+  MccsAntenna : +timestampOfLastSpectrum()
+  MccsAntenna : +logicalAntennaId()
+  MccsAntenna : +xPolarisationScalingFactor()
+  MccsAntenna : +yPolarisationScalingFactor()
+  MccsAntenna : +calibrationCoefficient()
+  MccsAntenna : +pointingCoefficient()
+  MccsAntenna : +spectrumX()
+  MccsAntenna : +spectrumY()
+  MccsAntenna : +position()
+  MccsAntenna : +delays()
+  MccsAntenna : +delayRates()
+  MccsAntenna : +bandpassCoefficient()
+  MccsAntenna : +PowerOn()
+  MccsAntenna : +PowerOff()
+  AntennaTileProxy : -_logical_antenna_id
+  AntennaTileProxy : -_tile
+  AntennaTileProxy : -_is_connected
+  AntennaAPIUProxy : -_logical_antenna_id
+  AntennaAPIUProxy : -_apiu
+  AntennaAPIUProxy : -_is_connected
+  AntennaHardwareDriver : -_apiu
+  AntennaHardwareDriver : -_tile
+  AntennaHardwareFactory : -_hardware
+  MccsAntenna : -_thread
+  MccsAntenna : -_lock
+  MccsAntenna : -_interrupt
+  MccsAntenna : -_health_state
+}
+SKABaseDevice <|- MccsAntenna
+HardwareHealthEvaluator <|- AntennaHardwareHealthEvaluator
+HardwareDriver <|- AntennaTileProxy
+OnOffHardwareDriver <|- AntennaHardwareDriver
+OnOffHardwareDriver <|- AntennaAPIUProxy
+OnOffHardwareSimulator <|- APIUSimulator
+HardwareFactory <|- AntennaHardwareFactory
+OnOffHardwareManager <|- AntennaHardwareManager
+AntennaHardwareDriver *-- "*" AntennaAPIUProxy
+AntennaHardwareFactory *-- "1" AntennaHardwareDriver
+AntennaHardwareManager *-- "1" AntennaHardwareFactory
+AntennaHardwareManager *-- "1" AntennaHardwareHealthEvaluator
+MccsAntenna *-- "1" AntennaHardwareManager
+MccsAntenna *-- "1" EventManager
+
+@enduml

@@ -1,6 +1,6 @@
 """
 This module contains the pytest-bdd implementation of the Gherkin BDD
-tests for TMC and MCCS interactions
+tests for TMC and MCCS interactions.
 """
 import json
 
@@ -17,7 +17,7 @@ from conftest import confirm_initialised
 @pytest.fixture(scope="module")
 def devices_to_load():
     """
-    Fixture that specifies the devices to be loaded for testing
+    Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     :rtype: dict
@@ -51,7 +51,7 @@ def devices_to_load():
 @pytest.fixture(scope="module")
 def cached_obsstate():
     """
-    Use a pytest message box to retain obsstate between test stages
+    Use a pytest message box to retain obsstate between test stages.
 
     :return: cached_obsstate: pytest message box for the cached obsstate
     :rtype: cached_obsstate: dict<string, :py:class:`ska.base.control_model.ObsState`>
@@ -113,7 +113,7 @@ def devices(tango_context):
 
 def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     """
-    Method to simplify assertions on the result of TMC calls
+    Method to simplify assertions on the result of TMC calls.
 
     :param device: The MCCS device to send command to
     :type device: :py:class:`tango.DeviceProxy`
@@ -136,8 +136,7 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
 @scenario("controller_subarray_interactions.feature", "MCCS Start up low telescope")
 def test_start_up_low_telescope(devices):
     """
-    This is run at the end of the scenario.
-    Turn MCCS Controller Off.
+    This is run at the end of the scenario. Turn MCCS Controller Off.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -150,7 +149,7 @@ def test_start_up_low_telescope(devices):
 @given(parsers.parse("we have mvplow running an instance of {component_name}"))
 def we_have_mvplow_running_an_instance_of(devices, devices_to_load, component_name):
     """
-    Asserts the existence/availability of a component
+    Asserts the existence/availability of a component.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -173,7 +172,7 @@ def we_have_mvplow_running_an_instance_of(devices, devices_to_load, component_na
 @given(parsers.parse("{component_name} is ready to {direction} an on command"))
 def component_is_ready_to_receive_an_on_command(devices, component_name, direction):
     """
-    Asserts that a component is ready to receive an on command
+    Asserts that a component is ready to receive an on command.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -193,7 +192,7 @@ def component_is_ready_to_receive_an_on_command(devices, component_name, directi
 @when(parsers.parse("tmc turns mccs controller {device_state}"))
 def tmc_turns_mccs_controller_onoff(devices, device_state):
     """
-    Turn the mccs controller device off/on
+    Turn the mccs controller device off/on.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -209,7 +208,7 @@ def tmc_turns_mccs_controller_onoff(devices, device_state):
 @then(parsers.parse("mccs controller state is {device_state}"))
 def check_mccs_controller_state(devices, device_state):
     """
-    Asserts that the mccs controller device is on/off
+    Asserts that the mccs controller device is on/off.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -224,7 +223,7 @@ def check_mccs_controller_state(devices, device_state):
 @then(parsers.parse("all mccs station states are {state}"))
 def all_mccs_station_states_are_onoff(devices, device_state):
     """
-    Asserts that online or maintenance mccs station devices are on/off
+    Asserts that online or maintenance mccs station devices are on/off.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -243,7 +242,7 @@ def all_mccs_station_states_are_onoff(devices, device_state):
 
 def check_reset_state(devices):
     """
-    Check that the MCCS devices are in a known reset state
+    Check that the MCCS devices are in a known reset state.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -262,8 +261,8 @@ def check_reset_state(devices):
 @scenario("controller_subarray_interactions.feature", "MCCS Allocate subarray")
 def test_allocate_subarray(devices):
     """
-    This is run at the end of the scenario.
-    Turn MCCS Controller Off.
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     """
@@ -277,7 +276,8 @@ def test_allocate_subarray(devices):
 @given(parsers.parse("{component_name} is ready to {action} a subarray"))
 def component_is_ready_to_action_a_subarray(devices, component_name, action):
     """
-    Asserts that a component is ready to perform an action on a subarray
+    Asserts that a component is ready to perform an action on a
+    subarray.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -302,7 +302,7 @@ def component_is_ready_to_action_a_subarray(devices, component_name, action):
 @given(parsers.parse("subarray obsstate is idle or empty"))
 def subarray_obsstate_is_idle_or_empty(devices, cached_obsstate):
     """
-    The obsstate of each subarray should be idle or empty
+    The obsstate of each subarray should be idle or empty.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -320,7 +320,7 @@ def subarray_obsstate_is_idle_or_empty(devices, cached_obsstate):
 @when(parsers.parse("tmc allocates a subarray with {validity} parameters"))
 def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
     """
-    TMC allocates a subarray
+    TMC allocates a subarray.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -351,7 +351,7 @@ def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
 @then(parsers.parse("the stations have the correct subarray id"))
 def the_stations_have_the_correct_subarray_id(devices):
     """
-    Stations have the correct subarray id
+    Stations have the correct subarray id.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -363,7 +363,7 @@ def the_stations_have_the_correct_subarray_id(devices):
 @then(parsers.parse("subarray state is on"))
 def subarray_state_is_on(devices):
     """
-    The subarray should be on
+    The subarray should be on.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -376,7 +376,7 @@ def subarray_state_is_on(devices):
 )
 def according_to_allocation_policy_health_of_allocated_subarray_is_good(devices):
     """
-    Health is good
+    Health is good.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -391,7 +391,7 @@ def according_to_allocation_policy_health_of_allocated_subarray_is_good(devices)
 @then(parsers.parse("other resources are not affected"))
 def other_resources_are_not_affected(devices):
     """
-    Other resource should not be affected
+    Other resource should not be affected.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -403,7 +403,7 @@ def other_resources_are_not_affected(devices):
 @then(parsers.parse("subarray obsstate is not changed"))
 def subarray_obsstate_is_not_changed(devices, cached_obsstate):
     """
-    Check that the subarray obsState has not changed
+    Check that the subarray obsState has not changed.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -417,8 +417,8 @@ def subarray_obsstate_is_not_changed(devices, cached_obsstate):
 @scenario("controller_subarray_interactions.feature", "MCCS Configure a subarray")
 def test_configure_a_subarray(devices):
     """
-    This is run at the end of the scenario.
-    Turn MCCS Controller Off.
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     """
@@ -435,7 +435,7 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
     devices, devices_to_load, desired_state, cached_obsstate
 ):
     """
-    Get the subarray into an configured and/or allocated state
+    Get the subarray into an configured and/or allocated state.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -458,7 +458,7 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
 
 def configure_subarray(devices):
     """
-    Configure the subarray
+    Configure the subarray.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -487,7 +487,7 @@ def configure_subarray(devices):
 @when(parsers.parse("tmc starts a scan on subarray"))
 def tmc_starts_a_scan_on_subarray(devices):
     """
-    TMC starts a scan on the subarray
+    TMC starts a scan on the subarray.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -505,7 +505,7 @@ def tmc_starts_a_scan_on_subarray(devices):
 @when(parsers.parse("tmc configures the subarray"))
 def tmc_configures_the_subarray(devices):
     """
-    TMC configures a subarray
+    TMC configures a subarray.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -517,7 +517,7 @@ def tmc_configures_the_subarray(devices):
 @then(parsers.parse("the subarray obsstate is {obsstate}"))
 def the_subarray_obsstate_is(devices, obsstate):
     """
-    The subarray obsstate is ready
+    The subarray obsstate is ready.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -530,7 +530,7 @@ def the_subarray_obsstate_is(devices, obsstate):
 @then(parsers.parse("subarray health is good"))
 def subarray_health_is_good(devices):
     """
-    The health of the subarray is good
+    The health of the subarray is good.
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -541,8 +541,8 @@ def subarray_health_is_good(devices):
 @scenario("controller_subarray_interactions.feature", "MCCS Perform a scan on subarray")
 def test_perform_a_scan_on_subarray(devices):
     """
-    This is run at the end of the scenario.
-    Turn MCCS Controller Off.
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     """

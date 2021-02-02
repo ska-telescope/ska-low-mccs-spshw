@@ -1,6 +1,6 @@
 # flake8: noqa
 """
-Basic order of proceedings for an iTango demo in Malte's k8s environment
+Basic order of proceedings for an iTango demo.
 """
 
 # Test controller enabling and disabling subarray

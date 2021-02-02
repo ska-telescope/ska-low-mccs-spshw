@@ -38,10 +38,12 @@ from ska.low.mccs.health import HealthModel
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
     A :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator` for a
-    subarray beam. A Subarray beam doesn't have hardware as such. Here we
-    are pretending it does because we have to set health to DEGRADED if
-    the beam is not locked, so for now we pretend that the
-    `isBeamLocked` attribute is a hardware property.
+    subarray beam.
+
+    A Subarray beam doesn't have hardware as such. Here we are
+    pretending it does because we have to set health to DEGRADED if the
+    beam is not locked, so for now we pretend that the `isBeamLocked`
+    attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -72,7 +74,8 @@ class SubarrayBeamDriver(HardwareDriver):
     A hardware driver for a subarray beam. A subarray beam doesn't
     actually have hardware. Here we are shoe-horning the subarray beam
     implementation into the hardware model by pretending that the
-    `isBeamLocked` attribute of the associated stations is a hardware property.
+    `isBeamLocked` attribute of the associated stations is a hardware
+    property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -159,10 +162,12 @@ class SubarrayBeamHardwareFactory(HardwareFactory):
 
 class SubarrayBeamHardwareManager(HardwareManager):
     """
-    This class manages subarray beam "hardware".  A subarray beam doesn't
-    actually have hardware. Here we are shoe-horning the subarray beam
-    implementation into the hardware model by pretending that the
-    `isLocked` attribute is a hardware property.
+    This class manages subarray beam "hardware".
+
+    A subarray beam doesn't actually have hardware. Here we are
+    shoe-horning the subarray beam implementation into the hardware
+    model by pretending that the `isLocked` attribute is a hardware
+    property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,

@@ -9,14 +9,14 @@ Release information for SKA MCCS Python Package.
 """
 import sys
 
-name = """ska.low.mccs"""
+name = "ska.low.mccs"
 version = "0.5.0"
 version_info = version.split(".")
-description = """A set of Low MCCS tango devices for the SKA Telescope."""
+description = "A set of Low MCCS tango devices for the SKA Telescope."
 author = "Team MCCS"
 author_email = "malte.marquarding at csiro dot au"
-url = """https://www.skatelescope.org/"""
-license = """BSD-3-Clause"""  # noqa: A001
+url = "https://www.skatelescope.org/"
+license = "BSD-3-Clause"  # noqa: A001
 copyright = (  # noqa: A001
     "CSIRO and STFC Daresbury Laboratory and University of Manchester"
 )

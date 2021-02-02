@@ -231,8 +231,8 @@ class MccsStationBeam(SKAObsDevice):
         """
         A class for :py:class:`~.MccsStationBeam`'s Init command.
 
-        The :py:meth:`~.MccsStationBeam.InitCommand.do` method below is
-        called upon :py:class:`~.MccsStationBeam`'s initialisation.
+        The :py:meth:`~.MccsStationBeam.InitCommand.do` method below is called upon
+        :py:class:`~.MccsStationBeam`'s initialisation.
         """
 
         def __init__(self, target, state_model, logger=None):

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-""" Standard sphinx config file """
+"""
+Standard sphinx config file.
+"""
 
 import sys
 import os
@@ -45,7 +47,9 @@ autodoc_default_options = {"special-members": "__init__"}
 
 
 def setup(app):
-    """ initialise app """
+    """
+    Initialise app.
+    """
     app.add_css_file("css/custom.css")
     app.add_js_file("js/gitlab.js")
 

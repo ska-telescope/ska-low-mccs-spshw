@@ -894,7 +894,7 @@ class MccsSubarray(SKASubarray):
             Whether this command is allowed to be run in current device
             state.
 
-            TODO: The Abort command is currently limited based on the
+            :todo: The Abort command is currently limited based on the
             available implementaion of MCCS.
 
             :return: True if this command is allowed to be run in
@@ -924,10 +924,10 @@ class MccsSubarray(SKASubarray):
         self._command_result = DevState.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Abort")
-        (return_code, message) = command()
-        self._command_result = return_code
+        (result_code, message) = command()
+        self._command_result = result_code
         self.push_change_event("commandResult", self._command_result)
-        return [[return_code], [message]]
+        return [[result_code], [message]]
 
     class ObsResetCommand(SKASubarray.ObsResetCommand):
         """
@@ -963,7 +963,7 @@ class MccsSubarray(SKASubarray):
             Whether this command is allowed to be run in current device
             state.
 
-            TODO: The ObsReset command is currently limited based on the
+            :todo: The ObsReset command is currently limited based on the
             available implementaion of MCCS.
 
             :return: True if this command is allowed to be run in

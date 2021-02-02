@@ -135,7 +135,7 @@ linting:
     - k8srunner
   stage: linting
   script:
-    - tox -e lint
+    - tox -e checklint
   when: always
   artifacts:
     paths:

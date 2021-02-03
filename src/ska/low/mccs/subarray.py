@@ -895,7 +895,7 @@ class MccsSubarray(SKASubarray):
             state.
 
             :todo: The Abort command is currently limited based on the
-            available implementaion of MCCS.
+                available implementaion of MCCS.
 
             :return: True if this command is allowed to be run in
                 current device obsstates
@@ -964,7 +964,7 @@ class MccsSubarray(SKASubarray):
             state.
 
             :todo: The ObsReset command is currently limited based on the
-            available implementaion of MCCS.
+                available implementaion of MCCS.
 
             :return: True if this command is allowed to be run in
                 current device obsstates

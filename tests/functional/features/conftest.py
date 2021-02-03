@@ -25,6 +25,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "XTP-1257: XRay BDD test marker")
     config.addinivalue_line("markers", "XTP-1260: XRay BDD test marker")
     config.addinivalue_line("markers", "XTP-1261: XRay BDD test marker")
+    config.addinivalue_line("markers", "XTP-1473: XRay BDD test marker")
 
 
 @contextmanager

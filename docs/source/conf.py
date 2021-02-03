@@ -79,6 +79,8 @@ copyright = "2020, SKA MCCS Team"
 nitpick_ignore = [
     ("py:class", "callable"),
     ("py:class", "optional"),
+    ("py:exc", "LibraryError"),
+    ("py:exc", "BoardError"),
 ]
 
 extensions = [

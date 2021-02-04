@@ -1,0 +1,43 @@
+@startuml
+hide empty members
+
+package ska.base {
+    class SKAMaster {
+    }
+
+    class SKAObsDevice {
+    }
+
+    class SKABaseDevice {
+    }
+SKABaseDevice <|-- SKAObsDevice
+SKABaseDevice <|--  SKAMaster
+}
+
+
+package ska.low.mccs {
+    class MccsController {
+        class ControllerPowerManager
+    }
+    PowerManager <|-- ControllerPowerManager
+
+    class MccsStation {
+    }
+
+    class MccsAntenna {
+    }
+
+    class MccsApiu {
+    }
+
+    class MccsTile {
+    }
+
+SKABaseDevice <|-- MccsAntenna
+SKABaseDevice <|-- MccsApiu
+SKABaseDevice <|-- MccsTile
+SKAObsDevice <|-- MccsStation
+SKAMaster <|-- MccsController
+}
+
+@enduml

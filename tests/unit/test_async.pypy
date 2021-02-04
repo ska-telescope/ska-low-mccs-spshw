@@ -1,0 +1,37 @@
+# Imports
+import threading
+
+import tango
+from tango.server import Device, command
+from tango.test_utils import DeviceTestContext
+
+def test_async_command_with_pushed_callback():
+    dtype = 'float'
+    values = [3.142]
+    expected = [3.142]
+
+    def cmd_ended():
+        executed += 1
+        print("cmd_ended called back")
+
+    class TestDevice(Device):
+
+        @command(dtype_in=dtype, dtype_out=dtype)
+        def identity(self, arg):
+            print("executing identity")
+            return arg
+
+    api_util = tango.ApiUtil.instance()
+    api_util.set_asynch_cb_sub_model(tango.cb_sub_model.PUSH_CALLBACK)
+
+    with DeviceTestContext(TestDevice) as proxy:
+#        for value in values:
+#            future = Future()
+        proxy.command_inout_asynch('identity', cmd_ended)
+        for i in range(5):
+            sleep(1)
+            print("sleep")
+
+        proxy.get_asynch_replies()
+#            result = future.result(timeout=0.5)
+#            assert result.argout == value

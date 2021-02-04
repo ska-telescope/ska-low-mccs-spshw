@@ -15,7 +15,6 @@ TileHardwareManager class and the TpmSimulator.
 When we eventually have a TpmDriver that drives real hardware, this
 module could also be used to test that.
 """
-import logging
 from unittest.mock import Mock
 
 import pytest
@@ -25,21 +24,29 @@ from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
 
 
 @pytest.fixture()
-def tpm_simulator():
+def tpm_simulator(logger):
     """
     Fixture that returns a TPM simulator.
+
+    :param logger: a object that implements the standard logging
+        interface of :py:class:`logging.Logger`
+    :type logger: :py:class:`logging.Logger`
 
     :return: a TPM simulator
     :rtype: :py:class:`ska.low.mccs.tile.tpm_simulator.TpmSimulator`
     """
-    return TpmSimulator(logger=logging.getLogger())
+    return TpmSimulator(logger=logger)
 
 
 @pytest.fixture()
-def tile_hardware_manager():
+def tile_hardware_manager(logger):
     """
     Fixture that returns a hardware manager for the MCCS tile device, in
     hardware simulation mode.
+
+    :param logger: a object that implements the standard logging
+        interface of :py:class:`logging.Logger`
+    :type logger: :py:class:`logging.Logger`
 
     :return: a hardware manager for the MCCS tile device, in hardware
         simulation mode
@@ -47,7 +54,7 @@ def tile_hardware_manager():
     """
     return TileHardwareManager(
         simulation_mode=SimulationMode.TRUE,
-        logger=logging.getLogger(),
+        logger=logger,
         tpm_ip="0.0.0.0",
         tpm_cpld_port=10000,
     )
@@ -58,14 +65,18 @@ class TestTileHardwareManager:
     Contains tests specific to TileHardwareManager.
     """
 
-    def test_init_simulation_mode(self):
+    def test_init_simulation_mode(self, logger):
         """
         Test that we can create an hardware manager that isn't in
         simulation mode.
+
+        :param logger: a object that implements the standard logging
+            interface of :py:class:`logging.Logger`
+        :type logger: :py:class:`logging.Logger`
         """
         _ = TileHardwareManager(
             SimulationMode.FALSE,
-            logger=logging.getLogger(),
+            logger=logger,
             tpm_ip="0.0.0.0",
             tpm_cpld_port=10000,
         )

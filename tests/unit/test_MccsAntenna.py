@@ -103,7 +103,7 @@ def hardware_factory(hardware_driver):
 
 
 @pytest.fixture()
-def hardware_manager(hardware_factory):
+def hardware_manager(hardware_factory, logger):
     """
     Return a hardware manager for antenna hardware.
 
@@ -112,12 +112,20 @@ def hardware_manager(hardware_factory):
         purposes
     :type:
         :py:class:`~ska.low.mccs.antenna.AntennaHardwareDriver`
+    :param logger: a object that implements the standard logging interface of
+        :py:class:`logging.Logger`
+    :type logger: :py:class:`logging.Logger`
 
     :return: a hardware manager for antenna hardware
     :rtype: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
     """
     return AntennaHardwareManager(
-        "low-mccs/apiu/001", 1, "low-mccs/tile/0001", 1, _factory=hardware_factory
+        "low-mccs/apiu/001",
+        1,
+        "low-mccs/tile/0001",
+        1,
+        logger,
+        _factory=hardware_factory,
     )
 
 

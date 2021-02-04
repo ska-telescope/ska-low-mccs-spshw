@@ -8,25 +8,261 @@ import pkg_resources
 
 import backoff
 import jsonschema
-from tango import Except, ErrSeverity
+from tango import DevFailed, DevState, Except, ErrSeverity
 from tango.server import Device
 import tango
 
 
-@backoff.on_exception(backoff.expo, tango.DevFailed, factor=0.1, max_time=120)
-def backoff_connect(fqdn):
+class _DeviceConnector:
     """
-    Attempts connection to a specified device, using an exponential
-    backoff-retry scheme in case of failure.
+    Class that handles connecting to devices.
+
+    Because devices will try to connect to unready devices during system
+    startup, this class contains a sequence of checks, in backoff-retry
+    loops, to ensure that connection requests do not complete until the
+    target device is completely ready.
+    """
+
+    def __init__(self, logger):
+        """
+        Create a new instance.
+
+        :param logger: the logger to be used.
+        :type logger: :py:class:`logging.Logger`
+        """
+        self._logger = logger
+
+    def _get_proxy(self, fqdn, max_time=120):
+        """
+        Get a proxy to a device at a given FQDN.
+
+        The :py:class:`tango.DeviceProxy` is written to be stateless, so
+        we can successfully get a proxy to a device as soon as the Tango
+        subsystem knows about the FQDN. Thus, obtaining a proxy does not
+        mean that the device is ready to accept connections.
+
+        :param fqdn: the fully qualified device name of the device
+        :type fqdn: str
+        :param max_time: the (optional) maximum time to attempt
+            connection before giving up. The default is two minutes.
+            This needs a large wait time because it will be called by
+            initialising devices at subsystem startup. In an
+            under-resourced k8s cluster, initialisation may take several
+            minutes; that is, the pods that host devices may initialise
+            several minutes apart.
+        :type max_time: int
+
+        :return: a proxy for the device
+        :rtype: :py:class:`tango.DeviceProxy`
+        """
+
+        def _on_giveup_get_proxy(details):
+            """
+            Handler for when the backoff-retry loop gives up trying to
+            make a connection to the device.
+
+            :param details: a dictionary providing call context, such as
+                the call args and the elapsed time
+            :type details: dict
+            """
+            fqdn = details.args[0]
+            self._logger.warning(
+                f"Gave up trying to connect to device {fqdn} after "
+                f"{details.elapsed} seconds."
+            )
+
+        @backoff.on_exception(
+            backoff.expo,
+            DevFailed,
+            on_giveup=_on_giveup_get_proxy,
+            factor=1,
+            max_time=max_time,
+        )
+        def _backoff_get_proxy(fqdn):
+            """
+            Attempts connection to a specified device, using an
+            exponential backoff-retry scheme in case of failure.
+
+            :param fqdn: the fully qualified device name of the device for
+                which this DeviceEventManager will manage change events
+            :type fqdn: str
+
+            :return: a proxy for the device
+            :rtype: :py:class:`tango.DeviceProxy`
+            """
+            return tango.DeviceProxy(fqdn)
+
+        return _backoff_get_proxy(fqdn)
+
+    def _ping(self, device, max_time=120):
+        """
+        Ping a device until it is responsive.
+
+        :param device: the device to be pinged
+        :type device: :py:class:`tango.DeviceProxy`
+        :param max_time: the (optional) maximum time to attempt to ping
+            the device before giving up. The default is two minutes.
+            This needs a large wait time because it has been found that,
+            during startup in an under-resourced k8s cluster, a device
+            may be unresponsive to pings for up to a minute after a
+            proxy to the device has been obtained.
+        :type max_time: int
+        """
+
+        def _on_giveup_ping(details):
+            """
+            Handler for when the backoff-retry loop gives up trying to
+            ping the device.
+
+            :param details: a dictionary providing call context, such as
+                the call args and the elapsed time
+            :type details: dict
+            """
+            fqdn = details.args[0]
+            self._logger.warning(
+                f"Gave up trying to get response from device {fqdn} after "
+                f"{details.elapsed} seconds."
+            )
+
+        @backoff.on_exception(
+            backoff.expo,
+            DevFailed,
+            on_giveup=_on_giveup_ping,
+            factor=1,
+            max_time=max_time,
+        )
+        def _backoff_ping(device):
+            """
+            Ping a device to see if it is ready to accept connections,
+            using an exponential backoff-retry schema in case of
+            failure.
+
+            :param device: the device to be pinged
+            :type device: :py:class:`tango.DeviceProxy`
+            """
+            _ = device.ping()
+
+        _backoff_ping(device)
+
+    def _check_initialised(self, device, max_time=120):
+        """
+        Check that a device has completed initialisation; that is, it is
+        not longer in state INIT.
+
+        :param device: the device to be checked
+        :type device: :py:class:`tango.DeviceProxy`
+        :param max_time: the (optional) maximum time to wait for the
+            device to complete initialisation. The default is two
+            minutes.
+        :type max_time: int
+
+        :raises TimeoutError: if the device still hasn't initialised
+            after a sufficient wait time.
+        """
+
+        def _on_giveup_check_initialised(details):
+            """
+            Handler for when the backoff-retry loop gives up waiting for
+            the device to complete initialisation.
+
+            :param details: a dictionary providing call context, such as
+                the call args and the elapsed time
+            :type details: dict
+            """
+            fqdn = details.args[0]
+            self._logger.warning(
+                f"Gave up waiting for device {fqdn} to complete initialisation after "
+                f"{details.elapsed} seconds."
+            )
+
+        @backoff.on_predicate(
+            backoff.expo,
+            on_giveup=_on_giveup_check_initialised,
+            factor=1,
+            max_time=max_time,
+        )
+        def _backoff_check_initialised(device):
+            """
+            Check that the device has completed initialisation; that is,
+            it is no longer in DevState.INIT.
+
+            Checking that a device has initialised means calling its
+            `state()` method, and even after the device returns a
+            response from a ping, it might still raise an exception in
+            response to reading device state
+            (``"BAD_INV_ORDER_ORBHasShutdown``). So here we catch that
+            exception.
+
+            :param device: the device to be checked
+            :type device: :py:class:`tango.DeviceProxy`
+
+            :return: whether the device has completed initialisation
+            :rtype: bool
+            """
+            try:
+                return device.state() != DevState.INIT
+            except DevFailed:
+                self._logger.debug(
+                    "Caught a DevFailed exception while checking that the device has "
+                    "initialised. This is most likely a 'BAD_INV_ORDER_ORBHasShutdown "
+                    "exception triggered by the call to state()."
+                )
+                return False
+
+        if not _backoff_check_initialised(device):
+            raise TimeoutError(
+                "Gave up waiting for device {fqdn} to complete initialisation."
+            )
+
+    def connect(self, fqdn):
+        """
+        Returns a connection to a device that is responsive and has
+        completed its initialisation.
+
+        Firstly, it repeatedly attempts to connect to the device at the
+        given FQDN until it succeeds (or times out). However success
+        means only that the Tango subsystem knows about the FQDNs and
+        has allows a stateless connection to the device. It does not
+        mean that the device is ready. It doesn't even mean that the
+        device has been started yet.
+
+        Secondly, it repeatedly pings the device until the device
+        becomes responsive (or times out).
+
+        Thirdly, it repeatedly checks device state until that state is
+        not INIT.
+
+        Only when we have a connection to a responsive device that has
+        completed initialisation, do we return it for use.
+
+        :param fqdn: the fully qualified device name of the device
+        :type fqdn: str
+
+        :return: a connection to a device that is responsive and has
+            completed its initialisation.
+        :rtype: :py:class:`tango.DeviceProxy`
+        """
+        device = self._get_proxy(fqdn)
+        self._ping(device)
+        self._check_initialised(device)
+        return device
+
+
+def backoff_connect(fqdn, logger):
+    """
+    Create a proxy connection to the device, and if necessary wait for
+    the device to become responsive and complete initialisation.
 
     :param fqdn: the fully qualified device name of the device for
         which this DeviceEventManager will manage change events
     :type fqdn: str
+    :param logger: the logger to be used.
+    :type logger: :py:class:`logging.Logger`
 
     :return: a proxy for the device
     :rtype: :py:class:`tango.DeviceProxy`
     """
-    return tango.DeviceProxy(fqdn)
+    return _DeviceConnector(logger).connect(fqdn)
 
 
 def tango_raise(

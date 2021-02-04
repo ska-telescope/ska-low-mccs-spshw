@@ -822,7 +822,7 @@ class MccsController(SKAMaster):
         Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
-            subarray_id, station_ids, channels and station_beam_ids.
+            subarray_id, station_ids, channels and station_beam_id.
         :type argin: str
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -838,7 +838,7 @@ class MccsController(SKAMaster):
                         "subarray_id": 1,
                         "station_ids": [1,2],
                         "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                        "subarray_beam_id": [1],
+                        "subarray_beam_ids": [1],
                     }
                 )
             )
@@ -874,7 +874,7 @@ class MccsController(SKAMaster):
                     "subarray_id": int,
                     "station_ids": List[int],
                     "channels": List[List[int]],
-                    "subarray_beam_id": List[int],
+                    "subarray_beam_ids": List(int),
                     }
             :type argin: str
             :return: A tuple containing a return code and a string
@@ -888,7 +888,7 @@ class MccsController(SKAMaster):
 
             kwargs = json.loads(argin)
             subarray_id = kwarg.get("subarray_id")
-            station_ids = kwargs.get("station_ids")
+            station_ids = kwargs.get("station_ids", list())
             channels = kwargs.get("channels", list())
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
             controllerdevice = self.target

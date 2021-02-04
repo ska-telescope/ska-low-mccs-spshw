@@ -17,7 +17,7 @@ To run the functional (BDD) tests:
 
 .. code-block:: shell-session
 
-   make functional_test
+   make functional-test
 
 
 Develop and test code
@@ -65,7 +65,7 @@ absolutely necessary. If doing so, the basic workflow is:
 
    .. code-block:: shell-session
 
-      make functional_test
+      make functional-test
       
 6. Test failed?
 
@@ -75,7 +75,7 @@ absolutely necessary. If doing so, the basic workflow is:
 
      .. code-block:: shell-session
 
-        make functional_test
+        make functional-test
 
    * If the code needs to be edited, then, once you have edited the
      code, you will need to rebuild the image, and redeploy the cluster.

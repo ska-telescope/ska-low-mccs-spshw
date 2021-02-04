@@ -1,7 +1,6 @@
 HELM_HOST ?= https://nexus.engageska-portugal.pt## helm host url https
 MINIKUBE ?= true## Minikube or not
 MARK ?= all
-IMAGE_TO_TEST ?= $(DOCKER_REGISTRY_HOST)/$(DOCKER_REGISTRY_USER)/$(PROJECT):latest## docker image that will be run for testing purpose
 TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_HOST is an input!
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
@@ -32,7 +31,7 @@ namespace: ## create the kubernetes namespace
 			else kubectl create namespace $(KUBE_NAMESPACE); \
 		fi
 
-delete_namespace: ## delete the kubernetes namespace
+delete-namespace: ## delete the kubernetes namespace
 	@if [ "default" == "$(KUBE_NAMESPACE)" ] || [ "kube-system" == "$(KUBE_NAMESPACE)" ]; then \
 	echo "You cannot delete Namespace: $(KUBE_NAMESPACE)"; \
 	exit 1; \
@@ -61,7 +60,7 @@ dep-up: ## update dependencies for every charts in the env var CHARTS
 		done;
 
 # minikube only 
-minikube_setup:
+minikube-setup:
 	@test $$(kubectl config current-context | grep minikube) || exit 0; \
 	test ! -d $(MINIKUBE_TMP) && mkdir $(MINIKUBE_TMP); \
 	owner=$$(stat -c "%u:%g" $(MINIKUBE_TMP) ); \
@@ -156,14 +155,15 @@ kubeconfig: ## export current KUBECONFIG as base64 ready for KUBE_CONFIG_BASE64
 	echo -e "\n\n# base64 encoded from: kubectl config view --flatten\nKUBE_CONFIG_BASE64 = $${KUBE_CONFIG_BASE64}" >> PrivateRules.mak
 
 # run helm  test 
-functional_test helm_test test: ## test the application on K8s
+functional-test helm-test test: ## test the application on K8s
 	@helm test $(RELEASE_NAME) --namespace $(KUBE_NAMESPACE); \
 	test_retcode=$$?; \
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
 	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -f $$yaml; \
-	mkdir -p $(TEST_RESULTS_DIR); kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
+	rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
+	kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
 	python3 .wait_for_report_file.py; \
 	report_retcode=$$?; \
 	echo "test report:"; \

@@ -1,5 +1,5 @@
 pytest == 5.4.3
-pytest-bdd >= 4.0.0
+pytest-bdd >= 4.0.2
 pytest-cov
 pytest-json-report
 pytest-mock

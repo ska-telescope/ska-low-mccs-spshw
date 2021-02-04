@@ -6,6 +6,7 @@ pytest-mock
 pytest-xdist == 1.34.0
 pytest-repeat
 coverage
+docformatter
 docstr-coverage
 darglint
 flake8

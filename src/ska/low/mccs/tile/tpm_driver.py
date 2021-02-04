@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 An implementation of a TPM driver.
-The class is basically a wrapper around the HwTile class, in order to have
-a consistent interface for driver and simulator.
-This is an initial version. Some methods are still simulated. A warning is
-issued in this case, or a NotImplementedError exception raised
+
+The class is basically a wrapper around the HwTile class, in order to
+have a consistent interface for driver and simulator. This is an initial
+version. Some methods are still simulated. A warning is issued in this
+case, or a NotImplementedError exception raised.
 """
 import copy
 import numpy as np
@@ -45,8 +46,9 @@ class TpmDriver(HardwareDriver):
 
     def __init__(self, logger, ip, port):
         """
-        Initialise a new TPM driver instance. Tries to connect to the given IP and port.
+        Initialise a new TPM driver instance.
 
+        Tries to connect to the given IP and port.
 
         :param logger: a logger for this simulator to use
         :type logger: an instance of :py:class:`logging.Logger`, or
@@ -138,7 +140,7 @@ class TpmDriver(HardwareDriver):
 
     def is_connected(self):
         """
-        Check if TPM is connected
+        Check if TPM is connected.
 
         :return: Connection status
         :rtype: bool
@@ -177,8 +179,8 @@ class TpmDriver(HardwareDriver):
 
     def initialise(self):
         """
-        Download firmware, if not already downloaded, and initializes tile
-
+        Download firmware, if not already downloaded, and initializes
+        tile.
         """
         self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
@@ -201,7 +203,8 @@ class TpmDriver(HardwareDriver):
     @tile_id.setter
     def tile_id(self, value):
         """
-        Set Tile ID
+        Set Tile ID.
+
         :param value: assigned tile Id value
         :type value: int
         """
@@ -220,7 +223,8 @@ class TpmDriver(HardwareDriver):
     @station_id.setter
     def station_id(self, value):
         """
-        Set Station ID
+        Set Station ID.
+
         :param value: assigned station Id value
         :type value: int
         """
@@ -354,7 +358,7 @@ class TpmDriver(HardwareDriver):
 
     def read_register(self, register_name, nb_read, offset, device):
         """
-        Read the values in a register. Named register returns
+        Read the values in a register. Named register returns.
 
         :param register_name: name of the register
         :type register_name: str
@@ -963,6 +967,7 @@ class TpmDriver(HardwareDriver):
     def is_beamformer_running(self):
         """
         Whether the beamformer is currently running.
+
         :return: whether the beamformer is currently running
         :rtype: bool
         """
@@ -973,6 +978,7 @@ class TpmDriver(HardwareDriver):
     def check_pending_data_requests(self):
         """
         Check for pending data requests.
+
         :return: whether there are pending send data requests
         :rtype: bool
         """

@@ -89,8 +89,7 @@ class ResourceAvailabilityPolicy:
 
 class Resource:
     """
-    This inner class implements state recording for a managed
-    resource.
+    This inner class implements state recording for a managed resource.
 
     Initialise with a device id number.
     """
@@ -166,8 +165,8 @@ class Resource:
 
     def is_healthy(self):
         """
-        Check if this resource is in a healthy state, as defined by
-        its resource availability policy.
+        Check if this resource is in a healthy state, as defined by its
+        resource availability policy.
 
         :return: True if healthy
         :rtype: bool

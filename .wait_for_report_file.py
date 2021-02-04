@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Script that continually checks for the existence of
-the MCCS functional test output file cucumber.json
-Script will timeout and waits between checks
+Script that continually checks for the existence of the MCCS functional
+test output file cucumber.json.
+
+Script will timeout and waits between checks.
 """
 import os.path
 import time

@@ -32,7 +32,8 @@ def backoff_connect(fqdn):
 def tango_raise(
     msg, reason="API_CommandFailed", severity=ErrSeverity.ERR, _origin=None
 ):
-    """Helper function to provide a concise way to throw
+    """
+    Helper function to provide a concise way to throw
     :py:class:`tango.Except.throw_exception <pytango:tango.Except>`.
 
     Example::

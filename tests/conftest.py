@@ -1,6 +1,6 @@
 """
 This module contains pytest fixtures and other test setups common to all
-ska.low.mccs tests: unit, integration and functional (BDD)
+ska.low.mccs tests: unit, integration and functional (BDD).
 """
 import backoff
 from collections import defaultdict
@@ -14,7 +14,7 @@ from tango.test_context import MultiDeviceTestContext
 
 def pytest_sessionstart(session):
     """
-    Pytest hook; prints info about tango version
+    Pytest hook; prints info about tango version.
 
     :param session: a pytest Session object
     :type session: :py:class:`pytest.Session`

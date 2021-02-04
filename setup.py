@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" Standard setup.py script """
+"""
+Standard setup.py script.
+"""
 import os
 import setuptools
 

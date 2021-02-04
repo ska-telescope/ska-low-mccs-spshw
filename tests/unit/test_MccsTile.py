@@ -542,8 +542,8 @@ class TestMccsTileCommands:
 
     def test_MissingDownloadFirmwareFile(self, device_under_test):
         """
-        Test for a missing firmware download. Also functions as the test for the
-        isProgrammed and the firmwareName properties.
+        Test for a missing firmware download. Also functions as the test
+        for the isProgrammed and the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

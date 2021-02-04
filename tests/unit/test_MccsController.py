@@ -489,6 +489,8 @@ class TestMccsController:
                 "low-mccs/subarray/02": _subarray_mock(),
                 "low-mccs/station/001": _station_mock(),
                 "low-mccs/station/002": _station_mock(),
+                "low-mccs/beam/01": _subarray_beam_mock(),
+                "low-mccs/beam/02": _subarray_beam_mock(),
             }
 
         def test_Allocate(self, device_under_test, mocker):
@@ -508,6 +510,8 @@ class TestMccsController:
             mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
+            mock_subarray_beam_1 = tango.DeviceProxy("low-mccs/beam/01")
+            mock_subarray_beam_2 = tango.DeviceProxy("low-mccs/beam/02")
 
             controller.On()
 
@@ -543,7 +547,11 @@ class TestMccsController:
 
             # Make the call to allocate
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=1, station_ids=[1]
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[1],
+                subarray_beam_ids=[1],
+                channels=[0, 1, 2, 3],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -554,7 +562,7 @@ class TestMccsController:
             mock_subarray_1.On.assert_called_once_with()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/001"], "station_beams": []})
+                json.dumps({"stations": ["low-mccs/station/001"], "subarray_beams": []})
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -568,7 +576,11 @@ class TestMccsController:
             # allocating station_1 to subarray 2 should fail, because it is already
             # allocated to subarray 1
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=2, station_ids=[1]
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[1],
+                subarray_beam_ids=[1],
+                channels=[0, 1, 2, 3],
             )
             assert result_code == ResultCode.FAILED
             TestMccsController._callback_commandResult_check(
@@ -618,7 +630,11 @@ class TestMccsController:
             # allocating station 2 to subarray 1 should succeed, because
             # it only requires resource release
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=1, station_ids=[2]
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[2],
+                subarray_beam_ids=[1],
+                channels=[0, 1, 2, 3],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -704,6 +720,8 @@ class TestMccsController:
             mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
+            mock_subarray_beam_1 = tango.DeviceProxy("low-mccs/beam/01")
+            mock_subarray_beam_2 = tango.DeviceProxy("low-mccs/beam/02")
 
             controller.On()
 
@@ -728,13 +746,23 @@ class TestMccsController:
                 health_state=HealthState.OK,
             )
 
-            call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
+            call_with_json(
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[1],
+                subarray_beam_id=[1],
+            )
             mock_subarray_1.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
 
             # allocate station 2 to subarray 2
-            call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
+            call_with_json(
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[2],
+                subarray_beam_id=[2],
+            )
             mock_subarray_2.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1

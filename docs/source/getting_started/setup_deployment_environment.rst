@@ -144,7 +144,7 @@ deploying is:
    
      .. code-block:: shell-session
 
-        $ make install-chart; make wait; make functional_test
+        $ make install-chart; make wait; make functional-test
 
 
 Use

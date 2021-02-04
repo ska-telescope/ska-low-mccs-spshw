@@ -40,7 +40,7 @@ KUBERNETES_VERSION = v1.19.2
 # user/group 1000. This will require sudo access in "make create_tmp"
 MINIKUBE_TMP = /tmp/minikube-tango
 
-# where to put the output of "make functional_test"
+# where to put the output of "make functional-test"
 TEST_RESULTS_DIR = test-results
 
 # Docker, K8s and Gitlab CI variables
@@ -97,4 +97,4 @@ include .make/release.mk
 include .make/docker.mk
 include .make/k8s.mk
 
-.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete_namespace ingress_check kubeconfig  rk8s_test k8s_test rlint
+.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete-namespace kubeconfig rlint

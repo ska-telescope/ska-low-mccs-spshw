@@ -39,15 +39,17 @@ class StationPowerManager(PowerManager):
     device.
     """
 
-    def __init__(self, fqdns):
+    def __init__(self, fqdns, logger):
         """
         Initialise a new StationPowerManager.
 
         :param fqdns: the FQDNs of the devices that this controller
             device manages
         :type fqdns: list(str)
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
-        super().__init__(None, fqdns)
+        super().__init__(None, fqdns, logger)
 
 
 class MccsStation(SKAObsDevice):
@@ -218,7 +220,7 @@ class MccsStation(SKAObsDevice):
                 this device manages power
             :type: list(str)
             """
-            device.power_manager = StationPowerManager(fqdns)
+            device.power_manager = StationPowerManager(fqdns, self.logger)
 
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))

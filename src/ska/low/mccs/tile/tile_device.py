@@ -39,15 +39,17 @@ class TilePowerManager(PowerManager):
     device.
     """
 
-    def __init__(self, tile_hardware_manager):
+    def __init__(self, tile_hardware_manager, logger):
         """
         Initialise a new TilePowerManager.
 
         :param tile_hardware_manager: an object that manages this tile's
             hardware
         :type tile_hardware_manager: object
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
-        super().__init__(None, None)
+        super().__init__(None, None, logger)
 
 
 class MccsTile(SKABaseDevice):
@@ -373,9 +375,11 @@ class MccsTile(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.power_manager = TilePowerManager(device.hardware_manager)
+            device.power_manager = TilePowerManager(
+                device.hardware_manager, self.logger
+            )
 
-            power_args = (device.power_manager, device.state_model, device.logger)
+            power_args = (device.power_manager, device.state_model, self.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
             device.register_command_object("On", device.OnCommand(*power_args))
 

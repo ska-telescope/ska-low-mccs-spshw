@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-361 - robust device connection
 * MCCS-320 - deployment bugfixes and move to hyphenated make targets
 * MCCS-350 - Set commandResult to UNKNOWN before MccsController commands are executed
 * MCCS-272 - SubArrayBeam device - implement stub device

@@ -96,7 +96,7 @@ class EventSubscriptionHandler:
 
         self._subscribe()
 
-    @backoff.on_exception(backoff.expo, DevFailed, factor=0.1, max_time=120)
+    @backoff.on_exception(backoff.expo, DevFailed, factor=1, max_time=3)
     def _subscribe(self):
         """
         Subscribe to a change event.
@@ -220,7 +220,7 @@ class DeviceEventManager:
         self._handlers = {}
 
         self._fqdn = fqdn
-        self._device = backoff_connect(fqdn)
+        self._device = backoff_connect(fqdn, logger)
 
     def register_callback(self, callback, event_spec=None):
         """

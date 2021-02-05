@@ -9,7 +9,8 @@ MCCS cluster. Now what can you do with it? Here are some options:
 * develop and test your code against the cluster (not recommended)
 * use a CLI to control devices
 * run an interactive iTango session
-
+* monitor and control devices with WebJive
+* monitor devices with Grafana
 
 Running functional tests
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -39,7 +40,6 @@ absolutely necessary. If doing so, the basic workflow is:
 
       make bounce
 
-
 4. Wait for the cluster to be fully deployed:
 
    .. code-block:: shell-session
@@ -67,39 +67,16 @@ absolutely necessary. If doing so, the basic workflow is:
 
       make functional-test
       
-6. Test failed?
-
-   * If the problem is in the test itself, you can edit it, then
-     run it again -- there is no need to delete and redeploy the
-     cluster:
-
-     .. code-block:: shell-session
-
-        make functional-test
-
-   * If the code needs to be edited, then, once you have edited the
-     code, you will need to rebuild the image, and redeploy the cluster.
-     You can either do a lightweight teardown and redeploy of just the
-     MCCS pods:
+6. Test failed? Edit the code, then
 
      .. code-block:: shell-session
 
         make devimage
         make bounce
         make watch  # until pods have come back up.
+        make functional-test
 
-     or a full teardown and redeploy of the whole cluster, including the
-     tango pods:
-
-     .. code-block:: shell-session
-
-        make devimage
-        make delete
-        make watch  # until all resources are gone
-        make deploy
-        make watch  # or make wait
-
-7. Run the test again, rinse, repeat.
+   Rinse, repeat. Developing against the cluster is very slow.
 
 
 Running a CLI
@@ -195,3 +172,49 @@ An interactice itango session can be run using `make itango`:
    Out[2]: <adminMode.MAINTENANCE: 2>
 
    In [3]: 
+
+
+Webjive
+^^^^^^^
+WebJive provides a Web UI for monitoring and controlling devices in the
+cluster. The MCCS charts have Webjive enabled by default, so once MCCS
+is deployed, you should be able to see Webjive in your web browser, at
+the cluster's IP address.
+
+#. Find out the IP address of the cluster:
+
+   .. code-block:: shell-session
+
+      me@local:~$ minikube ip
+      192.168.49.2
+      me@local:~$
+
+
+#. Open a Web browser (Webjive works best with Chrome) and navigate to
+   http://192.168.49.2/mccs/taranta/devices.
+
+#. Log in with credentials found here:
+   https://github.com/ska-telescope/ska-engineering-ui-compose-utils
+
+#. Select the **dashboard** tab on the right-hand side of the window.
+
+#. You may now build your own dashboard, or import a dashboard from
+   file. MCCS dashboards are available at ska-low-mccs/dashboards/.
+
+Grafana
+^^^^^^^
+To monitor MCCS with Grafana:
+
+#. Navigate to http://grafana.integration.engageska-portugal.pt
+#. Login with user ``admin``, password ``admin``.
+#. Open Dashboards -> Manage -> examples -> MCCS Device Dashboard
+#. Select device: low-mccs/control/control (default)
+#. Change dashboard time-span: From: now-5s To: now
+#. You can then open the CLI to interact with the controller and observe changes
+   in Grafana dashboard
+
+   .. code-block:: bash
+
+      make cli
+      mccs-controller on
+      mccs-controller off

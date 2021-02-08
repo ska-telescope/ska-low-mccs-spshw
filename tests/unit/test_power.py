@@ -10,6 +10,7 @@
 This module contains the tests for the ska.low.mccs.power module.
 """
 import pytest
+from tango import DevState
 
 from ska.low.mccs.power import PowerManager
 
@@ -64,6 +65,24 @@ class TestPowerManager:
             """
             return self._is_on
 
+        def ping(self):
+            """
+            Report that I am responsive.
+
+            :return: nominally the time taken; here we just return 0
+            :rtype: int
+            """
+            return 0
+
+        def state(self):
+            """
+            Report my state.
+
+            :return: OFF
+            :rtype: :py:class:`tango.DevState`
+            """
+            return DevState.OFF
+
     @pytest.fixture(params=[False, True])
     def hardware_manager(self, request):
         """
@@ -114,7 +133,7 @@ class TestPowerManager:
         return mock_device_proxies.keys()
 
     @pytest.fixture()
-    def power_manager(self, hardware_manager, devices):
+    def power_manager(self, hardware_manager, devices, logger):
         """
         Fixture that returns a power manager.
 
@@ -122,11 +141,14 @@ class TestPowerManager:
             something that can be turned off and on.
         :param devices: fixture that returns a list of devices that are
             subservient to the device under test.
+        :param logger: a logger for this power manager to use
+        :type logger: an instance of :py:class:`logging.Logger`, or
+            an object that implements the same interface
 
         :return: a power manager instance
         :rtype: :py:class:`ska.low.mccs.power.PowerManager`
         """
-        return PowerManager(hardware_manager, devices)
+        return PowerManager(hardware_manager, devices, logger)
 
     def test_power_manager(self, power_manager):
         """

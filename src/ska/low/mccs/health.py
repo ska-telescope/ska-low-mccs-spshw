@@ -37,11 +37,13 @@ class DeviceHealthPolicy:
         Computes the health of the device, based on the device's admin
         mode and self-reported health state.
 
-        :param admin_mode: the value of the adminMode attribute of the device
+        :param admin_mode: the value of the adminMode attribute of the
+            device
         :type admin_mode: :py:class:`~ska.base.control_model.AdminMode`
         :param health_state: the value of the healthState attribute of
             the device
-        :type health_state: :py:class:`~ska.base.control_model.HealthState`
+        :type health_state:
+            :py:class:`~ska.base.control_model.HealthState`
         :return: the evaluated health of the device
         :rtype: :py:class:`~ska.base.control_model.HealthState`, or None
             if the health should be ignored.

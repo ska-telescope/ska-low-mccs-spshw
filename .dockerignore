@@ -1,0 +1,4 @@
+.devcontainer/
+.tox/
+**/*.pyc
+**/__pycache__/

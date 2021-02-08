@@ -34,7 +34,7 @@ class PowerManager:
     devices that this device is responsible for turning off and on.
     """
 
-    def __init__(self, hardware, device_fqdns):
+    def __init__(self, hardware, device_fqdns, logger):
         """
         Initialise a new PowerManager object.
 
@@ -44,14 +44,17 @@ class PowerManager:
         :param device_fqdns: the FQDNs of the devices that are
             subservient, for power-management purposes, to this manager
         :type device_fqdns: list(str)
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
+        self._logger = logger
         self._is_on = False
 
         self.hardware = hardware
         if device_fqdns is None:
             self.devices = None
         else:
-            self.devices = [backoff_connect(fqdn) for fqdn in device_fqdns]
+            self.devices = [backoff_connect(fqdn, logger) for fqdn in device_fqdns]
 
     def off(self):
         """

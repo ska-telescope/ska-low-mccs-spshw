@@ -107,7 +107,7 @@ def devices(tango_context):
     #       a real deployment (i.e. not in a test/development environment)
     for device in device_dict.values():
         device.set_source(DevSource.DEV)
-    confirm_initialised(device_dict.values())
+    assert confirm_initialised(device_dict.values())
     return device_dict
 
 

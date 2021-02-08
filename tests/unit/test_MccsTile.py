@@ -13,7 +13,6 @@ This module contains the tests for MccsTile.
 """
 
 import json
-import logging
 import itertools
 import threading
 
@@ -421,7 +420,7 @@ class TestMccsTileCommands:
         ),
     )
     def test_command_passthrough(
-        self, device_under_test, mocker, device_command, arg, tpm_command
+        self, device_under_test, mocker, device_command, arg, tpm_command, logger
     ):
         """
         Test of commands that return OK and have a simple pass-through
@@ -442,6 +441,9 @@ class TestMccsTileCommands:
         :param tpm_command: the name of the tpm command that is expected
             to be called as a result of the device command being called
         :type tpm_command: str
+        :param logger: a object that implements the standard logging
+            interface of :py:class:`logging.Logger`
+        :type logger: :py:class:`logging.Logger`
         """
         device_under_test.On()
 
@@ -453,7 +455,6 @@ class TestMccsTileCommands:
 
         # Now check that calling the command object results in the
         # correct TPM simulator command being called.
-        logger = logging.getLogger()
         state_model = DeviceStateModel(logger)
 
         mock_tpm_simulator = mocker.Mock()

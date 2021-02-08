@@ -31,11 +31,12 @@ stages:
   - release
 
 # The YAML file defines a set of jobs with constraints stating when they should be run.
-# You can specify an unlimited number of jobs which are defined as top-level elements with an arbitrary name and always
-#  have to contain at least the script clause.
-# In this case we have only the test job which produces a coverage report and the unittest output (see setup.cfg), and
-#  the coverage xml report is moved to the reports directory while the html output is persisted for use by the pages
-#  job. TODO: possibly a candidate for refactor / renaming later on.
+# You can specify an unlimited number of jobs which are defined as top-level elements
+# with an arbitrary name and always have to contain at least the script clause.
+# In this case we have only the test job which produces a coverage report and the
+# unittest output (see setup.cfg), and the coverage xml report is moved to the reports
+# directory while the html output is persisted for use by the pages job.
+# TODO: possibly a candidate for refactor / renaming later on.
 test:
   stage: test
   tags:
@@ -94,7 +95,7 @@ functional_test:
     - make install-chart
     - make template-chart
     - make wait
-    - make functional_test
+    - make functional-test
   artifacts:
     paths:
       - ./test-results
@@ -127,7 +128,7 @@ functional_test_tear_down:
   script:
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
     - make uninstall-chart
-    - make delete_namespace
+    - make delete-namespace
   when: always
 
 linting:
@@ -135,7 +136,7 @@ linting:
     - k8srunner
   stage: linting
   script:
-    - tox -e lint
+    - tox -e checklint
   when: always
   artifacts:
     paths:

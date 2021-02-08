@@ -5,7 +5,7 @@ An implementation of a TPM driver.
 The class is basically a wrapper around the HwTile class, in order to
 have a consistent interface for driver and simulator. This is an initial
 version. Some methods are still simulated. A warning is issued in this
-case, or a NotImplementedError exception raised
+case, or a NotImplementedError exception raised.
 """
 import copy
 import numpy as np
@@ -46,8 +46,9 @@ class TpmDriver(HardwareDriver):
 
     def __init__(self, logger, ip, port):
         """
-        Initialise a new TPM driver instance. Tries to connect to the
-        given IP and port.
+        Initialise a new TPM driver instance.
+
+        Tries to connect to the given IP and port.
 
         :param logger: a logger for this simulator to use
         :type logger: an instance of :py:class:`logging.Logger`, or

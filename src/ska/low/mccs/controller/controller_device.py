@@ -45,15 +45,17 @@ class ControllerPowerManager(PowerManager):
     device.
     """
 
-    def __init__(self, station_fqdns):
+    def __init__(self, station_fqdns, logger):
         """
         Initialise a new ControllerPowerManager.
 
         :param station_fqdns: the FQDNs of the stations that this controller
             device manages
         :type station_fqdns: list(str)
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
-        super().__init__(None, station_fqdns)
+        super().__init__(None, station_fqdns, logger)
 
 
 class ControllerResourceManager(ResourceManager):
@@ -301,8 +303,10 @@ class MccsController(SKAMaster):
                 this device manages power
             :type: list(str)
             """
-            device.power_manager = ControllerPowerManager(device._station_fqdns)
-            power_args = (device.power_manager, device.state_model, device.logger)
+            device.power_manager = ControllerPowerManager(
+                device._station_fqdns, self.logger
+            )
+            power_args = (device.power_manager, device.state_model, self.logger)
             device.register_command_object("Off", device.OffCommand(*power_args))
             device.register_command_object("On", device.OnCommand(*power_args))
 

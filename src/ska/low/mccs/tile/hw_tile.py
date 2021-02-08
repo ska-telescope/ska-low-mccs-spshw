@@ -7,9 +7,10 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-Hardware functions for the TPM 1.2 hardware This is derived from
-pyaavs.Tile object and depends heavily on the pyfabil low level software
-and specific hardware module plugins.
+Hardware functions for the TPM 1.2 hardware.
+
+This is derived from pyaavs.Tile object and depends heavily on the
+pyfabil low level software and specific hardware module plugins.
 """
 import functools
 import socket
@@ -171,9 +172,11 @@ class HwTile(object):
         """
         Connect and initialise.
 
-        :param enable_ada: enable adc amplifier, Not present in most TPM versions
+        :param enable_ada: enable adc amplifier, Not present in most TPM
+            versions
         :type enable_ada: bool
-        :param enable_test: setup internal test signal generator instead of ADC
+        :param enable_test: setup internal test signal generator instead
+            of ADC
         :type enable_test: bool
         """
         # Before initialing, check if TPM is programmed
@@ -285,7 +288,7 @@ class HwTile(object):
     @connected
     def erase_fpga(self):
         """
-        h Erase FPGA configuration memory.
+        Erase FPGA configuration memory.
         """
         self.tpm.erase_fpga()
 
@@ -448,8 +451,9 @@ class HwTile(object):
     @connected
     def wait_pps_event(self):
         """
-        Wait for a PPS edge TODO Add a timeout feature, to avoid
-        potential lock.
+        Wait for a PPS edge.
+
+        :todo: Add a timeout feature, to avoid potential lock.
 
         :raises BoardError: Hardware PPS stuck
         """
@@ -518,9 +522,10 @@ class HwTile(object):
     @connected
     def set_time_delays(self, delays):
         """
-        set coarse zenith delay for input ADC streams Delay specified in
-        nanoseconds, nominal is 0. Delay in samples, positive delay adds
-        delay to the signal stream.
+        Set coarse zenith delay for input ADC streams.
+
+        Delay specified in nanoseconds, nominal is 0. Delay in samples,
+        positive delay adds delay to the signal stream.
 
         :param delays: array of delays for each signal (2 signals per antenna)
         :type delays: list(float)
@@ -674,9 +679,11 @@ class HwTile(object):
     @connected
     def set_beamformer_regions(self, region_array):
         """
-        Set frequency regions. Regions are defined in a 2-d array, for a
-        maximum of 48 regions. Each element in the array defines a
-        region, with the form [start_ch, nof_ch, beam_index]
+        Set frequency regions.
+
+        Regions are defined in a 2-d array, for a maximum of 48 regions.
+        Each element in the array defines a region, with the form
+        [start_ch, nof_ch, beam_index]
 
         - start_ch:    region starting channel (currently must be a
                        multiple of 2, LS bit discarded)
@@ -698,8 +705,10 @@ class HwTile(object):
     def set_pointing_delay(self, delay_array, beam_index):
         """
         Specifies the delay in seconds and the delay rate in
-        seconds/seconds. Delay is updated inside the delay engine at the
-        time specified by method load_delay.
+        seconds/seconds.
+
+        Delay is updated inside the delay engine at the time specified
+        by method load_delay.
 
         :param delay_array: delay and delay rate for each antenna
         :type delay_array: list(list(float))
@@ -766,10 +775,12 @@ class HwTile(object):
     def load_beam_angle(self, angle_coefs):
         """
         Angle_coeffs is an array of one element per beam, specifying a
-        rotation angle, in radians, for the specified beam. The rotation
-        is the same for all antennas. Default is 0 (no rotation). A
-        positive pi/4 value transfers the X polarization to the Y
-        polarization The rotation is applied after regular calibration.
+        rotation angle, in radians, for the specified beam.
+
+        The rotation is the same for all antennas. Default is 0 (no
+        rotation). A positive pi/4 value transfers the X polarization to
+        the Y polarization. The rotation is applied after regular
+        calibration.
 
         :param angle_coefs: Rotation angle, per beam, in radians
         :type angle_coefs: list(float)
@@ -840,9 +851,10 @@ class HwTile(object):
 
     def set_first_last_tile(self, is_first, is_last):
         """
-        Defines if a tile is first, last, both or intermediate One, and
-        only one tile must be first, and last, in a chain A tile can be
-        both (one tile chain), or none.
+        Defines if a tile is first, last, both or intermediate.
+
+        One, and only one tile must be first, and last, in a chain. A
+        tile can be both (one tile chain), or none.
 
         :param is_first: True for first tile in beamforming chain
         :type is_first: bool
@@ -859,8 +871,9 @@ class HwTile(object):
         self, station_id, subarray_id, nof_antennas, ref_epoch=-1, start_time=0
     ):
         """
-        define SPEAD header for last tile. All parameters are specified
-        by the LMC.
+        Define SPEAD header for last tile.
+
+        All parameters are specified by the LMC.
 
         :param station_id: Station ID
         :param subarray_id: Subarray ID
@@ -894,6 +907,7 @@ class HwTile(object):
 
         Duration: if > 0 is a duration in frames * 256 (276.48 us)
         if == -1 run forever
+
         :param start_time: time (in ADC frames/256) for first frame sent
         :type start_time: int
         :param duration: duration in ADC frames/256. Multiple of 8
@@ -974,7 +988,8 @@ class HwTile(object):
     @connected
     def check_synchronization(self):
         """
-        chcks FPGA synchronisation Returns when these are synchronised.
+        Checks FPGA synchronisation, returns when these are
+        synchronised.
         """
         t0, t1, t2 = 0, 0, 1
         while t0 != t2:
@@ -990,8 +1005,11 @@ class HwTile(object):
     @connected
     def check_fpga_synchronization(self):
         """
-        Checks various synchronization parameters Output in the log TODO
-        Output in the return value.
+        Checks various synchronization parameters.
+
+        Output in the log
+
+        :todo: Output in the return value.
         """
         # check PLL status
         pll_status = self.tpm["pll", 0x508]
@@ -1168,8 +1186,9 @@ class HwTile(object):
 
     def test_generator_input_select(self, inputs):
         """
-        Select which signals use the internal test generator. Bit
-        mapped, 1 for test generator, 0 for ADC.
+        Select which signals use the internal test generator.
+
+        Bit mapped, 1 for test generator, 0 for ADC.
 
         :param inputs: Bitmapped selector
         """
@@ -1270,7 +1289,7 @@ class HwTile(object):
 
     def __getitem__(self, key):
         """
-        read a register using indexing syntax:
+        Read a register using indexing syntax:
         value=tile['registername']
 
         :param key: register address, symbolic or numeric

@@ -14,7 +14,6 @@ prototype.
 """
 
 import json
-import logging
 import threading
 import time
 
@@ -972,32 +971,25 @@ class TestMccsController:
 class TestControllerPowerManager:
     """
     This class contains tests of the
-    :py:class:`~ska.low.mccs.MccsController` class.
+    :py:class:`~ska.low.mccs.controller.controller_device.ControllerPowerManager`
+    class.
     """
 
     @pytest.fixture()
-    def logger(self):
-        """
-        Fixture that returns a logger for the power manager under test
-        (or its components) to use.
-
-        :return: a logger for the power manager under test to use
-        :rtype: :py:class:`logging.Logger` or an object that implement
-           its logging interface
-        """
-        return logging.getLogger()
-
-    @pytest.fixture()
-    def power_manager(self):
+    def power_manager(self, logger):
         """
         Fixture that returns a power manager with no hardware manager
         and no subservient devices.
+
+        :param logger: a logger for this power manager to use
+        :type logger: an instance of :py:class:`logging.Logger`, or
+            an object that implements the same interface
 
         :return: a power manager with no hardware manager and no
             subservient devices
         :rtype: :py:class:`ska.low.mccs.power.PowerManager`
         """
-        return ControllerPowerManager([])
+        return ControllerPowerManager([], logger)
 
     @pytest.fixture()
     def state_model(self, logger):
@@ -1119,10 +1111,12 @@ class TestControllerPowerManager:
 class TestControllerResourceManager:
     """
     This class contains tests of the
-    `:py:class:~ska.low.mccs.ControllerResourceManager` class.
+    :py:class:`~ska.low.mccs.controller.controller_device.ControllerResourceManager`
+    class.
 
     This class is already exercised through the Tango commands of
     Controller, but here we simulate some scenarios not covered.
+
     """
 
     @pytest.fixture()

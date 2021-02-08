@@ -1,6 +1,6 @@
 """
 This module contains pytest fixtures and other test setups common to all
-ska.low.mccs tests: unit, integration and functional (BDD)
+ska.low.mccs tests: unit, integration and functional (BDD).
 """
 import backoff
 from collections import defaultdict
@@ -210,7 +210,7 @@ class MCCSDeviceTestContext:
         self._ready_condition = ready_condition
         self._source_setting = source
 
-    @backoff.on_predicate(backoff.expo, factor=0.1, max_time=3)
+    @backoff.on_predicate(backoff.expo, factor=0.1, max_time=10)
     def _backoff_retry_ready(self, unready_devices):
         """
         Implements exponential backoff-retry loop checking remaining
@@ -241,7 +241,7 @@ class MCCSDeviceTestContext:
             self.get_device(device_name)
             for device_name in self._devices_info.device_names
         ]
-        self._backoff_retry_ready(unready)
+        return self._backoff_retry_ready(unready)
 
     def _set_source(self):
         """
@@ -262,7 +262,7 @@ class MCCSDeviceTestContext:
         """
         self._multi_device_test_context.__enter__()
         self._set_source()
-        self._check_ready()
+        assert self._check_ready()
         return self
 
     def __exit__(self, exc_type, exception, trace):

@@ -86,7 +86,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
     antenna hardware
     """
 
-    def __init__(self, apiu_fqdn, logical_antenna_id):
+    def __init__(self, apiu_fqdn, logical_antenna_id, logger):
         """
         Initialise a new APIU proxy instance.
 
@@ -94,16 +94,20 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :type apiu_fqdn: str
         :param logical_antenna_id: this antenna's id within the APIU
         :type logical_antenna_id: int
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
 
         :raises AssertionError: if parameters are out of bounds
         :raises DevFailed: if unable to connect to the tile device
         """
+        self._logger = logger
+
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
         try:
-            self._apiu = backoff_connect(apiu_fqdn)
+            self._apiu = backoff_connect(apiu_fqdn, logger)
             self._is_connected = True
         except DevFailed:
             self._is_connected = False
@@ -181,7 +185,7 @@ class AntennaTileProxy(HardwareDriver):
     placeholder.
     """
 
-    def __init__(self, tile_fqdn, logical_antenna_id):
+    def __init__(self, tile_fqdn, logical_antenna_id, logger):
         """
         Create a new Tile proxy instance.
 
@@ -190,16 +194,20 @@ class AntennaTileProxy(HardwareDriver):
         :type tile_fqdn: str
         :param logical_antenna_id: this antenna's id in tile
         :type logical_antenna_id: int
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
 
         :raises AssertionError: if parameters are out of bounds
         :raises DevFailed: if unable to connect to the tile device
         """
+        self._logger = logger
+
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
         try:
-            self._tile = backoff_connect(tile_fqdn)
+            self._tile = backoff_connect(tile_fqdn, logger)
             self._is_connected = True
         except DevFailed:
             self._is_connected = False
@@ -216,7 +224,12 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
     """
 
     def __init__(
-        self, apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+        self,
+        apiu_fqdn,
+        logical_apiu_antenna_id,
+        tile_fqdn,
+        logical_tile_antenna_id,
+        logger,
     ):
         """
         Create a new driver for antenna hardware.
@@ -231,9 +244,12 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :type tile_fqdn: str
         :param logical_tile_antenna_id: the tile's id for this antenna
         :type logical_tile_antenna_id: int
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
-        self._apiu = AntennaAPIUProxy(apiu_fqdn, logical_apiu_antenna_id)
-        self._tile = AntennaTileProxy(tile_fqdn, logical_tile_antenna_id)
+        self._logger = logger
+        self._apiu = AntennaAPIUProxy(apiu_fqdn, logical_apiu_antenna_id, logger)
+        self._tile = AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
 
     @property
     def is_connected(self):
@@ -306,7 +322,12 @@ class AntennaHardwareFactory(HardwareFactory):
     """
 
     def __init__(
-        self, apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+        self,
+        apiu_fqdn,
+        logical_apiu_antenna_id,
+        tile_fqdn,
+        logical_tile_antenna_id,
+        logger,
     ):
         """
         Create a new antenna hardware factory instance.
@@ -321,9 +342,16 @@ class AntennaHardwareFactory(HardwareFactory):
         :type tile_fqdn: str
         :param logical_tile_antenna_id: the tile's id for this antenna
         :type logical_tile_antenna_id: int
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
+        self._logger = logger
         self._hardware = AntennaHardwareDriver(
-            apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+            apiu_fqdn,
+            logical_apiu_antenna_id,
+            tile_fqdn,
+            logical_tile_antenna_id,
+            logger,
         )
 
     @property
@@ -353,6 +381,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
         logical_apiu_antenna_id,
         tile_fqdn,
         logical_tile_antenna_id,
+        logger,
         _factory=None,
     ):
         """
@@ -368,6 +397,8 @@ class AntennaHardwareManager(OnOffHardwareManager):
         :type tile_fqdn: str
         :param logical_tile_antenna_id: the tile's id for this antenna
         :type logical_tile_antenna_id: int
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
@@ -376,7 +407,11 @@ class AntennaHardwareManager(OnOffHardwareManager):
         super().__init__(
             _factory
             or AntennaHardwareFactory(
-                apiu_fqdn, logical_apiu_antenna_id, tile_fqdn, logical_tile_antenna_id
+                apiu_fqdn,
+                logical_apiu_antenna_id,
+                tile_fqdn,
+                logical_tile_antenna_id,
+                logger,
             ),
             AntennaHardwareHealthEvaluator(),
         )
@@ -569,6 +604,7 @@ class MccsAntenna(SKABaseDevice):
                 device.LogicalApiuAntennaId,
                 f"low-mccs/tile/{device.TileId:04}",
                 device.LogicalTileAntennaId,
+                self.logger,
             )
             hardware_args = (device.hardware_manager, device.state_model, self.logger)
             device.register_command_object("Reset", device.ResetCommand(*hardware_args))

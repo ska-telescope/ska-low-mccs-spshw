@@ -18,8 +18,20 @@ These instructions assume a Linux environment; it should be possible to
 deploy in other environments.
 
 
-Initial setup
--------------
+Overview of setup / teardown
+----------------------------
+Installation and configuration of the cluster is handled by the SKA
+``deploy-minikube`` project. Thus, this project need only handle the
+deployment of our project charts to the cluster.
+
+The following state chart summarises the steps to deploying MCCS.
+Detailed instructions follow.
+
+.. uml:: setup_overview.uml
+
+
+Prerequisites and initial setup
+-------------------------------
 As with all SKA subsystems, SKA Low MCCS uses Helm to deploy Kubernetes
 clusters of Docker containers.
 
@@ -39,10 +51,10 @@ clusters of Docker containers.
    Don't be alarmed if running `kubectl` results in a config file error.
    A config file will be build the first time you run minikube.
 
-#. Install minikube and helm. Again, there are various ways to do this. The recommended
-   way is to use the SKA provided `make` system. But first, ensure you remove any old
-   copies of minikube and its environment:
-
+#. Clone the SKA ``deploy-minikube`` project. (But first, if you have
+   run minikube before, remove any old copies and their configuration
+   files.)
+   
    .. code-block:: bash
 
       find / -name minikube 2>/dev/null
@@ -52,21 +64,25 @@ clusters of Docker containers.
    .. code-block:: bash
 
       git clone git@gitlab.com:ska-telescope/sdi/deploy-minikube.git
-      cd deploy-minikube
-      make setup  # installs everything needed
-
 
 Start the cluster manager
 -------------------------
-#. Start minikube, still in the deploy-minikube directory:
+#. Check for a new version of ``deploy-minikube``. Development is ongoing,
+   and you want to be running the latest version:
 
    .. code-block:: bash
 
-      make install # installs all the needed tools
+      cd ~/deploy-minikube
+      git pull
 
-   There is no harm in leaving minikube running all the time, in which
-   case you will only need to re-run this command after a machine
-   reboot.
+   (Obviously there is no need to do this if you have only just cloned
+   the project.)
+
+#. Used ``deploy-minikube`` to install and configure the cluster:
+
+   .. code-block:: bash
+
+      make all
 
 #. **IMPORTANT** Because we are using docker as our driver, the
    environment must be set in your terminal. This command must be run in
@@ -77,31 +93,24 @@ Start the cluster manager
       eval $(minikube docker-env)
 
 
-MCCS cluster configuration
---------------------------
-The set of all deployable devices, with suitable configurations, is
-declared in `charts/ska-low-mccs/data/configuration.json`.
-
-The selection of devices to be deployed is specified in
-`charts/ska-low-mccs/values.yaml`.
-
-
 Deploy MCCS to a cluster
 ------------------------
-Kubernetes / helm interaction is facilitated through `make`. There are
-quite a few `make` commands. Back in the ska-low-mccs repo, the main sequence for 
-deploying is:
+The basic steps to deploying MCCS is:
 
-#. Build the development image ready for deployment to the cluster:
+#. Change into the ska-low-mccs directory, and build the development
+   image ready for deployment to the cluster:
 
    .. code-block:: bash
 
+      cd ~/ska-low.mccs
       make devimage
 
-   This command must be rerun whenever the code is edited. The first
-   time this command is run it can take a very long time because it has
-   to download gigabytes of data. It may time out: just restart it.
-#. Deploy the built image to the cluster:
+   The ``make devimage`` command must be rerun whenever the code is
+   edited. The first time this command is run it can take a very long
+   time because it has to download gigabytes of data. It may time out:
+   just rerun it.
+
+#. Deploy the built image to the cluster. The basic command is
 
    .. code-block:: bash
 
@@ -116,7 +125,6 @@ deploying is:
    .. code-block:: bash
 
       make UMBRELLA_CHART_PATH=charts/mccs-demo/ install-chart
-
 
 #. Monitor the cluster to make sure it comes up okay. There are two
    tools available for this:
@@ -144,142 +152,64 @@ deploying is:
    
      .. code-block:: shell-session
 
-        $ make install-chart; make wait; make functional_test
+        $ make install-chart; make wait; make functional-test
 
-
-Use
----
+Using the MCCS Deployment
+-------------------------
 Now that the cluster is running, what can you do with it? See the
 :doc:`use_mccs` page for some options.
 
 
-Teardown
---------
+Teardown MCCS
+-------------
 Once you have finished with the deployment, you can tear it down:
 
-.. code-block:: shell-session
+.. code-block:: bash
 
    make uninstall-chart
    make watch
-    
+
 This may take a minute or so; use `make watch` to monitor
 deletion.
 
-(On completion, `minikube` is still running, but nothing is
-deployed to it. There is no need to stop `minikube`)
+Note that this does not teardown the minikube deployment, it simply
+unloads the MCCS charts.
 
 
-Monitoring the cluster
-----------------------
-To start up a cluster:
-
-.. code-block:: bash
-
-   # Export Docker environment variables to Bash
-   eval $(minikube docker-env)
-
-
-Now deploy mccs-umbrella chart to the cluster:
+Teardown everything
+-------------------
+There is no harm in leaving minikube running all the time. But if you
+`must` tear everything down, then
 
 .. code-block:: bash
 
-   cd ska-low-mccs
-   make devimage
-   make install-chart
-   make watch
+   cd ~/deploy-minikube
+   make clean
 
-If everything went smoothly, when all the pods are running...
 
-.. code-block:: bash
-
-   # Take a note of the server IP address
-   minikube ip
-
-Place the returned IP address and names in `/etc/hosts` file; for example if
-the above returns `172.17.0.3`, add
-
-.. code-block:: text
-
-   172.17.0.3  integration.engageska-portugal.pt # webjive
-   172.17.0.3  grafana.integration.engageska-portugal.pt
-   172.17.0.3  tangogql-proxy.integration.engageska-portugal.pt
-
-**Note** that once this has been done the "official" (online) instances can no
-longer be accessed until these lines have been commented out.
-
-WebJive
--------
-When the pod has been created and is ready, on the local machine navigate to:
-http://integration.engageska-portugal.pt/testdb/devices
-
-**Note** It may be necessary to explicitly add a port number if you get a 404
-error at the above. As part of `make install` in the deploy-minikube project,
-the port that Traefik is listening on is output in the listing:
-
-.. code-block:: console
-  :emphasize-lines: 19
-
-   me@local:~$ make install
-
-   ...
-
-   "stable" has been added to your repositories
-   Hang tight while we grab the latest from your chart repositories...
-   ...Successfully got an update from the "stable" chart repository
-   Update Complete. ⎈Happy Helming!⎈
-   Release "traefik0" does not exist. Installing it now.
-   WARNING: This chart is deprecated
-   NAME: traefik0
-   LAST DEPLOYED: Tue Jan 5 13:39:46 2021
-   NAMESPACE: kube-system
-   STATUS: deployed
-   REVISION: 1
-   TEST SUITE: None
-   NOTES:
-   1. Traefik is listening on the following ports on the host machine:
-      http - 30081  <-- PORT NUMBER THAT TRAEFIK IS LISTENING ON
-      https - 30444
-
-Use the port number from above when addressing WebJive in your browser:
-http://integration.engageska-portugal.pt:30081/testdb/devices
-
-Login with credentials found here: https://github.com/ska-telescope/ska-engineering-ui-compose-utils
-Once you are successfully logged in, to add the MCCS dashboard:
-
-#. Select the **dashboard** tab on the right-hand side of the window.
-#. Import the dashboard from file which is called `dashboards/MCCS_webjive_health.wj`.
-#. Click on on the **play** button to activate the dashboard.
-
-You can then open the CLI to interact with the controller and observe changes
-in the dashboard.
-
-.. code-block:: bash
-
-   make cli
-   mccs-controller on
-   mccs-controller off
-
-Grafana
--------
+Set up Grafana
+--------------
 
 **Currently under rework**
 
-.. code-block:: bash
+In order to use Grafana to monitor the cluster, an extra step is
+required: you must make your Web browser think that
+grafana.integration.engageska-portugal.pt is served by your minikube
+cluster.
 
-   # 
+#. Obtain the IP address of your cluster:
 
-To monitor MCCS with Grafana:
+   .. code-block:: shell-session
 
-#. Navigate to http://grafana.integration.engageska-portugal.pt
-   (admin:admin).
-#. Open Dashboards -> Manage -> examples -> MCCS Device Dashboard
-#. Select device: low-mccs/control/control (default)
-#. Change dashboard time-span: From: now-5s To: now
-#. You can then open the CLI to interact with the controller and observe changes
-   in Grafana dashboard
+      me@local:~$ minikube ip
+      192.168.49.2
+      me@local:~$
 
-   .. code-block:: bash
+Add the following line to your hosts file (on Ubuntu this is located at
+/etc/hosts).
 
-      make cli
-      mccs-controller on
-      mccs-controller off
+.. code-block:: text
+
+   192.168.49.2 grafana.integration.engageska-portugal.pt
+
+See the :doc:`use_mccs` page for instructions on using Grafana.

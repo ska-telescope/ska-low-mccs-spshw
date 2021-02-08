@@ -24,9 +24,11 @@ from ska.base.commands import ResultCode
 
 
 class CliMeta(type):
-    """Metaclass to catch and disect
-    :py:class:`tango.DevFailed` and other exceptions for
-    all class methods. They get turned into `fire.core.FireError` exceptions.
+    """
+    Metaclass to catch and disect :py:class:`tango.DevFailed` and other
+    exceptions for all class methods.
+
+    They get turned into `fire.core.FireError` exceptions.
     """
 
     def __new__(cls, name, bases, attrs):

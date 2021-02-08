@@ -1,0 +1,28 @@
+state "Cluster not ready" as ClusterNotReady
+state "Cluster ready" as ClusterReady
+state "Cluster running MCCS" as ClusterRunningMCCS
+
+ClusterNotReady --> ClusterReady 
+note on link
+  cd ~/deploy-minikube
+  make all
+end note
+
+ClusterReady --> ClusterNotReady
+note on link
+  cd ~/deploy-minikube
+  make clean
+end note
+
+ClusterReady --> ClusterRunningMCCS
+note on link
+  cd ~/ska-low-mccs
+  make devimage
+  make install-chart
+end note
+
+ClusterRunningMCCS --> ClusterReady
+note on link
+  cd ~/ska-low-mccs
+  make uninstall-chart
+end note

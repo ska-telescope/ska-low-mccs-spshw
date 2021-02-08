@@ -68,7 +68,7 @@ class TestUtils:
     def test_tango_raise_not_device(self):
         """
         Test that use of `tango_raise` helper function fails in a non-
-        device class with default argument (`origin=None`)
+        device class with default argument (`origin=None`).
         """
 
         class NonDevice:

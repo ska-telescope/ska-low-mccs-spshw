@@ -44,10 +44,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
-            "beam_001",
-            "beam_002",
-            "beam_003",
-            "beam_004",
+            "subarraybeam_01",
+            "subarraybeam_02",
+            "subarraybeam_03",
+            "subarraybeam_04",
         ],
     }
 
@@ -92,10 +92,10 @@ class TestMccsIntegrationTmc:
             # "antenna_000002": device_context.get_device("antenna_000002"),
             # "antenna_000003": device_context.get_device("antenna_000003"),
             # "antenna_000004": device_context.get_device("antenna_000004"),
-            "beam_001": device_context.get_device("beam_001"),
-            "beam_002": device_context.get_device("beam_002"),
-            "beam_003": device_context.get_device("beam_003"),
-            "beam_004": device_context.get_device("beam_004"),
+            "subarraybeam_01": device_context.get_device("subarraybeam_01"),
+            "subarraybeam_02": device_context.get_device("subarraybeam_02"),
+            "subarraybeam_03": device_context.get_device("subarraybeam_03"),
+            "subarraybeam_04": device_context.get_device("subarraybeam_04"),
         }
         return device_dict
 
@@ -197,10 +197,10 @@ class TestMccsIntegrationTmc:
         parameters = {
             "subarray_id": 1,
             "station_ids": [1, 2],
-            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-            "station_beam_ids": [1],
+            "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+            "subarray_beam_ids": [1],
         }
-        devices["beam_001"].isBeamLocked = True
+        devices["subarraybeam_01"].isBeamLocked = True
         json_string = json.dumps(parameters)
         self.assert_command(
             device=devices["controller"], command="Allocate", argin=json_string
@@ -248,8 +248,8 @@ class TestMccsIntegrationTmc:
         parameters = {
             "subarray_id": 1,
             "station_ids": [1, 2],
-            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-            "station_beam_ids": [1],
+            "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+            "subarray_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
         self.assert_command(
@@ -262,18 +262,17 @@ class TestMccsIntegrationTmc:
 
         # Configure the subarray
         configuration = {
-            "mccs": {
-                "stations": [{"station_id": 1}, {"station_id": 2}],
-                "station_beams": [
-                    {
-                        "station_beam_id": 1,
-                        "station_id": [1, 2],
-                        "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-                        "update_rate": 0.0,
-                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                    }
-                ],
-            }
+            "stations": [{"station_id": 1}, {"station_id": 2}],
+            "subarray_beams": [
+                {
+                    "subarray_id": 1,
+                    "subarray_beam_id": 1,
+                    "station_ids": [1, 2],
+                    "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    "update_rate": 0.0,
+                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                }
+            ],
         }
         json_string = json.dumps(configuration)
         self.assert_command(
@@ -282,7 +281,7 @@ class TestMccsIntegrationTmc:
         assert devices["subarray_01"].obsState == ObsState.READY
 
         # Perform a scan on the subarray
-        scan_config = {"id": 1}
+        scan_config = {"id": 1, "scan_time": 4}
         json_string = json.dumps(scan_config)
         self.assert_command(
             device=devices["subarray_01"],

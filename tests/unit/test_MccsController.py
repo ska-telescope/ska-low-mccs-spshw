@@ -489,8 +489,6 @@ class TestMccsController:
                 "low-mccs/subarray/02": _subarray_mock(),
                 "low-mccs/station/001": _station_mock(),
                 "low-mccs/station/002": _station_mock(),
-                "low-mccs/beam/01": _subarray_beam_mock(),
-                "low-mccs/beam/02": _subarray_beam_mock(),
             }
 
         def test_Allocate(self, device_under_test, mocker):
@@ -510,8 +508,6 @@ class TestMccsController:
             mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
-            mock_subarray_beam_1 = tango.DeviceProxy("low-mccs/beam/01")
-            mock_subarray_beam_2 = tango.DeviceProxy("low-mccs/beam/02")
 
             controller.On()
 
@@ -551,7 +547,7 @@ class TestMccsController:
                 subarray_id=1,
                 station_ids=[1],
                 subarray_beam_ids=[1],
-                channels=[0, 1, 2, 3],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -562,7 +558,13 @@ class TestMccsController:
             mock_subarray_1.On.assert_called_once_with()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/001"], "subarray_beams": []})
+                json.dumps(
+                    {
+                        "stations": ["low-mccs/station/001"],
+                        "subarray_beams": ["low-mccs/subarraybeam/01"],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    }
+                )
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -580,7 +582,7 @@ class TestMccsController:
                 subarray_id=2,
                 station_ids=[1],
                 subarray_beam_ids=[1],
-                channels=[0, 1, 2, 3],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.FAILED
             TestMccsController._callback_commandResult_check(
@@ -605,7 +607,11 @@ class TestMccsController:
             )
 
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=1, station_ids=[1, 2]
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[1, 2],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -616,7 +622,13 @@ class TestMccsController:
             mock_subarray_1.On.assert_not_called()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/002"], "station_beams": []})
+                json.dumps(
+                    {
+                        "stations": ["low-mccs/station/002"],
+                        "subarray_beams": ["low-mccs/subarraybeam/01"],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    }
+                )
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -634,7 +646,7 @@ class TestMccsController:
                 subarray_id=1,
                 station_ids=[2],
                 subarray_beam_ids=[1],
-                channels=[0, 1, 2, 3],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -680,7 +692,11 @@ class TestMccsController:
             time.sleep(0.2)  # RCL???
             mock_callback.reset_mock()
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=2, station_ids=[1, 2]
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[1, 2],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -697,7 +713,8 @@ class TestMccsController:
                 json.dumps(
                     {
                         "stations": ["low-mccs/station/001", "low-mccs/station/002"],
-                        "station_beams": [],
+                        "subarray_beams": ["low-mccs/subarraybeam/01"],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     }
                 )
             )
@@ -720,8 +737,6 @@ class TestMccsController:
             mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
-            mock_subarray_beam_1 = tango.DeviceProxy("low-mccs/beam/01")
-            mock_subarray_beam_2 = tango.DeviceProxy("low-mccs/beam/02")
 
             controller.On()
 
@@ -750,7 +765,8 @@ class TestMccsController:
                 controller.Allocate,
                 subarray_id=1,
                 station_ids=[1],
-                subarray_beam_id=[1],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             mock_subarray_1.On.assert_called_once_with()
             # check state
@@ -761,7 +777,8 @@ class TestMccsController:
                 controller.Allocate,
                 subarray_id=2,
                 station_ids=[2],
-                subarray_beam_id=[2],
+                subarray_beam_ids=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             mock_subarray_2.On.assert_called_once_with()
             # check state

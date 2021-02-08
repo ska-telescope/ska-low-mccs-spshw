@@ -887,7 +887,7 @@ class MccsController(SKAMaster):
             controllerdevice = self.target
 
             kwargs = json.loads(argin)
-            subarray_id = kwarg.get("subarray_id")
+            subarray_id = kwargs.get("subarray_id")
             station_ids = kwargs.get("station_ids", list())
             channels = kwargs.get("channels", list())
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
@@ -904,7 +904,7 @@ class MccsController(SKAMaster):
             for subarray_beam_id in subarray_beam_ids:
                 subarray_beams[
                     subarray_beam_id
-                ] = f"low-mccs/beam/{subarray_beam_id:02}"
+                ] = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
             subarray_beam_fqdns = sorted(subarray_beams.values())
 
             # Generate subarray FQDN from ID
@@ -962,6 +962,7 @@ class MccsController(SKAMaster):
                     subarray_device.AssignResources,
                     stations=stations_to_assign,
                     subarray_beams=subarray_beam_fqdns,
+                    channels=channels,
                 )
                 if result_code == ResultCode.FAILED:
                     return (

@@ -1,6 +1,6 @@
 """
 This module contains pytest fixtures and other test setups for the
-ska.low.mccs functional (BDD) tests
+ska.low.mccs functional (BDD) tests.
 """
 from collections import defaultdict
 from contextlib import contextmanager
@@ -16,7 +16,7 @@ from tango.test_context import MultiDeviceTestContext, get_host_ip
 
 def pytest_configure(config):
     """
-    Register custom markers to avoid pytest warnings
+    Register custom markers to avoid pytest warnings.
 
     :param config: the pytest config object
     :type config: pytest config class
@@ -43,11 +43,12 @@ def _tango_true_context():
         """
         Implements a context that provides access to a true TANGO
         environment through an interface like that of
-        tango.MultiDeviceTestContext."""
+        tango.MultiDeviceTestContext.
+        """
 
         def get_device(self, fqdn):
             """
-            Returns a device proxy to the specified device
+            Returns a device proxy to the specified device.
 
             :param fqdn: the fully qualified domain name of the server
             :type fqdn: str
@@ -80,7 +81,8 @@ def _tango_test_context(_devices_info, _module_mocker):
 
     def _get_open_port():
         """
-        Helper function that returns an available port on the local machine
+        Helper function that returns an available port on the local
+        machine.
 
         Note the possibility of a race condition here. By the time the
         calling method tries to make use of this port, it might already
@@ -171,7 +173,7 @@ def devices_info(devices_to_load):
     """
     Constructs a devices_info dictionary in the form required by
     tango.test_context.MultiDeviceTestContext, with devices as specified
-    by the devices_to_load fixture
+    by the devices_to_load fixture.
 
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
@@ -253,7 +255,7 @@ def confirm_initialised(devices):
     """
     Helper function that tries to confirm that a device has completed
     its initialisation and transitioned out of INIT state, using an
-    exponential backoff-retry scheme in case of failure
+    exponential backoff-retry scheme in case of failure.
 
     :param devices: the devices that we are waiting to initialise
     :type devices: :py:class:`tango.DeviceProxy`

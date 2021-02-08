@@ -7,9 +7,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-Hardware functions for the TPM 1.2 hardware
-This is derived from pyaavs.Tile object and depends heavily on the
-pyfabil low level software and specific hardware module plugins
+Hardware functions for the TPM 1.2 hardware This is derived from
+pyaavs.Tile object and depends heavily on the pyfabil low level software
+and specific hardware module plugins.
 """
 import functools
 import socket
@@ -41,8 +41,9 @@ def connected(f):
 
 class HwTile(object):
     """
-    Tile hardware interface library. Streamlined and edited version
-    of the AAVS Tile object
+    Tile hardware interface library.
+
+    Streamlined and edited version of the AAVS Tile object
     """
 
     def __init__(
@@ -55,7 +56,7 @@ class HwTile(object):
         logger=None,
     ):
         """
-        HwTile initialization
+        HwTile initialization.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
@@ -118,7 +119,7 @@ class HwTile(object):
 
     def connect(self, initialise=False, load_plugin=True, enable_ada=False):
         """
-        Connect to the hardware and loads initial configuration
+        Connect to the hardware and loads initial configuration.
 
         :param initialise: Initialises the TPM object
         :type initialise: bool
@@ -168,7 +169,8 @@ class HwTile(object):
 
     def initialise(self, enable_ada=False, enable_test=False):
         """
-        Connect and initialise
+        Connect and initialise.
+
         :param enable_ada: enable adc amplifier, Not present in most TPM versions
         :type enable_ada: bool
         :param enable_test: setup internal test signal generator instead of ADC
@@ -253,11 +255,7 @@ class HwTile(object):
         self.set_first_last_tile(False, False)
         # TODO Use meaningful numbers instead of just magic
         self.define_spead_header(
-            station_id=0,
-            subarray_id=0,
-            nof_antennas=16,
-            ref_epoch=-1,
-            start_time=0,
+            station_id=0, subarray_id=0, nof_antennas=16, ref_epoch=-1, start_time=0
         )
         # Do not start beamformer as default
         # self.start_beamformer(start_time=0, duration=-1)
@@ -270,7 +268,8 @@ class HwTile(object):
 
     def program_fpgas(self, bitfile):
         """
-        Program both FPGAs with specified firmware
+        Program both FPGAs with specified firmware.
+
         :param bitfile: Bitfile to load
         :type bitfile: str
         """
@@ -285,15 +284,16 @@ class HwTile(object):
 
     @connected
     def erase_fpga(self):
-        """h
-        Erase FPGA configuration memory
+        """
+        h Erase FPGA configuration memory.
         """
         self.tpm.erase_fpga()
 
     @connected
     def read_cpld(self, bitfile="cpld_dump.bit"):
         """
-        Read bitfile in CPLD FLASH
+        Read bitfile in CPLD FLASH.
+
         :param bitfile: Bitfile where to dump CPLD firmware
         :type bitfile: str
         """
@@ -384,7 +384,8 @@ class HwTile(object):
     @connected
     def get_fpga_time(self, device=Device.FPGA_1):
         """
-        Return time from FPGA
+        Return time from FPGA.
+
         :param device: FPGA to get time from
         :type device: int
         :return: Internal time for FPGA
@@ -401,7 +402,8 @@ class HwTile(object):
     @connected
     def get_fpga_timestamp(self, device=Device.FPGA_1):
         """
-        Get timestamp from FPGA
+        Get timestamp from FPGA.
+
         :param device: FPGA to read timestamp from
         :type device: int
         :return: PPS time
@@ -427,7 +429,8 @@ class HwTile(object):
     @connected
     def set_phase_terminal_count(self, value):
         """
-        Set phase terminal count
+        Set phase terminal count.
+
         :param value: PPS phase terminal count
         """
         self["fpga1.pps_manager.sync_tc.cnt_1_pulse"] = value
@@ -445,8 +448,9 @@ class HwTile(object):
     @connected
     def wait_pps_event(self):
         """
-        Wait for a PPS edge
-        TODO Add a timeout feature, to avoid potential lock
+        Wait for a PPS edge TODO Add a timeout feature, to avoid
+        potential lock.
+
         :raises BoardError: Hardware PPS stuck
         """
         timeout = 1100
@@ -471,7 +475,8 @@ class HwTile(object):
     @connected
     def start_acquisition(self, start_time=None, delay=2):
         """
-        Start data acquisition
+        Start data acquisition.
+
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
         """
@@ -513,9 +518,10 @@ class HwTile(object):
     @connected
     def set_time_delays(self, delays):
         """
-        set coarse zenith delay for input ADC streams
-        Delay specified in nanoseconds, nominal is 0.
-        Delay in samples, positive delay adds delay to the signal stream
+        set coarse zenith delay for input ADC streams Delay specified in
+        nanoseconds, nominal is 0. Delay in samples, positive delay adds
+        delay to the signal stream.
+
         :param delays: array of delays for each signal (2 signals per antenna)
         :type delays: list(float)
         :return: True on success, False on error
@@ -558,9 +564,7 @@ class HwTile(object):
             delays = np.array(delays, dtype=np.float)
             if np.all(min_delay <= delays) and np.all(delays <= max_delay):
                 delays_hw = np.clip(
-                    (np.round(delays / frame_length) + 128).astype(np.int),
-                    4,
-                    255,
+                    (np.round(delays / frame_length) + 128).astype(np.int), 4, 255
                 ).tolist()
             else:
                 self.logger.warning(
@@ -591,7 +595,8 @@ class HwTile(object):
     @connected
     def set_channeliser_truncation(self, trunc, signal=None):
         """
-        Set channeliser truncation scale for the whole tile
+        Set channeliser truncation scale for the whole tile.
+
         :param trunc: Truncted bits, channeliser output scaled down
         :type trunc: int
         :param signal: Input signal, 0 to 31. If None, apply to all
@@ -638,8 +643,9 @@ class HwTile(object):
     @connected
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
-        Initialise tile and station beamformers for a simple
-        single beam configuration
+        Initialise tile and station beamformers for a simple single beam
+        configuration.
+
         :param start_channel: Initial channel, must be even
         :type start_channel: int
         :param nof_channels: Number of beamformed spectral channels
@@ -668,10 +674,9 @@ class HwTile(object):
     @connected
     def set_beamformer_regions(self, region_array):
         """
-        Set frequency regions.
-        Regions are defined in a 2-d array, for a maximum of 48 regions.
-        Each element in the array defines a region, with
-        the form [start_ch, nof_ch, beam_index]
+        Set frequency regions. Regions are defined in a 2-d array, for a
+        maximum of 48 regions. Each element in the array defines a
+        region, with the form [start_ch, nof_ch, beam_index]
 
         - start_ch:    region starting channel (currently must be a
                        multiple of 2, LS bit discarded)
@@ -692,9 +697,10 @@ class HwTile(object):
     @connected
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in seconds/seconds.
-        Delay is updated inside the delay engine at the time specified
-        by method load_delay
+        Specifies the delay in seconds and the delay rate in
+        seconds/seconds. Delay is updated inside the delay engine at the
+        time specified by method load_delay.
+
         :param delay_array: delay and delay rate for each antenna
         :type delay_array: list(list(float))
         :param beam_index: specifies which beam is described (range 0:7)
@@ -746,7 +752,8 @@ class HwTile(object):
     def load_antenna_tapering(self, beam, tapering_coefs):
         """
         tapering_coefs is a vector of 16 values, one per antenna.
-        Default (at initialization) is 1.0
+        Default (at initialization) is 1.0.
+
         :param beam: Beam index (optional) in range 0:47
         :type beam: int
         :param tapering_coefs: Coefficients for each antenna
@@ -758,11 +765,12 @@ class HwTile(object):
     @connected
     def load_beam_angle(self, angle_coefs):
         """
-        Angle_coeffs is an array of one element per beam, specifying a rotation
-        angle, in radians, for the specified beam. The rotation is the same
-        for all antennas. Default is 0 (no rotation).
-        A positive pi/4 value transfers the X polarization to the Y polarization
-        The rotation is applied after regular calibration
+        Angle_coeffs is an array of one element per beam, specifying a
+        rotation angle, in radians, for the specified beam. The rotation
+        is the same for all antennas. Default is 0 (no rotation). A
+        positive pi/4 value transfers the X polarization to the Y
+        polarization The rotation is applied after regular calibration.
+
         :param angle_coefs: Rotation angle, per beam, in radians
         :type angle_coefs: list(float)
         """
@@ -771,7 +779,8 @@ class HwTile(object):
 
     def compute_calibration_coefficients(self):
         """
-        Compute the calibration coefficients and load them in the hardware.
+        Compute the calibration coefficients and load them in the
+        hardware.
         """
         self.tpm.beamf_fd[0].compute_calibration_coefs()
         self.tpm.beamf_fd[1].compute_calibration_coefs()
@@ -791,7 +800,8 @@ class HwTile(object):
 
     def set_beamformer_epoch(self, epoch):
         """
-        Set the Unix epoch in seconds since Unix reference time
+        Set the Unix epoch in seconds since Unix reference time.
+
         :param epoch: Unix epoch for the reference time
         :return: Success status
         :rtype: bool
@@ -802,7 +812,8 @@ class HwTile(object):
 
     def set_csp_rounding(self, rounding):
         """
-        Set output rounding for CSP
+        Set output rounding for CSP.
+
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         :return: success status
         :rtype: bool
@@ -829,9 +840,10 @@ class HwTile(object):
 
     def set_first_last_tile(self, is_first, is_last):
         """
-        Defines if a tile is first, last, both or intermediate
-        One, and only one tile must be first, and last, in a chain
-        A tile can be both (one tile chain), or none
+        Defines if a tile is first, last, both or intermediate One, and
+        only one tile must be first, and last, in a chain A tile can be
+        both (one tile chain), or none.
+
         :param is_first: True for first tile in beamforming chain
         :type is_first: bool
         :param is_last: True for last tile in beamforming chain
@@ -848,7 +860,8 @@ class HwTile(object):
     ):
         """
         define SPEAD header for last tile. All parameters are specified
-        by the LMC
+        by the LMC.
+
         :param station_id: Station ID
         :param subarray_id: Subarray ID
         :param nof_antennas: Number of antenns in the station
@@ -878,6 +891,7 @@ class HwTile(object):
     def start_beamformer(self, start_time=0, duration=-1):
         """
         Start the beamformer.
+
         Duration: if > 0 is a duration in frames * 256 (276.48 us)
         if == -1 run forever
         :param start_time: time (in ADC frames/256) for first frame sent
@@ -911,7 +925,7 @@ class HwTile(object):
 
     def stop_beamformer(self):
         """
-        Stop beamformer
+        Stop beamformer.
         """
         self.tpm.station_beamf[0].abort()
         self.tpm.station_beamf[1].abort()
@@ -921,8 +935,7 @@ class HwTile(object):
     @connected
     def post_synchronisation(self):
         """
-        Post tile configuration synchronization
-        for PPS signal
+        Post tile configuration synchronization for PPS signal.
         """
 
         self.wait_pps_event()
@@ -940,8 +953,8 @@ class HwTile(object):
     @connected
     def sync_fpgas(self):
         """
-        Syncronises the two FPGAs in the tile
-        Returns when these are synchronised
+        Syncronises the two FPGAs in the tile Returns when these are
+        synchronised.
         """
         devices = ["fpga1", "fpga2"]
 
@@ -961,8 +974,7 @@ class HwTile(object):
     @connected
     def check_synchronization(self):
         """
-        chcks FPGA synchronisation
-        Returns when these are synchronised
+        chcks FPGA synchronisation Returns when these are synchronised.
         """
         t0, t1, t2 = 0, 0, 1
         while t0 != t2:
@@ -978,9 +990,8 @@ class HwTile(object):
     @connected
     def check_fpga_synchronization(self):
         """
-        Checks various synchronization parameters
-        Output in the log
-        TODO Output in the return value
+        Checks various synchronization parameters Output in the log TODO
+        Output in the return value.
         """
         # check PLL status
         pll_status = self.tpm["pll", 0x508]
@@ -1031,7 +1042,7 @@ class HwTile(object):
     @connected
     def set_c2c_burst(self):
         """
-        Setting C2C burst when supported by FPGAs and CPLD
+        Setting C2C burst when supported by FPGAs and CPLD.
         """
 
         self.tpm["fpga1.regfile.c2c_stream_ctrl.idle_val"] = 0
@@ -1058,7 +1069,8 @@ class HwTile(object):
     @connected
     def synchronised_data_operation(self, seconds=0.2, timestamp=None):
         """
-        Synchronise data operations between FPGAs
+        Synchronise data operations between FPGAs.
+
         :param seconds: Number of seconds to delay operation
         :param timestamp: Timestamp at which tile will be synchronised
         """
@@ -1093,7 +1105,8 @@ class HwTile(object):
     ):
         """
         Set tone frequency and amplitude fro one of the two DDS in the
-        internal tone generator
+        internal tone generator.
+
         :param dds: DDS Id, 0 or 1
         :param frequency: Tone frequency in Hz
         :param ampl: Normalized amplitude, max 1.0 for 32 ADUs peak
@@ -1115,7 +1128,8 @@ class HwTile(object):
 
     def test_generator_disable_tone(self, dds, delay=128):
         """
-        disable tone generator
+        disable tone generator.
+
         :param dds: DDS Id, 0 or 1
         :param delay: delay for actua setting, to synchronize between tiles
         :return: 0 for OK, 1 for timing error
@@ -1134,7 +1148,8 @@ class HwTile(object):
 
     def test_generator_set_noise(self, ampl=0.0, delay=128):
         """
-        Set noise generator amplitude
+        Set noise generator amplitude.
+
         :param ampl: Normalized amplitude, max 1.0 for 32 ADUs peak
         :param delay: delay for actua setting, to synchronize between tiles
         :return: 0 for OK, 1 for timing error
@@ -1153,8 +1168,9 @@ class HwTile(object):
 
     def test_generator_input_select(self, inputs):
         """
-        Select which signals use the internal test generator.
-        Bit mapped, 1 for test generator, 0 for ADC
+        Select which signals use the internal test generator. Bit
+        mapped, 1 for test generator, 0 for ADC.
+
         :param inputs: Bitmapped selector
         """
         self.tpm.test_generator[0].channel_select(inputs & 0xFFFF)
@@ -1163,7 +1179,8 @@ class HwTile(object):
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_low, ref_hi):
         """
-        Calculate delay for PPS pulse
+        Calculate delay for PPS pulse.
+
         :param current_delay: Current delay
         :type current_delay: int
         :param current_tc: Current phase register terminal count
@@ -1195,7 +1212,8 @@ class HwTile(object):
     @connected
     def set_station_id(self, station_id, tile_id):
         """
-        Set station ID
+        Set station ID.
+
         :param station_id: Station ID
         :param tile_id: Tile ID within station
         """
@@ -1252,7 +1270,8 @@ class HwTile(object):
 
     def __getitem__(self, key):
         """
-        read a register using indexing syntax: value=tile['registername']
+        read a register using indexing syntax:
+        value=tile['registername']
 
         :param key: register address, symbolic or numeric
         :type key: str
@@ -1263,7 +1282,7 @@ class HwTile(object):
 
     def __setitem__(self, key, value):
         """
-        Set a register to a value
+        Set a register to a value.
 
         :param key: register address, symbolic or numeric
         :type key: str

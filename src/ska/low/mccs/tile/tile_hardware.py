@@ -111,10 +111,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :type _factory: :py:class:`.TileHardwareFactory`
         """
         hardware_factory = _factory or TileHardwareFactory(
-            simulation_mode == SimulationMode.TRUE,
-            logger,
-            tpm_ip,
-            tpm_cpld_port,
+            simulation_mode == SimulationMode.TRUE, logger, tpm_ip, tpm_cpld_port
         )
         super().__init__(hardware_factory, TileHardwareHealthEvaluator())
 
@@ -179,7 +176,8 @@ class TileHardwareManager(SimulableHardwareManager):
     @tile_id.setter
     def tile_id(self, value):
         """
-        Set Tile ID
+        Set Tile ID.
+
         :param value: assigned tile Id value
         :type value: int
         """
@@ -197,7 +195,8 @@ class TileHardwareManager(SimulableHardwareManager):
     @station_id.setter
     def station_id(self, value):
         """
-        Set Station ID
+        Set Station ID.
+
         :param value: assigned station Id value
         :type value: int
         """

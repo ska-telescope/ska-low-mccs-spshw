@@ -14,7 +14,7 @@ from tango.test_context import MultiDeviceTestContext
 
 def pytest_sessionstart(session):
     """
-    Pytest hook; prints info about tango version
+    Pytest hook; prints info about tango version.
 
     :param session: a pytest Session object
     :type session: :py:class:`pytest.Session`

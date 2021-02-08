@@ -196,10 +196,10 @@ class TestMccsController:
     @staticmethod
     def _callback_commandResult_check(mock_callback, name, result):
         """
-        Special callback check routine for commandResult.
-        There should always be two entries for commandResult; the first
-        should reset commandResult to ResultCode.UNKNOWN, the second
-        should match the expected result passed into this routine.
+        Special callback check routine for commandResult. There should
+        always be two entries for commandResult; the first should reset
+        commandResult to ResultCode.UNKNOWN, the second should match the
+        expected result passed into this routine.
 
         :param mock_callback: fixture that provides a mock callback object
             that records registered callbacks from the DUT
@@ -971,8 +971,8 @@ class TestMccsController:
 
 class TestControllerPowerManager:
     """
-    This class contains tests of the `:py:class:~ska.low.mccs.controller
-    .controller_device.ControllerPowerManager` class.
+    This class contains tests of the
+    :py:class:`~ska.low.mccs.MccsController` class.
     """
 
     @pytest.fixture()
@@ -1118,8 +1118,8 @@ class TestControllerPowerManager:
 
 class TestControllerResourceManager:
     """
-    This class contains tests of the `:py:class:~ska.low.mccs.controller
-    .controller_device.ControllerResourceManager` class.
+    This class contains tests of the
+    `:py:class:~ska.low.mccs.ControllerResourceManager` class.
 
     This class is already exercised through the Tango commands of
     Controller, but here we simulate some scenarios not covered.

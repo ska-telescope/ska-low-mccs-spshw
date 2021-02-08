@@ -202,10 +202,7 @@ class MccsTile(SKABaseDevice):
                 + str(device.TpmCpldPort)
             )
             device.hardware_manager = TileHardwareManager(
-                device._simulation_mode,
-                device.logger,
-                device.TpmIp,
-                device.TpmCpldPort,
+                device._simulation_mode, device.logger, device.TpmIp, device.TpmCpldPort
             )
             args = (device.hardware_manager, device.state_model, device.logger)
             device.register_command_object(
@@ -991,6 +988,7 @@ class MccsTile(SKABaseDevice):
     def simulationMode(self):
         """
         Reports the simulation mode of the device.
+
         Some devices may implement both modes,
         while others will have simulators that set simulationMode
         to True while the real devices always set simulationMode to False.
@@ -1002,7 +1000,8 @@ class MccsTile(SKABaseDevice):
     @simulationMode.write
     def simulationMode(self, value):
         """
-        Set the simulation mode
+        Set the simulation mode.
+
         :param value: The simulation mode, as a SimulationMode value
         """
         super().write_simulationMode(value)

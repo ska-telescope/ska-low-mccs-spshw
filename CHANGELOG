@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-317 - Basic Abort and ObsReset implementation
 * MCCS-361 - robust device connection
 * MCCS-320 - deployment bugfixes and move to hyphenated make targets
 * MCCS-350 - Set commandResult to UNKNOWN before MccsController commands are executed

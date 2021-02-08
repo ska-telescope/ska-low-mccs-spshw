@@ -207,7 +207,9 @@ class Resource:
         if self.is_assigned():
             if self._assigned_to != owner:
                 # Trying to assign to new owner not allowed
-                raise ValueError(f"{self._fqdn} already assigned to {self._assignedTo}")
+                raise ValueError(
+                    f"{self._fqdn} already assigned to {self._assigned_to}"
+                )
             # No action if repeating the existing assignment
             return
         # Don't allow assign if resource is not healthy

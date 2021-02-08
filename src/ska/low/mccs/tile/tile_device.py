@@ -204,10 +204,7 @@ class MccsTile(SKABaseDevice):
                 + str(device.TpmCpldPort)
             )
             device.hardware_manager = TileHardwareManager(
-                device._simulation_mode,
-                device.logger,
-                device.TpmIp,
-                device.TpmCpldPort,
+                device._simulation_mode, device.logger, device.TpmIp, device.TpmCpldPort
             )
             args = (device.hardware_manager, device.state_model, device.logger)
             device.register_command_object(

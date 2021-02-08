@@ -451,9 +451,12 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
     component_is_ready_to_action_a_subarray(devices, "mccs", "allocate")
     subarray_obsstate_is_idle_or_empty(devices, cached_obsstate)
     tmc_allocates_a_subarray_with_validity_parameters(devices, "valid")
-    if desired_state == "configured":
+    if desired_state == "configured" or desired_state == "scanning":
         configure_subarray(devices)
         the_subarray_obsstate_is(devices, "ready")
+    if desired_state == "scanning":
+        tmc_starts_a_scan_on_subarray(devices)
+        the_subarray_obsstate_is(devices, "scanning")
 
 
 def configure_subarray(devices):
@@ -517,7 +520,7 @@ def tmc_configures_the_subarray(devices):
 @then(parsers.parse("the subarray obsstate is {obsstate}"))
 def the_subarray_obsstate_is(devices, obsstate):
     """
-    The subarray obsstate is ready.
+    The subarray obsstate is {obsstate}
 
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -553,3 +556,34 @@ def test_perform_a_scan_on_subarray(devices):
     assert_command(device=devices["controller"], command="Release", argin=json_string)
     assert_command(device=devices["controller"], command="Off")
     check_reset_state(devices)
+
+
+@scenario(
+    "controller_subarray_interactions.feature",
+    "MCCS Perform an abort on a scanning subarray",
+)
+def test_perform_an_abort_on_a_scanning_subarray(devices):
+    """
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    assert_command(device=devices["subarray_01"], command="ObsReset")
+    release_config = {"subarray_id": 1, "release_all": True}
+    json_string = json.dumps(release_config)
+    assert_command(device=devices["controller"], command="Release", argin=json_string)
+    assert_command(device=devices["controller"], command="Off")
+    check_reset_state(devices)
+
+
+@when(parsers.parse("tmc issues an abort on subarray"))
+def tmc_issues_an_abort_on_subarray(devices):
+    """
+    TMC issues an abort on the subarray.
+
+    :param devices: fixture that provides access to devices by their name
+    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    """
+    the_subarray_obsstate_is(devices, "scanning")
+    assert_command(device=devices["subarray_01"], command="Abort")

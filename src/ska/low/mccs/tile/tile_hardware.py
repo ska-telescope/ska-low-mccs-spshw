@@ -111,10 +111,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :type _factory: :py:class:`.TileHardwareFactory`
         """
         hardware_factory = _factory or TileHardwareFactory(
-            simulation_mode == SimulationMode.TRUE,
-            logger,
-            tpm_ip,
-            tpm_cpld_port,
+            simulation_mode == SimulationMode.TRUE, logger, tpm_ip, tpm_cpld_port
         )
         super().__init__(hardware_factory, TileHardwareHealthEvaluator())
 

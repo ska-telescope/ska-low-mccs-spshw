@@ -258,11 +258,7 @@ class HwTile(object):
         self.set_first_last_tile(False, False)
         # TODO Use meaningful numbers instead of just magic
         self.define_spead_header(
-            station_id=0,
-            subarray_id=0,
-            nof_antennas=16,
-            ref_epoch=-1,
-            start_time=0,
+            station_id=0, subarray_id=0, nof_antennas=16, ref_epoch=-1, start_time=0
         )
         # Do not start beamformer as default
         # self.start_beamformer(start_time=0, duration=-1)
@@ -573,9 +569,7 @@ class HwTile(object):
             delays = np.array(delays, dtype=np.float)
             if np.all(min_delay <= delays) and np.all(delays <= max_delay):
                 delays_hw = np.clip(
-                    (np.round(delays / frame_length) + 128).astype(np.int),
-                    4,
-                    255,
+                    (np.round(delays / frame_length) + 128).astype(np.int), 4, 255
                 ).tolist()
             else:
                 self.logger.warning(

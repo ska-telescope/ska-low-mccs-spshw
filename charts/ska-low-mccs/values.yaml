@@ -77,6 +77,15 @@ deviceServers:
     instances: ["station_001", "station_002"]
     depends_on:
       - device: low-mccs/control/control
+  subracks:
+    name: mccs-subrack
+    # subrack instances have to be 0-padded to two digits
+    function: subrack
+    domain: ska-low-mccs
+    command: "MccsSubrack"
+    instances: ["subrack_01"]
+    depends_on:
+      - device: low-mccs/control/control
   tiles:
     name: mccs-tile
     # tile instances have to be 0-padded to four digits

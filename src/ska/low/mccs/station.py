@@ -27,29 +27,10 @@ from ska.base import SKABaseDevice, SKAObsDevice
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import HealthState
 
-from ska.low.mccs.power import PowerManager, PowerManagerError
+from ska.low.mccs.pool import DevicePoolManager
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
-
-
-class StationPowerManager(PowerManager):
-    """
-    This class that implements the power manager for the MCCS Station
-    device.
-    """
-
-    def __init__(self, fqdns, logger):
-        """
-        Initialise a new StationPowerManager.
-
-        :param fqdns: the FQDNs of the devices that this controller
-            device manages
-        :type fqdns: list(str)
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-        """
-        super().__init__(None, fqdns, logger)
 
 
 class MccsStation(SKAObsDevice):
@@ -177,18 +158,37 @@ class MccsStation(SKAObsDevice):
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_health_monitoring(device, fqdns)
+                self._initialise_device_pool_manager(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_power_management(device, fqdns)
+                self._initialise_health_monitoring(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
                 with self._lock:
                     self.succeeded()
+
+        def _initialise_device_pool_manager(self, device, fqdns):
+            """
+            Initialise power management for this device.
+
+            :param device: the device for which power management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices for which
+                this device manages power
+            :type fqdns: list(str)
+            """
+            device.device_pool_manager = DevicePoolManager(fqdns, self.logger)
+
+            args = (device.device_pool_manager, device.state_model, self.logger)
+            device.register_command_object("Disable", device.DisableCommand(*args))
+            device.register_command_object("Standby", device.StandbyCommand(*args))
+            device.register_command_object("Off", device.OffCommand(*args))
+            device.register_command_object("On", device.OnCommand(*args))
 
         def _initialise_health_monitoring(self, device, fqdns):
             """
@@ -208,23 +208,6 @@ class MccsStation(SKAObsDevice):
             device.health_model = HealthModel(
                 None, fqdns, device.event_manager, device.health_changed
             )
-
-        def _initialise_power_management(self, device, fqdns):
-            """
-            Initialise power management for this device.
-
-            :param device: the device for which power management is
-                being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type: list(str)
-            """
-            device.power_manager = StationPowerManager(fqdns, self.logger)
-
-            power_args = (device.power_manager, device.state_model, device.logger)
-            device.register_command_object("Off", device.OffCommand(*power_args))
-            device.register_command_object("On", device.OnCommand(*power_args))
 
         def interrupt(self):
             """
@@ -254,6 +237,7 @@ class MccsStation(SKAObsDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ----------
     # Attributes
@@ -469,12 +453,10 @@ class MccsStation(SKAObsDevice):
         """
         Set up the handler objects for Commands.
         """
-        # Technical debt -- forced to register base class stuff rather than
+        # TODO: Technical debt -- forced to register base class stuff rather than
         # calling super(), because On() and Off() are registered on a
         # thread, and we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*args))
-        self.register_command_object("Standby", self.StandbyCommand(*args))
         self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)
@@ -499,14 +481,12 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            power_manager = self.target
-            try:
-                if power_manager.on():
-                    return (ResultCode.OK, "On command completed OK")
-                else:
-                    return (ResultCode.FAILED, "On command failed")
-            except PowerManagerError as pme:
-                return (ResultCode.FAILED, f"On command failed: {pme}")
+            device_pool_manager = self.target
+
+            if device_pool_manager.on():
+                return (ResultCode.OK, "On command completed OK")
+            else:
+                return (ResultCode.FAILED, "On command failed")
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
@@ -525,14 +505,60 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            power_manager = self.target
-            try:
-                if power_manager.off():
-                    return (ResultCode.OK, "Off command completed OK")
-                else:
-                    return (ResultCode.FAILED, "Off command failed")
-            except PowerManagerError as pme:
-                return (ResultCode.FAILED, f"Off command failed: {pme}")
+            device_pool_manager = self.target
+
+            if device_pool_manager.off():
+                return (ResultCode.OK, "On command completed OK")
+            else:
+                return (ResultCode.FAILED, "On command failed")
+
+    class StandbyCommand(SKABaseDevice.StandbyCommand):
+        """
+        Class for handling the Standby() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            command for this :py:class:`.MccsStation` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            device_pool_manager = self.target
+
+            if device_pool_manager.standby():
+                return (ResultCode.OK, "Standby command completed OK")
+            else:
+                return (ResultCode.FAILED, "Standby command failed")
+
+    class DisableCommand(SKABaseDevice.DisableCommand):
+        """
+        Class for handling the Disable() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            command for this :py:class:`.MccsStation` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            device_pool_manager = self.target
+
+            if device_pool_manager.disable():
+                return (ResultCode.OK, "Disable command completed OK")
+            else:
+                return (ResultCode.FAILED, "Disable command failed")
 
     class ConfigureCommand(ResponseCommand):
         """

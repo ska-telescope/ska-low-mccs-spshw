@@ -34,6 +34,7 @@ from ska.low.mccs.hardware import (
     OnOffHardwareDriver,
     HardwareFactory,
     OnOffHardwareManager,
+    PowerMode,
 )
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.utils import backoff_connect, tango_raise
@@ -118,7 +119,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         Turn the antenna on (by telling the APIU to turn the right
         antenna on)
         """
-        self._check_connected()
+        self.check_connected()
         self._apiu.turn_on_antenna(self._logical_antenna_id)
 
     def off(self):
@@ -126,19 +127,20 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         Turn the antenna off (by telling the APIU to turn the right
         antenna off)
         """
-        self._check_connected()
+        self.check_connected()
         self._apiu.turn_off_antenna(self._logical_antenna_id)
 
     @property
-    def is_on(self):
+    def power_mode(self):
         """
-        Whether this antenna is on (determined by asking the APIU
-        whether a certain antenna is on)
+        Return the power mode of this antenna (determined by asking the
+        APIU whether a certain antenna is on)
 
-        :return: whether the antenna is on
-        :rtype: bool
+        :return: the power mode of this antenna
+        :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
-        return self._apiu.is_antenna_on(self._logical_antenna_id)
+        is_on = self._apiu.is_antenna_on(self._logical_antenna_id)
+        return PowerMode.ON if is_on else PowerMode.OFF
 
     @property
     def current(self):
@@ -148,7 +150,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the current of this antenna
         :rtype: float
         """
-        self._check_connected()
+        self.check_connected()
         return self._apiu.get_antenna_current(self._logical_antenna_id)
 
     @property
@@ -159,7 +161,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the voltage of this antenna
         :rtype: float
         """
-        self._check_connected()
+        self.check_connected()
         return self._apiu.get_antenna_voltage(self._logical_antenna_id)
 
     @property
@@ -170,7 +172,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the temperature of this antenna
         :rtype: float
         """
-        self._check_connected()
+        self.check_connected()
         return self._apiu.get_antenna_temperature(self._logical_antenna_id)
 
 
@@ -248,8 +250,12 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
-        self._apiu = AntennaAPIUProxy(apiu_fqdn, logical_apiu_antenna_id, logger)
-        self._tile = AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
+        self._antenna_apiu_proxy = AntennaAPIUProxy(
+            apiu_fqdn, logical_apiu_antenna_id, logger
+        )
+        self._antenna_tile_proxy = AntennaTileProxy(
+            tile_fqdn, logical_tile_antenna_id, logger
+        )
 
     @property
     def is_connected(self):
@@ -261,29 +267,32 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
             to the hardware
         :rtype: bool
         """
-        return self._apiu.is_connected and self._tile._is_connected
+        return (
+            self._antenna_apiu_proxy.is_connected
+            and self._antenna_tile_proxy._is_connected
+        )
 
     def on(self):
         """
         Turn the antenna hardware on.
         """
-        self._apiu.on()
+        self._antenna_apiu_proxy.on()
 
     def off(self):
         """
         Turn the antenna hardware off.
         """
-        self._apiu.off()
+        self._antenna_apiu_proxy.off()
 
     @property
-    def is_on(self):
+    def power_mode(self):
         """
-        Whether the antenna hardware is turned on.
+        Whether the power mode of the antenna hardware (off or on).
 
-        :return: whether the antenna hardware is turned on
-        :rtype: bool
+        :return: the power mode of the AP
+        :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
         """
-        return self._apiu.is_on
+        return self._antenna_apiu_proxy.power_mode
 
     @property
     def current(self):
@@ -293,7 +302,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :return: the current of the antenna
         :rtype: float
         """
-        return self._apiu.current
+        return self._antenna_apiu_proxy.current
 
     @property
     def voltage(self):
@@ -303,7 +312,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :return: the voltage of the antenna
         :rtype: float
         """
-        return self._apiu.voltage
+        return self._antenna_apiu_proxy.voltage
 
     @property
     def temperature(self):
@@ -313,7 +322,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :return: the temperature of the antenna
         :rtype: float
         """
-        return self._apiu.temperature
+        return self._antenna_apiu_proxy.temperature
 
 
 class AntennaHardwareFactory(HardwareFactory):
@@ -462,6 +471,21 @@ class MccsAntenna(SKABaseDevice):
     LogicalApiuAntennaId = device_property(dtype=int)
     TileId = device_property(dtype=int)
     LogicalTileAntennaId = device_property(dtype=int)
+
+    def init_command_objects(self):
+        """
+        Initialises the command handlers for commands supported by this
+        device.
+        """
+        # TODO: Technical debt -- forced to register base class stuff rather than
+        # calling super(), because Disable(), Standby() and Off() are registered on a
+        # thread, and we don't want the super() method clobbering them.
+        args = (self, self.state_model, self.logger)
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("Reset", self.ResetCommand(*args))
+        self.register_command_object(
+            "GetVersionInfo", self.GetVersionInfoCommand(*args)
+        )
 
     # ---------------
     # General methods
@@ -614,6 +638,13 @@ class MccsAntenna(SKABaseDevice):
             device.register_command_object(
                 "PowerOff", device.PowerOffCommand(*hardware_args)
             )
+            device.register_command_object(
+                "Disable", device.DisableCommand(*hardware_args)
+            )
+            device.register_command_object(
+                "Standby", device.StandbyCommand(*hardware_args)
+            )
+            device.register_command_object("Off", device.OffCommand(*hardware_args))
 
         def _initialise_health_monitoring(self, device):
             """
@@ -664,6 +695,7 @@ class MccsAntenna(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ----------
     # Attributes
@@ -1023,6 +1055,70 @@ class MccsAntenna(SKABaseDevice):
     # --------
     # Commands
     # --------
+    class DisableCommand(SKABaseDevice.DisableCommand):
+        """
+        Class for handling the Disable() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            command for this :py:class:`.MccsAntenna` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.off()
+            return create_return(success, "disable")
+
+    class StandbyCommand(SKABaseDevice.StandbyCommand):
+        """
+        Class for handling the Standby() command.
+
+        Actually the Antenna hardware has no standby mode, so when this
+        device is told to go to standby mode, it switches on / remains
+        on.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            command for this :py:class:`.MccsAntenna` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.on()
+            return create_return(success, "standby")
+
+    class OffCommand(SKABaseDevice.OffCommand):
+        """
+        Class for handling the Off() command.
+        """
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
+            for this :py:class:`.MccsAntenna` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            success = hardware_manager.off()
+            return create_return(success, "off")
+
     class ResetCommand(SKABaseDevice.ResetCommand):
         """
         Command class for the Reset() command.

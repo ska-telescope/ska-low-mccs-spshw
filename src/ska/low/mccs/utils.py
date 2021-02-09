@@ -314,11 +314,10 @@ def call_with_json(func, **kwargs):
     Allows the calling of a command that accepts a JSON string as input,
     with the actual unserialised parameters.
 
-    For example, suppose you need to use
-    :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate()`
-    to command a controller device to allocate certain stations and
-    tiles to a subarray. `Allocate()` accepts a single JSON string
-    argument. Instead of
+    For example, suppose you need to use `Allocate(resources)` command
+    to tell a controller device to allocate certain stations and tiles
+    to a subarray. `Allocate` accepts a single JSON string argument.
+    Instead of
 
     Example::
 

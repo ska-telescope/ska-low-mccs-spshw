@@ -27,7 +27,7 @@ from ska.base.commands import ResultCode
 
 from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator
-from ska.low.mccs.hardware import HardwareFactory
+from ska.low.mccs.hardware import HardwareFactory, PowerMode
 
 
 @pytest.fixture()
@@ -154,12 +154,12 @@ class TestAntennaHardwareManager:
         current = 23.4
         temperature = 120
 
-        assert not hardware_manager.is_on
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        assert hardware_manager.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = hardware_manager.temperature
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = hardware_manager.voltage
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = hardware_manager.current
 
         assert hardware_manager.health == HealthState.OK
@@ -169,7 +169,7 @@ class TestAntennaHardwareManager:
         mock_health_callback.reset_mock()
 
         hardware_manager.on()
-        assert hardware_manager.is_on
+        assert hardware_manager.power_mode == PowerMode.ON
         assert hardware_manager.voltage == AntennaHardwareSimulator.VOLTAGE
         assert hardware_manager.current == AntennaHardwareSimulator.CURRENT
         assert hardware_manager.temperature == AntennaHardwareSimulator.TEMPERATURE
@@ -186,12 +186,12 @@ class TestAntennaHardwareManager:
         assert hardware_manager.temperature == temperature
 
         hardware_manager.off()
-        assert not hardware_manager.is_on
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        assert hardware_manager.power_mode == PowerMode.OFF
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = hardware_manager.temperature
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = hardware_manager.voltage
-        with pytest.raises(ValueError, match="Antenna hardware is turned off"):
+        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = hardware_manager.current
         assert hardware_manager.health == HealthState.OK
         mock_health_callback.assert_not_called()

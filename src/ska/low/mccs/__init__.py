@@ -20,6 +20,7 @@ __all__ = [
     "MccsStationBeam",
     "MccsSubarray",
     "MccsSubarrayBeam",
+    "MccsSubrack",
     "MccsTelState",
     "MccsTile",
     "MccsTransientBuffer",
@@ -35,6 +36,7 @@ __all__ = [
     "antenna",
     "station",
     "station_beam",
+    "subrack",
     "subarray",
     "subarray_beam",
     "tel_state",
@@ -43,7 +45,7 @@ __all__ = [
     "events",
     "hardware",
     "health",
-    "power",
+    "pool",
     "utils",
     "resource",
 ]
@@ -61,5 +63,6 @@ from .station import MccsStation
 from .station_beam import MccsStationBeam
 from .subarray import MccsSubarray
 from .subarray_beam import MccsSubarrayBeam
+from .subrack import MccsSubrack
 from .tel_state import MccsTelState
 from .transient_buffer import MccsTransientBuffer

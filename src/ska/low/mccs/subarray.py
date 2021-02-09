@@ -429,7 +429,7 @@ class MccsSubarray(SKASubarray):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # Technical debt -- forced to register base class stuff rather than
+        # TODO: Technical debt -- forced to register base class stuff rather than
         # calling super(), because AssignResources(), ReleaseResources() and
         # ReleaseAllResources() are registered on a thread, and
         # we don't want the super() method clobbering them
@@ -469,6 +469,7 @@ class MccsSubarray(SKASubarray):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ------------------
     # Attribute methods

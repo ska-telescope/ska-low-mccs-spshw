@@ -23,8 +23,8 @@ from ska.base import DeviceStateModel
 from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import ResultCode
 from ska.low.mccs import MccsTile
-from ska.low.mccs.hardware import SimulableHardwareFactory
-from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
+from ska.low.mccs.hardware import PowerMode, SimulableHardwareFactory
+from ska.low.mccs.tile import TileHardwareManager, TilePowerManager, TpmSimulator
 
 
 @pytest.fixture()
@@ -42,7 +42,198 @@ def device_to_load():
     }
 
 
-class TestMccsTile(object):
+@pytest.fixture()
+def initial_mocks(mock_factory, request):
+    """
+    Fixture that registers device proxy mocks prior to patching. The
+    default fixture is overridden here to ensure that a mock subrack
+    responds suitably to actions taken on it by the TilePowerManager.
+
+    :param mock_factory: a factory for
+        :py:class:`tango.DeviceProxy` mocks
+    :type mock_factory: object
+    :param request: A pytest object giving access to the requesting test
+        context.
+    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :return: a dictionary of mocks, keyed by FQDN
+    :rtype: dict
+    """
+
+    def _subrack_mock(is_on=False, result_code=ResultCode.OK):
+        """
+        Sets up a mock for a :py:class:`tango.DeviceProxy` that
+        connects to an :py:class:`~ska.low.mccs.MccsSubrack`
+        device. The returned mock will respond suitably to
+        actions taken on it by the TilePowerManager as part of the
+        controller's
+        :py:meth:`~ska.low.mccs.MccsController.Allocate` and
+        :py:meth:`~ska.low.mccs.MccsController.Release`
+        commands.
+
+        :param is_on: whether this mock subrack device should report
+            that its TPMs are turned on
+        :type is_on: bool
+        :param result_code: the result code this mock subrack device
+            should return when told to turn a TPM on or off
+        :type result_code: :py:class:`ska.base.commands.ResultCode`
+        :return: a mock for a :py:class:`tango.DeviceProxy` that
+            connects to an
+            :py:class:`~ska.low.mccs.MccsSubarray` device.
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mock_factory()
+        mock.IsTpmOn.return_value = is_on
+        mock.PowerOffTpm.return_value = [
+            [result_code],
+            ["Mock information_only message"],
+        ]
+        mock.PowerOnTpm.return_value = [
+            [result_code],
+            ["Mock information_only message"],
+        ]
+        return mock
+
+    kwargs = getattr(request, "param", {})
+    return {"low-mccs/subrack/01": _subrack_mock(**kwargs)}
+
+
+class TestTilePowerManager:
+    """
+    Test class for
+    :py:class:`ska.low.mccs.tile.TilePowerManager`.
+    """
+
+    @pytest.fixture()
+    def power_manager(self, logger):
+        """
+        Returns the power manager under test.
+
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
+
+        :return: the power manager under test
+        :rtype: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        """
+        return TilePowerManager("low-mccs/subrack/01", 1, logger)
+
+    @pytest.mark.parametrize(
+        ("initial_mocks", "expected_power_mode"),
+        [
+            # ({"is_on": A}, B) means
+            # If subrack.IsTpmOn() returns A,
+            # Then the power mode should end up B.
+            ({"is_on": False}, PowerMode.OFF),
+            ({"is_on": True}, PowerMode.ON),
+        ],
+        ids=("OFF", "ON"),
+        indirect=["initial_mocks"],
+    )
+    def test_init(
+        self, device_under_test, power_manager, initial_mocks, expected_power_mode
+    ):
+        """
+        Test that the power manager initialises into the right state,
+        depending on whether the subrack says the TPM is off or on.
+
+        :param device_under_test: a :py:class:`tango.DeviceProxy` to the
+            device under test, within a
+            :py:class:tango.test_context.DeviceTestContext`tile.
+            (The device is not actually under test here, but we need
+            this to ensure that the TANGO subsystem gets stood up.)
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param power_manager: the power_manager under test
+        :type power_manager: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :param initial_mocks: a dictionary of mock devices, keyed by
+            device FQDN, set up before device initialisation. This is
+            only used indirectly here, but included so that we can
+            indirectly parametrize it.
+        :type initial_mocks: dict of str
+        :param expected_power_mode: the expected post-init power mode,
+            given the indirect parametrisation of the subrack mock
+            fixture.
+        """
+        assert power_manager.power_mode == expected_power_mode
+
+    @pytest.mark.parametrize(
+        ("initial_mocks", "expected_return", "expected_power_mode"),
+        [
+            # ({"is_on": A, "result_code": B}, C, D) means
+            # If subrack.IsTpmOn() returns A,
+            # And subrack.PowerOnTPM() returns B
+            # Then power_manager.on() should return C,
+            # And the power mode should end up as D
+            ({"is_on": False, "result_code": ResultCode.OK}, True, PowerMode.ON),
+            ({"is_on": False, "result_code": ResultCode.FAILED}, False, PowerMode.OFF),
+            ({"is_on": True, "result_code": ResultCode.OK}, None, PowerMode.ON),
+            ({"is_on": True, "result_code": ResultCode.FAILED}, None, PowerMode.ON),
+        ],
+        ids=("OFF-OK", "OFF-FAILED", "ON-OK", "ON-FAILED"),
+        indirect=["initial_mocks"],
+    )
+    def test_on(
+        self,
+        device_under_test,
+        power_manager,
+        initial_mocks,
+        expected_return,
+        expected_power_mode,
+    ):
+        """
+        Test that turning on this TilePowerManager results in the right
+        return code and state for each possible subrack state.
+
+        :param device_under_test: a :py:class:`tango.DeviceProxy` to the
+            device under test, within a
+            :py:class:tango.test_context.DeviceTestContext`tile.
+            (The device is not actually under test here, but we need
+            this to ensure that the TANGO subsystem gets stood up.)
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param power_manager: the power_manager under test
+        :type power_manager: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :param initial_mocks: a dictionary of mock devices, keyed by
+            device FQDN, set up before device initialisation. This is
+            only used indirectly here, but included so that we can
+            indirectly parametrize it.
+        :type initial_mocks: dict of str
+        :param expected_return: the expected return value for the call
+        :type expected_return: bool
+        :param expected_power_mode: the expected power mode of this
+            TilePowerManager after the method has been executed.
+        :type expected_power_mode:
+            :py:class:`ska.low.mccs.hardware.PowerMode`
+        """
+        assert power_manager.on() == expected_return
+        assert power_manager.power_mode == expected_power_mode
+
+    @pytest.mark.parametrize(
+        ("initial_mocks", "expected_return", "expected_power_mode"),
+        [
+            # ({"is_on": A, "result_code": B}, C, D) means
+            # If subrack.IsTpmOn() returns A,
+            # And subrack.PowerOffTPM() returns B
+            # Then power_manager.off() should return C,
+            # And the power mode should end up as D
+            ({"is_on": False, "result_code": ResultCode.OK}, None, PowerMode.OFF),
+            ({"is_on": False, "result_code": ResultCode.FAILED}, None, PowerMode.OFF),
+            ({"is_on": True, "result_code": ResultCode.OK}, True, PowerMode.OFF),
+            ({"is_on": True, "result_code": ResultCode.FAILED}, False, PowerMode.ON),
+        ],
+        ids=("OFF-OK", "OFF-FAILED", "ON-OK", "ON-FAILED"),
+        indirect=["initial_mocks"],
+    )
+    def test_off(
+        self,
+        device_under_test,
+        power_manager,
+        initial_mocks,
+        expected_return,
+        expected_power_mode,
+    ):
+        assert power_manager.off() == expected_return
+        assert power_manager.power_mode == expected_power_mode
+
+
+class TestMccsTile:
     """
     Test class for MccsTile tests.
 
@@ -164,6 +355,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.voltage == TpmSimulator.VOLTAGE
 
@@ -176,6 +371,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         device_under_test.current == TpmSimulator.CURRENT
 
@@ -188,6 +387,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.board_temperature == TpmSimulator.BOARD_TEMPERATURE
 
@@ -200,6 +403,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga1_temperature == TpmSimulator.FPGA1_TEMPERATURE
 
@@ -212,6 +419,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga2_temperature == TpmSimulator.FPGA2_TEMPERATURE
 
@@ -224,6 +435,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga1_time == TpmSimulator.FPGA1_TIME
 
@@ -236,6 +451,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga2_time == TpmSimulator.FPGA2_TIME
 
@@ -262,6 +481,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         expected = tuple(float(i) for i in range(32))
         assert device_under_test.adcPower == pytest.approx(expected)
@@ -275,6 +498,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert (
             device_under_test.currentTileBeamformerFrame
@@ -290,6 +517,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.PhaseTerminalCount == TpmSimulator.PHASE_TERMINAL_COUNT
         device_under_test.PhaseTerminalCount = 45
@@ -304,6 +535,10 @@ class TestMccsTile(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.ppsDelay == 12
 
@@ -395,6 +630,10 @@ class TestMccsTileCommands:
         :param arg: argument to the command (optional)
         :type arg: any
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         args = [] if arg is None else [arg]
@@ -445,6 +684,10 @@ class TestMccsTileCommands:
             interface of :py:class:`logging.Logger`
         :type logger: :py:class:`logging.Logger`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         # First test that the calling the command on the device results
@@ -493,13 +736,17 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
 
     def test_GetFirmwareAvailable(self, device_under_test):
         """
-        Test for.
+        Test for:
 
         * GetFirmwareAvailable command
         * firmwareName attribute
@@ -510,6 +757,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         firmware_available_str = device_under_test.GetFirmwareAvailable()
@@ -533,6 +784,8 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Standby()
+
         assert not device_under_test.isProgrammed
         bitfile = "tests/unit/testdata/Vivado_test_firmware_bitfile.bit"
         [[result_code], [message]] = device_under_test.DownloadFirmware(bitfile)
@@ -551,6 +804,8 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Standby()
+
         assert not device_under_test.isProgrammed
         invalid_bitfile_path = "this/folder/and/file/doesnt/exist.bit"
         existing_firmware_name = device_under_test.firmwareName
@@ -571,6 +826,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.GetRegisterList() == list(
             TpmSimulator.REGISTER_MAP[0].keys()
@@ -585,6 +844,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         num_values = 4
@@ -615,6 +878,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         arg = {
@@ -646,6 +913,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         address = 0xF
@@ -670,6 +941,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         [[result_code], [message]] = device_under_test.WriteAddress([20, 1, 2, 3])
@@ -690,6 +965,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         config_1 = {
@@ -744,6 +1023,10 @@ class TestMccsTileCommands:
         :type channels: int
         :param frequencies: number of frequencies to set
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
 
         array = [channels] + [frequencies] + [1.0] * (channels * frequencies)
@@ -764,6 +1047,10 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         antenna = 2
         complex_coeffs = [
@@ -801,6 +1088,10 @@ class TestMccsTileCommands:
         :param duration: duration of time that the beamformer should run
         :type duration: int or None
         """
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        device_under_test.Off()
         device_under_test.On()
         assert not device_under_test.isBeamformerRunning
         args = {"StartTime": start_time, "Duration": duration}

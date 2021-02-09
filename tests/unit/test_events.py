@@ -378,8 +378,8 @@ class TestEventManager:
 
         event_manager = EventManager(logger)
 
-        fqdns = [f"mock/mock/{i}" for i in range(device_count)]
-        events = [f"mock_event_{i}" for i in range(event_count)]
+        fqdns = [f"mock/mock/{i}" for i in range(1, device_count + 1)]
+        events = [f"mock_event_{i}" for i in range(1, event_count + 1)]
 
         for fqdn in fqdns:
             mock_device_proxy = tango.DeviceProxy(fqdn)
@@ -416,8 +416,8 @@ class TestEventManager:
         device_count = 2  # test should pass for any positive number
         event_count = 2  # test should pass for any positive number
 
-        fqdns = [f"mock/mock/{i}" for i in range(device_count)]
-        events = [f"mock_event_{i}" for i in range(event_count)]
+        fqdns = [f"mock/mock/{i}" for i in range(1, device_count + 1)]
+        events = [f"mock_event_{i}" for i in range(1, event_count + 1)]
         mock_callbacks = {}
 
         event_manager = EventManager(logger)

@@ -34,12 +34,13 @@ def devices_to_load():
             "subarray_02",
             "station_001",
             "station_002",
+            "subrack_01",
             "tile_0001",
             "tile_0002",
             "tile_0003",
             "tile_0004",
-            "apiu_001",
-            # "antenna_000001",  # workaround for MCCS-244
+            # "apiu_001",  # workaround for MCCS-244
+            # "antenna_000001",
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
@@ -141,15 +142,15 @@ class TestMccsIntegrationTmc:
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
 
-        # Call MccsController->On() command
-        self.assert_command(device=devices["controller"], command="On")
+        # Call MccsController->Startup() command
+        self.assert_command(device=devices["controller"], command="Startup")
         assert devices["controller"].State() == DevState.ON
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.ON
         assert devices["station_002"].State() == DevState.ON
 
-        # A second call to On should have no side-effects
+        # Startup turns everything on, so a call to On should have no side-effects
         self.assert_command(device=devices["controller"], command="On")
         assert devices["controller"].State() == DevState.ON
         assert devices["subarray_01"].State() == DevState.OFF
@@ -168,7 +169,7 @@ class TestMccsIntegrationTmc:
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
-        self.assert_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="Startup")
         assert devices["controller"].State() == DevState.ON
         assert devices["station_001"].State() == DevState.ON
         assert devices["station_002"].State() == DevState.ON
@@ -186,7 +187,7 @@ class TestMccsIntegrationTmc:
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         # Turn on controller and stations
-        self.assert_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="Startup")
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
@@ -237,7 +238,7 @@ class TestMccsIntegrationTmc:
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         # Turn on controller and stations
-        self.assert_command(device=devices["controller"], command="On")
+        self.assert_command(device=devices["controller"], command="Startup")
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0

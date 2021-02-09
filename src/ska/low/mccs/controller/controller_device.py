@@ -14,7 +14,6 @@ This module contains the SKA Low MCCS Controller device prototype.
 __all__ = [
     "MccsController",
     "ControllerResourceManager",
-    "ControllerPowerManager",
     "main",
 ]
 
@@ -31,31 +30,12 @@ from ska.base import SKAMaster, SKABaseDevice
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.low.mccs.power import PowerManager, PowerManagerError
+from ska.low.mccs.pool import DevicePoolManager
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.resource import ResourceManager
-
-
-class ControllerPowerManager(PowerManager):
-    """
-    This class that implements the power manager for the MCCS Controller
-    device.
-    """
-
-    def __init__(self, station_fqdns, logger):
-        """
-        Initialise a new ControllerPowerManager.
-
-        :param station_fqdns: the FQDNs of the stations that this controller
-            device manages
-        :type station_fqdns: list(str)
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-        """
-        super().__init__(None, station_fqdns, logger)
 
 
 class ControllerResourceManager(ResourceManager):
@@ -149,22 +129,15 @@ class MccsController(SKAMaster):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # Technical debt -- forced to register base class stuff rather than
+        # TODO: Technical debt -- forced to register base class stuff rather than
         # calling super(), because On() and Off() are registered on a
         # thread, and we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*args))
-        self.register_command_object("Standby", self.StandbyCommand(*args))
         self.register_command_object("Reset", self.ResetCommand(*args))
         self.register_command_object(
             "GetVersionInfo", self.GetVersionInfoCommand(*args)
         )
-
-        self.register_command_object("StandbyLow", self.StandbyLowCommand(*args))
-        self.register_command_object("StandbyFull", self.StandbyFullCommand(*args))
         self.register_command_object("Operate", self.OperateCommand(*args))
-        self.register_command_object("Allocate", self.AllocateCommand(*args))
-        self.register_command_object("Release", self.ReleaseCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
     class InitCommand(SKAMaster.InitCommand):
@@ -228,6 +201,7 @@ class MccsController(SKAMaster):
             else:
                 device._subarray_fqdns = device.MccsSubarrays
             device._subarray_enabled = [False] * len(device.MccsSubarrays)
+
             if device.MccsStations is None:
                 device._station_fqdns = list()
             else:
@@ -255,12 +229,12 @@ class MccsController(SKAMaster):
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_health_monitoring(device, fqdns)
+                self._initialise_device_pool_manager(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_power_management(device, fqdns)
+                self._initialise_health_monitoring(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -272,6 +246,32 @@ class MccsController(SKAMaster):
                     return
                 with self._lock:
                     self.succeeded()
+
+        def _initialise_device_pool_manager(self, device, fqdns):
+            """
+            Initialise the device pool for this device.
+
+            :param device: the device for which power management is
+                being initialised
+            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :param fqdns: the fqdns of subservient devices for which
+                this device manages power
+            :type fqdns: list(str)
+            """
+            device.device_pool_manager = DevicePoolManager(
+                device._station_fqdns, self.logger
+            )
+            args = (device.device_pool_manager, device.state_model, self.logger)
+            device.register_command_object("Disable", device.DisableCommand(*args))
+            device.register_command_object(
+                "StandbyLow", device.StandbyLowCommand(*args)
+            )
+            device.register_command_object(
+                "StandbyFull", device.StandbyFullCommand(*args)
+            )
+            device.register_command_object("Off", device.OffCommand(*args))
+            device.register_command_object("On", device.OnCommand(*args))
+            device.register_command_object("Startup", device.StartupCommand(*args))
 
         def _initialise_health_monitoring(self, device, fqdns):
             """
@@ -291,24 +291,6 @@ class MccsController(SKAMaster):
             device.health_model = HealthModel(
                 None, device._station_fqdns, device.event_manager, device.health_changed
             )
-
-        def _initialise_power_management(self, device, fqdns):
-            """
-            Initialise power management for this device.
-
-            :param device: the device for which power management is
-                being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type: list(str)
-            """
-            device.power_manager = ControllerPowerManager(
-                device._station_fqdns, self.logger
-            )
-            power_args = (device.power_manager, device.state_model, self.logger)
-            device.register_command_object("Off", device.OffCommand(*power_args))
-            device.register_command_object("On", device.OnCommand(*power_args))
 
         def _initialise_resource_management(self, device, fqdns):
             """
@@ -363,6 +345,7 @@ class MccsController(SKAMaster):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ----------
     # Attributes
@@ -442,6 +425,65 @@ class MccsController(SKAMaster):
         doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
+    def Startup(self):
+        """
+        Start up the MCCS subsystem.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        command = self.get_command_object("Startup")
+        (result_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
+
+    class StartupCommand(ResponseCommand):
+        """
+        Class for handling the Startup command.
+        """
+
+        def do(self):
+            """
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsController.Startup` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            # TODO: For now, we need to get our devices to OFF state
+            # (the highest state of device readiness for a device that
+            # isn't actually on) before we can put them into ON state.
+            # This is a counterintuitive mess that will be fixed in
+            # MCCS-181. Meanwhile, Startup() is implemented to turn all
+            # devices OFF (which will actually cause all the hardware to
+            # come on), and then turn them ON.
+            device_pool_manager = self.target
+
+            if device_pool_manager.off():
+                self.state_model.perform_action("off_succeeded")
+            else:
+                self.state_model.perform_action("off_failed")
+                return (ResultCode.FAILED, "Startup command failed")
+
+            if device_pool_manager.on():
+                self.state_model.perform_action("on_succeeded")
+                return (ResultCode.OK, "Startup command completed OK")
+            else:
+                self.state_model.perform_action("on_failed")
+                return (ResultCode.FAILED, "Startup command failed")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
     def On(self):
         """
         Turn the controller on.
@@ -476,17 +518,56 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            power_manager = self.target
-            try:
-                result = power_manager.on()
-                if result is None:
-                    return (ResultCode.OK, "On command redundant; already on")
-                elif result:
-                    return (ResultCode.OK, "On command completed OK")
-                else:
-                    return (ResultCode.FAILED, "On command failed")
-            except PowerManagerError as pme:
-                return (ResultCode.FAILED, f"On command failed: {pme}")
+            device_pool_manager = self.target
+
+            if device_pool_manager.on():
+                return (ResultCode.OK, "On command completed OK")
+            else:
+                return (ResultCode.FAILED, "On command failed")
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
+    def Disable(self):
+        """
+        Disable the controller.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        command = self.get_command_object("Disable")
+        (result_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
+
+    class DisableCommand(SKABaseDevice.DisableCommand):
+        """
+        Class for handling the Disable command.
+        """
+
+        def do(self):
+            """
+            Stateless do-hook for implementing the functionality of the
+            :py:meth:`.MccsController.Off` command
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska.base.commands.ResultCode`, str)
+            """
+            device_pool_manager = self.target
+
+            if device_pool_manager.disable():
+                return (ResultCode.OK, "Off command completed OK")
+            else:
+                return (ResultCode.FAILED, "Off command failed")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -527,17 +608,12 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            power_manager = self.target
-            try:
-                result = power_manager.off()
-                if result is None:
-                    return (ResultCode.OK, "Off command redundant; already off")
-                elif result:
-                    return (ResultCode.OK, "Off command completed OK")
-                else:
-                    return (ResultCode.FAILED, "Off command failed")
-            except PowerManagerError as pme:
-                return (ResultCode.FAILED, f"Off command failed: {pme}")
+            device_pool_manager = self.target
+
+            if device_pool_manager.off():
+                return (ResultCode.OK, "Off command completed OK")
+            else:
+                return (ResultCode.FAILED, "Off command failed")
 
     class StandbyLowCommand(ResponseCommand):
         """
@@ -552,8 +628,8 @@ class MccsController(SKAMaster):
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyLow` command.
 
-            Transitions the MCCS system to the low-power STANDBY_LOW_POWER
-            operating state.
+            :todo: For now, StandbyLow and StandbyHigh simply implement
+                a general "standby".
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -561,10 +637,12 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            return (
-                ResultCode.OK,
-                "Stub implementation of StandbyLowCommand(), does nothing",
-            )
+            device_pool_manager = self.target
+
+            if device_pool_manager.standby():
+                return (ResultCode.OK, "StandbyLow command completed OK")
+            else:
+                return (ResultCode.FAILED, "StandbyLow command failed")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -599,7 +677,8 @@ class MccsController(SKAMaster):
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
 
-            Transition the MCCS system to the STANDBY_FULL_POWER operating state.
+            :todo: For now, StandbyLow and StandbyHigh simply implement
+                a general "standby".
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -607,10 +686,12 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            return (
-                ResultCode.OK,
-                "Stub implementation of StandbyFullCommand(), does nothing",
-            )
+            device_pool_manager = self.target
+
+            if device_pool_manager.standby():
+                return (ResultCode.OK, "StandbyFull command completed OK")
+            else:
+                return (ResultCode.FAILED, "StandbyFull command failed")
 
     @command(
         dtype_out="DevVarLongStringArray",

@@ -38,12 +38,13 @@ def devices_to_load():
             "subarray_02",
             "station_001",
             "station_002",
+            "subrack_01",
             "tile_0001",
             "tile_0002",
             "tile_0003",
             "tile_0004",
-            "apiu_001",
-            # "antenna_000001",  # workaround for MCCS-244
+            # "apiu_001",  # workaround for MCCS-244
+            # "antenna_000001",
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
@@ -90,9 +91,9 @@ def test_controller_health_rollup(device_context):
     tile_2 = device_context.get_device("tile_0002")
     tile_3 = device_context.get_device("tile_0003")
     tile_4 = device_context.get_device("tile_0004")
+    # workaround for MCCS-244
     # apiu_1 = device_context.get_device("apiu_001")
 
-    # workaround for MCCS-244
     # antenna_1 = device_context.get_device("antenna_000001")
     # antenna_2 = device_context.get_device("antenna_000002")
     # antenna_3 = device_context.get_device("antenna_000003")
@@ -186,9 +187,9 @@ def test_subarray_health_rollup(device_context):
     tile_2 = device_context.get_device("tile_0002")
     tile_3 = device_context.get_device("tile_0003")
     tile_4 = device_context.get_device("tile_0004")
-    # apiu_1 = device_context.get_device("apiu_001")
 
     # workaround for MCCS-244
+    # apiu_1 = device_context.get_device("apiu_001")
     # antenna_1 = device_context.get_device("antenna_000001")
     # antenna_2 = device_context.get_device("antenna_000002")
     # antenna_3 = device_context.get_device("antenna_000003")
@@ -212,7 +213,7 @@ def test_subarray_health_rollup(device_context):
     assert subarray_1.healthState == HealthState.OK
     assert subarray_2.healthState == HealthState.OK
 
-    _ = controller.On()
+    _ = controller.Startup()
 
     _ = call_with_json(
         controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]

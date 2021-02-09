@@ -16,7 +16,7 @@ a simulated APIU with real antennas. Therefore this module simulates an
 APIU and its antennas together.
 """
 
-from ska.low.mccs.hardware import OnOffHardwareSimulator
+from ska.low.mccs.hardware import OnOffHardwareSimulator, PowerMode
 
 
 class AntennaHardwareSimulator(OnOffHardwareSimulator):
@@ -32,14 +32,23 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
     CURRENT = 20.5
     TEMPERATURE = 23.8
 
-    def __init__(self):
+    def __init__(self, fail_connect=False, power_mode=PowerMode.OFF):
         """
         Initialise a new instance.
+
+        :param fail_connect: whether this simulator should initially
+            simulate failure to connect to the hardware
+        :type fail_connect: bool
+        :param power_mode: the initial power_mode of the simulated
+            hardware. For example, if set to ON, then
+            this simulator will simulate connecting to hardware and
+            finding it to be already powered on.
+        :type power_mode: :py:class:`.PowerMode`
         """
         self._voltage = None
         self._current = None
         self._temperature = None
-        super().__init__()
+        super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
     def off(self):
         """
@@ -67,7 +76,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
         :return: my voltage
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._voltage
 
     @property
@@ -78,7 +87,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
         :return: my current
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._current
 
     @property
@@ -89,20 +98,24 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
         :return: my temperature
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._temperature
 
-    def _check_on(self, error=None):
+    def check_power_mode(self, power_mode, error=None):
         """
         Overrides the
-        :py:meth:`~ska.low.mccs.hardware.OnOffHardwareSimulator._check_on`
+        :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareDriver.check_power_mode`
         helper method with a more specific error message
 
+        :param power_mode: the asserted power mode
+        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
         :param error: the error message for the exception to be raised
             if not connected
         :type error: str
         """
-        super()._check_on(error or "Antenna hardware is turned off")
+        super().check_power_mode(
+            power_mode, error or f"Antenna hardware is not {power_mode.name}."
+        )
 
     def simulate_current(self, current):
         """
@@ -143,9 +156,18 @@ class APIUSimulator(OnOffHardwareSimulator):
     HUMIDITY = 23.9
     NUMBER_OF_ANTENNAS = 2
 
-    def __init__(self):
+    def __init__(self, fail_connect=False, power_mode=PowerMode.OFF):
         """
-        Initialise a new APIUSimulator instance.
+        Initialise a new instance.
+
+        :param fail_connect: whether this simulator should initially
+            simulate failure to connect to the hardware
+        :type fail_connect: bool
+        :param power_mode: the initial power_mode of the simulated
+            hardware. For example, if the initial mode is ON, then
+            this simulator will simulate connecting to hardware and
+            finding it to be already powered on.
+        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
         self._voltage = None
         self._current = None
@@ -155,7 +177,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._antennas = [
             AntennaHardwareSimulator() for antenna_id in range(self.NUMBER_OF_ANTENNAS)
         ]
-        super().__init__()
+        super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
     def off(self):
         """
@@ -190,7 +212,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my voltage
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._voltage
 
     @property
@@ -201,7 +223,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my current
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._current
 
     @property
@@ -212,7 +234,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my temperature
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._temperature
 
     @property
@@ -223,7 +245,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: my humidity
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._humidity
 
     def is_antenna_on(self, logical_antenna_id):
@@ -238,8 +260,8 @@ class APIUSimulator(OnOffHardwareSimulator):
             is off
         :rtype: bool or None
         """
-        self._check_on()
-        return self._antennas[logical_antenna_id - 1].is_on
+        self.check_power_mode(PowerMode.ON)
+        return self._antennas[logical_antenna_id - 1].power_mode == PowerMode.ON
 
     def turn_off_antenna(self, logical_antenna_id):
         """
@@ -249,7 +271,7 @@ class APIUSimulator(OnOffHardwareSimulator):
             antenna to be turned off
         :type logical_antenna_id: int
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         self._antennas[logical_antenna_id - 1].off()
 
     def turn_on_antenna(self, logical_antenna_id):
@@ -260,8 +282,24 @@ class APIUSimulator(OnOffHardwareSimulator):
             antenna to be turned on
         :type logical_antenna_id: int
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         self._antennas[logical_antenna_id - 1].on()
+
+    def turn_off_antennas(self):
+        """
+        Turn off all antennas.
+        """
+        self.check_power_mode(PowerMode.ON)
+        for antenna in self._antennas:
+            antenna.off()
+
+    def turn_on_antennas(self):
+        """
+        Turn on all antennas.
+        """
+        self.check_power_mode(PowerMode.ON)
+        for antenna in self._antennas:
+            antenna.on()
 
     def get_antenna_current(self, logical_antenna_id):
         """
@@ -274,7 +312,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: the antenna current
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._antennas[logical_antenna_id - 1].current
 
     def get_antenna_voltage(self, logical_antenna_id):
@@ -288,7 +326,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: the antenna voltage
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._antennas[logical_antenna_id - 1].voltage
 
     def get_antenna_temperature(self, logical_antenna_id):
@@ -302,17 +340,21 @@ class APIUSimulator(OnOffHardwareSimulator):
         :return: the antenna temperature
         :rtype: float
         """
-        self._check_on()
+        self.check_power_mode(PowerMode.ON)
         return self._antennas[logical_antenna_id - 1].temperature
 
-    def _check_on(self, error=None):
+    def check_power_mode(self, power_mode, error=None):
         """
         Overrides the
-        :py:meth:`~ska.low.mccs.hardware.OnOffHardwareSimulator._check_on`
+        :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareDriver.check_power_mode`
         helper method with a more specific error message
 
+        :param power_mode: the asserted power mode
+        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
         :param error: the error message for the exception to be raise if
             not connected
         :type error: str
         """
-        super()._check_on(error or "APIU hardware is turned off")
+        super().check_power_mode(
+            power_mode, error or f"APIU hardware is not {power_mode.name}."
+        )

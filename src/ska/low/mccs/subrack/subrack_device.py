@@ -8,18 +8,17 @@
 # See LICENSE.txt for more info.
 
 """
-This module contains an implementation of the MCCS APIU device and
-related classes.
+This module contains an implementation of the MCCS Subrack Management
+Board Tango device and related classes.
 """
 import threading
 
 from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command
+from tango.server import attribute, command, device_property
 
 from ska.base import SKABaseDevice
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.base.control_model import HealthState, SimulationMode
-from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     OnOffHardwareManager,
@@ -27,14 +26,13 @@ from ska.low.mccs.hardware import (
     SimulableHardwareManager,
 )
 from ska.low.mccs.health import HealthModel
-from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
+from ska.low.mccs.subrack.subrack_simulator import SubrackBoardSimulator
 
 
 __all__ = [
-    # "AntennaHardwareHealthEvaluator",
-    "APIUHardwareHealthEvaluator",
-    "APIUHardwareManager",
-    "MccsAPIU",
+    "SubrackHardwareHealthEvaluator",
+    "SubrackHardwareManager",
+    "MccsSubrack",
     "main",
 ]
 
@@ -58,17 +56,18 @@ def create_return(success, action):
     :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
     """
     if success is None:
-        return (ResultCode.OK, f"APIU {action} is redundant")
+        return (ResultCode.OK, f"Subrack {action} is redundant")
     elif success:
-        return (ResultCode.OK, f"APIU {action} successful")
+        return (ResultCode.OK, f"Subrack {action} successful")
     else:
-        return (ResultCode.FAILED, f"APIU {action} failed")
+        return (ResultCode.FAILED, f"Subrack {action} failed")
 
 
-class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
+class SubrackHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
     A placeholder for a class that implements a policy by which the
-    antenna hardware manager evaluates the health of its hardware.
+    subrack hardware manager evaluates the health of the subrack
+    management board hardware that it manages.
 
     At present this just inherits from the base class unchanged.
     """
@@ -76,14 +75,13 @@ class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
     pass
 
 
-class APIUHardwareFactory(SimulableHardwareFactory):
+class SubrackHardwareFactory(SimulableHardwareFactory):
     """
-    A hardware factory for APIU hardware.
+    A hardware factory for Subrack hardware.
 
-    At present, this returns a
-    :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator` object
-    when in simulation mode, and raises :py:exc:`NotImplementedError`
-    if the hardware is sought whilst not in simulation mode
+    At present, this returns a :py:class:`SubrackSimulator` object when
+    in simulation mode, and raises :py:exc:`NotImplementedError` if the
+    hardware is sought whilst not in simulation mode
     """
 
     def __init__(self, simulation_mode):
@@ -103,217 +101,196 @@ class APIUHardwareFactory(SimulableHardwareFactory):
 
         :return: a hardware simulator for the tile
         :rtype:
-            :py:class:`ska.low.mccs.apiu.apiu_simulator.ApiuSimulator`
+            :py:class:`.SubrackHardwareSimulator`
         """
-        return APIUSimulator()
+        return SubrackBoardSimulator()
 
 
-class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
+class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     """
-    This class manages APIU hardware.
+    This class manages MCCS subrack hardware.
 
-    :todo: So far all we can do with APIU hardware is turn it off and
-        on. We need to implement monitoring.
+    :todo:
     """
 
     def __init__(self, simulation_mode, _factory=None):
         """
-        Initialise a new APIUHardwareManager instance.
+        Initialise a new SubrackHardwareManager instance.
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
-        hardware_factory = _factory or APIUHardwareFactory(
+        hardware_factory = _factory or SubrackHardwareFactory(
             simulation_mode == SimulationMode.TRUE
         )
-        super().__init__(hardware_factory, APIUHardwareHealthEvaluator())
+        super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
 
     @property
-    def voltage(self):
+    def backplane_temperature(self):
         """
-        The voltage of the hardware.
+        Return the temperature of this subrack's backplane.
 
-        :return: the voltage of the hardware
+        :return: the backplane temperature, in degrees celcius
         :rtype: float
         """
-        return self._factory.hardware.voltage
+        return self._factory.hardware.backplane_temperature
 
     @property
-    def current(self):
+    def board_temperature(self):
         """
-        The current of the hardware.
+        Return the temperature of this subrack's management board.
 
-        :return: the current of the hardware
+        :return: the board temperature, in degrees celcius
         :rtype: float
         """
-        return self._factory.hardware.current
+        return self._factory.hardware.board_temperature
 
     @property
-    def temperature(self):
+    def board_current(self):
         """
-        The temperature of the hardware.
+        Return the current of this subrack's management board.
 
-        :return: the temperature of the hardware
+        :return: the board current
         :rtype: float
         """
-        return self._factory.hardware.temperature
+        return self._factory.hardware.board_current
 
     @property
-    def humidity(self):
+    def fan_speed(self):
         """
-        The humidity of the hardware.
+        Return this subrack's fan speed.
 
-        :return: the humidity of the hardware
+        :return: the fan speed, in RPMs
         :rtype: float
         """
-        return self._factory.hardware.humidity
+        return self._factory.hardware.fan_speed
 
     @property
-    def antenna_count(self):
+    def tpm_count(self):
         """
-        Return the number of antennas managed by this APIU.
+        Return the number of TPMs managed by this subrack.
 
-        :return: the number of antennas managed by this APIU
+        :return: the number of TPMs managed by this subrack
         :rtype: int
         """
-        return self._factory.hardware.NUMBER_OF_ANTENNAS
+        return self._factory.hardware.tpm_count
 
-    def turn_off_antenna(self, logical_antenna_id):
+    @property
+    def tpm_temperatures(self):
         """
-        Turn off a specified antenna.
+        Return a list of bay temperatures for this subrack.
 
-        :param logical_antenna_id: the APIU's internal id for the
-            antenna to be turned off
-        :type logical_antenna_id: int
-
-        :return: whether successful, or None if there was nothing to do
-        :rtype: bool or None
+        :return: a list of bay temperatures, in degrees celcius
+        :rtype: list(float)
         """
-        if not self._factory.hardware.is_antenna_on(logical_antenna_id):
-            return None
-        self._factory.hardware.turn_off_antenna(logical_antenna_id)
-        return not self._factory.hardware.is_antenna_on(logical_antenna_id)
+        return self._factory.hardware.tpm_temperatures
 
-    def turn_on_antenna(self, logical_antenna_id):
+    @property
+    def tpm_currents(self):
         """
-        Turn on a specified antenna.
+        Return a list of bay currents for this subrack.
 
-        :param logical_antenna_id: the APIU's internal id for the
-            antenna to be turned on
-        :type logical_antenna_id: int
-
-        :return: whether successful, or None if there was nothing to do
-        :rtype: bool or None
+        :return: a list of bay currents
+        :rtype: list(float)
         """
-        if self._factory.hardware.is_antenna_on(logical_antenna_id):
-            return None
-        self._factory.hardware.turn_on_antenna(logical_antenna_id)
-        return self._factory.hardware.is_antenna_on(logical_antenna_id)
+        return self._factory.hardware.tpm_currents
 
-    def turn_off_antennas(self):
+    def is_tpm_on(self, logical_tpm_id):
         """
-        Turn off all antennas.
+        Check whether this subrack is supplying power to a specified
+        TPM.
 
-        :return: whether successful, or None if there was nothing to do
-        :rtype: bool or None
-        """
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
-            if self._factory.hardware.is_antenna_on(antenna_id):
-                break
-        else:
-            return None
+        :param logical_tpm_id: this subrack's internal id for the
+            TPM being queried
+        :type logical_tpm_id: int
 
-        self._factory.hardware.turn_off_antennas()
-
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
-            if self._factory.hardware.is_antenna_on(antenna_id):
-                return False
-        return True
-
-    def turn_on_antennas(self):
-        """
-        Turn on all antennas.
-
-        :return: whether successful, or None if there was nothing to do
-        :rtype: bool or None
-        """
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
-            if not self._factory.hardware.is_antenna_on(antenna_id):
-                break
-        else:
-            return None
-
-        self._factory.hardware.turn_on_antennas()
-
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
-            if not self._factory.hardware.is_antenna_on(antenna_id):
-                return False
-        return True
-
-    def is_antenna_on(self, logical_antenna_id):
-        """
-        Gets whether a specified antenna is turned on.
-
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna being queried
-        :type logical_antenna_id: int
-
-        :return: whether the antenna is on
+        :return: whether this subrack is supplying power to the specified TPM
         :rtype: bool
         """
-        return self._factory.hardware.is_antenna_on(logical_antenna_id)
+        return self._factory.hardware.is_tpm_on(logical_tpm_id)
 
-    def get_antenna_current(self, logical_antenna_id):
+    def turn_on_tpm(self, logical_tpm_id):
         """
-        Get the current of a specified antenna.
+        Turn on a specified TPM.
 
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna for which the current is requested
-        :type logical_antenna_id: int
+        :param logical_tpm_id: the subrack's internal id for the
+            TPM to be turned on
+        :type logical_tpm_id: int
 
-        :return: the antenna current
-        :rtype: float
+        :return: whether successful, or None if there was nothing to do
+        :rtype: bool or None
         """
-        return self._factory.hardware.get_antenna_current(logical_antenna_id)
+        if self._factory.hardware.is_tpm_on(logical_tpm_id):
+            return None
+        self._factory.hardware.turn_on_tpm(logical_tpm_id)
+        return self._factory.hardware.is_tpm_on(logical_tpm_id)
 
-    def get_antenna_voltage(self, logical_antenna_id):
+    def turn_off_tpm(self, logical_tpm_id):
         """
-        Get the voltage of a specified antenna.
+        Turn off a specified TPM.
 
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna for which the voltage is requested
-        :type logical_antenna_id: int
+        :param logical_tpm_id: the subrack's internal id for the
+            TPM to be turned off
+        :type logical_tpm_id: int
 
-        :return: the antenna voltage
-        :rtype: float
+        :return: whether successful, or None if there was nothing to do
+        :rtype: bool or None
         """
-        return self._factory.hardware.get_antenna_voltage(logical_antenna_id)
+        if not self._factory.hardware.is_tpm_on(logical_tpm_id):
+            return None
+        self._factory.hardware.turn_off_tpm(logical_tpm_id)
+        return not self._factory.hardware.is_tpm_on(logical_tpm_id)
 
-    def get_antenna_temperature(self, logical_antenna_id):
+    def turn_on_tpms(self):
         """
-        Get the temperature of a specified antenna.
+        Turn on all TPMs.
 
-        :param logical_antenna_id: this APIU's internal id for the
-            antenna for which the temperature is requested
-        :type logical_antenna_id: int
-
-        :return: the antenna temperature
-        :rtype: float
+        :return: whether the action was successful, or None if there was nothing to do
+        :rtype: bool
         """
-        return self._factory.hardware.get_antenna_temperature(logical_antenna_id)
+        for logical_tpm_id in range(1, self.tpm_count + 1):
+            if not self._factory.hardware.is_tpm_on(logical_tpm_id):
+                break
+        else:
+            return None
+
+        self._factory.hardware.turn_on_tpms()
+
+        for logical_tpm_id in range(1, self.tpm_count + 1):
+            if not self._factory.hardware.is_tpm_on(logical_tpm_id):
+                return False
+        return True
+
+    def turn_off_tpms(self):
+        """
+        Turn off all TPMs.
+
+        :return: whether the action was successful, or None if there was nothing to do
+        :rtype: bool
+        """
+        for logical_tpm_id in range(1, self.tpm_count + 1):
+            if self._factory.hardware.is_tpm_on(logical_tpm_id):
+                break
+        else:
+            return None
+
+        self._factory.hardware.turn_off_tpms()
+
+        for logical_tpm_id in range(1, self.tpm_count + 1):
+            if self._factory.hardware.is_tpm_on(logical_tpm_id):
+                return False
+        return True
 
 
-class MccsAPIU(SKABaseDevice):
+class MccsSubrack(SKABaseDevice):
     """
-    An implementation of MCCS APIU device.
+    An implementation of MCCS Subrack device.
 
     This class is a subclass of :py:class:`ska.base.SKABaseDevice`.
-
-    **Properties:**
-
-    - Device Property
     """
+
+    TileFQDNs = device_property(dtype=(str,))
 
     def init_command_objects(self):
         """
@@ -332,7 +309,7 @@ class MccsAPIU(SKABaseDevice):
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS APIU
+        Class that implements device initialisation for the MCCS Subrack
         device.
         """
 
@@ -362,7 +339,7 @@ class MccsAPIU(SKABaseDevice):
         def do(self):
             """
             Initialises the attributes and properties of the
-            :py:class:`.MccsAPIU`.
+            :py:class:`.MccsSubrack`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -383,11 +360,6 @@ class MccsAPIU(SKABaseDevice):
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
             device.hardware_manager = None
-
-            device._isAlive = True
-            device._overCurrentThreshold = 0.0
-            device._overVoltageThreshold = 0.0
-            device._humidityThreshold = 0.0
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -430,7 +402,7 @@ class MccsAPIU(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = APIUHardwareManager(device._simulation_mode)
+            device.hardware_manager = SubrackHardwareManager(device._simulation_mode)
             device.hardware_manager.on()
 
             args = (device.hardware_manager, device.state_model, self.logger)
@@ -439,14 +411,12 @@ class MccsAPIU(SKABaseDevice):
             device.register_command_object("Standby", device.StandbyCommand(*args))
             device.register_command_object("Off", device.OffCommand(*args))
 
+            device.register_command_object("IsTpmOn", device.IsTpmOnCommand(*args))
             device.register_command_object(
-                "IsAntennaOn", device.IsAntennaOnCommand(*args)
+                "PowerOnTpm", device.PowerOnTpmCommand(*args)
             )
             device.register_command_object(
-                "PowerUpAntenna", device.PowerUpAntennaCommand(*args)
-            )
-            device.register_command_object(
-                "PowerDownAntenna", device.PowerDownAntennaCommand(*args)
+                "PowerOffTpm", device.PowerOffTpmCommand(*args)
             )
             device.register_command_object("PowerUp", device.PowerUpCommand(*args))
             device.register_command_object("PowerDown", device.PowerDownCommand(*args))
@@ -459,13 +429,12 @@ class MccsAPIU(SKABaseDevice):
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
                 device.hardware_manager,
                 None,
-                device.event_manager,
+                None,
                 device.health_changed,
             )
 
@@ -491,11 +460,11 @@ class MccsAPIU(SKABaseDevice):
     def delete_device(self):
         """
         Hook to delete resources allocated in the
-        :py:meth:`~.MccsAPIU.InitCommand.do` method of the nested
-        :py:class:`~.MccsAPIU.InitCommand` class.
+        :py:meth:`~.MccsSubrack.InitCommand.do` method of the nested
+        :py:class:`~.MccsSubrack.InitCommand` class.
 
         This method allows for any memory or other resources allocated
-        in the :py:meth:`~.MccsAPIU.InitCommand.do` method to be
+        in the :py:meth:`~.MccsSubrack.InitCommand.do` method to be
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
@@ -518,122 +487,67 @@ class MccsAPIU(SKABaseDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevDouble", label="Voltage", unit="Volts", polling_period=1000)
-    def voltage(self):
+    @attribute(dtype="float", label="Backplane temperature", unit="Celsius")
+    def backplaneTemperature(self):
         """
-        Return the voltage attribute.
+        Return the temperature of the subrack backplane.
 
-        :return: the voltage attribute
+        :return: the temperature of the subrack backplane
         :rtype: float
         """
-        return self.hardware_manager.voltage
+        return self.hardware_manager.backplane_temperature
 
-    @attribute(dtype="DevDouble", label="Current", unit="Amps", polling_period=1000)
-    def current(self):
+    @attribute(dtype="float", label="Board temperature", unit="Celsius")
+    def boardTemperature(self):
         """
-        Return the current attribute.
+        Return the temperature of the subrack management board.
 
-        :return: the current value of the current attribute
+        :return: the temperature of the subrack management board
         :rtype: float
         """
-        return self.hardware_manager.current
+        return self.hardware_manager.board_temperature
 
-    @attribute(dtype="DevDouble", label="Temperature", unit="degC", polling_period=1000)
-    def temperature(self):
+    @attribute(dtype="float", label="Board current")
+    def boardCurrent(self):
         """
-        Return the temperature attribute.
+        Return the subrack management board current.
 
-        :return: the value of the temperature attribute
+        :return: the subrack management board current
         :rtype: float
         """
-        return self.hardware_manager.temperature
+        return self.hardware_manager.board_current
 
-    @attribute(
-        dtype="DevDouble",
-        label="Humidity",
-        unit="percent",
-        polling_period=1000,
-        # max_value=0.0,
-        # min_value=100.0,
-    )
-    def humidity(self):
+    @attribute(dtype="float", label="Fan speed")
+    def fanSpeed(self):
         """
-        Return the humidity attribute.
+        Return the subrack fan speed.
 
-        :return: the value of the humidity attribute
+        :return: the subrack fan speed
         :rtype: float
         """
-        return self.hardware_manager.humidity
+        return self.hardware_manager.fan_speed
 
-    @attribute(dtype="DevBoolean", label="Is alive?")
-    def isAlive(self):
+    @attribute(dtype=(float,), label="TPM temperatures", max_dim_x=8)
+    def tpmTemperatures(self):
         """
-        Return the isAlive attribute.
+        Return the temperatures of the subrack bays (hence the
+        temperatures of the TPMs housed in those bays).
 
-        :return: the value of the isAlive attribute
-        :rtype: bool
+        :return: the TPM temperatures
+        :rtype: list(float)
         """
-        return self._isAlive
+        return self.hardware_manager.tpm_temperatures
 
-    @attribute(dtype="DevDouble", label="Over current threshold", unit="Amp")
-    def overCurrentThreshold(self):
+    @attribute(dtype=(float,), label="TPM currents", max_dim_x=8)
+    def tpmCurrents(self):
         """
-        Return the overCurrentThreshold attribute.
+        Return the currents of the subrack bays (hence the currents of
+        the TPMs housed in those bays).
 
-        :return: the value of the overCurrentThreshold attribute
-        :rtype: float
+        :return: the TPM currents
+        :rtype: list(float)
         """
-        return self._overCurrentThreshold
-
-    @overCurrentThreshold.write
-    def overCurrentThreshold(self, value):
-        """
-        Set the overCurrentThreshold attribute.
-
-        :param value: new value for the overCurrentThreshold attribute
-        :type value: float
-        """
-        self._overCurrentThreshold = value
-
-    @attribute(dtype="DevDouble", label="Over Voltage threshold", unit="Volt")
-    def overVoltageThreshold(self):
-        """
-        Return the overVoltageThreshold attribute.
-
-        :return: the value of the overVoltageThreshold attribute
-        :rtype: float
-        """
-        return self._overVoltageThreshold
-
-    @overVoltageThreshold.write
-    def overVoltageThreshold(self, value):
-        """
-        Set the overVoltageThreshold attribute.
-
-        :param value: new value for the overVoltageThreshold attribute
-        :type value: float
-        """
-        self._overVoltageThreshold = value
-
-    @attribute(dtype="DevDouble", label="Humidity threshold", unit="percent")
-    def humidityThreshold(self):
-        """
-        Return the humidity threshold.
-
-        :return: the value of the humidityThreshold attribute
-        :rtype: float
-        """
-        return self._humidityThreshold
-
-    @humidityThreshold.write
-    def humidityThreshold(self, value):
-        """
-        Set the humidityThreshold attribute.
-
-        :param value: new value for the humidityThreshold attribute
-        :type value: float
-        """
-        self._humidityThreshold = value
+        return self.hardware_manager.tpm_currents
 
     # --------
     # Commands
@@ -642,10 +556,10 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the Disable() command.
 
-        :todo: We assume for now that the APIU hardware has control of
+        :todo: We assume for now that the Subrack hardware has control of
             its own power mode i.e. is able to turn itself off and on.
             Actually it is more likely that some upstream hardware would
-            turn the APIU off and on, in which case this command would be
+            turn the subrack off and on, in which case this command would be
             implemented by passing the command to the tango device that manages
             the upstream hardware
         """
@@ -654,7 +568,7 @@ class MccsAPIU(SKABaseDevice):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
-            command for this :py:class:`.MccsAPIU` device.
+            command for this :py:class:`.MccsSubrack` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -672,14 +586,14 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the Standby() command.
 
-        Actually the APIU hardware has no standby mode, so when this
+        Actually the subrack hardware has no standby mode, so when this
         device is told to go to standby mode, it switches on / remains
         on.
 
-        :todo: We assume for now that the APIU hardware has control of
+        :todo: We assume for now that the subrack hardware has control of
             its own power mode i.e. is able to turn itself off and on.
             Actually it is more likely that some upstream hardware would
-            turn the APIU off and on, in which case this command would
+            turn the subrack off and on, in which case this command would
             be implemented by passing the command to the tango device
             that manages the upstream hardware.
         """
@@ -688,7 +602,7 @@ class MccsAPIU(SKABaseDevice):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
-            command for this :py:class:`.MccsAPIU` device.
+            command for this :py:class:`.MccsSubrack` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -703,10 +617,10 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the Off() command.
 
-        :todo: We assume for now that the APIU hardware has control of
+        :todo: We assume for now that the subrack hardware has control of
             its own power mode i.e. is able to turn itself off and on.
             Actually it is more likely that some upstream hardware
-            would turn the APIU off and on, in which case this command
+            would turn the subrack off and on, in which case this command
             would be implemented by passing the command to the tango
             device that manages the upstream hardware.
         """
@@ -715,7 +629,7 @@ class MccsAPIU(SKABaseDevice):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
-            for this :py:class:`.MccsAPIU` device.
+            for this :py:class:`.MccsSubrack` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -729,54 +643,54 @@ class MccsAPIU(SKABaseDevice):
 
             return create_return(success, "off")
 
-    class IsAntennaOnCommand(BaseCommand):
+    class IsTpmOnCommand(BaseCommand):
         """
-        The command class for the IsAntennaOn command.
+        The command class for the IsTpmOn command.
         """
 
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.IsAntennaOn` command functionality.
+            :py:meth:`.MccsSubrack.IsTpmOn` command functionality.
 
-            :param argin: the logical antenna id of the antenna to power
+            :param argin: the logical tpm id of the TPM to power
                 up
             :type argin: int
 
-            :return: whether the specified antenna is on or not
+            :return: whether the specified TPM is on or not
             :rtype: bool
             """
             hardware_manager = self.target
-            return hardware_manager.is_antenna_on(argin)
+            return hardware_manager.is_tpm_on(argin)
 
-    @command(dtype_in="DevULong", doc_in="logicalAntennaId", dtype_out=bool)
+    @command(dtype_in="DevULong", doc_in="logicalTpmId", dtype_out=bool)
     @DebugIt()
-    def IsAntennaOn(self, argin):
+    def IsTpmOn(self, argin):
         """
-        Power up the antenna.
+        Power up the TPM.
 
-        :param argin: the logical antenna id of the antenna to power
+        :param argin: the logical TPM id of the TPM to power
             up
         :type argin: int
 
-        :return: whether the specified antenna is on or not
+        :return: whether the specified TPM is on or not
         :rtype: bool
         """
-        handler = self.get_command_object("IsAntennaOn")
+        handler = self.get_command_object("IsTpmOn")
         return handler(argin)
 
-    class PowerUpAntennaCommand(ResponseCommand):
+    class PowerOnTpmCommand(ResponseCommand):
         """
-        The command class for the PowerDownAntenna command.
+        The command class for the PowerOnTpm command.
         """
 
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerUpAntenna`
+            :py:meth:`.MccsSubrack.PowerOnTpm`
             command functionality.
 
-            :param argin: the logical antenna id of the antenna to power
+            :param argin: the logical TPM id of the TPM to power
                 up
             :type argin: int
 
@@ -786,21 +700,21 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.turn_on_antenna(argin)
-            return create_return(success, f"antenna {argin} power-up")
+            success = hardware_manager.turn_on_tpm(argin)
+            return create_return(success, f"TPM {argin} power-on")
 
     @command(
         dtype_in="DevULong",
-        doc_in="logicalAntennaId",
+        doc_in="logicalTpmId",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
-    def PowerUpAntenna(self, argin):
+    def PowerOnTpm(self, argin):
         """
-        Power up the antenna.
+        Power up the TPM.
 
-        :param argin: the logical antenna id of the antenna to power
+        :param argin: the logical id of the TPM to power
             up
         :type argin: int
 
@@ -809,22 +723,22 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
-        handler = self.get_command_object("PowerUpAntenna")
+        handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    class PowerDownAntennaCommand(ResponseCommand):
+    class PowerOffTpmCommand(ResponseCommand):
         """
-        The command class for the PowerDownAntenna command.
+        The command class for the PowerOffTpm command.
         """
 
         def do(self, argin):
             """
             Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerDownAntenna`
+            :py:meth:`.MccsSubrack.PowerOffTpm`
             command functionality.
 
-            :param argin: the logical antenna id of the antenna to power
+            :param argin: the logical id of the TPM to power
                 down
             :type argin: int
 
@@ -834,21 +748,21 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.turn_off_antenna(argin)
-            return create_return(success, f"antenna {argin} power-down")
+            success = hardware_manager.turn_off_tpm(argin)
+            return create_return(success, f"TPM {argin} power-off")
 
     @command(
         dtype_in="DevULong",
-        doc_in="logicalAntennaId",
+        doc_in="logicalTpmId",
         dtype_out="DevVarLongStringArray",
         doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
-    def PowerDownAntenna(self, argin):
+    def PowerOffTpm(self, argin):
         """
-        Power down the antenna.
+        Power down the TPM.
 
-        :param argin: the logical antenna id of the antenna to power
+        :param argin: the logical id of the TPM to power
             down
         :type argin: int
 
@@ -857,7 +771,7 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
-        handler = self.get_command_object("PowerDownAntenna")
+        handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
@@ -865,14 +779,14 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the PowerUp() command.
 
-        The PowerUp command turns on all of the antennas that are
-        powered by this APIU.
+        The PowerUp command turns on all of the TPMs that are powered by
+        this subrack.
         """
 
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerUp` command
+            :py:meth:`.MccsSubrack.PowerUp` command
             functionality.
 
             :return: A tuple containing a return code and a string
@@ -881,7 +795,7 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.turn_on_antennas()
+            success = hardware_manager.turn_on_tpms()
             return create_return(success, "power-up")
 
     @command(
@@ -906,14 +820,14 @@ class MccsAPIU(SKABaseDevice):
         """
         Class for handling the PowerDown() command.
 
-        The PowerDown command turns on all of the antennas that are
-        powered by this APIU.
+        The PowerDown command turns off all of the TPMs that are powered
+        by this subrack.
         """
 
         def do(self):
             """
             Stateless hook for implementation of
-            :py:meth:`.MccsAPIU.PowerDown`
+            :py:meth:`.MccsSubrack.PowerDown`
             command functionality.
 
             :return: A tuple containing a return code and a string
@@ -922,7 +836,7 @@ class MccsAPIU(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.turn_off_antennas()
+            success = hardware_manager.turn_off_tpms()
             return create_return(success, "power-down")
 
     @command(
@@ -973,7 +887,7 @@ def main(args=None, **kwargs):
     :rtype: int
     """
 
-    return MccsAPIU.run_server(args=args, **kwargs)
+    return MccsSubrack.run_server(args=args, **kwargs)
 
 
 if __name__ == "__main__":

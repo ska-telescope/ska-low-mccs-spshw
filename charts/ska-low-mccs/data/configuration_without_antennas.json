@@ -84,10 +84,6 @@
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002"
                             ],
-                            "AntennaFQDNs": [
-                                "low-mccs/antenna/000001",
-                                "low-mccs/antenna/000002"
-                            ],
                             "LoggingLevelDefault": [
                                 "3"
                             ]
@@ -105,10 +101,6 @@
                             "TileFQDNs": [
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
-                            ],
-                            "AntennaFQDNs": [
-                                "low-mccs/antenna/000003",
-                                "low-mccs/antenna/000004"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -335,7 +327,7 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-                            "TpmIp": [
+			                "TpmIp": [
                                 "10.0.10.4"
                             ],
                             "TpmCpldPort": [
@@ -364,137 +356,11 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-                            "TileIp": [
-                                "10.0.10.5"
-                            ],
-                            "TpmCpldPort": [
-                                "10000"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsAPIU": {
-            "apiu_001": {
-                "MccsAPIU": {
-                    "low-mccs/apiu/001": {
-                        "properties": {
-                            "AntennaFQDNs": [
-                                "low-mccs/antenna/000001",
-                                "low-mccs/antenna/000002",
-                                "low-mccs/antenna/000003",
-                                "low-mccs/antenna/000004"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsAntenna": {
-            "antenna_000001": {
-                "MccsAntenna": {
-                    "low-mccs/antenna/000001": {
-                        "properties": {
-                            "ApiuId": [
-                                "1"
-                            ],
-                            "LogicalApiuAntennaId": [
-                                "1"
-                            ],
-                            "TileId": [
-                                "1"
-                            ],
-                            "LogicalTileAntennaId": [
-                                "1"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "antenna_000002": {
-                "MccsAntenna": {
-                    "low-mccs/antenna/000002": {
-                        "properties": {
-                            "ApiuId": [
-                                "1"
-                            ],
-                            "LogicalApiuAntennaId": [
-                                "2"
-                            ],
-                            "TileId": [
-                                "1"
-                            ],
-                            "LogicalTileAntennaId": [
-                                "2"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "antenna_000003": {
-                "MccsAntenna": {
-                    "low-mccs/antenna/000003": {
-                        "properties": {
-                            "ApiuId": [
-                                "1"
-                            ],
-                            "LogicalApiuAntennaId": [
-                                "3"
-                            ],
-                            "TileId": [
-                                "2"
-                            ],
-                            "LogicalTileAntennaId": [
-                                "1"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "antenna_000004": {
-                "MccsAntenna": {
-                    "low-mccs/antenna/000004": {
-                        "properties": {
-                            "ApiuId": [
-                                "1"
-                            ],
-                            "LogicalApiuAntennaId": [
-                                "4"
-                            ],
-                            "TileId": [
-                                "2"
-                            ],
-                            "LogicalTileAntennaId": [
-                                "2"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsTpmDeviceSimulator": {
-            "tpmsimulator": {
-                "MccsTpmDeviceSimulator": {
-                    "low-mccs/tpmsimulator/tpmsimulator": {
-                        "properties": {
-                            "LoggingLevelDefault": [
-                                "3"
+			                "TileIp": [
+				                "10.0.10.5"
+			                ],
+			                "TpmCpldPort": [
+				                "10000"
                             ]
                         }
                     }

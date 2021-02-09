@@ -14,7 +14,7 @@ related classes.
 import threading
 
 from tango import DebugIt, EnsureOmniThread
-from tango.server import attribute, command
+from tango.server import attribute, command, device_property
 
 from ska.base import SKABaseDevice
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
@@ -86,15 +86,19 @@ class APIUHardwareFactory(SimulableHardwareFactory):
     if the hardware is sought whilst not in simulation mode
     """
 
-    def __init__(self, simulation_mode):
+    def __init__(self, simulation_mode, antenna_count):
         """
         Create a new factory instance.
 
+        :param antenna_count: number of antennas that are attached to
+            this APIU simulator
+        :type antenna_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode:
             :py:class:`~ska.base.control_model.SimulationMode`
         """
+        self._antenna_count = antenna_count
         super().__init__(simulation_mode)
 
     def _create_simulator(self):
@@ -105,7 +109,7 @@ class APIUHardwareFactory(SimulableHardwareFactory):
         :rtype:
             :py:class:`ska.low.mccs.apiu.apiu_simulator.ApiuSimulator`
         """
-        return APIUSimulator()
+        return APIUSimulator(self._antenna_count)
 
 
 class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
@@ -116,16 +120,19 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         on. We need to implement monitoring.
     """
 
-    def __init__(self, simulation_mode, _factory=None):
+    def __init__(self, simulation_mode, antenna_count, _factory=None):
         """
         Initialise a new APIUHardwareManager instance.
 
+        :param antenna_count: number of antennas that are attached to
+            the APIU
+        :type antenna_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
         """
         hardware_factory = _factory or APIUHardwareFactory(
-            simulation_mode == SimulationMode.TRUE
+            simulation_mode == SimulationMode.TRUE, antenna_count
         )
         super().__init__(hardware_factory, APIUHardwareHealthEvaluator())
 
@@ -177,7 +184,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: the number of antennas managed by this APIU
         :rtype: int
         """
-        return self._factory.hardware.NUMBER_OF_ANTENNAS
+        return self._factory.hardware.antenna_count
 
     def turn_off_antenna(self, logical_antenna_id):
         """
@@ -218,7 +225,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+        for antenna_id in range(1, self.antenna_count + 1):
             if self._factory.hardware.is_antenna_on(antenna_id):
                 break
         else:
@@ -226,7 +233,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         self._factory.hardware.turn_off_antennas()
 
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+        for antenna_id in range(1, self.antenna_count + 1):
             if self._factory.hardware.is_antenna_on(antenna_id):
                 return False
         return True
@@ -238,7 +245,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+        for antenna_id in range(1, self.antenna_count + 1):
             if not self._factory.hardware.is_antenna_on(antenna_id):
                 break
         else:
@@ -246,7 +253,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         self._factory.hardware.turn_on_antennas()
 
-        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+        for antenna_id in range(1, self.antenna_count + 1):
             if not self._factory.hardware.is_antenna_on(antenna_id):
                 return False
         return True
@@ -315,6 +322,8 @@ class MccsAPIU(SKABaseDevice):
     - Device Property
     """
 
+    AntennaFQDNs = device_property(dtype=(str,))
+
     def init_command_objects(self):
         """
         Initialises the command handlers for commands supported by this
@@ -382,6 +391,8 @@ class MccsAPIU(SKABaseDevice):
             # tango deployment, then start honouring the default of
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
+
+            device._antenna_fqdns = list(device.AntennaFQDNs)
             device.hardware_manager = None
 
             device._isAlive = True
@@ -430,7 +441,9 @@ class MccsAPIU(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = APIUHardwareManager(device._simulation_mode)
+            device.hardware_manager = APIUHardwareManager(
+                device._simulation_mode, len(device._antenna_fqdns)
+            )
             device.hardware_manager.on()
 
             args = (device.hardware_manager, device.state_model, self.logger)

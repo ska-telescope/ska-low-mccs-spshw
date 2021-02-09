@@ -17,41 +17,38 @@ import pytest
 from tango import DevState
 
 
-@pytest.fixture()
-def devices_to_load():
+class TestPowerManagementFromControllerToTile:
     """
-    Fixture that specifies the devices to be loaded for testing.
+    Integration test cases for MCCS subsystem's power management,
+    focussing on the path from the controller to the Tile.
+    """
 
-    :return: specification of the devices to be loaded
-    :rtype: dict
-    """
-    return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
-        "package": "ska.low.mccs",
-        "devices": [
-            "controller",
-            "subarray_01",
-            "subarray_02",
-            "station_001",
-            "station_002",
-            "subrack_01",
-            "tile_0001",
-            "tile_0002",
-            "tile_0003",
-            "tile_0004",
-            "apiu_001",
-            # "antenna_000001",  # workaround for MCCS-244
-            # "antenna_000002",
-            # "antenna_000003",
-            # "antenna_000004",
-        ],
-    }
+    @pytest.fixture()
+    def devices_to_load(self):
+        """
+        Fixture that specifies the devices to be loaded for testing.
 
-
-class TestPowerManagement:
-    """
-    Integration test cases for MCCS subsystem's power management.
-    """
+        :return: specification of the devices to be loaded
+        :rtype: dict
+        """
+        # TODO: Once MCCS-244 is resolved, we should merge this tile/subrack test with
+        # the antenna/APIU test below.
+        return {
+            "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
+            "package": "ska.low.mccs",
+            "devices": [
+                "controller",
+                "subarray_01",
+                "subarray_02",
+                "station_001",
+                "station_002",
+                "subrack_01",
+                "tile_0001",
+                "tile_0002",
+                "tile_0003",
+                "tile_0004",
+            ],
+        }
 
     def test_power_on_off(self, device_context):
         """
@@ -99,3 +96,83 @@ class TestPowerManagement:
         assert tile_2.State() == DevState.OFF
         assert tile_3.State() == DevState.OFF
         assert tile_4.State() == DevState.OFF
+
+
+class TestPowerManagementFromControllerToAntenna:
+    """
+    Integration test cases for MCCS subsystem's power management.
+    """
+
+    @pytest.fixture()
+    def devices_to_load(self):
+        """
+        Fixture that specifies the devices to be loaded for testing.
+
+        :return: specification of the devices to be loaded
+        :rtype: dict
+        """
+        # TODO: Once MCCS-244 is resolved, we should merge this antenna/APIU test with
+        # the tile/subrack test above.
+        return {
+            "path": "charts/ska-low-mccs/data/configuration_without_tiles.json",
+            "package": "ska.low.mccs",
+            "devices": [
+                "controller",
+                "subarray_01",
+                "subarray_02",
+                "station_001",
+                "station_002",
+                "apiu_001",
+                "antenna_000001",
+                "antenna_000002",
+                "antenna_000003",
+                "antenna_000004",
+            ],
+        }
+
+    def test_power_on_off(self, device_context):
+        """
+        Test that a MccsController device can enable an MccsSubarray
+        device.
+
+        :param device_context: a test context for a set of tango devices
+        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        """
+        controller = device_context.get_device("controller")
+        station_1 = device_context.get_device("station_001")
+        station_2 = device_context.get_device("station_002")
+        antenna_1 = device_context.get_device("antenna_000001")
+        antenna_2 = device_context.get_device("antenna_000002")
+        antenna_3 = device_context.get_device("antenna_000003")
+        antenna_4 = device_context.get_device("antenna_000004")
+
+        assert controller.State() == DevState.OFF
+        assert station_1.State() == DevState.OFF
+        assert station_2.State() == DevState.OFF
+        assert antenna_1.State() == DevState.OFF
+        assert antenna_2.State() == DevState.OFF
+        assert antenna_3.State() == DevState.OFF
+        assert antenna_4.State() == DevState.OFF
+
+        # TODO: For now we need to get this to OFF (highest state of
+        # device readiness) before we can turn this ON. This is a
+        # counterintuitive mess that will be fixed in MCCS-181.
+        controller.Startup()
+
+        assert controller.State() == DevState.ON
+        assert station_1.State() == DevState.ON
+        assert station_2.State() == DevState.ON
+        assert antenna_1.State() == DevState.ON
+        assert antenna_2.State() == DevState.ON
+        assert antenna_3.State() == DevState.ON
+        assert antenna_4.State() == DevState.ON
+
+        controller.Off()
+
+        assert controller.State() == DevState.OFF
+        assert station_1.State() == DevState.OFF
+        assert station_2.State() == DevState.OFF
+        assert antenna_1.State() == DevState.OFF
+        assert antenna_2.State() == DevState.OFF
+        assert antenna_3.State() == DevState.OFF
+        assert antenna_4.State() == DevState.OFF

@@ -122,7 +122,6 @@ deviceServers:
     instances: ["beam_001", "beam_002", "beam_003", "beam_004"]
     depends_on:
       - device: low-mccs/control/control
-
   subarray-beams:
     name: mccs-subarray-beam
     # subarray beam instances have to be 0-padded to two digits

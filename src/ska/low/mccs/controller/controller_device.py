@@ -129,7 +129,7 @@ class MccsController(SKAMaster):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # Technical debt -- forced to register base class stuff rather than
+        # TODO: Technical debt -- forced to register base class stuff rather than
         # calling super(), because On() and Off() are registered on a
         # thread, and we don't want the super() method clobbering them
         args = (self, self.state_model, self.logger)

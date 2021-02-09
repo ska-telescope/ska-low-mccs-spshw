@@ -33,6 +33,45 @@ class TpmSimulator(HardwareSimulator):
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
+    # ARP resolution table
+    # Values are consistent with unit test test_MccsTile
+    #
+    ARP_MAP = {
+        "10.0.23.56": 0x10FEFA060B99,
+        "10.0.98.3": 0x10FEED080B59,
+        "10.0.98.4": 0x10FEED080B57,
+        "10.0.99.3": 0x10FEED080A58,
+        "10.0.99.4": 0x10FEED080A56,
+    }
+
+    def _arp(self, ip):
+        """
+        Return MAC address from ARP resolution table Private method for
+        the simulator.
+
+        :param ip: IP address in dot decimal format
+        :type ip: str
+        :return: MAC address in xx:xx:xx:xx:xx:xx format
+        :rtype: str
+        """
+        if ip in self.ARP_MAP:
+            mac = hex(self.ARP_MAP[ip])
+            arp = (
+                mac[2:4]
+                + ":"
+                + mac[4:6]
+                + ":"
+                + mac[6:8]
+                + ":"
+                + mac[8:10]
+                + ":"
+                + mac[10:12]
+                + ":"
+                + mac[12:14]
+            )
+            return arp
+        else:
+            return "ff:ff:ff:ff:ff:ff"
 
     def __init__(self, logger, fail_connect=False):
         """
@@ -383,7 +422,8 @@ class TpmSimulator(HardwareSimulator):
         self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
     ):
         """
-        Configure the 40G code.
+        Configure the 40G code. The dst_mac parmeter is ignored in true
+        40G core (ARP resolution used instead)
 
         :param core_id: id of the core
         :type core_id: int
@@ -400,12 +440,13 @@ class TpmSimulator(HardwareSimulator):
         :param dst_port: port of the destination
         :type dst_port: int
         """
+
         core_dict = {
             "CoreID": core_id,
-            "SrcMac": src_mac,
+            "SrcMac": self._arp(src_ip),
             "SrcIP": src_ip,
             "SrcPort": src_port,
-            "DstMac": dst_mac,
+            "DstMac": self._arp(dst_ip),
             "DstIP": dst_ip,
             "DstPort": dst_port,
         }

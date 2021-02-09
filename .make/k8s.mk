@@ -3,7 +3,7 @@ MINIKUBE ?= true## Minikube or not
 MARK ?= all
 TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_HOST is an input!
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
-SLEEPTIME ?= 45
+SLEEPTIME ?= 30
 EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
 CHARTS ?= ska-low-mccs mccs-umbrella mccs-demo
@@ -177,8 +177,8 @@ wait:
 	@date
 	@kubectl -n $(KUBE_NAMESPACE) get pods
 	@jobs=$$(kubectl get job --output=jsonpath={.items..metadata.name} -n $(KUBE_NAMESPACE)); \
-	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=120s $$jobs 
-	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -l 'app=$(PROJECT)' pods || exit 1
+	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=180s $$jobs 
+	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=180s -l 'app=$(PROJECT)' pods || exit 1
 	@date
 
 bounce:

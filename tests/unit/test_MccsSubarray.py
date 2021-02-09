@@ -574,19 +574,13 @@ class TestMccsSubarray:
             helpers.callback_event_data_check(
                 mock_callback=mock_callback, name="commandResult", result=None
             )
-            try:
-                # Call the Abort() command on the Subarray device
-                [[result_code], [message]] = device_under_test.Abort()
-                assert result_code == ResultCode.OK
-                assert message == "Abort command completed OK"
-                helpers.callback_command_result_check(
-                    mock_callback=mock_callback,
-                    name="commandResult",
-                    result=result_code,
-                )
-            except Exception as reason:
-                assert False, f"Exception raised: {reason}"
-
+            # Call the Abort() command on the Subarray device
+            [[result_code], [message]] = device_under_test.Abort()
+            assert result_code == ResultCode.OK
+            assert message == "Abort command completed OK"
+            helpers.callback_command_result_check(
+                mock_callback=mock_callback, name="commandResult", result=result_code
+            )
             assert device_under_test.obsState == ObsState.ABORTED
 
         def test_ObsReset(self, device_under_test, mocker, helpers):
@@ -612,17 +606,11 @@ class TestMccsSubarray:
             helpers.callback_event_data_check(
                 mock_callback=mock_callback, name="commandResult", result=None
             )
-            try:
-                # Call the ObsReset() command on the Subarray device
-                [[result_code], [message]] = device_under_test.ObsReset()
-                assert result_code == ResultCode.OK
-                assert message == "ObsReset command completed OK"
-                helpers.callback_command_result_check(
-                    mock_callback=mock_callback,
-                    name="commandResult",
-                    result=result_code,
-                )
-            except Exception as reason:
-                assert False, f"Exception raised: {reason}"
-
+            # Call the ObsReset() command on the Subarray device
+            [[result_code], [message]] = device_under_test.ObsReset()
+            assert result_code == ResultCode.OK
+            assert message == "ObsReset command completed OK"
+            helpers.callback_command_result_check(
+                mock_callback=mock_callback, name="commandResult", result=result_code
+            )
             assert device_under_test.obsState == ObsState.IDLE

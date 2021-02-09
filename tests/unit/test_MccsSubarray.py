@@ -561,6 +561,8 @@ class TestMccsSubarray:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param mocker: fixture that wraps unittest.Mock
             :type mocker: wrapper for :py:mod:`unittest.mock`
+            :param helpers: The Helpers class
+            :type helpers: :py:class: `Helpers`
             """
             self.test_Scan(device_under_test)
 
@@ -583,7 +585,44 @@ class TestMccsSubarray:
                     result=result_code,
                 )
             except Exception as reason:
-                print(f"Exception: {reason}")
-                assert False
+                assert False, f"Exception raised: {reason}"
 
             assert device_under_test.obsState == ObsState.ABORTED
+
+        def test_ObsReset(self, device_under_test, mocker, helpers):
+            """
+            Test for ObsReset (including end of command event testing).
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param mocker: fixture that wraps unittest.Mock
+            :type mocker: wrapper for :py:mod:`unittest.mock`
+            :param helpers: The Helpers class
+            :type helpers: :py:class: `Helpers`
+            """
+            self.test_Abort(device_under_test, mocker, helpers)
+
+            # Test that subscription yields an event as expected
+            mock_callback = mocker.Mock()
+            _ = device_under_test.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+            )
+            helpers.callback_event_data_check(
+                mock_callback=mock_callback, name="commandResult", result=None
+            )
+            try:
+                # Call the ObsReset() command on the Subarray device
+                [[result_code], [message]] = device_under_test.ObsReset()
+                assert result_code == ResultCode.OK
+                assert message == "ObsReset command completed OK"
+                helpers.callback_command_result_check(
+                    mock_callback=mock_callback,
+                    name="commandResult",
+                    result=result_code,
+                )
+            except Exception as reason:
+                assert False, f"Exception raised: {reason}"
+
+            assert device_under_test.obsState == ObsState.IDLE

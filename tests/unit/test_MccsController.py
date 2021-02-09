@@ -235,6 +235,8 @@ class TestMccsController:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param helpers: The Helpers class
+        :type helpers: :py:class: `Helpers`
         """
         # Test that subscription yields an event as expected
         mock_callback = mocker.Mock()
@@ -263,6 +265,8 @@ class TestMccsController:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param helpers: The Helpers class
+        :type helpers: :py:class: `Helpers`
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
@@ -437,6 +441,8 @@ class TestMccsController:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param mocker: fixture that wraps unittest.Mock
             :type mocker: wrapper for :py:mod:`unittest.mock`
+            :param helpers: The Helpers class
+            :type helpers: :py:class: `Helpers`
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -640,6 +646,8 @@ class TestMccsController:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param mocker: fixture that wraps unittest.Mock
             :type mocker: wrapper for :py:mod:`unittest.mock`
+            :param helpers: The Helpers class
+            :type helpers: :py:class: `Helpers`
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -781,6 +789,8 @@ class TestMccsController:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param helpers: The Helpers class
+        :type helpers: :py:class: `Helpers`
         """
 
         # The device has subscribed to healthState change events on

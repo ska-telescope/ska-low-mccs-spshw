@@ -19,6 +19,7 @@ from ska.base.control_model import (
     AdminMode,
     ControlMode,
     HealthState,
+    ObsState,
     SimulationMode,
     TestMode,
 )
@@ -244,7 +245,7 @@ class TestMccsSubarray:
         """
         Class containing fixtures and tests of the MccsController's
         :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-        :py:meth:`~ska.low.mccs.MccsController.Release` commands
+        :py:meth:`~ska.low.mccs.MccsController.Release` and
         :py:meth:`~ska.low.mccs.MccsController.Configure` commands
         """
 
@@ -256,7 +257,7 @@ class TestMccsSubarray:
             subarrays and stations respond suitably to actions taken on
             them by the controller as part of the controller's
             :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-            :py:meth:`~ska.low.mccs.MccsController.Release` commands
+            :py:meth:`~ska.low.mccs.MccsController.Release` and
             :py:meth:`~ska.low.mccs.MccsController.Configure` commands
 
             :param mock_factory: a factory for
@@ -527,6 +528,62 @@ class TestMccsSubarray:
             [[result_code], [message]] = device_under_test.Configure(json_str)
             assert result_code == ResultCode.OK
             assert message == "Configure command completed successfully"
+            assert device_under_test.obsState == ObsState.READY
+
             # remove preceeding "call(\" and trailing "\)"
             output = str(mock_station_beam.configure.call_args)[6:-2]
             assert json.loads(output) == expected
+
+        def test_Scan(self, device_under_test):
+            """
+            Test for Scan.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            """
+            self.test_configure(device_under_test)
+
+            [[result_code], _] = call_with_json(
+                device_under_test.Scan, subarray_id=1, scan_time=0.0
+            )
+            assert result_code == ResultCode.STARTED
+            assert device_under_test.obsState == ObsState.SCANNING
+
+        def test_Abort(self, device_under_test, mocker, helpers):
+            """
+            Test for Abort (including end of command event testing).
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param mocker: fixture that wraps unittest.Mock
+            :type mocker: wrapper for :py:mod:`unittest.mock`
+            """
+            self.test_Scan(device_under_test)
+
+            # Test that subscription yields an event as expected
+            mock_callback = mocker.Mock()
+            _ = device_under_test.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+            )
+            helpers.callback_event_data_check(
+                mock_callback=mock_callback, name="commandResult", result=None
+            )
+            try:
+                # Call the Abort() command on the Subarray device
+                [[result_code], [message]] = device_under_test.Abort()
+                assert result_code == ResultCode.OK
+                assert message == "Abort command completed OK"
+                helpers.callback_command_result_check(
+                    mock_callback=mock_callback,
+                    name="commandResult",
+                    result=result_code,
+                )
+            except Exception as reason:
+                print(f"Exception: {reason}")
+                assert False
+
+            assert device_under_test.obsState == ObsState.ABORTED

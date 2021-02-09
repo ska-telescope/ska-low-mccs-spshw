@@ -149,3 +149,77 @@ def device_under_test(device_context, device_to_load):
     """
     device = device_context.get_device(device_to_load["device"])
     return device
+
+
+import time
+import tango
+from ska.base.commands import ResultCode
+
+
+class Helpers:
+    @staticmethod
+    def callback_event_data_check(mock_callback, name, result):
+        """
+        :param mock_callback: fixture that provides a mock callback object
+            that records registered callbacks from the DUT
+        :type mock_callback: :py:class:`tango.DeviceProxy`
+        :param name: name of the registered event
+        :type name: str
+        :param result: return code from the completed command
+            If set to None, value and quaility checks are bypassed
+        :type result: :py:class:`~ska.base.commands.ResultCode`
+        """
+        # push_change_event isn't synchronous, because it has to go
+        # through the 0MQ event system. So we have to sleep long enough
+        # for the event to arrive
+        time.sleep(0.2)
+
+        mock_callback.assert_called_once()
+        event_data = mock_callback.call_args[0][0].attr_value
+
+        assert event_data.name.lower() == name.lower()
+        if result is not None:
+            assert event_data.value == result
+            assert event_data.quality == tango.AttrQuality.ATTR_VALID
+        mock_callback.reset_mock()
+
+    @staticmethod
+    def callback_command_result_check(mock_callback, name, result):
+        """
+        Special callback check routine for commandResult. There should
+        always be two entries for commandResult; the first should reset
+        commandResult to ResultCode.UNKNOWN, the second should match the
+        expected result passed into this routine.
+
+        :param mock_callback: fixture that provides a mock callback object
+            that records registered callbacks from the DUT
+        :type mock_callback: :py:class:`tango.DeviceProxy`
+        :param name: name of the registered event
+        :type name: str
+        :param result: return code from the completed command
+            If set to None, value and quaility checks are bypassed
+        :type result: :py:class:`~ska.base.commands.ResultCode`
+        """
+        # push_change_event isn't synchronous, because it has to go
+        # through the 0MQ event system. So we have to sleep long enough
+        # for the event to arrive
+        time.sleep(0.2)
+
+        mock_callback.assert_called()
+        assert len(mock_callback.mock_calls) == 2  # exactly two calls
+
+        first_event_data = mock_callback.mock_calls[0][1][0].attr_value
+        second_event_data = mock_callback.mock_calls[1][1][0].attr_value
+        assert first_event_data.name.lower() == name.lower()
+        assert second_event_data.name.lower() == name.lower()
+        assert first_event_data.value == ResultCode.UNKNOWN
+        assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
+        if result is not None:
+            assert second_event_data.value == result
+            assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
+        mock_callback.reset_mock()
+
+
+@pytest.fixture
+def helpers():
+    return Helpers

@@ -16,14 +16,14 @@ __all__ = [
     "main",
 ]
 
-# imports
+# imports 123
 import json
 import threading
 import time
 
 # PyTango imports
 import tango
-from tango import DebugIt, DevState, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
@@ -922,7 +922,7 @@ class MccsSubarray(SKASubarray):
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
-        self._command_result = DevState.UNKNOWN
+        self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Abort")
         (result_code, message) = command()

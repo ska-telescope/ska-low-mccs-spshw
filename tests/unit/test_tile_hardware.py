@@ -467,7 +467,7 @@ class TestCommon:
 
         expected = {
             "CoreID": "mock_core_id",
-            "SrcMac": "ff:ff:ff:ff:ff:ff",
+            "SrcMac": "mock_src_mac",
             "SrcIP": "mock_src_ip",
             "SrcPort": "mock_src_port",
             "DstMac": "ff:ff:ff:ff:ff:ff",

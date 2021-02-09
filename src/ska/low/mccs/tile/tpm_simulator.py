@@ -443,7 +443,7 @@ class TpmSimulator(HardwareSimulator):
 
         core_dict = {
             "CoreID": core_id,
-            "SrcMac": self._arp(src_ip),
+            "SrcMac": src_mac,
             "SrcIP": src_ip,
             "SrcPort": src_port,
             "DstMac": self._arp(dst_ip),

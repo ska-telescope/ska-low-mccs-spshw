@@ -218,16 +218,16 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
-            if self._factory.hardware.is_antenna_on(antenna_id + 1):
+        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+            if self._factory.hardware.is_antenna_on(antenna_id):
                 break
         else:
             return None
 
         self._factory.hardware.turn_off_antennas()
 
-        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
-            if self._factory.hardware.is_antenna_on(antenna_id + 1):
+        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+            if self._factory.hardware.is_antenna_on(antenna_id):
                 return False
         return True
 
@@ -238,16 +238,16 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
-            if not self._factory.hardware.is_antenna_on(antenna_id + 1):
+        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+            if not self._factory.hardware.is_antenna_on(antenna_id):
                 break
         else:
             return None
 
         self._factory.hardware.turn_on_antennas()
 
-        for antenna_id in range(self._factory.hardware.NUMBER_OF_ANTENNAS):
-            if not self._factory.hardware.is_antenna_on(antenna_id + 1):
+        for antenna_id in range(1, self._factory.hardware.NUMBER_OF_ANTENNAS + 1):
+            if not self._factory.hardware.is_antenna_on(antenna_id):
                 return False
         return True
 
@@ -499,6 +499,7 @@ class MccsAPIU(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ----------
     # Attributes

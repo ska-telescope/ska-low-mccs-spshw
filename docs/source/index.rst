@@ -38,6 +38,7 @@ prototype for the `Square Kilometre Array`_.
    api/station_beam
    api/subarray_beam
    api/subarray
+   api/subrack_device
    api/tel_state
    api/tile_device
    api/transient_buffer
@@ -49,6 +50,7 @@ prototype for the `Square Kilometre Array`_.
 
    api/apiu_simulator
    api/cluster_simulator
+   api/subrack_simulator
    api/tile_hardware
    api/tpm_simulator
    api/tpm_driver

@@ -123,17 +123,17 @@ class TestAPIUSimulator:
             _ = apiu_simulator.current
         with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.temperature
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                assert apiu_simulator.is_antenna_on(antenna_id + 1) is None
+                assert apiu_simulator.is_antenna_on(antenna_id) is None
 
         apiu_simulator.on()
         assert apiu_simulator.power_mode == PowerMode.ON
         assert apiu_simulator.voltage == APIUSimulator.VOLTAGE
         assert apiu_simulator.current == APIUSimulator.CURRENT
         assert apiu_simulator.temperature == APIUSimulator.TEMPERATURE
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert not apiu_simulator.is_antenna_on(antenna_id)
 
         apiu_simulator.off()
         assert apiu_simulator.power_mode == PowerMode.OFF
@@ -143,9 +143,9 @@ class TestAPIUSimulator:
             _ = apiu_simulator.current
         with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.temperature
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                assert apiu_simulator.is_antenna_on(antenna_id + 1) is None
+                assert apiu_simulator.is_antenna_on(antenna_id) is None
 
     def test_antenna_on_off(self, apiu_simulator):
         """
@@ -161,48 +161,48 @@ class TestAPIUSimulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
         apiu_simulator.on()
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert not apiu_simulator.is_antenna_on(antenna_id)
             with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-                _ = apiu_simulator.get_antenna_current(antenna_id + 1)
+                _ = apiu_simulator.get_antenna_current(antenna_id)
             with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-                _ = apiu_simulator.get_antenna_voltage(antenna_id + 1)
+                _ = apiu_simulator.get_antenna_voltage(antenna_id)
             with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-                _ = apiu_simulator.get_antenna_temperature(antenna_id + 1)
+                _ = apiu_simulator.get_antenna_temperature(antenna_id)
 
-            apiu_simulator.turn_on_antenna(antenna_id + 1)
-            assert apiu_simulator.is_antenna_on(antenna_id + 1)
+            apiu_simulator.turn_on_antenna(antenna_id)
+            assert apiu_simulator.is_antenna_on(antenna_id)
 
             assert (
-                apiu_simulator.get_antenna_current(antenna_id + 1)
+                apiu_simulator.get_antenna_current(antenna_id)
                 == AntennaHardwareSimulator.CURRENT
             )
             assert (
-                apiu_simulator.get_antenna_voltage(antenna_id + 1)
+                apiu_simulator.get_antenna_voltage(antenna_id)
                 == AntennaHardwareSimulator.VOLTAGE
             )
             assert (
-                apiu_simulator.get_antenna_temperature(antenna_id + 1)
+                apiu_simulator.get_antenna_temperature(antenna_id)
                 == AntennaHardwareSimulator.TEMPERATURE
             )
 
-            apiu_simulator.turn_off_antenna(antenna_id + 1)
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+            apiu_simulator.turn_off_antenna(antenna_id)
+            assert not apiu_simulator.is_antenna_on(antenna_id)
 
         apiu_simulator.off()
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                apiu_simulator.turn_on_antenna(antenna_id + 1)
+                apiu_simulator.turn_on_antenna(antenna_id)
 
         apiu_simulator.on()
         for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+            assert not apiu_simulator.is_antenna_on(antenna_id)
             with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-                _ = apiu_simulator.get_antenna_current(antenna_id + 1)
+                _ = apiu_simulator.get_antenna_current(antenna_id)
             with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-                _ = apiu_simulator.get_antenna_voltage(antenna_id + 1)
+                _ = apiu_simulator.get_antenna_voltage(antenna_id)
             with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-                _ = apiu_simulator.get_antenna_temperature(antenna_id + 1)
+                _ = apiu_simulator.get_antenna_temperature(antenna_id)
 
     def test_antennas_on_off(self, apiu_simulator):
         """
@@ -215,36 +215,36 @@ class TestAPIUSimulator:
         apiu_simulator.on()
 
         # check all antennas are off
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert not apiu_simulator.is_antenna_on(antenna_id)
 
         # now turn them all off at once (nothing to do)
         apiu_simulator.turn_off_antennas()
 
         # check all antennas are off
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert not apiu_simulator.is_antenna_on(antenna_id)
 
         # now turn them all on at once
         apiu_simulator.turn_on_antennas()
 
         # check all antennas are on
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert apiu_simulator.is_antenna_on(antenna_id)
 
         # now turn them all on at once (nothing to do)
         apiu_simulator.turn_on_antennas()
 
         # check all antennas are on
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert apiu_simulator.is_antenna_on(antenna_id)
 
         # now turn them all off at once
         apiu_simulator.turn_off_antennas()
 
         # check all antennas are off
-        for antenna_id in range(APIUSimulator.NUMBER_OF_ANTENNAS):
-            assert not apiu_simulator.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, APIUSimulator.NUMBER_OF_ANTENNAS + 1):
+            assert not apiu_simulator.is_antenna_on(antenna_id)
 
 
 class TestAPIUHardwareManager:
@@ -423,22 +423,22 @@ class TestAPIUHardwareManager:
         hardware_manager.on()
 
         # check all antennas are off
-        for antenna_id in range(hardware_manager.antenna_count):
-            assert not hardware_manager.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, hardware_manager.antenna_count + 1):
+            assert not hardware_manager.is_antenna_on(antenna_id)
 
         # now turn them all off at once (nothing to do)
         assert hardware_manager.turn_off_antennas() is None
 
         # check all antennas are off
-        for antenna_id in range(hardware_manager.antenna_count):
-            assert not hardware_manager.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, hardware_manager.antenna_count + 1):
+            assert not hardware_manager.is_antenna_on(antenna_id)
 
         # now turn them all on at once
         assert hardware_manager.turn_on_antennas()
 
         # check all antennas are on
-        for antenna_id in range(hardware_manager.antenna_count):
-            assert hardware_manager.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, hardware_manager.antenna_count + 1):
+            assert hardware_manager.is_antenna_on(antenna_id)
 
         # now turn them all on at once
         assert hardware_manager.turn_on_antennas() is None
@@ -447,8 +447,8 @@ class TestAPIUHardwareManager:
         assert hardware_manager.turn_off_antennas()
 
         # check all antennas are off
-        for antenna_id in range(hardware_manager.antenna_count):
-            assert not hardware_manager.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, hardware_manager.antenna_count + 1):
+            assert not hardware_manager.is_antenna_on(antenna_id)
 
         # turn on a random antenna
         antenna_id = random.randint(1, hardware_manager.antenna_count)
@@ -458,8 +458,8 @@ class TestAPIUHardwareManager:
         assert hardware_manager.turn_on_antennas()
 
         # check all antennas are on
-        for antenna_id in range(hardware_manager.antenna_count):
-            assert hardware_manager.is_antenna_on(antenna_id + 1)
+        for antenna_id in range(1, hardware_manager.antenna_count + 1):
+            assert hardware_manager.is_antenna_on(antenna_id)
 
         # turn off a random antenna
         antenna_id = random.randint(1, hardware_manager.antenna_count)

@@ -290,7 +290,7 @@ class ResourceManager:
         :param devices: A dictionary of device IDs and FQDNs
         :type devices: a dictionary, key = device ID, value = device FQDN
         :param availability_policy: availability policy for this resource manager
-        :type availability_policy: list of HealthState
+        :type availability_policy: list(:py:class:`~ska.base.control_model.HealthState`)
         """
         self._managername = managername
         self._resources = dict()
@@ -313,7 +313,7 @@ class ResourceManager:
         managed by this manager.
 
         :param fqdns: The FQDNs to check
-        :type fqdns: list of str
+        :type fqdns: list(str)
         :raises ValueError: if an FQDN is not managed by this
         """
         # Are these keys all managed?
@@ -347,7 +347,7 @@ class ResourceManager:
         Remove device(s) from this resource manager.
 
         :param fqdns: The The FQDNs of devices to remove
-        :type fqdns: list of str
+        :type fqdns: list(str)
         """
         for fqdn in fqdns:
             self._resources.pop(fqdn)
@@ -378,7 +378,7 @@ class ResourceManager:
         Get all FQDNs managed by this resource manager.
 
         :return: List of FQDNs managed
-        :rtype: list of strings
+        :rtype: list(str)
         """
         return sorted(self._resources.keys())
 
@@ -390,7 +390,7 @@ class ResourceManager:
         :type owner_id: int
 
         :return: List of FQDNs assigned to owner_id
-        :rtype: list of strings
+        :rtype: list(str)
         """
 
         return [
@@ -408,7 +408,7 @@ class ResourceManager:
         ReleaseList.
 
         :param fqdns: The list of FQDNs we would like to assign
-        :type fqdns: list of string
+        :type fqdns: list(str)
         :param new_owner: 1-based device id that would take ownership
         :type new_owner: int
 
@@ -483,7 +483,7 @@ class ResourceManager:
         Take a list of device FQDNs and flag them as unassigned.
 
         :param fqdns: The list of device FQDNs to release
-        :type fqdns: list of string
+        :type fqdns: list(str)
         :raises ValueError: if any of the FQDNs are not being managed
         """
         self._except_on_unmanaged(fqdns)
@@ -499,7 +499,7 @@ class ResourceManager:
         availability state unavailable.
 
         :param fqdns: The list of device FQDNs to make unavailable
-        :type fqdns: list of string
+        :type fqdns: list(str)
         """
         self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
@@ -511,7 +511,7 @@ class ResourceManager:
         availability state available.
 
         :param fqdns: The list of device FQDNs to make unavailable
-        :type fqdns: list of string
+        :type fqdns: list(str)
         """
         self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:

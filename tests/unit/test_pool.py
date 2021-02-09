@@ -60,7 +60,7 @@ class TestDevicePoolManager:
         Fixture that returns some FQDNs for testing against.
 
         :return: some FQDNs
-        :rtype: list of str
+        :rtype: list(str)
         """
         return ["test/test/1", "test/test/2", "test/test/3"]
 
@@ -70,7 +70,7 @@ class TestDevicePoolManager:
         Returns the device_pool_manager under test.
 
         :param fqdns: FQDNs of the devices in the pool
-        :type fqdns: list of str
+        :type fqdns: list(str)
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param mock_device_proxies: fixture that patches
@@ -92,7 +92,7 @@ class TestDevicePoolManager:
         method.
 
         :param fqdns: FQDNs of the devices in the pool
-        :type fqdns: list of str
+        :type fqdns: list(str)
         :param device_pool_manager: the device_pool_manager under test
         :type device_pool_manager: :py:class:`ska.low.mccs.pool.DevicePoolManager`
         :param arg: a dummy argument to use in testing
@@ -120,7 +120,7 @@ class TestDevicePoolManager:
         Test of command-specific methods.
 
         :param fqdns: FQDNs of the devices in the pool
-        :type fqdns: list of str
+        :type fqdns: list(str)
         :param device_pool_manager: the device_pool_manager under test
         :type device_pool_manager: :py:class:`ska.low.mccs.pool.DevicePoolManager`
         :param method: the command-specific method to test

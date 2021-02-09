@@ -182,7 +182,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return a list of bay temperatures for this subrack.
 
         :return: a list of bay temperatures, in degrees celcius
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self._factory.hardware.tpm_temperatures
 
@@ -192,7 +192,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return a list of bay currents for this subrack.
 
         :return: a list of bay currents
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self._factory.hardware.tpm_currents
 
@@ -249,7 +249,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether the action was successful, or None if there was nothing to do
         :rtype: bool
         """
-        for logical_tpm_id in range(self.tpm_count):
+        for logical_tpm_id in range(1, self.tpm_count + 1):
             if not self._factory.hardware.is_tpm_on(logical_tpm_id):
                 break
         else:
@@ -257,7 +257,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         self._factory.hardware.turn_on_tpms()
 
-        for logical_tpm_id in range(self.tpm_count):
+        for logical_tpm_id in range(1, self.tpm_count + 1):
             if not self._factory.hardware.is_tpm_on(logical_tpm_id):
                 return False
         return True
@@ -269,7 +269,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether the action was successful, or None if there was nothing to do
         :rtype: bool
         """
-        for logical_tpm_id in range(self.tpm_count):
+        for logical_tpm_id in range(1, self.tpm_count + 1):
             if self._factory.hardware.is_tpm_on(logical_tpm_id):
                 break
         else:
@@ -277,7 +277,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         self._factory.hardware.turn_off_tpms()
 
-        for logical_tpm_id in range(self.tpm_count):
+        for logical_tpm_id in range(1, self.tpm_count + 1):
             if self._factory.hardware.is_tpm_on(logical_tpm_id):
                 return False
         return True
@@ -468,6 +468,7 @@ class MccsSubrack(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ----------
     # Attributes
@@ -533,7 +534,7 @@ class MccsSubrack(SKABaseDevice):
         temperatures of the TPMs housed in those bays).
 
         :return: the TPM temperatures
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self.hardware_manager.tpm_temperatures
 
@@ -544,7 +545,7 @@ class MccsSubrack(SKABaseDevice):
         the TPMs housed in those bays).
 
         :return: the TPM currents
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self.hardware_manager.tpm_currents
 

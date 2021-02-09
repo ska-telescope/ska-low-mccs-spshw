@@ -225,9 +225,9 @@ class TestSubrackBoardSimulator:
                 _ = subrack_board.board_current
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = subrack_board.fan_speed
-            for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
+            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
                 with pytest.raises(ValueError, match="Subrack is not ON."):
-                    _ = subrack_board.is_tpm_on(tpm_id + 1)
+                    _ = subrack_board.is_tpm_on(tpm_id)
 
         def assert_on_behaviour():
             """
@@ -249,8 +249,8 @@ class TestSubrackBoardSimulator:
             )
             assert subrack_board.fan_speed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
 
-            for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-                assert not subrack_board.is_tpm_on(tpm_id + 1)
+            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+                assert not subrack_board.is_tpm_on(tpm_id)
 
         assert_off_behaviour()
         subrack_board.on()
@@ -270,17 +270,17 @@ class TestSubrackBoardSimulator:
             :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
         """
         subrack_board.on()
-        for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-            assert not subrack_board.is_tpm_on(tpm_id + 1)
+        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            assert not subrack_board.is_tpm_on(tpm_id)
 
-            subrack_board.turn_on_tpm(tpm_id + 1)
-            assert subrack_board.is_tpm_on(tpm_id + 1)
+            subrack_board.turn_on_tpm(tpm_id)
+            assert subrack_board.is_tpm_on(tpm_id)
 
         subrack_board.off()
 
         subrack_board.on()
-        for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-            assert not subrack_board.is_tpm_on(tpm_id + 1)
+        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            assert not subrack_board.is_tpm_on(tpm_id)
 
     def test_tpms_on_off(self, subrack_board):
         """
@@ -299,8 +299,8 @@ class TestSubrackBoardSimulator:
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
             """
-            for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-                assert subrack_board.is_tpm_on(tpm_id + 1) == is_on
+            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+                assert subrack_board.is_tpm_on(tpm_id) == is_on
 
         subrack_board.on()
         assert_tpms_on(False)
@@ -589,18 +589,18 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
         """
         hardware_manager.on()
-        for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-            assert not hardware_manager.is_tpm_on(tpm_id + 1)
+        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            assert not hardware_manager.is_tpm_on(tpm_id)
 
-            hardware_manager.turn_on_tpm(tpm_id + 1)
-            assert hardware_manager.is_tpm_on(tpm_id + 1)
-            assert subrack_board.is_tpm_on(tpm_id + 1)
+            hardware_manager.turn_on_tpm(tpm_id)
+            assert hardware_manager.is_tpm_on(tpm_id)
+            assert subrack_board.is_tpm_on(tpm_id)
 
         hardware_manager.off()
 
         hardware_manager.on()
-        for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-            assert not hardware_manager.is_tpm_on(tpm_id + 1)
+        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            assert not hardware_manager.is_tpm_on(tpm_id)
 
     def test_tpms_on_off(self, hardware_manager):
         """
@@ -619,8 +619,8 @@ class TestSubrackHardwareManager:
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
             """
-            for tpm_id in range(SubrackBoardSimulator.NUMBER_OF_BAYS):
-                assert hardware_manager.is_tpm_on(tpm_id + 1) == is_on
+            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+                assert hardware_manager.is_tpm_on(tpm_id) == is_on
 
         hardware_manager.on()
         assert_tpms_on(False)

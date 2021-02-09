@@ -345,6 +345,7 @@ class MccsController(SKAMaster):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
+        pass
 
     # ----------
     # Attributes

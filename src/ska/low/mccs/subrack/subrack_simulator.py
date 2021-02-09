@@ -35,7 +35,7 @@ These assumptions are unconfirmed and may need to change in future.
 
 from ska.low.mccs.hardware import OnOffHardwareSimulator, PowerMode
 
-__all__ = ["SubrackBoardSimulator"]
+__all__ = ["SubrackBaySimulator", "SubrackBoardSimulator"]
 
 
 class SubrackBaySimulator(OnOffHardwareSimulator):
@@ -203,7 +203,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             used. This is for testing purposes only, allowing us to
             inject our own bays instead of letting this simulator create
             them.
-        :type _bays: list of :py:class:`.SubrackBaySimulator`
+        :type _bays: list(:py:class:`.SubrackBaySimulator`)
         """
         self._backplane_temperature = backplane_temperature
         self._board_temperature = board_temperature
@@ -341,7 +341,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         Return the temperatures of the TPMs housed in this subrack.
 
         :return: the temperatures of the TPMs housed in this subrack
-        :rtype: list of float
+        :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
         return [bay.temperature for bay in self._bays]
@@ -352,7 +352,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         subrack simulator.
 
         :param tpm_temperatures: the simulated TPM temperatures.
-        :type tpm_temperatures: list of float
+        :type tpm_temperatures: list(float)
 
         :raises ValueError: If the argument doesn't match the number of
             TPMs in this subrack
@@ -369,7 +369,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         Return the temperatures of the TPMs housed in this subrack.
 
         :return: the temperatures of the TPMs housed in this subrack
-        :rtype: list of float
+        :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
         return [bay.current for bay in self._bays]
@@ -380,7 +380,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         simulator.
 
         :param tpm_currents: the simulated TPM currents.
-        :type tpm_currents: list of float
+        :type tpm_currents: list(float)
 
         :raises ValueError: If the argument doesn't match the number of
             TPMs in this subrack

@@ -17,11 +17,11 @@ simulation_mode attribute. This will reset the Tile's TPM object.
 
 TPM Simulator Construction
 ==========================
-.. uml:: tile_construction.uml
+.. image:: tile_construction.svg
 
 TPM Driver Construction
 =======================
-.. uml:: tile_construction_driver.uml
+.. image:: tile_construction_driver.svg
 
 ***************************************
  Connection to TPM & Firmware Download
@@ -34,11 +34,11 @@ The code checks that the file exists and then passes this file path down to the 
 
 Ursula's Sequence Diagram
 =========================
-.. uml:: spo_943_sequence_1.uml
+.. image:: spo_943_sequence_1.svg
 
 Gianni's Code (Modified to hook into Ursula's sequence)
 =======================================================
-.. uml:: spo_943_sequence_2.uml
+.. image:: spo_943_sequence_2.svg
 
 Notes
 -----

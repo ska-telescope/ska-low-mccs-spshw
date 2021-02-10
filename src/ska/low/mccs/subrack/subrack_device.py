@@ -492,8 +492,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :param speed_per: fan speed in percent (MIN 0=0% - MAX 100=100%)
         :type speed_per: list of float
 
-        :return: whether the action was successful, or None if there was nothing to do
-        :rtype: bool
         """
         self._factory.hardware.set_ps_fan_speed(ps_fan_id, speed_per)
 

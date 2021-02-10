@@ -543,7 +543,11 @@ class TestMccsController:
 
             # Make the call to allocate
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=1, station_ids=[1]
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[1],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -554,7 +558,13 @@ class TestMccsController:
             mock_subarray_1.On.assert_called_once_with()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/001"], "station_beams": []})
+                json.dumps(
+                    {
+                        "stations": ["low-mccs/station/001"],
+                        "subarray_beams": ["low-mccs/subarraybeam/01"],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    }
+                )
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -568,7 +578,11 @@ class TestMccsController:
             # allocating station_1 to subarray 2 should fail, because it is already
             # allocated to subarray 1
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=2, station_ids=[1]
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[1],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.FAILED
             TestMccsController._callback_commandResult_check(
@@ -593,7 +607,11 @@ class TestMccsController:
             )
 
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=1, station_ids=[1, 2]
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[1, 2],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -604,7 +622,13 @@ class TestMccsController:
             mock_subarray_1.On.assert_not_called()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
-                json.dumps({"stations": ["low-mccs/station/002"], "station_beams": []})
+                json.dumps(
+                    {
+                        "stations": ["low-mccs/station/002"],
+                        "subarray_beams": ["low-mccs/subarraybeam/01"],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    }
+                )
             )
             mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
@@ -618,7 +642,11 @@ class TestMccsController:
             # allocating station 2 to subarray 1 should succeed, because
             # it only requires resource release
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=1, station_ids=[2]
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[2],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -664,7 +692,11 @@ class TestMccsController:
             time.sleep(0.2)  # RCL???
             mock_callback.reset_mock()
             ((result_code,), (_,)) = call_with_json(
-                controller.Allocate, subarray_id=2, station_ids=[1, 2]
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[1, 2],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             TestMccsController._callback_commandResult_check(
@@ -681,7 +713,8 @@ class TestMccsController:
                 json.dumps(
                     {
                         "stations": ["low-mccs/station/001", "low-mccs/station/002"],
-                        "station_beams": [],
+                        "subarray_beams": ["low-mccs/subarraybeam/01"],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     }
                 )
             )
@@ -728,13 +761,25 @@ class TestMccsController:
                 health_state=HealthState.OK,
             )
 
-            call_with_json(controller.Allocate, subarray_id=1, station_ids=[1])
+            call_with_json(
+                controller.Allocate,
+                subarray_id=1,
+                station_ids=[1],
+                subarray_beam_ids=[1],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            )
             mock_subarray_1.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
 
             # allocate station 2 to subarray 2
-            call_with_json(controller.Allocate, subarray_id=2, station_ids=[2])
+            call_with_json(
+                controller.Allocate,
+                subarray_id=2,
+                station_ids=[2],
+                subarray_beam_ids=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            )
             mock_subarray_2.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1

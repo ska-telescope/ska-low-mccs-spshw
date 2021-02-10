@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-302 - Updates for PI#9 json strings
 * MCCS-370 - Async mechanism for subarray ObsReset command
 * MCCS-180 - updated power management, new subrack device, MccsController.Startup()
 * MCCS-317 - Basic Abort and ObsReset implementation

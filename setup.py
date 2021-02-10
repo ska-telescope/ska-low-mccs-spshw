@@ -41,6 +41,7 @@ setuptools.setup(
             "MccsAPIU=ska.low.mccs.apiu.apiu_device:main",
             "MccsController=ska.low.mccs.controller.controller_device:main",
             "MccsSubarray=ska.low.mccs.subarray:main",
+            "MccsSubarrayBeam=ska.low.mccs.subarray_beam:main",
             "MccsSubrack=ska.low.mccs.subrack.subrack_device:main",
             "MccsStation=ska.low.mccs.station:main",
             "MccsStationBeam=ska.low.mccs.station_beam:main",

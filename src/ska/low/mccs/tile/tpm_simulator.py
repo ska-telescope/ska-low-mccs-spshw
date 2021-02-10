@@ -55,20 +55,9 @@ class TpmSimulator(HardwareSimulator):
         :rtype: str
         """
         if ip in self.ARP_MAP:
-            mac = hex(self.ARP_MAP[ip])
-            arp = (
-                mac[2:4]
-                + ":"
-                + mac[4:6]
-                + ":"
-                + mac[6:8]
-                + ":"
-                + mac[8:10]
-                + ":"
-                + mac[10:12]
-                + ":"
-                + mac[12:14]
-            )
+            mac = self.ARP_MAP[ip]
+            mac_str = f"{mac:016x}"
+            arp = ":".join(mac_str[i:(i+2)] for i in range(0, 16, 2))
             return arp
         else:
             return "ff:ff:ff:ff:ff:ff"

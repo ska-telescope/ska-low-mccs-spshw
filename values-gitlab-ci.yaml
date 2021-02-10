@@ -11,5 +11,10 @@ ska-low-mccs:
     enabled: false
 
 webjive:
-  enabled: false
   minikube: false
+
+webjive-dashboard:
+  enabled: false
+
+webjive-auth:
+  enabled: false

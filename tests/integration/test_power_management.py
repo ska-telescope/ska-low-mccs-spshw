@@ -31,8 +31,8 @@ class TestPowerManagementFromControllerToTile:
         :return: specification of the devices to be loaded
         :rtype: dict
         """
-        # TODO: Once MCCS-244 is resolved, we should merge this tile/subrack test with
-        # the antenna/APIU test below.
+        # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved,
+        # we should merge this tile/subrack test with the antenna/APIU test below.
         return {
             "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
             "package": "ska.low.mccs",
@@ -76,7 +76,7 @@ class TestPowerManagementFromControllerToTile:
 
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         controller.Startup()
 
         assert controller.State() == DevState.ON
@@ -111,8 +111,8 @@ class TestPowerManagementFromControllerToAntenna:
         :return: specification of the devices to be loaded
         :rtype: dict
         """
-        # TODO: Once MCCS-244 is resolved, we should merge this antenna/APIU test with
-        # the tile/subrack test above.
+        # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved,
+        # we should merge this antenna/APIU test with the tile/subrack test above.
         return {
             "path": "charts/ska-low-mccs/data/configuration_without_tiles.json",
             "package": "ska.low.mccs",
@@ -156,7 +156,7 @@ class TestPowerManagementFromControllerToAntenna:
 
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         controller.Startup()
 
         assert controller.State() == DevState.ON

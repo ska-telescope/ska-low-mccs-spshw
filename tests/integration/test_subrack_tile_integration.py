@@ -82,7 +82,7 @@ class TestSubrackTileIntegration:
 
         # TODO: For now we need to get this device to OFF (highest state
         # of device readiness) in order to turn the TPM on. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         tile.Off()
 
         assert tile.state() == DevState.OFF
@@ -90,7 +90,7 @@ class TestSubrackTileIntegration:
 
         # TODO: For now we need to get this device to DISABLE (lowest
         # state of device readiness) in order to turn the TPM off. This
-        # is a counterintuitive mess that will be fixed in MCCS-181.
+        # is a counterintuitive mess that will be fixed in SP-1501.
         tile.Disable()
 
         assert tile.state() == DevState.DISABLE

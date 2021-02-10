@@ -29,8 +29,8 @@ def devices_to_load():
     :return: specification of the devices to be loaded
     :rtype: dict
     """
-    # TODO: Once MCCS-244 is resolved, we should reinstate the APIUs and antennas in
-    # these tests.
+    # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
+    # should reinstate the APIUs and antennas in these tests.
     return {
         "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska.low.mccs",
@@ -88,7 +88,7 @@ def test_controller_health_rollup(device_context):
     tile_2 = device_context.get_device("tile_0002")
     tile_3 = device_context.get_device("tile_0003")
     tile_4 = device_context.get_device("tile_0004")
-    # workaround for MCCS-244
+    # workaround for https://github.com/tango-controls/cppTango/issues/816
     # apiu_1 = device_context.get_device("apiu_001")
 
     # antenna_1 = device_context.get_device("antenna_000001")
@@ -185,7 +185,7 @@ def test_subarray_health_rollup(device_context):
     tile_3 = device_context.get_device("tile_0003")
     tile_4 = device_context.get_device("tile_0004")
 
-    # workaround for MCCS-244
+    # workaround for https://github.com/tango-controls/cppTango/issues/816
     # apiu_1 = device_context.get_device("apiu_001")
     # antenna_1 = device_context.get_device("antenna_000001")
     # antenna_2 = device_context.get_device("antenna_000002")

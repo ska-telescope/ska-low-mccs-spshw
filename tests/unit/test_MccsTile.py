@@ -357,7 +357,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.voltage == TpmSimulator.VOLTAGE
@@ -373,7 +373,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         device_under_test.current == TpmSimulator.CURRENT
@@ -389,7 +389,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.board_temperature == TpmSimulator.BOARD_TEMPERATURE
@@ -405,7 +405,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga1_temperature == TpmSimulator.FPGA1_TEMPERATURE
@@ -421,7 +421,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga2_temperature == TpmSimulator.FPGA2_TEMPERATURE
@@ -437,7 +437,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga1_time == TpmSimulator.FPGA1_TIME
@@ -453,7 +453,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.fpga2_time == TpmSimulator.FPGA2_TIME
@@ -483,7 +483,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         expected = tuple(float(i) for i in range(32))
@@ -500,7 +500,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert (
@@ -519,7 +519,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.PhaseTerminalCount == TpmSimulator.PHASE_TERMINAL_COUNT
@@ -537,7 +537,7 @@ class TestMccsTile:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.ppsDelay == 12
@@ -632,7 +632,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -686,7 +686,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -738,7 +738,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
@@ -759,7 +759,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -828,7 +828,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.GetRegisterList() == list(
@@ -846,7 +846,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -880,7 +880,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -915,7 +915,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -943,7 +943,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -967,7 +967,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -1025,7 +1025,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
 
@@ -1049,7 +1049,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         antenna = 2
@@ -1090,7 +1090,7 @@ class TestMccsTileCommands:
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in MCCS-181.
+        # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
         assert not device_under_test.isBeamformerRunning

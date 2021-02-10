@@ -176,9 +176,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._temperature = None
         self._humidity = None
 
-        self._antennas = [
-            AntennaHardwareSimulator() for antenna_id in range(antenna_count)
-        ]
+        self._antennas = [AntennaHardwareSimulator() for i in range(antenna_count)]
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
     def off(self):

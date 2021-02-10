@@ -327,7 +327,7 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-			                "TpmIp": [
+                            "TpmIp": [
                                 "10.0.10.4"
                             ],
                             "TpmCpldPort": [
@@ -356,11 +356,11 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-			                "TileIp": [
-				                "10.0.10.5"
-			                ],
-			                "TpmCpldPort": [
-				                "10000"
+                            "TileIp": [
+                                "10.0.10.5"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
                             ]
                         }
                     }

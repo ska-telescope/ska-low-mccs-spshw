@@ -91,7 +91,7 @@ class APIUHardwareFactory(SimulableHardwareFactory):
         Create a new factory instance.
 
         :param antenna_count: number of antennas that are attached to
-            this APIU simulator
+            the APIU
         :type antenna_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager

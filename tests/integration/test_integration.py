@@ -17,8 +17,8 @@ def devices_to_load():
     :return: specification of the devices to be loaded
     :rtype: dict
     """
-    # TODO: Once MCCS-244 is resolved, we should reinstate the APIUs and antennas in
-    # these tests.
+    # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
+    # should reinstate the APIUs and antennas in these tests.
     return {
         "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska.low.mccs",

@@ -57,7 +57,7 @@ class TpmSimulator(HardwareSimulator):
         if ip in self.ARP_MAP:
             mac = self.ARP_MAP[ip]
             mac_str = f"{mac:016x}"
-            arp = ":".join(mac_str[i:(i+2)] for i in range(0, 16, 2))
+            arp = ":".join(mac_str[i : (i + 2)] for i in range(0, 16, 2))
             return arp
         else:
             return "ff:ff:ff:ff:ff:ff"

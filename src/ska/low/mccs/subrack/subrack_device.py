@@ -327,6 +327,36 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return self._factory.hardware.tpm_supply_fault(self)
 
     @property
+    def tpm_on_off(self):
+        """
+        Check whether the tpm are on or off
+
+        :return: list of tpm on or off in the subrack
+        :rtype: list of int
+        """
+        return self._factory.hardware.tpm_on_off(self)
+
+    @property
+    def tpm_present(self):
+        """
+        Return the tpms detected in the subrack
+
+        :return: list of tpm detected
+        :rtype: list of int
+        """
+        return self._factory.hardware.tpm_present(self)
+
+    @property
+    def tpm_supply_fault(self):
+        """
+        Return info about about TPM supply fault status.
+
+        :return: the TPM supply fault status
+        :rtype: list of int
+        """
+        return self._factory.hardware.tpm_supply_fault(self)
+
+    @property
     def tpm_currents(self):
         """
         Return a list of bay currents for this subrack.
@@ -462,6 +492,8 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :param speed_per: fan speed in percent (MIN 0=0% - MAX 100=100%)
         :type speed_per: list of float
 
+        :return: whether the action was successful, or None if there was nothing to do
+        :rtype: bool
         """
         self._factory.hardware.set_ps_fan_speed(ps_fan_id, speed_per)
 

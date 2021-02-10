@@ -177,8 +177,8 @@ wait:
 	@date
 	@kubectl -n $(KUBE_NAMESPACE) get pods
 	@jobs=$$(kubectl get job --output=jsonpath={.items..metadata.name} -n $(KUBE_NAMESPACE)); \
-	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=180s $$jobs 
-	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=180s -l 'app=$(PROJECT)' pods || exit 1
+	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=120s $$jobs 
+	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -l 'app=$(PROJECT)' pods || exit 1
 	@date
 
 bounce:

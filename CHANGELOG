@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-370 - Async mechanism for subarray ObsReset command
 * MCCS-180 - updated power management, new subrack device, MccsController.Startup()
 * MCCS-317 - Basic Abort and ObsReset implementation
 * MCCS-361 - robust device connection

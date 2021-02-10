@@ -973,6 +973,31 @@ class MccsSubarray(SKASubarray):
             """
             return self.state_model.obs_state in [ObsState.ABORTED]
 
+    @command(
+        dtype_out="DevVarLongStringArray",
+        doc_out="(ReturnType, 'informational message')",
+    )
+    @DebugIt()
+    def ObsReset(self):
+        """
+        Reset the current observation process.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
+        command = self.get_command_object("ObsReset")
+        (result_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
+
     class RestartCommand(SKASubarray.RestartCommand):
         """
         Class for handling the Restart() command.

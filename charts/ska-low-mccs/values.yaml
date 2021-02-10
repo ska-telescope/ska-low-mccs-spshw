@@ -122,6 +122,15 @@ deviceServers:
     instances: ["beam_001", "beam_002", "beam_003", "beam_004"]
     depends_on:
       - device: low-mccs/control/control
+  subarray-beams:
+    name: mccs-subarray-beam
+    # subarray beam instances have to be 0-padded to two digits
+    function: subarraybeam
+    domain: ska-low-mccs
+    command: "MccsSubarrayBeam"
+    instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
+    depends_on:
+      - device: low-mccs/control/control
 
 cli:
   # use the MCCS unix cli tool

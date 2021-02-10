@@ -36,10 +36,10 @@ def devices_to_load():
             # "antenna_000002",
             # "antenna_000003",
             # "antenna_000004",
-            "beam_001",
-            "beam_002",
-            "beam_003",
-            "beam_004",
+            "subarraybeam_01",
+            "subarraybeam_02",
+            "subarraybeam_03",
+            "subarraybeam_04",
         ],
     }
 
@@ -80,8 +80,12 @@ class TestMccsIntegration:
         controller.Startup()
 
         # allocate station_1 to subarray_1
-        ((result_code,), (_,)) = call_with_json(
-            controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]
+        ((result_code,), (message,)) = call_with_json(
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[1],
+            subarray_beam_ids=[1],
+            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
         )
         assert result_code == ResultCode.OK
 
@@ -98,7 +102,11 @@ class TestMccsIntegration:
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
         ((result_code,), (_,)) = call_with_json(
-            controller.Allocate, subarray_id=2, station_ids=[1], station_beams=[1]
+            controller.Allocate,
+            subarray_id=2,
+            station_ids=[1],
+            subarray_beam_ids=[1],
+            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
         )
         assert result_code == ResultCode.FAILED
 
@@ -114,9 +122,15 @@ class TestMccsIntegration:
 
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
-        # subarray
-        ((result_code,), (_,)) = call_with_json(
-            controller.Allocate, subarray_id=1, station_ids=[1, 2]
+        # subarray, BUT we must remember that the subarray cannot reallocate
+        # the same subarray_beam.
+        # ToDo This will change when subarray_beam is not a list.
+        ((result_code,), (message,)) = call_with_json(
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[1, 2],
+            subarray_beam_ids=[2],
+            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
         )
         assert result_code == ResultCode.OK
 
@@ -155,12 +169,20 @@ class TestMccsIntegration:
 
         # allocate stations 1 to subarray 1
         call_with_json(
-            controller.Allocate, subarray_id=1, station_ids=[1], station_beam_ids=[1]
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[1],
+            subarray_beam_ids=[1],
+            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
         )
 
         # allocate station 2 to subarray 2
         call_with_json(
-            controller.Allocate, subarray_id=2, station_ids=[2], station_beam_ids=[2]
+            controller.Allocate,
+            subarray_id=2,
+            station_ids=[2],
+            subarray_beam_ids=[2],
+            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
         )
 
         # check initial state

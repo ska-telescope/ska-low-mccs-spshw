@@ -870,7 +870,7 @@ class MccsController(SKAMaster):
                     "subarray_id": int,
                     "station_ids": list[int],
                     "channels": list[list[int]],
-                    "subarray_beam_ids": list(int),
+                    "subarray_beam_ids": list[int],
                     }
             :type argin: str
             :return: A tuple containing a return code and a string

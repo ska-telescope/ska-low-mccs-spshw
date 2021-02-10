@@ -506,7 +506,7 @@ def configure_subarray(devices):
     # Configure the subarray
     configuration = {
         "stations": [{"station_id": 1}, {"station_id": 2}],
-        "station_beams": [
+        "subarray_beams": [
             {
                 "subarray_id": 1,
                 "subarray_beam_id": 1,

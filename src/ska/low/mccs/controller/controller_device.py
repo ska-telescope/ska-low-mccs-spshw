@@ -11,11 +11,7 @@
 This module contains the SKA Low MCCS Controller device prototype.
 """
 
-__all__ = [
-    "MccsController",
-    "ControllerResourceManager",
-    "main",
-]
+__all__ = ["MccsController", "ControllerResourceManager", "main"]
 
 import json
 import threading
@@ -822,7 +818,7 @@ class MccsController(SKAMaster):
         Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
-            subarray_id, station_ids, channels and station_beam_id.
+            subarray_id, station_ids, channels and subarray_beam_ids.
         :type argin: str
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

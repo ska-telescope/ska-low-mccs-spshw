@@ -7,7 +7,7 @@ LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
 EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
-CHARTS ?= ska-low-mccs mccs-umbrella mccs-demo
+CHARTS ?= ska-low-mccs mccs-umbrella
 
 CI_PROJECT_PATH_SLUG ?= ska-low-mccs
 CI_ENVIRONMENT_SLUG ?= ska-low-mccs

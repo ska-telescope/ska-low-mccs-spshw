@@ -66,12 +66,12 @@ ifneq ($(CI_JOB_ID),)
 CI_PROJECT_IMAGE := 
 VALUES_FILE = values-gitlab-ci.yaml
 CUSTOM_VALUES = --set ska-low-mccs.mccs.image.registry=$(CI_REGISTRY)/ska-telescope \
-	--set ska-low-mccs.mccs.image.tag=$(CI_COMMIT_SHORT_SHA) \
+	--set ska-low-mccs.mccs.image.tag=$(CI_COMMIT_SHORT_SHA)
 else
 endif
 
 ifneq ($(VALUES_FILE),)
-CUSTOM_VALUES := $(CUSTOM_VALUES) -f $(VALUES_FILE)
+CUSTOM_VALUES := --values $(VALUES_FILE) $(CUSTOM_VALUES)
 else
 endif
 

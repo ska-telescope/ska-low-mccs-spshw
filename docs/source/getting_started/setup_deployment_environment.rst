@@ -95,7 +95,7 @@ Start the cluster manager
 
 Deploy MCCS to a cluster
 ------------------------
-The basic steps to deploying MCCS is:
+The basic steps to deploying MCCS are:
 
 #. Change into the ska-low-mccs directory, and build the development
    image ready for deployment to the cluster:
@@ -118,13 +118,20 @@ The basic steps to deploying MCCS is:
 
    This too may take a very long time the first time it is run.
 
-   MCCS also has a "mccs-demo" umbrella chart for deploying a separate
-   configuration for demo and testing purposes. To deploy this chart
-   instead, use:
+   MCCS also has a "mccs-demo" chart configuration for deploying a separate
+   configuration for demo and testing purposes. To deploy this instead, use:
 
    .. code-block:: bash
 
-      make UMBRELLA_CHART_PATH=charts/mccs-demo/ install-chart
+      make VALUES_FILE=values-demo.yaml install-chart
+
+   Similarly, if you want to deploy on the PSI cluster this can be controlled
+   using the `VALUES_FILE=values-psi.yaml` environment variable.
+   For PSI which is on a shared cluster it is also recommended to set:
+
+   .. code-block:: bash
+
+      make RELEASE_NAME=mccs-psi VALUES_FILE=values-demo.yaml install-chart
 
 #. Monitor the cluster to make sure it comes up okay. There are two
    tools available for this:
@@ -134,7 +141,7 @@ The basic steps to deploying MCCS is:
      .. code-block:: bash
    
         make watch
-        
+
      After the image has been deployed to the cluster, you should see
      the device containers be created, and then the devices initialise.
      At first some devices may error; this is normal, and they will be

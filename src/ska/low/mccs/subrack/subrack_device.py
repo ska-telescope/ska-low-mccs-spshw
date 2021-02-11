@@ -142,7 +142,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         """
         hardware_factory = _factory or SubrackHardwareFactory(
-            simulation_mode == SimulationMode.TRUE  # FALSE for the driver?
+            simulation_mode == SimulationMode.TRUE
         )
         super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
 
@@ -326,16 +326,16 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         return self._factory.hardware.tpm_supply_fault(self)
 
-    # @property
-    # def tpm_currents(self):
-    #     """
-    #     Return a list of bay currents for this subrack.
-    #
-    #     :return: a list of bay currents
-    #     :rtype: list of float
-    #
-    #     """
-    #     return self._factory.hardware_manager.
+    @property
+    def tpm_currents(self):
+        """
+        Return a list of bay currents for this subrack.
+
+        :return: a list of bay currents
+        :rtype: list of float
+
+        """
+        return self._factory.hardware.tpm_currents(self)
 
     def is_tpm_on(self, logical_tpm_id):
         """
@@ -706,6 +706,28 @@ class MccsSubrack(SKABaseDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
+    @attribute(dtype="DevLong")
+    def simulationMode(self):
+        """
+        Reports the simulation mode of the device.
+        Some devices may implement both modes,
+        while others will have simulators that set simulationMode
+        to True while the real devices always set simulationMode to False.
+        :return: Return the current simulation mode
+        :rtype: int
+        """
+        return super().read_simulationMode()
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode
+        :param value: The simulation mode, as a SimulationMode value
+        """
+        super().write_simulationMode(value)
+        self.logger.info("Switching simulation mode to " + str(value))
+        self.hardware_manager.simulation_mode = self._simulation_mode
+
     @attribute(
         dtype="Devfloat",
         max_dim_x=2,
@@ -893,6 +915,17 @@ class MccsSubrack(SKABaseDevice):
         :rtype: list of float
         """
         return self.hardware_manager.tpm_voltage
+
+    @attribute(dtype=(float,), label="TPM currents", max_dim_x=8)
+    def tpmCurrents(self):
+        """
+        Return the currents of the subrack bays (hence the currents of
+        the TPMs housed in those bays).
+
+        :return: the TPM currents
+        :rtype: list(float)
+        """
+        return self.hardware_manager.tpm_currents
 
     @attribute(
         dtype="DevFloat",
@@ -1170,8 +1203,7 @@ class MccsSubrack(SKABaseDevice):
         """
         Power down the TPM.
 
-        :param argin: the logical id of the TPM to power
-            down
+        :param argin: the logical id of the TPM to power down
         :type argin: int
 
         :return: A tuple containing a return code and a string
@@ -1278,20 +1310,16 @@ class MccsSubrack(SKABaseDevice):
 
         def do(self, argin):
             """
-            Hook for implementation of
-            :py:meth:`.MccsSubrack.SetSubrackFanSpeed`
+            Hook for implementation of :py:meth:'.MccsSubrack.SetSubrackFanSpeed'
             command functionality.
-
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
 
-            :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :return: A tuple containing a return code and a string message
+                indicating status. The message is for information purpose only.
+            :rtype: (:py:class:'~ska.base.commands.ResultCode', str)
+            :raises ValueError: if the JSON input lacks mandatory parameters
 
-            :raises ValueError: if the JSON input lacks
-            mandatory parameters
             """
             hardware_manager = self.target
 

@@ -110,7 +110,9 @@ class MccsStation(SKAObsDevice):
             device = self.target
 
             device._subarray_id = 0
-            device._tile_fqdns = list(device.TileFQDNs)
+            device._tile_fqdns = (
+                list(device.TileFQDNs) if device.TileFQDNs is not None else []
+            )
             device._antenna_fqdns = (
                 list(device.AntennaFQDNs) if device.AntennaFQDNs is not None else []
             )

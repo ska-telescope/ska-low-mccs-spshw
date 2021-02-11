@@ -457,7 +457,7 @@ class MccsController(SKAMaster):
             # (the highest state of device readiness for a device that
             # isn't actually on) before we can put them into ON state.
             # This is a counterintuitive mess that will be fixed in
-            # MCCS-181. Meanwhile, Startup() is implemented to turn all
+            # SP-1501. Meanwhile, Startup() is implemented to turn all
             # devices OFF (which will actually cause all the hardware to
             # come on), and then turn them ON.
             device_pool_manager = self.target

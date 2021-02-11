@@ -1,6 +1,7 @@
 # Version History
 
 ## unreleased
+* MCCS-366 - Updates to APIU and Antenna
 * MCCS-253 - Add simulation of ARP resolution to TPM simulator
 * MCCS-371 - MCCS-371 Replace plantuml markup with static svgs
 * MCCS-302 - Updates for PI#9 json strings

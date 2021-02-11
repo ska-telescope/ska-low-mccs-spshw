@@ -154,12 +154,14 @@ class APIUSimulator(OnOffHardwareSimulator):
     CURRENT = 20.5
     TEMPERATURE = 20.4
     HUMIDITY = 23.9
-    NUMBER_OF_ANTENNAS = 2
 
-    def __init__(self, fail_connect=False, power_mode=PowerMode.OFF):
+    def __init__(self, antenna_count, fail_connect=False, power_mode=PowerMode.OFF):
         """
         Initialise a new instance.
 
+        :param antenna_count: number of antennas that are attached to
+            this APIU simulator
+        :type antenna_count: int
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -174,9 +176,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._temperature = None
         self._humidity = None
 
-        self._antennas = [
-            AntennaHardwareSimulator() for antenna_id in range(self.NUMBER_OF_ANTENNAS)
-        ]
+        self._antennas = [AntennaHardwareSimulator() for i in range(antenna_count)]
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
     def off(self):
@@ -248,6 +248,33 @@ class APIUSimulator(OnOffHardwareSimulator):
         self.check_power_mode(PowerMode.ON)
         return self._humidity
 
+    @property
+    def antenna_count(self):
+        """
+        Return the number of antennas powered by this APIU.
+
+        :return: the number of antennas powered by this APIU
+        :rtype: int
+        """
+        return len(self._antennas)
+
+    def _check_antenna_id(self, logical_antenna_id):
+        """
+        Helper method to check that an antenna id passed as an argument
+        is within range.
+
+        :param logical_antenna_id: the id to check
+        :type logical_antenna_id: int
+
+        :raises ValueError: if the antenna id is out of range for this
+            APIU
+        """
+        if logical_antenna_id < 1 or logical_antenna_id > self.antenna_count:
+            raise ValueError(
+                f"Cannot access antenna {logical_antenna_id}; "
+                f"this APIU has {self.antenna_count} antennas."
+            )
+
     def is_antenna_on(self, logical_antenna_id):
         """
         Return whether a specified antenna is turned on.
@@ -261,6 +288,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :rtype: bool or None
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_antenna_id(logical_antenna_id)
         return self._antennas[logical_antenna_id - 1].power_mode == PowerMode.ON
 
     def turn_off_antenna(self, logical_antenna_id):
@@ -272,6 +300,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :type logical_antenna_id: int
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_antenna_id(logical_antenna_id)
         self._antennas[logical_antenna_id - 1].off()
 
     def turn_on_antenna(self, logical_antenna_id):
@@ -283,6 +312,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :type logical_antenna_id: int
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_antenna_id(logical_antenna_id)
         self._antennas[logical_antenna_id - 1].on()
 
     def turn_off_antennas(self):
@@ -313,6 +343,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :rtype: float
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_antenna_id(logical_antenna_id)
         return self._antennas[logical_antenna_id - 1].current
 
     def get_antenna_voltage(self, logical_antenna_id):
@@ -327,6 +358,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :rtype: float
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_antenna_id(logical_antenna_id)
         return self._antennas[logical_antenna_id - 1].voltage
 
     def get_antenna_temperature(self, logical_antenna_id):
@@ -341,6 +373,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         :rtype: float
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_antenna_id(logical_antenna_id)
         return self._antennas[logical_antenna_id - 1].temperature
 
     def check_power_mode(self, power_mode, error=None):

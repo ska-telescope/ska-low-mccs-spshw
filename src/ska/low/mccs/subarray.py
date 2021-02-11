@@ -788,6 +788,33 @@ class MccsSubarray(SKASubarray):
         Class for handling the Scan(argin) command.
         """
 
+        def __init__(self, target, state_model, logger=None):
+            """
+            Constructor for ScanCommand
+
+            :param target: the object that this command acts upon; for
+                example, the SKASubarray device for which this class
+                implements the command
+            :type target: object
+            :param state_model: the state model that this command uses
+                 to check that it is allowed to run, and that it drives
+                 with actions.
+            :type state_model: :py:class:`SKASubarrayStateModel`
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            :type logger: a logger that implements the standard library
+                logger interface
+            """
+            super().__init__(target, state_model, logger)
+
+            station_beam_pool_manager = self.target._station_beam_pool_manager
+            # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
+            subarray_beam_fqdns = station_beam_pool_manager.station_beam_fqdns()
+            self._subarray_beam_device_proxies = []
+            for subarray_beam_fqdn in subarray_beam_fqdns:
+                device_proxy = tango.DeviceProxy(subarray_beam_fqdn)
+                self._subarray_beam_device_proxies.append(device_proxy)
+
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -805,8 +832,24 @@ class MccsSubarray(SKASubarray):
             """
             (result_code, message) = super().do(argin)
 
-            # MCCS-specific stuff goes here
-            return (result_code, message)
+            device = self.target
+            kwargs = json.loads(argin)
+            device._scan_id = kwargs.get("id")
+            device._scan_time = kwargs.get("scan_time")
+
+            result_failure = None
+            error_message = ""
+            for subarray_beam_device_proxy in self._subarray_beam_device_proxies:
+                # TODO: Ideally we want to kick these off in parallel...
+                (rcode, msg) = subarray_beam_device_proxy.Scan(argin)
+                if rcode in [ResultCode.FAILED, ResultCode.UNKNOWN]:
+                    error_message += msg + " "
+                    result_failure = rcode
+
+            if result_failure is None:
+                return (result_code, message)
+            else:
+                return (result_failure, error_message)
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """

@@ -381,6 +381,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         args = (self, self.state_model, self.logger)
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("Scan", self.ScanCommand(*args))
 
     def always_executed_hook(self):
         """
@@ -623,12 +624,12 @@ class MccsSubarrayBeam(SKAObsDevice):
             device._logical_beam_id = 0
             device._subarray_id = config_dict.get("subarray_id")
             device._subarray_beam_id = config_dict.get("subarray_beam_id")
-            device._station_ids = config_dict.get("station_ids")
-            device._channels = config_dict.get("channels")
+            device._station_ids = config_dict.get("station_ids", [])
+            device._channels = config_dict.get("channels", [])
             device._update_rate = config_dict.get("update_rate")
-            device._desired_pointing = config_dict.get("sky_coordinates")
+            device._desired_pointing = config_dict.get("sky_coordinates", [])
 
-            # We will forward configuration settings to all the subservient Stations
+            # TODO: Forward configuration settings to all the subservient Stations
             return (ResultCode.OK, "Configure command completed successfully")
 
     @command(
@@ -645,8 +646,8 @@ class MccsSubarrayBeam(SKAObsDevice):
                 {
                 "subarray_id": 1,
                 "subarray_beam_id": 1,
-                "station_ids": [1,2],
-                "channels": [[0,8,1,1],[8,8,2,1],[24,16,2,1]],
+                "station_ids": [1, 2],
+                "channels": [[0,8,1,1], [8,8,2,1], [24,16,2,1]],
                 "update_rate": 0.0,
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
                 }
@@ -658,6 +659,58 @@ class MccsSubarrayBeam(SKAObsDevice):
         :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
+        (result_code, message) = handler(argin)
+        return [[result_code], [message]]
+
+    class ScanCommand(ResponseCommand):
+        """
+        Class for handling the Scan(argin) command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`.MccsSubarrayBeam.Scan` command
+
+            :param argin: Scan parameters encoded in a json string
+            :type argin: str
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            """
+            scan_dict = json.loads(argin)
+            device = self.target
+            device._scan_id = scan_dict.get("id")
+            device._scan_time = scan_dict.get("scan_time")
+
+            # TODO: Forward scan command and parameters to all the subservient Stations
+            return (ResultCode.OK, "Scan command completed successfully")
+
+    @command(
+        dtype_in="DevString",
+        doc_in="Configuration parameters encoded in json string",
+        dtype_out="DevVarLongStringArray",
+        doc_out="[ReturnCode, information-only string]",
+    )
+    def Scan(self, argin):
+        """
+        Start a scan on the subarray_beam.
+
+        :param argin: Scan parameters encoded in a json string
+                {
+                "id": 1,
+                "scan_time": 4
+                }
+        :type argin: str
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("Scan")
         (result_code, message) = handler(argin)
         return [[result_code], [message]]
 

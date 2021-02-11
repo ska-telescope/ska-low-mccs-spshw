@@ -40,7 +40,7 @@ spec:
   accessModes:
     - ReadWriteOnce
 {{ else }}
-  storageClassName: nfs
+  storageClassName: nfss1
   accessModes:
     - ReadWriteMany
 {{ end }}

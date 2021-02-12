@@ -179,7 +179,7 @@ class Helpers:
         mock_callback.assert_called_once()
         event_data = mock_callback.call_args[0][0].attr_value
 
-        assert event_data.name.lower() == name.lower()
+        assert event_data.name.casefold() == name.casefold()
         if result is not None:
             assert event_data.value == result
             assert event_data.quality == tango.AttrQuality.ATTR_VALID
@@ -212,8 +212,8 @@ class Helpers:
 
         first_event_data = mock_callback.mock_calls[0][1][0].attr_value
         second_event_data = mock_callback.mock_calls[1][1][0].attr_value
-        assert first_event_data.name.lower() == name.lower()
-        assert second_event_data.name.lower() == name.lower()
+        assert first_event_data.name.casefold() == name.casefold()
+        assert second_event_data.name.casefold() == name.locasefoldwer()
         assert first_event_data.value == ResultCode.UNKNOWN
         assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
         if result is not None:

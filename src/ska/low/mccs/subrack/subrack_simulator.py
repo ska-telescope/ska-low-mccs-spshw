@@ -158,7 +158,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     The default initial simulated temperature for the subrack management
     board itself; this can be overruled in the constructor
     """
-
     DEFAULT_BOARD_CURRENT = 1.1
     """
     The default initial simulated current for the subrack management

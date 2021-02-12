@@ -74,7 +74,6 @@ spec:
       - /bin/bash
       - "-ce"
       - |
-        pip3 install -rrequirements-tst.txt  # TODO: should be part of image?
         pytest --true-context tests/functional/features --junitxml=/reports/functional-test.xml --cucumberjson=/reports/cucumber.json &> /reports/functional-test-output.txt
     env:
     - name: TANGO_HOST

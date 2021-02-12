@@ -11,10 +11,14 @@ This module contains the tests for MccsSubarray.
 """
 import json
 import pytest
+import logging
 
 import tango
-from tango import AttrQuality, EventType
+from tango import AttrQuality, EventType, DevState
 
+from ska.base import SKASubarrayStateModel
+from ska.base.faults import CommandError
+from ska.base.commands import ResultCode
 from ska.base.control_model import (
     AdminMode,
     ControlMode,
@@ -23,9 +27,58 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.base.commands import ResultCode
 from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
+from ska.low.mccs.subarray import MccsSubarray
+
+
+def load_data(name):
+    """
+    Loads a dataset by name. This implementation uses the name to find a
+    JSON file containing the data to be loaded.
+
+    :param name: name of the dataset to be loaded; this implementation
+        uses the name to find a JSON file containing the data to be
+        loaded.
+    :type name: string
+    :return: Dictionary of JSON file read in
+    :rtype: dict
+    """
+    with open(f"tests/unit/testdata/{name}.json", "r") as json_file:
+        return json.load(json_file)
+
+
+def load_state_machine_spec(name):
+    """
+    Loads a state machine specification by name.
+
+    :param name: name of the dataset to be loaded; this implementation
+        uses the name to find a JSON file containing the data to be
+        loaded.
+    :type name: string
+    :return: machine specification
+    :rtype: dict
+    """
+    machine_spec = load_data(name)
+    for state in machine_spec["states"]:
+        state_spec = machine_spec["states"][state]
+        if "admin_mode" in state_spec:
+            state_spec["admin_mode"] = AdminMode[state_spec["admin_mode"]]
+        if "op_state" in state_spec:
+            state_spec["op_state"] = getattr(DevState, state_spec["op_state"])
+        if "obs_state" in state_spec:
+            state_spec["obs_state"] = ObsState[state_spec["obs_state"]]
+    return machine_spec
+
+
+@pytest.fixture
+def subarray_state_model():
+    """
+    Yields a new SKASubarrayStateModel for testing.
+
+    :yield: a new SKASubarrayStateModel for testing
+    """
+    yield SKASubarrayStateModel(logging.getLogger())
 
 
 @pytest.fixture()
@@ -626,3 +679,52 @@ class TestMccsSubarray:
                 mock_callback=mock_callback, name="commandResult", result=result_code
             )
             assert device_under_test.obsState == ObsState.IDLE
+
+
+# pylint: disable=invalid-name
+class TestMccsSubarrayCommands:
+    """
+    This class contains tests of MCCSSubarray commands.
+    """
+
+    def test_ScanCommand(self, subarray_state_model):
+        """
+        Test for MCCSSubarray.Scan()
+
+        :param subarray_state_model: the state model that this test uses
+            to check that it is allowed to run, and that it drives
+            with actions.
+        :type subarray_state_model: :py:class:`SKASubarrayStateModel`
+        """
+        scan_command = MccsSubarray.ScanCommand(self, subarray_state_model)
+        machine_spec = load_state_machine_spec("subarray_state_machine")
+        states = machine_spec["states"]
+        scan_args = {"id": 1, "scan_time": 4}
+        json_str = json.dumps(scan_args)
+
+        # In all states except READY, the scan command is not permitted,
+        # should not be allowed, should fail, should have no side-effects.
+        for state in set(states) - {"READY_ONLINE", "READY_MAINTENANCE"}:
+            subarray_state_model._straight_to_state(**states[state])
+            assert not scan_command.is_allowed()
+            with pytest.raises(CommandError):
+                scan_command(json_str)
+            assert subarray_state_model.admin_mode == states[state]["admin_mode"]
+            assert subarray_state_model.op_state == states[state]["op_state"]
+            assert subarray_state_model.obs_state == states[state]["obs_state"]
+
+        # Now let's test the READY cases.
+        state_map = {
+            "READY_ONLINE": "SCANNING_ONLINE",
+            "READY_MAINTENANCE": "SCANNING_MAINTENANCE",
+        }
+        for from_state, to_state in state_map.items():
+            # now push to READY_x, states in which the Scan command IS allowed
+            subarray_state_model._straight_to_state(**states[from_state])
+            assert scan_command.is_allowed()
+            (ret_code, message) = scan_command(json_str)
+            assert ret_code == ResultCode.STARTED
+            assert message == f"Scan command STARTED - config {scan_args}"
+            assert subarray_state_model.admin_mode == states[to_state]["admin_mode"]
+            assert subarray_state_model.op_state == states[to_state]["op_state"]
+            assert subarray_state_model.obs_state == states[to_state]["obs_state"]

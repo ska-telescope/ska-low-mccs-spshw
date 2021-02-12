@@ -470,7 +470,7 @@ class TestCommon:
             "SrcMac": "mock_src_mac",
             "SrcIP": "mock_src_ip",
             "SrcPort": "mock_src_port",
-            "DstMac": "mock_dst_mac",
+            "DstMac": "ff:ff:ff:ff:ff:ff",
             "DstIP": "mock_dst_ip",
             "DstPort": "mock_dst_port",
         }

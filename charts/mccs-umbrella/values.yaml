@@ -29,23 +29,12 @@ tango-base:
 
 webjive:
     enabled: true
-    minikube: true
-    ingress:
-       enabled: true
-       nginx: true
-       hostname: integration.engageska-portugal.pt
 
-webjive-dashboard:   
-    ingress:
-       enabled: true     
-       nginx: true     
-       hostname: integration.engageska-portugal.pt 
+webjive-dashboard:
+    enabled: true
 
-webjive-auth:   
-    ingress:     
-        enabled: true     
-        nginx: true     
-        hostname: integration.engageska-portugal.pt
+webjive-auth:
+    enabled: true
 
 # example overrides
 # ska-low-mccs:

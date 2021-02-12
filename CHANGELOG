@@ -1,15 +1,26 @@
 # Version History
 
 ## unreleased
+
+## 0.6.0
+
+* MCCS-366 - Updates to APIU and Antenna
+* MCCS-253 - Add simulation of ARP resolution to TPM simulator
+* MCCS-371 - Replace plantuml markup with static svgs
+* MCCS-302 - Updates for PI#9 json strings according to:
+             https://confluence.skatelescope.org/pages/viewpage.action?pageId=110799390
+* MCCS-370 - Async mechanism for subarray ObsReset command
 * MCCS-180 - updated power management, new subrack device, MccsController.Startup()
 * MCCS-317 - Basic Abort and ObsReset implementation
 * MCCS-361 - robust device connection
 * MCCS-320 - deployment bugfixes and move to hyphenated make targets
-* MCCS-251 - Software control of physical Tile Processing Board
 * MCCS-350 - Set commandResult to UNKNOWN before MccsController commands are executed
+* MCCS-345 - Basic connect to "turn on" TPM1.2 in Simulator
 * MCCS-272 - SubArrayBeam device - implement stub device
+* MCCS-251 - Software control of physical Tile Processing Board
 
-## 0.5.0 
+## 0.5.0
+
 * MCCS-169 - Add configure to subarray
 * MCCS-313 - MCCS Tile WebJive pages
 * MCCS-325 - minikube and WebJive setup
@@ -20,14 +31,15 @@
 * MCCS-242 - Test harness refactor
 * MCCS-331 - Don't assume pytango is numpy-enabled
 
-## 0.4.0 
+## 0.4.0
+
 * MCCS-208 - re-enable webjive chart
 * MCCS-237 - device subpackages
 * MCCS-240 - allow deviceserver overrides
 * MCCS-225 - further work on hardware model, especially antenna
 * MCCS-162 - Subarray resource management model
 
-## 0.3.0 
+## 0.3.0
 
 * MCCS-156 - controller resource management model
 * MCCS-225 - hardware model

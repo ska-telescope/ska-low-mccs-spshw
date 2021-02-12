@@ -265,7 +265,7 @@ understanding of what your IDE is doing for you.
 
    .. code-block:: shell-session
 
-     $ root@0852a572ffff:/app# python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt
+     $ root@0852a572ffff:/app# python3 -m pip install -r requirements-dev.txt -r requirements-lint.txt -r requirements-tst.txt
      
 4. Hooray, your container now has all dependencies installed, and can
    now run the tests. To run the tests (inside the container):

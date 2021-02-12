@@ -618,10 +618,14 @@ class MccsSubarray(SKASubarray):
             # target object
             kwargs = json.loads(argin)
             stations = kwargs.get("stations", [])
-            station_beams = kwargs.get("station_beams", [])
+            subarray_beams = kwargs.get("subarray_beams", [])
+            # TODO: Are channels required in subarray during allocation or are they
+            # only required in MCCSController? Remove noqa upon decision
+            channels = kwargs.get("channels", [])  # noqa: F841
             station_beam_pool_manager = self.target
-            station_beam_pool_manager.assign(station_beams, stations)
+            station_beam_pool_manager.assign(subarray_beams, stations)
 
+            # TODO: Should we always return success?
             return [ResultCode.OK, "AssignResources command completed successfully"]
 
         def succeeded(self):
@@ -659,9 +663,9 @@ class MccsSubarray(SKASubarray):
             # target object
             kwargs = json.loads(argin)
             stations = kwargs.get("station_fqdns", [])
-            station_beams = kwargs.get("station_beam_fqdns", [])
+            subarray_beams = kwargs.get("subarray_beam_fqdns", [])
             station_beam_pool_manager = self.target
-            station_beam_pool_manager.release(station_beams, stations)
+            station_beam_pool_manager.release(subarray_beams, stations)
             return [ResultCode.OK, "ReleaseResources command completed successfully"]
 
         def succeeded(self):
@@ -727,13 +731,15 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
-                        {"mccs":{
+                        {
                         "stations":[{"station_id": 1},{"station_id": 2}],
-                        "station_beams":[{"station_beam_id":1,"station_id":[1,2],
-                        "channels": [1,2,3,4,5,6,7,8],
+                        "subarray_beams":[{
+                        "subarray_id":1,
+                        "subarray_beam_id":1,
+                        "station_ids":[1,2],
+                        "channels":  [[0, 8, 1, 1], [8, 8, 2, 1]],
                         "update_rate": 0.0,
                         "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
-                        }
                         }
             :type argin: str
 
@@ -744,22 +750,22 @@ class MccsSubarray(SKASubarray):
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             kwargs = json.loads(argin)
-            stations = kwargs.get("mccs").get("stations")
+            stations = kwargs.get("stations", list())
             station_beam_pool_manager = self.target._station_beam_pool_manager
             for station in stations:
                 # This is here for future expansion of json strings
                 station.get("station_id")
 
-            station_beams = kwargs.get("mccs").get("station_beams")
-            for station_beam in station_beams:
-                station_beam_id = station_beam.get("station_beam_id")
-                if station_beam_id:
-                    station_beam_fqdn = station_beam_pool_manager.fqdn_from_id(
-                        station_beam_id
+            subarray_beams = kwargs.get("subarray_beams", list())
+            for subarray_beam in subarray_beams:
+                subarray_beam_id = subarray_beam.get("subarray_beam_id")
+                if subarray_beam_id:
+                    subarray_beam_fqdn = station_beam_pool_manager.fqdn_from_id(
+                        subarray_beam_id
                     )
-                    if station_beam_fqdn:
-                        dp = tango.DeviceProxy(station_beam_fqdn)
-                        json_str = json.dumps(station_beam)
+                    if subarray_beam_fqdn:
+                        dp = tango.DeviceProxy(subarray_beam_fqdn)
+                        json_str = json.dumps(subarray_beam)
                         dp.configure(json_str)
 
             result_code = ResultCode.OK

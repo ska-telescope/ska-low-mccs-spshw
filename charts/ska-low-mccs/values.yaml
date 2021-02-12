@@ -44,7 +44,7 @@ mccs:
   image:
     registry: nexus.engageska-portugal.pt/ska-docker
     image: ska-low-mccs
-    tag:    0.5.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    tag:     0.6.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent
 
 
@@ -120,6 +120,15 @@ deviceServers:
     domain: ska-low-mccs
     command: "MccsStationBeam"
     instances: ["beam_001", "beam_002", "beam_003", "beam_004"]
+    depends_on:
+      - device: low-mccs/control/control
+  subarray-beams:
+    name: mccs-subarray-beam
+    # subarray beam instances have to be 0-padded to two digits
+    function: subarraybeam
+    domain: ska-low-mccs
+    command: "MccsSubarrayBeam"
+    instances: ["subarraybeam_01", "subarraybeam_02", "subarraybeam_03", "subarraybeam_04"]
     depends_on:
       - device: low-mccs/control/control
 

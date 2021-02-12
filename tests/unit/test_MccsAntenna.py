@@ -216,12 +216,12 @@ class TestMccsAntenna:
         :type mock_device_proxies: dict
         """
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.is_antenna_on.side_effect = [False, True]
+        mock_apiu.IsAntennaOn.side_effect = [False, True]
 
         [[result_code], [message]] = device_under_test.PowerOn()
         assert result_code == ResultCode.OK
-        mock_apiu.is_antenna_on.assert_called_with(1)
-        mock_apiu.turn_on_antenna.assert_called_once_with(1)
+        mock_apiu.IsAntennaOn.assert_called_with(1)
+        mock_apiu.PowerUpAntenna.assert_called_once_with(1)
 
     def test_PowerOff(self, device_under_test, mock_device_proxies):
         """
@@ -237,12 +237,12 @@ class TestMccsAntenna:
         :type mock_device_proxies: dict
         """
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.is_antenna_on.side_effect = [True, False]
+        mock_apiu.IsAntennaOn.side_effect = [True, False]
 
         [[result_code], [message]] = device_under_test.PowerOff()
         assert result_code == ResultCode.OK
-        mock_apiu.is_antenna_on.assert_called_with(1)
-        mock_apiu.turn_off_antenna.assert_called_once_with(1)
+        mock_apiu.IsAntennaOn.assert_called_with(1)
+        mock_apiu.PowerDownAntenna.assert_called_once_with(1)
 
     def test_Reset(self, device_under_test):
         """

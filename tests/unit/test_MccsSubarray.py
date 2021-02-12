@@ -328,10 +328,10 @@ class TestMccsSubarray:
                 mock.subarrayId = 0
                 return mock
 
-            def _beam_mock():
+            def _subarraybeam_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsStationBeam`
+                connects to an :py:class:`~ska.low.mccs.MccsSubarrayBeam`
                 device. The returned mock will respond suitably to
                 actions taken on it by the subarray as part of the
                 subarray's
@@ -341,7 +341,7 @@ class TestMccsSubarray:
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
                     connects to an
-                    :py:class:`~ska.low.mccs.MccsStationBeam` device.
+                    :py:class:`~ska.low.mccs.MccsSubarrayBeam` device.
                 :rtype: :py:class:`unittest.Mock`
                 """
                 mock = mock_factory()
@@ -354,8 +354,8 @@ class TestMccsSubarray:
                 "low-mccs/subarray/02": _subarray_mock(),
                 "low-mccs/station/001": _station_mock(),
                 "low-mccs/station/002": _station_mock(),
-                "low-mccs/beam/001": _beam_mock(),
-                "low-mccs/beam/002": _beam_mock(),
+                "low-mccs/subarraybeam/01": _subarraybeam_mock(),
+                "low-mccs/subarraybeam/02": _subarraybeam_mock(),
             }
 
         def test_AllocateResources(self, device_under_test):
@@ -369,16 +369,18 @@ class TestMccsSubarray:
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
             mock_station_1 = tango.DeviceProxy(station_fqdns[0])
-            station_beam_fqdn = "low-mccs/beam/001"
-            mock_station_beam = tango.DeviceProxy(station_beam_fqdn)
+            subarray_beam_fqdn = "low-mccs/subarraybeam/01"
+            mock_subarray_beam = tango.DeviceProxy(subarray_beam_fqdn)
 
             device_under_test.On()
-            assert mock_station_beam.healthState == HealthState.OK
+            assert mock_subarray_beam.healthState == HealthState.OK
 
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
+                subarray_id=1,
                 stations=[station_fqdns[0]],
-                station_beams=[station_beam_fqdn],
+                subarray_beams=[subarray_beam_fqdn],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
 
             assert result_code == ResultCode.OK
@@ -386,24 +388,26 @@ class TestMccsSubarray:
             assert sorted(list(device_under_test.stationFQDNs)) == sorted(
                 [station_fqdns[0]]
             )
-            assert mock_station_beam.stationIds == [1]
+            assert mock_subarray_beam.stationIds == [1]
 
             mock_station_1.InitialSetup.assert_called_once_with()
 
             device_under_test.ReleaseAllResources()
-            assert mock_station_beam.stationIds == []
+            assert mock_subarray_beam.stationIds == []
 
             # now assign station beam to both stations...
             device_under_test.On()
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
+                subarray_id=1,
                 stations=station_fqdns,
-                station_beams=[station_beam_fqdn],
+                subarray_beams=[subarray_beam_fqdn],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             assert message == "AssignResources command completed successfully"
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
-            assert mock_station_beam.stationIds == [1, 2]
+            assert mock_subarray_beam.stationIds == [1, 2]
 
         def test_ReleaseAllResources(self, device_under_test):
             """
@@ -417,15 +421,18 @@ class TestMccsSubarray:
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
             mock_station_1 = tango.DeviceProxy(station_fqdns[0])
             mock_station_2 = tango.DeviceProxy(station_fqdns[1])
-            station_beam_fqdns = ["low-mccs/beam/001", "low-mccs/beam/002"]
-            mock_station_beam_1 = tango.DeviceProxy(station_beam_fqdns[0])
-            mock_station_beam_2 = tango.DeviceProxy(station_beam_fqdns[1])
+            subarray_beam_fqdns = [
+                "low-mccs/subarraybeam/01",
+                "low-mccs/subarraybeam/02",
+            ]
+            mock_subarray_beam_1 = tango.DeviceProxy(subarray_beam_fqdns[0])
+            mock_subarray_beam_2 = tango.DeviceProxy(subarray_beam_fqdns[1])
 
             device_under_test.On()
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
                 stations=station_fqdns,
-                station_beams=station_beam_fqdns,
+                subarray_beams=subarray_beam_fqdns,
             )
             assert result_code == ResultCode.OK
             assert message == "AssignResources command completed successfully"
@@ -434,34 +441,36 @@ class TestMccsSubarray:
             mock_station_1.InitialSetup.assert_called_once_with()
             mock_station_2.InitialSetup.assert_called_once_with()
 
-            assert mock_station_beam_1.stationIds == [1, 2]
-            assert mock_station_beam_2.stationIds == [1, 2]
+            assert mock_subarray_beam_1.stationIds == [1, 2]
+            assert mock_subarray_beam_2.stationIds == [1, 2]
 
             [[result_code], [message]] = call_with_json(
                 device_under_test.ReleaseResources,
-                station_beam_fqdns=[station_beam_fqdns[0]],
+                subarray_beam_fqdns=[subarray_beam_fqdns[0]],
             )
             assert result_code == ResultCode.OK
             assert message == "ReleaseResources command completed successfully"
 
-            assert mock_station_beam_1.stationIds == []
-            assert mock_station_beam_2.stationIds == [1, 2]
+            assert mock_subarray_beam_1.stationIds == []
+            assert mock_subarray_beam_2.stationIds == [1, 2]
 
             # reassign
             call_with_json(
                 device_under_test.AssignResources,
+                subarray_id=1,
                 stations=[station_fqdns[1]],
-                station_beams=[station_beam_fqdns[0]],
+                subarray_beams=[subarray_beam_fqdns[0]],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
-            assert mock_station_beam_1.stationIds == [2]
+            assert mock_subarray_beam_1.stationIds == [2]
 
             # ReleaseAll again
             [[result_code], [message]] = device_under_test.ReleaseAllResources()
             assert result_code == ResultCode.OK
             assert message == "ReleaseAllResources command completed successfully"
 
-            assert mock_station_beam_1.stationIds == []
-            assert mock_station_beam_2.stationIds == []
+            assert mock_subarray_beam_1.stationIds == []
+            assert mock_subarray_beam_2.stationIds == []
 
         def test_configure(self, device_under_test):
             """
@@ -474,64 +483,67 @@ class TestMccsSubarray:
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
             mock_station_1 = tango.DeviceProxy(station_fqdns[0])
-            station_beam_fqdn = "low-mccs/beam/001"
-            mock_station_beam = tango.DeviceProxy(station_beam_fqdn)
+            subarray_beam_fqdn = "low-mccs/subarraybeam/01"
+            mock_subarray_beam = tango.DeviceProxy(subarray_beam_fqdn)
 
             device_under_test.On()
-            assert mock_station_beam.healthState == HealthState.OK
+            assert mock_subarray_beam.healthState == HealthState.OK
 
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
+                subarray_id=1,
                 stations=[station_fqdns[0]],
-                station_beams=[station_beam_fqdn],
+                subarray_beams=[subarray_beam_fqdn],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
 
             assert result_code == ResultCode.OK
             assert message == "AssignResources command completed successfully"
             assert sorted(list(device_under_test.stationFQDNs)) == [station_fqdns[0]]
 
-            assert mock_station_beam.stationIds == [1]
+            assert mock_subarray_beam.stationIds == [1]
 
             mock_station_1.InitialSetup.assert_called_once_with()
 
             device_under_test.ReleaseAllResources()
-            assert mock_station_beam.stationIds == []
+            assert mock_subarray_beam.stationIds == []
 
             # now assign station beam to both stations...
             device_under_test.On()
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
+                subarray_id=1,
                 stations=station_fqdns,
-                station_beams=[station_beam_fqdn],
+                subarray_beams=[subarray_beam_fqdn],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
             assert message == "AssignResources command completed successfully"
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
-            assert mock_station_beam.stationIds == [1, 2]
+            assert mock_subarray_beam.stationIds == [1, 2]
 
             config_dict = {
-                "mccs": {
-                    "stations": [{"station_id": 1}, {"station_id": 2}],
-                    "station_beams": [
-                        {
-                            "station_beam_id": 1,
-                            "station_id": [1, 2],
-                            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-                            "update_rate": 3.14,
-                            "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
-                        }
-                    ],
-                }
+                "stations": [{"station_id": 1}, {"station_id": 2}],
+                "subarray_beams": [
+                    {
+                        "subarray_id": 1,
+                        "subarray_beam_id": 1,
+                        "station_ids": [1, 2],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                        "update_rate": 3.14,
+                        "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
+                    }
+                ],
             }
             json_str = json.dumps(config_dict)
-            expected = config_dict["mccs"]["station_beams"][0]
+            expected = config_dict["subarray_beams"][0]
             [[result_code], [message]] = device_under_test.Configure(json_str)
             assert result_code == ResultCode.OK
             assert message == "Configure command completed successfully"
             assert device_under_test.obsState == ObsState.READY
 
             # remove preceeding "call(\" and trailing "\)"
-            output = str(mock_station_beam.configure.call_args)[6:-2]
+            output = str(mock_subarray_beam.configure.call_args)[6:-2]
             assert json.loads(output) == expected
 
         def test_Scan(self, device_under_test):

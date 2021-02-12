@@ -120,7 +120,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         antenna on)
         """
         self.check_connected()
-        self._apiu.turn_on_antenna(self._logical_antenna_id)
+        self._apiu.PowerUpAntenna(self._logical_antenna_id)
 
     def off(self):
         """
@@ -128,7 +128,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         antenna off)
         """
         self.check_connected()
-        self._apiu.turn_off_antenna(self._logical_antenna_id)
+        self._apiu.PowerDownAntenna(self._logical_antenna_id)
 
     @property
     def power_mode(self):
@@ -139,7 +139,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the power mode of this antenna
         :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
-        is_on = self._apiu.is_antenna_on(self._logical_antenna_id)
+        is_on = self._apiu.IsAntennaOn(self._logical_antenna_id)
         return PowerMode.ON if is_on else PowerMode.OFF
 
     @property
@@ -253,8 +253,10 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         self._antenna_apiu_proxy = AntennaAPIUProxy(
             apiu_fqdn, logical_apiu_antenna_id, logger
         )
-        self._antenna_tile_proxy = AntennaTileProxy(
-            tile_fqdn, logical_tile_antenna_id, logger
+        self._antenna_tile_proxy = (
+            AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
+            if tile_fqdn is not None
+            else None
         )
 
     @property
@@ -267,10 +269,10 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
             to the hardware
         :rtype: bool
         """
-        return (
-            self._antenna_apiu_proxy.is_connected
-            and self._antenna_tile_proxy._is_connected
-        )
+        connected = self._antenna_apiu_proxy.is_connected
+        if self._antenna_tile_proxy is not None:
+            connected = connected and self._antenna_tile_proxy.is_connected
+        return connected
 
     def on(self):
         """
@@ -623,10 +625,17 @@ class MccsAntenna(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
+            apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
+            tile_fqdn = (
+                f"low-mccs/tile/{device.TileId:04}"
+                if device.TileId is not None
+                else None
+            )
+
             device.hardware_manager = AntennaHardwareManager(
-                f"low-mccs/apiu/{device.ApiuId:03}",
+                apiu_fqdn,
                 device.LogicalApiuAntennaId,
-                f"low-mccs/tile/{device.TileId:04}",
+                tile_fqdn,
                 device.LogicalTileAntennaId,
                 self.logger,
             )

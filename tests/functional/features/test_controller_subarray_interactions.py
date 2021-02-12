@@ -46,8 +46,10 @@ def devices_to_load():
     :return: specification of the devices to be loaded
     :rtype: dict
     """
+    # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
+    # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska.low.mccs",
         "devices": [
             "controller",
@@ -60,15 +62,10 @@ def devices_to_load():
             "tile_0002",
             "tile_0003",
             "tile_0004",
-            # "apiu_001",  # workaround for MCCS-244
-            # "antenna_000001",
-            # "antenna_000002",
-            # "antenna_000003",
-            # "antenna_000004",
-            "beam_001",
-            "beam_002",
-            "beam_003",
-            "beam_004",
+            "subarraybeam_01",
+            "subarraybeam_02",
+            "subarraybeam_03",
+            "subarraybeam_04",
         ],
     }
 
@@ -114,16 +111,16 @@ def devices(tango_context):
         "tile_0002": tango_context.get_device("low-mccs/tile/0002"),
         "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
         "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
-        # workaround for MCCS-244
+        # workaround for https://github.com/tango-controls/cppTango/issues/816
         # "apiu_001": tango_context.get_device("low-mccs/apiu/001"),
         # "antenna_000001": tango_context.get_device("low-mccs/antenna/000001"),
         # "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
         # "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
         # "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
-        "beam_001": tango_context.get_device("low-mccs/beam/001"),
-        "beam_002": tango_context.get_device("low-mccs/beam/002"),
-        "beam_003": tango_context.get_device("low-mccs/beam/003"),
-        "beam_004": tango_context.get_device("low-mccs/beam/004"),
+        "subarraybeam_01": tango_context.get_device("low-mccs/subarraybeam/01"),
+        "subarraybeam_02": tango_context.get_device("low-mccs/subarraybeam/02"),
+        "subarraybeam_03": tango_context.get_device("low-mccs/subarraybeam/03"),
+        "subarraybeam_04": tango_context.get_device("low-mccs/subarraybeam/04"),
     }
 
     # Bypass the cache because stationFQDNs etc are polled attributes,
@@ -367,8 +364,8 @@ def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
     parameters = {
         "subarray_id": 1,
         "station_ids": [1, 2],
-        "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-        "station_beam_ids": [1],
+        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+        "subarray_beam_ids": [1],
     }
     expected_result = ResultCode.OK
 
@@ -505,18 +502,17 @@ def configure_subarray(devices):
     """
     # Configure the subarray
     configuration = {
-        "mccs": {
-            "stations": [{"station_id": 1}, {"station_id": 2}],
-            "station_beams": [
-                {
-                    "station_beam_id": 1,
-                    "station_id": [1, 2],
-                    "channels": [1, 2, 3, 4, 5, 6, 7, 8],
-                    "update_rate": 0.0,
-                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                }
-            ],
-        }
+        "stations": [{"station_id": 1}, {"station_id": 2}],
+        "subarray_beams": [
+            {
+                "subarray_id": 1,
+                "subarray_beam_id": 1,
+                "station_ids": [1, 2],
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                "update_rate": 0.0,
+                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+            }
+        ],
     }
     json_string = json.dumps(configuration)
     assert_command(
@@ -532,7 +528,7 @@ def tmc_starts_a_scan_on_subarray(devices):
     :param devices: fixture that provides access to devices by their name
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     """
-    scan_config = {"id": 1}
+    scan_config = {"id": 1, "scan_time": 4}
     json_string = json.dumps(scan_config)
     assert_command(
         device=devices["subarray_01"],

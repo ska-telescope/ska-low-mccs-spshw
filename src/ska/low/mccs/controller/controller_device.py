@@ -431,6 +431,8 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska.base.commands.ResultCode`, str)
         """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Startup")
         (result_code, message) = command()
         self._command_result = result_code
@@ -536,6 +538,8 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska.base.commands.ResultCode`, str)
         """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Disable")
         (result_code, message) = command()
         self._command_result = result_code

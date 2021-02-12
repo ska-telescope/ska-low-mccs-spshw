@@ -21,15 +21,16 @@ from ska.base import SKABaseDevice
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 from ska.base.control_model import HealthState, SimulationMode
 from ska.low.mccs.hardware import (
+    PowerMode,
     HardwareHealthEvaluator,
     OnOffHardwareManager,
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
 from ska.low.mccs.health import HealthModel
-from ska.low.mccs.power import PowerManager
 from ska.low.mccs.subrack.subrack_simulator import SubrackBoardSimulator
-from ska.low.mccs.subrack.subrack_driver import SubrackBoardDriver
+
+# from ska.low.mccs.subrack.subrack_driver import SubrackBoardDriver
 
 __all__ = [
     "SubrackHardwareHealthEvaluator",
@@ -42,7 +43,7 @@ __all__ = [
 def create_return(success, action):
     """
     Helper function to package up a boolean result into a
-    (:py:class:`~ska.base.commands.ResultCode`, message) tuple.
+    (:py:class:`ska.base.commands.ResultCode`, message) tuple.
 
     :param success: whether execution of the action was successful. This
         may be None, in which case the action was not performed due to
@@ -56,7 +57,6 @@ def create_return(success, action):
         message indicating status. The message is for
         information purpose only.
     :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
-
     """
     if success is None:
         return (ResultCode.OK, f"Subrack {action} is redundant")
@@ -73,7 +73,6 @@ class SubrackHardwareHealthEvaluator(HardwareHealthEvaluator):
     management board hardware that it manages.
 
     At present this just inherits from the base class unchanged.
-
     """
 
     pass
@@ -86,7 +85,6 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
     At present, this returns a :py:class:`SubrackSimulator` object when
     in simulation mode, and raises :py:exc:`NotImplementedError` if the
     hardware is sought whilst not in simulation mode
-
     """
 
     def __init__(self, simulation_mode):
@@ -96,8 +94,7 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode:
-            :py:class:`~ska.base.control_model.SimulationMode`
-
+            :py:class:`ska.base.control_model.SimulationMode`
         """
         super().__init__(simulation_mode)
 
@@ -108,20 +105,8 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
         :return: a hardware simulator for the tile
         :rtype:
             :py:class:`.SubrackHardwareSimulator`
-
         """
         return SubrackBoardSimulator()
-
-    def _create_driver(self):
-        """
-        Returns a hardware driver.
-
-        :return: a hardware driver for the subrack
-        :rtype:
-            :py:class:`.SubrackHardwareDriver`
-
-        """
-        return SubrackBoardDriver()
 
 
 class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
@@ -129,7 +114,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     This class manages MCCS subrack hardware.
 
     :todo:
-
     """
 
     def __init__(self, simulation_mode, _factory=None):
@@ -138,8 +122,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager
-        :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
-
+        :type simulation_mode: :py:class:`ska.base.control_model.SimulationMode`
         """
         hardware_factory = _factory or SubrackHardwareFactory(
             simulation_mode == SimulationMode.TRUE
@@ -149,11 +132,11 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     @property
     def backplane_temperature(self):
         """
-        Return the temperature of this subrack's backplane from sensor 1 and 2.
+        Return the temperature of this subrack's backplane from sensor 1
+        and 2.
 
         :return: the backplane temperature, in degrees celsius
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.backplane_temperature
 
@@ -163,8 +146,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return the temperature of this subrack's management board.
 
         :return: the board temperature, in degrees celsius, from sensor 1 and 2
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.board_temperature
 
@@ -175,8 +157,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         (hence the currents of the TPMs housed in those bays).
 
         :return: the board current
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.board_current
 
@@ -186,19 +167,17 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return this subrack's backplane fan speed.
 
         :return: the fan speed, in RPMs
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.fan_speed
 
     @property
     def fan_speed_perc(self):
         """
-        Return this subrack's backplane fan speed in  percent
+        Return this subrack's backplane fan speed in  percent.
 
         :return: the fan speed, in percent
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.fan_speed_perc
 
@@ -206,6 +185,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     def subrack_fan_mode(self):
         """
         Return the subrack backplane fan Mode .
+
         :return: subrack fan mode 1 for AUTO or 0 for MANUAL
         :rtype: int
         """
@@ -218,7 +198,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :return: the number of TPMs managed by this subrack
         :rtype: int
-
         """
         return self._factory.hardware.tpm_count
 
@@ -228,8 +207,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return a list of bay temperatures for this subrack.
 
         :return: a list of bay temperatures, in degrees celsius
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.tpm_temperatures
 
@@ -239,8 +217,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return a list of bay powers for this subrack.
 
         :return: a list of bay powers, in Watt
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.tpm_power
 
@@ -250,8 +227,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return a list of bay voltagess for this subrack.
 
         :return: a list of bay voltages, in volt
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.tpm_voltage
 
@@ -261,8 +237,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return the ps FanSpeed for this subrack.
 
         :return: the ps fan speed
-        :rtype: list of float
-
+        :rtype: list(float)
         """
         return self._factory.hardware.ps_fanspeed
 
@@ -272,7 +247,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return the ps current for this subrack.
 
         :return: the ps current
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self._factory.hardware.ps_current
 
@@ -282,7 +257,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return the pps power for this subrack.
 
         :return: the ps power
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self._factory.hardware.ps_power
 
@@ -292,27 +267,27 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return the ps voltage for this subrack.
 
         :return: the ps voltages
-        :rtype: list of float
+        :rtype: list(float)
         """
         return self._factory.hardware.ps_voltage
 
     @property
     def tpm_on_off(self):
         """
-        Check whether the tpm are on or off
+        Check whether the tpm are on or off.
 
         :return: list of tpm on or off in the subrack
-        :rtype: list of int
+        :rtype: list(int)
         """
         return self._factory.hardware.tpm_on_off(self)
 
     @property
     def tpm_present(self):
         """
-        Return the tpms detected in the subrack
+        Return the tpms detected in the subrack.
 
         :return: list of tpm detected
-        :rtype: list of int
+        :rtype: list(int)
         """
         return self._factory.hardware.tpm_present(self)
 
@@ -322,7 +297,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return info about about TPM supply fault status.
 
         :return: the TPM supply fault status
-        :rtype: list of int
+        :rtype: list(int)
         """
         return self._factory.hardware.tpm_supply_fault(self)
 
@@ -332,10 +307,9 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Return a list of bay currents for this subrack.
 
         :return: a list of bay currents
-        :rtype: list of float
-
+        :rtype: list(float)
         """
-        return self._factory.hardware.tpm_currents(self)
+        return self._factory.hardware.tpm_currents
 
     def is_tpm_on(self, logical_tpm_id):
         """
@@ -348,7 +322,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :return: whether this subrack is supplying power to the specified TPM
         :rtype: bool
-
         """
         return self._factory.hardware.is_tpm_on(logical_tpm_id)
 
@@ -362,7 +335,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
-
         """
         if self._factory.hardware.is_tpm_on(logical_tpm_id):
             return None
@@ -379,7 +351,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
-
         """
         if not self._factory.hardware.is_tpm_on(logical_tpm_id):
             return None
@@ -392,7 +363,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :return: whether the action was successful, or None if there was nothing to do
         :rtype: bool
-
         """
         for logical_tpm_id in range(self.tpm_count):
             if not self._factory.hardware.is_tpm_on(logical_tpm_id):
@@ -413,7 +383,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         :return: whether the action was successful, or None if there was nothing to do
         :rtype: bool
-
         """
         for logical_tpm_id in range(self.tpm_count):
             if self._factory.hardware.is_tpm_on(logical_tpm_id):
@@ -430,40 +399,85 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def set_subrack_fan_speed(self, fan_id, speed_pwm_perc):
         """
-        Set the subrack backplane fan speed
+        Set the subrack backplane fan speed.
 
         :param fan_id: id of the selected fan accepted value: 1-4
         :type fan_id: int
         :param speed_pwm_perc: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
         :type speed_pwm_perc: float
-
         """
         self._factory.hardware.set_subrack_fan_speed(fan_id, speed_pwm_perc)
 
     def set_fan_mode(self, fan_id, mode):
         """
-        Set subrack Fan Operational Mode
+        Set subrack Fan Operational Mode.
 
         :param fan_id: id of the selected fan accepted value: 1-4
         :type fan_id: int
         :param mode:  1 AUTO, 0 MANUAL
         :type mode: int
-
         """
 
         self._factory.hardware.set_fan_mode(fan_id, mode)
 
     def set_ps_fan_speed(self, ps_fan_id, speed_per):
         """
-        Set the power supply  fan speed
+        Set the power supply  fan speed.
 
         :param ps_fan_id: power supply id from 0 to 2
         :type ps_fan_id: int
         :param speed_per: fan speed in percent (MIN 0=0% - MAX 100=100%)
-        :type speed_per: list of float
-
+        :type speed_per: list(float)
         """
         self._factory.hardware.set_ps_fan_speed(ps_fan_id, speed_per)
+
+
+class SubrackPowerManager:
+    """
+    This class performs subrack power management.
+
+    At the moment, dummy
+    """
+
+    def __init__(self, logger):
+        """
+        Initialise a new TilePowerManager.
+
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
+        """
+        self._logger = logger
+        self._power_mode = PowerMode.UNKNOWN
+
+    def off(self):
+        """
+        Turn off power to the subrack.
+
+        :return: whether the command was successful or not, or None if
+            there was nothing to do.
+        :rtype: bool
+        """
+        if self._power_mode == PowerMode.OFF:
+            return None  # already off
+
+        self.logger.info("Turning subrack OFF")
+        self._power_mode = PowerMode.OFF
+        return True
+
+    def on(self):
+        """
+        Turn on power to the subrack.
+
+        :return: whether the command was successful or not, or None if
+            there was nothing to do.
+        :rtype: bool
+        """
+        if self._power_mode == PowerMode.ON:
+            return None  # already on
+
+        self.logger.info("Turning subrack ON")
+        self._power_mode = PowerMode.ON
+        return True
 
 
 class MccsSubrack(SKABaseDevice):
@@ -471,7 +485,6 @@ class MccsSubrack(SKABaseDevice):
     An implementation of MCCS Subrack device.
 
     This class is a subclass of :py:class:`ska.base.SKABaseDevice`.
-
     """
 
     TileFQDNs = device_property(dtype=(str,))
@@ -509,11 +522,10 @@ class MccsSubrack(SKABaseDevice):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
-
             """
             super().__init__(target, state_model, logger)
 
@@ -559,8 +571,7 @@ class MccsSubrack(SKABaseDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-
+            :type device: :py:class:`ska.base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -591,8 +602,7 @@ class MccsSubrack(SKABaseDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-
+            :type device: :py:class:`ska.base.SKABaseDevice`
             """
             device.hardware_manager = SubrackHardwareManager(device._simulation_mode)
             device.hardware_manager.on()
@@ -624,8 +634,7 @@ class MccsSubrack(SKABaseDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-
+            :type device: :py:class:`ska.base.SKABaseDevice`
             """
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
@@ -642,10 +651,9 @@ class MccsSubrack(SKABaseDevice):
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
-
+            :type device: :py:class:`ska.base.SKABaseDevice`
             """
-            device.power_manager = PowerManager(device.hardware_manager, None)
+            device.power_manager = SubrackPowerManager(device.logger)
             power_args = (device.power_manager, device.state_model, device.logger)
             device.register_command_object(
                 "Disable", device.DisableCommand(*power_args)
@@ -661,7 +669,6 @@ class MccsSubrack(SKABaseDevice):
 
             :return: whether the initialisation thread was interrupted
             :rtype: bool
-
             """
             if self._thread is None:
                 return False
@@ -698,8 +705,7 @@ class MccsSubrack(SKABaseDevice):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
-
+        :type health: :py:class:`ska.base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -710,6 +716,7 @@ class MccsSubrack(SKABaseDevice):
     def simulationMode(self):
         """
         Reports the simulation mode of the device.
+
         Some devices may implement both modes,
         while others will have simulators that set simulationMode
         to True while the real devices always set simulationMode to False.
@@ -721,7 +728,8 @@ class MccsSubrack(SKABaseDevice):
     @simulationMode.write
     def simulationMode(self, value):
         """
-        Set the simulation mode
+        Set the simulation mode.
+
         :param value: The simulation mode, as a SimulationMode value
         """
         super().write_simulationMode(value)
@@ -729,7 +737,7 @@ class MccsSubrack(SKABaseDevice):
         self.hardware_manager.simulation_mode = self._simulation_mode
 
     @attribute(
-        dtype="Devfloat",
+        dtype=("DevFloat",),
         max_dim_x=2,
         label="Backplane temperature",
         unit="Celsius",
@@ -740,12 +748,12 @@ class MccsSubrack(SKABaseDevice):
         Return the temperature of the subrack backplane.
 
         :return: the temperature of the subrack backplane
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.backplane_temperature
+        return tuple(self.hardware_manager.backplane_temperature)
 
     @attribute(
-        dtype="Devfloat",
+        dtype=("DevFloat",),
         max_dim_x=2,
         label="Subrack board temperature",
         unit="Celsius",
@@ -757,12 +765,11 @@ class MccsSubrack(SKABaseDevice):
 
         :return: the temperature of the subrack management board
         :rtype: float
-
         """
-        return self.hardware_manager.board_temperature
+        return tuple(self.hardware_manager.board_temperature)
 
     @attribute(
-        dtype="Devfloat",
+        dtype=("DevFloat",),
         max_dim_x=8,
         label="Board current",
         doc="Method to get current consumption in Ampere for each TPM in each "
@@ -775,13 +782,12 @@ class MccsSubrack(SKABaseDevice):
         the TPMs housed in those bays).
 
         :return: the TPM currents
-        :rtype: list of float
-
+        :rtype: list(float)
         """
-        return self.hardware_manager.board_current
+        return tuple(self.hardware_manager.board_current)
 
     @attribute(
-        dtype="Devfloat",
+        dtype=("DevFloat",),
         max_dim_x=4,
         label="Subrack fans speed (RPM)",
         doc="Rotation speed in RPM of each fan of subrack",
@@ -791,13 +797,12 @@ class MccsSubrack(SKABaseDevice):
         Return the subrack fan speed.
 
         :return: the subrack fan speed
-        :rtype: list of float
-
+        :rtype: list(float)
         """
-        return self.hardware_manager.fan_speed
+        return tuple(self.hardware_manager.fan_speed)
 
     @attribute(
-        dtype="Devfloat",
+        dtype=("DevFloat",),
         max_dim_x=4,
         label="Subrack fans speed (%)",
         doc="PWM in percentage of each Fan of Subrack",
@@ -807,13 +812,12 @@ class MccsSubrack(SKABaseDevice):
         Return the subrack fan speed.
 
         :return: the subrack fan speed in percent
-        :rtype: list of float
-
+        :rtype: list(float)
         """
-        return self.hardware_manager.fan_speed_perc
+        return tuple(self.hardware_manager.fan_speed_perc)
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevString",),
         max_dim_x=4,
         label="Subrack Fan Mode",
         doc="Operation mode of each Fan of Subrack: AUTO or MANUAL",
@@ -821,13 +825,14 @@ class MccsSubrack(SKABaseDevice):
     def subrackFanMode(self):
         """
         Return the subrackFansMode attribute.
+
         :return: the subrack fan mode, 1 AUTO 0 MANUAL
         :rtype: int
         """
-        return self.hardware_manager.subrack_fan_mode
+        return tuple(self.hardware_manager.subrack_fan_mode)
 
     @attribute(
-        dtype="DevShort",
+        dtype=("DevShort",),
         label="TPM On/Off",
         max_dim_x=8,
         doc="Bits 7:0, bit 0 slot 1, bit 7 slot 8, 1 TPM power on, 0 no TPM "
@@ -835,16 +840,16 @@ class MccsSubrack(SKABaseDevice):
     )
     def tpmOnOff(self):
         """
-        Return a list to get Power On status of inserted tpm: 0 off or not present,
-        1 power on
+        Return a list to get Power On status of inserted tpm: 0 off or
+        not present, 1 power on.
 
         :return: the TPMs On or Off
-        :rtype: list of int
+        :rtype: list(int)
         """
-        return self.hardware_manager.tpm_on_off
+        return tuple(self.hardware_manager.tpm_on_off)
 
     @attribute(
-        dtype="DevUShort",
+        dtype=("DevUShort",),
         max_dim_x=8,
         label="TPM present",
         doc="Method to get info about TPM board present on subrack: "
@@ -856,12 +861,12 @@ class MccsSubrack(SKABaseDevice):
         Return info about TPM board present on subrack.
 
         :return: the TPMs detected
-        :rtype: list of int
+        :rtype: list(int)
         """
-        return self.hardware_manager.tpm_present
+        return tuple(self.hardware_manager.tpm_present)
 
     @attribute(
-        dtype="DevUShort",
+        dtype=("DevUShort",),
         max_dim_x=8,
         label="TPM Supply Fault",
         doc="Method to get info about TPM supply fault status. "
@@ -872,24 +877,23 @@ class MccsSubrack(SKABaseDevice):
         Return info about about TPM supply fault status.
 
         :return: the TPM supply fault status
-        :rtype: list of int
+        :rtype: list(int)
         """
-        return self.hardware_manager.tpm_supply_fault
+        return tuple(self.hardware_manager.tpm_supply_fault)
 
-    @attribute(dtype="Devfloat", label="TPM temperatures", max_dim_x=8)
+    @attribute(dtype=("DevFloat",), label="TPM temperatures", max_dim_x=8)
     def tpmTemperatures(self):
         """
         Return the temperatures of the subrack bays (hence the
         temperatures of the TPMs housed in those bays).
 
         :return: the TPM temperatures
-        :rtype: list of float
-
+        :rtype: list(float)
         """
-        return self.hardware_manager.tpm_temperatures
+        return tuple(self.hardware_manager.tpm_temperatures)
 
     @attribute(
-        dtype="DevFloat",
+        dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM power",
         doc="Method to get power consumption of selected tpm",
@@ -897,13 +901,14 @@ class MccsSubrack(SKABaseDevice):
     def tpmPower(self):
         """
         Return the tpmPower attribute.
+
         :return: the TPM powers
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.tpm_power
+        return tuple(self.hardware_manager.tpm_power)
 
     @attribute(
-        dtype="DevFloat",
+        dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM voltage",
         doc="Method to get voltage consumption of selected tpm",
@@ -911,10 +916,11 @@ class MccsSubrack(SKABaseDevice):
     def tpmVoltage(self):
         """
         Return the tpmVoltage attribute.
+
         :return: the TPM voltages
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.tpm_voltage
+        return tuple(self.hardware_manager.tpm_voltage)
 
     @attribute(dtype=(float,), label="TPM currents", max_dim_x=8)
     def tpmCurrents(self):
@@ -925,10 +931,10 @@ class MccsSubrack(SKABaseDevice):
         :return: the TPM currents
         :rtype: list(float)
         """
-        return self.hardware_manager.tpm_currents
+        return tuple(self.hardware_manager.tpm_currents)
 
     @attribute(
-        dtype="DevFloat",
+        dtype=("DevFloat",),
         max_dim_x=3,
         label="PS fan speed",
         doc="Method to get the power supply fan speed",
@@ -936,13 +942,14 @@ class MccsSubrack(SKABaseDevice):
     def psFanSpeed(self):
         """
         Return the psFanSpeed attribute.
+
         :return: the ps fan speed
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.ps_fanspeed
+        return tuple(self.hardware_manager.ps_fanspeed)
 
     @attribute(
-        dtype="DevFloat",
+        dtype=("DevFloat",),
         max_dim_x=3,
         label="PS current",
         doc="Method to get the power supply current",
@@ -950,13 +957,14 @@ class MccsSubrack(SKABaseDevice):
     def psIout(self):
         """
         Return the ps Iout attribute.
+
         :return: the ps current
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.ps_current
+        return tuple(self.hardware_manager.ps_current)
 
     @attribute(
-        dtype="DevFloat",
+        dtype=("DevFloat",),
         max_dim_x=3,
         label="PS Power",
         doc="Method to get the PS power",
@@ -964,13 +972,14 @@ class MccsSubrack(SKABaseDevice):
     def psPout(self):
         """
         Return the psPout attribute.
+
         :return: the ps power
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.ps_power
+        return tuple(self.hardware_manager.ps_power)
 
     @attribute(
-        dtype="DevFloat",
+        dtype=("DevFloat",),
         max_dim_x=3,
         label="PS voltage",
         doc="Method to get the power supply voltage",
@@ -978,10 +987,11 @@ class MccsSubrack(SKABaseDevice):
     def psVout(self):
         """
         Return the psVout attribute.
+
         :return: the ps voltages
-        :rtype: list of float
+        :rtype: list(float)
         """
-        return self.hardware_manager.ps_voltage
+        return tuple(self.hardware_manager.ps_voltage)
 
     # --------
     # Commands
@@ -997,7 +1007,6 @@ class MccsSubrack(SKABaseDevice):
             turn the subrack off and on, in which case this command would be
             implemented by passing the command to the tango device that manages
             the upstream hardware
-
         """
 
         def do(self):
@@ -1006,11 +1015,10 @@ class MccsSubrack(SKABaseDevice):
             (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
             command for this :py:class:`.MccsSubrack` device.
 
-            :return: A tuple containing a return code and a string
+            :return: A tuple containing a return code gand a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = (
@@ -1032,7 +1040,6 @@ class MccsSubrack(SKABaseDevice):
             turn the subrack off and on, in which case this command would
             be implemented by passing the command to the tango device
             that manages the upstream hardware.
-
         """
 
         def do(self):
@@ -1044,8 +1051,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.on()
@@ -1061,7 +1067,6 @@ class MccsSubrack(SKABaseDevice):
             would turn the subrack off and on, in which case this command
             would be implemented by passing the command to the tango
             device that manages the upstream hardware.
-
         """
 
         def do(self):
@@ -1073,8 +1078,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = (
@@ -1114,7 +1118,6 @@ class MccsSubrack(SKABaseDevice):
 
         :return: whether the specified TPM is on or not
         :rtype: bool
-
         """
         handler = self.get_command_object("IsTpmOn")
         return handler(argin)
@@ -1136,11 +1139,11 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.turn_on_tpm(argin)
-            return create_return(success, f"TPM {argin} power-up")
+            return create_return(success, f"TPM {argin} power-on")
 
     @command(
         dtype_in="DevULong",
@@ -1160,8 +1163,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(argin)
@@ -1185,12 +1187,12 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.turn_off_tpm(argin)
             print(f"success: {success}")
-            return create_return(success, f"TPM {argin} power-down")
+            return create_return(success, f"TPM {argin} power-off")
 
     @command(
         dtype_in="DevULong",
@@ -1209,8 +1211,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(argin)
@@ -1222,7 +1223,6 @@ class MccsSubrack(SKABaseDevice):
 
         The PowerUp command turns on all of the TPMs that are powered by
         this subrack.
-
         """
 
         def do(self):
@@ -1234,7 +1234,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.turn_on_tpms()
@@ -1252,8 +1252,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerUp")
         (return_code, message) = handler()
@@ -1265,7 +1264,6 @@ class MccsSubrack(SKABaseDevice):
 
         The PowerDown command turns off all of the TPMs that are powered
         by this subrack.
-
         """
 
         def do(self):
@@ -1277,7 +1275,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.turn_off_tpms()
@@ -1295,8 +1293,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerDown")
         (return_code, message) = handler()
@@ -1305,21 +1302,23 @@ class MccsSubrack(SKABaseDevice):
     class SetSubrackFanSpeedCommand(ResponseCommand):
         """
         Class for handling the SetSubrackFanSpeed() command.
+
         This command set the backplane fan speed.
         """
 
         def do(self, argin):
             """
-            Hook for implementation of :py:meth:'.MccsSubrack.SetSubrackFanSpeed'
-            command functionality.
+            Hook for implementation of
+            :py:meth:'.MccsSubrack.SetSubrackFanSpeed' command
+            functionality.
+
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
 
             :return: A tuple containing a return code and a string message
                 indicating status. The message is for information purpose only.
-            :rtype: (:py:class:'~ska.base.commands.ResultCode', str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             :raises ValueError: if the JSON input lacks mandatory parameters
-
             """
             hardware_manager = self.target
 
@@ -1343,7 +1342,7 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def SetSubrackFanSpeed(self, argin):
         """
-        Set the subrack backplane fan speed
+        Set the subrack backplane fan speed.
 
         :param argin: json dictionary with mandatory keywords:
 
@@ -1355,8 +1354,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("SetSubrackFanSpeed")
         (return_code, message) = handler(argin)
@@ -1367,14 +1365,12 @@ class MccsSubrack(SKABaseDevice):
         Class for handling the SetFanMode() command.
 
         This command can set the selected fan to manual or auto mode.
-
         """
 
         def do(self, argin):
             """
             Hook for the implementation of
-            py:meth:`.MccsSubrack.SetFanMode`
-            command functionality.
+            py:meth:`.MccsSubrack.SetFanMode` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -1382,7 +1378,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                     message indicating status. The message is for
                     information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
             hardware_manager = self.target
@@ -1406,7 +1402,7 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def SetFanMode(self, argin):
         """
-        Set Fan Operational Mode: 1 AUTO, 0 MANUAL
+        Set Fan Operational Mode: 1 AUTO, 0 MANUAL.
 
         :param argin: json dictionary with mandatory keywords:
 
@@ -1416,8 +1412,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("SetFanMode")
         (return_code, message) = handler(argin)
@@ -1426,14 +1421,14 @@ class MccsSubrack(SKABaseDevice):
     class SetPSFanSpeedCommand(ResponseCommand):
         """
         Class for handling the SetPSFanSpeed command.
+
         This command set the selected power supply fan speed.
         """
 
         def do(self, argin):
             """
             Hook for the implementation of
-            py:meth:`.MccsSubrack.SetPSFanSpeed`
-            command functionality.
+            py:meth:`.MccsSubrack.SetPSFanSpeed` command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -1441,7 +1436,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                     message indicating status. The message is for
                     information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
             hardware_manager = self.target
@@ -1466,7 +1461,7 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def SetPSFanSpeed(self, argin):
         """
-        Set the selected power supply fan speed
+        Set the selected power supply fan speed.
 
         :param argin: json dictionary with mandatory keywords:
 
@@ -1478,8 +1473,7 @@ class MccsSubrack(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-
+        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("SetPSFanSpeed")
         (return_code, message) = handler(argin)
@@ -1491,7 +1485,6 @@ class MccsSubrack(SKABaseDevice):
 
         :param health_state: The new health state
         :type health_state: :py:class:`ska.base.control_model.HealthState`
-
         """
         self.push_change_event("healthState", health_state)
         self._health_state = health_state
@@ -1514,7 +1507,6 @@ def main(args=None, **kwargs):
 
     :return: exit code
     :rtype: int
-
     """
 
     return MccsSubrack.run_server(args=args, **kwargs)

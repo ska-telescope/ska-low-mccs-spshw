@@ -695,18 +695,21 @@ class TestMccsSubrack(object):
         """
         device_under_test.On()
         assert (
-            device_under_test.backplaneTemperature
+            list(device_under_test.backplaneTemperature)
             == SubrackBoardSimulator.DEFAULT_BACKPLANE_TEMPERATURE
         )
         assert (
-            device_under_test.boardTemperature
+            list(device_under_test.boardTemperature)
             == SubrackBoardSimulator.DEFAULT_BOARD_TEMPERATURE
         )
         assert (
-            device_under_test.boardCurrent
+            list(device_under_test.boardCurrent)
             == SubrackBoardSimulator.DEFAULT_BOARD_CURRENT
         )
-        assert device_under_test.fanSpeed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
+        assert (
+            list(device_under_test.subrackFanSpeed)
+            == SubrackBoardSimulator.DEFAULT_FAN_SPEED
+        )
         assert (
             list(device_under_test.tpmTemperatures)
             == [SubrackBaySimulator.DEFAULT_TEMPERATURE]

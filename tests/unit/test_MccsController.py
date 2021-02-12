@@ -430,7 +430,7 @@ class TestMccsController:
                 "low-mccs/station/002": _station_mock(),
             }
 
-        def test_Allocate2(self, device_under_test, mocker, helpers):
+        def test_Allocate(self, device_under_test, mocker, helpers):
             """
             Test the Allocate command (including end of command event
             testing).

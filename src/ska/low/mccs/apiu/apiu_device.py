@@ -23,6 +23,7 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     OnOffHardwareManager,
+    PowerMode,
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
@@ -124,12 +125,12 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         Initialise a new APIUHardwareManager instance.
 
-        :param antenna_count: number of antennas that are attached to
-            the APIU
-        :type antenna_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
+        :param antenna_count: number of antennas that are attached to
+            the APIU
+        :type antenna_count: int
         """
         hardware_factory = _factory or APIUHardwareFactory(
             simulation_mode == SimulationMode.TRUE, antenna_count
@@ -257,6 +258,15 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
             if not self._factory.hardware.is_antenna_on(antenna_id):
                 return False
         return True
+
+    def are_antennas_on(self):
+        """
+        Returns whether each antenna is powered or not.
+
+        :return: whether each antenna is powered or not.
+        :rtype: list(bool)
+        """
+        return self._factory.hardware.are_antennas_on()
 
     def is_antenna_on(self, logical_antenna_id):
         """
@@ -494,6 +504,21 @@ class MccsAPIU(SKABaseDevice):
             self._interrupt = True
             return True
 
+        def succeeded(self):
+            """
+            Called when initialisation completes.
+
+            Here we override the base class default implementation to
+            ensure that MccsAPIU transitions to a state that reflects
+            the state of its hardware
+            """
+            device = self.target
+            if device.hardware_manager.power_mode == PowerMode.OFF:
+                action = "init_succeeded_disable"
+            else:
+                action = "init_succeeded_off"
+            self.state_model.perform_action(action)
+
     def always_executed_hook(self):
         """
         Method always executed before any TANGO command is executed.
@@ -530,6 +555,26 @@ class MccsAPIU(SKABaseDevice):
             return
         self._health_state = health
         self.push_change_event("healthState", health)
+
+    @attribute(dtype=int, label="antennas count")
+    def antennaCount(self):
+        """
+        Return the number of antennas connected to this APIU.
+
+        :return: the number of antennas connected to this APIU
+        :rtype: int
+        """
+        return self.hardware_manager.antenna_count
+
+    @attribute(dtype=(bool,), max_dim_x=256, label="areAntennasOn")
+    def areAntennasOn(self):
+        """
+        Return whether each antenna is powered or not.
+
+        :return: whether each antenna is powered or not
+        :rtype: list(bool)
+        """
+        return self.hardware_manager.are_antennas_on()
 
     @attribute(dtype="DevDouble", label="Voltage", unit="Volts", polling_period=1000)
     def voltage(self):

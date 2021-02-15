@@ -73,6 +73,10 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         super().init_device()
         self.logger.warn("I am a DEMO tile!")
 
+    # class InitCommand(MccsTile.InitCommand):
+    #     def _initialise_power_management(self, device):
+    #         super()._initialise_power_management(self, device)
+
     @command()
     def TakeOffline(self):
         """
@@ -93,6 +97,29 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         Implemented this way because webjive.
         """
         self.write_adminMode(AdminMode.ONLINE)
+        self.Off()
+        self.On()
+
+    @command()
+    def DemoOff(self):
+        """
+        Put the Tile into DISABLE state (i.e. turn the TPM off).
+
+        :todo: This is needed for demo purposes, just until we have
+            resolved SP-1501.
+        """
+        if self.get_state() == DevState.ON:
+            self.Off()
+        self.Disable()
+
+    @command()
+    def DemoOn(self):
+        """
+        Put the tile into ON state (i.e. turn the TPM on).
+
+        :todo: This is needed for demo purposes, just until we have
+            resolved SP-1501.
+        """
         self.Off()
         self.On()
 

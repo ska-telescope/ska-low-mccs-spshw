@@ -13,12 +13,6 @@
                                 "low-mccs/station/001",
                                 "low-mccs/station/002"
                             ],
-                            "MccsTiles": [
-                                "low-mccs/tile/0001",
-                                "low-mccs/tile/0002",
-                                "low-mccs/tile/0003",
-                                "low-mccs/tile/0004"
-                            ],
                             "MccsStationBeams": [
                                 "low-mccs/beam/001",
                                 "low-mccs/beam/002",
@@ -218,19 +212,6 @@
                             "SubarrayBeamId": [
                                 "4"
                             ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsSubrack": {
-            "subrack_01": {
-                "MccsSubrack": {
-                    "low-mccs/subrack/01": {
-                        "properties": {
                             "LoggingLevelDefault": [
                                 "3"
                             ]

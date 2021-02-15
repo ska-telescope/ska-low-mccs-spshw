@@ -96,7 +96,7 @@ class EventSubscriptionHandler:
 
         self._subscribe()
 
-    @backoff.on_exception(backoff.expo, DevFailed, factor=1, max_time=3)
+    @backoff.on_exception(backoff.expo, DevFailed, factor=1, max_time=30)
     def _subscribe(self):
         """
         Subscribe to a change event.

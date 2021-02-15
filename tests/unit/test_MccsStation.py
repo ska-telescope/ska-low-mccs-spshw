@@ -467,7 +467,6 @@ class TestInitCommand:
 
         with init_command._hang_lock:
             init_command()
-            time.sleep(0.1)
 
             # We got the hang lock first, so the initialisation thread will hang in
             # device pool manager initialisation until we release it.

@@ -59,7 +59,7 @@ def devices_to_load():
     }
 
 
-def sleep(seconds=0.1):
+def sleep(seconds=0.2):
     """
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.

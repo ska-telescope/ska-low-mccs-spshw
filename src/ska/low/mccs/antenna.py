@@ -114,6 +114,19 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
             self._is_connected = False
             raise
 
+        super().__init__()
+
+    @property
+    def is_connected(self):
+        """
+        Returns whether this simulator is connected to the hardware.
+        This should be implemented to return a bool.
+
+        :return: whether the device is connected to the hardware or not
+        :rtype: bool
+        """
+        return self._is_connected
+
     def on(self):
         """
         Turn the antenna on (by telling the APIU to turn the right
@@ -215,6 +228,19 @@ class AntennaTileProxy(HardwareDriver):
             self._is_connected = False
             raise
 
+        super().__init__()
+
+    @property
+    def is_connected(self):
+        """
+        Returns whether this simulator is connected to the hardware.
+        This should be implemented to return a bool.
+
+        :return: whether the device is connected to the hardware or not
+        :rtype: bool
+        """
+        return self._is_connected
+
 
 class AntennaHardwareDriver(OnOffHardwareDriver):
     """
@@ -258,6 +284,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
             if tile_fqdn is not None
             else None
         )
+        super().__init__()
 
     @property
     def is_connected(self):

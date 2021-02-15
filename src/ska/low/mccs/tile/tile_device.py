@@ -18,7 +18,6 @@ import json
 import numpy as np
 import threading
 import os.path
-import time
 
 from tango import DebugIt, DevFailed, EnsureOmniThread, DevState
 from tango.server import attribute, command
@@ -553,11 +552,14 @@ class MccsTile(SKABaseDevice):
             """
             device = self.target
             if device.power_manager.power_mode == PowerMode.OFF:
+                device.hardware_manager.is_connectible = False
                 action = "init_succeeded_disable"
-            elif device.hardware_manager.is_programmed:
-                action = "init_succeeded_on"
             else:
-                action = "init_succeeded_standby"
+                device.hardware_manager.is_connectible = True
+                if device.hardware_manager.is_programmed:
+                    action = "init_succeeded_on"
+                else:
+                    action = "init_succeeded_standby"
             self.state_model.perform_action(action)
 
     class DisableCommand(SKABaseDevice.DisableCommand):
@@ -578,6 +580,7 @@ class MccsTile(SKABaseDevice):
             """
             result = self.target.power_manager.off()
             if result is None:
+                self.target.hardware_manager.is_connectible = False
                 return (
                     ResultCode.OK,
                     "TPM was already off: nothing to do to disable device.",
@@ -588,11 +591,6 @@ class MccsTile(SKABaseDevice):
                     "Failed to disable device: could not turn TPM off",
                 )
 
-            # TODO: This is a sad state of affairs. We need to wait a sec here to drain
-            # the events system. Otherwise we run the risk of transitioning as a result
-            # of command success, only to receive an old event telling us of an earlier
-            # change in TPM power mode, making us transition again.
-            time.sleep(1.0)
             return (ResultCode.OK, "Device disabled; TPM has been turned off")
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
@@ -635,11 +633,7 @@ class MccsTile(SKABaseDevice):
                     "Failed to go to standby: could not turn TPM on",
                 )
 
-            # TODO: This is a sad state of affairs. We need to wait a sec here to drain
-            # the events system. Otherwise we run the risk of transitioning as a result
-            # of command success, only to receive an old event telling us of an earlier
-            # change in TPM power mode, making us transition again.
-            # time.sleep(1.0)
+            device.hardware_manager.is_connectible = True
             return (ResultCode.OK, "TPM has been turned on")
 
     @command(
@@ -710,6 +704,8 @@ class MccsTile(SKABaseDevice):
                     ResultCode.FAILED,
                     "Failed to go to OFF: could not turn TPM on",
                 )
+
+            device.hardware_manager.is_connectible = True
 
             # TODO: Okay, the TPM was been powered on. Now we need to
             # get it fully operational.
@@ -792,10 +788,12 @@ class MccsTile(SKABaseDevice):
         if power_mode == PowerMode.UNKNOWN:
             self.state_model.perform_action("fatal_error")
         elif power_mode == PowerMode.OFF:
+            self.hardware_manager.is_connectible = False
             if self.get_state() == DevState.ON:
                 self.state_model.perform_action("off_succeeded")
             self.state_model.perform_action("disable_succeeded")
         elif power_mode == PowerMode.ON:
+            self.hardware_manager.is_connectible = True
             self.state_model.perform_action("off_succeeded")
 
     # ----------

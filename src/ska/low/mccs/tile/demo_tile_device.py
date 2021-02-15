@@ -73,10 +73,6 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         super().init_device()
         self.logger.warn("I am a DEMO tile!")
 
-    # class InitCommand(MccsTile.InitCommand):
-    #     def _initialise_power_management(self, device):
-    #         super()._initialise_power_management(self, device)
-
     @command()
     def TakeOffline(self):
         """

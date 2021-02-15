@@ -210,7 +210,14 @@ class MCCSDeviceTestContext:
         self._ready_condition = ready_condition
         self._source_setting = source
 
-    @backoff.on_predicate(backoff.expo, factor=0.1, max_time=10)
+    def _check_ready_condition(self, device):
+        try:
+            return self._ready_condition(device)
+        except tango.DevFailed as dev_failed:
+            print(dev_failed)
+            return False
+
+    @backoff.on_predicate(backoff.expo, factor=0.1, max_time=20)
     def _backoff_retry_ready(self, unready_devices):
         """
         Implements exponential backoff-retry loop checking remaining
@@ -225,8 +232,12 @@ class MCCSDeviceTestContext:
         :rtype: bool
         """
         unready_devices[:] = [
-            device for device in unready_devices if not self._ready_condition(device)
+            device
+            for device in unready_devices
+            if not self._check_ready_condition(device)
         ]
+        if unready_devices:
+            print(f"The following devices still aren't ready: {unready_devices}.")
         return not unready_devices
 
     def _check_ready(self):
@@ -360,3 +371,17 @@ def logger():
     :rtype logger: :py:class:`logging.Logger`
     """
     return logging.getLogger()
+
+
+@pytest.fixture()
+def mock_callback(mocker):
+    """
+    Fixture that returns a mock to use as a callback.
+
+    :param mocker: fixture that wraps unittest.Mock
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+
+    :return: a mock to pass as a callback
+    :rtype: :py:class:`unittest.Mock`
+    """
+    return mocker.Mock()

@@ -137,11 +137,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         this.
     """
 
-    NUMBER_OF_BAYS = 8
-    """
-    The number of bays in this subrack.
-    """
-
     DEFAULT_BACKPLANE_TEMPERATURE = 38.0
     """
     The default initial simulated temperature for the subrack backplane;
@@ -168,6 +163,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def __init__(
         self,
+        tpm_count,
         backplane_temperature=DEFAULT_BACKPLANE_TEMPERATURE,
         board_temperature=DEFAULT_BOARD_TEMPERATURE,
         board_current=DEFAULT_BOARD_CURRENT,
@@ -179,6 +175,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         Initialise a new instance.
 
+        :param tpm_count: number of TPMs that are attached to
+            this subrack simulator
+        :type tpm_count: int
         :param backplane_temperature: the initial temperature of the
             subrack backplane
         :type backplane_temperature: float
@@ -210,9 +209,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._board_current = board_current
         self._fan_speed = fan_speed
 
-        self._bays = _bays or [
-            SubrackBaySimulator() for count in range(self.NUMBER_OF_BAYS)
-        ]
+        self._bays = _bays or [SubrackBaySimulator() for i in range(tpm_count)]
 
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
@@ -335,6 +332,23 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         return len(self._bays)
 
+    def _check_tpm_id(self, logical_tpm_id):
+        """
+        Helper method to check that a TPM id passed as an argument is
+        within range.
+
+        :param logical_tpm_id: the id to check
+        :type logical_tpm_id: int
+
+        :raises ValueError: if the tpm id is out of range for this
+            subrack
+        """
+        if logical_tpm_id < 1 or logical_tpm_id > self.tpm_count:
+            raise ValueError(
+                f"Cannot access TPM {logical_tpm_id}; "
+                f"this subrack has {self.tpm_count} antennas."
+            )
+
     @property
     def tpm_temperatures(self):
         """
@@ -403,8 +417,22 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             is off
         :rtype: bool or None
         """
-        self.check_power_mode(PowerMode.ON)
+        self._check_tpm_id(logical_tpm_id)
+        if self.power_mode != PowerMode.ON:
+            return None
         return self._bays[logical_tpm_id - 1].power_mode == PowerMode.ON
+
+    def are_tpms_on(self):
+        """
+        Returns whether each TPM is powered or not. Or None if the
+        subrack itself is turned off.
+
+        :return: whether each TPM is powered or not.
+        :rtype: list(bool) or None
+        """
+        if self.power_mode != PowerMode.ON:
+            return None
+        return [bay.power_mode == PowerMode.ON for bay in self._bays]
 
     def turn_off_tpm(self, logical_tpm_id):
         """
@@ -415,6 +443,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type logical_tpm_id: int
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_tpm_id(logical_tpm_id)
         self._bays[logical_tpm_id - 1].off()
 
     def turn_on_tpm(self, logical_tpm_id):
@@ -426,6 +455,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type logical_tpm_id: int
         """
         self.check_power_mode(PowerMode.ON)
+        self._check_tpm_id(logical_tpm_id)
         self._bays[logical_tpm_id - 1].on()
 
     def turn_on_tpms(self):

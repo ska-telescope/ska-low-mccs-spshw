@@ -18,8 +18,9 @@ import json
 import numpy as np
 import threading
 import os.path
+import time
 
-from tango import DebugIt, EnsureOmniThread, DevState
+from tango import DebugIt, DevFailed, EnsureOmniThread, DevState
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -27,7 +28,7 @@ from ska.base import SKABaseDevice
 from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
-from ska.low.mccs.events import EventManager
+from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import PowerMode
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.tile import TileHardwareManager
@@ -36,15 +37,15 @@ from ska.low.mccs.utils import backoff_connect
 
 class TilePowerManager:
     """
-    This class performs tile management on behalf of the MCCS Tile
-    device.
+    This class performs power management of the TPM on behalf of the
+    MCCS Tile device.
 
-    It has a simply job; all it needs to do is talk to the subrack that
-    houses this TPM, to ensure that the TPM is supplied/denied power as
-    required.
+    It has a simple job; all it needs to do is talk to the subrack that
+    houses this TPM, to keep track of ensure that the TPM is
+    supplied/denied power as required,
     """
 
-    def __init__(self, subrack_fqdn, subrack_bay, logger):
+    def __init__(self, subrack_fqdn, subrack_bay, logger, callback):
         """
         Initialise a new TilePowerManager.
 
@@ -58,17 +59,23 @@ class TilePowerManager:
         :type subrack_bay: int
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
+        :param callback: to be called when the power mode changes
+        :type callback: callable
         """
         self._logger = logger
-        self._power_mode = PowerMode.UNKNOWN
 
-        self._subrack = backoff_connect(subrack_fqdn, logger)
+        self._callback = callback
+
+        self._subrack = backoff_connect(subrack_fqdn, logger, wait=True)
         self._subrack_bay = subrack_bay
 
-        if not self._subrack.IsTpmOn(self._subrack_bay):
-            self._power_mode = PowerMode.OFF
-        else:
-            self._power_mode = PowerMode.ON
+        self._power_mode = self._read_power_mode()
+        self._callback(self._power_mode)
+
+        self.subrack_event_handler = EventSubscriptionHandler(
+            self._subrack, subrack_fqdn, "areTpmsOn", logger
+        )
+        self.subrack_event_handler.register_callback(self._subrack_power_changed)
 
     def off(self):
         """
@@ -81,12 +88,12 @@ class TilePowerManager:
         :raises NotImplementedError: if our call to PowerOffTpm gets a
             ResultCode other than OK or FAILED
         """
-        if not self._subrack.IsTpmOn(self._subrack_bay):
+        if self._power_mode == PowerMode.OFF:
             return None  # already off
 
         [[result_code], [_]] = self._subrack.PowerOffTpm(self._subrack_bay)
         if result_code == ResultCode.OK:
-            self._power_mode = PowerMode.OFF
+            self._update_power_mode(PowerMode.OFF)
             return True
         elif result_code == ResultCode.FAILED:
             return False
@@ -106,12 +113,12 @@ class TilePowerManager:
         :raises NotImplementedError: if our call to PowerOnTpm gets a
             ResultCode other than OK or FAILED
         """
-        if self._subrack.IsTpmOn(self._subrack_bay):
-            return None  # already off
+        if self._power_mode == PowerMode.ON:
+            return None  # already on
 
         [[result_code], [_]] = self._subrack.PowerOnTpm(self._subrack_bay)
         if result_code == ResultCode.OK:
-            self._power_mode = PowerMode.ON
+            self._update_power_mode(PowerMode.ON)
             return True
         elif result_code == ResultCode.FAILED:
             return False
@@ -129,6 +136,53 @@ class TilePowerManager:
         :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
         return self._power_mode
+
+    def _subrack_power_changed(self, event_name, event_value, event_quality):
+        """
+        Callback that this device registers with the event manager, so
+        that it is informed when the subrack power changes.
+
+        Because events may be delayed, a rapid off-on command sequence
+        can result in an "off" event arriving after the on() command has
+        been executed. We therefore don't put our full trust in these
+        events.
+
+        :param event_name: name of the event; will always be
+            "areTpmsOn" for this callback
+        :type event_name: str
+        :param event_value: the new attribute value
+        :type event_value: list(bool)
+        :param event_quality: the quality of the change event
+        :type event_quality: :py:class:`tango.AttrQuality`
+        """
+        assert event_name.lower() == "areTpmsOn".lower(), (
+            "subrack 'areTpmsOn' attribute changed callback called but "
+            f"event_name is {event_name}."
+        )
+
+        according_to_event = (
+            PowerMode.ON if event_value[self._subrack_bay - 1] else PowerMode.OFF
+        )
+        according_to_command = self._read_power_mode()
+        if according_to_event != according_to_command:
+            self._logger.warning(
+                f"Received a TPM power change event for {according_to_event.name} but "
+                f"a manual read says {according_to_command.name}; discarding."
+            )
+        self._update_power_mode(according_to_command)
+
+    def _read_power_mode(self):
+        try:
+            is_tpm_on = self._subrack.IsTpmOn(self._subrack_bay)
+        except DevFailed:
+            return PowerMode.UNKNOWN
+        else:
+            return PowerMode.ON if is_tpm_on else PowerMode.OFF
+
+    def _update_power_mode(self, power_mode):
+        if self._power_mode != power_mode:
+            self._power_mode = power_mode
+            self._callback(power_mode)
 
 
 class MccsTile(SKABaseDevice):
@@ -455,7 +509,7 @@ class MccsTile(SKABaseDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             device.power_manager = TilePowerManager(
-                device.SubrackFQDN, device.SubrackBay, self.logger
+                device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed
             )
 
             power_args = (device, device.state_model, self.logger)
@@ -523,6 +577,12 @@ class MccsTile(SKABaseDevice):
                     ResultCode.FAILED,
                     "Failed to disable device: could not turn TPM off",
                 )
+
+            # TODO: This is a sad state of affairs. We need to wait a sec here to drain
+            # the events system. Otherwise we run the risk of transitioning as a result
+            # of command success, only to receive an old event telling us of an earlier
+            # change in TPM power mode, making us transition again.
+            time.sleep(1.0)
             return (ResultCode.OK, "Device disabled; TPM has been turned off")
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
@@ -559,13 +619,18 @@ class MccsTile(SKABaseDevice):
                     ResultCode.OK,
                     "TPM was re-initialised; device is now on standby.",
                 )
-            if result:
-                return (ResultCode.OK, "TPM has been turned on")
             if not result:
                 return (
                     ResultCode.FAILED,
                     "Failed to go to standby: could not turn TPM on",
                 )
+
+            # TODO: This is a sad state of affairs. We need to wait a sec here to drain
+            # the events system. Otherwise we run the risk of transitioning as a result
+            # of command success, only to receive an old event telling us of an earlier
+            # change in TPM power mode, making us transition again.
+            # time.sleep(1.0)
+            return (ResultCode.OK, "TPM has been turned on")
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -629,20 +694,26 @@ class MccsTile(SKABaseDevice):
                 if not device.hardware_manager.is_programmed:
                     device.hardware_manager.download_firmware("firmware1")
                 return (ResultCode.OK, "TPM is on and programmed; device is now off.")
-            if result:
-                # TODO: Okay, the TPM was been powered on. Now we need to
-                # get it fully operational.
-                # This needs attention from an expert.
-                # But for now, let's initialise it and pretend to flash some firmware.
 
-                # device.hardware_manager.initialise()  # raises NotImplementedError
-                device.hardware_manager.download_firmware("firmware1")
-                return (ResultCode.OK, "TPM has been turned on")
             if not result:
                 return (
                     ResultCode.FAILED,
-                    "Failed to go to standby: could not turn TPM on",
+                    "Failed to go to OFF: could not turn TPM on",
                 )
+
+            # TODO: Okay, the TPM was been powered on. Now we need to
+            # get it fully operational.
+            # This needs attention from an expert.
+            # But for now, let's initialise it and pretend to flash some firmware.
+
+            # device.hardware_manager.initialise()  # raises NotImplementedError
+            device.hardware_manager.download_firmware("firmware1")
+
+            # TODO: This is a sad state of affairs. We need to wait a sec here to drain
+            # the events system. Otherwise we run the risk of transitioning as a result
+            # of command success, only to receive an old event telling us of an earlier
+            # change in TPM power mode, making us transition again.
+            return (ResultCode.OK, "TPM has been turned on")
 
     def always_executed_hook(self):
         """
@@ -666,7 +737,7 @@ class MccsTile(SKABaseDevice):
         pass
 
     # ----------
-    # Attributes
+    # Callbacks
     # ----------
     def health_changed(self, health):
         """
@@ -682,6 +753,44 @@ class MccsTile(SKABaseDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
+    def power_changed(self, power_mode):
+        """
+        Callback to be called whenever the TilePowerManager's record of
+        the power mode of the TPM changes; responsible for updating the
+        tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :todo: There's way too much explicit management of state in this
+            callback. We need to get this into the state machine so we
+            can simply
+            ``self.state_model.perform_action("tpm_was_turned_off")``.
+
+        :param power_mode: the new power_mode
+        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        """
+        if self.get_state() == DevState.INIT:
+            # Don't respond to power mode changes while initialising.
+            # We'll worry about it when it comes time to transition out
+            # of INIT.
+            return
+
+        # TODO: For now, we need to get our devices to OFF state
+        # (the highest state of device readiness for a device that
+        # isn't actually on) before we can put them into ON state.
+        # This is a counterintuitive mess that will be fixed in
+        # SP-1501.
+        if power_mode == PowerMode.UNKNOWN:
+            self.state_model.perform_action("fatal_error")
+        elif power_mode == PowerMode.OFF:
+            if self.get_state() == DevState.ON:
+                self.state_model.perform_action("off_succeeded")
+            self.state_model.perform_action("disable_succeeded")
+        elif power_mode == PowerMode.ON:
+            self.state_model.perform_action("off_succeeded")
+
+    # ----------
+    # Attributes
+    # ----------
     @attribute(dtype="DevLong")
     def logicalTileId(self):
         """

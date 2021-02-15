@@ -173,11 +173,21 @@ class TilePowerManager:
 
     def _read_power_mode(self):
         try:
+            subrack_state = self._subrack.state()
+        except DevFailed:
+            return PowerMode.UNKNOWN
+
+        if subrack_state == DevState.DISABLE:
+            return PowerMode.OFF
+        elif subrack_state not in [DevState.OFF, DevState.ON]:
+            return PowerMode.UNKNOWN
+
+        try:
             is_tpm_on = self._subrack.IsTpmOn(self._subrack_bay)
         except DevFailed:
             return PowerMode.UNKNOWN
-        else:
-            return PowerMode.ON if is_tpm_on else PowerMode.OFF
+
+        return PowerMode.ON if is_tpm_on else PowerMode.OFF
 
     def _update_power_mode(self, power_mode):
         if self._power_mode != power_mode:

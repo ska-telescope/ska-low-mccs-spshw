@@ -114,6 +114,7 @@ class TestMccsIntegrationTmc:
         # Call the specified command asynchronously
         async_id = device.command_inout_asynch(command, argin)
         try:
+            # HACK: increasing the timeout until we can make some commands synchronous
             result = device.command_inout_reply(async_id, timeout=5000)
             if expected_result is None:
                 assert result is None

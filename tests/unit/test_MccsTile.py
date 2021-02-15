@@ -17,7 +17,7 @@ import itertools
 import threading
 
 import pytest
-from tango import AttrQuality, DevFailed, EventType
+from tango import AttrQuality, DevFailed, DevState, EventType
 
 from ska.base import DeviceStateModel
 from ska.base.control_model import HealthState, SimulationMode
@@ -59,7 +59,7 @@ def initial_mocks(mock_factory, request):
     :rtype: dict
     """
 
-    def _subrack_mock(is_on=False, result_code=ResultCode.OK):
+    def _subrack_mock(state=DevState.ON, is_on=False, result_code=ResultCode.OK):
         """
         Sets up a mock for a :py:class:`tango.DeviceProxy` that
         connects to an :py:class:`~ska.low.mccs.MccsSubrack`
@@ -70,6 +70,9 @@ def initial_mocks(mock_factory, request):
         :py:meth:`~ska.low.mccs.MccsController.Release`
         commands.
 
+        :param state: the device state that this mock subrack device
+            should report
+        :type state: :py:class:`tango.DevState`
         :param is_on: whether this mock subrack device should report
             that its TPMs are turned on
         :type is_on: bool
@@ -82,6 +85,7 @@ def initial_mocks(mock_factory, request):
         :rtype: :py:class:`unittest.Mock`
         """
         mock = mock_factory()
+        mock.state.return_value = state
         mock.IsTpmOn.return_value = is_on
         mock.PowerOffTpm.return_value = [
             [result_code],
@@ -187,14 +191,21 @@ class TestTilePowerManager:
     @pytest.mark.parametrize(
         ("initial_mocks", "mock_factory", "expected_power_mode"),
         [
-            # ({"is_on": A}, {"is_on": B}, B) means
-            # If subrack.IsTpmOn() returns A,
-            # And change event subscription on subrack.areTpmsOn returns a B event
-            # Then the power mode should end up C.
-            ({"is_on": False}, {"is_on": False}, PowerMode.OFF),
-            ({"is_on": True}, {"is_on": True}, PowerMode.ON),
+            # ({"state": A, "is_on": B}, {"is_on": C}, D) means
+            # If subrack.state() returns A
+            # If subrack.IsTpmOn() returns B,
+            # And change event subscription on subrack.areTpmsOn returns a C event
+            # Then the power mode should end up D.
+            (
+                {"state": DevState.DISABLE, "is_on": False},
+                {"is_on": False},
+                PowerMode.OFF,
+            ),
+            ({"state": DevState.OFF, "is_on": False}, {"is_on": False}, PowerMode.OFF),
+            ({"state": DevState.ON, "is_on": False}, {"is_on": False}, PowerMode.OFF),
+            ({"state": DevState.ON, "is_on": True}, {"is_on": True}, PowerMode.ON),
         ],
-        ids=("OFF", "ON"),
+        ids=("DISABLED", "OFF", "TPM off", "TPM on"),
         indirect=["initial_mocks", "mock_factory"],
     )
     def test_init(

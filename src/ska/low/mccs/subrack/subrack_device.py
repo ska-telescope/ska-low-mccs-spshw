@@ -455,8 +455,6 @@ class MccsSubrack(SKABaseDevice):
             device.register_command_object(
                 "PowerOffTpm", device.PowerOffTpmCommand(*args)
             )
-            device.register_command_object("PowerUp", device.PowerUpCommand(*args))
-            device.register_command_object("PowerDown", device.PowerDownCommand(*args))
 
         def _initialise_health_monitoring(self, device):
             """
@@ -761,6 +759,27 @@ class MccsSubrack(SKABaseDevice):
                 # The subrack itself is not on. We don't want o
                 return None
 
+        def is_allowed(self):
+            """
+            Whether this command is allowed to run.
+
+            :returns: whether this command is allowed to run
+            :rtype: bool
+            """
+            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
+
+    def is_IsTpmOn_allowed(self):
+        """
+        Whether the ``Reset()`` command is allowed to be run in the
+        current state.
+
+        :returns: whether the ``Reset()`` command is allowed to be run in the
+            current state
+        :rtype: bool
+        """
+        handler = self.get_command_object("IsTpmOn")
+        return handler.is_allowed()
+
     @command(dtype_in="DevULong", dtype_out=bool)
     @DebugIt()
     def IsTpmOn(self, argin):
@@ -800,6 +819,27 @@ class MccsSubrack(SKABaseDevice):
             hardware_manager = self.target
             success = hardware_manager.turn_on_tpm(argin)
             return create_return(success, f"TPM {argin} power-on")
+
+        def is_allowed(self):
+            """
+            Whether this command is allowed to run.
+
+            :returns: whether this command is allowed to run
+            :rtype: bool
+            """
+            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
+
+    def is_PowerOnTpm_allowed(self):
+        """
+        Whether the ``PowerOnTpm()`` command is allowed to be run in the
+        current state.
+
+        :returns: whether the ``PowerOnTpm()`` command is allowed to be run in the
+            current state
+        :rtype: bool
+        """
+        handler = self.get_command_object("PowerOnTpm")
+        return handler.is_allowed()
 
     @command(
         dtype_in="DevULong",
@@ -847,6 +887,27 @@ class MccsSubrack(SKABaseDevice):
             success = hardware_manager.turn_off_tpm(argin)
             return create_return(success, f"TPM {argin} power-off")
 
+        def is_allowed(self):
+            """
+            Whether this command is allowed to run.
+
+            :returns: whether this command is allowed to run
+            :rtype: bool
+            """
+            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
+
+    def is_PowerOffTpm_allowed(self):
+        """
+        Whether the ``PowerOffTpm()`` command is allowed to be run in
+        the current state.
+
+        :returns: whether the ``PowerOffTpm()`` command is allowed to be run in the
+            current state
+        :rtype: bool
+        """
+        handler = self.get_command_object("PowerOffTpm")
+        return handler.is_allowed()
+
     @command(
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
@@ -867,86 +928,6 @@ class MccsSubrack(SKABaseDevice):
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
-
-    class PowerUpCommand(ResponseCommand):
-        """
-        Class for handling the PowerUp() command.
-
-        The PowerUp command turns on all of the TPMs that are powered by
-        this subrack.
-        """
-
-        def do(self):
-            """
-            Stateless hook for implementation of
-            :py:meth:`.MccsSubrack.PowerUp` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.turn_on_tpms()
-            return create_return(success, "power-up")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def PowerUp(self):
-        """
-        Power up.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("PowerUp")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
-
-    class PowerDownCommand(ResponseCommand):
-        """
-        Class for handling the PowerDown() command.
-
-        The PowerDown command turns off all of the TPMs that are powered
-        by this subrack.
-        """
-
-        def do(self):
-            """
-            Stateless hook for implementation of
-            :py:meth:`.MccsSubrack.PowerDown`
-            command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.turn_off_tpms()
-            return create_return(success, "power-down")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def PowerDown(self):
-        """
-        Power down.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("PowerDown")
-        (return_code, message) = handler()
         return [[return_code], [message]]
 
     def _update_health_state(self, health_state):

@@ -753,48 +753,6 @@ class TestMccsSubrack(object):
         )
         assert list(device_under_test.tpmCurrents) == [0.0, 0.0, 0.0, 0.0]
 
-    def test_PowerUp(self, device_under_test):
-        """
-        Test for PowerUp.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.Off()
-        device_under_test.On()
-
-        [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-up successful"
-
-        [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-up is redundant"
-
-    def test_PowerDown(self, device_under_test):
-        """
-        Test for PowerDown.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.Off()
-        device_under_test.On()
-
-        [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-down is redundant"
-
-        _ = device_under_test.PowerUp()
-
-        [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-down successful"
-
     def test_PowerOnTpm(self, device_under_test):
         """
         Test for PowerOnTpm.

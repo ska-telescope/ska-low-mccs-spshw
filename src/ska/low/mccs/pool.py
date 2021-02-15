@@ -72,7 +72,9 @@ class DevicePool:
             ]
 
             for (async_id, device) in zip(async_ids, self._devices):
-                (result_code, _) = device.command_inout_reply(async_id, timeout=3000)
+                # HACK: Increasing timeout as a workaround.
+                # We need to make these command asynchronous ASAP
+                (result_code, _) = device.command_inout_reply(async_id, timeout=5000)
                 if result_code == ResultCode.FAILED:
                     return False
         return True

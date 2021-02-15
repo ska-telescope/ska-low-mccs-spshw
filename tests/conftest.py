@@ -264,6 +264,9 @@ class MCCSDeviceTestContext:
         for device_name in self._devices_info.device_names:
             self.get_device(device_name).set_source(self._source_setting)
 
+            # HACK: increasing the timeout until we can make some commands synchronous
+            self.get_device(device_name).set_timeout_millis(5000)
+
     def __enter__(self):
         """
         Entry method for "with" context.

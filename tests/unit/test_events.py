@@ -356,15 +356,15 @@ class TestEventManager:
                 mocker.Mock(), fqdn_spec=fqdn_spec, event_spec="mock"
             )
 
-    def test_subscribe(self, mocker, mock_device_proxies, logger):
+    def test_subscribe(self, mock_callback, mock_device_proxies, logger):
         """
         Test subscription: specifically, test that when a a client uses
         an EventManager to subscribe to a specified event from a
         specified device, the device receives a subscribe_event call for
         the specified event.
 
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -385,7 +385,7 @@ class TestEventManager:
             mock_device_proxy = tango.DeviceProxy(fqdn)
 
             for event in events:
-                mock_callback = mocker.Mock()
+                mock_callback.reset_mock()
 
                 event_manager.register_callback(
                     mock_callback, fqdn_spec=fqdn, event_spec=event

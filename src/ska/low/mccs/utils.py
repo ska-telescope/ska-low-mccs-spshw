@@ -65,10 +65,11 @@ class _DeviceConnector:
                 the call args and the elapsed time
             :type details: dict
             """
-            fqdn = details.args[0]
+            fqdn = details["args"][0]
+            elapsed = details["elapsed"]
             self._logger.warning(
                 f"Gave up trying to connect to device {fqdn} after "
-                f"{details.elapsed} seconds."
+                f"{elapsed} seconds."
             )
 
         @backoff.on_exception(
@@ -118,10 +119,11 @@ class _DeviceConnector:
                 the call args and the elapsed time
             :type details: dict
             """
-            fqdn = details.args[0]
+            fqdn = details["args"][0]
+            elapsed = details["elapsed"]
             self._logger.warning(
                 f"Gave up trying to get response from device {fqdn} after "
-                f"{details.elapsed} seconds."
+                f"{elapsed} seconds."
             )
 
         @backoff.on_exception(
@@ -169,10 +171,11 @@ class _DeviceConnector:
                 the call args and the elapsed time
             :type details: dict
             """
-            fqdn = details.args[0]
+            fqdn = details["args"][0]
+            elapsed = details["elapsed"]
             self._logger.warning(
                 f"Gave up waiting for device {fqdn} to complete initialisation after "
-                f"{details.elapsed} seconds."
+                f"{elapsed} seconds."
             )
 
         @backoff.on_predicate(
@@ -210,11 +213,9 @@ class _DeviceConnector:
                 return False
 
         if not _backoff_check_initialised(device):
-            raise TimeoutError(
-                "Gave up waiting for device {fqdn} to complete initialisation."
-            )
+            raise TimeoutError("Gave up waiting for device to complete initialisation.")
 
-    def connect(self, fqdn):
+    def connect(self, fqdn, wait=False):
         """
         Returns a connection to a device that is responsive and has
         completed its initialisation.
@@ -229,14 +230,21 @@ class _DeviceConnector:
         Secondly, it repeatedly pings the device until the device
         becomes responsive (or times out).
 
-        Thirdly, it repeatedly checks device state until that state is
-        not INIT.
+        Thirdly, if the `wait` argument is True, then it repeatedly
+        checks device state until that state is not INIT.
 
         Only when we have a connection to a responsive device that has
-        completed initialisation, do we return it for use.
+        completed initialisation (if required), do we return it for use.
 
         :param fqdn: the fully qualified device name of the device
         :type fqdn: str
+        :param wait: whether to wait for the device to exit INIT state.
+            This should only be set to True if it is intended to use
+            this connection as soon as it has been established. Note
+            that if two devices depend upon a connection to the other in
+            order to initialise, using `wait=True` will create a
+            deadlock.
+        :type wait: bool
 
         :return: a connection to a device that is responsive and has
             completed its initialisation.
@@ -244,11 +252,12 @@ class _DeviceConnector:
         """
         device = self._get_proxy(fqdn)
         self._ping(device)
-        self._check_initialised(device)
+        if wait:
+            self._check_initialised(device)
         return device
 
 
-def backoff_connect(fqdn, logger):
+def backoff_connect(fqdn, logger, wait=False):
     """
     Create a proxy connection to the device, and if necessary wait for
     the device to become responsive and complete initialisation.
@@ -258,11 +267,17 @@ def backoff_connect(fqdn, logger):
     :type fqdn: str
     :param logger: the logger to be used.
     :type logger: :py:class:`logging.Logger`
+    :param wait: whether to wait for the device to exit INIT state. This
+        should only be set to True if it is intended to use this
+        connection as soon as it has been established. Note that if two
+        devices depend upon a connection to the other in order to
+        initialise, using `wait=True` will create a deadlock
+    :type wait: bool
 
     :return: a proxy for the device
     :rtype: :py:class:`tango.DeviceProxy`
     """
-    return _DeviceConnector(logger).connect(fqdn)
+    return _DeviceConnector(logger).connect(fqdn, wait=wait)
 
 
 def tango_raise(

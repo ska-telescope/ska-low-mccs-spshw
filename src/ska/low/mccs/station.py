@@ -27,7 +27,7 @@ from ska.base import SKABaseDevice, SKAObsDevice
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import HealthState
 
-from ska.low.mccs.pool import DevicePoolManager
+from ska.low.mccs.pool import DevicePool
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
@@ -160,7 +160,7 @@ class MccsStation(SKAObsDevice):
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_device_pool_manager(device, fqdns)
+                self._initialise_device_pool(device, fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -173,7 +173,7 @@ class MccsStation(SKAObsDevice):
                 with self._lock:
                     self.succeeded()
 
-        def _initialise_device_pool_manager(self, device, fqdns):
+        def _initialise_device_pool(self, device, fqdns):
             """
             Initialise power management for this device.
 
@@ -184,9 +184,9 @@ class MccsStation(SKAObsDevice):
                 this device manages power
             :type fqdns: list(str)
             """
-            device.device_pool_manager = DevicePoolManager(fqdns, self.logger)
+            device.device_pool = DevicePool(fqdns, self.logger)
 
-            args = (device.device_pool_manager, device.state_model, self.logger)
+            args = (device.device_pool, device.state_model, self.logger)
             device.register_command_object("Disable", device.DisableCommand(*args))
             device.register_command_object("Standby", device.StandbyCommand(*args))
             device.register_command_object("Off", device.OffCommand(*args))
@@ -468,9 +468,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.on():
+            if device_pool.on():
                 return (ResultCode.OK, "On command completed OK")
             else:
                 return (ResultCode.FAILED, "On command failed")
@@ -492,9 +492,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.off():
+            if device_pool.off():
                 return (ResultCode.OK, "On command completed OK")
             else:
                 return (ResultCode.FAILED, "On command failed")
@@ -516,9 +516,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.standby():
+            if device_pool.standby():
                 return (ResultCode.OK, "Standby command completed OK")
             else:
                 return (ResultCode.FAILED, "Standby command failed")
@@ -540,9 +540,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.disable():
+            if device_pool.disable():
                 return (ResultCode.OK, "Disable command completed OK")
             else:
                 return (ResultCode.FAILED, "Disable command failed")

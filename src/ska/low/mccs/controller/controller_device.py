@@ -26,7 +26,7 @@ from ska.base import SKAMaster, SKABaseDevice
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
-from ska.low.mccs.pool import DevicePoolManager
+from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
@@ -112,9 +112,10 @@ class MccsController(SKAMaster):
     # Device Properties
     # -----------------
 
-    MccsSubarrays = device_property(dtype="DevVarStringArray")
-    MccsStations = device_property(dtype="DevVarStringArray")
-    MccsSubarrayBeams = device_property(dtype="DevVarStringArray")
+    MccsSubarrays = device_property(dtype="DevVarStringArray", default_value=[])
+    MccsSubracks = device_property(dtype="DevVarStringArray", default_value=[])
+    MccsStations = device_property(dtype="DevVarStringArray", default_value=[])
+    MccsSubarrayBeams = device_property(dtype="DevVarStringArray", default_value=[])
 
     # ---------------
     # General methods
@@ -192,50 +193,46 @@ class MccsController(SKAMaster):
             device._version_id = release.version
             device.set_change_event("commandResult", True, False)
 
-            if device.MccsSubarrays is None:
-                device._subarray_fqdns = list()
-            else:
-                device._subarray_fqdns = device.MccsSubarrays
+            device._subarray_fqdns = list(device.MccsSubarrays)
             device._subarray_enabled = [False] * len(device.MccsSubarrays)
 
-            if device.MccsStations is None:
-                device._station_fqdns = list()
-            else:
-                device._station_fqdns = device.MccsStations
+            device._subrack_fqdns = list(device.MccsSubracks)
+            device._station_fqdns = list(device.MccsStations)
 
             self._thread = threading.Thread(
                 target=self._initialise_connections,
-                args=(device, device._station_fqdns),
+                args=(device,),
             )
             with self._lock:
                 self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
-        def _initialise_connections(self, device, fqdns):
+        def _initialise_connections(self, device):
             """
             Thread target for asynchronous initialisation of connections
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices to which
-                this device must maintain connections
-            :type: list(str)
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_device_pool_manager(device, fqdns)
+                self._initialise_device_pool(
+                    device, device._subrack_fqdns, device._station_fqdns
+                )
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_health_monitoring(device, fqdns)
+                self._initialise_health_monitoring(
+                    device, device._subrack_fqdns + device._station_fqdns
+                )
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_resource_management(device, fqdns)
+                self._initialise_resource_management(device, device._station_fqdns)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -243,21 +240,25 @@ class MccsController(SKAMaster):
                 with self._lock:
                     self.succeeded()
 
-        def _initialise_device_pool_manager(self, device, fqdns):
+        def _initialise_device_pool(self, device, subrack_fqdns, station_fqdns):
             """
             Initialise the device pool for this device.
 
             :param device: the device for which power management is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type fqdns: list(str)
+            :param subrack_fqdns: the fqdns of subservient subracks.
+            :type subrack_fqdns: list(str)
+            :param station_fqdns: the fqdns of subservient stations.
+            :type station_fqdns: list(str)
             """
-            device.device_pool_manager = DevicePoolManager(
-                device._station_fqdns, self.logger
+            subrack_pool = DevicePool(subrack_fqdns, self.logger)
+            station_pool = DevicePool(station_fqdns, self.logger)
+            device.device_pool = DevicePoolSequence(
+                [subrack_pool, station_pool], self.logger
             )
-            args = (device.device_pool_manager, device.state_model, self.logger)
+
+            args = (device.device_pool, device.state_model, self.logger)
             device.register_command_object("Disable", device.DisableCommand(*args))
             device.register_command_object(
                 "StandbyLow", device.StandbyLowCommand(*args)
@@ -280,12 +281,12 @@ class MccsController(SKAMaster):
                 this device monitors health
             :type: list(str)
             """
-            device.event_manager = EventManager(self.logger, device._station_fqdns)
+            device.event_manager = EventManager(self.logger, fqdns)
 
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, device._station_fqdns, device.event_manager, device.health_changed
+                None, fqdns, device.event_manager, device.health_changed
             )
 
         def _initialise_resource_management(self, device, fqdns):
@@ -455,15 +456,15 @@ class MccsController(SKAMaster):
             # SP-1501. Meanwhile, Startup() is implemented to turn all
             # devices OFF (which will actually cause all the hardware to
             # come on), and then turn them ON.
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.off():
+            if device_pool.off():
                 self.state_model.perform_action("off_succeeded")
             else:
                 self.state_model.perform_action("off_failed")
                 return (ResultCode.FAILED, "Startup command failed")
 
-            if device_pool_manager.on():
+            if device_pool.on():
                 self.state_model.perform_action("on_succeeded")
                 return (ResultCode.OK, "Startup command completed OK")
             else:
@@ -508,9 +509,9 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.on():
+            if device_pool.on():
                 return (ResultCode.OK, "On command completed OK")
             else:
                 return (ResultCode.FAILED, "On command failed")
@@ -553,9 +554,9 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.disable():
+            if device_pool.disable():
                 return (ResultCode.OK, "Off command completed OK")
             else:
                 return (ResultCode.FAILED, "Off command failed")
@@ -598,9 +599,9 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.off():
+            if device_pool.off():
                 return (ResultCode.OK, "Off command completed OK")
             else:
                 return (ResultCode.FAILED, "Off command failed")
@@ -627,9 +628,9 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.standby():
+            if device_pool.standby():
                 return (ResultCode.OK, "StandbyLow command completed OK")
             else:
                 return (ResultCode.FAILED, "StandbyLow command failed")
@@ -675,9 +676,9 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.standby():
+            if device_pool.standby():
                 return (ResultCode.OK, "StandbyFull command completed OK")
             else:
                 return (ResultCode.FAILED, "StandbyFull command failed")

@@ -10,7 +10,13 @@ a Tango device and an APIU simulator.
 """
 
 
-__all__ = ["MccsAPIU", "APIUSimulator", "apiu_device", "apiu_simulator"]
+__all__ = [
+    "MccsAPIU",
+    "APIUSimulator",
+    "apiu_device",
+    "apiu_simulator",
+    "demo_apiu_device",
+]
 
 from .apiu_device import MccsAPIU
 from .apiu_simulator import APIUSimulator

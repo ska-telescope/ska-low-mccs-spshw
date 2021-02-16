@@ -15,7 +15,7 @@ from ska.base.control_model import AdminMode, SimulationMode
 from ska.low.mccs import MccsTile
 
 
-__all__ = ["ConnectionFailableDevice"]
+__all__ = ["ConnectionFailableDevice", "DemoTile"]
 
 
 class ConnectionFailableDevice(Device):

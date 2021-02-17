@@ -13,6 +13,7 @@ Device Server, based on the architecture in SKA-TEL-LFAA-06000052-02.
 __all__ = [
     "AntennaHardwareDriver",
     "AntennaHardwareFactory",
+    "AntennaHardwareHealthEvaluator",
     "AntennaHardwareManager",
     "MccsAntenna",
     "main",

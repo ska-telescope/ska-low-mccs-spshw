@@ -32,7 +32,7 @@ from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
 
 
 __all__ = [
-    # "AntennaHardwareHealthEvaluator",
+    "APIUHardwareFactory",
     "APIUHardwareHealthEvaluator",
     "APIUHardwareManager",
     "MccsAPIU",

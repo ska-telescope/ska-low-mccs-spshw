@@ -33,11 +33,6 @@ def confirm_initialised(devices):
     :returns: whether the devices are all initialised or not
     :rtype: bool
     """
-
-    # HACK: increasing the timeout until we can make some commands synchronous
-    for device in devices:
-        device.set_timeout_millis(5000)
-
     return all(
         device.state() not in [DevState.UNKNOWN, DevState.INIT] for device in devices
     )
@@ -134,6 +129,9 @@ def devices(tango_context):
     # TODO: Need to investigate disabling this section for tests performed on
     #       a real deployment (i.e. not in a test/development environment)
     for device in device_dict.values():
+        # HACK: increasing the timeout until we can make some commands synchronous
+        device.set_timeout_millis(5000)
+
         device.set_source(DevSource.DEV)
     assert confirm_initialised(device_dict.values())
     return device_dict

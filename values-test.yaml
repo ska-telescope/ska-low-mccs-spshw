@@ -1,23 +1,15 @@
-# static overrides for gitlab ci job
+# static overrides for (minikube) development
 global:
-  minikube: false
-
-tango-base:
-  itango:
-    enabled: false
-
-ska-low-mccs:
-  cli:
-    enabled: false
+  minikube: true
 
 webjive:
-  minikube: false
+  enabled: true
 
 webjive-dashboard:
-  enabled: false
+  enabled: true
 
 webjive-auth:
-  enabled: false
+  enabled: true
 
 # demo config
 ska-low-mccs:
@@ -28,3 +20,7 @@ ska-low-mccs:
       instances: []
     apius:
       instances: []
+  mccs:
+    image:
+      pullPolicy: Never
+      tag: latest

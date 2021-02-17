@@ -31,6 +31,7 @@ from ska.low.mccs.subrack.subrack_simulator import SubrackBoardSimulator
 
 
 __all__ = [
+    "SubrackHardwareFactory",
     "SubrackHardwareHealthEvaluator",
     "SubrackHardwareManager",
     "MccsSubrack",
@@ -80,9 +81,11 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
     """
     A hardware factory for Subrack hardware.
 
-    At present, this returns a :py:class:`SubrackSimulator` object when
-    in simulation mode, and raises :py:exc:`NotImplementedError` if the
-    hardware is sought whilst not in simulation mode
+    At present, this returns a
+    :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
+    object when in simulation mode, and raises
+    :py:exc:`NotImplementedError` if the hardware is sought whilst not
+    in simulation mode
     """
 
     def __init__(self, simulation_mode, tpm_count):

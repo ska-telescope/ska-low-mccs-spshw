@@ -133,6 +133,10 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :param are_tpms_on_change_callback: a callback to be called when
             the are_tpms_on property changes
         :type are_tpms_on_change_callback: callable
+        :param _factory: allows for substitution of a hardware factory.
+            This is useful for testing, but generally should not be used
+            in operations.
+        :type _factory: :py:class:`.SubrackHardwareFactory`
         """
         hardware_factory = _factory or SubrackHardwareFactory(
             simulation_mode == SimulationMode.TRUE, tpm_count

@@ -418,7 +418,7 @@ class TestInitCommand:
             self._initialise_device_pool_called = False
             self._initialise_health_monitoring_called = False
 
-        def _initialise_device_pool(self, device, fqdns):
+        def _initialise_device_pool(self, device):
             """
             Initialise the device pool for this device (overridden here
             to inject a call trace attribute).
@@ -426,9 +426,6 @@ class TestInitCommand:
             :param device: the device for which the device pool is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type fqdns: list(str)
             """
             self._initialise_device_pool_called = True
             super()._initialise_device_pool(device)
@@ -436,7 +433,7 @@ class TestInitCommand:
                 # hang until the hang lock is released
                 pass
 
-        def _initialise_health_monitoring(self, device, fqdns):
+        def _initialise_health_monitoring(self, device):
             """
             Initialise the health model for this device (overridden here
             to inject a call trace attribute).
@@ -444,12 +441,9 @@ class TestInitCommand:
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device monitors health
-            :type: list(str)
             """
             self._initialise_health_monitoring_called = True
-            super()._initialise_health_monitoring(device, fqdns)
+            super()._initialise_health_monitoring(device)
 
     def test_interrupt(self, mocker):
         """

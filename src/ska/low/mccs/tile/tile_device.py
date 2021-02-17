@@ -557,7 +557,7 @@ class MccsTile(SKABaseDevice):
             else:
                 device.hardware_manager.is_connectible = True
                 if device.hardware_manager.is_programmed:
-                    action = "init_succeeded_on"
+                    action = "init_succeeded_off"
                 else:
                     action = "init_succeeded_standby"
             self.state_model.perform_action(action)

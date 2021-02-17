@@ -156,7 +156,12 @@ class DevicePoolSequence(DevicePool):
         self._logger = logger
         self._pools = pools
 
-    def invoke_command(self, command_name, arg=None):
+    def invoke_command(
+        self,
+        command_name,
+        arg=None,
+        reverse=False,
+    ):
         """
         A generic method for sequential invoking a command on a list of
         device pools.
@@ -165,12 +170,18 @@ class DevicePoolSequence(DevicePool):
         :type command_name: str
         :param arg: optional argument to the command
         :type arg: object
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.)
+        :type reverse: bool
+
         :return: Whether the command succeeded or not
         :rtype: bool
         """
         did_nothing = True
 
-        for pool in self._pools:
+        pools = reversed(self._pools) if reverse else self._pools
+        for pool in pools:
             success = pool.invoke_command(command_name, arg)
             if success is False:
                 return False
@@ -178,3 +189,63 @@ class DevicePoolSequence(DevicePool):
                 did_nothing = False
         else:
             return None if did_nothing else True
+
+    def disable(self, reverse=False):
+        """
+        Call Disable() on all the devices in this device pool.
+
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.) Optional, defaults to
+            False
+        :type reverse: bool
+
+        :return: Whether the command succeeded or not
+        :rtype: bool
+        """
+        return self.invoke_command("Disable", reverse=reverse)
+
+    def standby(self, reverse=False):
+        """
+        Call Standby() on all the devices in this device pool.
+
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.) Optional, defaults to
+            False
+        :type reverse: bool
+
+        :return: Whether the command succeeded or not
+        :rtype: bool
+        """
+        return self.invoke_command("Standby", reverse=reverse)
+
+    def off(self, reverse=False):
+        """
+        Call Off() on all the devices in this device pool.
+
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.) Optional, defaults to
+            False
+        :type reverse: bool
+
+        :return: Whether the command succeeded or not
+        :rtype: bool
+        """
+        return self.invoke_command("Off", reverse=reverse)
+
+    def on(self, reverse=False):
+        """
+        Call On() on all the devices in this device pool.
+
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.) Optional, defaults to
+            False
+        :type reverse: bool
+
+        :return: Whether the command succeeded or not
+        :rtype: bool
+        """
+        return self.invoke_command("On", reverse=reverse)

@@ -123,10 +123,15 @@ class TestPowerManagementFromControllerToAntenna:
                 "station_001",
                 "station_002",
                 "apiu_001",
+                "apiu_002",
                 "antenna_000001",
                 "antenna_000002",
                 "antenna_000003",
                 "antenna_000004",
+                "antenna_000005",
+                "antenna_000006",
+                "antenna_000007",
+                "antenna_000008",
             ],
         }
 
@@ -141,6 +146,7 @@ class TestPowerManagementFromControllerToAntenna:
         controller = device_context.get_device("controller")
         station_1 = device_context.get_device("station_001")
         station_2 = device_context.get_device("station_002")
+        apiu = device_context.get_device("apiu_001")
         antenna_1 = device_context.get_device("antenna_000001")
         antenna_2 = device_context.get_device("antenna_000002")
         antenna_3 = device_context.get_device("antenna_000003")
@@ -149,10 +155,11 @@ class TestPowerManagementFromControllerToAntenna:
         assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF
         assert station_2.State() == DevState.OFF
-        assert antenna_1.State() == DevState.OFF
-        assert antenna_2.State() == DevState.OFF
-        assert antenna_3.State() == DevState.OFF
-        assert antenna_4.State() == DevState.OFF
+        assert apiu.State() == DevState.DISABLE
+        assert antenna_1.State() == DevState.DISABLE
+        assert antenna_2.State() == DevState.DISABLE
+        assert antenna_3.State() == DevState.DISABLE
+        assert antenna_4.State() == DevState.DISABLE
 
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
@@ -162,6 +169,7 @@ class TestPowerManagementFromControllerToAntenna:
         assert controller.State() == DevState.ON
         assert station_1.State() == DevState.ON
         assert station_2.State() == DevState.ON
+        assert apiu.State() == DevState.ON
         assert antenna_1.State() == DevState.ON
         assert antenna_2.State() == DevState.ON
         assert antenna_3.State() == DevState.ON
@@ -172,6 +180,7 @@ class TestPowerManagementFromControllerToAntenna:
         assert controller.State() == DevState.OFF
         assert station_1.State() == DevState.OFF
         assert station_2.State() == DevState.OFF
+        assert apiu.State() == DevState.OFF
         assert antenna_1.State() == DevState.OFF
         assert antenna_2.State() == DevState.OFF
         assert antenna_3.State() == DevState.OFF

@@ -61,6 +61,9 @@ class TestDemoAPIU:
                 for antenna_id in range(1, 5)
             ] == expected
 
+        device_under_test.Off()
+        device_under_test.On()
+
         assert_powered([False, False, False, False])
 
         device_under_test.PowerUpAntenna1()

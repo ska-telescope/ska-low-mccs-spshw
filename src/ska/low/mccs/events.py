@@ -11,6 +11,7 @@ subsystem.
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
 from functools import partial
+import warnings
 
 import backoff
 from tango import DevFailed, EventType
@@ -136,10 +137,13 @@ class EventSubscriptionHandler:
         :rtype: :py:class:`tango.DeviceAttribute`
         """
         if event.attr_value is None:
-            self._logger.warn(
-                "Received changed event with empty value. "
-                "Falling back to manual attribute read."
+            warning_message = (
+                "Received change event with empty value. Falling back to manual "
+                f"attribute read. Event.err is {event.err}. Event.errors is\n"
+                f"{event.errors}."
             )
+            warnings.warn(UserWarning(warning_message))
+            self._logger.warn(warning_message)
             return self._read()
         else:
             return event.attr_value

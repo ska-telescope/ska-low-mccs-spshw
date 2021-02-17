@@ -22,3 +22,7 @@ ska-low-mccs:
       command: "python3 -m ska.low.mccs.subrack.demo_subrack_device"
     tiles:
       command: "python3 -m ska.low.mccs.tile.demo_tile_device"
+  mccs:
+    image:
+      pullPolicy: Never
+      tag: latest

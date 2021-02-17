@@ -124,11 +124,9 @@ class TestAPIUSimulator:
         with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.temperature
 
-        with pytest.raises(ValueError, match="APIU hardware is not ON."):
-            _ = apiu_simulator.are_antennas_on()
+        assert apiu_simulator.are_antennas_on() is None
         for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                assert apiu_simulator.is_antenna_on(antenna_id) is None
+            assert apiu_simulator.is_antenna_on(antenna_id) is None
 
         apiu_simulator.on()
         assert apiu_simulator.power_mode == PowerMode.ON
@@ -151,11 +149,9 @@ class TestAPIUSimulator:
         with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.temperature
 
-        with pytest.raises(ValueError, match="APIU hardware is not ON."):
-            _ = apiu_simulator.are_antennas_on()
+        assert apiu_simulator.are_antennas_on() is None
         for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                assert apiu_simulator.is_antenna_on(antenna_id) is None
+            assert apiu_simulator.is_antenna_on(antenna_id) is None
 
     def test_antenna_on_off(self, apiu_simulator):
         """
@@ -211,8 +207,7 @@ class TestAPIUSimulator:
             assert not apiu_simulator.is_antenna_on(antenna_id)
 
         apiu_simulator.off()
-        with pytest.raises(ValueError, match="APIU hardware is not ON."):
-            _ = apiu_simulator.are_antennas_on()
+        assert apiu_simulator.are_antennas_on() is None
         for antenna_id in range(1, apiu_simulator.antenna_count + 1):
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 apiu_simulator.turn_on_antenna(antenna_id)
@@ -290,25 +285,31 @@ class TestAPIUHardwareManager:
     """
 
     @pytest.fixture()
-    def hardware_manager(self):
+    def hardware_manager(self, mock_callback):
         """
         Return a manager for APIU hardware.
+
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
 
         :return: a manager for APIU hardware
         :rtype:
             :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         """
-        return APIUHardwareManager(SimulationMode.TRUE, 2)
+        return APIUHardwareManager(SimulationMode.TRUE, 2, mock_callback)
 
-    def test_init_simulation_mode(self):
+    def test_init_simulation_mode(self, mock_callback):
         """
         Test that we can't create an hardware manager that isn't in
         simulation mode.
+
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):
-            _ = APIUHardwareManager(SimulationMode.FALSE, 2)
+            _ = APIUHardwareManager(SimulationMode.FALSE, 2, mock_callback)
 
     def test_simulation_mode(self, hardware_manager):
         """
@@ -401,19 +402,19 @@ class TestAPIUHardwareManager:
         """
         assert hardware_manager.power_mode == PowerMode.OFF
 
-        with pytest.raises(ValueError, match="APIU hardware is not ON."):
-            _ = hardware_manager.are_antennas_on()
+        assert (
+            hardware_manager.are_antennas_on()
+            == [False] * hardware_manager.antenna_count
+        )
         for antenna_id in range(1, hardware_manager.antenna_count + 1):
-            with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                _ = hardware_manager.is_antenna_on(antenna_id)
+            assert not hardware_manager.is_antenna_on(antenna_id)
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.get_antenna_current(antenna_id)
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.get_antenna_voltage(antenna_id)
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.get_antenna_temperature(antenna_id)
-            with pytest.raises(ValueError, match="APIU hardware is not ON."):
-                _ = hardware_manager.turn_off_antenna(antenna_id)
+            assert hardware_manager.turn_off_antenna(antenna_id) is None
             with pytest.raises(ValueError, match="APIU hardware is not ON."):
                 _ = hardware_manager.turn_on_antenna(antenna_id)
 
@@ -559,8 +560,8 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
 
-        assert device_under_test.state() == DevState.OFF
-        assert device_under_test.status() == "The device is in OFF state."
+        assert device_under_test.state() == DevState.DISABLE
+        assert device_under_test.status() == "The device is in DISABLE state."
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
@@ -600,6 +601,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         device_under_test.On()
         assert device_under_test.temperature == APIUSimulator.TEMPERATURE
         assert device_under_test.humidity == APIUSimulator.HUMIDITY
@@ -626,6 +628,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         device_under_test.On()
 
         [[result_code], [message]] = device_under_test.PowerUp()
@@ -645,6 +648,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         device_under_test.On()
 
         [[result_code], [message]] = device_under_test.PowerDown()
@@ -666,6 +670,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         _ = device_under_test.On()
 
         assert (
@@ -697,6 +702,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         _ = device_under_test.On()
 
         assert (

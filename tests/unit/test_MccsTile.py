@@ -658,7 +658,7 @@ class TestMccsTileCommands:
             ),
             ("LoadBeamAngle", tuple(float(i) for i in range(16))),
             ("LoadAntennaTapering", tuple(float(i) for i in range(16))),
-            ("SetPointingDelay", [3] * 33),
+            ("SetPointingDelay", [3] * 5),  # 2 * antennas_per_tile + 1
             ("ConfigureIntegratedChannelData", 6.284),
             ("ConfigureIntegratedBeamData", 3.142),
             ("SendRawData", json.dumps({"Sync": True, "Period": 5, "Seconds": 6.7})),

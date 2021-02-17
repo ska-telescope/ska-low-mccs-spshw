@@ -33,6 +33,11 @@ def confirm_initialised(devices):
     :returns: whether the devices are all initialised or not
     :rtype: bool
     """
+
+    # HACK: increasing the timeout until we can make some commands synchronous
+    for device in devices:
+        device.set_timeout_millis(5000)
+
     return all(
         device.state() not in [DevState.UNKNOWN, DevState.INIT] for device in devices
     )

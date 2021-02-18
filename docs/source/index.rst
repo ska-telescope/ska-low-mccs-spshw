@@ -28,7 +28,7 @@ prototype for the `Square Kilometre Array`_.
    :maxdepth: 1
    :caption: Devices
 
-   api/antenna
+   api/antenna_device
    api/apiu_device
    api/cluster_manager_device
    api/controller_device
@@ -42,9 +42,6 @@ prototype for the `Square Kilometre Array`_.
    api/tel_state
    api/tile_device
    api/transient_buffer
-   api/demo_apiu_device
-   api/demo_subrack_device
-   api/demo_tile_device
 
 .. toctree::
    :maxdepth: 1
@@ -57,6 +54,15 @@ prototype for the `Square Kilometre Array`_.
    api/tpm_simulator
    api/tpm_driver
    api/hw_tile
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Demonstration devices
+
+   api/demo_antenna_device
+   api/demo_apiu_device
+   api/demo_subrack_device
+   api/demo_tile_device
 
 .. toctree::
    :maxdepth: 1

@@ -16,12 +16,25 @@ ska-low-mccs:
   dsconfig:
     configuration_file: data/demo_configuration.json
   deviceServers:
-    apius:
-      command: "python3 -m ska.low.mccs.apiu.demo_apiu_device"
+    subarrays:
+      instances: []
+    subarray-beams:
+      instances: []
+    stations:
+      instances: ["station_001"]
+    station-beams:
+      instances: []
     subracks:
       command: "python3 -m ska.low.mccs.subrack.demo_subrack_device"
     tiles:
       command: "python3 -m ska.low.mccs.tile.demo_tile_device"
+    apius:
+      command: "python3 -m ska.low.mccs.apiu.demo_apiu_device"
+      instances: ["apiu_001"]
+    antennas:
+      command: "python3 -m ska.low.mccs.antenna.demo_antenna_device"
+      instances: ["antenna_000001", "antenna_000002",
+                  "antenna_000003", "antenna_000004"]
   mccs:
     image:
       pullPolicy: Never

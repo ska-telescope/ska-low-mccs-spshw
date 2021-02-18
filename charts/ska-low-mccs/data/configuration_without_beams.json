@@ -56,9 +56,9 @@
                 }
             }
         },
-        "DemoSubrack": {
+        "MccsSubrack": {
             "subrack_01": {
-                "DemoSubrack": {
+                "MccsSubrack": {
                     "low-mccs/subrack/01": {
                         "properties": {
                             "TileFQDNs": [
@@ -75,9 +75,9 @@
                 }
             }
         },
-        "DemoTile": {
+        "MccsTile": {
             "tile_0001": {
-                "DemoTile": {
+                "MccsTile": {
                     "low-mccs/tile/0001": {
                         "properties": {
                             "TileId": [
@@ -106,7 +106,7 @@
                 }
             },
             "tile_0002": {
-                "DemoTile": {
+                "MccsTile": {
                     "low-mccs/tile/0002": {
                         "properties": {
                             "TileId": [
@@ -135,7 +135,7 @@
                 }
             },
             "tile_0003": {
-                "DemoTile": {
+                "MccsTile": {
                     "low-mccs/tile/0003": {
                         "properties": {
                             "TileId": [
@@ -164,7 +164,7 @@
                 }
             },
             "tile_0004": {
-                "DemoTile": {
+                "MccsTile": {
                     "low-mccs/tile/0004": {
                         "properties": {
                             "TileId": [
@@ -193,9 +193,9 @@
                 }
             }
         },
-        "DemoAPIU": {
+        "MccsAPIU": {
             "apiu_001": {
-                "DemoAPIU": {
+                "MccsAPIU": {
                     "low-mccs/apiu/001": {
                         "properties": {
                             "AntennaFQDNs": [
@@ -212,9 +212,9 @@
                 }
             }
         },
-        "DemoAntenna": {
+        "MccsAntenna": {
             "antenna_000001": {
-                "DemoAntenna": {
+                "MccsAntenna": {
                     "low-mccs/antenna/000001": {
                         "properties": {
                             "ApiuId": [
@@ -237,7 +237,7 @@
                 }
             },
             "antenna_000002": {
-                "DemoAntenna": {
+                "MccsAntenna": {
                     "low-mccs/antenna/000002": {
                         "properties": {
                             "ApiuId": [
@@ -260,7 +260,7 @@
                 }
             },
             "antenna_000003": {
-                "DemoAntenna": {
+                "MccsAntenna": {
                     "low-mccs/antenna/000003": {
                         "properties": {
                             "ApiuId": [
@@ -283,7 +283,7 @@
                 }
             },
             "antenna_000004": {
-                "DemoAntenna": {
+                "MccsAntenna": {
                     "low-mccs/antenna/000004": {
                         "properties": {
                             "ApiuId": [

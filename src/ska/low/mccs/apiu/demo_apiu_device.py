@@ -8,6 +8,7 @@
 This module implements a Demo APIU device, with extra interface features
 that support testing and demonstrating the MCCS APIU device.
 """
+from tango import DevState
 from tango.server import attribute, command
 
 from ska.low.mccs import MccsAPIU
@@ -31,6 +32,29 @@ class DemoAPIU(MccsAPIU):
         """
         super().init_device()
         self.logger.warn("I am a DEMO APIU!")
+
+    @command()
+    def DemoOff(self):
+        """
+        Put the Tile into DISABLE state (i.e. turn the TPM off).
+
+        :todo: This is needed for demo purposes, just until we have
+            resolved SP-1501.
+        """
+        if self.get_state() == DevState.ON:
+            self.Off()
+        self.Disable()
+
+    @command()
+    def DemoOn(self):
+        """
+        Put the tile into ON state (i.e. turn the TPM on).
+
+        :todo: This is needed for demo purposes, just until we have
+            resolved SP-1501.
+        """
+        self.Off()
+        self.On()
 
     @command(dtype_out="DevVarLongStringArray")
     def PowerUpAntenna1(self):

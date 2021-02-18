@@ -25,7 +25,7 @@ from ska.base.control_model import (
 )
 from ska.base.commands import ResultCode
 
-from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
+from ska.low.mccs.antenna.antenna_device import AntennaHardwareManager, MccsAntenna
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator
 from ska.low.mccs.hardware import HardwareFactory, PowerMode
 
@@ -73,7 +73,7 @@ def hardware_factory(hardware_driver):
 
     :return: a hardware factory for antenna hardware
     :rtype:
-        :py:class:`~ska.low.mccs.antenna.AntennaHardwareFactory`
+        :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareFactory`
     """
 
     class BasicAntennaHardwareFactory(HardwareFactory):
@@ -111,7 +111,7 @@ def hardware_manager(hardware_factory, logger, mock_callback):
         access to, the hardware driver that it returns, for testing
         purposes
     :type:
-        :py:class:`~ska.low.mccs.antenna.AntennaHardwareDriver`
+        :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareDriver`
     :param logger: a object that implements the standard logging interface of
         :py:class:`logging.Logger`
     :type logger: :py:class:`logging.Logger`
@@ -119,7 +119,7 @@ def hardware_manager(hardware_factory, logger, mock_callback):
     :type mock_callback: :py:class:`unittest.Mock`
 
     :return: a hardware manager for antenna hardware
-    :rtype: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+    :rtype: :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
     """
     return AntennaHardwareManager(
         "low-mccs/apiu/001",
@@ -135,7 +135,7 @@ def hardware_manager(hardware_factory, logger, mock_callback):
 class TestAntennaHardwareManager:
     """
     Contains the tests of the
-    :py:class:`ska.low.mccs.antenna.AntennaHardwareManager`
+    :py:class:`ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
     """
 
     def test_on_off(self, hardware_driver, hardware_manager, mocker):
@@ -148,7 +148,7 @@ class TestAntennaHardwareManager:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         :param hardware_manager: a hardware manager for antenna hardware
         :type hardware_manager:
-            :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+            :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`

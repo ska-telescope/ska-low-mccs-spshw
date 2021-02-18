@@ -1,10 +1,10 @@
 {
-  "id": "6029d9e96f05e70018a62305",
+  "id": "602db4741b8c0c0018a942b9",
   "name": "MCCS_Dashboard",
   "version": "1.0.7",
   "user": "user1",
-  "insertTime": "2021-02-15T02:18:17.324Z",
-  "updateTime": "2021-02-15T02:27:37.652Z",
+  "insertTime": "2021-02-18T00:27:33.338Z",
+  "updateTime": "2021-02-18T00:37:46.542Z",
   "group": null,
   "groupWriteAccess": false,
   "lastUpdatedBy": "user1",
@@ -78,7 +78,7 @@
       "x": 30,
       "y": 8,
       "canvas": "0",
-      "width": 12,
+      "width": 34,
       "height": 6,
       "type": "LABEL",
       "inputs": {
@@ -96,8 +96,8 @@
     },
     {
       "id": "87",
-      "x": 42,
-      "y": 8,
+      "x": 30,
+      "y": 14,
       "canvas": "0",
       "width": 12,
       "height": 6,
@@ -118,7 +118,7 @@
     },
     {
       "id": "90",
-      "x": 60,
+      "x": 72,
       "y": 14,
       "canvas": "0",
       "width": 14,
@@ -139,7 +139,7 @@
     },
     {
       "id": "91",
-      "x": 74,
+      "x": 86,
       "y": 14,
       "canvas": "0",
       "width": 12,
@@ -186,7 +186,7 @@
     },
     {
       "id": "172",
-      "x": 60,
+      "x": 72,
       "y": 20,
       "canvas": "0",
       "width": 14,
@@ -207,7 +207,7 @@
     },
     {
       "id": "173",
-      "x": 74,
+      "x": 86,
       "y": 20,
       "canvas": "0",
       "width": 12,
@@ -229,7 +229,7 @@
     },
     {
       "id": "174",
-      "x": 60,
+      "x": 72,
       "y": 26,
       "canvas": "0",
       "width": 14,
@@ -250,7 +250,7 @@
     },
     {
       "id": "175",
-      "x": 74,
+      "x": 86,
       "y": 26,
       "canvas": "0",
       "width": 12,
@@ -272,7 +272,7 @@
     },
     {
       "id": "176",
-      "x": 60,
+      "x": 72,
       "y": 32,
       "canvas": "0",
       "width": 14,
@@ -293,7 +293,7 @@
     },
     {
       "id": "177",
-      "x": 74,
+      "x": 86,
       "y": 32,
       "canvas": "0",
       "width": 12,
@@ -315,7 +315,7 @@
     },
     {
       "id": "192",
-      "x": 36,
+      "x": 50,
       "y": 14,
       "canvas": "0",
       "width": 8,
@@ -334,7 +334,7 @@
     },
     {
       "id": "193",
-      "x": 36,
+      "x": 50,
       "y": 20,
       "canvas": "0",
       "width": 8,
@@ -353,7 +353,7 @@
     },
     {
       "id": "194",
-      "x": 36,
+      "x": 50,
       "y": 26,
       "canvas": "0",
       "width": 8,
@@ -372,7 +372,7 @@
     },
     {
       "id": "195",
-      "x": 36,
+      "x": 50,
       "y": 32,
       "canvas": "0",
       "width": 8,
@@ -391,7 +391,7 @@
     },
     {
       "id": "197",
-      "x": 44,
+      "x": 58,
       "y": 14,
       "canvas": "0",
       "width": 6,
@@ -416,7 +416,7 @@
     },
     {
       "id": "198",
-      "x": 44,
+      "x": 58,
       "y": 20,
       "canvas": "0",
       "width": 6,
@@ -441,7 +441,7 @@
     },
     {
       "id": "199",
-      "x": 44,
+      "x": 58,
       "y": 26,
       "canvas": "0",
       "width": 6,
@@ -466,7 +466,7 @@
     },
     {
       "id": "200",
-      "x": 44,
+      "x": 58,
       "y": 32,
       "canvas": "0",
       "width": 6,
@@ -491,7 +491,7 @@
     },
     {
       "id": "202",
-      "x": 30,
+      "x": 44,
       "y": 32,
       "canvas": "0",
       "width": 6,
@@ -516,7 +516,7 @@
     },
     {
       "id": "203",
-      "x": 30,
+      "x": 44,
       "y": 26,
       "canvas": "0",
       "width": 6,
@@ -541,7 +541,7 @@
     },
     {
       "id": "204",
-      "x": 30,
+      "x": 44,
       "y": 20,
       "canvas": "0",
       "width": 6,
@@ -566,7 +566,7 @@
     },
     {
       "id": "205",
-      "x": 30,
+      "x": 44,
       "y": 14,
       "canvas": "0",
       "width": 6,
@@ -591,7 +591,7 @@
     },
     {
       "id": "206",
-      "x": 88,
+      "x": 100,
       "y": 14,
       "canvas": "0",
       "width": 6,
@@ -616,7 +616,7 @@
     },
     {
       "id": "207",
-      "x": 94,
+      "x": 106,
       "y": 14,
       "canvas": "0",
       "width": 6,
@@ -641,7 +641,7 @@
     },
     {
       "id": "208",
-      "x": 94,
+      "x": 106,
       "y": 20,
       "canvas": "0",
       "width": 6,
@@ -666,7 +666,7 @@
     },
     {
       "id": "209",
-      "x": 88,
+      "x": 100,
       "y": 20,
       "canvas": "0",
       "width": 6,
@@ -691,7 +691,7 @@
     },
     {
       "id": "210",
-      "x": 94,
+      "x": 106,
       "y": 26,
       "canvas": "0",
       "width": 6,
@@ -716,7 +716,7 @@
     },
     {
       "id": "211",
-      "x": 88,
+      "x": 100,
       "y": 26,
       "canvas": "0",
       "width": 6,
@@ -741,7 +741,7 @@
     },
     {
       "id": "212",
-      "x": 94,
+      "x": 106,
       "y": 32,
       "canvas": "0",
       "width": 6,
@@ -766,7 +766,7 @@
     },
     {
       "id": "213",
-      "x": 88,
+      "x": 100,
       "y": 32,
       "canvas": "0",
       "width": 6,
@@ -788,6 +788,797 @@
         "font": "Helvetica"
       },
       "order": 33
+    },
+    {
+      "id": "220",
+      "x": 106,
+      "y": 48,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000001",
+          "command": "DemoOn",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"On\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 34
+    },
+    {
+      "id": "221",
+      "x": 100,
+      "y": 48,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000001",
+          "command": "DemoOff",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"Off\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 35
+    },
+    {
+      "id": "222",
+      "x": 44,
+      "y": 48,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerDownAntenna1",
+          "acceptedType": "DevVoid"
+        },
+        "title": "Off",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 36
+    },
+    {
+      "id": "229",
+      "x": 58,
+      "y": 48,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerUpAntenna1",
+          "acceptedType": "DevVoid"
+        },
+        "title": "On",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 37
+    },
+    {
+      "id": "233",
+      "x": 50,
+      "y": 48,
+      "canvas": "0",
+      "width": 8,
+      "height": 6,
+      "type": "BOOLEAN_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/apiu/001",
+          "attribute": "isantenna1powered",
+          "label": "Is antenna 1 powered"
+        },
+        "showAttribute": "None",
+        "showDevice": false
+      },
+      "order": 38
+    },
+    {
+      "id": "234",
+      "x": 86,
+      "y": 66,
+      "canvas": "0",
+      "width": 12,
+      "height": 6,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/antenna/000004",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 39
+    },
+    {
+      "id": "236",
+      "x": 86,
+      "y": 60,
+      "canvas": "0",
+      "width": 12,
+      "height": 6,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/antenna/000003",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 40
+    },
+    {
+      "id": "238",
+      "x": 86,
+      "y": 54,
+      "canvas": "0",
+      "width": 12,
+      "height": 6,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/antenna/000002",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 41
+    },
+    {
+      "id": "240",
+      "x": 30,
+      "y": 42,
+      "canvas": "0",
+      "width": 34,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "APIU 001",
+        "backgroundColor": "#87ec79",
+        "textColor": "#000",
+        "size": 1,
+        "borderWidth": 0.001,
+        "borderColor": "#010101",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 42
+    },
+    {
+      "id": "241",
+      "x": 30,
+      "y": 48,
+      "canvas": "0",
+      "width": 12,
+      "height": 6,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/apiu/001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 43
+    },
+    {
+      "id": "242",
+      "x": 72,
+      "y": 48,
+      "canvas": "0",
+      "width": 14,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Antenna 0001",
+        "backgroundColor": "#d7f9d2",
+        "textColor": "#000",
+        "size": 1,
+        "borderWidth": 0.001,
+        "borderColor": "#010101",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 44
+    },
+    {
+      "id": "243",
+      "x": 86,
+      "y": 48,
+      "canvas": "0",
+      "width": 12,
+      "height": 6,
+      "type": "DEVICE_STATUS",
+      "inputs": {
+        "device": "low-mccs/antenna/000001",
+        "state": {
+          "device": null,
+          "attribute": null
+        },
+        "showDeviceName": false,
+        "showStateString": true,
+        "showStateLED": true,
+        "LEDSize": 1,
+        "textSize": 1
+      },
+      "order": 45
+    },
+    {
+      "id": "244",
+      "x": 72,
+      "y": 54,
+      "canvas": "0",
+      "width": 14,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Antenna 0002",
+        "backgroundColor": "#d7f9d2",
+        "textColor": "#000",
+        "size": 1,
+        "borderWidth": 0.001,
+        "borderColor": "#010101",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 46
+    },
+    {
+      "id": "245",
+      "x": 72,
+      "y": 60,
+      "canvas": "0",
+      "width": 14,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Antenna 0003",
+        "backgroundColor": "#d7f9d2",
+        "textColor": "#000",
+        "size": 1,
+        "borderWidth": 0.001,
+        "borderColor": "#010101",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 47
+    },
+    {
+      "id": "246",
+      "x": 72,
+      "y": 66,
+      "canvas": "0",
+      "width": 14,
+      "height": 6,
+      "type": "LABEL",
+      "inputs": {
+        "text": "Antenna 0004",
+        "backgroundColor": "#d7f9d2",
+        "textColor": "#000",
+        "size": 1,
+        "borderWidth": 0.001,
+        "borderColor": "#010101",
+        "font": "Helvetica",
+        "linkTo": "",
+        "customCss": ""
+      },
+      "order": 48
+    },
+    {
+      "id": "247",
+      "x": 50,
+      "y": 54,
+      "canvas": "0",
+      "width": 8,
+      "height": 6,
+      "type": "BOOLEAN_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/apiu/001",
+          "attribute": "isantenna2powered",
+          "label": "Is antenna 2 powered"
+        },
+        "showAttribute": "None",
+        "showDevice": false
+      },
+      "order": 49
+    },
+    {
+      "id": "248",
+      "x": 58,
+      "y": 54,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerUpAntenna2",
+          "acceptedType": "DevVoid"
+        },
+        "title": "On",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 50
+    },
+    {
+      "id": "249",
+      "x": 44,
+      "y": 54,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerDownAntenna2",
+          "acceptedType": "DevVoid"
+        },
+        "title": "Off",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 51
+    },
+    {
+      "id": "250",
+      "x": 50,
+      "y": 60,
+      "canvas": "0",
+      "width": 8,
+      "height": 6,
+      "type": "BOOLEAN_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/apiu/001",
+          "attribute": "isantenna3powered",
+          "label": "Is antenna 3 powered"
+        },
+        "showAttribute": "None",
+        "showDevice": false
+      },
+      "order": 52
+    },
+    {
+      "id": "251",
+      "x": 58,
+      "y": 60,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerUpAntenna3",
+          "acceptedType": "DevVoid"
+        },
+        "title": "On",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 53
+    },
+    {
+      "id": "252",
+      "x": 44,
+      "y": 60,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerDownAntenna3",
+          "acceptedType": "DevVoid"
+        },
+        "title": "Off",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 54
+    },
+    {
+      "id": "253",
+      "x": 50,
+      "y": 66,
+      "canvas": "0",
+      "width": 8,
+      "height": 6,
+      "type": "BOOLEAN_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/apiu/001",
+          "attribute": "isantenna4powered",
+          "label": "Is antenna 4 powered"
+        },
+        "showAttribute": "None",
+        "showDevice": false
+      },
+      "order": 55
+    },
+    {
+      "id": "254",
+      "x": 58,
+      "y": 66,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerUpAntenna4",
+          "acceptedType": "DevVoid"
+        },
+        "title": "On",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 56
+    },
+    {
+      "id": "255",
+      "x": 44,
+      "y": 66,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "PowerDownAntenna4",
+          "acceptedType": "DevVoid"
+        },
+        "title": "Off",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 57
+    },
+    {
+      "id": "256",
+      "x": 100,
+      "y": 54,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000002",
+          "command": "DemoOff",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"Off\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 58
+    },
+    {
+      "id": "257",
+      "x": 106,
+      "y": 54,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000002",
+          "command": "DemoOn",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"On\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 59
+    },
+    {
+      "id": "258",
+      "x": 100,
+      "y": 60,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000003",
+          "command": "DemoOff",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"Off\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 60
+    },
+    {
+      "id": "259",
+      "x": 106,
+      "y": 60,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000003",
+          "command": "DemoOn",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"On\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 61
+    },
+    {
+      "id": "260",
+      "x": 100,
+      "y": 66,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000004",
+          "command": "DemoOff",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"Off\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 62
+    },
+    {
+      "id": "261",
+      "x": 106,
+      "y": 66,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/antenna/000004",
+          "command": "DemoOn",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"On\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 63
+    },
+    {
+      "id": "262",
+      "x": 36,
+      "y": 20,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "DemoOn",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"On\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 64
+    },
+    {
+      "id": "263",
+      "x": 30,
+      "y": 20,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/subrack/01",
+          "command": "DemoOff",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"Off\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 65
+    },
+    {
+      "id": "264",
+      "x": 36,
+      "y": 54,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "DemoOn",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"On\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#ff0000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 66
+    },
+    {
+      "id": "265",
+      "x": 30,
+      "y": 54,
+      "canvas": "0",
+      "width": 6,
+      "height": 6,
+      "type": "COMMAND_EXECUTOR",
+      "inputs": {
+        "command": {
+          "device": "low-mccs/apiu/001",
+          "command": "DemoOff",
+          "acceptedType": "DevVoid"
+        },
+        "title": "\"Off\"",
+        "requireConfirmation": false,
+        "displayOutput": false,
+        "cooldown": 0,
+        "textColor": "#0000ff",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 67
     }
   ]
 }

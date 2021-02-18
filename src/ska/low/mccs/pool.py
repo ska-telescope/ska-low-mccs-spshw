@@ -72,7 +72,7 @@ class DevicePool:
             ]
 
             for (async_id, device) in zip(async_ids, self._devices):
-                (result_code, _) = device.command_inout_reply(async_id, timeout=0)
+                (result_code, _) = device.command_inout_reply(async_id)
                 if result_code == ResultCode.FAILED:
                     return False
         return True

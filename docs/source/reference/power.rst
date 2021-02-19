@@ -55,30 +55,34 @@ Thus, implementation of the three power modes breaks down into:
  Power flow
 ************
 
+Map
+===
 The activity diagram below shows the flow of power through the MCCS
 system; i.e. cabling, essentially. The (/) points are switch points at
 which the power can be turned on/off. These switch points are annotated
 with the Tango device commands that drive the switch.
 
+Note: this diagram will evolve over time.
+
 .. uml:: power_flow.uml
 
-*******************
- Power on sequence
-*******************
+Startup sequence
+================
 
 Boot-up
-=======
+-------
 
 When power is first applied to MCCS, the following minimal bootup
 sequence is followed:
 
-#. Power is applied to all cabinets. All the cabinet management boards are on, 
-   as they are the primary control points for the cabinet subsystems. Switches and
-   subelements for the SPS cabinets are configured to remain off, as are the 
-   subelements for all but one of the MCCS cabinets. 
+#. Power is applied to all cabinets. All the cabinet management boards
+   come on, as they are the primary control points for the cabinet
+   subsystems. Switches and subelements for the SPS cabinets are
+   configured to remain off, as are the subelements for all but one of
+   the MCCS cabinets. 
 
-#. Power is applied to the APIUs in the field nodes. All the antennas are configured 
-   to remain off.
+#. Power is applied to the APIUs in the field nodes. All the antennas
+   are configured to remain off.
 
 #. The cabinet management board for the MCCS cabinet that houses the
    MCCS controller node is configured to start up the cabinet's 1Gb
@@ -94,7 +98,7 @@ sequence is followed:
    the MCCS Controller Tango device.
 
 Power-on
-========
+--------
 
 When TM sends the MCCS Controller the Startup command, the MCCS
 Controller must start up:
@@ -105,7 +109,7 @@ Controller must start up:
 #. the field equipment
 
 Prototype status
-================
+----------------
 
 In the current prototype implementation, all of MCCS is deployed
 immediately on startup, so that when TM sends the MCCS Controller the
@@ -113,3 +117,70 @@ Startup command, it need only start up the SPS cabinets and field
 equipment.
 
 .. uml:: power_sequence.uml
+
+Implementation model
+====================
+Currently, the operational state machine does not support transient
+states; that is, there is no POWERING or STARTING state. Commands like
+`Off()`, `On()` and `Startup()` are therefore implemented synchronously, and
+have to complete within three seconds.
+
+The simplest implementation would be hierarchical one, where each device
+responds to a command such as `On()`, by actioning it on its own
+hardware, and then actioning it on its own subservient devices. Once all
+subservient devices have completed, the device itself completes. the
+following diagram shows such a hierarchy for Controller, Cabinet,
+Subrack and Tile devices:
+
+.. uml:: power_sequence_hierarchy_example.uml
+
+Unfortunately, such an approach leads to deadlock (in the default TANGO
+serialisation model), because in turning itself on, a Tile device must
+command its Subrack to turn on power to the Tile's TPM. Thus
+`Subrack.On()` would call `Tile.On()`, which will call
+`Subrack.TurnOnTpm(N)`; and because TANGO devices will only run one
+command at a time (in the default TANGO serialisation model), the call
+to `Subrack.TurnOnTpm()` will be queued until `Subrack.On()` has
+completed. Hence, deadlock:
+
+.. uml:: power_sequence_deadlock_example.uml
+
+To resolve this, the implementation provides for sequencing of commands.
+A hierarchical model is still present, but rather that a device passing
+commands to all subservient devices simultaneously, it can group its
+subservient devices into pools, and invoke commands on each pool in
+sequence.
+
+The implementation of these pools and their sequencing is in the
+:doc:`Pool module </api/pool>`.
+
+In the example below, the deadlock is resolved by allowing the Cabinet
+to split its subservient devices into a pool of subracks and a pool of
+tiles, so that it can turn on subracks before tiles:
+
+.. uml:: power_sequence_deadlock_solved_example.uml
+
+***************************
+TANGO device initialisation
+***************************
+TANGO devices comprise the control system for the telescope. The control
+system's state and status is affected by the state and status of the
+telescope, but not vice versa. Thus, shutting down the telescope affects
+control system state, but shutting down the control system does not
+affect the telescope. (This is analogous to removing the batteries from
+a TV remote: the TV continues to run, it is only our ability to control
+the TV that has been lost.)
+
+Also, we should not assume that TANGO Devices initialise only at
+telescope startup. The control system runs on compute resources that can
+fail or require maintenance. Thus the control system, or any given TANGO
+device, could initialise at any time; for example, when the telescope is
+in the middle of a scan.
+
+Therefore, when a TANGO device initialises, it does not attempt to drive
+the telescope into a default state; rather, it observes the telescope,
+and updates its own state accordingly. (This is analogous to restoring a
+TV remote's batteries: we do not expect the remote to turn the TV off so
+that it can initialise into a target "TV is off" state. Rather, we
+expect the remote to check whether the TV is off or on, and update its
+state accordingly.)

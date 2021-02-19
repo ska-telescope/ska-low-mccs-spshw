@@ -61,6 +61,7 @@ prototype for the `Square Kilometre Array`_.
 
    api/demo_antenna_device
    api/demo_apiu_device
+   api/demo_controller_device
    api/demo_subrack_device
    api/demo_tile_device
 

@@ -1,10 +1,10 @@
 {
-  "id": "602db4741b8c0c0018a942b9",
+  "id": "602df28e7703c30018439956",
   "name": "MCCS_Dashboard",
   "version": "1.0.7",
   "user": "user1",
-  "insertTime": "2021-02-18T00:27:33.338Z",
-  "updateTime": "2021-02-18T00:37:46.542Z",
+  "insertTime": "2021-02-18T04:52:30.240Z",
+  "updateTime": "2021-02-18T07:12:39.543Z",
   "group": null,
   "groupWriteAccess": false,
   "lastUpdatedBy": "user1",
@@ -19,7 +19,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Controller",
-        "backgroundColor": "#93ff93",
+        "backgroundColor": "#80f6ff",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -56,7 +56,7 @@
       "x": 14,
       "y": 8,
       "canvas": "0",
-      "width": 10,
+      "width": 12,
       "height": 6,
       "type": "DEVICE_STATUS",
       "inputs": {
@@ -83,7 +83,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Subrack 01",
-        "backgroundColor": "#7891ed",
+        "backgroundColor": "#ffa866",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -126,7 +126,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Tile 0001",
-        "backgroundColor": "#d0d9f9",
+        "backgroundColor": "#ffe2cc",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -177,7 +177,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff8000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -194,7 +194,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Tile 0002",
-        "backgroundColor": "#d0d9f9",
+        "backgroundColor": "#ffe2cc",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -237,7 +237,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Tile 0003",
-        "backgroundColor": "#d0d9f9",
+        "backgroundColor": "#ffe2cc",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -280,7 +280,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Tile 0004",
-        "backgroundColor": "#d0d9f9",
+        "backgroundColor": "#ffe2cc",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -407,7 +407,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -432,7 +432,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -457,7 +457,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -482,7 +482,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -507,7 +507,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -532,7 +532,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -557,7 +557,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -582,7 +582,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -607,7 +607,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -632,7 +632,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -657,7 +657,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -682,7 +682,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -707,7 +707,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -732,7 +732,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -757,7 +757,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -782,7 +782,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -807,7 +807,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -832,7 +832,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -857,7 +857,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -882,7 +882,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -984,7 +984,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "APIU 001",
-        "backgroundColor": "#87ec79",
+        "backgroundColor": "#ec79cd",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -1027,7 +1027,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Antenna 0001",
-        "backgroundColor": "#d7f9d2",
+        "backgroundColor": "#f9d2ee",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -1070,7 +1070,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Antenna 0002",
-        "backgroundColor": "#d7f9d2",
+        "backgroundColor": "#f9d2ee",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -1091,7 +1091,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Antenna 0003",
-        "backgroundColor": "#d7f9d2",
+        "backgroundColor": "#f9d2ee",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -1112,7 +1112,7 @@
       "type": "LABEL",
       "inputs": {
         "text": "Antenna 0004",
-        "backgroundColor": "#d7f9d2",
+        "backgroundColor": "#fecdf1",
         "textColor": "#000",
         "size": 1,
         "borderWidth": 0.001,
@@ -1160,7 +1160,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1185,7 +1185,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1229,7 +1229,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1254,7 +1254,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1298,7 +1298,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1323,7 +1323,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1348,7 +1348,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1373,7 +1373,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1398,7 +1398,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1423,7 +1423,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1448,7 +1448,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1473,7 +1473,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1498,7 +1498,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1523,7 +1523,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1548,7 +1548,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#ff0000",
+        "textColor": "#4db34d",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"
@@ -1573,7 +1573,7 @@
         "requireConfirmation": false,
         "displayOutput": false,
         "cooldown": 0,
-        "textColor": "#0000ff",
+        "textColor": "#4d4db3",
         "backgroundColor": "#ffffff",
         "size": 1,
         "font": "Helvetica"

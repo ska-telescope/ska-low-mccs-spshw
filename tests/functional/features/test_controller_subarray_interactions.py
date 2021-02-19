@@ -208,7 +208,7 @@ def component_is_ready_to_receive_a_startup_command(devices, component_name, dir
     :type direction: str
     """
     if component_name == "mccs":
-        assert devices["controller"].state() == DevState.OFF
+        assert devices["controller"].state() == DevState.DISABLE
     elif component_name == "tmc":
         pass
     else:

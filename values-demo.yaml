@@ -16,6 +16,8 @@ ska-low-mccs:
   dsconfig:
     configuration_file: data/demo_configuration.json
   deviceServers:
+    controller:
+      command: "python3 -m ska.low.mccs.controller.demo_controller_device"
     subarrays:
       instances: []
     subarray-beams:

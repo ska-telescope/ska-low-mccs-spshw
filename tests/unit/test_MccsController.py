@@ -236,7 +236,7 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.State() == tango.DevState.OFF
+        assert device_under_test.State() == tango.DevState.DISABLE
 
     def test_Status(self, device_under_test):
         """
@@ -247,7 +247,7 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.Status() == "The device is in OFF state."
+        assert device_under_test.Status() == "The device is in DISABLE state."
 
     def test_GetVersionInfo(self, device_under_test):
         """
@@ -286,7 +286,7 @@ class TestMccsController:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Command Reset not allowed when the device is in OFF state",
+            match="Command Reset not allowed when the device is in DISABLE state",
         ):
             device_under_test.Reset()
 
@@ -301,6 +301,8 @@ class TestMccsController:
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.Mock`
         """
+        device_under_test.Off()
+
         # Test that subscription yields an event as expected
         _ = device_under_test.subscribe_event(
             "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
@@ -330,6 +332,7 @@ class TestMccsController:
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
+        controller.Off()
         controller.On()
 
         # Test that subscription yields an event as expected
@@ -383,6 +386,8 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
+
         # assert device_under_test.Operate() == 0
         [[result_code], [message]] = device_under_test.Operate()
         assert result_code == ResultCode.OK
@@ -507,6 +512,7 @@ class TestMccsController:
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
+            controller.Off()
             controller.On()
 
             call_with_json(
@@ -735,6 +741,7 @@ class TestMccsController:
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
+            controller.Off()
             controller.On()
 
             call_with_json(

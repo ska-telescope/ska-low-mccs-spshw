@@ -72,7 +72,7 @@ class DevicePool:
             ]
 
             for (async_id, device) in zip(async_ids, self._devices):
-                (result_code, _) = device.command_inout_reply(async_id)
+                (result_code, _) = device.command_inout_reply(async_id, timeout=0)
                 if result_code == ResultCode.FAILED:
                     return False
         return True
@@ -114,7 +114,7 @@ class DevicePool:
         return self.invoke_command("On")
 
 
-class DevicePoolSequence(DevicePool):
+class DevicePoolSequence:
     """
     A class for managing a sequence of device pools.
 

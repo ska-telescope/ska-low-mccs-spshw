@@ -1,8 +1,8 @@
 {
     "servers": {
-        "MccsController": {
+        "DemoController": {
             "controller": {
-                "MccsController": {
+                "DemoController": {
                     "low-mccs/control/control": {
                         "properties": {
                             "MccsSubracks": [

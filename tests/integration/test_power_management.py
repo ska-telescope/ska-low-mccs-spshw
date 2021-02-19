@@ -72,7 +72,7 @@ class TestPowerManagement:
         antenna_3 = device_context.get_device("antenna_000003")
         antenna_4 = device_context.get_device("antenna_000004")
 
-        assert controller.State() == DevState.OFF
+        assert controller.State() == DevState.DISABLE
         assert subrack.State() == DevState.DISABLE
         assert station.State() == DevState.OFF
         assert tile_1.State() == DevState.DISABLE

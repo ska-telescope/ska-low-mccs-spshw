@@ -326,6 +326,9 @@ class MccsController(SKAMaster):
             self._interrupt = True
             return True
 
+        def succeeded(self):
+            self.state_model.perform_action("init_succeeded_disable")
+
     def always_executed_hook(self):
         """
         Method always executed before any TANGO command is executed.

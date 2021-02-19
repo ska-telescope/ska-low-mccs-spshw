@@ -115,7 +115,7 @@ class TestMccsIntegrationTmc:
         async_id = device.command_inout_asynch(command, argin)
         try:
             # HACK: increasing the timeout until we can make some commands synchronous
-            result = device.command_inout_reply(async_id, timeout=5000)
+            result = device.command_inout_reply(async_id, timeout=0)
             if expected_result is None:
                 assert result is None
             else:
@@ -134,7 +134,7 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        assert devices["controller"].State() == DevState.OFF
+        assert devices["controller"].State() == DevState.DISABLE
         assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_02"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
@@ -164,7 +164,7 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        assert devices["controller"].State() == DevState.OFF
+        assert devices["controller"].State() == DevState.DISABLE
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
         self.assert_command(device=devices["controller"], command="Startup")

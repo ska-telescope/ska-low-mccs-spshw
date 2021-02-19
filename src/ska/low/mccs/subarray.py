@@ -492,7 +492,6 @@ class MccsSubarray(SKASubarray):
         dtype="DevLong",
         format="%i",
         polling_period=1000,
-        doc="Result code from the previously completed command",
     )
     def commandResult(self):
         """
@@ -507,8 +506,6 @@ class MccsSubarray(SKASubarray):
         dtype="DevLong",
         format="%i",
         polling_period=1000,
-        doc="The ID of the current scan, set via commands Scan() and "
-        "endScan(). A scanId of 0 means that the subarray is idle.",
     )
     def scanId(self):
         """
@@ -534,8 +531,6 @@ class MccsSubarray(SKASubarray):
         max_dim_x=512,
         format="%s",
         polling_period=1000,
-        doc="Array holding the fully qualified device names of the "
-        "Stations allocated to this Subarray",
     )
     def stationFQDNs(self):
         """
@@ -912,7 +907,6 @@ class MccsSubarray(SKASubarray):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def Abort(self):
@@ -981,7 +975,6 @@ class MccsSubarray(SKASubarray):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def ObsReset(self):
@@ -1062,20 +1055,7 @@ class MccsSubarray(SKASubarray):
 
     @command(
         dtype_in="DevVarLongArray",
-        doc_in="Specification of the segment of the transient buffer "
-        "to send, comprising:"
-        "1. Start time (timestamp: milliseconds since UNIX epoch)"
-        "2. End time (timestamp: milliseconds since UNIX epoch)"
-        "3. Dispersion measure"
-        "Together, these parameters narrow the selection of transient"
-        "buffer data to the period of time and frequencies that are of"
-        "interest."
-        ""
-        "Additional metadata, such as the ID of a triggering Scheduling"
-        "Block, may need to be supplied to allow SDP to assign data"
-        "ownership correctly (TBD75).",
         dtype_out="DevVarLongStringArray",
-        doc_out="[ReturnCode, information-only string]",
     )
     @DebugIt()
     def SendTransientBuffer(self, argin):

@@ -186,6 +186,10 @@ class StationBeamsResourceManager(ResourceManager):
             station_beams[station_beam_id] = station_beam_fqdn
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = sorted(stations.keys())
+            # TODO for now assigning single station fqdn to station beam
+            # for health monitoring, rather than an array
+            # This will be the case when Subarray Beam is fully implemented
+            station_beam.stationFqdn = station_fqdns[0]
 
         self._add_to_managed(station_beams)
         for station_beam_fqdn in station_beam_fqdns:
@@ -250,6 +254,7 @@ class StationBeamsResourceManager(ResourceManager):
         for station_beam_fqdn in station_beam_fqdns:
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = []
+            station_beam.stationFqdn = ""
         super().release(station_beam_fqdns)
 
     def release_all(self):

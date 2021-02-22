@@ -663,7 +663,7 @@ class MccsSubrack(SKABaseDevice):
             hardware_manager = self.target
             return hardware_manager.is_tpm_on(argin)
 
-    @command(dtype_in="DevULong", doc_in="logicalTpmId", dtype_out=bool)
+    @command(dtype_in="DevULong", dtype_out=bool)
     @DebugIt()
     def IsTpmOn(self, argin):
         """
@@ -705,9 +705,7 @@ class MccsSubrack(SKABaseDevice):
 
     @command(
         dtype_in="DevULong",
-        doc_in="logicalTpmId",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerOnTpm(self, argin):
@@ -753,9 +751,7 @@ class MccsSubrack(SKABaseDevice):
 
     @command(
         dtype_in="DevULong",
-        doc_in="logicalTpmId",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerOffTpm(self, argin):
@@ -800,7 +796,6 @@ class MccsSubrack(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerUp(self):
@@ -841,7 +836,6 @@ class MccsSubrack(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerDown(self):

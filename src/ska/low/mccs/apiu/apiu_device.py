@@ -762,7 +762,7 @@ class MccsAPIU(SKABaseDevice):
             hardware_manager = self.target
             return hardware_manager.is_antenna_on(argin)
 
-    @command(dtype_in="DevULong", doc_in="logicalAntennaId", dtype_out=bool)
+    @command(dtype_in="DevULong", dtype_out=bool)
     @DebugIt()
     def IsAntennaOn(self, argin):
         """
@@ -804,9 +804,7 @@ class MccsAPIU(SKABaseDevice):
 
     @command(
         dtype_in="DevULong",
-        doc_in="logicalAntennaId",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerUpAntenna(self, argin):
@@ -852,9 +850,7 @@ class MccsAPIU(SKABaseDevice):
 
     @command(
         dtype_in="DevULong",
-        doc_in="logicalAntennaId",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerDownAntenna(self, argin):
@@ -899,7 +895,6 @@ class MccsAPIU(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerUp(self):
@@ -940,7 +935,6 @@ class MccsAPIU(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerDown(self):

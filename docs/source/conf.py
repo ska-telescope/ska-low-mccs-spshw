@@ -258,7 +258,7 @@ intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
     "ska-base": (
-        "https://developer.skatelescope.org/projects/lmc-base-classes/en/latest/",
+        "https://developer.skatelescope.org/projects/lmc-base-classes/en/0.8.1/",
         None,
     ),
 }

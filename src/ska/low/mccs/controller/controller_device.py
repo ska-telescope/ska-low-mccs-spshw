@@ -364,7 +364,6 @@ class MccsController(SKAMaster):
         dtype="DevLong",
         format="%i",
         polling_period=1000,
-        doc="Result code from the previously completed command",
     )
     def commandResult(self):
         """
@@ -383,9 +382,6 @@ class MccsController(SKAMaster):
         abs_change=5,
         max_value=100,
         min_value=0,
-        doc="Percentage progress implemented for commands that result in "
-        "state/mode transitions for a large \nnumber of components and/or "
-        "are executed in stages (e.g power up, power down)",
     )
     def commandProgress(self):
         """
@@ -399,8 +395,6 @@ class MccsController(SKAMaster):
     @attribute(
         dtype="DevUShort",
         unit="s",
-        doc="Amount of time it will take to prepare the requested state/mode "
-        "transition ? implemented as needed.",
     )
     def commandDelayExpected(self):
 
@@ -418,7 +412,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def Startup(self):
@@ -479,7 +472,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def On(self):
@@ -525,7 +517,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def Disable(self):
@@ -571,7 +562,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def Off(self):
@@ -646,7 +636,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def StandbyLow(self):
@@ -695,7 +684,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def StandbyFull(self):
@@ -751,7 +739,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def Operate(self):
@@ -810,9 +797,7 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_in="DevString",
-        doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     def Allocate(self, argin):
         """
@@ -1052,9 +1037,7 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_in="DevString",
-        doc_in="JSON-formatted string",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     def Release(self, argin):
         """
@@ -1216,7 +1199,6 @@ class MccsController(SKAMaster):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def Maintenance(self):

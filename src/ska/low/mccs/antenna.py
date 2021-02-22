@@ -748,7 +748,7 @@ class MccsAntenna(SKABaseDevice):
                 "Antennas cannot be put into simulation mode, but entire APIUs can."
             )
 
-    @attribute(dtype="int", label="AntennaID", doc="Global antenna identifier")
+    @attribute(dtype="int", label="AntennaID")
     def antennaId(self):
         """
         Return the antenna ID attribute.
@@ -758,7 +758,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._antennaId
 
-    @attribute(dtype="float", label="gain", doc="The gain set for the antenna")
+    @attribute(dtype="float", label="gain")
     def gain(self):
         """
         Return the gain attribute.
@@ -768,9 +768,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._gain
 
-    @attribute(
-        dtype="float", label="rms", doc="The measured RMS of the antenna (monitored)"
-    )
+    @attribute(dtype="float", label="rms")
     def rms(self):
         """
         Return the measured RMS of the antenna.
@@ -843,7 +841,6 @@ class MccsAntenna(SKABaseDevice):
     @attribute(
         dtype="float",
         label="fieldNodeLongitude",
-        doc="Longitude of field node (centre) to which antenna is associated.",
     )
     def fieldNodeLongitude(self):
         """
@@ -857,8 +854,6 @@ class MccsAntenna(SKABaseDevice):
     @attribute(
         dtype="float",
         label="fieldNodeLatitude",
-        doc="""Latitude of the field node (centre) to which antenna is
-        associated.""",
     )
     def fieldNodeLatitude(self):
         """
@@ -869,9 +864,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._fieldNodeLongitude
 
-    @attribute(
-        dtype="float", label="altitude", unit="meters", doc="Antenna altitude in meters"
-    )
+    @attribute(dtype="float", label="altitude", unit="meters")
     def altitude(self):
         """
         Return the altitude attribute.
@@ -885,7 +878,6 @@ class MccsAntenna(SKABaseDevice):
         dtype="float",
         label="xDisplacement",
         unit="meters",
-        doc="Horizontal displacement in meters from field node centre",
     )
     def xDisplacement(self):
         """
@@ -900,7 +892,6 @@ class MccsAntenna(SKABaseDevice):
         dtype="float",
         label="yDisplacement",
         unit="meters",
-        doc="Vertical displacement in meters from field centre",
     )
     def yDisplacement(self):
         """
@@ -924,7 +915,6 @@ class MccsAntenna(SKABaseDevice):
     @attribute(
         dtype="int",
         label="logicalAntennaId",
-        doc="Local (within Tile) antenna identifier",
     )
     def logicalAntennaId(self):
         """
@@ -959,9 +949,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="calibrationCoefficient",
-        doc="""Calibration coefficient to be applied for the next frequency
-        channel in the calibration cycle (archived).
-        This is presented as a vector.""",
     )
     def calibrationCoefficient(self):
         """
@@ -973,7 +960,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._calibrationCoefficient
 
-    @attribute(dtype=("float",), max_dim_x=100, doc="This is presented as a vector.")
+    @attribute(dtype=("float",), max_dim_x=100)
     def pointingCoefficient(self):
         """
         Return the pointingCoefficient attribute.
@@ -1017,8 +1004,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="delays",
-        doc="Delay for each beam to be applied during the next pointing "
-        "update (archived)",
     )
     def delays(self):
         """
@@ -1033,8 +1018,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="delayRates",
-        doc="Delay rate for each beam to be applied during the next "
-        "pointing update (archived)",
     )
     def delayRates(self):
         """
@@ -1049,8 +1032,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="bandpassCoefficient",
-        doc="Bandpass coefficient to apply during next calibration cycle to "
-        "flatten the antenna's bandpass (archived)",
     )
     def bandpassCoefficient(self):
         """
@@ -1173,7 +1154,6 @@ class MccsAntenna(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerOn(self):
@@ -1212,7 +1192,6 @@ class MccsAntenna(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PowerOff(self):

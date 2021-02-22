@@ -545,7 +545,6 @@ class MccsDevice(SKABaseDevice):
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def ConstructDeviceProxyAddress(self, argin):

@@ -33,9 +33,15 @@ Some assumptions of this class are:
 These assumptions are unconfirmed and may need to change in future.
 """
 
+import enum
 from ska.low.mccs.hardware import OnOffHardwareSimulator, PowerMode
 
 __all__ = ["SubrackBaySimulator", "SubrackBoardSimulator"]
+
+
+class FanMode(enum.IntEnum):
+    AUTO = 1
+    MANUAL = 0
 
 
 class SubrackBaySimulator(OnOffHardwareSimulator):
@@ -151,7 +157,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     The default initial simulated temperature for the subrack management
     board itself; this can be overruled in the constructor
     """
-    DEFAULT_BOARD_CURRENT = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    DEFAULT_BOARD_CURRENT = 1.1
     """
     The default initial simulated current for the subrack management
     board itself; this can be overruled in the constructor
@@ -161,7 +167,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     The default initial simulated fan speed for the subrack; this can be
     overruled using the set_subrack_fan_speed method
     """
-    DEFAULT_FAN_MODE = [0, 0, 0, 0]
+    DEFAULT_FAN_MODE = [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO]
     """
     The default initial simulated fan mode for the subrack; this can be
     overruled using the set_fan_mode method
@@ -171,7 +177,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         The default initial simulated Power On/Off status of inserted tpm; this can be
         overruled in the constructor
     """
-    DEFAULT_TPM_PRESENT = [1, 1, 1, 1, 1, 1, 1, 1]
+    DEFAULT_TPM_PRESENT = [True, True, True, True, True, True, True, True]
     """
         The default initial simulated tpm present in the subrack;
     """
@@ -188,13 +194,13 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def __init__(
         self,
-        backplane_temperature=DEFAULT_BACKPLANE_TEMPERATURE,
-        board_temperature=DEFAULT_BOARD_TEMPERATURE,
+        backplane_temperatures=DEFAULT_BACKPLANE_TEMPERATURE,
+        board_temperatures=DEFAULT_BOARD_TEMPERATURE,
         board_current=DEFAULT_BOARD_CURRENT,
-        fan_speed=DEFAULT_FAN_SPEED,
+        fan_speeds=DEFAULT_FAN_SPEED,
         fan_mode=DEFAULT_FAN_MODE,
-        ps_power=DEFAULT_PS_POWER,
-        ps_fan_speed=DEFAULT_PS_FAN_SPEED,
+        power_supply_powers=DEFAULT_PS_POWER,
+        power_supply_fan_speeds=DEFAULT_PS_FAN_SPEED,
         tpm_on_off=DEFAULT_TPM_ON_OFF,
         tpm_present=DEFAULT_TPM_PRESENT,
         fail_connect=False,
@@ -204,29 +210,29 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         Initialise a new instance.
 
-        :param backplane_temperature: the initial temperature of the
-            subrack backplane from sensor 1 and 2
-        :type backplane_temperature: list(float)
-        :param board_temperature: the initial temperature of the subrack
-            management board from sensor 1 and 2
-        :type board_temperature: list(float)
-        :param board_current: the initial current of the subrack
-            management board
+        :param backplane_temperatures: the initial temperature of the subrack
+            backplane from sensor 1 and 2
+        :type backplane_temperatures: list(float)
+        :param board_temperatures: the initial temperature of the subrack management
+            board from sensor 1 and 2
+        :type board_temperatures: list(float)
+        :param board_current: the initial current of the subrack management board
         :type board_current: float
-        :param fan_speed: the initial fan_speed of the subrack backplane
+        :param fan_speeds: the initial fan_speeds of the subrack backplane
             management board
-        :type fan_speed: list(float)
+        :type fan_speeds: list(float)
         :param fan_mode: the initial fan mode of the subrack backplane
         :type fan_mode: list(int)
-        :param ps_power: the initial power for the 3 power supply in the subrack
-        :type ps_power: list(float)
-        :param: ps_fan_speed: the initial fan speed in percent for the 3 power supply
-            in the subrack
-        :type ps_fan_speed: list(float)
+        :param power_supply_powers: the initial power for the 3 power supply in the
+            subrack
+        :type power_supply_powers: list(float)
+        :param: power_supply_fan_speeds: the initial fan speeds in percent for the 3
+            power supply in the subrack
+        :type power_supply_fan_speeds: list(float)
         :param tpm_on_off: the initial Power On/Off status of inserted tpm
         :type tpm_on_off: list(int)
         :param tpm_present: the initial TPM board present on subrack
-        :type tpm_present: list(int)
+        :type tpm_present: list(boolean)
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -241,13 +247,13 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             them.
         :type _bays: list of :py:class:`.SubrackBaySimulator`
         """
-        self._backplane_temperature = backplane_temperature
-        self._board_temperature = board_temperature
+        self._backplane_temperatures = backplane_temperatures
+        self._board_temperatures = board_temperatures
         self._board_current = board_current
-        self._fan_speed = fan_speed
+        self._fan_speeds = fan_speeds
         self._fan_mode = fan_mode
-        self._ps_power = ps_power
-        self._ps_fan_speed = ps_fan_speed
+        self._power_supply_powers = power_supply_powers
+        self._power_supply_fan_speeds = power_supply_fan_speeds
         self._tpm_on_off = tpm_on_off
         self._tpm_present = tpm_present
 
@@ -284,54 +290,53 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         super().on()
 
     @property
-    def backplane_temperature(self):
+    def backplane_temperatures(self):
         """
         Return the subrack backplane temperature from sensor 1 and 2.
 
-        :return: the subrack backplane temperature
+        :return: the subrack backplane temperatures
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._backplane_temperature
+        return self._backplane_temperatures
 
-    def simulate_backplane_temperature(self, backplane_temperature):
+    def simulate_backplane_temperatures(self, backplane_temperatures):
         """
-        Set the simulated backplane temperature for this subrack
+        Set the simulated backplane temperatures for this subrack
         simulator.
 
-        :param backplane_temperature: the simulated backplane
+        :param backplane_temperatures: the simulated backplane
             temperature for this subrack simulator.
-        :type backplane_temperature: list(float)
+        :type backplane_temperatures: list(float)
         """
-        self._backplane_temperature = backplane_temperature
+        self._backplane_temperatures = backplane_temperatures
 
     @property
-    def board_temperature(self):
+    def board_temperatures(self):
         """
         Return the subrack management board temperature from sensor 1
         and 2.
 
-        :return: the board temperature, in degrees celsius
+        :return: the board temperatures, in degrees celsius
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._board_temperature
+        return self._board_temperatures
 
-    def simulate_board_temperature(self, board_temperature):
+    def simulate_board_temperatures(self, board_temperatures):
         """
-        Set the simulated board temperature for this subrack simulator.
+        Set the simulated board temperatures for this subrack simulator.
 
-        :param board_temperature: the simulated board temperature for
+        :param board_temperatures: the simulated board temperature for
             this subrack simulator.
-        :type board_temperature: list(float)
+        :type board_temperatures: list(float)
         """
-        self._board_temperature = board_temperature
+        self._board_temperatures = board_temperatures
 
     @property
     def board_current(self):
         """
-        Return the current of this subrack's management board bays
-        (hence the currents of the TPMs housed in those bays).
+        Return the subrack management board current.
 
         :return: the subrack management board current
         :rtype: float
@@ -349,35 +354,35 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._board_current = board_current
 
     @property
-    def fan_speed(self):
+    def fan_speeds(self):
         """
-        Return the subrack backplane fan speed (in RPMs).
+        Return the subrack backplane fan speeds (in RPMs).
 
-        :return: the subrack fan speed (RPMs)
+        :return: the subrack fan speeds (RPMs)
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._fan_speed
+        return self._fan_speeds
 
-    def simulate_fan_speed(self, fan_speed):
+    def simulate_fan_speeds(self, fan_speeds):
         """
         Set the simulated fan speed for this subrack simulator.
 
-        :param fan_speed: the simulated fan speed for this subrack simulator.
-        :type fan_speed: list(float)
+        :param fan_speeds: the simulated fan speed for this subrack simulator.
+        :type fan_speeds: list(float)
         """
-        self._fan_speed = fan_speed
+        self._fan_speeds = fan_speeds
 
     @property
-    def fan_speed_perc(self):
+    def fan_speeds_percent(self):
         """
-        Return the subrack backplane fan speed in percent.
+        Return the subrack backplane fan speeds in percent.
 
         :return: the fan speed, in percent
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._fan_speed_perc
+        return self._fan_speeds_percent
 
     @property
     def subrack_fan_mode(self):
@@ -429,73 +434,73 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             bay.simulate_temperature(temperature)
 
     @property
-    def tpm_power(self):
+    def tpm_powers(self):
         """
         Return a list of bay powers for this subrack.
 
         :return: a list of bay powers, in Watt
         :rtype: list(float)
         """
-        return self._tpm_power
+        return self._tpm_powers
 
     @property
-    def tpm_voltage(self):
+    def tpm_voltages(self):
         """
         Return a list of bay voltages for this subrack.
 
         :return: a list of bay voltages, in volt
         :rtype: list(float)
         """
-        return self._tpm_voltage
+        return self._tpm_voltages
 
     @property
-    def ps_fanspeed(self):
+    def power_supply_fan_speeds(self):
         """
-        Return the ps fan speed for this subrack.
+        Return the power supply fan speeds for this subrack.
 
         :return: the ps fan speed
         :rtype: list(float)
         """
-        return self._ps_fanspeed
+        return self._power_supply_fan_speeds
 
     @property
-    def ps_current(self):
+    def power_supply_currents(self):
         """
-        Return the ps current for this subrack.
+        Return the power supply currents for this subrack.
 
         :return: the ps current
         :rtype: list(float)
         """
-        return self._ps_current
+        return self._power_supply_currents
 
     @property
-    def ps_power(self):
+    def power_supply_powers(self):
         """
-        Return the pps power for this subrack.
+        Return the power supply power for this subrack.
 
-        :return: the ps power
+        :return: the power supply power
         :rtype: list(float)
         """
-        return self._ps_power
+        return self._power_supply_powers
 
-    def simulate_ps_power(self, ps_power):
+    def simulate_power_supply_powers(self, power_supply_powers):
         """
-        Set the the pps power for this subrack.
+        Set the the power supply power for this subrack.
 
-        :param ps_power: the simulated  ps power
-        :type ps_power: list(float)
+        :param power_supply_powers: the simulated  power supply power
+        :type power_supply_powers: list(float)
         """
-        self._ps_power = ps_power
+        self._power_supply_powers = power_supply_powers
 
     @property
-    def ps_voltage(self):
+    def power_supply_voltages(self):
         """
-        Return the ps voltage for this subrack.
+        Return the power supply voltages for this subrack.
 
-        :return: the ps voltages
+        :return: the power supply voltages
         :rtype: list(float)
         """
-        return self._ps_voltage
+        return self._power_supply_voltages
 
     @property
     def tpm_on_off(self):
@@ -513,7 +518,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         Return the tpm detected in the subrack.
 
         :return: list of tpm detected
-        :rtype: list(int)
+        :rtype: list(boolean)
         """
         return self._tpm_present
 
@@ -612,17 +617,17 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         for bay in self._bays:
             bay.off()
 
-    def set_subrack_fan_speed(self, fan_id, speed_pwm_perc):
+    def set_subrack_fan_speed(self, fan_id, speed_percent):
         """
-        Set the subrack backplane fan speed.
+        Set the subrack backplane fan speed in percent.
 
         :param fan_id: id of the selected fan accepted value: 1-4
         :type fan_id: int
-        :param speed_pwm_perc: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
-        :type speed_pwm_perc: float
+        :param speed_percent: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
+        :type speed_percent: float
         """
         self.check_power_mode(PowerMode.ON)
-        self._fan_speed[fan_id - 1] = speed_pwm_perc
+        self._fan_speed[fan_id - 1] = speed_percent
 
     def set_fan_mode(self, fan_id, mode):
         """
@@ -636,17 +641,17 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self.check_power_mode(PowerMode.ON)
         self._fan_mode[fan_id - 1] = mode
 
-    def set_ps_fan_speed(self, ps_fan_id, speed_per):
+    def set_power_supply_fan_speed(self, power_supply_fan_id, speed_percent):
         """
         Set the power supply  fan speed.
 
-        :param ps_fan_id: power supply id from 0 to 2
-        :type ps_fan_id: int
-        :param speed_per: fan speed in percent (MIN 0=0% - MAX 100=100%)
-        :type speed_per: float
+        :param power_supply_fan_id: power supply id from 0 to 2
+        :type power_supply_fan_id: int
+        :param speed_percent: fan speed in percent (MIN 0=0% - MAX 100=100%)
+        :type speed_percent: float
         """
         self.check_power_mode(PowerMode.ON)
-        self._ps_fan_speed[ps_fan_id - 1] = speed_per
+        self._power_supply_fan_speed[power_supply_fan_id - 1] = speed_percent
 
     def check_power_mode(self, power_mode, error=None):
         """

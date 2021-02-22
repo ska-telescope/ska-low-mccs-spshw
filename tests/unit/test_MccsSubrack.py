@@ -250,7 +250,10 @@ class TestSubrackBoardSimulator:
             )
             assert subrack_board.fan_speed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
 
-            assert subrack_board.are_tpms_on() == [False] * subrack_board.tpm_count
+            are_tpms_on = subrack_board.are_tpms_on()
+            assert not any(are_tpms_on)
+            assert len(are_tpms_on) == subrack_board.tpm_count
+
             for tpm_id in range(1, subrack_board.tpm_count + 1):
                 assert not subrack_board.is_tpm_on(tpm_id)
 

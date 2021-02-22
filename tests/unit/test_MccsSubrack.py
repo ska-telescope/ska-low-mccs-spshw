@@ -218,13 +218,14 @@ class TestSubrackBoardSimulator:
             """
             assert subrack_board.power_mode == PowerMode.OFF
             with pytest.raises(ValueError, match="Subrack is not ON."):
-                _ = subrack_board.backplane_temperature
+                _ = subrack_board.backplane_temperatures
             with pytest.raises(ValueError, match="Subrack is not ON."):
-                _ = subrack_board.board_temperature
+                _ = subrack_board.board_temperatures
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = subrack_board.board_current
             with pytest.raises(ValueError, match="Subrack is not ON."):
-                _ = subrack_board.fan_speed
+
+                _ = subrack_board.fan_speeds
 
             assert subrack_board.are_tpms_on() is None
             for tpm_id in range(1, subrack_board.tpm_count + 1):
@@ -237,18 +238,18 @@ class TestSubrackBoardSimulator:
             """
             assert subrack_board.power_mode == PowerMode.ON
             assert (
-                subrack_board.backplane_temperature
+                subrack_board.backplane_temperatures
                 == SubrackBoardSimulator.DEFAULT_BACKPLANE_TEMPERATURE
             )
             assert (
-                subrack_board.board_temperature
+                subrack_board.board_temperatures
                 == SubrackBoardSimulator.DEFAULT_BOARD_TEMPERATURE
             )
             assert (
                 subrack_board.board_current
                 == SubrackBoardSimulator.DEFAULT_BOARD_CURRENT
             )
-            assert subrack_board.fan_speed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
+            assert subrack_board.fan_speeds == SubrackBoardSimulator.DEFAULT_FAN_SPEED
 
             are_tpms_on = subrack_board.are_tpms_on()
             assert not any(are_tpms_on)
@@ -352,31 +353,31 @@ class TestSubrackBoardSimulator:
         subrack_board.on()
 
         assert (
-            subrack_board.backplane_temperature
+            subrack_board.backplane_temperatures
             == SubrackBoardSimulator.DEFAULT_BACKPLANE_TEMPERATURE
         )
         assert (
-            subrack_board.board_temperature
+            subrack_board.board_temperatures
             == SubrackBoardSimulator.DEFAULT_BOARD_TEMPERATURE
         )
         assert (
             subrack_board.board_current == SubrackBoardSimulator.DEFAULT_BOARD_CURRENT
         )
 
-        backplane_temperature = random_temperature()
-        board_temperature = random_temperature()
+        backplane_temperatures = random_temperature()
+        board_temperatures = random_temperature()
         board_current = random_current()
-        fan_speed = random_fan_speed()
+        fan_speeds = random_fan_speed()
 
-        subrack_board.simulate_backplane_temperature(backplane_temperature)
-        subrack_board.simulate_board_temperature(board_temperature)
+        subrack_board.simulate_backplane_temperatures(backplane_temperatures)
+        subrack_board.simulate_board_temperatures(board_temperatures)
         subrack_board.simulate_board_current(board_current)
-        subrack_board.simulate_fan_speed(fan_speed)
+        subrack_board.simulate_fan_speeds(fan_speeds)
 
-        assert subrack_board.backplane_temperature == backplane_temperature
-        assert subrack_board.board_temperature == board_temperature
+        assert subrack_board.backplane_temperatures == backplane_temperatures
+        assert subrack_board.board_temperatures == board_temperatures
         assert subrack_board.board_current == board_current
-        assert subrack_board.fan_speed == fan_speed
+        assert subrack_board.fan_speeds == fan_speeds
 
         assert subrack_board.tpm_temperatures == [
             bay.temperature for bay in subrack_bays
@@ -438,11 +439,13 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
+
             tpm_count=len(subrack_bays),
-            backplane_temperature=random_temperature(),
-            board_temperature=random_temperature(),
+            backplane_temperatures=random_temperature(),
+            board_temperatures=random_temperature(),
+
             board_current=random_current(),
-            fan_speed=random_fan_speed(),
+            fan_speeds=random_fan_speed(),
             _bays=subrack_bays,
         )
 
@@ -539,13 +542,13 @@ class TestSubrackHardwareManager:
             """
             assert hardware_manager.power_mode == PowerMode.OFF
             with pytest.raises(ValueError, match="Subrack is not ON."):
-                _ = hardware_manager.backplane_temperature
+                _ = hardware_manager.backplane_temperatures
             with pytest.raises(ValueError, match="Subrack is not ON."):
-                _ = hardware_manager.board_temperature
+                _ = hardware_manager.board_temperatures
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = hardware_manager.board_current
             with pytest.raises(ValueError, match="Subrack is not ON."):
-                _ = hardware_manager.fan_speed
+                _ = hardware_manager.fan_speeds
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = hardware_manager.tpm_temperatures
             with pytest.raises(ValueError, match="Subrack is not ON."):
@@ -561,12 +564,14 @@ class TestSubrackHardwareManager:
             assert hardware_manager.health == HealthState.OK
 
             assert (
-                hardware_manager.backplane_temperature
-                == subrack_board.backplane_temperature
+                hardware_manager.backplane_temperatures
+                == subrack_board.backplane_temperatures
             )
-            assert hardware_manager.board_temperature == subrack_board.board_temperature
+            assert (
+                hardware_manager.board_temperatures == subrack_board.board_temperatures
+            )
             assert hardware_manager.board_current == subrack_board.board_current
-            assert hardware_manager.fan_speed == subrack_board.fan_speed
+            assert hardware_manager.fan_speeds == subrack_board.fan_speeds
             assert hardware_manager.tpm_temperatures == subrack_board.tpm_temperatures
             assert hardware_manager.tpm_currents == subrack_board.tpm_currents
 
@@ -738,18 +743,23 @@ class TestMccsSubrack(object):
         device_under_test.Off()
         device_under_test.On()
         assert (
-            device_under_test.backplaneTemperature
+            list(device_under_test.backplaneTemperatures)
             == SubrackBoardSimulator.DEFAULT_BACKPLANE_TEMPERATURE
         )
         assert (
-            device_under_test.boardTemperature
+            list(device_under_test.boardTemperatures)
             == SubrackBoardSimulator.DEFAULT_BOARD_TEMPERATURE
         )
         assert (
             device_under_test.boardCurrent
             == SubrackBoardSimulator.DEFAULT_BOARD_CURRENT
         )
-        assert device_under_test.fanSpeed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
+
+        assert (
+            list(device_under_test.subrackFanSpeeds)
+            == SubrackBoardSimulator.DEFAULT_FAN_SPEED
+        )
+
         assert (
             list(device_under_test.tpmTemperatures)
             == [SubrackBaySimulator.DEFAULT_TEMPERATURE] * 4

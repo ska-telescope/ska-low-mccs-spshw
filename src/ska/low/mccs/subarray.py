@@ -16,7 +16,7 @@ __all__ = [
     "main",
 ]
 
-# imports 123
+# imports
 import json
 import threading
 import time

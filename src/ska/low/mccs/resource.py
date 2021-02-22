@@ -472,6 +472,7 @@ class ResourceManager:
         :type new_owner: int
         :raises ValueError: if any of the FQDNs are unavailable or not healthy
         """
+
         self._except_on_unmanaged(devices.values())
         for device_id in devices.keys():
             try:

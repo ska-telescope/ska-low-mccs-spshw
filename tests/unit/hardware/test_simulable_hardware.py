@@ -19,6 +19,44 @@ from ska.low.mccs.hardware import (
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
+from ska.low.mccs.hardware.simulable_hardware import DynamicValuesGenerator
+
+class TestDynamicValuesGenerator:
+    """
+    Contains tests of the dynamic values generator
+    """
+    def test_collapse(self):
+        """
+        If you set the in_range_rate to 1, the model variance collapses
+        to zero, and all your values end up being the average of softmin
+        and softmax, regardless of window size. This isn't a good thing
+        but it is useful for testing.
+        """
+        generator = DynamicValuesGenerator(
+            softmin=30,
+            softmax=40,
+            window_size=10,
+            in_range_rate=1.0,
+        )
+        assert next(generator) == 35.0
+
+    def test(self):
+        """
+        If you set the in_range_rate to 1, the model variance collapses
+        to zero, and all your values end up being the average of softmin
+        and softmax, regardless of window size. This isn't a good thing
+        but it is useful for testing.
+        """
+        softmin, softmax = 30, 40
+        generator = DynamicValuesGenerator(
+            softmin=30,
+            softmax=40,
+            window_size=10,
+            in_range_rate=0.9,
+        )
+        values = [next(generator) for i in range(1000)]
+        in_range = [softmin <= value <= softmax for value in values]
+        assert 850 <= sum(in_range) <= 950  # very likely, not certain
 
 
 class TestSimulableHardware:

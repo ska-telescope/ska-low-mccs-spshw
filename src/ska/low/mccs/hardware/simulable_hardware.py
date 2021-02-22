@@ -10,14 +10,76 @@ subsystem.
 """
 __all__ = ["HardwareSimulator", "SimulableHardwareFactory", "SimulableHardwareManager"]
 
-from ska.base.control_model import SimulationMode
+from math import sqrt
+from random import uniform
+from scipy.stats import norm
 
+from ska.base.control_model import SimulationMode
 from ska.low.mccs.hardware import (
     ConnectionStatus,
     HardwareDriver,
     HardwareFactory,
     HardwareManager,
 )
+
+
+class DynamicValuesGenerator:
+    """
+    A generator of dynamic values with the following properties:
+
+    * We want the values to gradually walk around their range rather
+      than randomly jumping around. i.e. we want values to be temporally
+      correlated. We achieve this by calculating values as a sliding
+      window sum of a sequence of random values.
+    * The provided range is a "soft" range -- we allow values to walk
+      outside this range occasionally. The proportion of time that the
+      values should stay within the required range is exposed as an
+      argument. This is useful for testing the alarm conditions of TANGO
+      attributes: we set the soft range of this generator to the
+      attribute's alarm range, and we specify how often the attribute
+      should exceed that range and start alarming.
+    """
+
+    def __init__(self, softmin, softmax, window_size, in_range_rate=0.9):
+        """
+        Create a new instance
+        """
+
+        # We start by from the assumption that we'll be drawing uniform
+        # values from the range [-1, 1]. Our output values will be the
+        # sum of these uniform values across the sliding window size.
+        # The sum of independent random variables drawn from the same
+        # uniform distribution actually has an Irwin-Hall distribution,
+        # but by the central limit theory, this tends towards normal as
+        # the window_size increases. So we'll approximate it as normal.
+        # First let's calculate the interval into which `in_range_rate`
+        # proportion of values will fall.
+        interval = norm.interval(in_range_rate, scale=sqrt(window_size/3.0))
+        print(f"Interval: {interval}")
+
+
+        # We want to select the range of our uniform values so that the
+        # above interval is [softmin, softmax]. So let's scale:
+        scale = (softmax-softmin)/(2.0 * interval[1])
+        print(f"Scale: {scale}")
+
+        # And now calculate the offset
+        offset = (softmax+softmin)/(2.0 * window_size)
+        print(f"Offset: {offset}")
+
+        # Values from this generator, when summed across the window
+        # size, should generate values that fall between `softmin` and
+        # `softmax`, `in_range_rate` proportion of the time.
+        bounds = (offset-scale, offset+scale)
+        print(f"Bounds: {bounds}")
+        self._uniform = lambda: uniform(*bounds)
+
+        # Generate our initial window of values
+        self._values = [self._uniform() for i in range(window_size)]
+
+    def __next__(self):
+        self._values = self._values[1:] + [self._uniform()]
+        return sum(self._values)
 
 
 class HardwareSimulator(HardwareDriver):

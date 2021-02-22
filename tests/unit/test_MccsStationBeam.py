@@ -18,7 +18,13 @@ import pytest
 from tango import AttrQuality, EventType
 
 from ska.base.commands import ResultCode
-from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
+from ska.base.control_model import (
+    AdminMode,
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
 from ska.low.mccs import release
 
 
@@ -37,11 +43,105 @@ def device_to_load():
     }
 
 
+@pytest.fixture()
+def mock_factory(mocker):
+    """
+    Fixture that provides a mock factory for device proxy mocks. This
+    default factory provides vanilla mocks, but this fixture can be
+    overridden by test modules/classes to provide mocks with specified
+    behaviours.
+
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+
+    :return: a factory for device proxy mocks
+    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+        instance)
+    """
+    _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
+
+    def _mock_attribute(name, *args, **kwargs):
+        """
+        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
+        for a given attribute name.
+
+        :param name: name of the attribute
+        :type name: str
+        :param args: positional args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type args: list
+        :param kwargs: named args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type kwargs: dict
+
+        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
+            instance, with name, value and quality values
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mocker.Mock()
+        mock.name = name
+        mock.value = _values.get(name, "MockValue")
+        mock.quality = "MockQuality"
+        return mock
+
+    def _mock_device():
+        """
+        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
+        with its :py:meth:`tango.DeviceProxy.read_attribute` method
+        mocked to return :py:class:`tango.DeviceAttribute` mocks.
+
+        :return: a basic mock for a :py:class:`tango.DeviceProxy`
+            instance,
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mocker.Mock()
+        mock.read_attribute.side_effect = _mock_attribute
+        return mock
+
+    return _mock_device
+
+
 # pylint: disable=invalid-name
 class TestMccsStationBeam:
     """
     Test class for MccsStationBeam tests.
     """
+
+    @pytest.fixture()
+    def initial_mocks(self, mock_factory):
+        """
+        Fixture that registers device proxy mocks prior to patching.
+
+        :param mock_factory: a factory for
+            :py:class:`tango.DeviceProxy` mocks
+        :type mock_factory: object
+        :return: a dictionary of mocks, keyed by FQDN
+        :rtype: dict
+        """
+
+        def _station_mock():
+            """
+            Sets up a mock for a :py:class:`tango.DeviceProxy` that
+            connects to an :py:class:`~ska.low.mccs.MccsStation` device.
+            The returned mock will respond suitably to actions taken on
+            it by the station beam.
+
+            :return: a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an
+                :py:class:`~ska.low.mccs.MccsStation` device.
+            :rtype: :py:class:`unittest.Mock`
+            """
+            mock = mock_factory()
+            mock.healthState = HealthState.OK
+            return mock
+
+        return {
+            "low-mccs/station/001": _station_mock(),
+            "low-mccs/station/002": _station_mock(),
+        }
 
     def test_InitDevice(self, device_under_test):
         """
@@ -63,6 +163,7 @@ class TestMccsStationBeam:
         # implemented
         assert list(device_under_test.stationIds) == []
         assert device_under_test.logicalBeamId == 0
+        assert device_under_test.stationFqdn == ""
         assert device_under_test.channels is None
         assert list(device_under_test.desiredPointing) == []
         assert device_under_test.pointingDelay is None
@@ -173,6 +274,19 @@ class TestMccsStationBeam:
         assert list(device_under_test.stationIds) == []
         device_under_test.stationIds = [3, 4, 5, 6]
         assert list(device_under_test.stationIds) == [3, 4, 5, 6]
+
+    def test_stationFqdn(self, device_under_test):
+        """
+        Test for stationFqdn attribute.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.stationFqdn == ""
+        device_under_test.stationFqdn = "low-mccs/station/001"
+        assert device_under_test.stationFqdn == "low-mccs/station/001"
 
     def test_logicalBeamId(self, device_under_test):
         """

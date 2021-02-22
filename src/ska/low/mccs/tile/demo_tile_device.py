@@ -15,7 +15,7 @@ from ska.base.control_model import AdminMode, SimulationMode
 from ska.low.mccs import MccsTile
 
 
-__all__ = ["ConnectionFailableDevice"]
+__all__ = ["ConnectionFailableDevice", "DemoTile"]
 
 
 class ConnectionFailableDevice(Device):
@@ -93,6 +93,29 @@ class DemoTile(MccsTile, ConnectionFailableDevice):
         Implemented this way because webjive.
         """
         self.write_adminMode(AdminMode.ONLINE)
+        self.Off()
+        self.On()
+
+    @command()
+    def DemoOff(self):
+        """
+        Put the Tile into DISABLE state (i.e. turn the TPM off).
+
+        :todo: This is needed for demo purposes, just until we have
+            resolved SP-1501.
+        """
+        if self.get_state() == DevState.ON:
+            self.Off()
+        self.Disable()
+
+    @command()
+    def DemoOn(self):
+        """
+        Put the tile into ON state (i.e. turn the TPM on).
+
+        :todo: This is needed for demo purposes, just until we have
+            resolved SP-1501.
+        """
         self.Off()
         self.On()
 

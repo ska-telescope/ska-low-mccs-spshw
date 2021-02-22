@@ -2,7 +2,7 @@ backoff
 numpy == 1.19.2
 pytango >= 9.3.3
 jsonschema >= 3.2.0
-lmcbaseclasses >= 0.7.2
+lmcbaseclasses == 0.8.1
 fire
 future
 pyfabil == 1.0.0+ska

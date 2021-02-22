@@ -24,15 +24,22 @@ class HardwareSimulator(HardwareDriver):
     failure state via a :py:meth:`simulate_connection_failure` method.
     """
 
-    def __init__(self, fail_connect=False):
+    def __init__(self, is_connectible=True, fail_connect=False):
         """
         Initialise a new instance.
 
+        :param is_connectible: whether it ought to be possible,
+            initially, to connect to the hardware being simulation. For
+            example, if the hardware we are simulating is not yet
+            powered on, then we would not expect to be able to connect
+            to the hardware, and failure to do so would not be an error.
+        :type is_connectible: bool
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
         """
-        self._is_connected = not fail_connect
+        super().__init__(is_connectible)
+        self._is_connected = self.is_connectible and not fail_connect
 
     @property
     def is_connected(self):

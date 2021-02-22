@@ -71,7 +71,7 @@ class TestMccsStationBeam:
         assert list(device_under_test.antennaWeights) == []
         assert not device_under_test.isBeamLocked
 
-    def test_healthState(self, device_under_test, mocker):
+    def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.
 
@@ -79,14 +79,13 @@ class TestMccsStationBeam:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
         assert device_under_test.healthState == HealthState.DEGRADED
 
         # Test that polling is turned on and subscription yields an
         # event as expected
-        mock_callback = mocker.Mock()
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )

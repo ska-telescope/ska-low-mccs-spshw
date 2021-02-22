@@ -23,6 +23,7 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     OnOffHardwareManager,
+    PowerMode,
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
@@ -31,7 +32,7 @@ from ska.low.mccs.apiu.apiu_simulator import APIUSimulator
 
 
 __all__ = [
-    # "AntennaHardwareHealthEvaluator",
+    "APIUHardwareFactory",
     "APIUHardwareHealthEvaluator",
     "APIUHardwareManager",
     "MccsAPIU",
@@ -120,21 +121,38 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         on. We need to implement monitoring.
     """
 
-    def __init__(self, simulation_mode, antenna_count, _factory=None):
+    def __init__(
+        self,
+        simulation_mode,
+        antenna_count,
+        are_antennas_on_change_callback,
+        _factory=None,
+    ):
         """
         Initialise a new APIUHardwareManager instance.
 
-        :param antenna_count: number of antennas that are attached to
-            the APIU
-        :type antenna_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
+        :param antenna_count: number of antennas that are attached to
+            the APIU
+        :type antenna_count: int
+        :param are_antennas_on_change_callback: a callback to be called
+            when the are_antennas_on property changes
+        :type are_antennas_on_change_callback: callable
+        :param _factory: allows for substitution of a hardware factory.
+            This is useful for testing, but generally should not be used
+            in operations.
+        :type _factory: :py:class:`.APIUHardwareFactory`
         """
         hardware_factory = _factory or APIUHardwareFactory(
             simulation_mode == SimulationMode.TRUE, antenna_count
         )
         super().__init__(hardware_factory, APIUHardwareHealthEvaluator())
+
+        self._are_antennas_on = None
+        self._are_antennas_on_change_callback = are_antennas_on_change_callback
+        self._update_are_antennas_on()
 
     @property
     def voltage(self):
@@ -200,6 +218,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         if not self._factory.hardware.is_antenna_on(logical_antenna_id):
             return None
         self._factory.hardware.turn_off_antenna(logical_antenna_id)
+        self._update_are_antennas_on()
         return not self._factory.hardware.is_antenna_on(logical_antenna_id)
 
     def turn_on_antenna(self, logical_antenna_id):
@@ -216,6 +235,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         if self._factory.hardware.is_antenna_on(logical_antenna_id):
             return None
         self._factory.hardware.turn_on_antenna(logical_antenna_id)
+        self._update_are_antennas_on()
         return self._factory.hardware.is_antenna_on(logical_antenna_id)
 
     def turn_off_antennas(self):
@@ -225,18 +245,11 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        for antenna_id in range(1, self.antenna_count + 1):
-            if self._factory.hardware.is_antenna_on(antenna_id):
-                break
-        else:
+        if not any(self.are_antennas_on()):
             return None
-
         self._factory.hardware.turn_off_antennas()
-
-        for antenna_id in range(1, self.antenna_count + 1):
-            if self._factory.hardware.is_antenna_on(antenna_id):
-                return False
-        return True
+        self._update_are_antennas_on()
+        return not any(self.are_antennas_on())
 
     def turn_on_antennas(self):
         """
@@ -245,18 +258,21 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether successful, or None if there was nothing to do
         :rtype: bool or None
         """
-        for antenna_id in range(1, self.antenna_count + 1):
-            if not self._factory.hardware.is_antenna_on(antenna_id):
-                break
-        else:
+        if all(self.are_antennas_on()):
             return None
-
         self._factory.hardware.turn_on_antennas()
+        self._update_are_antennas_on()
+        return all(self.are_antennas_on())
 
-        for antenna_id in range(1, self.antenna_count + 1):
-            if not self._factory.hardware.is_antenna_on(antenna_id):
-                return False
-        return True
+    def are_antennas_on(self):
+        """
+        Returns whether each antenna is powered or not.
+
+        :return: whether each antenna is powered or not.
+        :rtype: list(bool)
+        """
+        self._update_are_antennas_on()
+        return self._are_antennas_on
 
     def is_antenna_on(self, logical_antenna_id):
         """
@@ -269,7 +285,24 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether the antenna is on
         :rtype: bool
         """
-        return self._factory.hardware.is_antenna_on(logical_antenna_id)
+        self._update_are_antennas_on()
+        return (
+            self._are_antennas_on is not None
+            and self._are_antennas_on[logical_antenna_id - 1]
+        )
+
+    def _update_are_antennas_on(self):
+        are_antennas_on = self._factory.hardware.are_antennas_on()
+        if are_antennas_on is None:
+            are_antennas_on = [False] * self.antenna_count
+
+        if self._are_antennas_on != are_antennas_on:
+            self._are_antennas_on = list(are_antennas_on)
+            self._are_antennas_on_change_callback(self._are_antennas_on)
+
+    def poll(self):
+        super().poll()
+        self._update_are_antennas_on()
 
     def get_antenna_current(self, logical_antenna_id):
         """
@@ -392,6 +425,9 @@ class MccsAPIU(SKABaseDevice):
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
 
+            device._are_antennas_on = None
+            device.set_change_event("areAntennasOn", True, False)
+
             device._antenna_fqdns = list(device.AntennaFQDNs)
             device.hardware_manager = None
 
@@ -442,9 +478,10 @@ class MccsAPIU(SKABaseDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             device.hardware_manager = APIUHardwareManager(
-                device._simulation_mode, len(device._antenna_fqdns)
+                device._simulation_mode,
+                len(device._antenna_fqdns),
+                device.are_antennas_on_changed,
             )
-            device.hardware_manager.on()
 
             args = (device.hardware_manager, device.state_model, self.logger)
 
@@ -494,6 +531,21 @@ class MccsAPIU(SKABaseDevice):
             self._interrupt = True
             return True
 
+        def succeeded(self):
+            """
+            Called when initialisation completes.
+
+            Here we override the base class default implementation to
+            ensure that MccsAPIU transitions to a state that reflects
+            the state of its hardware
+            """
+            device = self.target
+            if device.hardware_manager.power_mode == PowerMode.OFF:
+                action = "init_succeeded_disable"
+            else:
+                action = "init_succeeded_off"
+            self.state_model.perform_action(action)
+
     def always_executed_hook(self):
         """
         Method always executed before any TANGO command is executed.
@@ -515,8 +567,22 @@ class MccsAPIU(SKABaseDevice):
         pass
 
     # ----------
-    # Attributes
+    # Callbacks
     # ----------
+    def are_antennas_on_changed(self, are_antennas_on):
+        """
+        Callback to be called whenever power to the antennas changes;
+        responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
+
+        :param are_antennas_on: whether each antenna is pwoered
+        :type are_antennas_on: list(bool)
+        """
+        if self._are_antennas_on == are_antennas_on:
+            return
+        self._are_antennas_on = list(are_antennas_on)
+        self.push_change_event("areAntennasOn", self._are_antennas_on)
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state
@@ -530,6 +596,30 @@ class MccsAPIU(SKABaseDevice):
             return
         self._health_state = health
         self.push_change_event("healthState", health)
+
+    # ----------
+    # Attributes
+    # ----------
+
+    @attribute(dtype=int, label="antennas count")
+    def antennaCount(self):
+        """
+        Return the number of antennas connected to this APIU.
+
+        :return: the number of antennas connected to this APIU
+        :rtype: int
+        """
+        return self.hardware_manager.antenna_count
+
+    @attribute(dtype=(bool,), max_dim_x=256, label="Are Antennas On")
+    def areAntennasOn(self):
+        """
+        Return whether each antenna is powered or not.
+
+        :return: whether each antenna is powered or not
+        :rtype: list(bool)
+        """
+        return self.hardware_manager.are_antennas_on()
 
     @attribute(dtype="DevDouble", label="Voltage", unit="Volts", polling_period=1000)
     def voltage(self):

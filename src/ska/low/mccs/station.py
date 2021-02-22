@@ -27,7 +27,7 @@ from ska.base import SKABaseDevice, SKAObsDevice
 from ska.base.commands import ResponseCommand, ResultCode
 from ska.base.control_model import HealthState
 
-from ska.low.mccs.pool import DevicePoolManager
+from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
@@ -46,8 +46,14 @@ class MccsStation(SKAObsDevice):
         StationId
             - MCCS station ID for this station
             - Type: int (scalar attribute)
+        APIUFQDNs
+            - The FQDN of this station's APIU
+            - Type: str (spectrum attribute)
         TileFQDNs
-            - List of Tile FQDNs (Fully Qualified Domain Name)
+            - List of Tile FQDNs
+            - Type: str (spectrum attribute)
+        AntennaFQDNs
+            - List of Antenna FQDNs
             - Type: str (spectrum attribute)
     """
 
@@ -55,8 +61,9 @@ class MccsStation(SKAObsDevice):
     # Device Properties
     # -----------------
     StationId = device_property(dtype=int, default_value=0)
-    TileFQDNs = device_property(dtype=(str,))
-    AntennaFQDNs = device_property(dtype=(str,))
+    APIUFQDN = device_property(dtype=str)
+    TileFQDNs = device_property(dtype=(str,), default_value=[])
+    AntennaFQDNs = device_property(dtype=(str,), default_value=[])
 
     # ---------------
     # General methods
@@ -110,12 +117,9 @@ class MccsStation(SKAObsDevice):
             device = self.target
 
             device._subarray_id = 0
-            device._tile_fqdns = (
-                list(device.TileFQDNs) if device.TileFQDNs is not None else []
-            )
-            device._antenna_fqdns = (
-                list(device.AntennaFQDNs) if device.AntennaFQDNs is not None else []
-            )
+            device._apiu_fqdn = device.APIUFQDN
+            device._tile_fqdns = list(device.TileFQDNs)
+            device._antenna_fqdns = list(device.AntennaFQDNs)
             device._beam_fqdns = []
             device._transient_buffer_fqdn = ""
             device._delay_centre = []
@@ -137,35 +141,30 @@ class MccsStation(SKAObsDevice):
             device.set_change_event("transientBufferFQDN", True, False)
             device.set_archive_event("transientBufferFQDN", True, False)
 
-            fqdns = device._tile_fqdns + device._antenna_fqdns  # + device._beam_fqdns
-
             self._thread = threading.Thread(
-                target=self._initialise_connections, args=(device, fqdns)
+                target=self._initialise_connections, args=(device,)
             )
             with self._lock:
                 self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
-        def _initialise_connections(self, device, fqdns):
+        def _initialise_connections(self, device):
             """
             Thread target for asynchronous initialisation of connections
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices to which
-                this device must maintain connections
-            :type: list(str)
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_device_pool_manager(device, fqdns)
+                self._initialise_device_pool(device)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_health_monitoring(device, fqdns)
+                self._initialise_health_monitoring(device)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -173,36 +172,41 @@ class MccsStation(SKAObsDevice):
                 with self._lock:
                     self.succeeded()
 
-        def _initialise_device_pool_manager(self, device, fqdns):
+        def _initialise_device_pool(self, device):
             """
             Initialise power management for this device.
 
             :param device: the device for which power management is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type fqdns: list(str)
             """
-            device.device_pool_manager = DevicePoolManager(fqdns, self.logger)
+            prerequisite_fqdns = device._tile_fqdns
+            if device._apiu_fqdn is not None:
+                prerequisite_fqdns.append(device._apiu_fqdn)
+            prerequisite_device_pool = DevicePool(prerequisite_fqdns, self.logger)
+            antenna_pool = DevicePool(device._antenna_fqdns, self.logger)
+            device.device_pool = DevicePoolSequence(
+                [prerequisite_device_pool, antenna_pool], self.logger
+            )
 
-            args = (device.device_pool_manager, device.state_model, self.logger)
+            args = (device.device_pool, device.state_model, self.logger)
             device.register_command_object("Disable", device.DisableCommand(*args))
             device.register_command_object("Standby", device.StandbyCommand(*args))
             device.register_command_object("Off", device.OffCommand(*args))
             device.register_command_object("On", device.OnCommand(*args))
 
-        def _initialise_health_monitoring(self, device, fqdns):
+        def _initialise_health_monitoring(self, device):
             """
             Initialise the health model for this device.
 
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device monitors health
-            :type: list(str)
             """
+            fqdns = device._tile_fqdns + device._antenna_fqdns
+            if device._apiu_fqdn is not None:
+                fqdns.append(device._apiu_fqdn)
+
             device.event_manager = EventManager(self.logger)
 
             device._health_state = HealthState.UNKNOWN
@@ -468,9 +472,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.on():
+            if device_pool.on():
                 return (ResultCode.OK, "On command completed OK")
             else:
                 return (ResultCode.FAILED, "On command failed")
@@ -492,9 +496,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.off():
+            if device_pool.off():
                 return (ResultCode.OK, "On command completed OK")
             else:
                 return (ResultCode.FAILED, "On command failed")
@@ -516,9 +520,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.standby():
+            if device_pool.standby():
                 return (ResultCode.OK, "Standby command completed OK")
             else:
                 return (ResultCode.FAILED, "Standby command failed")
@@ -540,9 +544,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            device_pool_manager = self.target
+            device_pool = self.target
 
-            if device_pool_manager.disable():
+            if device_pool.disable():
                 return (ResultCode.OK, "Disable command completed OK")
             else:
                 return (ResultCode.FAILED, "Disable command failed")

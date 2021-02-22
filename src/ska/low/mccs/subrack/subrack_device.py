@@ -22,6 +22,7 @@ from ska.base.control_model import HealthState, SimulationMode
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     OnOffHardwareManager,
+    PowerMode,
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
@@ -30,6 +31,7 @@ from ska.low.mccs.subrack.subrack_simulator import SubrackBoardSimulator
 
 
 __all__ = [
+    "SubrackHardwareFactory",
     "SubrackHardwareHealthEvaluator",
     "SubrackHardwareManager",
     "MccsSubrack",
@@ -79,20 +81,26 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
     """
     A hardware factory for Subrack hardware.
 
-    At present, this returns a :py:class:`SubrackSimulator` object when
-    in simulation mode, and raises :py:exc:`NotImplementedError` if the
-    hardware is sought whilst not in simulation mode
+    At present, this returns a
+    :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
+    object when in simulation mode, and raises
+    :py:exc:`NotImplementedError` if the hardware is sought whilst not
+    in simulation mode
     """
 
-    def __init__(self, simulation_mode):
+    def __init__(self, simulation_mode, tpm_count):
         """
         Create a new factory instance.
 
+        :param tpm_count: number of TPMs that are attached to the
+            subrack
+        :type tpm_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode:
             :py:class:`~ska.base.control_model.SimulationMode`
         """
+        self._tpm_count = tpm_count
         super().__init__(simulation_mode)
 
     def _create_simulator(self):
@@ -103,7 +111,7 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
         :rtype:
             :py:class:`.SubrackHardwareSimulator`
         """
-        return SubrackBoardSimulator()
+        return SubrackBoardSimulator(self._tpm_count)
 
 
 class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
@@ -113,18 +121,34 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     :todo:
     """
 
-    def __init__(self, simulation_mode, _factory=None):
+    def __init__(
+        self, simulation_mode, tpm_count, are_tpms_on_change_callback, _factory=None
+    ):
         """
         Initialise a new SubrackHardwareManager instance.
 
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
+        :param tpm_count: number of TPMs that are attached to the
+            subrack
+        :type tpm_count: int
+        :param are_tpms_on_change_callback: a callback to be called when
+            the are_tpms_on property changes
+        :type are_tpms_on_change_callback: callable
+        :param _factory: allows for substitution of a hardware factory.
+            This is useful for testing, but generally should not be used
+            in operations.
+        :type _factory: :py:class:`.SubrackHardwareFactory`
         """
         hardware_factory = _factory or SubrackHardwareFactory(
-            simulation_mode == SimulationMode.TRUE
+            simulation_mode == SimulationMode.TRUE, tpm_count
         )
         super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
+
+        self._are_tpms_on = None
+        self._are_tpms_on_change_callback = are_tpms_on_change_callback
+        self._update_are_tpms_on()
 
     @property
     def backplane_temperature(self):
@@ -208,7 +232,18 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether this subrack is supplying power to the specified TPM
         :rtype: bool
         """
-        return self._factory.hardware.is_tpm_on(logical_tpm_id)
+        self._update_are_tpms_on()
+        return self._are_tpms_on is not None and self._are_tpms_on[logical_tpm_id - 1]
+
+    def are_tpms_on(self):
+        """
+        Returns whether each TPM is powered or not.
+
+        :return: whether each TPM is powered or not.
+        :rtype: list(bool)
+        """
+        self._update_are_tpms_on()
+        return self._are_tpms_on
 
     def turn_on_tpm(self, logical_tpm_id):
         """
@@ -224,6 +259,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         if self._factory.hardware.is_tpm_on(logical_tpm_id):
             return None
         self._factory.hardware.turn_on_tpm(logical_tpm_id)
+        self._update_are_tpms_on()
         return self._factory.hardware.is_tpm_on(logical_tpm_id)
 
     def turn_off_tpm(self, logical_tpm_id):
@@ -240,6 +276,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         if not self._factory.hardware.is_tpm_on(logical_tpm_id):
             return None
         self._factory.hardware.turn_off_tpm(logical_tpm_id)
+        self._update_are_tpms_on()
         return not self._factory.hardware.is_tpm_on(logical_tpm_id)
 
     def turn_on_tpms(self):
@@ -249,18 +286,11 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether the action was successful, or None if there was nothing to do
         :rtype: bool
         """
-        for logical_tpm_id in range(1, self.tpm_count + 1):
-            if not self._factory.hardware.is_tpm_on(logical_tpm_id):
-                break
-        else:
+        if all(self.are_tpms_on()):
             return None
-
         self._factory.hardware.turn_on_tpms()
-
-        for logical_tpm_id in range(1, self.tpm_count + 1):
-            if not self._factory.hardware.is_tpm_on(logical_tpm_id):
-                return False
-        return True
+        self._update_are_tpms_on()
+        return all(self.are_tpms_on())
 
     def turn_off_tpms(self):
         """
@@ -269,18 +299,24 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: whether the action was successful, or None if there was nothing to do
         :rtype: bool
         """
-        for logical_tpm_id in range(1, self.tpm_count + 1):
-            if self._factory.hardware.is_tpm_on(logical_tpm_id):
-                break
-        else:
+        if not any(self.are_tpms_on()):
             return None
-
         self._factory.hardware.turn_off_tpms()
+        self._update_are_tpms_on()
+        return not any(self.are_tpms_on())
 
-        for logical_tpm_id in range(1, self.tpm_count + 1):
-            if self._factory.hardware.is_tpm_on(logical_tpm_id):
-                return False
-        return True
+    def _update_are_tpms_on(self):
+        are_tpms_on = self._factory.hardware.are_tpms_on()
+        if are_tpms_on is None:
+            are_tpms_on = [False] * self.tpm_count
+
+        if self._are_tpms_on != are_tpms_on:
+            self._are_tpms_on = list(are_tpms_on)
+            self._are_tpms_on_change_callback(self._are_tpms_on)
+
+    def poll(self):
+        super().poll()
+        self._update_are_tpms_on()
 
 
 class MccsSubrack(SKABaseDevice):
@@ -290,7 +326,7 @@ class MccsSubrack(SKABaseDevice):
     This class is a subclass of :py:class:`ska.base.SKABaseDevice`.
     """
 
-    TileFQDNs = device_property(dtype=(str,))
+    TileFQDNs = device_property(dtype=(str,), default_value=[])
 
     def init_command_objects(self):
         """
@@ -348,6 +384,7 @@ class MccsSubrack(SKABaseDevice):
             """
             super().do()
             device = self.target
+            device._tile_fqdns = list(device.TileFQDNs)
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
@@ -359,6 +396,10 @@ class MccsSubrack(SKABaseDevice):
             # tango deployment, then start honouring the default of
             # FALSE by removing this next line.
             device._simulation_mode = SimulationMode.TRUE
+
+            device._are_tpms_on = None
+            device.set_change_event("areTpmsOn", True, False)
+
             device.hardware_manager = None
 
             self._thread = threading.Thread(
@@ -402,8 +443,11 @@ class MccsSubrack(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
-            device.hardware_manager = SubrackHardwareManager(device._simulation_mode)
-            device.hardware_manager.on()
+            device.hardware_manager = SubrackHardwareManager(
+                device._simulation_mode,
+                len(device._tile_fqdns),
+                device.are_tpms_on_changed,
+            )
 
             args = (device.hardware_manager, device.state_model, self.logger)
 
@@ -418,8 +462,6 @@ class MccsSubrack(SKABaseDevice):
             device.register_command_object(
                 "PowerOffTpm", device.PowerOffTpmCommand(*args)
             )
-            device.register_command_object("PowerUp", device.PowerUpCommand(*args))
-            device.register_command_object("PowerDown", device.PowerDownCommand(*args))
 
         def _initialise_health_monitoring(self, device):
             """
@@ -450,6 +492,21 @@ class MccsSubrack(SKABaseDevice):
             self._interrupt = True
             return True
 
+        def succeeded(self):
+            """
+            Called when initialisation completes.
+
+            Here we override the base class default implementation to
+            ensure that MccsSubrack transitions to a state that reflects
+            the state of its hardware
+            """
+            device = self.target
+            if device.hardware_manager.power_mode == PowerMode.OFF:
+                action = "init_succeeded_disable"
+            else:
+                action = "init_succeeded_off"
+            self.state_model.perform_action(action)
+
     def always_executed_hook(self):
         """
         Method always executed before any TANGO command is executed.
@@ -471,8 +528,22 @@ class MccsSubrack(SKABaseDevice):
         pass
 
     # ----------
-    # Attributes
+    # Callbacks
     # ----------
+    def are_tpms_on_changed(self, are_tpms_on):
+        """
+        Callback to be called whenever power to the TPMs changes;
+        responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
+
+        :param are_tpms_on: whether each TPM is pwoered
+        :type are_tpms_on: list(bool)
+        """
+        if self._are_tpms_on == are_tpms_on:
+            return
+        self._are_tpms_on = list(are_tpms_on)
+        self.push_change_event("areTpmsOn", self._are_tpms_on)
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state
@@ -486,6 +557,10 @@ class MccsSubrack(SKABaseDevice):
             return
         self._health_state = health
         self.push_change_event("healthState", health)
+
+    # ----------
+    # Attributes
+    # ----------
 
     @attribute(dtype="float", label="Backplane temperature", unit="Celsius")
     def backplaneTemperature(self):
@@ -549,6 +624,31 @@ class MccsSubrack(SKABaseDevice):
         """
         return self.hardware_manager.tpm_currents
 
+    @attribute(dtype=int, label="TPM count")
+    def tpmCount(self):
+        """
+        Return the number of TPMs connected to this subrack.
+
+        :return: the number of TPMs connected to this subrack
+        :rtype: int
+        """
+        return self.hardware_manager.tpm_count
+
+    @attribute(dtype=(bool,), max_dim_x=256, label="Are TPMs On")
+    def areTpmsOn(self):
+        """
+        Return whether each TPM is powered or not.
+
+        The main reason this attribute exists is so that individual Tile
+        devices can subscribe to change events on it. From this they can
+        figure out when the subrack has turned off/on power to their
+        TPM.
+
+        :return: whether each TPM is powered or not
+        :rtype: list(bool)
+        """
+        return self.hardware_manager.are_tpms_on()
+
     # --------
     # Commands
     # --------
@@ -576,9 +676,7 @@ class MccsSubrack(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-
             success = hardware_manager.off()
-            # because DISABLE is the state of lowest device readiness
 
             return create_return(success, "disable")
 
@@ -636,11 +734,12 @@ class MccsSubrack(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
+            # TODO: For now, OFF represents the highest state of device
+            # readiness for a device that is not actually on. i.e. state
+            # OFF means the hardware is on. This is a
+            # counterintuitive mess that will be fixed in SP-1501.
             hardware_manager = self.target
-
             success = hardware_manager.on()
-            # because the OFF state is a state of high device readiness
-
             return create_return(success, "off")
 
     class IsTpmOnCommand(BaseCommand):
@@ -661,7 +760,32 @@ class MccsSubrack(SKABaseDevice):
             :rtype: bool
             """
             hardware_manager = self.target
-            return hardware_manager.is_tpm_on(argin)
+            try:
+                return hardware_manager.is_tpm_on(argin)
+            except ValueError:
+                # The subrack itself is not on. We don't want o
+                return None
+
+        def is_allowed(self):
+            """
+            Whether this command is allowed to run.
+
+            :returns: whether this command is allowed to run
+            :rtype: bool
+            """
+            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
+
+    def is_IsTpmOn_allowed(self):
+        """
+        Whether the ``Reset()`` command is allowed to be run in the
+        current state.
+
+        :returns: whether the ``Reset()`` command is allowed to be run in the
+            current state
+        :rtype: bool
+        """
+        handler = self.get_command_object("IsTpmOn")
+        return handler.is_allowed()
 
     @command(dtype_in="DevULong", dtype_out=bool)
     @DebugIt()
@@ -702,6 +826,27 @@ class MccsSubrack(SKABaseDevice):
             hardware_manager = self.target
             success = hardware_manager.turn_on_tpm(argin)
             return create_return(success, f"TPM {argin} power-on")
+
+        def is_allowed(self):
+            """
+            Whether this command is allowed to run.
+
+            :returns: whether this command is allowed to run
+            :rtype: bool
+            """
+            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
+
+    def is_PowerOnTpm_allowed(self):
+        """
+        Whether the ``PowerOnTpm()`` command is allowed to be run in the
+        current state.
+
+        :returns: whether the ``PowerOnTpm()`` command is allowed to be run in the
+            current state
+        :rtype: bool
+        """
+        handler = self.get_command_object("PowerOnTpm")
+        return handler.is_allowed()
 
     @command(
         dtype_in="DevULong",
@@ -749,6 +894,27 @@ class MccsSubrack(SKABaseDevice):
             success = hardware_manager.turn_off_tpm(argin)
             return create_return(success, f"TPM {argin} power-off")
 
+        def is_allowed(self):
+            """
+            Whether this command is allowed to run.
+
+            :returns: whether this command is allowed to run
+            :rtype: bool
+            """
+            return self.target.power_mode in [PowerMode.OFF, PowerMode.ON]
+
+    def is_PowerOffTpm_allowed(self):
+        """
+        Whether the ``PowerOffTpm()`` command is allowed to be run in
+        the current state.
+
+        :returns: whether the ``PowerOffTpm()`` command is allowed to be run in the
+            current state
+        :rtype: bool
+        """
+        handler = self.get_command_object("PowerOffTpm")
+        return handler.is_allowed()
+
     @command(
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
@@ -769,86 +935,6 @@ class MccsSubrack(SKABaseDevice):
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
-
-    class PowerUpCommand(ResponseCommand):
-        """
-        Class for handling the PowerUp() command.
-
-        The PowerUp command turns on all of the TPMs that are powered by
-        this subrack.
-        """
-
-        def do(self):
-            """
-            Stateless hook for implementation of
-            :py:meth:`.MccsSubrack.PowerUp` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.turn_on_tpms()
-            return create_return(success, "power-up")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def PowerUp(self):
-        """
-        Power up.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("PowerUp")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
-
-    class PowerDownCommand(ResponseCommand):
-        """
-        Class for handling the PowerDown() command.
-
-        The PowerDown command turns off all of the TPMs that are powered
-        by this subrack.
-        """
-
-        def do(self):
-            """
-            Stateless hook for implementation of
-            :py:meth:`.MccsSubrack.PowerDown`
-            command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.turn_off_tpms()
-            return create_return(success, "power-down")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def PowerDown(self):
-        """
-        Power down.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("PowerDown")
-        (return_code, message) = handler()
         return [[return_code], [message]]
 
     def _update_health_state(self, health_state):

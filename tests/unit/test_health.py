@@ -238,13 +238,15 @@ class TestDeviceHealthMonitor:
     (The DeviceHealthMonitor monitors the health of a single device.)
     """
 
-    def test(self, mocker, mock_device_proxies, logger):
+    def test(self, mocker, mock_callback, mock_device_proxies, logger):
         """
         Test that a DeviceHealthMonitor registers a change in device
         health when the device emits relevant events.
 
-        :param mocker: fixture that wraps unittest.Mock
+        :param mocker: fixture that wraps unittest.mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -255,7 +257,6 @@ class TestDeviceHealthMonitor:
         """
         fqdn = "mock/mock/1"
         event_manager = EventManager(logger)
-        mock_callback = mocker.Mock()
         _ = DeviceHealthMonitor(event_manager, fqdn, mock_callback)
 
         mock_callback.assert_called_once_with(HealthState.UNKNOWN)
@@ -294,13 +295,15 @@ class TestHealthMonitor:
     subservient devices.)
     """
 
-    def test(self, mocker, mock_device_proxies, logger):
+    def test(self, mocker, mock_callback, mock_device_proxies, logger):
         """
         Test that a HealthMonitor registers changes in device health
         when devices emit relevant events.
 
-        :param mocker: fixture that wraps unittest.Mock
+        :param mocker: fixture that wraps unittest.mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -311,7 +314,6 @@ class TestHealthMonitor:
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
         event_manager = EventManager(logger)
-        mock_callback = mocker.Mock()
         _ = HealthMonitor(fqdns, event_manager, mock_callback)
 
         posargs = [call[0] for call in mock_callback.call_args_list]
@@ -358,7 +360,15 @@ class TestHealthModel:
         ("with_hardware", "with_devices"),
         [(False, False), (False, True), (True, False), (True, True)],
     )
-    def test(self, with_hardware, with_devices, mocker, mock_device_proxies, logger):
+    def test(
+        self,
+        with_hardware,
+        with_devices,
+        mocker,
+        mock_callback,
+        mock_device_proxies,
+        logger,
+    ):
         """
         Test that the health of a HealthModel changes with changes to
         hardware health and/or changes to the health of managed devices.
@@ -369,6 +379,8 @@ class TestHealthModel:
         :type with_devices: bool
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -380,7 +392,6 @@ class TestHealthModel:
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"] if with_devices else None
         event_manager = EventManager(logger)
-        mock_callback = mocker.Mock()
 
         health_model = HealthModel(hardware, fqdns, event_manager, mock_callback)
         if with_hardware or with_devices:
@@ -413,13 +424,15 @@ class TestMutableHealthMonitor:
     collection of subservient devices.)
     """
 
-    def test(self, mocker, mock_device_proxies, logger):
+    def test(self, mocker, mock_callback, mock_device_proxies, logger):
         """
         Test that one can add and remove device, and a
         MutableHealthMonitor behaves as expected.
 
-        :param mocker: fixture that wraps unittest.Mock
+        :param mocker: fixture that wraps unittest.mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -431,7 +444,6 @@ class TestMutableHealthMonitor:
         fqdns = ["mock/mock/1", "mock/mock/2"]
 
         event_manager = EventManager(logger)
-        mock_callback = mocker.Mock()
         mutable_health_monitor = MutableHealthMonitor(
             fqdns, event_manager, mock_callback
         )
@@ -485,7 +497,7 @@ class TestMutableHealthModel:
     """
 
     @pytest.mark.parametrize("with_hardware", [False, True])
-    def test(self, with_hardware, mocker, mock_device_proxies, logger):
+    def test(self, with_hardware, mocker, mock_callback, mock_device_proxies, logger):
         """
         Test that the health of a MutableHealthModel changes with
         changes to the collection of managed devices.
@@ -494,6 +506,8 @@ class TestMutableHealthModel:
         :type with_hardware: bool
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -505,7 +519,6 @@ class TestMutableHealthModel:
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"]
         event_manager = EventManager(logger)
-        mock_callback = mocker.Mock()
 
         health_model = MutableHealthModel(hardware, fqdns, event_manager, mock_callback)
         mock_callback.assert_called_with(HealthState.UNKNOWN)

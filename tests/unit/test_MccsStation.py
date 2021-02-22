@@ -102,7 +102,7 @@ def mock_factory(mocker):
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
-        mock.command_inout.return_value = ((ResultCode.OK,), ("mock message",))
+        mock.command_inout_reply.return_value = ((ResultCode.OK,), ("mock message",))
         return mock
 
     return _mock_device
@@ -148,7 +148,7 @@ class TestMccsStation:
         time.sleep(0.2)
         assert device_under_test.state() == DevState.ON
 
-    def test_healthState(self, device_under_test, mocker):
+    def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.
 
@@ -156,8 +156,8 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
 
         # The device has subscribed to healthState change events on
@@ -168,7 +168,6 @@ class TestMccsStation:
 
         # Test that polling is turned on and subscription yields an
         # event as expected
-        mock_callback = mocker.Mock()
         _ = device_under_test.subscribe_event(
             "healthState", tango.EventType.CHANGE_EVENT, mock_callback
         )
@@ -416,10 +415,10 @@ class TestInitCommand:
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
-            self._initialise_device_pool_manager_called = False
+            self._initialise_device_pool_called = False
             self._initialise_health_monitoring_called = False
 
-        def _initialise_device_pool_manager(self, device, fqdns):
+        def _initialise_device_pool(self, device):
             """
             Initialise the device pool for this device (overridden here
             to inject a call trace attribute).
@@ -427,17 +426,14 @@ class TestInitCommand:
             :param device: the device for which the device pool is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type fqdns: list(str)
             """
-            self._initialise_device_pool_manager_called = True
-            super()._initialise_device_pool_manager(device)
+            self._initialise_device_pool_called = True
+            super()._initialise_device_pool(device)
             with self._hang_lock:
                 # hang until the hang lock is released
                 pass
 
-        def _initialise_health_monitoring(self, device, fqdns):
+        def _initialise_health_monitoring(self, device):
             """
             Initialise the health model for this device (overridden here
             to inject a call trace attribute).
@@ -445,12 +441,9 @@ class TestInitCommand:
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device monitors health
-            :type: list(str)
             """
             self._initialise_health_monitoring_called = True
-            super()._initialise_health_monitoring(device, fqdns)
+            super()._initialise_health_monitoring(device)
 
     def test_interrupt(self, mocker):
         """
@@ -468,12 +461,11 @@ class TestInitCommand:
 
         with init_command._hang_lock:
             init_command()
-            time.sleep(0.1)
 
             # We got the hang lock first, so the initialisation thread will hang in
             # device pool manager initialisation until we release it.
 
-            assert init_command._initialise_device_pool_manager_called
+            assert init_command._initialise_device_pool_called
             assert not init_command._initialise_health_monitoring_called
 
             init_command.interrupt()
@@ -481,8 +473,8 @@ class TestInitCommand:
         init_command._thread.join()
 
         # Now that we've released the hang lock, the thread can exit its
-        # _initialise_device_pool_manager method, but before it enters its
+        # _initialise_device_pool method, but before it enters its
         # _initialise_health_monitoring, it will detect that it has been
         # interrupted, and return
-        assert init_command._initialise_device_pool_manager_called
+        assert init_command._initialise_device_pool_called
         assert not init_command._initialise_health_monitoring_called

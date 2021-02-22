@@ -175,7 +175,7 @@ def subrack_bays(random_temperature, random_current):
     """
     return [
         SubrackBaySimulator(temperature=random_temperature(), current=random_current())
-        for bay in range(SubrackBoardSimulator.NUMBER_OF_BAYS)
+        for bay in range(4)
     ]
 
 
@@ -198,7 +198,7 @@ class TestSubrackBoardSimulator:
         :rtype:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
-        return SubrackBoardSimulator(_bays=subrack_bays)
+        return SubrackBoardSimulator(tpm_count=len(subrack_bays), _bays=subrack_bays)
 
     def test_subrack_on_off(self, subrack_board):
         """
@@ -225,9 +225,10 @@ class TestSubrackBoardSimulator:
                 _ = subrack_board.board_current
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = subrack_board.fan_speed
-            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
-                with pytest.raises(ValueError, match="Subrack is not ON."):
-                    _ = subrack_board.is_tpm_on(tpm_id)
+
+            assert subrack_board.are_tpms_on() is None
+            for tpm_id in range(1, subrack_board.tpm_count + 1):
+                assert subrack_board.is_tpm_on(tpm_id) is None
 
         def assert_on_behaviour():
             """
@@ -249,7 +250,11 @@ class TestSubrackBoardSimulator:
             )
             assert subrack_board.fan_speed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
 
-            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            are_tpms_on = subrack_board.are_tpms_on()
+            assert not any(are_tpms_on)
+            assert len(are_tpms_on) == subrack_board.tpm_count
+
+            for tpm_id in range(1, subrack_board.tpm_count + 1):
                 assert not subrack_board.is_tpm_on(tpm_id)
 
         assert_off_behaviour()
@@ -270,7 +275,7 @@ class TestSubrackBoardSimulator:
             :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
         """
         subrack_board.on()
-        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+        for tpm_id in range(1, subrack_board.tpm_count + 1):
             assert not subrack_board.is_tpm_on(tpm_id)
 
             subrack_board.turn_on_tpm(tpm_id)
@@ -279,7 +284,7 @@ class TestSubrackBoardSimulator:
         subrack_board.off()
 
         subrack_board.on()
-        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+        for tpm_id in range(1, subrack_board.tpm_count + 1):
             assert not subrack_board.is_tpm_on(tpm_id)
 
     def test_tpms_on_off(self, subrack_board):
@@ -299,7 +304,7 @@ class TestSubrackBoardSimulator:
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
             """
-            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            for tpm_id in range(1, subrack_board.tpm_count + 1):
                 assert subrack_board.is_tpm_on(tpm_id) == is_on
 
         subrack_board.on()
@@ -386,11 +391,9 @@ class TestSubrackBoardSimulator:
         assert subrack_board.tpm_currents == [bay.current for bay in subrack_bays]
 
         bay_temperatures = [
-            random_temperature() for bay in range(SubrackBoardSimulator.NUMBER_OF_BAYS)
+            random_temperature() for i in range(subrack_board.tpm_count)
         ]
-        bay_currents = [
-            random_current() for bay in range(SubrackBoardSimulator.NUMBER_OF_BAYS)
-        ]
+        bay_currents = [random_current() for i in range(subrack_board.tpm_count)]
 
         subrack_board.simulate_tpm_temperatures(bay_temperatures)
         subrack_board.simulate_tpm_currents(bay_currents)
@@ -435,6 +438,7 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
+            tpm_count=len(subrack_bays),
             backplane_temperature=random_temperature(),
             board_temperature=random_temperature(),
             board_current=random_current(),
@@ -461,7 +465,7 @@ class TestSubrackHardwareManager:
         return SimulableHardwareFactory(True, _simulator=subrack_board)
 
     @pytest.fixture()
-    def hardware_manager(self, hardware_factory):
+    def hardware_manager(self, hardware_factory, mock_callback):
         """
         Return a manager for Subrack hardware.
 
@@ -469,22 +473,29 @@ class TestSubrackHardwareManager:
             hardware simulator/driver
         :type hardware_factory:
             :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
 
         :return: a manager for Subrack hardware
         :rtype:
             :py:class:`~ska.low.mccs.subrack.subrack_device.SubrackHardwareManager`
         """
-        return SubrackHardwareManager(SimulationMode.TRUE, _factory=hardware_factory)
+        return SubrackHardwareManager(
+            SimulationMode.TRUE, 4, mock_callback, _factory=hardware_factory
+        )
 
-    def test_init_simulation_mode(self):
+    def test_init_simulation_mode(self, mock_callback):
         """
         Test that we can't create an hardware manager that isn't in
         simulation mode.
+
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):
-            _ = SubrackHardwareManager(SimulationMode.FALSE)
+            _ = SubrackHardwareManager(SimulationMode.FALSE, 4, mock_callback)
 
     def test_simulation_mode(self, hardware_manager):
         """
@@ -589,7 +600,7 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
         """
         hardware_manager.on()
-        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+        for tpm_id in range(1, hardware_manager.tpm_count + 1):
             assert not hardware_manager.is_tpm_on(tpm_id)
 
             hardware_manager.turn_on_tpm(tpm_id)
@@ -599,7 +610,7 @@ class TestSubrackHardwareManager:
         hardware_manager.off()
 
         hardware_manager.on()
-        for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+        for tpm_id in range(1, hardware_manager.tpm_count + 1):
             assert not hardware_manager.is_tpm_on(tpm_id)
 
     def test_tpms_on_off(self, hardware_manager):
@@ -619,7 +630,7 @@ class TestSubrackHardwareManager:
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
             """
-            for tpm_id in range(1, SubrackBoardSimulator.NUMBER_OF_BAYS + 1):
+            for tpm_id in range(1, hardware_manager.tpm_count + 1):
                 assert hardware_manager.is_tpm_on(tpm_id) == is_on
 
         hardware_manager.on()
@@ -641,6 +652,38 @@ class TestMccsSubrack(object):
     Test class for MccsSubrack tests.
     """
 
+    @pytest.fixture()
+    def mock_factory(self, mocker):
+        """
+        Fixture that provides a mock factory for device proxy mocks.
+        This factory ensures that calls to a mock's command_inout method
+        results in a (ResultCode.OK, message) return.
+
+        :param mocker: a wrapper around the :py:mod:`unittest.mock` package
+        :type mocker: obj
+
+        :return: a factory for device proxy mocks
+        :rtype: :py:class:`unittest.Mock` (the class itself, not an instance)
+        """
+
+        def custom_mock():
+            """
+            Return a mock that returns `(ResultCode.OK, message)` when
+            its `command_inout` method is called.
+
+            :return: a mock that returns `(ResultCode.OK, message)` when
+                its `command_inout` method is called.
+            :rtype: :py:class:`unittest.Mock`
+            """
+            mock_device_proxy = mocker.Mock()
+            mock_device_proxy.command_inout.return_value = (
+                (ResultCode.OK,),
+                ("mock message",),
+            )
+            return mock_device_proxy
+
+        return custom_mock
+
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.
@@ -651,14 +694,14 @@ class TestMccsSubrack(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
 
-        assert device_under_test.state() == DevState.OFF
-        assert device_under_test.status() == "The device is in OFF state."
+        assert device_under_test.state() == DevState.DISABLE
+        assert device_under_test.status() == "The device is in DISABLE state."
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.testMode == TestMode.NONE
 
-    def test_healthState(self, device_under_test, mocker):
+    def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.
 
@@ -666,14 +709,13 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
         assert device_under_test.healthState == HealthState.OK
 
         # Test that polling is turned on and subscription yields an
         # event as expected
-        mock_callback = mocker.Mock()
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )
@@ -693,6 +735,7 @@ class TestMccsSubrack(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         device_under_test.On()
         assert (
             device_under_test.backplaneTemperature
@@ -709,53 +752,9 @@ class TestMccsSubrack(object):
         assert device_under_test.fanSpeed == SubrackBoardSimulator.DEFAULT_FAN_SPEED
         assert (
             list(device_under_test.tpmTemperatures)
-            == [SubrackBaySimulator.DEFAULT_TEMPERATURE]
-            * SubrackBoardSimulator.NUMBER_OF_BAYS
+            == [SubrackBaySimulator.DEFAULT_TEMPERATURE] * 4
         )
-        assert (
-            list(device_under_test.tpmCurrents)
-            == [0.0] * SubrackBoardSimulator.NUMBER_OF_BAYS
-        )
-
-    def test_PowerUp(self, device_under_test):
-        """
-        Test for PowerUp.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-
-        [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-up successful"
-
-        [[result_code], [message]] = device_under_test.PowerUp()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-up is redundant"
-
-    def test_PowerDown(self, device_under_test):
-        """
-        Test for PowerDown.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        device_under_test.On()
-
-        [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-down is redundant"
-
-        _ = device_under_test.PowerUp()
-
-        [[result_code], [message]] = device_under_test.PowerDown()
-        assert result_code == ResultCode.OK
-        assert message == "Subrack power-down successful"
+        assert list(device_under_test.tpmCurrents) == [0.0, 0.0, 0.0, 0.0]
 
     def test_PowerOnTpm(self, device_under_test):
         """
@@ -766,15 +765,16 @@ class TestMccsSubrack(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         _ = device_under_test.On()
 
-        [[result_code], [message]] = device_under_test.PowerOnTpm(0)
+        [[result_code], [message]] = device_under_test.PowerOnTpm(1)
         assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 0 power-on successful"
+        assert message == "Subrack TPM 1 power-on successful"
 
-        [[result_code], [message]] = device_under_test.PowerOnTpm(0)
+        [[result_code], [message]] = device_under_test.PowerOnTpm(1)
         assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 0 power-on is redundant"
+        assert message == "Subrack TPM 1 power-on is redundant"
 
     def test_PowerOffTpm(self, device_under_test):
         """
@@ -785,14 +785,15 @@ class TestMccsSubrack(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         _ = device_under_test.On()
 
-        [[result_code], [message]] = device_under_test.PowerOffTpm(0)
+        [[result_code], [message]] = device_under_test.PowerOffTpm(1)
         assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 0 power-off is redundant"
+        assert message == "Subrack TPM 1 power-off is redundant"
 
-        _ = device_under_test.PowerOnTpm(0)
+        _ = device_under_test.PowerOnTpm(1)
 
-        [[result_code], [message]] = device_under_test.PowerOffTpm(0)
+        [[result_code], [message]] = device_under_test.PowerOffTpm(1)
         assert result_code == ResultCode.OK
-        assert message == "Subrack TPM 0 power-off successful"
+        assert message == "Subrack TPM 1 power-off successful"

@@ -1,55 +1,21 @@
 {
     "servers": {
-        "MccsController": {
+        "DemoController": {
             "controller": {
-                "MccsController": {
+                "DemoController": {
                     "low-mccs/control/control": {
                         "properties": {
-                            "MccsSubarrays": [
-                                "low-mccs/subarray/01",
-                                "low-mccs/subarray/02"
+                            "MccsSubracks": [
+                                "low-mccs/subrack/01"
                             ],
                             "MccsStations": [
-                                "low-mccs/station/001",
-                                "low-mccs/station/002"
+                                "low-mccs/station/001"
                             ],
                             "MccsTiles": [
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002",
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsSubarray": {
-            "subarray_01": {
-                "MccsSubarray": {
-                    "low-mccs/subarray/01": {
-                        "properties": {
-                            "CapabilityTypes": [
-                                "BAND1",
-                                "BAND2"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "subarray_02": {
-                "MccsSubarray": {
-                    "low-mccs/subarray/02": {
-                        "properties": {
-                            "CapabilityTypes": [
-                                "BAND1",
-                                "BAND2"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -67,33 +33,18 @@
                             "StationId": [
                                 "1"
                             ],
+                            "APIUFQDN": [
+                                "low-mccs/apiu/001"
+                            ],
                             "TileFQDNs": [
                                 "low-mccs/tile/0001",
-                                "low-mccs/tile/0002"
-                            ],
-                            "AntennaFQDNs": [
-                                "low-mccs/antenna/000001",
-                                "low-mccs/antenna/000002"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "station_002": {
-                "MccsStation": {
-                    "low-mccs/station/002": {
-                        "properties": {
-                            "StationId": [
-                                "2"
-                            ],
-                            "TileFQDNs": [
+                                "low-mccs/tile/0002",
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
                             ],
                             "AntennaFQDNs": [
+                                "low-mccs/antenna/000001",
+                                "low-mccs/antenna/000002",
                                 "low-mccs/antenna/000003",
                                 "low-mccs/antenna/000004"
                             ],
@@ -105,78 +56,16 @@
                 }
             }
         },
-        "MccsStationBeam": {
-            "beam_01": {
-                "MccsStationBeam": {
-                    "low-mccs/beam/01": {
-                        "properties": {
-                            "BeamId": [
-                                "1"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "beam_02": {
-                "MccsStationBeam": {
-                    "low-mccs/beam/02": {
-                        "properties": {
-                            "BeamId": [
-                                "2"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "beam_03": {
-                "MccsStationBeam": {
-                    "low-mccs/beam/03": {
-                        "properties": {
-                            "BeamId": [
-                                "3"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            },
-            "beam_04": {
-                "MccsStationBeam": {
-                    "low-mccs/beam/04": {
-                        "properties": {
-                            "BeamId": [
-                                "4"
-                            ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsSubrack": {
+        "DemoSubrack": {
             "subrack_01": {
-                "MccsSubrack": {
+                "DemoSubrack": {
                     "low-mccs/subrack/01": {
                         "properties": {
                             "TileFQDNs": [
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002",
                                 "low-mccs/tile/0003",
-                                "low-mccs/tile/0004",
-                                "low-mccs/tile/0005",
-                                "low-mccs/tile/0006",
-                                "low-mccs/tile/0007",
-                                "low-mccs/tile/0008"
+                                "low-mccs/tile/0004"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -201,10 +90,16 @@
                                 "1"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "1"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.2"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
                             ]
                         }
                     }
@@ -224,10 +119,16 @@
                                 "2"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "1"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.3"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
                             ]
                         }
                     }
@@ -247,10 +148,16 @@
                                 "3"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "1"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
+                            ],
+                            "TpmIp": [
+                                "10.0.10.4"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
                             ]
                         }
                     }
@@ -270,7 +177,32 @@
                                 "4"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ],
+                            "TileIp": [
+                                "10.0.10.5"
+                            ],
+                            "TpmCpldPort": [
+                                "10000"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "DemoAPIU": {
+            "apiu_001": {
+                "DemoAPIU": {
+                    "low-mccs/apiu/001": {
+                        "properties": {
+                            "AntennaFQDNs": [
+                                "low-mccs/antenna/000001",
+                                "low-mccs/antenna/000002",
+                                "low-mccs/antenna/000003",
+                                "low-mccs/antenna/000004"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -280,18 +212,9 @@
                 }
             }
         },
-        "MccsAPIU": {
-            "apiu_001": {
-                "MccsAPIU": {
-                    "low-mccs/apiu/001": {
-                        "properties": {}
-                    }
-                }
-            }
-        },
-        "MccsAntenna": {
+        "DemoAntenna": {
             "antenna_000001": {
-                "MccsAntenna": {
+                "DemoAntenna": {
                     "low-mccs/antenna/000001": {
                         "properties": {
                             "ApiuId": [
@@ -314,7 +237,7 @@
                 }
             },
             "antenna_000002": {
-                "MccsAntenna": {
+                "DemoAntenna": {
                     "low-mccs/antenna/000002": {
                         "properties": {
                             "ApiuId": [
@@ -324,10 +247,10 @@
                                 "2"
                             ],
                             "TileId": [
-                                "1"
+                                "2"
                             ],
                             "LogicalTileAntennaId": [
-                                "2"
+                                "1"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -337,7 +260,7 @@
                 }
             },
             "antenna_000003": {
-                "MccsAntenna": {
+                "DemoAntenna": {
                     "low-mccs/antenna/000003": {
                         "properties": {
                             "ApiuId": [
@@ -347,7 +270,7 @@
                                 "3"
                             ],
                             "TileId": [
-                                "2"
+                                "3"
                             ],
                             "LogicalTileAntennaId": [
                                 "1"
@@ -360,7 +283,7 @@
                 }
             },
             "antenna_000004": {
-                "MccsAntenna": {
+                "DemoAntenna": {
                     "low-mccs/antenna/000004": {
                         "properties": {
                             "ApiuId": [
@@ -370,24 +293,11 @@
                                 "4"
                             ],
                             "TileId": [
-                                "2"
+                                "4"
                             ],
                             "LogicalTileAntennaId": [
-                                "2"
+                                "1"
                             ],
-                            "LoggingLevelDefault": [
-                                "3"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "MccsTpmDeviceSimulator": {
-            "tpmsimulator": {
-                "MccsTpmDeviceSimulator": {
-                    "low-mccs/tpmsimulator/tpmsimulator": {
-                        "properties": {
                             "LoggingLevelDefault": [
                                 "3"
                             ]

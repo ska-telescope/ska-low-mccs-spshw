@@ -154,7 +154,7 @@ def mock_factory(mocker):
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
-        mock.command_inout.return_value = ((ResultCode.OK,), ("mock message",))
+        mock.command_inout_reply.return_value = ((ResultCode.OK,), ("mock message",))
         return mock
 
     return _mock_device
@@ -236,7 +236,7 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.State() == tango.DevState.OFF
+        assert device_under_test.State() == tango.DevState.DISABLE
 
     def test_Status(self, device_under_test):
         """
@@ -247,7 +247,7 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.Status() == "The device is in OFF state."
+        assert device_under_test.Status() == "The device is in DISABLE state."
 
     def test_GetVersionInfo(self, device_under_test):
         """
@@ -286,11 +286,11 @@ class TestMccsController:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Command Reset not allowed when the device is in OFF state",
+            match="Command Reset not allowed when the device is in DISABLE state",
         ):
             device_under_test.Reset()
 
-    def test_On(self, device_under_test, mocker):
+    def test_On(self, device_under_test, mock_callback):
         """
         Test for On (including end of command event testing).
 
@@ -298,11 +298,12 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
+        device_under_test.Off()
+
         # Test that subscription yields an event as expected
-        mock_callback = mocker.Mock()
         _ = device_under_test.subscribe_event(
             "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
         )
@@ -318,7 +319,7 @@ class TestMccsController:
             mock_callback=mock_callback, name="commandResult", result=result_code
         )
 
-    def test_Off(self, device_under_test, mocker):
+    def test_Off(self, device_under_test, mock_callback):
         """
         Test for Off (including end of command event testing).
 
@@ -326,15 +327,15 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
+        controller.Off()
         controller.On()
 
         # Test that subscription yields an event as expected
-        mock_callback = mocker.Mock()
         _ = controller.subscribe_event(
             "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
         )
@@ -385,6 +386,8 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
+
         # assert device_under_test.Operate() == 0
         [[result_code], [message]] = device_under_test.Operate()
         assert result_code == ResultCode.OK
@@ -491,7 +494,7 @@ class TestMccsController:
                 "low-mccs/station/002": _station_mock(),
             }
 
-        def test_Allocate(self, device_under_test, mocker):
+        def test_Allocate(self, device_under_test, mock_callback):
             """
             Test the Allocate command (including end of command event
             testing).
@@ -500,8 +503,8 @@ class TestMccsController:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
-            :param mocker: fixture that wraps unittest.Mock
-            :type mocker: wrapper for :py:mod:`unittest.mock`
+            :param mock_callback: a mock to pass as a callback
+            :type mock_callback: :py:class:`unittest.Mock`
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -509,6 +512,7 @@ class TestMccsController:
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
+            controller.Off()
             controller.On()
 
             call_with_json(
@@ -533,7 +537,6 @@ class TestMccsController:
             )
 
             # Test that subscription yields an event as expected
-            mock_callback = mocker.Mock()
             _ = device_under_test.subscribe_event(
                 "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
             )
@@ -721,7 +724,7 @@ class TestMccsController:
             assert mock_station_1.subarrayId == 2
             assert mock_station_2.subarrayId == 2
 
-        def test_Release(self, device_under_test, mocker):
+        def test_Release(self, device_under_test, mock_callback):
             """
             Test Release command.
 
@@ -729,8 +732,8 @@ class TestMccsController:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
-            :param mocker: fixture that wraps unittest.Mock
-            :type mocker: wrapper for :py:mod:`unittest.mock`
+            :param mock_callback: a mock to pass as a callback
+            :type mock_callback: :py:class:`unittest.Mock`
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -738,6 +741,7 @@ class TestMccsController:
             mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
             mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
 
+            controller.Off()
             controller.On()
 
             call_with_json(
@@ -786,7 +790,6 @@ class TestMccsController:
             assert mock_station_2.subarrayId == 2
 
             # Test that subscription yields an event as expected
-            mock_callback = mocker.Mock()
             _ = device_under_test.subscribe_event(
                 "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
             )
@@ -874,7 +877,7 @@ class TestMccsController:
         """
         assert device_under_test.versionId == release.version
 
-    def test_healthState(self, device_under_test, mocker):
+    def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.
 
@@ -882,18 +885,17 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
 
         # The device has subscribed to healthState change events on
-        # its subsidiary, but hasn't heard from them (because in unit
-        # testing these devices are mocked out), so its healthState is
-        # UNKNOWN
+        # its subsidiary devices, but hasn't heard from them (because in
+        # unit testing these devices are mocked out), so its healthState
+        # is UNKNOWN
         assert device_under_test.healthState == HealthState.UNKNOWN
 
         # Test that subscription yields an event as expected
-        mock_callback = mocker.Mock()
         _ = device_under_test.subscribe_event(
             "healthState", tango.EventType.CHANGE_EVENT, mock_callback
         )
@@ -905,6 +907,11 @@ class TestMccsController:
 
         call_with_json(
             device_under_test.simulateAdminModeChange,
+            fqdn="low-mccs/subrack/01",
+            admin_mode=AdminMode.ONLINE,
+        )
+        call_with_json(
+            device_under_test.simulateAdminModeChange,
             fqdn="low-mccs/station/001",
             admin_mode=AdminMode.ONLINE,
         )
@@ -913,6 +920,14 @@ class TestMccsController:
             fqdn="low-mccs/station/002",
             admin_mode=AdminMode.ONLINE,
         )
+
+        call_with_json(
+            device_under_test.simulateHealthStateChange,
+            fqdn="low-mccs/subrack/01",
+            health_state=HealthState.FAILED,
+        )
+        assert device_under_test.healthState == HealthState.UNKNOWN
+        mock_callback.assert_not_called()
 
         call_with_json(
             device_under_test.simulateHealthStateChange,
@@ -1143,28 +1158,26 @@ class TestInitCommand:
             """
             super().__init__(target, state_model, logger)
             self._hang_lock = threading.Lock()
-            self._initialise_device_pool_manager_called = False
+            self._initialise_hardware_management_called = False
             self._initialise_health_monitoring_called = False
 
-        def _initialise_device_pool_manager(self, device, fqdns):
+        def _initialise_device_pool(self, device, subrack_fqdns, station_fqdns):
             """
             Initialise the device pool for this device (overridden here
             to inject a call trace attribute).
 
-            :param device: the device for which the device pool is
+            :param device: the device for which power management is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device manages power
-            :type fqdns: list(str)
+            :param subrack_fqdns: the fqdns of subservient subracks.
+            :type subrack_fqdns: list(str)
+            :param station_fqdns: the fqdns of subservient stations.
+            :type station_fqdns: list(str)
             """
-            self._initialise_device_pool_manager_called = True
-            super()._initialise_device_pool_manager(device)
-            with self._hang_lock:
-                # hang until the hang lock is released
-                pass
+            self._initialise_device_pool_called = True
+            super()._initialise_device_pool(device, subrack_fqdns, station_fqdns)
 
-        def _initialise_health_monitoring(self, device, fqdns):
+        def _initialise_health_monitoring(self, device):
             """
             Initialise the health model for this device (overridden here
             to inject a call trace attribute).
@@ -1172,12 +1185,9 @@ class TestInitCommand:
             :param device: the device for which the health model is
                 being initialised
             :type device: :py:class:`~ska.base.SKABaseDevice`
-            :param fqdns: the fqdns of subservient devices for which
-                this device monitors health
-            :type: list(str)
             """
             self._initialise_health_monitoring_called = True
-            super()._initialise_health_monitoring(device, fqdns)
+            super()._initialise_health_monitoring(device)
 
     def test_interrupt(self, mocker):
         """
@@ -1195,21 +1205,15 @@ class TestInitCommand:
 
         with init_command._hang_lock:
             init_command()
-            time.sleep(0.1)
-
-            # We got the hang lock first, so the initialisation thread will hang in
-            # device pool manager initialisation until we release it.
-
-            assert init_command._initialise_device_pool_manager_called
-            assert not init_command._initialise_health_monitoring_called
-
+            # we got the hang lock first, so the initialisation thread
+            # will hang in health initialisation until we release it
             init_command.interrupt()
 
         init_command._thread.join()
 
-        # Now that we've released the hang lock, the thread can exit its
-        # _initialise_device_pool_manager method, but before it enters its
+        # now that we've released the hang lock, the thread can exit
+        # its _initialise_hardware_management, but before it enters its
         # _initialise_health_monitoring, it will detect that it has been
         # interrupted, and return
-        assert init_command._initialise_device_pool_manager_called
+        assert init_command._initialise_device_pool_called
         assert not init_command._initialise_health_monitoring_called

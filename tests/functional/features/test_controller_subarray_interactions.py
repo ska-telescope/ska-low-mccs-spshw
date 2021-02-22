@@ -129,6 +129,9 @@ def devices(tango_context):
     # TODO: Need to investigate disabling this section for tests performed on
     #       a real deployment (i.e. not in a test/development environment)
     for device in device_dict.values():
+        # HACK: increasing the timeout until we can make some commands synchronous
+        device.set_timeout_millis(5000)
+
         device.set_source(DevSource.DEV)
     assert confirm_initialised(device_dict.values())
     return device_dict
@@ -205,7 +208,7 @@ def component_is_ready_to_receive_a_startup_command(devices, component_name, dir
     :type direction: str
     """
     if component_name == "mccs":
-        assert devices["controller"].state() == DevState.OFF
+        assert devices["controller"].state() == DevState.DISABLE
     elif component_name == "tmc":
         pass
     else:

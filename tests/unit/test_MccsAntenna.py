@@ -16,7 +16,7 @@ import threading
 
 import pytest
 
-from tango import AttrQuality, DevFailed, EventType
+from tango import AttrQuality, DevFailed, DevState, EventType
 from ska.base.control_model import (
     ControlMode,
     LoggingLevel,
@@ -25,7 +25,7 @@ from ska.base.control_model import (
 )
 from ska.base.commands import ResultCode
 
-from ska.low.mccs.antenna import AntennaHardwareManager, MccsAntenna
+from ska.low.mccs.antenna.antenna_device import AntennaHardwareManager, MccsAntenna
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator
 from ska.low.mccs.hardware import HardwareFactory, PowerMode
 
@@ -73,7 +73,7 @@ def hardware_factory(hardware_driver):
 
     :return: a hardware factory for antenna hardware
     :rtype:
-        :py:class:`~ska.low.mccs.antenna.AntennaHardwareFactory`
+        :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareFactory`
     """
 
     class BasicAntennaHardwareFactory(HardwareFactory):
@@ -103,7 +103,7 @@ def hardware_factory(hardware_driver):
 
 
 @pytest.fixture()
-def hardware_manager(hardware_factory, logger):
+def hardware_manager(hardware_factory, logger, mock_callback):
     """
     Return a hardware manager for antenna hardware.
 
@@ -111,13 +111,15 @@ def hardware_manager(hardware_factory, logger):
         access to, the hardware driver that it returns, for testing
         purposes
     :type:
-        :py:class:`~ska.low.mccs.antenna.AntennaHardwareDriver`
+        :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareDriver`
     :param logger: a object that implements the standard logging interface of
         :py:class:`logging.Logger`
     :type logger: :py:class:`logging.Logger`
+    :param mock_callback: a mock to pass as a callback
+    :type mock_callback: :py:class:`unittest.Mock`
 
     :return: a hardware manager for antenna hardware
-    :rtype: :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+    :rtype: :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
     """
     return AntennaHardwareManager(
         "low-mccs/apiu/001",
@@ -125,6 +127,7 @@ def hardware_manager(hardware_factory, logger):
         "low-mccs/tile/0001",
         1,
         logger,
+        mock_callback,
         _factory=hardware_factory,
     )
 
@@ -132,7 +135,7 @@ def hardware_manager(hardware_factory, logger):
 class TestAntennaHardwareManager:
     """
     Contains the tests of the
-    :py:class:`ska.low.mccs.antenna.AntennaHardwareManager`
+    :py:class:`ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
     """
 
     def test_on_off(self, hardware_driver, hardware_manager, mocker):
@@ -145,7 +148,7 @@ class TestAntennaHardwareManager:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         :param hardware_manager: a hardware manager for antenna hardware
         :type hardware_manager:
-            :py:class:`~ska.low.mccs.antenna.AntennaHardwareManager`
+            :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -197,52 +200,131 @@ class TestAntennaHardwareManager:
         mock_health_callback.assert_not_called()
 
 
+@pytest.fixture()
+def initial_mocks(mock_factory, request):
+    """
+    Fixture that registers device proxy mocks prior to patching. The
+    default fixture is overridden here to ensure that a mock subrack
+    responds suitably to actions taken on it by the AntennaAPIUProxy.
+
+    :param mock_factory: a factory for
+        :py:class:`tango.DeviceProxy` mocks
+    :type mock_factory: object
+    :param request: A pytest object giving access to the requesting test
+        context.
+    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :return: a dictionary of mocks, keyed by FQDN
+    :rtype: dict
+    """
+
+    def _apiu_mock(state=DevState.ON, is_on=False, result_code=ResultCode.OK):
+        """
+        Sets up a mock for a :py:class:`tango.DeviceProxy` that connects
+        to an :py:class:`~ska.low.mccs.MccsAPIU` device. The returned
+        mock will respond suitably to actions taken on it by the
+        AntennaApiuProxy.
+
+        :param state: the device state that this mock APIU device
+            should report
+        :type state: :py:class:`tango.DevState`
+        :param is_on: whether this mock APIU device should report
+            that its Antennas are turned on
+        :type is_on: bool
+        :param result_code: the result code this mock APIU device
+            should return when told to turn an Antenna on or off
+        :type result_code: :py:class:`ska.base.commands.ResultCode`
+        :return: a mock for a :py:class:`tango.DeviceProxy` that
+            connects to an
+            :py:class:`~ska.low.mccs.MccsAPIU` device.
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mock_factory()
+        mock.state.return_value = state
+        mock.IsAntennaOn.return_value = is_on
+        mock.PowerDownAntenna.return_value = [
+            [result_code],
+            ["Mock information_only message"],
+        ]
+        mock.PowerUpAntenna.return_value = [
+            [result_code],
+            ["Mock information_only message"],
+        ]
+        return mock
+
+    kwargs = getattr(request, "param", {})
+    return {"low-mccs/apiu/001": _apiu_mock(**kwargs)}
+
+
+@pytest.fixture()
+def mock_factory(mocker, request):
+    """
+    Fixture that provides a mock factory for device proxy mocks. This
+    default factory provides vanilla mocks, but this fixture can be
+    overridden by test modules/classes to provide mocks with specified
+    behaviours.
+
+    :param mocker: the pytest `mocker` fixture is a wrapper around the
+        `unittest.mock` package
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :param request: A pytest object giving access to the requesting test
+        context.
+    :type request: :py:class:`_pytest.fixtures.SubRequest`
+
+    :return: a factory for device proxy mocks
+    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+        instance)
+    """
+    kwargs = getattr(request, "param", {})
+    is_on = kwargs.get("is_on", False)
+    _values = {"areAntennasOn": [is_on, True, False, True]}
+
+    def _mock_attribute(name, *args, **kwargs):
+        """
+        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
+        for a given attribute name.
+
+        :param name: name of the attribute
+        :type name: str
+        :param args: positional args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type args: list
+        :param kwargs: named args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type kwargs: dict
+
+        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
+            instance, with name, value and quality values
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mocker.Mock()
+        mock.name = name
+        mock.value = _values.get(name, "MockValue")
+        mock.quality = "MockQuality"
+        return mock
+
+    def _mock_device():
+        """
+        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
+        with its :py:meth:`tango.DeviceProxy.read_attribute` method
+        mocked to return :py:class:`tango.DeviceAttribute` mocks.
+
+        :return: a basic mock for a :py:class:`tango.DeviceProxy`
+            instance,
+        :rtype: :py:class:`unittest.Mock`
+        """
+        mock = mocker.Mock()
+        mock.read_attribute.side_effect = _mock_attribute
+        return mock
+
+    return _mock_device
+
+
 class TestMccsAntenna:
     """
     Test class for MccsAntenna tests.
     """
-
-    def test_PowerOn(self, device_under_test, mock_device_proxies):
-        """
-        Test for PowerOn.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict
-        """
-        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.IsAntennaOn.side_effect = [False, True]
-
-        [[result_code], [message]] = device_under_test.PowerOn()
-        assert result_code == ResultCode.OK
-        mock_apiu.IsAntennaOn.assert_called_with(1)
-        mock_apiu.PowerUpAntenna.assert_called_once_with(1)
-
-    def test_PowerOff(self, device_under_test, mock_device_proxies):
-        """
-        Test for PowerOff.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict
-        """
-        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
-        mock_apiu.IsAntennaOn.side_effect = [True, False]
-
-        [[result_code], [message]] = device_under_test.PowerOff()
-        assert result_code == ResultCode.OK
-        mock_apiu.IsAntennaOn.assert_called_with(1)
-        mock_apiu.PowerDownAntenna.assert_called_once_with(1)
 
     def test_Reset(self, device_under_test):
         """
@@ -309,7 +391,6 @@ class TestMccsAntenna:
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
         mock_apiu.get_antenna_voltage.return_value = voltage
 
-        device_under_test.PowerOn()
         assert device_under_test.voltage == voltage
         assert mock_apiu.get_antenna_voltage.called_once_with(1)
 
@@ -332,7 +413,6 @@ class TestMccsAntenna:
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
         mock_apiu.get_antenna_current.return_value = current
 
-        device_under_test.PowerOn()
         assert device_under_test.current == current
         assert mock_apiu.get_antenna_current.called_once_with(1)
 
@@ -355,7 +435,6 @@ class TestMccsAntenna:
         mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
         mock_apiu.get_antenna_temperature.return_value = temperature
 
-        device_under_test.PowerOn()
         assert device_under_test.temperature == temperature
         assert mock_apiu.get_antenna_temperature.called_once_with(1)
 
@@ -458,7 +537,7 @@ class TestMccsAntenna:
         """
         assert device_under_test.loggingLevel == LoggingLevel.WARNING
 
-    def test_healthState(self, device_under_test, mocker):
+    def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.
 
@@ -466,14 +545,13 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
         assert device_under_test.healthState == HealthState.OK
 
         # Test that polling is turned on and subscription yields an
         # event as expected
-        mock_callback = mocker.Mock()
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )

@@ -2,6 +2,10 @@
 
 ## unreleased
 
+* MCCS-309 - Integration of devices into end-to-end power flow
+* MCCS-347 - Correct initialisation values for controller commandResult
+* MCCS-307 - Add PSI chart configuration
+
 ## 0.6.0
 
 * MCCS-366 - Updates to APIU and Antenna

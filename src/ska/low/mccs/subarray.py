@@ -488,12 +488,7 @@ class MccsSubarray(SKASubarray):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-        doc="Result code from the previously completed command",
-    )
+    @attribute(dtype="DevLong", format="%i", polling_period=1000)
     def commandResult(self):
         """
         Return the commandResult attribute.
@@ -503,13 +498,7 @@ class MccsSubarray(SKASubarray):
         """
         return self._command_result
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-        doc="The ID of the current scan, set via commands Scan() and "
-        "endScan(). A scanId of 0 means that the subarray is idle.",
-    )
+    @attribute(dtype="DevLong", format="%i", polling_period=1000)
     def scanId(self):
         """
         Return the scan id.
@@ -529,14 +518,7 @@ class MccsSubarray(SKASubarray):
         """
         self._scan_id = scan_id
 
-    @attribute(
-        dtype=("DevString",),
-        max_dim_x=512,
-        format="%s",
-        polling_period=1000,
-        doc="Array holding the fully qualified device names of the "
-        "Stations allocated to this Subarray",
-    )
+    @attribute(dtype=("DevString",), max_dim_x=512, format="%s", polling_period=1000)
     def stationFQDNs(self):
         """
         Return the FQDNs of stations assigned to this subarray.
@@ -910,10 +892,7 @@ class MccsSubarray(SKASubarray):
             """
             return self.state_model.obs_state in [ObsState.SCANNING]
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Abort(self):
         """
@@ -979,10 +958,7 @@ class MccsSubarray(SKASubarray):
             """
             return self.state_model.obs_state in [ObsState.ABORTED]
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ObsReset(self):
         """
@@ -1060,23 +1036,7 @@ class MccsSubarray(SKASubarray):
             transient_buffer_manager.send(argin)
             return (ResultCode.OK, "SendTransientBuffer command completed successfully")
 
-    @command(
-        dtype_in="DevVarLongArray",
-        doc_in="Specification of the segment of the transient buffer "
-        "to send, comprising:"
-        "1. Start time (timestamp: milliseconds since UNIX epoch)"
-        "2. End time (timestamp: milliseconds since UNIX epoch)"
-        "3. Dispersion measure"
-        "Together, these parameters narrow the selection of transient"
-        "buffer data to the period of time and frequencies that are of"
-        "interest."
-        ""
-        "Additional metadata, such as the ID of a triggering Scheduling"
-        "Block, may need to be supplied to allow SDP to assign data"
-        "ownership correctly (TBD75).",
-        dtype_out="DevVarLongStringArray",
-        doc_out="[ReturnCode, information-only string]",
-    )
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendTransientBuffer(self, argin):
         """

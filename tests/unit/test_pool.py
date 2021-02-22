@@ -13,13 +13,13 @@ import pytest
 import tango
 
 from ska.base.commands import ResultCode
-from ska.low.mccs.pool import DevicePoolManager
+from ska.low.mccs.pool import DevicePool
 
 
-class TestDevicePoolManager:
+class TestDevicePool:
     """
     This class contains the tests for the
-    :py:class:`ska.low.mccs.pool.DevicePoolManager` class.
+    :py:class:`ska.low.mccs.pool.DevicePool` class.
     """
 
     @pytest.fixture()
@@ -46,7 +46,7 @@ class TestDevicePoolManager:
             :rtype: :py:class:`unittest.Mock`
             """
             mock_device_proxy = mocker.Mock()
-            mock_device_proxy.command_inout.return_value = (
+            mock_device_proxy.command_inout_reply.return_value = (
                 (ResultCode.OK,),
                 ("mock message",),
             )
@@ -65,9 +65,9 @@ class TestDevicePoolManager:
         return ["test/test/1", "test/test/2", "test/test/3"]
 
     @pytest.fixture()
-    def device_pool_manager(self, fqdns, logger, mock_device_proxies):
+    def device_pool(self, fqdns, logger, mock_device_proxies):
         """
-        Returns the device_pool_manager under test.
+        Returns the device_pool under test.
 
         :param fqdns: FQDNs of the devices in the pool
         :type fqdns: list(str)
@@ -79,32 +79,35 @@ class TestDevicePoolManager:
         :type mock_device_proxies: dict (but don't access it directly,
             access it through :py:class:`tango.DeviceProxy` calls)
 
-        :return: a device_pool_manager to test
-        :rtype: :py:class:`ska.low.mccs.pool.DevicePoolManager`
+        :return: a device_pool to test
+        :rtype: :py:class:`ska.low.mccs.pool.DevicePool`
         """
-        return DevicePoolManager(fqdns, logger)
+        return DevicePool(fqdns, logger)
 
     @pytest.mark.parametrize("arg", ["Bah", None])
-    def test_invoke_command(self, fqdns, device_pool_manager, arg):
+    def test_invoke_command(self, fqdns, device_pool, arg):
         """
         Test of the
-        :py:meth:`ska.low.mccs.pool.DevicePoolManager.invoke_command`
+        :py:meth:`ska.low.mccs.pool.DevicePool.invoke_command`
         method.
 
         :param fqdns: FQDNs of the devices in the pool
         :type fqdns: list(str)
-        :param device_pool_manager: the device_pool_manager under test
-        :type device_pool_manager: :py:class:`ska.low.mccs.pool.DevicePoolManager`
+        :param device_pool: the device_pool under test
+        :type device_pool: :py:class:`ska.low.mccs.pool.DevicePool`
         :param arg: a dummy argument to use in testing
         :type arg: str
         """
         if arg is None:
-            device_pool_manager.invoke_command("Foo")
+            device_pool.invoke_command("Foo")
         else:
-            device_pool_manager.invoke_command("Foo", arg)
+            device_pool.invoke_command("Foo", arg)
 
         for fqdn in fqdns:
-            tango.DeviceProxy(fqdn).command_inout.assert_called_once_with("Foo", arg)
+            tango.DeviceProxy(fqdn).command_inout_asynch.assert_called_once_with(
+                "Foo", arg
+            )
+            tango.DeviceProxy(fqdn).command_inout_reply.assert_called_once()
 
     @pytest.mark.parametrize(
         ("method", "command"),
@@ -115,21 +118,24 @@ class TestDevicePoolManager:
             ("on", "On"),
         ],
     )
-    def test_commands(self, fqdns, device_pool_manager, method, command):
+    def test_commands(self, fqdns, device_pool, method, command):
         """
         Test of command-specific methods.
 
         :param fqdns: FQDNs of the devices in the pool
         :type fqdns: list(str)
-        :param device_pool_manager: the device_pool_manager under test
-        :type device_pool_manager: :py:class:`ska.low.mccs.pool.DevicePoolManager`
+        :param device_pool: the device_pool under test
+        :type device_pool: :py:class:`ska.low.mccs.pool.DevicePool`
         :param method: the command-specific method to test
         :type method: str
         :param command: the device command expected to be called on each
             device in the pool
         :type command: str
         """
-        getattr(device_pool_manager, method)()
+        getattr(device_pool, method)()
 
         for fqdn in fqdns:
-            tango.DeviceProxy(fqdn).command_inout.assert_called_once_with(command, None)
+            tango.DeviceProxy(fqdn).command_inout_asynch.assert_called_once_with(
+                command, None
+            )
+            tango.DeviceProxy(fqdn).command_inout_reply.assert_called_once()

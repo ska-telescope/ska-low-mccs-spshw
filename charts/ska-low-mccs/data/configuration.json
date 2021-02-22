@@ -9,6 +9,9 @@
                                 "low-mccs/subarray/01",
                                 "low-mccs/subarray/02"
                             ],
+                            "MccsSubracks": [
+                                "low-mccs/subrack/01"
+                            ],
                             "MccsStations": [
                                 "low-mccs/station/001",
                                 "low-mccs/station/002"
@@ -34,7 +37,6 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ]
-                            
                         }
                     }
                 }
@@ -80,13 +82,18 @@
                             "StationId": [
                                 "1"
                             ],
+                            "APIUFQDN": [
+                                "low-mccs/apiu/001"
+                            ],
                             "TileFQDNs": [
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002"
                             ],
                             "AntennaFQDNs": [
                                 "low-mccs/antenna/000001",
-                                "low-mccs/antenna/000002"
+                                "low-mccs/antenna/000002",
+                                "low-mccs/antenna/000003",
+                                "low-mccs/antenna/000004"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -102,13 +109,18 @@
                             "StationId": [
                                 "2"
                             ],
+                            "APIUFQDN": [
+                                "low-mccs/apiu/002"
+                            ],
                             "TileFQDNs": [
                                 "low-mccs/tile/0003",
                                 "low-mccs/tile/0004"
                             ],
                             "AntennaFQDNs": [
-                                "low-mccs/antenna/000003",
-                                "low-mccs/antenna/000004"
+                                "low-mccs/antenna/000005",
+                                "low-mccs/antenna/000006",
+                                "low-mccs/antenna/000007",
+                                "low-mccs/antenna/000008"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -243,11 +255,7 @@
                                 "low-mccs/tile/0001",
                                 "low-mccs/tile/0002",
                                 "low-mccs/tile/0003",
-                                "low-mccs/tile/0004",
-                                "low-mccs/tile/0005",
-                                "low-mccs/tile/0006",
-                                "low-mccs/tile/0007",
-                                "low-mccs/tile/0008"
+                                "low-mccs/tile/0004"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -272,7 +280,7 @@
                                 "1"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "2"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -301,7 +309,7 @@
                                 "2"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "2"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -330,7 +338,7 @@
                                 "3"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "2"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -359,7 +367,7 @@
                                 "4"
                             ],
                             "AntennasPerTile": [
-                                "16"
+                                "2"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -385,6 +393,23 @@
                                 "low-mccs/antenna/000002",
                                 "low-mccs/antenna/000003",
                                 "low-mccs/antenna/000004"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "apiu_002": {
+                "MccsAPIU": {
+                    "low-mccs/apiu/002": {
+                        "properties": {
+                            "AntennaFQDNs": [
+                                "low-mccs/antenna/000005",
+                                "low-mccs/antenna/000006",
+                                "low-mccs/antenna/000007",
+                                "low-mccs/antenna/000008"
                             ],
                             "LoggingLevelDefault": [
                                 "3"
@@ -476,6 +501,98 @@
                             ],
                             "TileId": [
                                 "2"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "antenna_000005": {
+                "MccsAntenna": {
+                    "low-mccs/antenna/000005": {
+                        "properties": {
+                            "ApiuId": [
+                                "2"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "1"
+                            ],
+                            "TileId": [
+                                "3"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "antenna_000006": {
+                "MccsAntenna": {
+                    "low-mccs/antenna/000006": {
+                        "properties": {
+                            "ApiuId": [
+                                "2"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "2"
+                            ],
+                            "TileId": [
+                                "3"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "2"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "antenna_000007": {
+                "MccsAntenna": {
+                    "low-mccs/antenna/000007": {
+                        "properties": {
+                            "ApiuId": [
+                                "2"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "3"
+                            ],
+                            "TileId": [
+                                "4"
+                            ],
+                            "LogicalTileAntennaId": [
+                                "1"
+                            ],
+                            "LoggingLevelDefault": [
+                                "3"
+                            ]
+                        }
+                    }
+                }
+            },
+            "antenna_000008": {
+                "MccsAntenna": {
+                    "low-mccs/antenna/000008": {
+                        "properties": {
+                            "ApiuId": [
+                                "2"
+                            ],
+                            "LogicalApiuAntennaId": [
+                                "4"
+                            ],
+                            "TileId": [
+                                "4"
                             ],
                             "LogicalTileAntennaId": [
                                 "2"

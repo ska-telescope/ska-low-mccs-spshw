@@ -13,6 +13,7 @@ Device Server, based on the architecture in SKA-TEL-LFAA-06000052-02.
 __all__ = [
     "AntennaHardwareDriver",
     "AntennaHardwareFactory",
+    "AntennaHardwareHealthEvaluator",
     "AntennaHardwareManager",
     "MccsAntenna",
     "main",
@@ -20,14 +21,14 @@ __all__ = [
 
 import threading
 
-from tango import DebugIt, DevFailed, EnsureOmniThread
-from tango.server import attribute, command, device_property, AttrWriteType
+from tango import DevFailed, DevState, EnsureOmniThread
+from tango.server import attribute, device_property, AttrWriteType
 
 from ska.base import SKABaseDevice
-from ska.base.commands import ResponseCommand, ResultCode
+from ska.base.commands import ResultCode
 from ska.base.control_model import HealthState, SimulationMode
 
-from ska.low.mccs.events import EventManager
+from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import (
     HardwareDriver,
     HardwareHealthEvaluator,
@@ -87,7 +88,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
     antenna hardware
     """
 
-    def __init__(self, apiu_fqdn, logical_antenna_id, logger):
+    def __init__(self, apiu_fqdn, logical_antenna_id, logger, power_callback):
         """
         Initialise a new APIU proxy instance.
 
@@ -97,50 +98,113 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :type logical_antenna_id: int
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
+        :param power_callback: to be called when the power mode of the
+            antenna changes
+        :type power_callback: callable
 
         :raises AssertionError: if parameters are out of bounds
         :raises DevFailed: if unable to connect to the tile device
         """
         self._logger = logger
+        self._power_callback = power_callback
+
+        super().__init__()
 
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
         try:
-            self._apiu = backoff_connect(apiu_fqdn, logger)
+            self._apiu = backoff_connect(apiu_fqdn, logger, wait=True)
             self._is_connected = True
         except DevFailed:
             self._is_connected = False
             raise
 
+        self._power_mode = self._read_power_mode()
+        self._power_callback(self._power_mode)
+
+        self.apiu_event_handler = EventSubscriptionHandler(
+            self._apiu, apiu_fqdn, "areAntennasOn", logger
+        )
+        self.apiu_event_handler.register_callback(self._apiu_power_changed)
+
+    @property
+    def is_connected(self):
+        """
+        Returns whether this simulator is connected to the hardware.
+        This should be implemented to return a bool.
+
+        :return: whether the device is connected to the hardware or not
+        :rtype: bool
+        """
+        return self._is_connected
+
     def on(self):
         """
         Turn the antenna on (by telling the APIU to turn the right
         antenna on)
+
+        :raises NotImplementedError: if a device returns a ResultCode
+            other than STARTED or FAILED
+
+        :return: whether the command was successful, or None if there
+            was nothing to do
+        :rtype: bool
         """
+        if self._power_mode == PowerMode.ON:
+            return None  # already off
+
         self.check_connected()
-        self._apiu.PowerUpAntenna(self._logical_antenna_id)
+
+        [[result_code], [_]] = self._apiu.PowerUpAntenna(self._logical_antenna_id)
+        if result_code == ResultCode.OK:
+            self._update_power_mode(PowerMode.ON)
+            return True
+        elif result_code == ResultCode.FAILED:
+            return False
+        else:
+            raise NotImplementedError(
+                f"APIU.PowerUpAntenna returned unexpected ResultCode {result_code}."
+            )
 
     def off(self):
         """
         Turn the antenna off (by telling the APIU to turn the right
         antenna off)
+
+        :raises NotImplementedError: if a device returns a ResultCode
+            other than STARTED or FAILED
+
+        :return: whether the command was successful, or None if there
+            was nothing to do
+        :rtype: bool
         """
+        if self._power_mode == PowerMode.OFF:
+            return None  # already off
+
         self.check_connected()
-        self._apiu.PowerDownAntenna(self._logical_antenna_id)
+
+        [[result_code], [_]] = self._apiu.PowerDownAntenna(self._logical_antenna_id)
+        if result_code == ResultCode.OK:
+            self._update_power_mode(PowerMode.OFF)
+            return True
+        elif result_code == ResultCode.FAILED:
+            return False
+        else:
+            raise NotImplementedError(
+                f"APIU.PowerDownAntenna returned unexpected ResultCode {result_code}."
+            )
 
     @property
     def power_mode(self):
         """
-        Return the power mode of this antenna (determined by asking the
-        APIU whether a certain antenna is on)
+        Return the power mode of this antenna.
 
         :return: the power mode of this antenna
         :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
-        is_on = self._apiu.IsAntennaOn(self._logical_antenna_id)
-        return PowerMode.ON if is_on else PowerMode.OFF
+        return self._power_mode
 
     @property
     def current(self):
@@ -174,6 +238,63 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         """
         self.check_connected()
         return self._apiu.get_antenna_temperature(self._logical_antenna_id)
+
+    def _apiu_power_changed(self, event_name, event_value, event_quality):
+        """
+        Callback that this device registers with the event manager, so
+        that it is informed when the APIU power changes.
+
+        Because events may be delayed, a rapid off-on command sequence
+        can result in an "off" event arriving after the on() command has
+        been executed. We therefore don't put our full trust in these
+        events.
+
+        :param event_name: name of the event; will always be
+            "areAntennasOn" for this callback
+        :type event_name: str
+        :param event_value: the new attribute value
+        :type event_value: list(bool)
+        :param event_quality: the quality of the change event
+        :type event_quality: :py:class:`tango.AttrQuality`
+        """
+        assert event_name.lower() == "areAntennasOn".lower(), (
+            "APIU 'areAntennasOn' attribute changed callback called but "
+            f"event_name is {event_name}."
+        )
+
+        according_to_event = (
+            PowerMode.ON if event_value[self._logical_antenna_id - 1] else PowerMode.OFF
+        )
+        according_to_command = self._read_power_mode()
+        if according_to_event != according_to_command:
+            self._logger.warning(
+                f"Received a Antenna power change event for {according_to_event.name} "
+                f"but a manual read says {according_to_command.name}; discarding."
+            )
+        self._update_power_mode(according_to_command)
+
+    def _read_power_mode(self):
+        try:
+            apiu_state = self._apiu.state()
+        except DevFailed:
+            return PowerMode.UNKNOWN
+
+        if apiu_state == DevState.DISABLE:
+            return PowerMode.OFF
+        elif apiu_state not in [DevState.OFF, DevState.ON]:
+            return PowerMode.UNKNOWN
+
+        try:
+            is_antenna_on = self._apiu.IsAntennaOn(self._logical_antenna_id)
+        except DevFailed:
+            return PowerMode.UNKNOWN
+
+        return PowerMode.ON if is_antenna_on else PowerMode.OFF
+
+    def _update_power_mode(self, power_mode):
+        if self._power_mode != power_mode:
+            self._power_mode = power_mode
+            self._power_callback(power_mode)
 
 
 class AntennaTileProxy(HardwareDriver):
@@ -215,6 +336,19 @@ class AntennaTileProxy(HardwareDriver):
             self._is_connected = False
             raise
 
+        super().__init__()
+
+    @property
+    def is_connected(self):
+        """
+        Returns whether this simulator is connected to the hardware.
+        This should be implemented to return a bool.
+
+        :return: whether the device is connected to the hardware or not
+        :rtype: bool
+        """
+        return self._is_connected
+
 
 class AntennaHardwareDriver(OnOffHardwareDriver):
     """
@@ -231,6 +365,7 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         logical_apiu_antenna_id,
         tile_fqdn,
         logical_tile_antenna_id,
+        power_callback,
         logger,
     ):
         """
@@ -246,18 +381,22 @@ class AntennaHardwareDriver(OnOffHardwareDriver):
         :type tile_fqdn: str
         :param logical_tile_antenna_id: the tile's id for this antenna
         :type logical_tile_antenna_id: int
+        :param power_callback: to be called when the power mode of the
+            antenna changes
+        :type power_callback: callable
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
         self._antenna_apiu_proxy = AntennaAPIUProxy(
-            apiu_fqdn, logical_apiu_antenna_id, logger
+            apiu_fqdn, logical_apiu_antenna_id, logger, power_callback
         )
         self._antenna_tile_proxy = (
             AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
             if tile_fqdn is not None
             else None
         )
+        super().__init__()
 
     @property
     def is_connected(self):
@@ -338,6 +477,7 @@ class AntennaHardwareFactory(HardwareFactory):
         logical_apiu_antenna_id,
         tile_fqdn,
         logical_tile_antenna_id,
+        power_callback,
         logger,
     ):
         """
@@ -353,6 +493,9 @@ class AntennaHardwareFactory(HardwareFactory):
         :type tile_fqdn: str
         :param logical_tile_antenna_id: the tile's id for this antenna
         :type logical_tile_antenna_id: int
+        :param power_callback: to be called when the power mode of the
+            antenna changes
+        :type power_callback: callable
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         """
@@ -362,6 +505,7 @@ class AntennaHardwareFactory(HardwareFactory):
             logical_apiu_antenna_id,
             tile_fqdn,
             logical_tile_antenna_id,
+            power_callback,
             logger,
         )
 
@@ -392,6 +536,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
         logical_apiu_antenna_id,
         tile_fqdn,
         logical_tile_antenna_id,
+        power_callback,
         logger,
         _factory=None,
     ):
@@ -408,6 +553,9 @@ class AntennaHardwareManager(OnOffHardwareManager):
         :type tile_fqdn: str
         :param logical_tile_antenna_id: the tile's id for this antenna
         :type logical_tile_antenna_id: int
+        :param power_callback: to be called when the power mode of the
+            antenna changes
+        :type power_callback: callable
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param _factory: allows for substitution of a hardware factory.
@@ -422,6 +570,7 @@ class AntennaHardwareManager(OnOffHardwareManager):
                 logical_apiu_antenna_id,
                 tile_fqdn,
                 logical_tile_antenna_id,
+                power_callback,
                 logger,
             ),
             AntennaHardwareHealthEvaluator(),
@@ -637,16 +786,11 @@ class MccsAntenna(SKABaseDevice):
                 device.LogicalApiuAntennaId,
                 tile_fqdn,
                 device.LogicalTileAntennaId,
+                device.power_changed,
                 self.logger,
             )
             hardware_args = (device.hardware_manager, device.state_model, self.logger)
             device.register_command_object("Reset", device.ResetCommand(*hardware_args))
-            device.register_command_object(
-                "PowerOn", device.PowerOnCommand(*hardware_args)
-            )
-            device.register_command_object(
-                "PowerOff", device.PowerOffCommand(*hardware_args)
-            )
             device.register_command_object(
                 "Disable", device.DisableCommand(*hardware_args)
             )
@@ -686,6 +830,23 @@ class MccsAntenna(SKABaseDevice):
             self._interrupt = True
             return True
 
+        def succeeded(self):
+            """
+            Called when initialisation completes.
+
+            Here we override the base class default implementation to
+            ensure that MccsTile transitions to a state that reflects
+            the state of its hardware
+            """
+            device = self.target
+            if device.hardware_manager.power_mode == PowerMode.OFF:
+                device.hardware_manager.is_connectible = False
+                action = "init_succeeded_disable"
+            else:
+                device.hardware_manager.is_connectible = True
+                action = "init_succeeded_off"
+            self.state_model.perform_action(action)
+
     def always_executed_hook(self):
         """
         Method always executed before any TANGO command is executed.
@@ -707,7 +868,7 @@ class MccsAntenna(SKABaseDevice):
         pass
 
     # ----------
-    # Attributes
+    # Callbacks
     # ----------
 
     def health_changed(self, health):
@@ -723,6 +884,47 @@ class MccsAntenna(SKABaseDevice):
             return
         self._health_state = health
         self.push_change_event("healthState", health)
+
+    def power_changed(self, power_mode):
+        """
+        Callback to be called whenever the AntennaHardwareManager's
+        record of the power mode of the antenna hardware changes;
+        responsible for updating the tango side of things i.e. making
+        sure the attribute is up to date, and events are pushed.
+
+        :todo: There's way too much explicit management of state in this
+            callback. We need to get this into the state machine so we
+            can simply
+            ``self.state_model.perform_action("antenna_was_turned_off")``.
+
+        :param power_mode: the new power_mode
+        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        """
+        if self.get_state() == DevState.INIT:
+            # Don't respond to power mode changes while initialising.
+            # We'll worry about it when it comes time to transition out
+            # of INIT.
+            return
+
+        # TODO: For now, we need to get our devices to OFF state
+        # (the highest state of device readiness for a device that
+        # isn't actually on) before we can put them into ON state.
+        # This is a counterintuitive mess that will be fixed in
+        # SP-1501.
+        if power_mode == PowerMode.UNKNOWN:
+            self.state_model.perform_action("fatal_error")
+        elif power_mode == PowerMode.OFF:
+            self.hardware_manager.is_connectible = False
+            if self.get_state() == DevState.ON:
+                self.state_model.perform_action("off_succeeded")
+            self.state_model.perform_action("disable_succeeded")
+        elif power_mode == PowerMode.ON:
+            self.hardware_manager.is_connectible = True
+            self.state_model.perform_action("off_succeeded")
+
+    # ----------
+    # Attributes
+    # ----------
 
     # override from base classes so that it can be stored in the hardware manager
     @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
@@ -748,7 +950,7 @@ class MccsAntenna(SKABaseDevice):
                 "Antennas cannot be put into simulation mode, but entire APIUs can."
             )
 
-    @attribute(dtype="int", label="AntennaID", doc="Global antenna identifier")
+    @attribute(dtype="int", label="AntennaID")
     def antennaId(self):
         """
         Return the antenna ID attribute.
@@ -758,7 +960,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._antennaId
 
-    @attribute(dtype="float", label="gain", doc="The gain set for the antenna")
+    @attribute(dtype="float", label="gain")
     def gain(self):
         """
         Return the gain attribute.
@@ -768,9 +970,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._gain
 
-    @attribute(
-        dtype="float", label="rms", doc="The measured RMS of the antenna (monitored)"
-    )
+    @attribute(dtype="float", label="rms")
     def rms(self):
         """
         Return the measured RMS of the antenna.
@@ -843,7 +1043,6 @@ class MccsAntenna(SKABaseDevice):
     @attribute(
         dtype="float",
         label="fieldNodeLongitude",
-        doc="Longitude of field node (centre) to which antenna is associated.",
     )
     def fieldNodeLongitude(self):
         """
@@ -857,8 +1056,6 @@ class MccsAntenna(SKABaseDevice):
     @attribute(
         dtype="float",
         label="fieldNodeLatitude",
-        doc="""Latitude of the field node (centre) to which antenna is
-        associated.""",
     )
     def fieldNodeLatitude(self):
         """
@@ -869,9 +1066,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._fieldNodeLongitude
 
-    @attribute(
-        dtype="float", label="altitude", unit="meters", doc="Antenna altitude in meters"
-    )
+    @attribute(dtype="float", label="altitude", unit="meters")
     def altitude(self):
         """
         Return the altitude attribute.
@@ -885,7 +1080,6 @@ class MccsAntenna(SKABaseDevice):
         dtype="float",
         label="xDisplacement",
         unit="meters",
-        doc="Horizontal displacement in meters from field node centre",
     )
     def xDisplacement(self):
         """
@@ -900,7 +1094,6 @@ class MccsAntenna(SKABaseDevice):
         dtype="float",
         label="yDisplacement",
         unit="meters",
-        doc="Vertical displacement in meters from field centre",
     )
     def yDisplacement(self):
         """
@@ -924,7 +1117,6 @@ class MccsAntenna(SKABaseDevice):
     @attribute(
         dtype="int",
         label="logicalAntennaId",
-        doc="Local (within Tile) antenna identifier",
     )
     def logicalAntennaId(self):
         """
@@ -959,9 +1151,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="calibrationCoefficient",
-        doc="""Calibration coefficient to be applied for the next frequency
-        channel in the calibration cycle (archived).
-        This is presented as a vector.""",
     )
     def calibrationCoefficient(self):
         """
@@ -973,7 +1162,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._calibrationCoefficient
 
-    @attribute(dtype=("float",), max_dim_x=100, doc="This is presented as a vector.")
+    @attribute(dtype=("float",), max_dim_x=100)
     def pointingCoefficient(self):
         """
         Return the pointingCoefficient attribute.
@@ -1017,8 +1206,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="delays",
-        doc="Delay for each beam to be applied during the next pointing "
-        "update (archived)",
     )
     def delays(self):
         """
@@ -1033,8 +1220,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="delayRates",
-        doc="Delay rate for each beam to be applied during the next "
-        "pointing update (archived)",
     )
     def delayRates(self):
         """
@@ -1049,8 +1234,6 @@ class MccsAntenna(SKABaseDevice):
         dtype=("float",),
         max_dim_x=100,
         label="bandpassCoefficient",
-        doc="Bandpass coefficient to apply during next calibration cycle to "
-        "flatten the antenna's bandpass (archived)",
     )
     def bandpassCoefficient(self):
         """
@@ -1125,7 +1308,7 @@ class MccsAntenna(SKABaseDevice):
             :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
-            success = hardware_manager.off()
+            success = hardware_manager.on()
             return create_return(success, "off")
 
     class ResetCommand(SKABaseDevice.ResetCommand):
@@ -1149,84 +1332,6 @@ class MccsAntenna(SKABaseDevice):
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
-
-    class PowerOnCommand(ResponseCommand):
-        """
-        Class for handling the PowerOn command.
-        """
-
-        def do(self):
-            """
-            Stateless hook for implementation of the
-            :py:meth:`.MccsAntenna.PowerOn` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.on()
-            return create_return(success, "on")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
-    )
-    @DebugIt()
-    def PowerOn(self):
-        """
-        Turn power On.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("PowerOn")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
-
-    class PowerOffCommand(ResponseCommand):
-        """
-        Class for handling the PowerOff command.
-        """
-
-        def do(self):
-            """
-            Stateless hook for implementation of the
-            :py:meth:`.MccsAntenna.PowerOff` command
-            functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.off()
-            return create_return(success, "off")
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
-    )
-    @DebugIt()
-    def PowerOff(self):
-        """
-        Turn power Off.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("PowerOff")
-        (return_code, message) = handler()
-        return [[return_code], [message]]
 
 
 # ----------

@@ -89,7 +89,6 @@ class MccsGroupDevice(SKABaseDevice):
     @attribute(
         dtype=("DevState",),
         max_dim_x=256,
-        doc="An aggregated list of Tango states for each member in the group",
     )
     def memberStates(self):
         """
@@ -103,7 +102,6 @@ class MccsGroupDevice(SKABaseDevice):
     @attribute(
         dtype=("DevString",),
         max_dim_x=256,
-        doc="A list of Tango addresses to devices comprising this group",
     )
     def memberList(self):
         """
@@ -153,9 +151,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="The device name to register eg. low-mccs/station/001",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def AddMember(self, argin):
@@ -196,9 +192,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="The name of the device to de-register",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def RemoveMember(self, argin):
@@ -239,9 +233,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="The command to run",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def Run(self, argin):

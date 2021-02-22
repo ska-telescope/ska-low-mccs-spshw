@@ -153,10 +153,18 @@ class BasePowerModeHardwareSimulator(HardwareSimulator, BasePowerModeHardwareDri
     property to a :py:class:`.HardwareSimulator`.
     """
 
-    def __init__(self, fail_connect=False, power_mode=PowerMode.UNKNOWN):
+    def __init__(
+        self, is_connectible=True, fail_connect=False, power_mode=PowerMode.UNKNOWN
+    ):
         """
         Initialise a new instance.
 
+        :param is_connectible: whether it ought to be possible,
+            initially, to connect to the hardware being simulated. For
+            example, if the hardware we are simulating is not yet
+            powered on, then we would not expect to be able to connect
+            to it, and failure to do so would not be an error.
+        :type is_connectible: bool
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -166,7 +174,7 @@ class BasePowerModeHardwareSimulator(HardwareSimulator, BasePowerModeHardwareDri
             finding it to be already powered on.
         :type power_mode: :py:class:`.PowerMode`
         """
-        super().__init__(fail_connect)
+        super().__init__(is_connectible, fail_connect)
         self._power_mode = power_mode
 
     def on(self):

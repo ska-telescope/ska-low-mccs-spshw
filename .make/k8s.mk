@@ -1,12 +1,13 @@
 HELM_HOST ?= https://nexus.engageska-portugal.pt## helm host url https
-MINIKUBE ?= true## Minikube or not
+# use values-<deployment>.yaml files instead as --set overrides
+#MINIKUBE ?= true## Minikube or not 
 MARK ?= all
 TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_HOST is an input!
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
 EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
-CHARTS ?= ska-low-mccs mccs-umbrella mccs-demo
+CHARTS ?= ska-low-mccs mccs-umbrella
 
 CI_PROJECT_PATH_SLUG ?= ska-low-mccs
 CI_ENVIRONMENT_SLUG ?= ska-low-mccs
@@ -59,7 +60,7 @@ dep-up: ## update dependencies for every charts in the env var CHARTS
 		helm dependency update $${i}; \
 		done;
 
-# minikube only 
+# minikube only
 minikube-setup:
 	@test $$(kubectl config current-context | grep minikube) || exit 0; \
 	test ! -d $(MINIKUBE_TMP) && mkdir $(MINIKUBE_TMP); \
@@ -71,27 +72,25 @@ minikube-setup:
 
 install-chart: clean dep-up namespace## install the helm chart with name RELEASE_NAME and path UMBRELLA_CHART_PATH on the namespace KUBE_NAMESPACE
 		@sed -e 's/CI_PROJECT_PATH_SLUG/$(CI_PROJECT_PATH_SLUG)/' $(UMBRELLA_CHART_PATH)/values.yaml > generated_values.yaml; \
-		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > values.yaml; \
+		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > tmp_values.yaml; \
 		helm install $(RELEASE_NAME) \
-		--set global.minikube=$(MINIKUBE) \
 		--set global.tango_host=$(TANGO_HOST) \
 		--set minikubeHostPath=$(MINIKUBE_TMP) \
-		--values values.yaml  $(CUSTOM_VALUES) \
+		--values tmp_values.yaml $(CUSTOM_VALUES) \
 		 $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE); \
 		 rm generated_values.yaml; \
-		 rm values.yaml
+		 rm tmp_values.yaml
 
 template-chart: clean dep-up namespace## install the helm chart with name RELEASE_NAME and path UMBRELLA_CHART_PATH on the namespace KUBE_NAMESPACE
 		@sed -e 's/CI_PROJECT_PATH_SLUG/$(CI_PROJECT_PATH_SLUG)/' $(UMBRELLA_CHART_PATH)/values.yaml > generated_values.yaml; \
-		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > values.yaml; \
+		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > tmp_values.yaml; \
 		helm template $(RELEASE_NAME) \
-		--set global.minikube=$(MINIKUBE) \
 		--set global.tango_host=$(TANGO_HOST) \
 		--set minikubeHostPath=$(MINIKUBE_TMP) \
-		--values values.yaml $(CUSTOM_VALUES) \
+		--values tmp_values.yaml $(CUSTOM_VALUES) \
 		 $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE); \
 		 rm generated_values.yaml; \
-		 rm values.yaml
+		 rm tmp_values.yaml
 
 # chart_lint: dep-up ## lint check the helm chart
 lint-chart: dep-up ## lint check the helm chart
@@ -107,15 +106,14 @@ reinstall-chart: uninstall-chart install-chart
 
 upgrade-chart: ## upgrade the  helm chart
 	@sed -e 's/CI_PROJECT_PATH_SLUG/$(CI_PROJECT_PATH_SLUG)/' $(UMBRELLA_CHART_PATH)values.yaml > generated_values.yaml; \
-		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > values.yaml; \
+		sed -e 's/CI_ENVIRONMENT_SLUG/$(CI_ENVIRONMENT_SLUG)/' generated_values.yaml > tmp_values.yaml; \
 		helm upgrade $(RELEASE_NAME) \
-		--set global.minikube=$(MINIKUBE) \
 		--set global.tango_host=$(TANGO_HOST) \
-		--set minikubeHostPath=$(MINIKUBE_TMP) $(CUSTOM_VALUES) \
-		--values values.yaml \
+		--set minikubeHostPath=$(MINIKUBE_TMP) \
+		--values tmp_values.yaml $(CUSTOM_VALUES) \
 		 $(UMBRELLA_CHART_PATH) --namespace $(KUBE_NAMESPACE); \
 		 rm generated_values.yaml; \
-		 rm values.yaml
+		 rm tmp_values.yaml
 
 
 describe: ## describe Pods executed from Helm chart

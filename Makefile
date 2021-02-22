@@ -59,16 +59,19 @@ CI_REGISTRY ?= gitlab.com/ska-telescope/$(PROJECT)
 KUBE_CONFIG_BASE64 ?=  ## base64 encoded kubectl credentials for KUBECONFIG
 KUBECONFIG ?= /etc/deploy/config ## KUBECONFIG location
 
-# Run from local image only, requires either a pulled or local image 
-# always run "latest" by default in dev environment
-CUSTOM_VALUES ?= --set ska-low-mccs.mccs.image.pullPolicy=Never \
-	--set ska-low-mccs.mccs.image.tag=latest
+VALUES_FILE ?= values-development.yaml
+CUSTOM_VALUES = 
 
 ifneq ($(CI_JOB_ID),)
 CI_PROJECT_IMAGE := 
+VALUES_FILE = values-gitlab-ci.yaml
 CUSTOM_VALUES = --set ska-low-mccs.mccs.image.registry=$(CI_REGISTRY)/ska-telescope \
-	--set ska-low-mccs.mccs.image.tag=$(CI_COMMIT_SHORT_SHA) \
-	-f values-gitlab-ci.yaml
+	--set ska-low-mccs.mccs.image.tag=$(CI_COMMIT_SHORT_SHA)
+else
+endif
+
+ifneq ($(VALUES_FILE),)
+CUSTOM_VALUES := --values $(VALUES_FILE) $(CUSTOM_VALUES)
 else
 endif
 

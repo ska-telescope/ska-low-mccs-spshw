@@ -1039,9 +1039,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="jobId",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def StartJob(self, argin):
@@ -1091,9 +1089,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="jobId",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def StopJob(self, argin):
@@ -1177,9 +1173,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="jobId",
         dtype_out="DevShort",
-        doc_out="the job status of the job",
     )
     @DebugIt()
     def GetJobStatus(self, argin):
@@ -1224,7 +1218,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def ClearJobStats(self):
@@ -1267,7 +1260,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'information-only string')",
     )
     @DebugIt()
     def PingMasterPool(self):

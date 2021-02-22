@@ -14,6 +14,7 @@ __all__ = [
     "MccsSubrack",
     "SubrackBaySimulator",
     "SubrackBoardSimulator",
+    "demo_subrack_device",
     "subrack_device",
     "subrack_board_simulator",
 ]

@@ -19,7 +19,7 @@ import numpy as np
 import threading
 import os.path
 
-from tango import DebugIt, EnsureOmniThread, DevState
+from tango import DebugIt, DevFailed, EnsureOmniThread, DevState
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -27,7 +27,7 @@ from ska.base import SKABaseDevice
 from ska.base.control_model import HealthState, SimulationMode
 from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
 
-from ska.low.mccs.events import EventManager
+from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import PowerMode
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.tile import TileHardwareManager
@@ -36,15 +36,15 @@ from ska.low.mccs.utils import backoff_connect
 
 class TilePowerManager:
     """
-    This class performs tile management on behalf of the MCCS Tile
-    device.
+    This class performs power management of the TPM on behalf of the
+    MCCS Tile device.
 
-    It has a simply job; all it needs to do is talk to the subrack that
-    houses this TPM, to ensure that the TPM is supplied/denied power as
-    required.
+    It has a simple job; all it needs to do is talk to the subrack that
+    houses this TPM, to keep track of ensure that the TPM is
+    supplied/denied power as required,
     """
 
-    def __init__(self, subrack_fqdn, subrack_bay, logger):
+    def __init__(self, subrack_fqdn, subrack_bay, logger, callback):
         """
         Initialise a new TilePowerManager.
 
@@ -58,17 +58,23 @@ class TilePowerManager:
         :type subrack_bay: int
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
+        :param callback: to be called when the power mode changes
+        :type callback: callable
         """
         self._logger = logger
-        self._power_mode = PowerMode.UNKNOWN
 
-        self._subrack = backoff_connect(subrack_fqdn, logger)
+        self._callback = callback
+
+        self._subrack = backoff_connect(subrack_fqdn, logger, wait=True)
         self._subrack_bay = subrack_bay
 
-        if not self._subrack.IsTpmOn(self._subrack_bay):
-            self._power_mode = PowerMode.OFF
-        else:
-            self._power_mode = PowerMode.ON
+        self._power_mode = self._read_power_mode()
+        self._callback(self._power_mode)
+
+        self.subrack_event_handler = EventSubscriptionHandler(
+            self._subrack, subrack_fqdn, "areTpmsOn", logger
+        )
+        self.subrack_event_handler.register_callback(self._subrack_power_changed)
 
     def off(self):
         """
@@ -81,12 +87,12 @@ class TilePowerManager:
         :raises NotImplementedError: if our call to PowerOffTpm gets a
             ResultCode other than OK or FAILED
         """
-        if not self._subrack.IsTpmOn(self._subrack_bay):
+        if self._power_mode == PowerMode.OFF:
             return None  # already off
 
         [[result_code], [_]] = self._subrack.PowerOffTpm(self._subrack_bay)
         if result_code == ResultCode.OK:
-            self._power_mode = PowerMode.OFF
+            self._update_power_mode(PowerMode.OFF)
             return True
         elif result_code == ResultCode.FAILED:
             return False
@@ -106,12 +112,12 @@ class TilePowerManager:
         :raises NotImplementedError: if our call to PowerOnTpm gets a
             ResultCode other than OK or FAILED
         """
-        if self._subrack.IsTpmOn(self._subrack_bay):
-            return None  # already off
+        if self._power_mode == PowerMode.ON:
+            return None  # already on
 
         [[result_code], [_]] = self._subrack.PowerOnTpm(self._subrack_bay)
         if result_code == ResultCode.OK:
-            self._power_mode = PowerMode.ON
+            self._update_power_mode(PowerMode.ON)
             return True
         elif result_code == ResultCode.FAILED:
             return False
@@ -129,6 +135,63 @@ class TilePowerManager:
         :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
         """
         return self._power_mode
+
+    def _subrack_power_changed(self, event_name, event_value, event_quality):
+        """
+        Callback that this device registers with the event manager, so
+        that it is informed when the subrack power changes.
+
+        Because events may be delayed, a rapid off-on command sequence
+        can result in an "off" event arriving after the on() command has
+        been executed. We therefore don't put our full trust in these
+        events.
+
+        :param event_name: name of the event; will always be
+            "areTpmsOn" for this callback
+        :type event_name: str
+        :param event_value: the new attribute value
+        :type event_value: list(bool)
+        :param event_quality: the quality of the change event
+        :type event_quality: :py:class:`tango.AttrQuality`
+        """
+        assert event_name.lower() == "areTpmsOn".lower(), (
+            "subrack 'areTpmsOn' attribute changed callback called but "
+            f"event_name is {event_name}."
+        )
+
+        according_to_event = (
+            PowerMode.ON if event_value[self._subrack_bay - 1] else PowerMode.OFF
+        )
+        according_to_command = self._read_power_mode()
+        if according_to_event != according_to_command:
+            self._logger.warning(
+                f"Received a TPM power change event for {according_to_event.name} but "
+                f"a manual read says {according_to_command.name}; discarding."
+            )
+        self._update_power_mode(according_to_command)
+
+    def _read_power_mode(self):
+        try:
+            subrack_state = self._subrack.state()
+        except DevFailed:
+            return PowerMode.UNKNOWN
+
+        if subrack_state == DevState.DISABLE:
+            return PowerMode.OFF
+        elif subrack_state not in [DevState.OFF, DevState.ON]:
+            return PowerMode.UNKNOWN
+
+        try:
+            is_tpm_on = self._subrack.IsTpmOn(self._subrack_bay)
+        except DevFailed:
+            return PowerMode.UNKNOWN
+
+        return PowerMode.ON if is_tpm_on else PowerMode.OFF
+
+    def _update_power_mode(self, power_mode):
+        if self._power_mode != power_mode:
+            self._power_mode = power_mode
+            self._callback(power_mode)
 
 
 class MccsTile(SKABaseDevice):
@@ -455,7 +518,7 @@ class MccsTile(SKABaseDevice):
             :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             device.power_manager = TilePowerManager(
-                device.SubrackFQDN, device.SubrackBay, self.logger
+                device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed
             )
 
             power_args = (device, device.state_model, self.logger)
@@ -489,11 +552,14 @@ class MccsTile(SKABaseDevice):
             """
             device = self.target
             if device.power_manager.power_mode == PowerMode.OFF:
+                device.hardware_manager.is_connectible = False
                 action = "init_succeeded_disable"
-            elif device.hardware_manager.is_programmed:
-                action = "init_succeeded_on"
             else:
-                action = "init_succeeded_standby"
+                device.hardware_manager.is_connectible = True
+                if device.hardware_manager.is_programmed:
+                    action = "init_succeeded_off"
+                else:
+                    action = "init_succeeded_standby"
             self.state_model.perform_action(action)
 
     class DisableCommand(SKABaseDevice.DisableCommand):
@@ -514,6 +580,7 @@ class MccsTile(SKABaseDevice):
             """
             result = self.target.power_manager.off()
             if result is None:
+                self.target.hardware_manager.is_connectible = False
                 return (
                     ResultCode.OK,
                     "TPM was already off: nothing to do to disable device.",
@@ -523,6 +590,7 @@ class MccsTile(SKABaseDevice):
                     ResultCode.FAILED,
                     "Failed to disable device: could not turn TPM off",
                 )
+
             return (ResultCode.OK, "Device disabled; TPM has been turned off")
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
@@ -559,17 +627,17 @@ class MccsTile(SKABaseDevice):
                     ResultCode.OK,
                     "TPM was re-initialised; device is now on standby.",
                 )
-            if result:
-                return (ResultCode.OK, "TPM has been turned on")
             if not result:
                 return (
                     ResultCode.FAILED,
                     "Failed to go to standby: could not turn TPM on",
                 )
 
+            device.hardware_manager.is_connectible = True
+            return (ResultCode.OK, "TPM has been turned on")
+
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ReturnType, 'informational message')",
     )
     @DebugIt()
     def On(self):
@@ -630,20 +698,28 @@ class MccsTile(SKABaseDevice):
                 if not device.hardware_manager.is_programmed:
                     device.hardware_manager.download_firmware("firmware1")
                 return (ResultCode.OK, "TPM is on and programmed; device is now off.")
-            if result:
-                # TODO: Okay, the TPM was been powered on. Now we need to
-                # get it fully operational.
-                # This needs attention from an expert.
-                # But for now, let's initialise it and pretend to flash some firmware.
 
-                # device.hardware_manager.initialise()  # raises NotImplementedError
-                device.hardware_manager.download_firmware("firmware1")
-                return (ResultCode.OK, "TPM has been turned on")
             if not result:
                 return (
                     ResultCode.FAILED,
-                    "Failed to go to standby: could not turn TPM on",
+                    "Failed to go to OFF: could not turn TPM on",
                 )
+
+            device.hardware_manager.is_connectible = True
+
+            # TODO: Okay, the TPM was been powered on. Now we need to
+            # get it fully operational.
+            # This needs attention from an expert.
+            # But for now, let's initialise it and pretend to flash some firmware.
+
+            # device.hardware_manager.initialise()  # raises NotImplementedError
+            device.hardware_manager.download_firmware("firmware1")
+
+            # TODO: This is a sad state of affairs. We need to wait a sec here to drain
+            # the events system. Otherwise we run the risk of transitioning as a result
+            # of command success, only to receive an old event telling us of an earlier
+            # change in TPM power mode, making us transition again.
+            return (ResultCode.OK, "TPM has been turned on")
 
     def always_executed_hook(self):
         """
@@ -667,7 +743,7 @@ class MccsTile(SKABaseDevice):
         pass
 
     # ----------
-    # Attributes
+    # Callbacks
     # ----------
     def health_changed(self, health):
         """
@@ -683,7 +759,47 @@ class MccsTile(SKABaseDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", doc="Logical tile identifier within a station")
+    def power_changed(self, power_mode):
+        """
+        Callback to be called whenever the TilePowerManager's record of
+        the power mode of the TPM changes; responsible for updating the
+        tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :todo: There's way too much explicit management of state in this
+            callback. We need to get this into the state machine so we
+            can simply
+            ``self.state_model.perform_action("tpm_was_turned_off")``.
+
+        :param power_mode: the new power_mode
+        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        """
+        if self.get_state() == DevState.INIT:
+            # Don't respond to power mode changes while initialising.
+            # We'll worry about it when it comes time to transition out
+            # of INIT.
+            return
+
+        # TODO: For now, we need to get our devices to OFF state
+        # (the highest state of device readiness for a device that
+        # isn't actually on) before we can put them into ON state.
+        # This is a counterintuitive mess that will be fixed in
+        # SP-1501.
+        if power_mode == PowerMode.UNKNOWN:
+            self.state_model.perform_action("fatal_error")
+        elif power_mode == PowerMode.OFF:
+            self.hardware_manager.is_connectible = False
+            if self.get_state() == DevState.ON:
+                self.state_model.perform_action("off_succeeded")
+            self.state_model.perform_action("disable_succeeded")
+        elif power_mode == PowerMode.ON:
+            self.hardware_manager.is_connectible = True
+            self.state_model.perform_action("off_succeeded")
+
+    # ----------
+    # Attributes
+    # ----------
+    @attribute(dtype="DevLong")
     def logicalTileId(self):
         """
         Return the logical tile id.
@@ -709,7 +825,7 @@ class MccsTile(SKABaseDevice):
         """
         self.hardware_manager.tile_id = value
 
-    @attribute(dtype="DevLong", doc="The identifier of the associated subarray.")
+    @attribute(dtype="DevLong")
     def subarrayId(self):
         """
         Return the id of the subarray to which this tile is assigned.
@@ -729,7 +845,7 @@ class MccsTile(SKABaseDevice):
         """
         self._subarray_id = value
 
-    @attribute(dtype="DevLong", doc="The identifier of the associated station.")
+    @attribute(dtype="DevLong")
     def stationId(self):
         """
         Return the id of the station to which this tile is assigned.
@@ -751,8 +867,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevString",
-        doc="""CSP ingest node IP address for station beam (use if Tile is
-        last one in the beamforming chain)""",
     )
     def cspDestinationIp(self):
         """
@@ -775,8 +889,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevString",
-        doc="""CSP ingest node MAC address for station beam (use if Tile is
-        last one in the beamforming chain)""",
     )
     def cspDestinationMac(self):
         """
@@ -799,8 +911,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevLong",
-        doc="""CSP ingest node port address for station beam (use if Tile is
-        last one in the beamforming chain)""",
     )
     def cspDestinationPort(self):
         """
@@ -821,9 +931,7 @@ class MccsTile(SKABaseDevice):
         """
         self._csp_destination_port = value
 
-    @attribute(
-        dtype="DevString", doc="Name and identifier of currently running firmware"
-    )
+    @attribute(dtype="DevString")
     def firmwareName(self):
         """
         Return the firmware name.
@@ -843,7 +951,7 @@ class MccsTile(SKABaseDevice):
         """
         self.hardware_manager.firmware_name = value
 
-    @attribute(dtype="DevString", doc="Version of currently running firmware")
+    @attribute(dtype="DevString")
     def firmwareVersion(self):
         """
         Return the firmware version.
@@ -903,7 +1011,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevBoolean",
-        doc="Return True if the all FPGAs are programmed, False otherwise",
     )
     def isProgrammed(self):
         """
@@ -916,7 +1023,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevDouble",
-        doc="The board temperature",
         abs_change=0.1,
         min_value=15.0,
         max_value=50.0,
@@ -993,8 +1099,6 @@ class MccsTile(SKABaseDevice):
         dtype=("DevLong",),
         max_dim_x=8,
         label="Antenna ID's",
-        doc="Array holding the logical ID`s of the antenna associated with "
-        "the Tile device",
     )
     def antennaIds(self):
         """
@@ -1018,8 +1122,6 @@ class MccsTile(SKABaseDevice):
     @attribute(
         dtype=("DevString",),
         max_dim_x=256,
-        doc="""40Gb destination IP for all 40Gb ports on the Tile (source
-        automatically set during initialization)""",
     )
     def fortyGbDestinationIps(self):
         """
@@ -1035,8 +1137,6 @@ class MccsTile(SKABaseDevice):
     @attribute(
         dtype=("DevString",),
         max_dim_x=256,
-        doc="""40Gb destination MACs for all 40Gb ports on the Tile (source
-        automatically set during initialization)""",
     )
     def fortyGbDestinationMacs(self):
         """
@@ -1053,8 +1153,6 @@ class MccsTile(SKABaseDevice):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=256,
-        doc="""40Gb destination ports for all 40Gb ports on the Tile (source
-        automatically set during initialization"")""",
     )
     def fortyGbDestinationPorts(self):
         """
@@ -1070,8 +1168,6 @@ class MccsTile(SKABaseDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=32,
-        doc="Return the RMS power of every ADC signal (so a TPM processes "
-        "16 antennas, this should return 32 RMS values)",
     )
     def adcPower(self):
         """
@@ -1085,7 +1181,6 @@ class MccsTile(SKABaseDevice):
 
     @attribute(
         dtype="DevLong",
-        doc="Return current frame, in units of 256 ADC frames (276,48 us)",
     )
     def currentTileBeamformerFrame(self):
         """
@@ -1211,7 +1306,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def Initialise(self):
@@ -1253,7 +1347,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager = self.target
             return json.dumps(hardware_manager.firmware_available)
 
-    @command(dtype_out="DevString", doc_out="list of firmware")
+    @command(dtype_out="DevString")
     @DebugIt()
     def GetFirmwareAvailable(self):
         """
@@ -1310,9 +1404,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="bitfile location",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def DownloadFirmware(self, argin):
@@ -1368,9 +1460,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="bitfile location",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def ProgramCPLD(self, argin):
@@ -1476,10 +1566,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "RegisterName, NbRead, Offset, Device",
         dtype_out="DevVarLongArray",
-        doc_out="list of register values",
     )
     @DebugIt()
     def ReadRegister(self, argin):
@@ -1561,10 +1648,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "RegisterName, Values, Offset, Device",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def WriteRegister(self, argin):
@@ -1628,9 +1712,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarLongArray",
-        doc_in="address, n",
         dtype_out="DevVarULongArray",
-        doc_out="values",
     )
     @DebugIt()
     def ReadAddress(self, argin):
@@ -1683,9 +1765,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarULongArray",
-        doc_in="address, values",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def WriteAddress(self, argin):
@@ -1774,10 +1854,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "CoreID, SrcMac, SrcIP, SrcPort, DstMac, DstIP, DstPort",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def Configure40GCore(self, argin):
@@ -1842,9 +1919,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevLong",
-        doc_in="coreId",
         dtype_out="DevString",
-        doc_out="configuration dict as a json string",
     )
     @DebugIt()
     def Get40GCoreConfiguration(self, argin):
@@ -1913,10 +1988,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "Mode,PayloadLength,DstIP,SrcPort,DstPort, LmcMac",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetLmcDownload(self, argin):
@@ -1988,9 +2060,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarLongArray",
-        doc_in="truncation array",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetChanneliserTruncation(self, argin):
@@ -2082,9 +2152,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarLongArray",
-        doc_in="region_array",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetBeamFormerRegions(self, argin):
@@ -2167,10 +2235,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with mandatory keywords:\n"
-        "StartChannel,Numtiles, IsFirst, IsLast",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def ConfigureStationBeamformer(self, argin):
@@ -2249,9 +2314,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarDoubleArray",
-        doc_in="antenna, calibration_coefficients",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def LoadCalibrationCoefficients(self, argin):
@@ -2329,9 +2392,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarDoubleArray",
-        doc_in="angle_coefficients",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def LoadBeamAngle(self, argin):
@@ -2419,9 +2480,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarDoubleArray",
-        doc_in="tapering coefficients",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def LoadAntennaTapering(self, argin):
@@ -2474,9 +2533,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevLong",
-        doc_in="switch time",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SwitchCalibrationBank(self, argin):
@@ -2563,9 +2620,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarDoubleArray",
-        doc_in="delay_array, beam_index",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetPointingDelay(self, argin):
@@ -2615,9 +2670,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevLong",
-        doc_in="load_time",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def LoadPointingDelay(self, argin):
@@ -2672,9 +2725,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n" "StartTime, Duration",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def StartBeamformer(self, argin):
@@ -2726,7 +2777,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def StopBeamformer(self):
@@ -2782,9 +2832,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevDouble",
-        doc_in="Integration time",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def ConfigureIntegratedChannelData(self, argin):
@@ -2840,9 +2888,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevDouble",
-        doc_in="Integration time",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def ConfigureIntegratedBeamData(self, argin):
@@ -2900,10 +2946,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "Sync,Period,Timeout,Timestamp,Seconds",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SendRawData(self, argin):
@@ -2977,11 +3020,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "NSamples,FirstChannel,LastChannel,Period,"
-        "Timeout,Timestamp,Seconds",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SendChannelisedData(self, argin):
@@ -3060,11 +3099,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "ChannelID,NSamples,WaitSeconds,Timeout,"
-        "Timestamp,Seconds",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SendChannelisedDataContinuous(self, argin):
@@ -3130,9 +3165,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n" "Period,Timeout,Timestamp,Seconds",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SendBeamData(self, argin):
@@ -3187,7 +3220,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def StopDataTransmission(self):
@@ -3234,7 +3266,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def ComputeCalibrationCoefficients(self):
@@ -3286,9 +3317,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n" "StartTime, Delay",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def StartAcquisition(self, argin):
@@ -3345,9 +3374,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevVarDoubleArray",
-        doc_in="time delays",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetTimeDelays(self, argin):
@@ -3401,9 +3428,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevDouble",
-        doc_in="csp rounding",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetCspRounding(self, argin):
@@ -3478,11 +3503,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "Mode,ChannelPayloadLength,BeamPayloadLength|n"
-        "DstIP,SrcPort,DstPort, LmcMac",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SetLmcIntegratedDownload(self, argin):
@@ -3552,9 +3573,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n" "Period,Timeout,Timestamp,Seconds",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     def SendRawDataSynchronised(self, argin):
         """
@@ -3639,10 +3658,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n"
-        "Frequency,RoundBits,NSamples,WaitSeconds,Timeout,Timestamp,Seconds",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SendChannelisedDataNarrowband(self, argin):
@@ -3706,7 +3722,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def TweakTransceivers(self):
@@ -3750,7 +3765,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def PostSynchronisation(self):
@@ -3794,7 +3808,6 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def SyncFpgas(self):
@@ -3865,9 +3878,7 @@ class MccsTile(SKABaseDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="json dictionary with keywords:\n" "CurrentDelay,CurrentTC,RefLo,RefHi",
         dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
     )
     @DebugIt()
     def CalculateDelay(self, argin):

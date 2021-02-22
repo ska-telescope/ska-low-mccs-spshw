@@ -33,7 +33,7 @@ from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     HardwareManager,
 )
-from ska.low.mccs.health import HealthModel
+from ska.low.mccs.health import MutableHealthModel
 
 
 class StationBeamHealthEvaluator(HardwareHealthEvaluator):
@@ -282,6 +282,7 @@ class MccsStationBeam(SKAObsDevice):
             # Changed station_id to list.
             # This is a divergance from the ICD
             device._station_ids = []
+            device._station_fqdn = ""
             device._logical_beam_id = 0
             device._channels = []
             device._desired_pointing = []
@@ -350,7 +351,7 @@ class MccsStationBeam(SKAObsDevice):
 
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
-            device.health_model = HealthModel(
+            device.health_model = MutableHealthModel(
                 device.hardware_manager,
                 None,
                 device.event_manager,
@@ -450,6 +451,40 @@ class MccsStationBeam(SKAObsDevice):
         :type station_ids: List[int]
         """
         self._station_ids = station_ids
+
+    @attribute(
+        dtype="DevString",
+        max_dim_x=512,
+        format="%s",
+    )
+    def stationFqdn(self):
+        """
+        Return the station FQDN.
+
+        :return: the station FQDN
+        :rtype: str
+        """
+        return self._station_fqdn
+
+    @stationFqdn.write
+    def stationFqnd(self, station_fqdn):
+        """
+        Set the station fqdn.
+
+        :param station_fqdn: fqdn of the station this beam is assigned to
+        :type station_fqdn: str
+        """
+        if self._station_fqdn != "":
+            self.health_model.remove_devices((self._station_fqdn,))
+
+        # if station_fqdn == "":
+        # self.health_model.remove_devices((self._station_fqdn, ))
+        # if self._station_fqdn is not station_fqdn:
+        # self.health_model.remove_devices((self._station_fqdn, ))
+
+        if station_fqdn != "":
+            self.health_model.add_devices((station_fqdn,))
+        self._station_fqdn = station_fqdn
 
     @attribute(
         dtype="DevLong",

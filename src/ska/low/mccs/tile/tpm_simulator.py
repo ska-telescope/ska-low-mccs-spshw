@@ -565,11 +565,11 @@ class TpmSimulator(HardwareSimulator):
     def load_calibration_curve(self, antenna, beam, calibration_coeffs):
         """
         Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency.
-        It will be combined together with tapering coefficients
-        and beam angles by ComputeCalibrationCoefficients,
-        and made active by SwitchCalibrationBank.
-        The calibration coefficients do not include the geometric delay.
+        for a single antenna and beam, as a function of frequency. It
+        will be combined together with tapering coefficients and beam
+        angles by ComputeCalibrationCoefficients, and made active by
+        SwitchCalibrationBank. The calibration coefficients do not
+        include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
@@ -635,8 +635,8 @@ class TpmSimulator(HardwareSimulator):
         """
         Compute the calibration coefficients from previously specified
         gain curves, tapering weigths and beam angles, load them in the
-        hardware. It must be followed by switch_calibration_bank()
-        to make these active
+        hardware. It must be followed by switch_calibration_bank() to
+        make these active.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

@@ -2165,8 +2165,8 @@ class MccsTile(SKABaseDevice):
     def SetBeamFormerRegions(self, argin):
         """
         Set the frequency regions which are going to be beamformed into
-        each beam. region_array is defined as a 2D array, for a
-        maximum of 48 regions. Total number of channels must be <= 384.
+        each beam. region_array is defined as a 2D array, for a maximum
+        of 48 regions. Total number of channels must be <= 384.
 
         :param argin: list of regions. Each region comprises:
 
@@ -2376,8 +2376,7 @@ class MccsTile(SKABaseDevice):
 
     class LoadCalibrationCurveCommand(ResponseCommand):
         """
-        Class for handling the LoadCalibrationCurve(argin)
-        command.
+        Class for handling the LoadCalibrationCurve(argin) command.
         """
 
         def do(self, argin):
@@ -2430,10 +2429,10 @@ class MccsTile(SKABaseDevice):
     def LoadCalibrationCurve(self, argin):
         """
         Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency.
-        It will be combined together with tapering coefficients
-        and beam angles by ComputeCalibrationCoefficients, which will
-        also make them active like SwitchCalibrationBank. The calibration
+        for a single antenna and beam, as a function of frequency. It
+        will be combined together with tapering coefficients and beam
+        angles by ComputeCalibrationCoefficients, which will also make
+        them active like SwitchCalibrationBank. The calibration
         coefficients do not include the geometric delay.
 
         :param argin: list comprises:
@@ -3395,8 +3394,8 @@ class MccsTile(SKABaseDevice):
         """
         Compute the calibration coefficients from previously specified
         gain curves, tapering weigths and beam angles, load them in the
-        hardware. It must be followed by switch_calibration_bank()
-        to make these active
+        hardware. It must be followed by switch_calibration_bank() to
+        make these active.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

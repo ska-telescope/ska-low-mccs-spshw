@@ -658,7 +658,7 @@ class TestMccsTileCommands:
             ),
             ("LoadBeamAngle", tuple(float(i) for i in range(16))),
             ("LoadAntennaTapering", tuple(float(i) for i in range(17))),
-            ("SetPointingDelay", [3] * 33),
+            ("SetPointingDelay", [3] * 5),  # 2 * antennas_per_tile + 1
             ("ConfigureIntegratedChannelData", 6.284),
             ("ConfigureIntegratedBeamData", 3.142),
             ("SendRawData", json.dumps({"Sync": True, "Period": 5, "Seconds": 6.7})),
@@ -1172,6 +1172,7 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
+        device_under_test.Off()
         device_under_test.On()
         antenna = 2
         beam = 0

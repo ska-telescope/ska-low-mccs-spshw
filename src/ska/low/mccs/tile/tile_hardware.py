@@ -574,10 +574,10 @@ class TileHardwareManager(SimulableHardwareManager):
     def load_calibration_curve(self, antenna, beam, calibration_coeffs):
         """
         Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency.
-        It will be combined together with tapering coefficients
-        and beam angles by ComputeCalibrationCoefficients, which will
-        also make them active like SwitchCalibrationBank. The calibration
+        for a single antenna and beam, as a function of frequency. It
+        will be combined together with tapering coefficients and beam
+        angles by ComputeCalibrationCoefficients, which will also make
+        them active like SwitchCalibrationBank. The calibration
         coefficients do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
@@ -627,8 +627,10 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         Compute the calibration coefficients from previously specified
         gain curves, tapering weigths and beam angles, load them in the
-        hardware. It must be followed by switch_calibration_bank()
-        to make these active
+        hardware.
+
+        It must be followed by switch_calibration_bank() to make these
+        active
         """
         self._factory.hardware.compute_calibration_coefs()
 

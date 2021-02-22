@@ -17,7 +17,6 @@ import tango
 from tango import AttrQuality, EventType, DevState
 
 from ska.base import SKASubarrayStateModel
-from ska.base.faults import CommandError
 from ska.base.commands import ResultCode
 from ska.base.control_model import (
     AdminMode,

@@ -82,6 +82,28 @@ class DynamicValuesGenerator:
         return sum(self._values)
 
 
+class DynamicValuesUpdater:
+    def __init__(
+        self,
+        softmin,
+        softmax,
+        update_callback,
+        update_rate=1.0,
+        window_size=10,
+        in_range_rate=0.9
+    ):
+        self._callback = update_callback
+
+        self._generator = DynamicValuesGenerator(
+            softmin, softmax, window_size, in_range_rate
+        )
+
+        self._interrupted = False
+        self._thread = threading.Thread(
+            target=self._update, args=()
+        )
+
+
 class HardwareSimulator(HardwareDriver):
     """
     A base class for hardware simulators.

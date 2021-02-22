@@ -236,58 +236,55 @@ class TestAPIUSimulator:
         :type apiu_simulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
+
+        def check_all_antennas_on_off(mode):
+            """
+            Helper function to check that all antennas are on, or that
+            all antennas are off, depending on the mode.
+
+            :param mode: whether all antennas are expected to be on or
+                off. If true, all antennas are expected to be on. If
+                false, all antennas are expected to be off.
+            :type mode: bool
+            """
+            are_antennas_on = apiu_simulator.are_antennas_on()
+            if mode:
+                assert all(are_antennas_on)
+            else:
+                assert not any(are_antennas_on)
+            assert len(are_antennas_on) == apiu_simulator.antenna_count
+
+            for antenna_id in range(1, apiu_simulator.antenna_count + 1):
+                assert apiu_simulator.is_antenna_on(antenna_id) == mode
+
         apiu_simulator.on()
 
         # check all antennas are off
-        are_antennas_on = apiu_simulator.are_antennas_on()
-        assert not any(are_antennas_on)
-        assert len(are_antennas_on) == apiu_simulator.antenna_count
-
-        for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            assert not apiu_simulator.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(False)
 
         # now turn them all off at once (nothing to do)
         apiu_simulator.turn_off_antennas()
 
         # check all antennas are off
-        are_antennas_on = apiu_simulator.are_antennas_on()
-        assert not any(are_antennas_on)
-        assert len(are_antennas_on) == apiu_simulator.antenna_count
-
-        for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            assert not apiu_simulator.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(False)
 
         # now turn them all on at once
         apiu_simulator.turn_on_antennas()
 
         # check all antennas are on
-        are_antennas_on = apiu_simulator.are_antennas_on()
-        assert all(are_antennas_on)
-        assert len(are_antennas_on) == apiu_simulator.antenna_count
-        for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            assert apiu_simulator.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(True)
 
         # now turn them all on at once (nothing to do)
         apiu_simulator.turn_on_antennas()
 
         # check all antennas are on
-        are_antennas_on = apiu_simulator.are_antennas_on()
-        assert all(are_antennas_on)
-        assert len(are_antennas_on) == apiu_simulator.antenna_count
-
-        for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            assert apiu_simulator.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(True)
 
         # now turn them all off at once
         apiu_simulator.turn_off_antennas()
 
         # check all antennas are off
-        are_antennas_on = apiu_simulator.are_antennas_on()
-        assert not any(are_antennas_on)
-        assert len(are_antennas_on) == apiu_simulator.antenna_count
-
-        for antenna_id in range(1, apiu_simulator.antenna_count + 1):
-            assert not apiu_simulator.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(False)
 
 
 class TestAPIUHardwareManager:
@@ -486,39 +483,45 @@ class TestAPIUHardwareManager:
         :type hardware_manager:
             :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         """
+
+        def check_all_antennas_on_off(mode):
+            """
+            Helper function to check that all antennas are on, or that
+            all antennas are off, depending on the mode.
+
+            :param mode: whether all antennas are expected to be on or
+                off. If true, all antennas are expected to be on. If
+                false, all antennas are expected to be off.
+            :type mode: bool
+            """
+            are_antennas_on = hardware_manager.are_antennas_on()
+            if mode:
+                assert all(are_antennas_on)
+            else:
+                assert not any(are_antennas_on)
+            assert len(are_antennas_on) == hardware_manager.antenna_count
+
+            for antenna_id in range(1, hardware_manager.antenna_count + 1):
+                assert hardware_manager.is_antenna_on(antenna_id) == mode
+
         assert hardware_manager.power_mode == PowerMode.OFF
 
         hardware_manager.on()
 
         # check all antennas are off
-        are_antennas_on = hardware_manager.are_antennas_on()
-        assert not any(are_antennas_on)
-        assert len(are_antennas_on) == hardware_manager.antenna_count
-
-        for antenna_id in range(1, hardware_manager.antenna_count + 1):
-            assert not hardware_manager.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(False)
 
         # now turn them all off at once (nothing to do)
         assert hardware_manager.turn_off_antennas() is None
 
         # check all antennas are off
-        are_antennas_on = hardware_manager.are_antennas_on()
-        assert not any(are_antennas_on)
-        assert len(are_antennas_on) == hardware_manager.antenna_count
-
-        for antenna_id in range(1, hardware_manager.antenna_count + 1):
-            assert not hardware_manager.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(False)
 
         # now turn them all on at once
         assert hardware_manager.turn_on_antennas()
 
         # check all antennas are on
-        are_antennas_on = hardware_manager.are_antennas_on()
-        assert all(are_antennas_on)
-        assert len(are_antennas_on) == hardware_manager.antenna_count
-
-        for antenna_id in range(1, hardware_manager.antenna_count + 1):
-            assert hardware_manager.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(True)
 
         # now turn them all on at once
         assert hardware_manager.turn_on_antennas() is None
@@ -527,12 +530,7 @@ class TestAPIUHardwareManager:
         assert hardware_manager.turn_off_antennas()
 
         # check all antennas are off
-        are_antennas_on = hardware_manager.are_antennas_on()
-        assert not any(are_antennas_on)
-        assert len(are_antennas_on) == hardware_manager.antenna_count
-
-        for antenna_id in range(1, hardware_manager.antenna_count + 1):
-            assert not hardware_manager.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(False)
 
         # turn on a random antenna
         antenna_id = random.randint(1, hardware_manager.antenna_count)
@@ -542,12 +540,7 @@ class TestAPIUHardwareManager:
         assert hardware_manager.turn_on_antennas()
 
         # check all antennas are on
-        are_antennas_on = hardware_manager.are_antennas_on()
-        assert all(are_antennas_on)
-        assert len(are_antennas_on) == hardware_manager.antenna_count
-
-        for antenna_id in range(1, hardware_manager.antenna_count + 1):
-            assert hardware_manager.is_antenna_on(antenna_id)
+        check_all_antennas_on_off(True)
 
         # turn off a random antenna
         antenna_id = random.randint(1, hardware_manager.antenna_count)

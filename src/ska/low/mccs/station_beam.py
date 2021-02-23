@@ -475,12 +475,6 @@ class MccsStationBeam(SKAObsDevice):
         """
         if self._station_fqdn != "":
             self.health_model.remove_devices((self._station_fqdn,))
-
-        # if station_fqdn == "":
-        # self.health_model.remove_devices((self._station_fqdn, ))
-        # if self._station_fqdn is not station_fqdn:
-        # self.health_model.remove_devices((self._station_fqdn, ))
-
         if station_fqdn != "":
             self.health_model.add_devices((station_fqdn,))
         self._station_fqdn = station_fqdn

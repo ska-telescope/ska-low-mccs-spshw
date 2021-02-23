@@ -237,9 +237,6 @@ class StationBeamsResourceManager(ResourceManager):
         :return: FQDNs of currently assigned station beams
         :rtype: list(str)
         """
-        print("RCL: Begin station_beam_fqdns...")
-        print(f"RCL: {self.get_all_fqdns()}")
-        print("RCL: End   station_beam_fqdns")
         return sorted(self.get_all_fqdns())
 
     @property

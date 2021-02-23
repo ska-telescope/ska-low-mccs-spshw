@@ -439,11 +439,9 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
-
             tpm_count=len(subrack_bays),
             backplane_temperatures=random_temperature(),
             board_temperatures=random_temperature(),
-
             board_current=random_current(),
             fan_speeds=random_fan_speed(),
             _bays=subrack_bays,

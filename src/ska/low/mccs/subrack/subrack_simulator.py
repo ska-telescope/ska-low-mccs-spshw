@@ -133,7 +133,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         self._current_when_on = current
 
 
-
 class SubrackBoardSimulator(OnOffHardwareSimulator):
     """
     A simulator of a subrack management board.
@@ -188,7 +187,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         The default initial simulated power supply fan speed in percent; this can be
         overruled using the set_ps_fan speed function
     """
-
 
     def __init__(
         self,

@@ -38,6 +38,7 @@ __all__ = [
     "main",
 ]
 
+
 def create_return(success, action):
     """
     Helper function to package up a boolean result into a
@@ -461,6 +462,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         self._factory.hardware.set_power_supply_fan_speed(
             power_supply_fan_id, speed_percent
         )
+
 
 class MccsSubrack(SKABaseDevice):
     """
@@ -1252,8 +1254,8 @@ class MccsSubrack(SKABaseDevice):
 
     def is_PowerOffTpm_allowed(self):
         """
-        Whether the ``PowerOffTpm()`` command is allowed to be run
-        in the current state.
+        Whether the ``PowerOffTpm()`` command is allowed to be run in
+        the current state.
 
         :returns: whether the ``PowerOffTpm()`` command is allowed to be run in the
             current state
@@ -1265,7 +1267,7 @@ class MccsSubrack(SKABaseDevice):
     @command(
         dtype_in="DevULong",
         dtype_out="DevVarLongStringArray",
-        )
+    )
     @DebugIt()
     def PowerOffTpm(self, argin):
         """
@@ -1349,8 +1351,7 @@ class MccsSubrack(SKABaseDevice):
         """
         Class for handling the SetFanMode() command.
 
-        This command can set the selected fan to manual or auto
-        mode.
+        This command can set the selected fan to manual or auto mode.
         """
 
         def do(self, argin):

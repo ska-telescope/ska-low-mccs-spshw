@@ -300,7 +300,7 @@ class StationBeamsResourceManager(ResourceManager):
         for station_beam_fqdn in station_beam_fqdns:
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = []
-            station_beam.stationFqdn = ""
+            station_beam.stationFqdn = None
         super().release(station_beam_fqdns)
 
     def release_all(self):

@@ -14,6 +14,7 @@ This module contains the SKA Low MCCS Controller device prototype.
 __all__ = ["MccsController", "ControllerResourceManager", "main"]
 
 import json
+import logging
 import threading
 
 # PyTango imports
@@ -22,7 +23,7 @@ from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice
+from ska.base import SKAMaster, SKABaseDevice, DeviceStateModel
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
@@ -146,22 +147,18 @@ class MccsController(SKAMaster):
         called during :py:class:`~.MccsController`'s initialisation.
         """
 
-        def __init__(self, target, state_model, logger=None):
+        def __init__(self, target: object, state_model, logger: logging.Logger = None):
             """
             Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
                 command
-            :type target: object
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 

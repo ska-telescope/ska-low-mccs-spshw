@@ -35,6 +35,7 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import MutableHealthModel
 import ska.low.mccs.release as release
 from ska.low.mccs.resource import ResourceManager
+from ska.low.mccs.utils import backoff_connect
 
 
 class StationsResourceManager(ResourceManager):
@@ -236,6 +237,9 @@ class StationBeamsResourceManager(ResourceManager):
         :return: FQDNs of currently assigned station beams
         :rtype: list(str)
         """
+        print("RCL: Begin station_beam_fqdns...")
+        print(f"RCL: {self.get_all_fqdns()}")
+        print("RCL: End   station_beam_fqdns")
         return sorted(self.get_all_fqdns())
 
     @property
@@ -789,14 +793,6 @@ class MccsSubarray(SKASubarray):
             """
             super().__init__(target, state_model, logger)
 
-            station_beam_pool_manager = self.target._station_beam_pool_manager
-            # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
-            subarray_beam_fqdns = station_beam_pool_manager.station_beam_fqdns()
-            self._subarray_beam_device_proxies = []
-            for subarray_beam_fqdn in subarray_beam_fqdns:
-                device_proxy = tango.DeviceProxy(subarray_beam_fqdn)
-                self._subarray_beam_device_proxies.append(device_proxy)
-
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -813,6 +809,14 @@ class MccsSubarray(SKASubarray):
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do(argin)
+
+            station_beam_pool_manager = self.target._station_beam_pool_manager
+            # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
+            subarray_beam_fqdns = station_beam_pool_manager.station_beam_fqdns
+            self._subarray_beam_device_proxies = []
+            for subarray_beam_fqdn in subarray_beam_fqdns:
+                device_proxy = backoff_connect(subarray_beam_fqdn, logger=self.logger)
+                self._subarray_beam_device_proxies.append(device_proxy)
 
             device = self.target
             kwargs = json.loads(argin)

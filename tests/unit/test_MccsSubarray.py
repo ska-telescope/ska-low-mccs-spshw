@@ -560,9 +560,9 @@ class TestMccsSubarray:
 
 
 # pylint: disable=invalid-name
-class TestMccsSubarrayCommands:
+class TestMccsSubarrayCommandClasses:
     """
-    This class contains tests of MCCSSubarray commands.
+    This class contains tests of MCCSSubarray command classes.
     """
 
     def test_ScanCommand(self, subarray_state_model):

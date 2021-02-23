@@ -181,10 +181,10 @@ def mock_callback(mocker):
 
         def check_command_result(self, name, result):
             """
-            Special callback check routine for commandResult. There should
-            always be two entries for commandResult; the first should reset
-            commandResult to ResultCode.UNKNOWN, the second should match the
-            expected result passed into this routine.
+            Special callback check routine for commandResult. There
+            should always be two entries for commandResult; the first
+            should reset commandResult to ResultCode.UNKNOWN, the second
+            should match the expected result passed into this routine.
 
             :param name: name of the registered event
             :type name: str

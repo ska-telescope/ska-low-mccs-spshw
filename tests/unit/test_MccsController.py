@@ -15,7 +15,6 @@ prototype.
 
 import json
 import threading
-import time
 
 import pytest
 import tango

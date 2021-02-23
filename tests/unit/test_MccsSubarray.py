@@ -253,6 +253,46 @@ class TestMccsSubarray:
         """
         assert device_under_test.stationFQDNs is None
 
+    class TestNotificationCommands:
+        """
+        Class containing tests for commands that notify used on completion
+        """
+
+        def test_ScanNotification(
+            self, subarray_state_model, device_under_test, mock_callback
+        ):
+            """
+            Test for MCCSSubarray.Scan()'s notification callback
+
+            :param subarray_state_model: the state model that this test uses
+                to check that it is allowed to run, and that it drives
+                with actions.
+            :type subarray_state_model: :py:class:`SKASubarrayStateModel`
+            :param mock_callback: fixture that provides a mock instance
+                with callback support methods
+            :type mock_callback: MockCallback
+            """
+            subarray_state_model._straight_to_state(
+                op_state=DevState.ON,
+                admin_mode=AdminMode.ONLINE,
+                obs_state=ObsState.READY,
+            )
+            init_cmd = device_under_test.command_inout("init", subarray_state_model)
+
+            # Test that subscription yields an event as expected
+            _ = device_under_test.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+            )
+            mock_callback.check_event_data(name="commandResult", result=None)
+
+            scan_args = {"id": 1, "scan_time": 4}
+            json_str = json.dumps(scan_args)
+            (result_code, message) = device_under_test.Scan(json_str)
+
+            assert result_code == ResultCode.STARTED
+            assert message == f"Scan command STARTED - config {scan_args}"
+            mock_callback.check_command_result(name="commandResult", result=result_code)
+
     class TestAllocateAndConfigure:
         """
         Class containing fixtures and tests of the MccsController's

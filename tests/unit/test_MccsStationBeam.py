@@ -284,7 +284,7 @@ class TestMccsStationBeam:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.stationFqdn == ""
+        assert not device_under_test.stationFqdn
         device_under_test.stationFqdn = "low-mccs/station/001"
         assert device_under_test.stationFqdn == "low-mccs/station/001"
 

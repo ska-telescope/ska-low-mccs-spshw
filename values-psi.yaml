@@ -1,0 +1,24 @@
+# static overrides for PSI deployment
+global:
+  minikube: false
+
+webjive:
+  enabled: true
+  minikube: false
+
+webjive-dashboard:
+  enabled: false
+
+webjive-auth:
+  enabled: false
+
+# temporary PSI image
+ska-low-mccs:
+  deviceServers:
+    tiles:
+      nodeSelector:
+        tpm: "true"
+#  mccs:
+#     image:
+#       registry: registry.gitlab.com/ska-telescope
+#       tag: decccacb

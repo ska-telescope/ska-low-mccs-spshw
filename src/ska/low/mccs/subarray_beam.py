@@ -421,7 +421,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000, doc="ID of the beam")
+    @attribute(dtype="DevLong", format="%i", polling_period=1000)
     def subarrayId(self):
         """
         Return the subarray id.
@@ -436,7 +436,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         format="%i",
         max_value=47,
         min_value=0,
-        doc="Logical ID of the beam within the associated Subarray",
     )
     def subarrayBeamId(self):
         """
@@ -451,7 +450,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         dtype=("DevLong",),
         max_dim_x=512,
         format="%i",
-        doc="IDs of the associated stations",
     )
     def stationIds(self):
         """
@@ -477,7 +475,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         format="%i",
         max_value=7,
         min_value=0,
-        doc="Logical ID of the beam within the associated Subarray",
     )
     def logicalBeamId(self):
         """
@@ -507,7 +504,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         standard_unit="s^-1",
         max_value=1e37,
         min_value=0,
-        doc="The update rate in Hz to use when updating pointing coefficients",
     )
     def updateRate(self):
         """
@@ -520,7 +516,6 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     @attribute(
         dtype="DevBoolean",
-        doc="Flag specifying whether beam is locked to target",
         polling_period=1000,
     )
     def isBeamLocked(self):
@@ -545,10 +540,6 @@ class MccsSubarrayBeam(SKAObsDevice):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=384,
-        doc="The channel configuration for the Subarray Beam, specified as an "
-        "array of channel IDs (where the lowest frequency is "
-        "(channelID+1)*781250 Hz). When the Subarray Beam is OFF, the array is"
-        " empty.",
     )
     def channels(self):
         """
@@ -562,13 +553,6 @@ class MccsSubarrayBeam(SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=5,
-        doc="An array of doubles conforming to the Sky Coordinate Set "
-        "definition. It comprises:"
-        "* activation time (s) -- value range 0-10^37"
-        "* azimuth position (deg) -- value range 0-360"
-        "* azimuth speed (deg/s) -- value range 0-10^37"
-        "* elevation position (deg) -- value range 0-90"
-        "* elevation rate (deg/s) -- value range 0-10^37",
     )
     def desiredPointing(self):
         """
@@ -634,9 +618,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     @command(
         dtype_in="DevString",
-        doc_in="Configuration parameters encoded in json string",
         dtype_out="DevVarLongStringArray",
-        doc_out="[ReturnCode, information-only string]",
     )
     def Configure(self, argin):
         """

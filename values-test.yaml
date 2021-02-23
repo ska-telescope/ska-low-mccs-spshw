@@ -1,0 +1,26 @@
+# static overrides for (minikube) development
+global:
+  minikube: true
+
+webjive:
+  enabled: true
+
+webjive-dashboard:
+  enabled: true
+
+webjive-auth:
+  enabled: true
+
+# demo config
+ska-low-mccs:
+  dsconfig:
+    configuration_file: data/configuration_without_antennas.json
+  deviceServers:
+    antennas:
+      instances: []
+    apius:
+      instances: []
+  mccs:
+    image:
+      pullPolicy: Never
+      tag: latest

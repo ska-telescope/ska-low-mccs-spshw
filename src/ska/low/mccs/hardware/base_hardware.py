@@ -28,6 +28,35 @@ class HardwareDriver:
     this driver is connected to hardware.
     """
 
+    def __init__(self, is_connectible=True):
+        self._is_connectible = is_connectible
+
+    @property
+    def is_connectible(self):
+        """
+        Returns whether the hardware to which this driver connects is
+        currently connectible. For example, if the hardware is known to
+        be powered off, then we would not expect it to be possible to
+        connect to it, and failure to do so would not be an error.
+
+        :return: whether the hardware that this driver will need to
+            connect to is currentl connectible
+        :rtype: bool
+        """
+        return self._is_connectible
+
+    @is_connectible.setter
+    def is_connectible(self, is_now_connectible):
+        """
+        Sets whether the hardware to which this driver connects is
+        currently connectible.
+
+        :param is_now_connectible: whether the hardware to which this
+            driver connects is currently connectible.
+        """
+        self._is_connectible = is_now_connectible
+
+    @property
     def is_connected(self):
         """
         Returns whether this driver is connected to the hardware. This
@@ -38,20 +67,30 @@ class HardwareDriver:
         """
         raise NotImplementedError
 
-    def check_connected(self, error=None):
+    def check_connected(self, connectible_error=None, connection_error=None):
         """
         Helper method to check that a connection is in place, and raise
         a suitable error if it is not.
 
-        :param error: the error message for the exception to be raise if
-            not connected
-        :type error: str
+        :param connectible_error: the error message for the exception to
+            be raised if the hardware is not currently connectible (e.g.
+            it is turned off)
+        :type connectible_error: str
+        :param connection_error: the error message for the exception to
+            be raised if the hardware should be connectible yet there is
+            no connection to the hardware
+        :type connection_error: str
 
         :raises ConnectionError: if there is no connection to the
             hardware
         """
+        if not self.is_connectible:
+            raise ConnectionError(
+                connectible_error or "Hardware is not currently connectible."
+            )
+
         if not self.is_connected:
-            raise ConnectionError(error or "No connection to hardware")
+            raise ConnectionError(connection_error or "No connection to hardware")
 
 
 class HardwareHealthEvaluator:
@@ -74,8 +113,12 @@ class HardwareHealthEvaluator:
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska.base.control_model.HealthState`
         """
+        if not hardware.is_connectible:
+            return HealthState.UNKNOWN
+
         if not hardware.is_connected:
             return HealthState.FAILED
+
         return HealthState.OK
 
 
@@ -174,3 +217,38 @@ class HardwareManager:
         """
         self._health_callbacks.append(callback)
         callback(self._health)
+
+    @property
+    def is_connectible(self):
+        """
+        Returns whether the hardware managed by this hardware manager is
+        currently connectible. For example, if the hardware is known to
+        be powered off, then we would not expect it to be possible to
+        connect to it, and failure to do so would not be an error.
+
+        :return: whether the hardware that this driver will need to
+            connect to is currentl connectible
+        :rtype: bool
+        """
+        return self._is_connectible
+
+    @is_connectible.setter
+    def is_connectible(self, is_now_connectible):
+        """
+        Sets whether the hardware managed by this hardware manager is
+        currently connectible.
+
+        :param is_now_connectible: whether the hardware managed by this
+            hardware manager is currently connectible.
+        """
+        self._is_connectible = is_now_connectible
+
+    @property
+    def is_connected(self):
+        """
+        Returns whether this driver is connected to the hardware.
+
+        :return: whether this driver is connected to the hardware
+        :rtype: bool
+        """
+        return self._factory.hardware.is_connected

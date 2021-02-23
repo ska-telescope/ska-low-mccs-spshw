@@ -119,7 +119,7 @@ class MccsTelState(SKATelState):
     # Attributes methods
     # ------------------
 
-    @attribute(dtype="DevString", doc="The elementsStates of the MccsTelState class")
+    @attribute(dtype="DevString")
     def elementsStates(self):
         """
         Return the elementsStates attribute.
@@ -143,9 +143,7 @@ class MccsTelState(SKATelState):
         """
         self._elements_states = value
 
-    @attribute(
-        dtype="DevString", doc="The observationsStates of the MccsTelState class"
-    )
+    @attribute(dtype="DevString")
     def observationsStates(self):
         """
         Return the observationsStates attribute.
@@ -169,7 +167,7 @@ class MccsTelState(SKATelState):
         """
         self._observations_states = value
 
-    @attribute(dtype="DevString", doc="The algorithms of the MccsTelState class")
+    @attribute(dtype="DevString")
     def algorithms(self):
         """
         Return the algorithms attribute.
@@ -193,7 +191,7 @@ class MccsTelState(SKATelState):
         """
         self._algorithms = value
 
-    @attribute(dtype="DevString", doc="The algorithmsVersion of the MccsTelState class")
+    @attribute(dtype="DevString")
     def algorithmsVersion(self):
         """
         Return the algorithm version.

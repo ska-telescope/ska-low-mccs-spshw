@@ -59,7 +59,7 @@ def devices_to_load():
     }
 
 
-def sleep(seconds=0.1):
+def sleep(seconds=0.2):
     """
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.
@@ -84,6 +84,7 @@ def test_controller_health_rollup(device_context):
     controller = device_context.get_device("controller")
     station_1 = device_context.get_device("station_001")
     station_2 = device_context.get_device("station_002")
+    subrack = device_context.get_device("subrack_01")
     tile_1 = device_context.get_device("tile_0001")
     tile_2 = device_context.get_device("tile_0002")
     tile_3 = device_context.get_device("tile_0003")
@@ -100,6 +101,15 @@ def test_controller_health_rollup(device_context):
     # beam_2 = device_context.get_device("low-mccs/beam/002")
     # beam_3 = device_context.get_device("low-mccs/beam/003")
     # beam_4 = device_context.get_device("low-mccs/beam/004")
+
+    # TODO: For now, we need to get our devices to OFF state (the highest state of
+    # device readiness for a device that isn't actual on -- and a state in which the
+    # hardware is turned on) before we can put them into ON state.
+    # This is a counterintuitive mess that will be fixed in SP-1501.
+    subrack.Off()
+    subrack.On()
+    tile_1.Off()
+    tile_1.On()
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -132,9 +142,10 @@ def test_controller_health_rollup(device_context):
     # but station will not take it into account when calculating its own
     # health.
 
+    # tile_1.Off()
     # tile_1.Disable()
     # tile_1.adminMode = AdminMode.OFFLINE
-    tile_1.TakeOffline()  # A single command to do both of the above, because webjive
+    tile_1.TakeOffline()  # A single command to do all of the above, because webjive
 
     assert tile_1.healthState == HealthState.FAILED
     assert tile_2.healthState == HealthState.OK
@@ -150,8 +161,9 @@ def test_controller_health_rollup(device_context):
     # put it back online
     tile_1.SimulateConnectionFailure(False)
     # tile_1.adminMode = AdminMode.ONLINE
+    # tile_1.Off()
     # tile_1.On()
-    tile_1.PutOnline()  # A single command to do both of the above, because webjive
+    tile_1.PutOnline()  # A single command to do all of the above, because webjive
 
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
@@ -246,9 +258,10 @@ def test_subarray_health_rollup(device_context):
     # but station will not take it into account when calculating its own
     # health.
 
+    # tile_1.Off()
     # tile_1.Disable()
     # tile_1.adminMode = AdminMode.OFFLINE
-    tile_1.TakeOffline()  # A single command to do both of the above, because webjive
+    tile_1.TakeOffline()  # A single command to all both of the above, because webjive
 
     assert tile_1.healthState == HealthState.FAILED
     assert tile_2.healthState == HealthState.OK

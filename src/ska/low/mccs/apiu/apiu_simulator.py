@@ -275,6 +275,18 @@ class APIUSimulator(OnOffHardwareSimulator):
                 f"this APIU has {self.antenna_count} antennas."
             )
 
+    def are_antennas_on(self):
+        """
+        Returns whether each antenna is powered or not.  Or None if the
+        APIU itself is turned off.
+
+        :return: whether each antenna is powered or not.
+        :rtype: list(bool) or None
+        """
+        if self.power_mode != PowerMode.ON:
+            return None
+        return [antenna.power_mode == PowerMode.ON for antenna in self._antennas]
+
     def is_antenna_on(self, logical_antenna_id):
         """
         Return whether a specified antenna is turned on.
@@ -287,8 +299,9 @@ class APIUSimulator(OnOffHardwareSimulator):
             is off
         :rtype: bool or None
         """
-        self.check_power_mode(PowerMode.ON)
         self._check_antenna_id(logical_antenna_id)
+        if self.power_mode != PowerMode.ON:
+            return None
         return self._antennas[logical_antenna_id - 1].power_mode == PowerMode.ON
 
     def turn_off_antenna(self, logical_antenna_id):

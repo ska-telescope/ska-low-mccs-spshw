@@ -30,10 +30,7 @@ from ska.base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs.controller import (
-    MccsController,
-    ControllerResourceManager,
-)
+from ska.low.mccs.controller import MccsController, ControllerResourceManager
 from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
 from ska.low.mccs.events import EventManager
@@ -57,8 +54,10 @@ class ControllerWithFailableDevices(MccsController):
         :type argin: str
         """
         args = json.loads(argin)
-        fqdn = args["fqdn"]
-        health = args["health_state"]
+        fqdn = args.get("fqdn")
+        assert fqdn is not None
+        health = args.get("health_state")
+        assert health is not None
 
         self.health_model._health_monitor._device_health_monitors[
             fqdn
@@ -74,8 +73,10 @@ class ControllerWithFailableDevices(MccsController):
         :type argin: str
         """
         args = json.loads(argin)
-        fqdn = args["fqdn"]
-        admin_mode = args["admin_mode"]
+        fqdn = args.get("fqdn")
+        assert fqdn is not None
+        admin_mode = args.get("admin_mode")
+        assert admin_mode is not None
 
         self.health_model._health_monitor._device_health_monitors[
             fqdn

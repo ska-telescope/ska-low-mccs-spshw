@@ -178,7 +178,13 @@ class StationBeamsResourceManager(ResourceManager):
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
             if station_fqdn not in self._stations.station_fqdns:
-                self._stations.add_to_managed(stations)
+                self._stations.add_to_managed(
+                    dict(
+                        [
+                            (station_id, station_fqdn),
+                        ]
+                    )
+                )
 
         station_beams = {}
         for station_beam_fqdn in station_beam_fqdns:
@@ -186,6 +192,13 @@ class StationBeamsResourceManager(ResourceManager):
             station_beams[station_beam_id] = station_beam_fqdn
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = sorted(stations.keys())
+            # TODO While SubarrayBeam device is not yet fully implemented, we're still
+            # passing an array of Station ids to StationBeams. This list will end up
+            # going to SubarrayBeam while StationBeam gets a single Station device.
+            # As the Station FQDN is used by StationBeam to report health to
+            # SubarrayBeam, it makes sense to only keep this as a single sting rather
+            # than a list, as it will be implemented when the StationBeam health
+            # gets implemented in SubarrayBeam - hence we pass a single value here:
             station_beam.stationFqdn = station_fqdns[0]
 
         self._add_to_managed(station_beams)
@@ -251,7 +264,7 @@ class StationBeamsResourceManager(ResourceManager):
         for station_beam_fqdn in station_beam_fqdns:
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = []
-            station_beam.stationFqdn = ""
+            station_beam.stationFqdn = None
         super().release(station_beam_fqdns)
 
     def release_all(self):

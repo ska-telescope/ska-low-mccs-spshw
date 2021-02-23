@@ -10,6 +10,8 @@
 This module contains the tests for the
 :py:mod:`ska.low.mccs.hardware.simulable_hardware` module.
 """
+from random import seed
+
 import pytest
 
 from ska.base.control_model import HealthState, SimulationMode
@@ -21,42 +23,61 @@ from ska.low.mccs.hardware import (
 )
 from ska.low.mccs.hardware.simulable_hardware import DynamicValuesGenerator
 
+
+@pytest.fixture()
+def zero_seed():
+    """
+    Sets the random seed to zero, so that we get some determinism in our
+    stochastic tests.
+    """
+    seed(0)
+
+
 class TestDynamicValuesGenerator:
     """
-    Contains tests of the dynamic values generator
+    Contains tests of the dynamic values generator.
     """
+
     def test_collapse(self):
         """
-        If you set the in_range_rate to 1, the model variance collapses
-        to zero, and all your values end up being the average of softmin
-        and softmax, regardless of window size. This isn't a good thing
-        but it is useful for testing.
+        Test that we get the fixed value we expect with in_range_rate
+        set to 1.
+
+        (If you set the in_range_rate to 1, the model variance collapses
+        to zero, and all your values end up being the mean of soft_min
+        and soft_max, regardless of window size. This isn't a good thing
+        but it is useful for testing.)
         """
         generator = DynamicValuesGenerator(
-            softmin=30,
-            softmax=40,
+            soft_min=30,
+            soft_max=40,
             window_size=10,
             in_range_rate=1.0,
         )
         assert next(generator) == 35.0
 
-    def test(self):
+    def test_rate(self, zero_seed):
         """
-        If you set the in_range_rate to 1, the model variance collapses
-        to zero, and all your values end up being the average of softmin
-        and softmax, regardless of window size. This isn't a good thing
-        but it is useful for testing.
+        Test that the attained rate is reasonably close to the set rate.
+
+        :param zero_seed: fixture that sets the random seed to 0 so that
+            we get the same random values each time. This is necessary
+            because we are testing a stochastic process, which won't
+            pass for all possible sets of values. Therefore we "freeze"
+            the values that we pass in, so that we can guarantee that it
+            won't fail for purely random reasons.
+        :type zero_seed: None
         """
-        softmin, softmax = 30, 40
+        soft_min, soft_max = 30, 40
         generator = DynamicValuesGenerator(
-            softmin=30,
-            softmax=40,
+            soft_min=30,
+            soft_max=40,
             window_size=10,
             in_range_rate=0.9,
         )
         values = [next(generator) for i in range(1000)]
-        in_range = [softmin <= value <= softmax for value in values]
-        assert 850 <= sum(in_range) <= 950  # very likely, not certain
+        in_range = [soft_min <= value <= soft_max for value in values]
+        assert 850 <= sum(in_range) <= 950
 
 
 class TestSimulableHardware:
@@ -69,12 +90,15 @@ class TestSimulableHardware:
     """
 
     @pytest.fixture()
-    def hardware_simulator(self, request):
+    def static_hardware_simulator(self, request):
         """
-        Fixture that returns a hardware simulator for testing.
+        Fixture that returns a static hardware simulator for testing.
+        Actually there is nothing particularly static about this
+        simulator, but our test only requires that our static and
+        dynamic hardware simulators be distinct objects.
 
-        :param request: A pytest object giving access to the requesting test
-            context.
+        :param request: A pytest object giving access to the requesting
+            test context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
@@ -85,27 +109,63 @@ class TestSimulableHardware:
         return HardwareSimulator(fail_connect=not parameter)
 
     @pytest.fixture()
-    def hardware_factory(self, request, hardware_driver, hardware_simulator):
+    def dynamic_hardware_simulator(self, request):
+        """
+        Fixture that returns a dynamic hardware simulator for testing.
+        Actually there is nothing particularly dynamic about this
+        simulator, but our test only requires that our static and
+        dynamic hardware simulators be distinct objects.
+
+        :param request: A pytest object giving access to the requesting
+            test context.
+        :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :return: a hardware simulator
+        :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+        """
+        parameter = getattr(request, "param", None)
+        if parameter is None:
+            return HardwareSimulator()
+        return HardwareSimulator(fail_connect=not parameter)
+
+    @pytest.fixture()
+    def hardware_factory(
+        self,
+        request,
+        hardware_driver,
+        static_hardware_simulator,
+        dynamic_hardware_simulator,
+    ):
         """
         Fixture that returns a hardware factory for simulable hardware.
 
-        :param request: A pytest object giving access to the requesting test
-            context.
+        :param request: A pytest object giving access to the requesting
+            test context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
         :param hardware_driver: the hardware driver to be returned by
             by this hardware factory when not in simulation mode
         :type hardware_driver:
             :py:class:`~ska.low.mccs.hardware.HardwareDriver`
-        :param hardware_simulator: the hardware simulator to be returned
-            by this hardware factory when in simulation mode
-        :type hardware_simulator:
+        :param static_hardware_simulator: the hardware simulator to be
+            returned by this hardware factory when in simulation mode
+            and test mode
+        :type static_hardware_simulator:
+            :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+        :param dynamic_hardware_simulator: the hardware simulator to be
+            returned by this hardware factory when in simulation mode
+            but not in test mode
+        :type dynamic_hardware_simulator:
             :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
 
         :return: a hardware factory for simulable hardware
         :rtype:
             :py:class:`~ska.low.mccs.hardware.SimulableHardwareFactory`
         """
-        return SimulableHardwareFactory(True, hardware_driver, hardware_simulator)
+        return SimulableHardwareFactory(
+            True,
+            _driver=hardware_driver,
+            _static_simulator=static_hardware_simulator,
+            _dynamic_simulator=dynamic_hardware_simulator,
+        )
 
     @pytest.fixture()
     def hardware_manager(self, hardware_factory, hardware_health_evaluator):
@@ -138,43 +198,43 @@ class TestSimulableHardware:
         """
 
         @pytest.mark.parametrize(
-            ("hardware_simulator", "connection_status"),
+            ("static_hardware_simulator", "connection_status"),
             [
                 (False, ConnectionStatus.NOT_CONNECTED),
                 (True, ConnectionStatus.CONNECTED),
             ],
-            indirect=("hardware_simulator",),
+            indirect=("static_hardware_simulator",),
         )
-        def test_init(self, hardware_simulator, connection_status):
+        def test_init(self, static_hardware_simulator, connection_status):
             """
             Test initialisation of this hardware simulator.
 
-            :param hardware_simulator: the hardware simulator under test
-            :type hardware_simulator:
+            :param static_hardware_simulator: the hardware simulator under test
+            :type static_hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             :param connection_status: the status of the simulated
                 software-hardware connection
             :type connection_status:
                 :py:class:`ska.low.mccs.hardware.ConnectionStatus`
             """
-            assert hardware_simulator.connection_status == connection_status
+            assert static_hardware_simulator.connection_status == connection_status
 
-        def test_simulate_connection_failure(self, hardware_simulator):
+        def test_simulate_connection_failure(self, static_hardware_simulator):
             """
             Test that simulating connection failure causes the hardware
             simulator to think its connection has been lost.
 
-            :param hardware_simulator: the hardware simulator under test
-            :type hardware_simulator:
+            :param static_hardware_simulator: the hardware simulator under test
+            :type static_hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             """
-            assert hardware_simulator.connection_status == ConnectionStatus.CONNECTED
-            hardware_simulator.simulate_connection_failure(True)
+            assert static_hardware_simulator.connection_status == ConnectionStatus.CONNECTED
+            static_hardware_simulator.simulate_connection_failure(True)
             assert (
-                hardware_simulator.connection_status == ConnectionStatus.NOT_CONNECTED
+                static_hardware_simulator.connection_status == ConnectionStatus.NOT_CONNECTED
             )
-            hardware_simulator.simulate_connection_failure(False)
-            assert hardware_simulator.connection_status == ConnectionStatus.CONNECTED
+            static_hardware_simulator.simulate_connection_failure(False)
+            assert static_hardware_simulator.connection_status == ConnectionStatus.CONNECTED
 
     class TestSimulableHardwareFactory:
         """
@@ -184,7 +244,7 @@ class TestSimulableHardware:
         """
 
         def test_simulation_mode(
-            self, hardware_driver, hardware_simulator, hardware_factory
+            self, hardware_driver, static_hardware_simulator, hardware_factory
         ):
             """
             Test that different hardware is returned depending on
@@ -194,9 +254,9 @@ class TestSimulableHardware:
                 hardware factory returns when not in simulation mode
             :type hardware_driver:
                 :py:class:`ska.low.mccs.hardware.HardwareDriver`
-            :param hardware_simulator: the hardware simulator that the
+            :param static_hardware_simulator: the hardware simulator that the
                 hardware factory returns when in simulation mode
-            :type hardware_simulator:
+            :type static_hardware_simulator:
                 :py:class:`ska.low.mccs.hardware.HardwareSimulator`
             :param hardware_factory: a hardware factory that returns a
                 driver or simulator depending on its simulation mode
@@ -205,10 +265,10 @@ class TestSimulableHardware:
             """
             # check precondition - the test doesn't make sense unless
             # these are unequal
-            assert hardware_driver != hardware_simulator
+            assert hardware_driver != static_hardware_simulator
 
             assert hardware_factory.simulation_mode
-            assert hardware_factory.hardware == hardware_simulator
+            assert hardware_factory.hardware == static_hardware_simulator
 
             hardware_factory.simulation_mode = False
             assert not hardware_factory.simulation_mode
@@ -216,7 +276,53 @@ class TestSimulableHardware:
 
             hardware_factory.simulation_mode = True
             assert hardware_factory.simulation_mode
-            assert hardware_factory.hardware == hardware_simulator
+            assert hardware_factory.hardware == static_hardware_simulator
+
+        def test_test_mode(
+            self,
+            hardware_driver,
+            static_hardware_simulator,
+            dynamic_hardware_simulator,
+            hardware_factory,
+        ):
+            """
+            Test that, when in simulation mode, a different simulator is
+            returned depending on test mode.
+
+            :param hardware_driver: the hardware driver that the
+                hardware factory returns when not in simulation mode
+            :type hardware_driver:
+                :py:class:`ska.low.mccs.hardware.HardwareDriver`
+            :param static_hardware_simulator: the hardware simulator
+                that the hardware factory returns when in simulation
+                mode and test mode
+            :type static_hardware_simulator:
+                :py:class:`ska.low.mccs.hardware.HardwareSimulator`
+            :param dynamic_hardware_simulator: the hardware simulator
+                that the hardware factory returns when in simulation
+                mode but not in test mode
+            :type dynamic_hardware_simulator:
+                :py:class:`ska.low.mccs.hardware.HardwareSimulator`
+            :param hardware_factory: a hardware factory that returns a
+                driver or simulator depending on its simulation mode
+            :type hardware_factory:
+                :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+            """
+            # check precondition - the test doesn't make sense unless
+            # these are unequal
+            assert static_hardware_simulator != dynamic_hardware_simulator
+
+            assert hardware_factory.simulation_mode
+            assert hardware_factory.test_mode
+            assert hardware_factory.hardware == static_hardware_simulator
+
+            hardware_factory.test_mode = False
+            assert not hardware_factory.test_mode
+            assert hardware_factory.hardware == dynamic_hardware_simulator
+
+            hardware_factory.test_mode = True
+            assert hardware_factory.test_mode
+            assert hardware_factory.hardware == static_hardware_simulator
 
     class TestSimulableHardwareManager:
         """
@@ -229,7 +335,7 @@ class TestSimulableHardware:
         """
 
         def test_simulation_mode(
-            self, hardware_driver, hardware_simulator, hardware_manager
+            self, hardware_driver, static_hardware_simulator, hardware_manager
         ):
             """
             Test that changing simulation mode, where the simulator is
@@ -239,8 +345,8 @@ class TestSimulableHardware:
                 testing purposes)
             :type hardware_driver:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
-            :param hardware_simulator: the hardware simulator
-            :type hardware_simulator:
+            :param static_hardware_simulator: the hardware simulator
+            :type static_hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             :param hardware_manager: the hardware manager under test
             :type hardware_manager:
@@ -249,7 +355,7 @@ class TestSimulableHardware:
             assert hardware_manager.simulation_mode
             assert hardware_manager.health == HealthState.OK
 
-            hardware_simulator.simulate_connection_failure(True)
+            static_hardware_simulator.simulate_connection_failure(True)
             hardware_manager.poll()
             assert hardware_manager.health == HealthState.FAILED
 

@@ -20,11 +20,11 @@ import pytest
 from tango import AttrQuality, DevFailed, DevState, EventType
 
 from ska.base import DeviceStateModel
-from ska.base.control_model import HealthState, SimulationMode
+from ska.base.control_model import HealthState, SimulationMode, TestMode
 from ska.base.commands import ResultCode
 from ska.low.mccs import MccsTile
 from ska.low.mccs.hardware import PowerMode, SimulableHardwareFactory
-from ska.low.mccs.tile import TileHardwareManager, TilePowerManager, TpmSimulator
+from ska.low.mccs.tile import TileHardwareManager, TilePowerManager, StaticTpmSimulator
 
 
 @pytest.fixture()
@@ -478,7 +478,7 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.voltage == TpmSimulator.VOLTAGE
+        assert device_under_test.voltage == StaticTpmSimulator.VOLTAGE
 
     def test_current(self, device_under_test):
         """
@@ -494,7 +494,7 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        device_under_test.current == TpmSimulator.CURRENT
+        device_under_test.current == StaticTpmSimulator.CURRENT
 
     def test_board_temperature(self, device_under_test):
         """
@@ -510,7 +510,9 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.board_temperature == TpmSimulator.BOARD_TEMPERATURE
+        assert (
+            device_under_test.board_temperature == StaticTpmSimulator.BOARD_TEMPERATURE
+        )
 
     def test_fpga1_temperature(self, device_under_test):
         """
@@ -526,7 +528,9 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.fpga1_temperature == TpmSimulator.FPGA1_TEMPERATURE
+        assert (
+            device_under_test.fpga1_temperature == StaticTpmSimulator.FPGA1_TEMPERATURE
+        )
 
     def test_fpga2_temperature(self, device_under_test):
         """
@@ -542,7 +546,9 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.fpga2_temperature == TpmSimulator.FPGA2_TEMPERATURE
+        assert (
+            device_under_test.fpga2_temperature == StaticTpmSimulator.FPGA2_TEMPERATURE
+        )
 
     def test_fpga1_time(self, device_under_test):
         """
@@ -558,7 +564,7 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.fpga1_time == TpmSimulator.FPGA1_TIME
+        assert device_under_test.fpga1_time == StaticTpmSimulator.FPGA1_TIME
 
     def test_fpga2_time(self, device_under_test):
         """
@@ -574,7 +580,7 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.fpga2_time == TpmSimulator.FPGA2_TIME
+        assert device_under_test.fpga2_time == StaticTpmSimulator.FPGA2_TIME
 
     def test_antennaIds(self, device_under_test):
         """
@@ -623,7 +629,7 @@ class TestMccsTile:
         device_under_test.On()
         assert (
             device_under_test.currentTileBeamformerFrame
-            == TpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME
+            == StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME
         )
 
     def test_phaseTerminalCount(self, device_under_test):
@@ -640,7 +646,10 @@ class TestMccsTile:
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
         device_under_test.On()
-        assert device_under_test.PhaseTerminalCount == TpmSimulator.PHASE_TERMINAL_COUNT
+        assert (
+            device_under_test.PhaseTerminalCount
+            == StaticTpmSimulator.PHASE_TERMINAL_COUNT
+        )
         device_under_test.PhaseTerminalCount = 45
         assert device_under_test.PhaseTerminalCount == 45
 
@@ -819,9 +828,16 @@ class TestMccsTileCommands:
         state_model = DeviceStateModel(logger)
 
         mock_tpm_simulator = mocker.Mock()
-        hardware_factory = SimulableHardwareFactory(True, _simulator=mock_tpm_simulator)
+        hardware_factory = SimulableHardwareFactory(
+            True, _static_simulator=mock_tpm_simulator
+        )
         hardware_manager = TileHardwareManager(
-            SimulationMode.TRUE, logger, "0.0.0.0", 10000, _factory=hardware_factory
+            SimulationMode.TRUE,
+            TestMode.TEST,
+            logger,
+            "0.0.0.0",
+            10000,
+            _factory=hardware_factory,
         )
 
         command_class = getattr(MccsTile, f"{device_command}Command")
@@ -883,10 +899,10 @@ class TestMccsTileCommands:
 
         firmware_available_str = device_under_test.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)
-        assert firmware_available == TpmSimulator.FIRMWARE_AVAILABLE
+        assert firmware_available == StaticTpmSimulator.FIRMWARE_AVAILABLE
 
         firmware_name = device_under_test.firmwareName
-        assert firmware_name == TpmSimulator.FIRMWARE_NAME
+        assert firmware_name == StaticTpmSimulator.FIRMWARE_NAME
 
         major = firmware_available[firmware_name]["major"]
         minor = firmware_available[firmware_name]["minor"]
@@ -950,7 +966,7 @@ class TestMccsTileCommands:
         device_under_test.Off()
         device_under_test.On()
         assert device_under_test.GetRegisterList() == list(
-            TpmSimulator.REGISTER_MAP[0].keys()
+            StaticTpmSimulator.REGISTER_MAP[0].keys()
         )
 
     def test_ReadRegister(self, device_under_test):

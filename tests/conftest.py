@@ -10,6 +10,7 @@ import logging
 import pytest
 import tango
 from tango.test_context import MultiDeviceTestContext
+from ska.base.control_model import TestMode
 
 
 def pytest_sessionstart(session):
@@ -276,6 +277,14 @@ class MCCSDeviceTestContext:
             # HACK: increasing the timeout until we can make some commands synchronous
             self.get_device(device_name).set_timeout_millis(5000)
 
+    def _set_test_mode(self):
+        """
+        Ensure that all included devices are set into test mode, since
+        we are testing.
+        """
+        for device_name in self._devices_info.device_names:
+            self.get_device(device_name).testMode = TestMode.TEST
+
     def __enter__(self):
         """
         Entry method for "with" context.
@@ -286,6 +295,7 @@ class MCCSDeviceTestContext:
         self._multi_device_test_context.__enter__()
         self._set_source()
         assert self._check_ready()
+        self._set_test_mode()
         return self
 
     def __exit__(self, exc_type, exception, trace):

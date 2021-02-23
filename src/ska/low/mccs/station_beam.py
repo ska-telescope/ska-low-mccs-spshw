@@ -466,16 +466,16 @@ class MccsStationBeam(SKAObsDevice):
         return self._station_fqdn
 
     @stationFqdn.write
-    def stationFqnd(self, station_fqdn):
+    def stationFqdn(self, station_fqdn):
         """
         Set the station fqdn.
 
         :param station_fqdn: fqdn of the station this beam is assigned to
         :type station_fqdn: str
         """
-        if self._station_fqdn != "":
+        if self._station_fqdn:
             self.health_model.remove_devices((self._station_fqdn,))
-        if station_fqdn != "":
+        if station_fqdn:
             self.health_model.add_devices((station_fqdn,))
         self._station_fqdn = station_fqdn
 

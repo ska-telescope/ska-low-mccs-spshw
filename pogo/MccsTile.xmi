@@ -215,6 +215,15 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
+    <commands name="LoadCalibrationCurve" description="Loads calibration curve. This is the frequency dependent response for a single antenna and beam, as a function of frequency.  It will be combined together with tapering coefficients and beam angles by ComputeCalibrationCoefficients, and made active by SwitchCalibrationBank. The calibration coefficients do not include the geometric delay. antenna is the antenna to which the coefficients will be applied. beam is the beam to which the coefficients will be applied. calibration_coefficients is a bidimensional complex array of the form calibration_coefficients[channel, polarization], with each element representing a normalized coefficient, with (1.0, 0.0) being the normal, expected response for an ideal antenna. channel is the index specifying the channels at the beamformer output, i.e. considering only those channels actually processed and beam assignments. The polarization index ranges from 0 to 3. 0: X polarization direct element 1: X->Y polarization cross element 2: Y->X polarization cross element 3: Y polarization direct element The calibration coefficients may include any rotation matrix (e.g. the parallactic angle), but do not include the geometric delay" execMethod="load_calibration_curve" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+      <argin description="antenna, beam, calibration_coefficients">
+        <type xsi:type="pogoDsl:EncodedType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </commands>
     <commands name="LoadCalibrationCoefficients" description="Loads calibration coefficients (but does not apply them, this is performed by switch_calibration_bank). antenna is the antenna to which the coefficients will be applied. calibration_coefficients is a bidimensional complex array of the form calibration_coefficients[channel, polarization], with each element representing a normalized coefficient, with (1.0, 0.0) being the normal, expected response for an ideal antenna. channel is the index specifying the channels at the beamformer output, i.e. considering only those channels actually processed and beam assignments. The polarization index ranges from 0 to 3. 0: X polarization direct element 1: X->Y polarization cross element 2: Y->X polarization cross element 3: Y polarization direct element The calibration coefficients may include any rotation matrix (e.g. the parallactic angle), but do not include the geometric delay" execMethod="load_calibration_coefficients" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="antenna, calibration_coefficients">
         <type xsi:type="pogoDsl:EncodedType"/>
@@ -224,7 +233,16 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="LoadBeamAngle" description="angle_coefs is an array of one element per beam, specifying a rotation angle, in radians, for the specified beam. The rotation is the same for all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X polarization to the Y polarization. The rotation is applied after regular calibration." execMethod="load_beam_angle" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="ComputeCalibrationCoefficients" description="Compute the calibration coefficients from previously specified gain curves, tapering weights and beam angles, load them in the hardware. It must be followed by SwitchCalibrationBank to make these active" execMethod="compute_calibration_coefficients" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+      <argin description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </commands>
+    <commands name="LoadBeamAngle" description="angle_coefficients is an array of one element per beam, specifying a rotation angle, in radians, for the specified beam. The rotation is the same for all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X polarization to the Y polarization. The rotation is applied after regular calibration." execMethod="load_beam_angle" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="angle_coefficients">
         <type xsi:type="pogoDsl:DoubleArrayType"/>
       </argin>
@@ -233,7 +251,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="LoadAntennaTapering" description="tapering_coeffs is a vector contains a value for each antenna the TPM processes. Default is 1." execMethod="load_antenna_tapering" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="LoadAntennaTapering" description="tapering_coefficients is a vector contains a value for each antenna the TPM processes. Default is 1." execMethod="load_antenna_tapering" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="tapering coefficients">
         <type xsi:type="pogoDsl:DoubleArrayType"/>
       </argin>

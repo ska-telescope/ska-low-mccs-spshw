@@ -666,8 +666,8 @@ class HwTile(object):
         self.tpm.beamf_fd[1].set_regions([[start_channel, nof_channels, 0]])
         self.tpm.beamf_fd[0].antenna_tapering = [1.0] * 8
         self.tpm.beamf_fd[1].antenna_tapering = [1.0] * 8
-        self.tpm.beamf_fd[0].compute_calibration_coefs()
-        self.tpm.beamf_fd[1].compute_calibration_coefs()
+        self.tpm.beamf_fd[0].compute_calibration_coefficients()
+        self.tpm.beamf_fd[1].compute_calibration_coefficients()
 
         # Interface towards beamformer in FPGAs
         self.tpm.station_beamf[0].initialize()
@@ -733,11 +733,11 @@ class HwTile(object):
         self.tpm.beamf_fd[1].load_delay(load_time)
 
     @connected
-    def load_calibration_coefficients(self, antenna, calibration_coefs):
+    def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
         Loads calibration coefficients.
-        calibration_coefs is a bi-dimensional complex array of the form
-        calibration_coefs[channel, polarization], with each element representing
+        calibration_coefficients is a bi-dimensional complex array of the form
+        calibration_coefficients[channel, polarization], with each element representing
         a normalized coefficient, with (1.0, 0.0) the normal, expected response for
         an ideal antenna.
         Channel is the index specifying the channels at the beamformer output,
@@ -750,51 +750,51 @@ class HwTile(object):
         The calibration coefficients may include any rotation matrix (e.g.
         the parallitic angle), but do not include the geometric delay.
         :param antenna: Antenna ID for the calibration coefficients
-        :param calibration_coefs: bi-dimensional complex array of coefficients
+        :param calibration_coefficients: bi-dimensional complex array of coefficients
         """
         if antenna < 8:
-            self.tpm.beamf_fd[0].load_calibration(antenna, calibration_coefs)
+            self.tpm.beamf_fd[0].load_calibration(antenna, calibration_coefficients)
         else:
-            self.tpm.beamf_fd[1].load_calibration(antenna - 8, calibration_coefs)
+            self.tpm.beamf_fd[1].load_calibration(antenna - 8, calibration_coefficients)
 
     @connected
-    def load_antenna_tapering(self, beam, tapering_coefs):
+    def load_antenna_tapering(self, beam, tapering_coefficients):
         """
-        tapering_coefs is a vector of 16 values, one per antenna.
+        tapering_coefficients is a vector of 16 values, one per antenna.
         Default (at initialization) is 1.0.
 
         :param beam: Beam index (optional) in range 0:47
         :type beam: int
-        :param tapering_coefs: Coefficients for each antenna
-        :type tapering_coefs: list(int)
+        :param tapering_coefficients: Coefficients for each antenna
+        :type tapering_coefficients: list(int)
         """
-        self.tpm.beamf_fd[0].load_antenna_tapering(tapering_coefs[0:8])
-        self.tpm.beamf_fd[1].load_antenna_tapering(tapering_coefs[8:])
+        self.tpm.beamf_fd[0].load_antenna_tapering(tapering_coefficients[0:8])
+        self.tpm.beamf_fd[1].load_antenna_tapering(tapering_coefficients[8:])
 
     @connected
-    def load_beam_angle(self, angle_coefs):
+    def load_beam_angle(self, angle_coefficients):
         """
-        Angle_coeffs is an array of one element per beam, specifying a
-        rotation angle, in radians, for the specified beam.
+        Angle_coefficients is an array of one element per beam,
+        specifying a rotation angle, in radians, for the specified beam.
 
         The rotation is the same for all antennas. Default is 0 (no
         rotation). A positive pi/4 value transfers the X polarization to
         the Y polarization. The rotation is applied after regular
         calibration.
 
-        :param angle_coefs: Rotation angle, per beam, in radians
-        :type angle_coefs: list(float)
+        :param angle_coefficients: Rotation angle, per beam, in radians
+        :type angle_coefficients: list(float)
         """
-        self.tpm.beamf_fd[0].load_beam_angle(angle_coefs)
-        self.tpm.beamf_fd[1].load_beam_angle(angle_coefs)
+        self.tpm.beamf_fd[0].load_beam_angle(angle_coefficients)
+        self.tpm.beamf_fd[1].load_beam_angle(angle_coefficients)
 
     def compute_calibration_coefficients(self):
         """
         Compute the calibration coefficients and load them in the
         hardware.
         """
-        self.tpm.beamf_fd[0].compute_calibration_coefs()
-        self.tpm.beamf_fd[1].compute_calibration_coefs()
+        self.tpm.beamf_fd[0].compute_calibration_coefficients()
+        self.tpm.beamf_fd[1].compute_calibration_coefficients()
 
     def switch_calibration_bank(self, switch_time=0):
         """

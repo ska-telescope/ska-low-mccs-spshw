@@ -431,12 +431,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self._subarray_id
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        max_value=47,
-        min_value=0,
-    )
+    @attribute(dtype="DevLong", format="%i", max_value=47, min_value=0)
     def subarrayBeamId(self):
         """
         Return the subarray beam id.
@@ -446,11 +441,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self._subarray_beam_id
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=512,
-        format="%i",
-    )
+    @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
     def stationIds(self):
         """
         Return the station ids.
@@ -470,12 +461,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         self._station_ids = station_ids
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        max_value=7,
-        min_value=0,
-    )
+    @attribute(dtype="DevLong", format="%i", max_value=7, min_value=0)
     def logicalBeamId(self):
         """
         Return the logical beam id.
@@ -499,11 +485,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         self._logical_beam_id = logical_beam_id
 
     @attribute(
-        dtype="DevDouble",
-        unit="Hz",
-        standard_unit="s^-1",
-        max_value=1e37,
-        min_value=0,
+        dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0
     )
     def updateRate(self):
         """
@@ -514,10 +496,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self._update_rate
 
-    @attribute(
-        dtype="DevBoolean",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevBoolean", polling_period=1000)
     def isBeamLocked(self):
         """
         Return a flag indicating whether the beam is locked or not.
@@ -537,10 +516,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         self.hardware_manager.is_locked = value
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=384,
-    )
+    @attribute(dtype=("DevLong",), max_dim_x=384)
     def channels(self):
         """
         Return the ids of the channels configured for this beam.
@@ -550,10 +526,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self._channels
 
-    @attribute(
-        dtype=("DevDouble",),
-        max_dim_x=5,
-    )
+    @attribute(dtype=("DevDouble",), max_dim_x=5)
     def desiredPointing(self):
         """
         Return the desired pointing of this beam.
@@ -616,10 +589,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             # TODO: Forward configuration settings to all the subservient Stations
             return (ResultCode.OK, "Configure command completed successfully")
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure(self, argin):
         """
         Configure the subarray_beam with all relevant parameters.
@@ -629,7 +599,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 "subarray_id": 1,
                 "subarray_beam_id": 1,
                 "station_ids": [1, 2],
-                "channels": [[0,8,1,1], [8,8,2,1], [24,16,2,1]],
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
                 "update_rate": 0.0,
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
                 }
@@ -662,10 +632,10 @@ class MccsSubarrayBeam(SKAObsDevice):
                 information purpose only.
             :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            scan_dict = json.loads(argin)
+            kwargs = json.loads(argin)
             device = self.target
-            device._scan_id = scan_dict.get("id")
-            device._scan_time = scan_dict.get("scan_time")
+            device._scan_id = kwargs.get("id")
+            device._scan_time = kwargs.get("scan_time")
 
             # TODO: Forward scan command and parameters to all the subservient Stations
             return (ResultCode.OK, "Scan command completed successfully")

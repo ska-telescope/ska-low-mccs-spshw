@@ -195,6 +195,37 @@ class StationBeamsResourceManager(ResourceManager):
 
         super().assign(station_beams, list(stations.keys()))
 
+    def scan(self, logger, argin):
+        """
+        Start a scan on the configured subarray resources.
+
+        :param logger: the logger to be used.
+        :type logger: :py:class:`logging.Logger`
+        :param argin: JSON scan specification
+        :type argin: str
+        :return: A tuple containing a result code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
+        subarray_beam_device_proxies = []
+        for subarray_beam_fqdn in self.station_beam_fqdns:
+            device_proxy = backoff_connect(subarray_beam_fqdn, logger=logger)
+            subarray_beam_device_proxies.append(device_proxy)
+
+        result_failure = None
+        error_message = ""
+        for subarray_beam_device_proxy in subarray_beam_device_proxies:
+            # TODO: Ideally we want to kick these off in parallel...
+            (result_code, message) = subarray_beam_device_proxy.Scan(argin)
+            if result_code in [ResultCode.FAILED, ResultCode.UNKNOWN]:
+                error_message += message + " "
+                result_failure = result_code
+
+        return (result_failure, error_message)
+
     def release(self, station_beam_fqdns, station_fqdns):
         """
         Release devices from this subarray resource manager.
@@ -771,25 +802,6 @@ class MccsSubarray(SKASubarray):
         Class for handling the Scan(argin) command.
         """
 
-        def __init__(self, target, state_model, logger=None):
-            """
-            Constructor for ScanCommand.
-
-            :param target: the object that this command acts upon; for
-                example, the SKASubarray device for which this class
-                implements the command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
-            """
-            super().__init__(target, state_model, logger)
-
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -807,32 +819,19 @@ class MccsSubarray(SKASubarray):
             """
             (result_code, message) = super().do(argin)
 
-            station_beam_pool_manager = self.target._station_beam_pool_manager
-            # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
-            subarray_beam_fqdns = station_beam_pool_manager.station_beam_fqdns
-            self._subarray_beam_device_proxies = []
-            for subarray_beam_fqdn in subarray_beam_fqdns:
-                device_proxy = backoff_connect(subarray_beam_fqdn, logger=self.logger)
-                self._subarray_beam_device_proxies.append(device_proxy)
-
             device = self.target
             kwargs = json.loads(argin)
             device._scan_id = kwargs.get("id")
             device._scan_time = kwargs.get("scan_time")
 
-            result_failure = None
-            error_message = ""
-            for subarray_beam_device_proxy in self._subarray_beam_device_proxies:
-                # TODO: Ideally we want to kick these off in parallel...
-                (rcode, msg) = subarray_beam_device_proxy.Scan(argin)
-                if rcode in [ResultCode.FAILED, ResultCode.UNKNOWN]:
-                    error_message += msg + " "
-                    result_failure = rcode
-
-            if result_failure is None:
+            station_beam_pool_manager = self.target._station_beam_pool_manager
+            (pool_failure_code, pool_message) = station_beam_pool_manager.scan(
+                self.logger, argin
+            )
+            if not pool_failure_code:
                 return (result_code, message)
             else:
-                return (result_failure, error_message)
+                return (pool_failure_code, pool_message)
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """

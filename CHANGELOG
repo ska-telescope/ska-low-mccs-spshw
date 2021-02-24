@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-381 - Move "Configure" command implementation to station beams resource manager
 * MCCS-252 - New and modified Tile commands for beam configuration and calibration
 * MCCS-309 - Integration of devices into end-to-end power flow
 * MCCS-347 - Correct initialisation values for controller commandResult

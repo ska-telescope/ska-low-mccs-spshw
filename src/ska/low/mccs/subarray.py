@@ -35,6 +35,7 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import MutableHealthModel
 import ska.low.mccs.release as release
 from ska.low.mccs.resource import ResourceManager
+from ska.low.mccs.utils import backoff_connect
 
 
 class StationsResourceManager(ResourceManager):
@@ -193,6 +194,51 @@ class StationBeamsResourceManager(ResourceManager):
             self.update_resource_health(station_beam_fqdn, station_beam.healthState)
 
         super().assign(station_beams, list(stations.keys()))
+
+    def configure(self, logger, argin):
+        """
+        Configure devices from this subarray resource manager.
+
+        :param logger: the logger to be used.
+        :type logger: :py:class:`logging.Logger`
+        :param argin: JSON configuration specification
+                    {
+                    "stations":[{"station_id": 1},{"station_id": 2}],
+                    "subarray_beams":[{
+                    "subarray_id":1,
+                    "subarray_beam_id":1,
+                    "station_ids":[1,2],
+                    "channels":  [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    "update_rate": 0.0,
+                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                    }
+        :type argin: str
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        kwargs = json.loads(argin)
+        stations = kwargs.get("stations", list())
+        for station in stations:
+            # TODO: This is here for future expansion of json strings
+            station.get("station_id")
+
+        subarray_beams = kwargs.get("subarray_beams", list())
+        for subarray_beam in subarray_beams:
+            subarray_beam_id = subarray_beam.get("subarray_beam_id")
+            if subarray_beam_id:
+                subarray_beam_fqdn = self.fqdn_from_id(subarray_beam_id)
+                if subarray_beam_fqdn:
+                    dp = backoff_connect(subarray_beam_fqdn, logger=logger)
+                    json_str = json.dumps(subarray_beam)
+                    dp.configure(json_str)
+
+        result_code = ResultCode.OK
+        message = "Configure command completed successfully"
+        return (result_code, message)
 
     def release(self, station_beam_fqdns, station_fqdns):
         """
@@ -488,11 +534,7 @@ class MccsSubarray(SKASubarray):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevLong", format="%i", polling_period=1000)
     def commandResult(self):
         """
         Return the commandResult attribute.
@@ -502,11 +544,7 @@ class MccsSubarray(SKASubarray):
         """
         return self._command_result
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevLong", format="%i", polling_period=1000)
     def scanId(self):
         """
         Return the scan id.
@@ -526,12 +564,7 @@ class MccsSubarray(SKASubarray):
         """
         self._scan_id = scan_id
 
-    @attribute(
-        dtype=("DevString",),
-        max_dim_x=512,
-        format="%s",
-        polling_period=1000,
-    )
+    @attribute(dtype=("DevString",), max_dim_x=512, format="%s", polling_period=1000)
     def stationFQDNs(self):
         """
         Return the FQDNs of stations assigned to this subarray.
@@ -744,28 +777,8 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            kwargs = json.loads(argin)
-            stations = kwargs.get("stations", list())
             station_beam_pool_manager = self.target._station_beam_pool_manager
-            for station in stations:
-                # This is here for future expansion of json strings
-                station.get("station_id")
-
-            subarray_beams = kwargs.get("subarray_beams", list())
-            for subarray_beam in subarray_beams:
-                subarray_beam_id = subarray_beam.get("subarray_beam_id")
-                if subarray_beam_id:
-                    subarray_beam_fqdn = station_beam_pool_manager.fqdn_from_id(
-                        subarray_beam_id
-                    )
-                    if subarray_beam_fqdn:
-                        dp = tango.DeviceProxy(subarray_beam_fqdn)
-                        json_str = json.dumps(subarray_beam)
-                        dp.configure(json_str)
-
-            result_code = ResultCode.OK
-            message = "Configure command completed successfully"
-            return (result_code, message)
+            return station_beam_pool_manager.configure(self.logger, argin)
 
         def check_allowed(self):
             """
@@ -905,9 +918,7 @@ class MccsSubarray(SKASubarray):
             """
             return self.state_model.obs_state in [ObsState.SCANNING]
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Abort(self):
         """
@@ -973,9 +984,7 @@ class MccsSubarray(SKASubarray):
             """
             return self.state_model.obs_state in [ObsState.ABORTED]
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ObsReset(self):
         """
@@ -1053,10 +1062,7 @@ class MccsSubarray(SKASubarray):
             transient_buffer_manager.send(argin)
             return (ResultCode.OK, "SendTransientBuffer command completed successfully")
 
-    @command(
-        dtype_in="DevVarLongArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendTransientBuffer(self, argin):
         """

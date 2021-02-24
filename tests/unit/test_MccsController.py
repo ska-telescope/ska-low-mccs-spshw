@@ -53,10 +53,10 @@ class ControllerWithFailableDevices(MccsController):
         :param argin: JSON-encode dict with "fqdn" and "health" values
         :type argin: str
         """
-        args = json.loads(argin)
-        fqdn = args.get("fqdn")
+        kwargs = json.loads(argin)
+        fqdn = kwargs.get("fqdn")
         assert fqdn is not None
-        health = args.get("health_state")
+        health = kwargs.get("health_state")
         assert health is not None
 
         self.health_model._health_monitor._device_health_monitors[
@@ -72,10 +72,10 @@ class ControllerWithFailableDevices(MccsController):
         :param argin: JSON-encode dict with "fqdn" and "adminMode" values
         :type argin: str
         """
-        args = json.loads(argin)
-        fqdn = args.get("fqdn")
+        kwargs = json.loads(argin)
+        fqdn = kwargs.get("fqdn")
         assert fqdn is not None
-        admin_mode = args.get("admin_mode")
+        admin_mode = kwargs.get("admin_mode")
         assert admin_mode is not None
 
         self.health_model._health_monitor._device_health_monitors[

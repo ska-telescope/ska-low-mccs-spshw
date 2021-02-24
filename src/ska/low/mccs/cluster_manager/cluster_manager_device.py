@@ -1037,10 +1037,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             else:
                 return (ResultCode.OK, "StartJob command successful")
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StartJob(self, argin):
         """
@@ -1087,10 +1084,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             else:
                 return (ResultCode.OK, "StopJob command successful")
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StopJob(self, argin):
         """
@@ -1127,8 +1121,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            args = json.loads(argin)
-            job_config = JobConfig(**args)
+            kwargs = json.loads(argin)
+            job_config = JobConfig(**kwargs)
 
             cluster_manager = self.target
             return cluster_manager.submit_job(job_config)
@@ -1171,10 +1165,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             except ValueError:
                 return JobStatus.UNKNOWN
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevShort",
-    )
+    @command(dtype_in="DevString", dtype_out="DevShort")
     @DebugIt()
     def GetJobStatus(self, argin):
         """
@@ -1216,9 +1207,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             else:
                 return (ResultCode.OK, "Job stats cleared")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ClearJobStats(self):
         """
@@ -1258,9 +1247,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             else:
                 return (ResultCode.OK, "PingMasterPool command successful")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def PingMasterPool(self):
         """

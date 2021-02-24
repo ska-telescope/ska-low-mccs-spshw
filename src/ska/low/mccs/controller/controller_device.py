@@ -1057,9 +1057,9 @@ class MccsController(SKAMaster):
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device = self.target
-            args = json.loads(argin)
-            subarray_id = args.get("subarray_id")
-            release_all = args.get("release_all")
+            kwargs = json.loads(argin)
+            subarray_id = kwargs.get("subarray_id")
+            release_all = kwargs.get("release_all")
             if subarray_id is None or not (
                 1 <= subarray_id <= len(device._subarray_fqdns)
             ):

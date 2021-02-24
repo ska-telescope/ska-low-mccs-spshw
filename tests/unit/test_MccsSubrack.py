@@ -366,15 +366,14 @@ class TestSubrackBoardSimulator:
             subrack_board.board_current == SubrackBoardSimulator.DEFAULT_BOARD_CURRENT
         )
         assert (
-            subrack_board.subrack_fan_speeds ==
-            SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_SPEED
+            subrack_board.subrack_fan_speeds
+            == SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_SPEED
         )
 
         backplane_temperatures = random_temperature()
         board_temperatures = random_temperature()
         board_current = random_current()
         subrack_fan_speeds = random_fan_speed()
-
 
         subrack_board.simulate_backplane_temperatures(backplane_temperatures)
         subrack_board.simulate_board_temperatures(board_temperatures)
@@ -451,7 +450,7 @@ class TestSubrackHardwareManager:
         """
         return SubrackBoardSimulator(
             tpm_count=len(subrack_bays),
-            backplane_temperatures= random_temperature(),
+            backplane_temperatures=random_temperature(),
             board_temperatures=random_temperature(),
             board_current=random_current(),
             subrack_fan_speeds=random_fan_speed(),

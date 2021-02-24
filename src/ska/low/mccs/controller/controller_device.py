@@ -23,7 +23,7 @@ from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice, DeviceStateModel
+from ska.base import SKAMaster, SKABaseDevice  # , DeviceStateModel
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 

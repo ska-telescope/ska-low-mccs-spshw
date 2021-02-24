@@ -252,7 +252,10 @@ epub_exclude_files = ["search.html"]
 
 
 # -- Extension configuration -------------------------------------------------
-extensions = ["sphinx.ext.autodoc", "sphinx_autodoc_typehints"]
+extensions = ["sphinx.ext.autodoc"]  # , "sphinx_autodoc_typehints"]
+
+# {"always_document_param_types": True, "typehints_fully_qualified": True}
+
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "https://docs.python.org/3/": None,

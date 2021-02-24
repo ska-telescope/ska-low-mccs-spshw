@@ -158,7 +158,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     The default initial simulated current for the subrack management
     board itself; this can be overruled in the constructor
     """
-    DEFAULT_FAN_SPEED = [4999.0, 5000.0, 5001.0, 5002.0]
+    DEFAULT_SUBRACK_FAN_SPEED = [4999.0, 5000.0, 5001.0, 5002.0]
     """
     The default initial simulated fan speed for the subrack; this can be
     overruled using the set_subrack_fan_speed method
@@ -185,7 +185,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     DEFAULT_POWER_SUPPLY_FAN_SPEED = [70, 71, 72, 73]
     """
         The default initial simulated power supply fan speed in percent; this can be
-        overruled using the set_ps_fan speed function
+        overruled using the set_power_supply_fan speed function
     """
 
     def __init__(
@@ -194,7 +194,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         backplane_temperatures=DEFAULT_BACKPLANE_TEMPERATURE,
         board_temperatures=DEFAULT_BOARD_TEMPERATURE,
         board_current=DEFAULT_BOARD_CURRENT,
-        fan_speeds=DEFAULT_FAN_SPEED,
+        subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEED,
         fan_mode=DEFAULT_FAN_MODE,
         power_supply_powers=DEFAULT_POWER_SUPPLY_POWER,
         power_supply_fan_speeds=DEFAULT_POWER_SUPPLY_FAN_SPEED,
@@ -218,9 +218,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type board_temperatures: list(float)
         :param board_current: the initial current of the subrack management board
         :type board_current: float
-        :param fan_speeds: the initial fan_speeds of the subrack backplane
+        :param subrack_fan_speeds: the initial fan_speeds of the subrack backplane
             management board
-        :type fan_speeds: list(float)
+        :type subrack_fan_speeds: list(float)
         :param fan_mode: the initial fan mode of the subrack backplane
         :type fan_mode: list(int)
         :param power_supply_powers: the initial power for the 3 power supply in the
@@ -250,7 +250,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._backplane_temperatures = backplane_temperatures
         self._board_temperatures = board_temperatures
         self._board_current = board_current
-        self._fan_speeds = fan_speeds
+        self._subrack_fan_speeds = subrack_fan_speeds
         self._fan_mode = fan_mode
         self._power_supply_powers = power_supply_powers
         self._power_supply_fan_speeds = power_supply_fan_speeds
@@ -353,7 +353,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._board_current = board_current
 
     @property
-    def fan_speeds(self):
+    def subrack_fan_speeds(self):
         """
         Return the subrack backplane fan speeds (in RPMs).
 
@@ -361,19 +361,19 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._fan_speeds
+        return self._subrack_fan_speeds
 
-    def simulate_fan_speeds(self, fan_speeds):
+    def simulate_subrack_fan_speeds(self, subrack_fan_speeds):
         """
         Set the simulated fan speed for this subrack simulator.
 
-        :param fan_speeds: the simulated fan speed for this subrack simulator.
-        :type fan_speeds: list(float)
+        :param subrack_fan_speeds: the simulated fan speed for this subrack simulator.
+        :type subrack_fan_speeds: list(float)
         """
-        self._fan_speeds = fan_speeds
+        self._subrack_fan_speeds = subrack_fan_speeds
 
     @property
-    def fan_speeds_percent(self):
+    def subrack_fan_speeds_percent(self):
         """
         Return the subrack backplane fan speeds in percent.
 
@@ -381,7 +381,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._fan_speeds_percent
+        return self._subrack_fan_speeds_percent
 
     @property
     def subrack_fan_mode(self):
@@ -474,7 +474,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         Return the power supply fan speeds for this subrack.
 
-        :return: the ps fan speed
+        :return: the power supply fan speed
         :rtype: list(float)
         """
         return self._power_supply_fan_speeds
@@ -484,7 +484,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         Return the power supply currents for this subrack.
 
-        :return: the ps current
+        :return: the power supply current
         :rtype: list(float)
         """
         return self._power_supply_currents
@@ -497,6 +497,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the power supply power
         :rtype: list(float)
         """
+        self.check_power_mode(PowerMode.ON)
         return self._power_supply_powers
 
     def simulate_power_supply_powers(self, power_supply_powers):
@@ -655,7 +656,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type speed_percent: float
         """
         self.check_power_mode(PowerMode.ON)
-        self._fan_speed[fan_id - 1] = speed_percent
+        self._subrack_fan_speeds[fan_id - 1] = speed_percent
 
     def set_fan_mode(self, fan_id, mode):
         """
@@ -679,7 +680,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type speed_percent: float
         """
         self.check_power_mode(PowerMode.ON)
-        self._power_supply_fan_speed[power_supply_fan_id - 1] = speed_percent
+        self._power_supply_fan_speeds[power_supply_fan_id - 1] = speed_percent
 
     def check_power_mode(self, power_mode, error=None):
         """

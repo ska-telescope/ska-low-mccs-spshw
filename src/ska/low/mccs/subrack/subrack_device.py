@@ -181,24 +181,24 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return self._factory.hardware.board_current
 
     @property
-    def fan_speeds(self):
+    def subrack_fan_speeds(self):
         """
         Return this subrack's backplane fan speeds.
 
         :return: the fan speeds, in RPMs
         :rtype: list(float)
         """
-        return self._factory.hardware.fan_speeds
+        return self._factory.hardware.subrack_fan_speeds
 
     @property
-    def fan_speeds_percent(self):
+    def subrack_fan_speeds_percent(self):
         """
         Return this subrack's backplane fan speeds in  percent.
 
         :return: the fan speeds, in percent
         :rtype: list(float)
         """
-        return self._factory.hardware.fan_speeds_percent
+        return self._factory.hardware.subrack_fan_speeds_percent
 
     @property
     def subrack_fan_mode(self):
@@ -772,7 +772,7 @@ class MccsSubrack(SKABaseDevice):
         :return: the subrack fan speeds
         :rtype: list(float)
         """
-        return tuple(self.hardware_manager.fan_speeds)
+        return tuple(self.hardware_manager.subrack_fan_speeds)
 
     @attribute(
         dtype=("DevFloat",),
@@ -787,7 +787,7 @@ class MccsSubrack(SKABaseDevice):
         :return: the subrack fan speeds in percent
         :rtype: list(float)
         """
-        return tuple(self.hardware_manager.fan_speeds_percent)
+        return tuple(self.hardware_manager.subrack_fan_speeds_percent)
 
     @attribute(
         dtype=("DevString",),
@@ -1431,17 +1431,17 @@ class MccsSubrack(SKABaseDevice):
 
             params = json.loads(argin)
             power_supply_fan_id = params.get("power_supply_fan_id", None)
-            speed_per = params.get("speed_%", None)
-            if power_supply_fan_id or speed_per is None:
+            speed_percent = params.get("speed_%", None)
+            if power_supply_fan_id or speed_percent is None:
                 self.logger.error(
-                    "power_supply_fan_id and speed_per are mandatory " "parameters"
+                    "power_supply_fan_id and speed_percent are mandatory " "parameters"
                 )
                 raise ValueError(
-                    "power_supply_fan_id and speed_per are mandatory " "parameters"
+                    "power_supply_fan_id and speed_percent are mandatory " "parameters"
                 )
 
             success = hardware_manager.set_power_supply_fan_speed(
-                power_supply_fan_id, speed_per
+                power_supply_fan_id, speed_percent
             )
             message = "SetPowerSupplyFanSpeed command completed"
             return create_return(success, message)
@@ -1461,7 +1461,7 @@ class MccsSubrack(SKABaseDevice):
             :param argin: json dictionary with mandatory keywords:
 
             * power_supply_id - (int) power supply id from 0 to 2
-            * speed_per - (float) fanspeed in percent
+            * speed_percent - (float) fanspeed in percent
 
             :type argin: str
 

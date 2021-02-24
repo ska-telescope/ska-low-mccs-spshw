@@ -233,7 +233,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="ComputeCalibrationCoefficients" description="Compute the calibration coefficients from previously specified gain curves, tapering weigths and beam angles, load them in the hardware. It must be followed by SwitchCalibrationBank to make these active" execMethod="compute_calibration_coefs" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="ComputeCalibrationCoefficients" description="Compute the calibration coefficients from previously specified gain curves, tapering weights and beam angles, load them in the hardware. It must be followed by SwitchCalibrationBank to make these active" execMethod="compute_calibration_coefficients" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -242,7 +242,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="LoadBeamAngle" description="angle_coefs is an array of one element per beam, specifying a rotation angle, in radians, for the specified beam. The rotation is the same for all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X polarization to the Y polarization. The rotation is applied after regular calibration." execMethod="load_beam_angle" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="LoadBeamAngle" description="angle_coefficients is an array of one element per beam, specifying a rotation angle, in radians, for the specified beam. The rotation is the same for all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X polarization to the Y polarization. The rotation is applied after regular calibration." execMethod="load_beam_angle" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="angle_coefficients">
         <type xsi:type="pogoDsl:DoubleArrayType"/>
       </argin>
@@ -251,7 +251,7 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="LoadAntennaTapering" description="tapering_coeffs is a vector contains a value for each antenna the TPM processes. Default is 1." execMethod="load_antenna_tapering" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
+    <commands name="LoadAntennaTapering" description="tapering_coefficients is a vector contains a value for each antenna the TPM processes. Default is 1." execMethod="load_antenna_tapering" displayLevel="OPERATOR" polledPeriod="0" isDynamic="false">
       <argin description="tapering coefficients">
         <type xsi:type="pogoDsl:DoubleArrayType"/>
       </argin>

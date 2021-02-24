@@ -1147,21 +1147,21 @@ class TestMccsTileCommands:
         device_under_test.Off()
         device_under_test.On()
         antenna = 2
-        complex_coeffs = [
+        complex_coefficients = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
         ] * 5
-        inp = list(itertools.chain.from_iterable(complex_coeffs))
+        inp = list(itertools.chain.from_iterable(complex_coefficients))
         out = [[v.real, v.imag] for v in inp]
-        coeffs = [antenna] + list(itertools.chain.from_iterable(out))
+        coefficients = [antenna] + list(itertools.chain.from_iterable(out))
 
         with pytest.raises(DevFailed, match="NotImplementedError"):
-            _ = device_under_test.LoadCalibrationCoefficients(coeffs)
+            _ = device_under_test.LoadCalibrationCoefficients(coefficients)
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = device_under_test.LoadCalibrationCoefficients(coeffs[0:8])
+            _ = device_under_test.LoadCalibrationCoefficients(coefficients[0:8])
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
+            _ = device_under_test.LoadCalibrationCoefficients(coefficients[0:16])
 
     def test_LoadCalibrationCurve(self, device_under_test):
         """
@@ -1176,21 +1176,21 @@ class TestMccsTileCommands:
         device_under_test.On()
         antenna = 2
         beam = 0
-        complex_coeffs = [
+        complex_coefficients = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
         ] * 5
-        inp = list(itertools.chain.from_iterable(complex_coeffs))
+        inp = list(itertools.chain.from_iterable(complex_coefficients))
         out = [[v.real, v.imag] for v in inp]
-        coeffs = [antenna] + [beam] + list(itertools.chain.from_iterable(out))
+        coefficients = [antenna] + [beam] + list(itertools.chain.from_iterable(out))
 
         with pytest.raises(DevFailed, match="NotImplementedError"):
-            _ = device_under_test.LoadCalibrationCurve(coeffs)
+            _ = device_under_test.LoadCalibrationCurve(coefficients)
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = device_under_test.LoadCalibrationCurve(coeffs[0:9])
+            _ = device_under_test.LoadCalibrationCurve(coefficients[0:9])
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = device_under_test.LoadCalibrationCurve(coeffs[0:17])
+            _ = device_under_test.LoadCalibrationCurve(coefficients[0:17])
 
     @pytest.mark.parametrize("start_time", (None, 0))
     @pytest.mark.parametrize("duration", (None, -1))

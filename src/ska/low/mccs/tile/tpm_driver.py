@@ -592,7 +592,7 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: initialise_beamformer")
         self.tile.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
 
-    def load_calibration_coefficients(self, antenna, calibration_coeffs):
+    def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
         Load calibration coefficients. These may include any rotation
         matrix (e.g. the parallactic angle), but do not include the
@@ -600,14 +600,14 @@ class TpmDriver(HardwareDriver):
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
-        :param calibration_coeffs: a bidirectional complex array of
+        :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
-        :type calibration_coeffs: list(int)
+        :type calibration_coefficients: list(int)
         """
         self.logger.debug("TpmDriver: load_calibration_coefficients")
-        self.tile.load_calibration_coefficients(calibration_coeffs)
+        self.tile.load_calibration_coefficients(calibration_coefficients)
 
-    def load_calibration_curve(self, antenna, beam, calibration_coeffs):
+    def load_calibration_curve(self, antenna, beam, calibration_coefficients):
         """
         Load calibration curve. This is the frequency dependent response
         for a single antenna and beam, as a function of frequency. It
@@ -620,9 +620,9 @@ class TpmDriver(HardwareDriver):
         :type antenna: int
         :param beam: the beam to which the coefficients apply
         :type beam: int
-        :param calibration_coeffs: a bidirectional complex array of
+        :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
-        :type calibration_coeffs: list(int)
+        :type calibration_coefficients: list(int)
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -630,29 +630,29 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: load_calibration_curve")
         raise NotImplementedError
 
-    def load_beam_angle(self, angle_coeffs):
+    def load_beam_angle(self, angle_coefficients):
         """
         Load the beam angle.
 
-        :param angle_coeffs: list containing angle coefficients for each
+        :param angle_coefficients: list containing angle coefficients for each
             beam
-        :type angle_coeffs: list(float)
+        :type angle_coefficients: list(float)
         """
         self.logger.debug("TpmDriver: load_beam_angle")
-        self.tile.load_beam_angle(angle_coeffs)
+        self.tile.load_beam_angle(angle_coefficients)
 
-    def load_antenna_tapering(self, beam, tapering_coeffs):
+    def load_antenna_tapering(self, beam, tapering_coefficients):
         """
         Loat the antenna tapering coefficients.
 
         :param beam: the beam to which the coefficients apply
         :type beam: int
-        :param tapering_coeffs: list of tapering coefficients for each
+        :param tapering_coefficients: list of tapering coefficients for each
             antenna
-        :type tapering_coeffs: list(float)
+        :type tapering_coefficients: list(float)
         """
         self.logger.debug("TpmDriver: load_antenna_tapering")
-        self.tile.load_antenna_tapering(beam, tapering_coeffs)
+        self.tile.load_antenna_tapering(beam, tapering_coefficients)
 
     def switch_calibration_bank(self, switch_time=0):
         """
@@ -667,17 +667,17 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: switch_calibration_bank")
         self.tile.switch_calibration_bank(switch_time=0)
 
-    def compute_calibration_coefs(self):
+    def compute_calibration_coefficients(self):
         """
         Compute the calibration coefficients from previously specified
-        gain curves, tapering weigths and beam angles, load them in the
+        gain curves, tapering weights and beam angles, load them in the
         hardware.
 
         It must be followed by switch_calibration_bank() to make these
         active.
         """
-        self.logger.debug("TpmDriver: compute_calibration_coefs")
-        self.tile.compute_calibration_coefs()
+        self.logger.debug("TpmDriver: compute_calibration_coefficients")
+        self.tile.compute_calibration_coefficients()
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
@@ -876,14 +876,6 @@ class TpmDriver(HardwareDriver):
         """
         self.logger.debug("TpmDriver: stop_data_transmission")
         raise NotImplementedError
-
-    def compute_calibration_coefficients(self):
-        """
-        Compute the calibration coefficients and load them into the
-        hardware.
-        """
-        self.logger.debug("TpmDriver: compute_calibration_coefficients")
-        self.tile.compute_calibration_coefficients()
 
     def start_acquisition(self, start_time=None, delay=2):
         """

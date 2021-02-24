@@ -2306,7 +2306,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("Incomplete specification of coefficient")
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
-            calib_coeffs = [
+            calibration_coefficients = [
                 [
                     complex(argin[i], argin[i + 1]),
                     complex(argin[i + 2], argin[i + 3]),
@@ -2317,7 +2317,9 @@ class MccsTile(SKABaseDevice):
             ]
 
             hardware_manager = self.target
-            hardware_manager.load_calibration_coefficients(antenna, calib_coeffs)
+            hardware_manager.load_calibration_coefficients(
+                antenna, calibration_coefficients
+            )
             return (ResultCode.OK, "LoadCalibrationCoefficients command completed OK")
 
     @command(
@@ -2360,13 +2362,13 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> antenna = 2
-        >>> complex_coeffs = [[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
         >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
-        >>> inp = list(itertools.chain.from_iterable(complex_coeffs))
+        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
         >>> out = [[v.real, v.imag] for v in inp]
-        >>> coeffs = list(itertools.chain.from_iterable(out))
-        >>> coeffs.insert(0, float(antenna))
-        >>> input = list(itertools.chain.from_iterable(coeffs))
+        >>> coefficients = list(itertools.chain.from_iterable(out))
+        >>> coefficients.insert(0, float(antenna))
+        >>> input = list(itertools.chain.from_iterable(coefficients))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
@@ -2405,7 +2407,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("Incomplete specification of coefficient")
             antenna = int(argin[0])
             beam = int(argin[1])
-            calib_coeffs = [
+            calibration_coefficients = [
                 [
                     complex(argin[i], argin[i + 1]),
                     complex(argin[i + 2], argin[i + 3]),
@@ -2416,15 +2418,12 @@ class MccsTile(SKABaseDevice):
             ]
 
             hardware_manager = self.target
-            hardware_manager.load_calibration_curve(antenna, beam, calib_coeffs)
+            hardware_manager.load_calibration_curve(
+                antenna, beam, calibration_coefficients
+            )
             return (ResultCode.OK, "LoadCalibrationCurve command completed OK")
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        doc_in="antenna, beam, calibration_coefficients",
-        dtype_out="DevVarLongStringArray",
-        doc_out="(ResultCode, 'informational message')",
-    )
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def LoadCalibrationCurve(self, argin):
         """
@@ -2465,14 +2464,14 @@ class MccsTile(SKABaseDevice):
 
         >>> antenna = 2
         >>> beam = 3
-        >>> complex_coeffs = [[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
         >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
-        >>> inp = list(itertools.chain.from_iterable(complex_coeffs))
+        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
         >>> out = [[v.real, v.imag] for v in inp]
-        >>> coeffs = list(itertools.chain.from_iterable(out))
-        >>> coeffs.insert(0, float(antenna))
-        >>> coeffs.insert(1, float(beam))
-        >>> input = list(itertools.chain.from_iterable(coeffs))
+        >>> coefficients = list(itertools.chain.from_iterable(out))
+        >>> coefficients.insert(0, float(antenna))
+        >>> coefficients.insert(1, float(beam))
+        >>> input = list(itertools.chain.from_iterable(coefficients))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("LoadCalbrationCurve", input)
         """
@@ -2511,11 +2510,12 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadBeamAngle(self, argin):
         """
-        angle_coefs is an array of one element per beam, specifying a
-        rotation angle, in radians, for the specified beam. The rotation
-        is the same for all antennas. Default is 0 (no rotation). A
-        positive pi/4 value transfers the X polarization to the Y
-        polarization. The rotation is applied after regular calibration.
+        angle_coefficients is an array of one element per beam,
+        specifying a rotation angle, in radians, for the specified beam.
+        The rotation is the same for all antennas. Default is 0 (no
+        rotation). A positive pi/4 value transfers the X polarization to
+        the Y polarization. The rotation is applied after regular
+        calibration.
 
         :param argin: list of angle coefficients for each beam
         :type argin: list(float)
@@ -2527,9 +2527,9 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> angle_coeffs = [3.4] * 16
+        >>> angle_coefficients = [3.4] * 16
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadBeamAngle", angle_coeffs)
+        >>> dp.command_inout("LoadBeamAngle", angle_coefficients)
         """
         handler = self.get_command_object("LoadBeamAngle")
         (return_code, message) = handler(argin)
@@ -2605,8 +2605,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadAntennaTapering(self, argin):
         """
-        tapering_coeffs is a vector contains a value for each antenna
-        the TPM processes. Default at initialisation is 1.0.
+        tapering_coefficients is a vector contains a value for each
+        antenna the TPM processes. Default at initialisation is 1.0.
 
         :param argin: beam index, list of tapering coefficients for each antenna
         :type argin: list(float)
@@ -2619,10 +2619,10 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> beam = 2
-        >>> tapering_coeffs = [3.4] * 16
-        >>> tapering_coeffs.insert(0, float(beam))
+        >>> tapering_coefficients = [3.4] * 16
+        >>> tapering_coefficients.insert(0, float(beam))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadAntennaTapering", tapering_coeffs)
+        >>> dp.command_inout("LoadAntennaTapering", tapering_coefficients)
         """
         handler = self.get_command_object("LoadAntennaTapering")
         (return_code, message) = handler(argin)
@@ -3393,7 +3393,7 @@ class MccsTile(SKABaseDevice):
     def ComputeCalibrationCoefficients(self):
         """
         Compute the calibration coefficients from previously specified
-        gain curves, tapering weigths and beam angles, load them in the
+        gain curves, tapering weights and beam angles, load them in the
         hardware. It must be followed by switch_calibration_bank() to
         make these active.
 

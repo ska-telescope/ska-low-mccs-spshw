@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-378 - Support for simulators with dynamic values
 * MCCS-359 - Add scan, abort and obsreset unit tests
 * MCCS-239 - Subarray scan implementation
 * MCCS-334 - Fix unsafe dictionary look-ups

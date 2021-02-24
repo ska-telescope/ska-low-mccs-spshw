@@ -228,13 +228,20 @@ class TestSimulableHardware:
             :type static_hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             """
-            assert static_hardware_simulator.connection_status == ConnectionStatus.CONNECTED
+            assert (
+                static_hardware_simulator.connection_status
+                == ConnectionStatus.CONNECTED
+            )
             static_hardware_simulator.simulate_connection_failure(True)
             assert (
-                static_hardware_simulator.connection_status == ConnectionStatus.NOT_CONNECTED
+                static_hardware_simulator.connection_status
+                == ConnectionStatus.NOT_CONNECTED
             )
             static_hardware_simulator.simulate_connection_failure(False)
-            assert static_hardware_simulator.connection_status == ConnectionStatus.CONNECTED
+            assert (
+                static_hardware_simulator.connection_status
+                == ConnectionStatus.CONNECTED
+            )
 
     class TestSimulableHardwareFactory:
         """

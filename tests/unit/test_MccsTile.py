@@ -649,7 +649,7 @@ class TestMccsTileCommands:
                 "SetLmcDownload",
                 json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
             ),
-            ("SetBeamFormerRegions", (1, 8, 5)),
+            ("SetBeamFormerRegions", (2, 8, 5, 0)),
             (
                 "ConfigureStationBeamformer",
                 json.dumps(
@@ -657,7 +657,7 @@ class TestMccsTileCommands:
                 ),
             ),
             ("LoadBeamAngle", tuple(float(i) for i in range(16))),
-            ("LoadAntennaTapering", tuple(float(i) for i in range(16))),
+            ("LoadAntennaTapering", tuple(float(i) for i in range(17))),
             ("SetPointingDelay", [3] * 5),  # 2 * antennas_per_tile + 1
             ("ConfigureIntegratedChannelData", 6.284),
             ("ConfigureIntegratedBeamData", 3.142),
@@ -1147,21 +1147,50 @@ class TestMccsTileCommands:
         device_under_test.Off()
         device_under_test.On()
         antenna = 2
-        complex_coeffs = [
+        complex_coefficients = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
         ] * 5
-        inp = list(itertools.chain.from_iterable(complex_coeffs))
+        inp = list(itertools.chain.from_iterable(complex_coefficients))
         out = [[v.real, v.imag] for v in inp]
-        coeffs = [antenna] + list(itertools.chain.from_iterable(out))
+        coefficients = [antenna] + list(itertools.chain.from_iterable(out))
 
         with pytest.raises(DevFailed, match="NotImplementedError"):
-            _ = device_under_test.LoadCalibrationCoefficients(coeffs)
+            _ = device_under_test.LoadCalibrationCoefficients(coefficients)
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = device_under_test.LoadCalibrationCoefficients(coeffs[0:8])
+            _ = device_under_test.LoadCalibrationCoefficients(coefficients[0:8])
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = device_under_test.LoadCalibrationCoefficients(coeffs[0:16])
+            _ = device_under_test.LoadCalibrationCoefficients(coefficients[0:16])
+
+    def test_LoadCalibrationCurve(self, device_under_test):
+        """
+        Test for LoadCalibrationCurve.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        device_under_test.Off()
+        device_under_test.On()
+        antenna = 2
+        beam = 0
+        complex_coefficients = [
+            [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
+        ] * 5
+        inp = list(itertools.chain.from_iterable(complex_coefficients))
+        out = [[v.real, v.imag] for v in inp]
+        coefficients = [antenna] + [beam] + list(itertools.chain.from_iterable(out))
+
+        with pytest.raises(DevFailed, match="NotImplementedError"):
+            _ = device_under_test.LoadCalibrationCurve(coefficients)
+
+        with pytest.raises(DevFailed, match="ValueError"):
+            _ = device_under_test.LoadCalibrationCurve(coefficients[0:9])
+
+        with pytest.raises(DevFailed, match="ValueError"):
+            _ = device_under_test.LoadCalibrationCurve(coefficients[0:17])
 
     @pytest.mark.parametrize("start_time", (None, 0))
     @pytest.mark.parametrize("duration", (None, -1))

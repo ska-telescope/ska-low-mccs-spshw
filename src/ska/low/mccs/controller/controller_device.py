@@ -200,8 +200,7 @@ class MccsController(SKAMaster):
             device._station_fqdns = list(device.MccsStations)
 
             self._thread = threading.Thread(
-                target=self._initialise_connections,
-                args=(device,),
+                target=self._initialise_connections, args=(device,)
             )
             with self._lock:
                 self._thread.start()
@@ -364,11 +363,7 @@ class MccsController(SKAMaster):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevLong", format="%i", polling_period=1000)
     def commandResult(self):
         """
         Return the commandResult attribute.
@@ -396,10 +391,7 @@ class MccsController(SKAMaster):
         """
         return 0
 
-    @attribute(
-        dtype="DevUShort",
-        unit="s",
-    )
+    @attribute(dtype="DevUShort", unit="s")
     def commandDelayExpected(self):
 
         """
@@ -414,9 +406,7 @@ class MccsController(SKAMaster):
     # Commands
     # --------
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Startup(self):
         """
@@ -474,9 +464,7 @@ class MccsController(SKAMaster):
                 self.state_model.perform_action("on_failed")
                 return (ResultCode.FAILED, "Startup command failed")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def On(self):
         """
@@ -519,9 +507,7 @@ class MccsController(SKAMaster):
             else:
                 return (ResultCode.FAILED, "On command failed")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Disable(self):
         """
@@ -564,9 +550,7 @@ class MccsController(SKAMaster):
             else:
                 return (ResultCode.FAILED, "Off command failed")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Off(self):
         """
@@ -638,9 +622,7 @@ class MccsController(SKAMaster):
             else:
                 return (ResultCode.FAILED, "StandbyLow command failed")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StandbyLow(self):
         """
@@ -686,9 +668,7 @@ class MccsController(SKAMaster):
             else:
                 return (ResultCode.FAILED, "StandbyFull command failed")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StandbyFull(self):
         """
@@ -741,9 +721,7 @@ class MccsController(SKAMaster):
             """
             return self.state_model.op_state == DevState.OFF
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Operate(self):
         """
@@ -799,10 +777,7 @@ class MccsController(SKAMaster):
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Allocate(self, argin):
         """
         Allocate a set of unallocated MCCS resources to a sub-array. The
@@ -1039,10 +1014,7 @@ class MccsController(SKAMaster):
             tango_raise("Allocate() is not allowed in current state")
         return True
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Release(self, argin):
         """
         Release resources from an MCCS Sub-Array.
@@ -1085,13 +1057,15 @@ class MccsController(SKAMaster):
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device = self.target
-            args = json.loads(argin)
-            subarray_id = args["subarray_id"]
-            release_all = args["release_all"]
-            if not (1 <= subarray_id <= len(device._subarray_fqdns)):
+            kwargs = json.loads(argin)
+            subarray_id = kwargs.get("subarray_id")
+            release_all = kwargs.get("release_all")
+            if subarray_id is None or not (
+                1 <= subarray_id <= len(device._subarray_fqdns)
+            ):
                 return (
                     ResultCode.FAILED,
-                    f"Subarray index {subarray_id} is out of range",
+                    f"Subarray index '{subarray_id}' is out of range",
                 )
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
@@ -1201,9 +1175,7 @@ class MccsController(SKAMaster):
             """
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Maintenance(self):
         """

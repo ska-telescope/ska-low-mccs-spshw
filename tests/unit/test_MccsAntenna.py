@@ -124,10 +124,11 @@ def hardware_manager(hardware_factory, logger, mock_callback):
     return AntennaHardwareManager(
         "low-mccs/apiu/001",
         1,
-        "low-mccs/tile/0001",
+        # "low-mccs/tile/0001",
+        None,
         1,
-        logger,
         mock_callback,
+        logger,
         _factory=hardware_factory,
     )
 
@@ -205,7 +206,7 @@ def initial_mocks(mock_factory, request):
     """
     Fixture that registers device proxy mocks prior to patching. The
     default fixture is overridden here to ensure that a mock subrack
-    responds suitably to actions taken on it by the AntennaAPIUProxy.
+    responds suitably to actions taken on it by the AntennaApiuProxy.
 
     :param mock_factory: a factory for
         :py:class:`tango.DeviceProxy` mocks

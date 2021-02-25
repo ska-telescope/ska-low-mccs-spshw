@@ -15,6 +15,7 @@ assumed impossible for a real APIU to work with a simulated antenna, or
 a simulated APIU with real antennas. Therefore this module simulates an
 APIU and its antennas together.
 """
+from threading import Lock
 
 from ska.low.mccs.hardware import OnOffHardwareSimulator, PowerMode
 
@@ -177,6 +178,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._humidity = None
 
         self._antennas = [AntennaHardwareSimulator() for i in range(antenna_count)]
+        self._antennas_lock = Lock()
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
     def off(self):
@@ -189,8 +191,9 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._temperature = None
         self._humidity = None
 
-        for antenna in self._antennas:
-            antenna.off()
+        with self._antennas_lock:
+            for antenna in self._antennas:
+                antenna.off()
 
     def on(self):
         """
@@ -285,7 +288,8 @@ class APIUSimulator(OnOffHardwareSimulator):
         """
         if self.power_mode != PowerMode.ON:
             return None
-        return [antenna.power_mode == PowerMode.ON for antenna in self._antennas]
+        with self._antennas_lock:
+            return [antenna.power_mode == PowerMode.ON for antenna in self._antennas]
 
     def is_antenna_on(self, logical_antenna_id):
         """
@@ -302,7 +306,8 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._check_antenna_id(logical_antenna_id)
         if self.power_mode != PowerMode.ON:
             return None
-        return self._antennas[logical_antenna_id - 1].power_mode == PowerMode.ON
+        with self._antennas_lock:
+            return self._antennas[logical_antenna_id - 1].power_mode == PowerMode.ON
 
     def turn_off_antenna(self, logical_antenna_id):
         """
@@ -314,7 +319,8 @@ class APIUSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_antenna_id(logical_antenna_id)
-        self._antennas[logical_antenna_id - 1].off()
+        with self._antennas_lock:
+            self._antennas[logical_antenna_id - 1].off()
 
     def turn_on_antenna(self, logical_antenna_id):
         """
@@ -326,23 +332,26 @@ class APIUSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_antenna_id(logical_antenna_id)
-        self._antennas[logical_antenna_id - 1].on()
+        with self._antennas_lock:
+            self._antennas[logical_antenna_id - 1].on()
 
     def turn_off_antennas(self):
         """
         Turn off all antennas.
         """
         self.check_power_mode(PowerMode.ON)
-        for antenna in self._antennas:
-            antenna.off()
+        with self._antennas_lock:
+            for antenna in self._antennas:
+                antenna.off()
 
     def turn_on_antennas(self):
         """
         Turn on all antennas.
         """
         self.check_power_mode(PowerMode.ON)
-        for antenna in self._antennas:
-            antenna.on()
+        with self._antennas_lock:
+            for antenna in self._antennas:
+                antenna.on()
 
     def get_antenna_current(self, logical_antenna_id):
         """
@@ -357,7 +366,8 @@ class APIUSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_antenna_id(logical_antenna_id)
-        return self._antennas[logical_antenna_id - 1].current
+        with self._antennas_lock:
+            return self._antennas[logical_antenna_id - 1].current
 
     def get_antenna_voltage(self, logical_antenna_id):
         """
@@ -372,7 +382,8 @@ class APIUSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_antenna_id(logical_antenna_id)
-        return self._antennas[logical_antenna_id - 1].voltage
+        with self._antennas_lock:
+            return self._antennas[logical_antenna_id - 1].voltage
 
     def get_antenna_temperature(self, logical_antenna_id):
         """
@@ -387,7 +398,8 @@ class APIUSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_antenna_id(logical_antenna_id)
-        return self._antennas[logical_antenna_id - 1].temperature
+        with self._antennas_lock:
+            return self._antennas[logical_antenna_id - 1].temperature
 
     def check_power_mode(self, power_mode, error=None):
         """

@@ -34,6 +34,7 @@ These assumptions are unconfirmed and may need to change in future.
 """
 
 import enum
+from threading import Lock
 from ska.low.mccs.hardware import OnOffHardwareSimulator, PowerMode
 
 __all__ = ["SubrackBaySimulator", "SubrackBoardSimulator"]
@@ -258,6 +259,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._tpm_present = tpm_present
 
         self._bays = _bays or [SubrackBaySimulator() for i in range(tpm_count)]
+        self._bay_lock = Lock()
 
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
@@ -273,8 +275,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         super().off()
 
         # If we turn the subrack off, any housed equipment will lose power
-        for module in self._bays:
-            module.off()
+        with self._bay_lock:
+            for module in self._bays:
+                module.off()
 
     def on(self):
         """
@@ -430,7 +433,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return [bay.temperature for bay in self._bays]
+        with self._bay_lock:
+            return [bay.temperature for bay in self._bays]
 
     def simulate_tpm_temperatures(self, tpm_temperatures):
         """
@@ -446,8 +450,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         if len(tpm_temperatures) != self.tpm_count:
             raise ValueError("Argument does not match number of TPMs")
 
-        for (bay, temperature) in zip(self._bays, tpm_temperatures):
-            bay.simulate_temperature(temperature)
+        with self._bay_lock:
+            for (bay, temperature) in zip(self._bays, tpm_temperatures):
+                bay.simulate_temperature(temperature)
 
     @property
     def tpm_powers(self):
@@ -558,7 +563,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return [bay.current for bay in self._bays]
+        with self._bay_lock:
+            return [bay.current for bay in self._bays]
 
     def simulate_tpm_currents(self, tpm_currents):
         """
@@ -574,8 +580,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         if len(tpm_currents) != self.tpm_count:
             raise ValueError("Argument does not match number of TPMs")
 
-        for (bay, current) in zip(self._bays, tpm_currents):
-            bay.simulate_current(current)
+        with self._bay_lock:
+            for (bay, current) in zip(self._bays, tpm_currents):
+                bay.simulate_current(current)
 
     def is_tpm_on(self, logical_tpm_id):
         """
@@ -592,7 +599,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._check_tpm_id(logical_tpm_id)
         if self.power_mode != PowerMode.ON:
             return None
-        return self._bays[logical_tpm_id - 1].power_mode == PowerMode.ON
+        with self._bay_lock:
+            return self._bays[logical_tpm_id - 1].power_mode == PowerMode.ON
 
     def are_tpms_on(self):
         """
@@ -604,7 +612,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         if self.power_mode != PowerMode.ON:
             return None
-        return [bay.power_mode == PowerMode.ON for bay in self._bays]
+        with self._bay_lock:
+            return [bay.power_mode == PowerMode.ON for bay in self._bays]
 
     def turn_off_tpm(self, logical_tpm_id):
         """
@@ -616,7 +625,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_tpm_id(logical_tpm_id)
-        self._bays[logical_tpm_id - 1].off()
+        with self._bay_lock:
+            self._bays[logical_tpm_id - 1].off()
 
     def turn_on_tpm(self, logical_tpm_id):
         """
@@ -628,23 +638,26 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         """
         self.check_power_mode(PowerMode.ON)
         self._check_tpm_id(logical_tpm_id)
-        self._bays[logical_tpm_id - 1].on()
+        with self._bay_lock:
+            self._bays[logical_tpm_id - 1].on()
 
     def turn_on_tpms(self):
         """
         Turn on all TPMs.
         """
         self.check_power_mode(PowerMode.ON)
-        for bay in self._bays:
-            bay.on()
+        with self._bay_lock:
+            for bay in self._bays:
+                bay.on()
 
     def turn_off_tpms(self):
         """
         Turn off all TPMs.
         """
         self.check_power_mode(PowerMode.ON)
-        for bay in self._bays:
-            bay.off()
+        with self._bay_lock:
+            for bay in self._bays:
+                bay.off()
 
     def set_subrack_fan_speed(self, fan_id, speed_percent):
         """

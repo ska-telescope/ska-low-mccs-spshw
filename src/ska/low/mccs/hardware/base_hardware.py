@@ -9,13 +9,41 @@ This module implements base classes for hardware management in the MCCS
 subsystem.
 """
 __all__ = [
+    "ConnectionStatus",
     "HardwareDriver",
     "HardwareFactory",
     "HardwareHealthEvaluator",
     "HardwareManager",
 ]
 
+from enum import Enum
+
 from ska.base.control_model import HealthState
+
+
+class ConnectionStatus(Enum):
+    """
+    Represents the status of a hardware driver's connection to its
+    hardware.
+    """
+
+    NOT_CONNECTIBLE = 1
+    """
+    It is not possible to connect to the hardware. There's no point even
+    trying. For example, the hardware is not currently supplied with
+    power.
+    """
+
+    NOT_CONNECTED = 2
+    """
+    It should be possible for the driver to connect to the hardware but
+    it is not currently connected.
+    """
+
+    CONNECTED = 3
+    """
+    The driver has a connection to the hardware.
+    """
 
 
 class HardwareDriver:
@@ -29,43 +57,48 @@ class HardwareDriver:
     """
 
     def __init__(self, is_connectible=True):
-        self._is_connectible = is_connectible
+        self._connection_status = (
+            ConnectionStatus.NOT_CONNECTED
+            if is_connectible
+            else ConnectionStatus.NOT_CONNECTIBLE
+        )
+        if self._connection_status == ConnectionStatus.NOT_CONNECTED:
+            if self._connect():
+                self._connection_status = ConnectionStatus.CONNECTED
+
+    def _connect(self):
+        """
+        Try to connect to the hardware.
+
+        Returns whether successful or not; or None if the hardware was
+        already connected.
+
+        :raises NotImplementedError: because this method needs to be
+            implemented by a subclass
+        """
+        raise NotImplementedError(
+            "HardwareDriver is abstract. Method '_connect' must "
+            "be implemented by a subclass."
+        )
 
     @property
-    def is_connectible(self):
+    def connection_status(self):
         """
-        Returns whether the hardware to which this driver connects is
-        currently connectible. For example, if the hardware is known to
-        be powered off, then we would not expect it to be possible to
-        connect to it, and failure to do so would not be an error.
+        Returns the status of the driver-hardware connection.
 
-        :return: whether the hardware that this driver will need to
-            connect to is currentl connectible
-        :rtype: bool
+        :return: the status of the driver-hardware connection.
+        :rtype: py:class:`.ConnectionStatus`
         """
-        return self._is_connectible
+        return self._connection_status
 
-    @is_connectible.setter
-    def is_connectible(self, is_now_connectible):
+    @connection_status.setter
+    def connection_status(self, status):
         """
-        Sets whether the hardware to which this driver connects is
-        currently connectible.
+        Sets the status of the driver-hardware connection.
 
-        :param is_now_connectible: whether the hardware to which this
-            driver connects is currently connectible.
+        :param status: new status of the driver-hardware connection.
         """
-        self._is_connectible = is_now_connectible
-
-    @property
-    def is_connected(self):
-        """
-        Returns whether this driver is connected to the hardware. This
-        should be implemented to return a bool.
-
-        :raises NotImplementedError: if this method is not implemented
-            by a subclass
-        """
-        raise NotImplementedError
+        self._connection_status = status
 
     def check_connected(self, connectible_error=None, connection_error=None):
         """
@@ -84,12 +117,13 @@ class HardwareDriver:
         :raises ConnectionError: if there is no connection to the
             hardware
         """
-        if not self.is_connectible:
+        connection_status = self._connection_status
+        if connection_status == ConnectionStatus.NOT_CONNECTIBLE:
             raise ConnectionError(
                 connectible_error or "Hardware is not currently connectible."
             )
 
-        if not self.is_connected:
+        if connection_status == ConnectionStatus.NOT_CONNECTED:
             raise ConnectionError(connection_error or "No connection to hardware")
 
 
@@ -113,10 +147,11 @@ class HardwareHealthEvaluator:
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska.base.control_model.HealthState`
         """
-        if not hardware.is_connectible:
+        connection_status = hardware.connection_status
+        if connection_status == ConnectionStatus.NOT_CONNECTIBLE:
             return HealthState.UNKNOWN
 
-        if not hardware.is_connected:
+        if connection_status == ConnectionStatus.NOT_CONNECTED:
             return HealthState.FAILED
 
         return HealthState.OK
@@ -219,36 +254,46 @@ class HardwareManager:
         callback(self._health)
 
     @property
-    def is_connectible(self):
+    def connection_status(self):
         """
-        Returns whether the hardware managed by this hardware manager is
-        currently connectible. For example, if the hardware is known to
-        be powered off, then we would not expect it to be possible to
-        connect to it, and failure to do so would not be an error.
+        Returns the status of the software-hardware connection.
 
-        :return: whether the hardware that this driver will need to
-            connect to is currentl connectible
-        :rtype: bool
+        :return: the status of the software-hardware connection
+        :rtype: :py:class:`.ConnectionStatus`
         """
-        return self._is_connectible
+        return self._factory.hardware.connection_status
 
-    @is_connectible.setter
-    def is_connectible(self, is_now_connectible):
+    def set_connectible(self, is_connectible):
         """
-        Sets whether the hardware managed by this hardware manager is
-        currently connectible.
+        Sets whether it should be possible to establish a software-
+        hardware connection.
 
-        :param is_now_connectible: whether the hardware managed by this
+        This is used to signal to the software whether there is any
+        point in trying to connect to the hardware. For example, if
+        power supply turns off power to the hardware, we would use this
+        method to tell the software driver that it should not expect to
+        be able to connect to the hardware, and therefore should not
+        treat the loss of a connection as a hardware failure.
+
+        :param is_connectible: whether the hardware managed by this
             hardware manager is currently connectible.
+        :type is_connectible: bool
         """
-        self._is_connectible = is_now_connectible
-
-    @property
-    def is_connected(self):
-        """
-        Returns whether this driver is connected to the hardware.
-
-        :return: whether this driver is connected to the hardware
-        :rtype: bool
-        """
-        return self._factory.hardware.is_connected
+        if is_connectible:
+            if (
+                self._factory.hardware.connection_status
+                == ConnectionStatus.NOT_CONNECTIBLE
+            ):
+                self._factory.hardware.connection_status = (
+                    ConnectionStatus.NOT_CONNECTED
+                )
+                if self._factory.hardware._connect():
+                    self._factory.hardware.connection_status = (
+                        ConnectionStatus.CONNECTED
+                    )
+                else:
+                    self._factory.hardware.connection_status = (
+                        ConnectionStatus.NOT_CONNECTED
+                    )
+        else:
+            self._factory.hardware.connection_status = ConnectionStatus.NOT_CONNECTIBLE

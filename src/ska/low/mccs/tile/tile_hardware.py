@@ -555,7 +555,7 @@ class TileHardwareManager(SimulableHardwareManager):
             start_channel, nof_channels, is_first, is_last
         )
 
-    def load_calibration_coefficients(self, antenna, calibration_coeffs):
+    def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
         Load calibration coefficients. These may include any rotation
         matrix (e.g. the parallactic angle), but do not include the
@@ -563,33 +563,55 @@ class TileHardwareManager(SimulableHardwareManager):
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
-        :param calibration_coeffs: a bidirectional complex array of
+        :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
-        :type calibration_coeffs: list(int)
+        :type calibration_coefficients: list(int)
         """
         self._factory.hardware.load_calibration_coefficients(
-            antenna, calibration_coeffs
+            antenna, calibration_coefficients
         )
 
-    def load_beam_angle(self, angle_coeffs):
+    def load_calibration_curve(self, antenna, beam, calibration_coefficients):
+        """
+        Load calibration curve. This is the frequency dependent response
+        for a single antenna and beam, as a function of frequency. It
+        will be combined together with tapering coefficients and beam
+        angles by ComputeCalibrationCoefficients, which will also make
+        them active like SwitchCalibrationBank. The calibration
+        coefficients do not include the geometric delay.
+
+        :param antenna: the antenna to which the coefficients apply
+        :type antenna: int
+        :param beam: the beam to which the coefficients apply
+        :type beam: int
+        :param calibration_coefficients: a bidirectional complex array of
+            coefficients, flattened into a list
+        :type calibration_coefficients: list(int)
+        """
+        self._factory.hardware.load_calibration_curve(
+            antenna, beam, calibration_coefficients
+        )
+
+    def load_beam_angle(self, angle_coefficients):
         """
         Load the beam angle.
 
-        :param angle_coeffs: list containing angle coefficients for each
-            beam
-        :type angle_coeffs: list(float)
+        :param angle_coefficients: list containing angle coefficients for each beam
+        :type angle_coefficients: list(float)
         """
-        self._factory.hardware.load_beam_angle(angle_coeffs)
+        self._factory.hardware.load_beam_angle(angle_coefficients)
 
-    def load_antenna_tapering(self, tapering_coeffs):
+    def load_antenna_tapering(self, beam, tapering_coefficients):
         """
         Loat the antenna tapering coefficients.
 
-        :param tapering_coeffs: list of tapering coefficients for each
+        :param beam: beam index
+        :type beam: int
+        :param tapering_coefficients: list of tapering coefficients for each
             antenna
-        :type tapering_coeffs: list(float)
+        :type tapering_coefficients: list(float)
         """
-        self._factory.hardware.load_antenna_tapering(tapering_coeffs)
+        self._factory.hardware.load_antenna_tapering(beam, tapering_coefficients)
 
     def switch_calibration_bank(self, switch_time=None):
         """
@@ -602,6 +624,17 @@ class TileHardwareManager(SimulableHardwareManager):
         :type switch_time: int, optional
         """
         self._factory.hardware.switch_calibration_bank(switch_time=switch_time)
+
+    def compute_calibration_coefficients(self):
+        """
+        Compute the calibration coefficients from previously specified
+        gain curves, tapering weights and beam angles, load them in the
+        hardware.
+
+        It must be followed by switch_calibration_bank() to make these
+        active
+        """
+        self._factory.hardware.compute_calibration_coefficients()
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
@@ -771,13 +804,6 @@ class TileHardwareManager(SimulableHardwareManager):
         Stop data transmission.
         """
         self._factory.hardware.stop_data_transmission()
-
-    def compute_calibration_coefficients(self):
-        """
-        Compute the calibration coefficients and load them into the
-        hardware.
-        """
-        self._factory.hardware.compute_calibration_coefficients()
 
     def start_acquisition(self, start_time=None, delay=None):
         """

@@ -2,10 +2,11 @@
 
 ## unreleased
 
+
+* MCCS-116 - Add station beam health monitoring to MCCS Station
 * MCCS-239 - Subarray scan implementation
 * MCCS-334 - Fix unsafe dictionary look-ups
 * MCCS-252 - New and modified Tile commands for beam configuration and calibration
-* MCCS-116 - Add station beam health monitoring to MCCS Station
 * MCCS-309 - Integration of devices into end-to-end power flow
 * MCCS-347 - Correct initialisation values for controller commandResult
 * MCCS-307 - Add PSI chart configuration

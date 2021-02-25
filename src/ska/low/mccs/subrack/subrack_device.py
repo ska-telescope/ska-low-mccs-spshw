@@ -728,7 +728,7 @@ class MccsSubrack(SKABaseDevice):
         Return the temperatures of the subrack backplane.
 
         :return: the temperatures of the subrack backplane
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.backplane_temperatures)
 
@@ -745,7 +745,7 @@ class MccsSubrack(SKABaseDevice):
         Return the temperatures of the subrack management board.
 
         :return: the temperatures of the subrack management board
-        :rtype: float
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.board_temperatures)
 
@@ -770,7 +770,7 @@ class MccsSubrack(SKABaseDevice):
         Return the subrack fan speeds.
 
         :return: the subrack fan speeds
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.subrack_fan_speeds)
 
@@ -800,7 +800,7 @@ class MccsSubrack(SKABaseDevice):
         Return the subrackFansMode attribute.
 
         :return: the subrack fan mode, 1 AUTO 0 MANUAL
-        :rtype: int
+        :rtype: tuple(int)
         """
         return tuple(self.hardware_manager.subrack_fan_mode)
 
@@ -817,7 +817,7 @@ class MccsSubrack(SKABaseDevice):
         not present, 1 power on.
 
         :return: the TPMs On or Off
-        :rtype: list(int)
+        :rtype: tuple(int)
         """
         return tuple(self.hardware_manager.tpm_on_off)
 
@@ -834,7 +834,7 @@ class MccsSubrack(SKABaseDevice):
         Return info about TPM board present on subrack.
 
         :return: the TPMs detected
-        :rtype: list(bool)
+        :rtype: tuple(bool)
         """
         return tuple(self.hardware_manager.tpm_present)
 
@@ -850,7 +850,7 @@ class MccsSubrack(SKABaseDevice):
         Return info about about TPM supply fault status.
 
         :return: the TPM supply fault status
-        :rtype: list(int)
+        :rtype: tuple(int)
         """
         return tuple(self.hardware_manager.tpm_supply_fault)
 
@@ -861,7 +861,7 @@ class MccsSubrack(SKABaseDevice):
         temperatures of the TPMs housed in those bays).
 
         :return: the TPM temperatures
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.tpm_temperatures)
 
@@ -876,7 +876,7 @@ class MccsSubrack(SKABaseDevice):
         Return the tpmPowers attribute.
 
         :return: the TPM powers
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.tpm_powers)
 
@@ -891,7 +891,7 @@ class MccsSubrack(SKABaseDevice):
         Return the tpmVoltages attribute.
 
         :return: the TPM voltages
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.tpm_voltages)
 
@@ -909,7 +909,7 @@ class MccsSubrack(SKABaseDevice):
         the TPMs housed in those bays).
 
         :return: the TPM currents
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return self.hardware_manager.tpm_currents
 
@@ -934,7 +934,7 @@ class MccsSubrack(SKABaseDevice):
         TPM.
 
         :return: whether each TPM is powered or not
-        :rtype: list(bool)
+        :rtype: tuple(bool)
         """
         return self.hardware_manager.are_tpms_on()
 
@@ -949,7 +949,7 @@ class MccsSubrack(SKABaseDevice):
         Return the powerSupplyFanSpeeds attribute.
 
         :return: the power supply fan speeds
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.power_supply_fan_speeds)
 
@@ -964,7 +964,7 @@ class MccsSubrack(SKABaseDevice):
         Return the power supply currents attribute.
 
         :return: the power supply currents
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.power_supply_currents)
 
@@ -979,7 +979,7 @@ class MccsSubrack(SKABaseDevice):
         Return the power supply power attribute.
 
         :return: the power supply power
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.power_supply_powers)
 
@@ -994,7 +994,7 @@ class MccsSubrack(SKABaseDevice):
         Return the power_supply_voltages attribute.
 
         :return: the power supply voltages
-        :rtype: list(float)
+        :rtype: tuple(float)
         """
         return tuple(self.hardware_manager.power_supply_voltages)
 

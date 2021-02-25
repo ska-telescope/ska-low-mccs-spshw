@@ -4,6 +4,9 @@ ska.low.mccs unit tests.
 """
 from collections import defaultdict
 import pytest
+import time
+import tango
+from ska.base.commands import ResultCode
 
 
 def pytest_itemcollected(item):
@@ -149,3 +152,63 @@ def device_under_test(device_context, device_to_load):
     """
     device = device_context.get_device(device_to_load["device"])
     return device
+
+
+@pytest.fixture()
+def mock_callback(mocker):
+    class MockCallback(mocker.Mock):
+        def check_event_data(self, name, result):
+            """
+            :param name: name of the registered event
+            :type name: str
+            :param result: return code from the completed command
+                If set to None, value and quaility checks are bypassed
+            :type result: :py:class:`~ska.base.commands.ResultCode`
+            """
+            # push_change_event isn't synchronous, because it has to go
+            # through the 0MQ event system. So we have to sleep long enough
+            # for the event to arrive
+            time.sleep(0.2)
+
+            self.assert_called_once()
+            event_data = self.call_args[0][0].attr_value
+
+            assert event_data.name.casefold() == name.casefold()
+            if result is not None:
+                assert event_data.value == result
+                assert event_data.quality == tango.AttrQuality.ATTR_VALID
+            self.reset_mock()
+
+        def check_command_result(self, name, result):
+            """
+            Special callback check routine for commandResult. There
+            should always be two entries for commandResult; the first
+            should reset commandResult to ResultCode.UNKNOWN, the second
+            should match the expected result passed into this routine.
+
+            :param name: name of the registered event
+            :type name: str
+            :param result: return code from the completed command
+                If set to None, value and quaility checks are bypassed
+            :type result: :py:class:`~ska.base.commands.ResultCode`
+            """
+            # push_change_event isn't synchronous, because it has to go
+            # through the 0MQ event system. So we have to sleep long enough
+            # for the event to arrive
+            time.sleep(0.2)
+
+            self.assert_called()
+            assert len(self.mock_calls) == 2  # exactly two calls
+
+            first_event_data = self.mock_calls[0][1][0].attr_value
+            second_event_data = self.mock_calls[1][1][0].attr_value
+            assert first_event_data.name.casefold() == name.casefold()
+            assert second_event_data.name.casefold() == name.casefold()
+            assert first_event_data.value == ResultCode.UNKNOWN
+            assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
+            if result is not None:
+                assert second_event_data.value == result
+                assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
+            self.reset_mock()
+
+    return MockCallback()

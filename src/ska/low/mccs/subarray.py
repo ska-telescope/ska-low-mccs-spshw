@@ -178,13 +178,7 @@ class StationBeamsResourceManager(ResourceManager):
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
             if station_fqdn not in self._stations.station_fqdns:
-                self._stations.add_to_managed(
-                    dict(
-                        [
-                            (station_id, station_fqdn),
-                        ]
-                    )
-                )
+                self._stations.add_to_managed({station_id: station_fqdn})
 
         station_beams = {}
         for station_beam_fqdn in station_beam_fqdns:

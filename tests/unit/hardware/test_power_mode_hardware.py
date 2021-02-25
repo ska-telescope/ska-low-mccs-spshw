@@ -16,6 +16,7 @@ import pytest
 
 from ska.base.control_model import HealthState
 from ska.low.mccs.hardware import (
+    ConnectionStatus,
     OnOffHardwareSimulator,
     OnStandbyHardwareSimulator,
     OnStandbyOffHardwareSimulator,
@@ -98,7 +99,7 @@ class TestPowerModeHardware:
         """
 
         @pytest.mark.parametrize(
-            ("hardware_simulator", "is_connected", "power_mode"),
+            ("hardware_simulator", "connection_status", "power_mode"),
             [
                 # We pass the test a hardware simulator that has been
                 # initialised with the first element of this triple, and
@@ -112,81 +113,102 @@ class TestPowerModeHardware:
                 #   which has been initialised as connected but turned off; and
                 # * test that it behaves as though connected, but turned
                 #   off
-                ((OnOffHardwareSimulator, False, PowerMode.OFF), False, PowerMode.OFF),
-                ((OnOffHardwareSimulator, False, PowerMode.ON), False, PowerMode.ON),
-                ((OnOffHardwareSimulator, True, PowerMode.OFF), True, PowerMode.OFF),
-                ((OnOffHardwareSimulator, True, PowerMode.ON), True, PowerMode.ON),
+                (
+                    (OnOffHardwareSimulator, False, PowerMode.OFF),
+                    ConnectionStatus.NOT_CONNECTED,
+                    PowerMode.OFF,
+                ),
+                (
+                    (OnOffHardwareSimulator, False, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTED,
+                    PowerMode.ON,
+                ),
+                (
+                    (OnOffHardwareSimulator, True, PowerMode.OFF),
+                    ConnectionStatus.CONNECTED,
+                    PowerMode.OFF,
+                ),
+                (
+                    (OnOffHardwareSimulator, True, PowerMode.ON),
+                    ConnectionStatus.CONNECTED,
+                    PowerMode.ON,
+                ),
                 (
                     (OnStandbyHardwareSimulator, False, PowerMode.STANDBY),
-                    False,
+                    ConnectionStatus.NOT_CONNECTED,
                     PowerMode.STANDBY,
                 ),
                 (
                     (OnStandbyHardwareSimulator, False, PowerMode.ON),
-                    False,
+                    ConnectionStatus.NOT_CONNECTED,
                     PowerMode.ON,
                 ),
                 (
                     (OnStandbyHardwareSimulator, True, PowerMode.STANDBY),
-                    True,
+                    ConnectionStatus.CONNECTED,
                     PowerMode.STANDBY,
                 ),
-                ((OnStandbyHardwareSimulator, True, PowerMode.ON), True, PowerMode.ON),
+                (
+                    (OnStandbyHardwareSimulator, True, PowerMode.ON),
+                    ConnectionStatus.CONNECTED,
+                    PowerMode.ON,
+                ),
                 (
                     (OnStandbyOffHardwareSimulator, False, PowerMode.OFF),
-                    False,
+                    ConnectionStatus.NOT_CONNECTED,
                     PowerMode.OFF,
                 ),
                 (
                     (OnStandbyOffHardwareSimulator, False, PowerMode.STANDBY),
-                    False,
+                    ConnectionStatus.NOT_CONNECTED,
                     PowerMode.STANDBY,
                 ),
                 (
                     (OnStandbyOffHardwareSimulator, False, PowerMode.ON),
-                    False,
+                    ConnectionStatus.NOT_CONNECTED,
                     PowerMode.ON,
                 ),
                 (
                     (OnStandbyOffHardwareSimulator, True, PowerMode.OFF),
-                    True,
+                    ConnectionStatus.CONNECTED,
                     PowerMode.OFF,
                 ),
                 (
                     (OnStandbyOffHardwareSimulator, True, PowerMode.STANDBY),
-                    True,
+                    ConnectionStatus.CONNECTED,
                     PowerMode.STANDBY,
                 ),
                 (
                     (OnStandbyOffHardwareSimulator, True, PowerMode.ON),
-                    True,
+                    ConnectionStatus.CONNECTED,
                     PowerMode.ON,
                 ),
             ],
             indirect=("hardware_simulator",),
         )
-        def test_init(self, hardware_simulator, is_connected, power_mode):
+        def test_init(self, hardware_simulator, connection_status, power_mode):
             """
             Test initialisation of this hardware simulator.
 
             :param hardware_simulator: the hardware simulator under test
             :type hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator`
-            :param is_connected: whether or not this hardware_simulator is
-                simulating having a connection to the hardware
-            :type is_connected: bool
+            :param connection_status: the status of the simulated
+                software-hardware connection
+            :type connection_status:
+                :py:class:`ska.low.mccs.hardware.ConnectionStatus`
             :param power_mode: the initial power mode of the hardware
             :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
             """
             contexts = {
-                False: pytest.raises(
+                ConnectionStatus.NOT_CONNECTED: pytest.raises(
                     ConnectionError, match="No connection to hardware"
                 ),
-                True: nullcontext(),
+                ConnectionStatus.CONNECTED: nullcontext(),
             }
 
-            assert hardware_simulator.is_connected == is_connected
-            with contexts[is_connected]:
+            assert hardware_simulator.connection_status == connection_status
+            with contexts[connection_status]:
                 assert hardware_simulator.power_mode == power_mode
 
         @pytest.mark.parametrize(
@@ -296,7 +318,7 @@ class TestPowerModeHardware:
                 the command is expected not to exist on the simulator
             :type expected_power_mode: str
             """
-            assert hardware_simulator.is_connected
+            assert hardware_simulator.connection_status == ConnectionStatus.CONNECTED
 
             command = getattr(hardware_simulator, command_name, None)
             if expected_power_mode is None:
@@ -337,7 +359,9 @@ class TestPowerModeHardware:
             :type hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             """
-            assert not hardware_simulator.is_connected
+            assert (
+                hardware_simulator.connection_status == ConnectionStatus.NOT_CONNECTED
+            )
             with pytest.raises(ConnectionError, match="No connection to hardware"):
                 _ = hardware_simulator.power_mode
 

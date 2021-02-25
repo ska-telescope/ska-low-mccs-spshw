@@ -11,7 +11,8 @@ This module contains an implementation of the SKA Low MCCS Antenna
 Device Server, based on the architecture in SKA-TEL-LFAA-06000052-02.
 """
 __all__ = [
-    "AntennaHardwareDriver",
+    "AntennaApiuProxy",
+    "AntennaTileProxy",
     "AntennaHardwareFactory",
     "AntennaHardwareHealthEvaluator",
     "AntennaHardwareManager",
@@ -30,9 +31,7 @@ from ska.base.control_model import HealthState, SimulationMode
 
 from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import (
-    HardwareDriver,
     HardwareHealthEvaluator,
-    OnOffHardwareDriver,
     HardwareFactory,
     OnOffHardwareManager,
     PowerMode,
@@ -75,10 +74,22 @@ class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
     At present this just inherits from the base class unchanged.
     """
 
-    pass
+    def evaluate_health(self, hardware):
+        """
+        Evaluate the health of the "hardware".
+
+        :param hardware: the "hardware" for which health is being
+            evaluated
+        :type hardware:
+            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+
+        :return: the evaluated health of the hardware
+        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        """
+        return HealthState.OK
 
 
-class AntennaAPIUProxy(OnOffHardwareDriver):
+class AntennaApiuProxy:
     """
     A proxy to the APIU.
 
@@ -103,23 +114,15 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :type power_callback: callable
 
         :raises AssertionError: if parameters are out of bounds
-        :raises DevFailed: if unable to connect to the tile device
         """
         self._logger = logger
         self._power_callback = power_callback
-
-        super().__init__()
 
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
-        try:
-            self._apiu = backoff_connect(apiu_fqdn, logger, wait=True)
-            self._is_connected = True
-        except DevFailed:
-            self._is_connected = False
-            raise
+        self._apiu = backoff_connect(apiu_fqdn, logger, wait=True)
 
         self._power_mode = self._read_power_mode()
         self._power_callback(self._power_mode)
@@ -128,17 +131,6 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
             self._apiu, apiu_fqdn, "areAntennasOn", logger
         )
         self.apiu_event_handler.register_callback(self._apiu_power_changed)
-
-    @property
-    def is_connected(self):
-        """
-        Returns whether this simulator is connected to the hardware.
-        This should be implemented to return a bool.
-
-        :return: whether the device is connected to the hardware or not
-        :rtype: bool
-        """
-        return self._is_connected
 
     def on(self):
         """
@@ -154,8 +146,6 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         """
         if self._power_mode == PowerMode.ON:
             return None  # already off
-
-        self.check_connected()
 
         [[result_code], [_]] = self._apiu.PowerUpAntenna(self._logical_antenna_id)
         if result_code == ResultCode.OK:
@@ -182,8 +172,6 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         """
         if self._power_mode == PowerMode.OFF:
             return None  # already off
-
-        self.check_connected()
 
         [[result_code], [_]] = self._apiu.PowerDownAntenna(self._logical_antenna_id)
         if result_code == ResultCode.OK:
@@ -214,7 +202,6 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the current of this antenna
         :rtype: float
         """
-        self.check_connected()
         return self._apiu.get_antenna_current(self._logical_antenna_id)
 
     @property
@@ -225,7 +212,6 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the voltage of this antenna
         :rtype: float
         """
-        self.check_connected()
         return self._apiu.get_antenna_voltage(self._logical_antenna_id)
 
     @property
@@ -236,7 +222,6 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
         :return: the temperature of this antenna
         :rtype: float
         """
-        self.check_connected()
         return self._apiu.get_antenna_temperature(self._logical_antenna_id)
 
     def _apiu_power_changed(self, event_name, event_value, event_quality):
@@ -297,7 +282,7 @@ class AntennaAPIUProxy(OnOffHardwareDriver):
             self._power_callback(power_mode)
 
 
-class AntennaTileProxy(HardwareDriver):
+class AntennaTileProxy:
     """
     A proxy to the Tile.
 
@@ -321,7 +306,6 @@ class AntennaTileProxy(HardwareDriver):
         :type logger: :py:class:`logging.Logger`
 
         :raises AssertionError: if parameters are out of bounds
-        :raises DevFailed: if unable to connect to the tile device
         """
         self._logger = logger
 
@@ -329,154 +313,20 @@ class AntennaTileProxy(HardwareDriver):
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
-        try:
-            self._tile = backoff_connect(tile_fqdn, logger)
-            self._is_connected = True
-        except DevFailed:
-            self._is_connected = False
-            raise
-
-        super().__init__()
-
-    @property
-    def is_connected(self):
-        """
-        Returns whether this simulator is connected to the hardware.
-        This should be implemented to return a bool.
-
-        :return: whether the device is connected to the hardware or not
-        :rtype: bool
-        """
-        return self._is_connected
-
-
-class AntennaHardwareDriver(OnOffHardwareDriver):
-    """
-    A hardware driver for antenna hardware.
-
-    Actually antenna hardware cannot be directly monitored or
-    controlled; it must be monitored and controlled via the APIU and
-    Tile devices. So this driver acts as a proxy to these other devices.
-    """
-
-    def __init__(
-        self,
-        apiu_fqdn,
-        logical_apiu_antenna_id,
-        tile_fqdn,
-        logical_tile_antenna_id,
-        power_callback,
-        logger,
-    ):
-        """
-        Create a new driver for antenna hardware.
-
-        :param apiu_fqdn: the FQDN of the APIU to which the antenna is
-            attached
-        :type apiu_fqdn: str
-        :param logical_apiu_antenna_id: the APIU's id for this antenna
-        :type logical_apiu_antenna_id: int
-        :param tile_fqdn: the FQDN of the tile to which the antenna is
-            attached.
-        :type tile_fqdn: str
-        :param logical_tile_antenna_id: the tile's id for this antenna
-        :type logical_tile_antenna_id: int
-        :param power_callback: to be called when the power mode of the
-            antenna changes
-        :type power_callback: callable
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-        """
-        self._logger = logger
-        self._antenna_apiu_proxy = AntennaAPIUProxy(
-            apiu_fqdn, logical_apiu_antenna_id, logger, power_callback
-        )
-        self._antenna_tile_proxy = (
-            AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
-            if tile_fqdn is not None
-            else None
-        )
-        super().__init__()
-
-    @property
-    def is_connected(self):
-        """
-        Whether this antenna hardware driver has a connection to the
-        hardware.
-
-        :return: whether this antenna hardware driver has a connection
-            to the hardware
-        :rtype: bool
-        """
-        connected = self._antenna_apiu_proxy.is_connected
-        if self._antenna_tile_proxy is not None:
-            connected = connected and self._antenna_tile_proxy.is_connected
-        return connected
-
-    def on(self):
-        """
-        Turn the antenna hardware on.
-        """
-        self._antenna_apiu_proxy.on()
-
-    def off(self):
-        """
-        Turn the antenna hardware off.
-        """
-        self._antenna_apiu_proxy.off()
-
-    @property
-    def power_mode(self):
-        """
-        Whether the power mode of the antenna hardware (off or on).
-
-        :return: the power mode of the AP
-        :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
-        """
-        return self._antenna_apiu_proxy.power_mode
-
-    @property
-    def current(self):
-        """
-        Return the current of the antenna.
-
-        :return: the current of the antenna
-        :rtype: float
-        """
-        return self._antenna_apiu_proxy.current
-
-    @property
-    def voltage(self):
-        """
-        Return the voltage of the antenna.
-
-        :return: the voltage of the antenna
-        :rtype: float
-        """
-        return self._antenna_apiu_proxy.voltage
-
-    @property
-    def temperature(self):
-        """
-        Return the temperature of the antenna.
-
-        :return: the temperature of the antenna
-        :rtype: float
-        """
-        return self._antenna_apiu_proxy.temperature
+        self._tile = backoff_connect(tile_fqdn, logger)
 
 
 class AntennaHardwareFactory(HardwareFactory):
     """
-    A factory that returns a hardware driver for the antenna hardware.
+    A factory that returns a hardware driver for the antenna hardware...
+
+    though really it returns a proxy to the APIU.
     """
 
     def __init__(
         self,
         apiu_fqdn,
         logical_apiu_antenna_id,
-        tile_fqdn,
-        logical_tile_antenna_id,
         power_callback,
         logger,
     ):
@@ -488,11 +338,6 @@ class AntennaHardwareFactory(HardwareFactory):
         :type apiu_fqdn: str
         :param logical_apiu_antenna_id: the APIU's id for this antenna
         :type logical_apiu_antenna_id: int
-        :param tile_fqdn: the FQDN of the tile to which the antenna is
-            attached.
-        :type tile_fqdn: str
-        :param logical_tile_antenna_id: the tile's id for this antenna
-        :type logical_tile_antenna_id: int
         :param power_callback: to be called when the power mode of the
             antenna changes
         :type power_callback: callable
@@ -500,22 +345,18 @@ class AntennaHardwareFactory(HardwareFactory):
         :type logger: :py:class:`logging.Logger`
         """
         self._logger = logger
-        self._hardware = AntennaHardwareDriver(
-            apiu_fqdn,
-            logical_apiu_antenna_id,
-            tile_fqdn,
-            logical_tile_antenna_id,
-            power_callback,
-            logger,
+        self._hardware = AntennaApiuProxy(
+            apiu_fqdn, logical_apiu_antenna_id, logger, power_callback
         )
 
     @property
     def hardware(self):
         """
-        Return an antenna hardware driver created by this factory.
+        Return an antenna hardware driver created by this factory... but
+        really a proxy to the APIU.
 
         :return: an antenna hardware driver created by this factory
-        :rtype: :py:class:`.AntennaHardwareDriver`
+        :rtype: :py:class:`.AntennaApiuProxy`
         """
         return self._hardware
 
@@ -568,12 +409,15 @@ class AntennaHardwareManager(OnOffHardwareManager):
             or AntennaHardwareFactory(
                 apiu_fqdn,
                 logical_apiu_antenna_id,
-                tile_fqdn,
-                logical_tile_antenna_id,
                 power_callback,
                 logger,
             ),
             AntennaHardwareHealthEvaluator(),
+        )
+        self._antenna_tile_proxy = (
+            AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
+            if tile_fqdn is not None
+            else None
         )
 
     @property
@@ -839,11 +683,10 @@ class MccsAntenna(SKABaseDevice):
             the state of its hardware
             """
             device = self.target
+
             if device.hardware_manager.power_mode == PowerMode.OFF:
-                device.hardware_manager.is_connectible = False
                 action = "init_succeeded_disable"
             else:
-                device.hardware_manager.is_connectible = True
                 action = "init_succeeded_off"
             self.state_model.perform_action(action)
 
@@ -914,12 +757,10 @@ class MccsAntenna(SKABaseDevice):
         if power_mode == PowerMode.UNKNOWN:
             self.state_model.perform_action("fatal_error")
         elif power_mode == PowerMode.OFF:
-            self.hardware_manager.is_connectible = False
             if self.get_state() == DevState.ON:
                 self.state_model.perform_action("off_succeeded")
             self.state_model.perform_action("disable_succeeded")
         elif power_mode == PowerMode.ON:
-            self.hardware_manager.is_connectible = True
             self.state_model.perform_action("off_succeeded")
 
     # ----------

@@ -29,6 +29,7 @@ from ska.low.mccs.cluster_manager.cluster_simulator import (
 )
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
+    ConnectionStatus,
     HardwareHealthEvaluator,
     SimulableHardwareManager,
     SimulableHardwareFactory,
@@ -74,7 +75,10 @@ class ClusterHealthEvaluator(HardwareHealthEvaluator):
         :return: the evaluated health of the cluster
         :rtype: :py:class:`~ska.base.control_model.HealthState`
         """
-        if not cluster.is_connected:
+        connection_status = cluster.connection_status
+        if connection_status == ConnectionStatus.NOT_CONNECTIBLE:
+            return HealthState.UNKNOWN
+        if connection_status == ConnectionStatus.NOT_CONNECTED:
             return HealthState.FAILED
 
         master_shadow_pool_node_health_ok = tuple(

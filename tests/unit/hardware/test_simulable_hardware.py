@@ -14,6 +14,7 @@ import pytest
 
 from ska.base.control_model import HealthState, SimulationMode
 from ska.low.mccs.hardware import (
+    ConnectionStatus,
     HardwareSimulator,
     SimulableHardwareFactory,
     SimulableHardwareManager,
@@ -99,22 +100,26 @@ class TestSimulableHardware:
         """
 
         @pytest.mark.parametrize(
-            ("hardware_simulator", "is_connected"),
-            [(False, False), (True, True)],
+            ("hardware_simulator", "connection_status"),
+            [
+                (False, ConnectionStatus.NOT_CONNECTED),
+                (True, ConnectionStatus.CONNECTED),
+            ],
             indirect=("hardware_simulator",),
         )
-        def test_init(self, hardware_simulator, is_connected):
+        def test_init(self, hardware_simulator, connection_status):
             """
             Test initialisation of this hardware simulator.
 
             :param hardware_simulator: the hardware simulator under test
             :type hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
-            :param is_connected: whether or not this hardware_simulator is
-                simulating having a connection to the hardware
-            :type is_connected: bool
+            :param connection_status: the status of the simulated
+                software-hardware connection
+            :type connection_status:
+                :py:class:`ska.low.mccs.hardware.ConnectionStatus`
             """
-            assert hardware_simulator.is_connected == is_connected
+            assert hardware_simulator.connection_status == connection_status
 
         def test_simulate_connection_failure(self, hardware_simulator):
             """
@@ -125,11 +130,13 @@ class TestSimulableHardware:
             :type hardware_simulator:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             """
-            assert hardware_simulator.is_connected
+            assert hardware_simulator.connection_status == ConnectionStatus.CONNECTED
             hardware_simulator.simulate_connection_failure(True)
-            assert not hardware_simulator.is_connected
+            assert (
+                hardware_simulator.connection_status == ConnectionStatus.NOT_CONNECTED
+            )
             hardware_simulator.simulate_connection_failure(False)
-            assert hardware_simulator.is_connected
+            assert hardware_simulator.connection_status == ConnectionStatus.CONNECTED
 
     class TestSimulableHardwareFactory:
         """

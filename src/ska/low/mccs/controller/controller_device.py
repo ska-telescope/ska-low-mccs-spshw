@@ -23,7 +23,7 @@ from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice  # , DeviceStateModel
+from ska.base import SKAMaster, SKABaseDevice
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
@@ -825,7 +825,7 @@ class MccsController(SKAMaster):
         Sub-Array.
         """
 
-        def do(self, argin):
+        def do(self, argin: str):
             """
             Stateless hook implementing the functionality of the
             :py:meth:`.MccsController.Allocate` command
@@ -1043,7 +1043,7 @@ class MccsController(SKAMaster):
         marking the resources and Capabilities as unassigned and idle.
         """
 
-        def do(self, argin):
+        def do(self, argin: str):
             """
             Stateless do hook for the
             :py:meth:`.MccsController.Release` command
@@ -1140,7 +1140,7 @@ class MccsController(SKAMaster):
             device._subarray_enabled[subarray_id - 1] = False
             return (ResultCode.OK, "_disable_subarray was successful")
 
-    def is_Release_allowed(self):
+    def is_Release_allowed(self) -> bool:
         """
         Whether this command is allowed to be run in current device
         state.

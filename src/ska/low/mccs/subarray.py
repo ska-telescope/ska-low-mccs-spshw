@@ -824,7 +824,7 @@ class MccsSubarray(SKASubarray):
             device._scan_id = kwargs.get("id")
             device._scan_time = kwargs.get("scan_time")
 
-            station_beam_pool_manager = self.target._station_beam_pool_manager
+            station_beam_pool_manager = device._station_beam_pool_manager
             (pool_failure_code, pool_message) = station_beam_pool_manager.scan(
                 self.logger, argin
             )

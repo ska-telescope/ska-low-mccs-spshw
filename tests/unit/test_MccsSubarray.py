@@ -565,7 +565,7 @@ class TestMccsSubarrayCommandClasses:
     This class contains tests of MCCSSubarray command classes.
     """
 
-    def test_ScanCommand(self, subarray_state_model):
+    def test_ScanCommand(self, subarray_state_model, mocker):
         """
         Test for MCCSSubarray.Scan()
 
@@ -573,16 +573,36 @@ class TestMccsSubarrayCommandClasses:
             to check that it is allowed to run, and that it drives
             with actions.
         :type subarray_state_model: :py:class:`SKASubarrayStateModel`
+        :param mocker: the pytest `mocker` fixture is a wrapper around the
+            `unittest.mock` package
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         subarray_state_model._straight_to_state(
             op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
         )
-        scan_command = MccsSubarray.ScanCommand(self, subarray_state_model)
+        mock = mocker.Mock()
+        mock._station_beam_pool_manager.scan.return_value = (None, "")
+        scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
         scan_args = {"id": 1, "scan_time": 4}
         json_str = json.dumps(scan_args)
         (result_code, message) = scan_command(json_str)
         assert result_code == ResultCode.STARTED
         assert message == f"Scan command STARTED - config {scan_args}"
+
+        mock.reset_mock()
+        failure_code = ResultCode.FAILED
+        failure_message = "failure path unit test"
+        mock._station_beam_pool_manager.scan.return_value = (
+            failure_code,
+            failure_message,
+        )
+        subarray_state_model._straight_to_state(
+            op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
+        )
+        scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
+        (result_code, message) = scan_command(json_str)
+        assert result_code == failure_code
+        assert message == failure_message
 
     def test_AbortCommand(self, subarray_state_model):
         """

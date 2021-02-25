@@ -555,10 +555,10 @@ class MccsTile(SKABaseDevice):
             """
             device = self.target
             if device.power_manager.power_mode == PowerMode.OFF:
-                device.hardware_manager.is_connectible = False
+                device.hardware_manager.set_connectible(False)
                 action = "init_succeeded_disable"
             else:
-                device.hardware_manager.is_connectible = True
+                device.hardware_manager.set_connectible(True)
                 if device.hardware_manager.is_programmed:
                     action = "init_succeeded_off"
                 else:
@@ -583,7 +583,7 @@ class MccsTile(SKABaseDevice):
             """
             result = self.target.power_manager.off()
             if result is None:
-                self.target.hardware_manager.is_connectible = False
+                self.target.hardware_manager.set_connectible(False)
                 return (
                     ResultCode.OK,
                     "TPM was already off: nothing to do to disable device.",
@@ -636,7 +636,7 @@ class MccsTile(SKABaseDevice):
                     "Failed to go to standby: could not turn TPM on",
                 )
 
-            device.hardware_manager.is_connectible = True
+            device.hardware_manager.set_connectible(True)
             return (ResultCode.OK, "TPM has been turned on")
 
     @command(
@@ -708,7 +708,7 @@ class MccsTile(SKABaseDevice):
                     "Failed to go to OFF: could not turn TPM on",
                 )
 
-            device.hardware_manager.is_connectible = True
+            device.hardware_manager.set_connectible(True)
 
             # TODO: Okay, the TPM was been powered on. Now we need to
             # get it fully operational.
@@ -791,12 +791,12 @@ class MccsTile(SKABaseDevice):
         if power_mode == PowerMode.UNKNOWN:
             self.state_model.perform_action("fatal_error")
         elif power_mode == PowerMode.OFF:
-            self.hardware_manager.is_connectible = False
+            self.hardware_manager.set_connectible(False)
             if self.get_state() == DevState.ON:
                 self.state_model.perform_action("off_succeeded")
             self.state_model.perform_action("disable_succeeded")
         elif power_mode == PowerMode.ON:
-            self.hardware_manager.is_connectible = True
+            self.hardware_manager.set_connectible(True)
             self.state_model.perform_action("off_succeeded")
 
     # ----------

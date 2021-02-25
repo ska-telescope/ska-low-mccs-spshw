@@ -12,15 +12,20 @@ __all__ = ["HardwareSimulator", "SimulableHardwareFactory", "SimulableHardwareMa
 
 from ska.base.control_model import SimulationMode
 
-from ska.low.mccs.hardware import HardwareDriver, HardwareFactory, HardwareManager
+from ska.low.mccs.hardware import (
+    ConnectionStatus,
+    HardwareDriver,
+    HardwareFactory,
+    HardwareManager,
+)
 
 
 class HardwareSimulator(HardwareDriver):
     """
     A base class for hardware simulators.
 
-    It provdes a concreate implementation of
-    :py:meth:`HardwareDriver.is_connected`, and can be put into a
+    It provides a concrete implementation of
+    :py:meth:`HardwareDriver.connection_status`, and can be put into a
     failure state via a :py:meth:`simulate_connection_failure` method.
     """
 
@@ -38,19 +43,15 @@ class HardwareSimulator(HardwareDriver):
             simulate failure to connect to the hardware
         :type fail_connect: bool
         """
+        self._simulate_connection_failure = fail_connect
         super().__init__(is_connectible)
-        self._is_connected = self.is_connectible and not fail_connect
 
-    @property
-    def is_connected(self):
-        """
-        Returns whether this simulator is connected to the hardware.
-        This should be implemented to return a bool.
-
-        :return: whether the device is connected to the hardware or not
-        :rtype: bool
-        """
-        return self._is_connected
+    def _connect(self):
+        if self.connection_status == ConnectionStatus.CONNECTED:
+            return None
+        if self.connection_status == ConnectionStatus.NOT_CONNECTIBLE:
+            return False
+        return not self._simulate_connection_failure
 
     def simulate_connection_failure(self, fail):
         """
@@ -61,7 +62,11 @@ class HardwareSimulator(HardwareDriver):
             simulate failure to connect to the hardware
         :type fail: bool
         """
-        self._is_connected = not fail
+        self._simulate_connection_failure = fail
+        if self._connection_status != ConnectionStatus.NOT_CONNECTIBLE:
+            self._connection_status = (
+                ConnectionStatus.NOT_CONNECTED if fail else ConnectionStatus.CONNECTED
+            )
 
 
 class SimulableHardwareFactory(HardwareFactory):

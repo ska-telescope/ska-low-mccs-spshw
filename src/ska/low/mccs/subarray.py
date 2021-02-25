@@ -240,6 +240,33 @@ class StationBeamsResourceManager(ResourceManager):
         message = "Configure command completed successfully"
         return (result_code, message)
 
+    def scan(self, logger, argin):
+        """
+        Start a scan on the configured subarray resources.
+
+        :param logger: the logger to be used.
+        :type logger: :py:class:`logging.Logger`
+        :param argin: JSON scan specification
+        :type argin: str
+        :return: A tuple containing a result code and a string
+        """
+        # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
+        subarray_beam_device_proxies = []
+        for subarray_beam_fqdn in self.station_beam_fqdns:
+            device_proxy = backoff_connect(subarray_beam_fqdn, logger=logger)
+            subarray_beam_device_proxies.append(device_proxy)
+
+        result_failure = None
+        error_message = ""
+        for subarray_beam_device_proxy in subarray_beam_device_proxies:
+            # TODO: Ideally we want to kick these off in parallel...
+            (result_code, message) = subarray_beam_device_proxy.Scan(argin)
+            if result_code in [ResultCode.FAILED, ResultCode.UNKNOWN]:
+                error_message += message + " "
+                result_failure = result_code
+
+        return (result_failure, error_message)
+
     def release(self, station_beam_fqdns, station_fqdns):
         """
         Release devices from this subarray resource manager.
@@ -813,8 +840,19 @@ class MccsSubarray(SKASubarray):
             """
             (result_code, message) = super().do(argin)
 
-            # MCCS-specific stuff goes here
-            return (result_code, message)
+            device = self.target
+            kwargs = json.loads(argin)
+            device._scan_id = kwargs.get("id")
+            device._scan_time = kwargs.get("scan_time")
+
+            station_beam_pool_manager = self.target._station_beam_pool_manager
+            (pool_failure_code, pool_message) = station_beam_pool_manager.scan(
+                self.logger, argin
+            )
+            if not pool_failure_code:
+                return (result_code, message)
+            else:
+                return (pool_failure_code, pool_message)
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """

@@ -14,7 +14,7 @@ This module contains the tests for the
 import pytest
 
 from ska.base.control_model import HealthState
-from ska.low.mccs.hardware import HardwareManager
+from ska.low.mccs.hardware import ConnectionStatus, HardwareManager
 
 
 class TestBaseHardware:
@@ -56,11 +56,15 @@ class TestBaseHardware:
         """
 
         @pytest.mark.parametrize(
-            ("is_connected", "expected_health"),
-            [(True, HealthState.OK), (False, HealthState.FAILED)],
+            ("connection_status", "expected_health"),
+            [
+                (ConnectionStatus.NOT_CONNECTIBLE, HealthState.UNKNOWN),
+                (ConnectionStatus.NOT_CONNECTED, HealthState.FAILED),
+                (ConnectionStatus.CONNECTED, HealthState.OK),
+            ],
         )
         def test_evaluate(
-            self, hardware_health_evaluator, mocker, is_connected, expected_health
+            self, hardware_health_evaluator, mocker, connection_status, expected_health
         ):
             """
             Test the output of the health evaluation.
@@ -71,9 +75,10 @@ class TestBaseHardware:
                 :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
             :param mocker: fixture that wraps unittest.Mock
             :type mocker: wrapper for :py:mod:`unittest.mock`
-            :param is_connected: whether or not this hardware_simulator is
-                simulating having a connection to the hardware
-            :type is_connected: bool
+            :param connection_status: the status of the simulated
+                software-hardware connection
+            :type connection_status:
+                :py:class:`ska.low.mccs.hardware.ConnectionStatus`
             :param expected_health: the health that this
                 :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
                 should report
@@ -81,7 +86,7 @@ class TestBaseHardware:
                 :py:class:`~ska.base.control_model.HealthState`
             """
             mock_hardware = mocker.Mock()
-            mock_hardware.is_connected = is_connected
+            mock_hardware.connection_status = connection_status
 
             assert (
                 hardware_health_evaluator.evaluate_health(mock_hardware)

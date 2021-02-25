@@ -9,7 +9,7 @@ This module implements infrastructure for resource management in the
 MCCS subsystem, separate from or common to all devices.
 """
 from enum import Enum
-from ska.base.control_model import HealthState
+from ska_tango_base.control_model import HealthState
 
 
 class ResourceState(Enum):
@@ -64,7 +64,7 @@ class ResourceAvailabilityPolicy:
         Check if a state allows allocation.
 
         :param health_state: The state of health to check
-        :type health_state: :py:class:`~ska.base.control_model.HealthState`
+        :type health_state: :py:class:`~ska_tango_base.control_model.HealthState`
 
         :return: True if this is suitable for allocation
         :rtype: bool
@@ -76,7 +76,7 @@ class ResourceAvailabilityPolicy:
         Set the health states allowed for allocation.
 
         :param health_states: Allowed health states
-        :type health_states: :py:class:`~ska.base.control_model.HealthState`
+        :type health_states: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self._allocatable_health_states = list(health_states)
 
@@ -286,13 +286,16 @@ class ResourceManager:
         Initialize new ResourceManager instance.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: :py:class:`~ska.low.mccs.health.HealthMonitor`
+        :type health_monitor:
+            :py:class:`~ska.low.mccs.health.HealthMonitor`
         :param managername: Name for this manager (information only)
         :type managername: string
         :param devices: A dictionary of device IDs and FQDNs
-        :type devices: a dictionary, key = device ID, value = device FQDN
-        :param availability_policy: availability policy for this resource manager
-        :type availability_policy: list(:py:class:`~ska.base.control_model.HealthState`)
+        :type devices: dict<str, str>
+        :param availability_policy: availability policy for this
+            resource manager
+        :type availability_policy:
+            list(:py:class:`~ska_tango_base.control_model.HealthState`)
         """
         self._managername = managername
         self._resources = dict()
@@ -363,7 +366,7 @@ class ResourceManager:
             being updated
         :type fqdn: string
         :param health_state: The (new) HealthState of the device
-        :type health_state: :py:class:`~ska.base.control_model.HealthState`
+        :type health_state: :py:class:`~ska_tango_base.control_model.HealthState`
 
         :raises ValueError: if FQDN of resource is unknown to resource manager
         """
@@ -540,7 +543,8 @@ class ResourceManager:
         Assign a list of health states which permit allocation.
 
         :param health_states: The list of allowed states
-        :type health_states: list if :py:class:`~ska.base.control_model.HealthState`
+        :type health_states:
+            list(:py:class:`~ska_tango_base.control_model.HealthState`)
         """
         self.resource_availability_policy.assign_allocatable_health_states = (
             health_states

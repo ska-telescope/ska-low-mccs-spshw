@@ -18,8 +18,7 @@ from fire import Fire
 from fire.core import FireError
 import tango
 
-from ska.base.commands import ResultCode
-from ska.low.mccs.utils import call_with_json
+from ska_tango_base.commands import ResultCode
 
 
 class CliMeta(type):
@@ -316,7 +315,7 @@ class MccsControllerCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("Release", subarray_id)
 

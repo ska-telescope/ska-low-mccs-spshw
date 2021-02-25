@@ -6,7 +6,7 @@ from collections import defaultdict
 import pytest
 import time
 import tango
-from ska.base.commands import ResultCode
+from ska_tango_base.commands import ResultCode
 
 
 def pytest_itemcollected(item):
@@ -191,7 +191,7 @@ def mock_event_callback(mocker):
             :type name: str
             :param result: return code from the completed command
                 If set to None, value and quaility checks are bypassed
-            :type result: :py:class:`~ska.base.commands.ResultCode`
+            :type result: :py:class:`~ska_tango_base.commands.ResultCode`
             """
             # push_change_event isn't synchronous, because it has to go
             # through the 0MQ event system. So we have to sleep long enough
@@ -218,7 +218,7 @@ def mock_event_callback(mocker):
             :type name: str
             :param result: return code from the completed command
                 If set to None, value and quaility checks are bypassed
-            :type result: :py:class:`~ska.base.commands.ResultCode`
+            :type result: :py:class:`~ska_tango_base.commands.ResultCode`
             """
             # push_change_event isn't synchronous, because it has to go
             # through the 0MQ event system. So we have to sleep long enough

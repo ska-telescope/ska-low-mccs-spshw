@@ -12,7 +12,7 @@ This module contains the tests for the
 """
 import pytest
 
-from ska.base.commands import ResultCode
+from ska_tango_base.commands import ResultCode
 from ska.low.mccs.subrack.demo_subrack_device import DemoSubrack
 
 

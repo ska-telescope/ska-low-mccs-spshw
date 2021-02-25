@@ -11,7 +11,7 @@ that support testing and demonstrating the MCCS Tile device.
 from tango import DevState
 from tango.server import command, Device
 
-from ska.base.control_model import AdminMode, SimulationMode
+from ska_tango_base.control_model import AdminMode, SimulationMode
 from ska.low.mccs import MccsTile
 
 

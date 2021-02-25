@@ -17,8 +17,8 @@ MccsTelState TANGO device class for the MccsTelState prototype
 from tango.server import run, attribute
 
 # Additional import
-from ska.base import SKATelState
-from ska.base.control_model import HealthState
+from ska_tango_base import SKATelState
+from ska_tango_base.control_model import HealthState
 
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
@@ -32,7 +32,7 @@ class MccsTelState(SKATelState):
     """
     MccsTelState TANGO device class for the MccsTelState prototype.
 
-    This is a subclass of :py:class:`ska.base.SKATelState`.
+    This is a subclass of :py:class:`ska_tango_base.SKATelState`.
 
     **Properties:**
 
@@ -53,7 +53,7 @@ class MccsTelState(SKATelState):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -76,7 +76,7 @@ class MccsTelState(SKATelState):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 

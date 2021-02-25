@@ -13,7 +13,7 @@ import typing
 # import sphinx_rtd_theme
 
 
-# This is an eloborate hack to insert write property into _all_
+# This is an elaborate hack to insert write property into _all_
 # mock decorators. It is needed for getting @attribute to build
 # in mocked out tango.server
 # see https://github.com/sphinx-doc/sphinx/issues/6709
@@ -41,7 +41,7 @@ sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
-autodoc_mock_imports = ["scipy", "tango", "PyTango", "PyTango.server", "ska.base", "pyfabil"]
+autodoc_mock_imports = ["scipy", "tango", "PyTango", "PyTango.server", "ska_tango_base", "pyfabil"]
 
 
 autodoc_default_options = {"special-members": "__init__"}
@@ -263,8 +263,8 @@ typing.TYPE_CHECKING = True
 intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
-    "ska-base": (
-        "https://developer.skatelescope.org/projects/lmc-base-classes/en/0.8.1/",
+    "ska-tango-base": (
+        "https://developer.skatelescope.org/projects/ska-tango-base/en/latest/",
         None,
     ),
 }

@@ -13,8 +13,8 @@ from tango import (
     DevFailed,
 )
 
-from ska.base.commands import ResultCode
-from ska.base.control_model import ObsState
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import ObsState
 
 
 @pytest.fixture()
@@ -109,7 +109,7 @@ class TestMccsIntegrationTmc:
         :param argin: Optional argument to send to the command
         :type argin: str
         :param expected_result: The expected return code from the command
-        :type expected_result: :py:class:`~ska.base.commands.ResultCode`
+        :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
         """
         # Call the specified command asynchronously
         async_id = device.command_inout_asynch(command, argin)

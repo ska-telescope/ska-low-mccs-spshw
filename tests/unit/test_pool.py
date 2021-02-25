@@ -12,7 +12,7 @@ This module contains the tests for the ska.low.mccs.pool module.
 import pytest
 import tango
 
-from ska.base.commands import ResultCode
+from ska_tango_base.commands import ResultCode
 from ska.low.mccs.pool import DevicePool
 
 

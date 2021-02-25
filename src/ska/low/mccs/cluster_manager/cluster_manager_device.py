@@ -19,8 +19,8 @@ import threading
 from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command, AttrWriteType
 
-from ska.base.commands import BaseCommand, ResponseCommand, ResultCode
-from ska.base.control_model import HealthState, SimulationMode
+from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState, SimulationMode
 from ska.low.mccs import MccsGroupDevice
 from ska.low.mccs.cluster_manager.cluster_simulator import (
     ClusterSimulator,
@@ -73,7 +73,7 @@ class ClusterHealthEvaluator(HardwareHealthEvaluator):
             `ClusterDriver`)
 
         :return: the evaluated health of the cluster
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         connection_status = cluster.connection_status
         if connection_status == ConnectionStatus.NOT_CONNECTIBLE:
@@ -110,7 +110,7 @@ class ClusterFactory(SimulableHardwareFactory):
         :param simulation_mode: the initial simulation mode for this
             cluster manager
         :type simulation_mode:
-            :py:class:`~ska.base.control_model.SimulationMode`
+            :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         super().__init__(simulation_mode)
 
@@ -137,7 +137,7 @@ class ClusterManager(SimulableHardwareManager):
         :param simulation_mode: the initial simulation mode for this
             cluster manager
         :type simulation_mode:
-            :py:class:`~ska.base.control_model.SimulationMode`
+            :py:class:`~ska_tango_base.control_model.SimulationMode`
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
@@ -424,7 +424,7 @@ class ClusterManager(SimulableHardwareManager):
         Return the statuses of nodes in the shadow master pool.
 
         :return: the statuses of nodes in the shadow master pool
-        :rtype: tuple(py:class:`~ska.base.control_model.HealthState`)
+        :rtype: tuple(py:class:`~ska_tango_base.control_model.HealthState`)
         """
         return self._factory.hardware.shadow_master_pool_status
 
@@ -525,7 +525,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -544,7 +544,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -574,7 +574,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -600,7 +600,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             device.cluster_manager = ClusterManager(device._simulation_mode)
 
@@ -625,7 +625,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
@@ -681,7 +681,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -994,7 +994,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Return the simulation mode of this device.
 
         :return: the simulation mode of this device
-        :rtype: :py:class:`~ska.base.control_model.SimulationMode`
+        :rtype: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         return self.cluster_manager.simulation_mode
 
@@ -1004,7 +1004,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Set the simulation mode of this device.
 
         :param value: the new simulation mode
-        :type value: :py:class:`~ska.base.control_model.SimulationMode`
+        :type value: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         self.cluster_manager.simulation_mode = value
 
@@ -1029,7 +1029,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             cluster_manager = self.target
             try:
@@ -1053,7 +1053,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StartJob")
         (return_code, message) = handler(argin)
@@ -1076,7 +1076,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             cluster_manager = self.target
             try:
@@ -1100,7 +1100,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StopJob")
         (return_code, message) = handler(argin)
@@ -1123,7 +1123,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             kwargs = json.loads(argin)
             job_config = JobConfig(**kwargs)
@@ -1181,7 +1181,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("GetJobStatus")
         return handler(argin)
@@ -1201,7 +1201,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             cluster_manager = self.target
             try:
@@ -1220,7 +1220,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("ClearJobStats")
         (return_code, message) = handler()
@@ -1241,7 +1241,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             cluster_manager = self.target
             try:
@@ -1261,7 +1261,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PingMasterPool")
         (return_code, message) = handler()
@@ -1272,7 +1272,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Update and push a change event for the healthState attribute.
 
         :param health_state: The new health state
-        :type health_state: :py:class:`ska.base.control_model.HealthState`
+        :type health_state: :py:class:`ska_tango_base.control_model.HealthState`
         """
         self.push_change_event("healthState", health_state)
         self._health_state = health_state

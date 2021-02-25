@@ -18,15 +18,16 @@ from tango.server import attribute, command
 from tango import DevState
 
 # Additional import
-from ska.base import SKABaseDevice
-from ska.base.commands import ResponseCommand, ResultCode
+from ska_tango_base import SKABaseDevice
+from ska_tango_base.commands import ResponseCommand, ResultCode
 
 import ska.low.mccs.release as release
 
 
 class MccsGroupDevice(SKABaseDevice):
     """
-    This class is a subclass of :py:class:`~ska.base.SKABaseDevice`.
+    This class is a subclass of
+    :py:class:`~ska_tango_base.SKABaseDevice`.
 
     **Properties:**
 
@@ -55,7 +56,7 @@ class MccsGroupDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -144,7 +145,7 @@ class MccsGroupDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
 
             return (ResultCode.OK, "AddMember command succeeded")
@@ -164,7 +165,7 @@ class MccsGroupDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("AddMember")
         (return_code, message) = handler(argin)
@@ -186,7 +187,7 @@ class MccsGroupDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "RemoveMember command succeeded")
 
@@ -205,7 +206,7 @@ class MccsGroupDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("RemoveMember")
         (return_code, message) = handler(argin)
@@ -227,7 +228,7 @@ class MccsGroupDevice(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Run command succeeded")
 
@@ -247,7 +248,7 @@ class MccsGroupDevice(SKABaseDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Run")
         (return_code, message) = handler(argin)

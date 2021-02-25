@@ -14,7 +14,7 @@ This module contains the tests for MccsTransientBuffer.
 import pytest
 
 from tango import AttrQuality, EventType
-from ska.base.control_model import HealthState
+from ska_tango_base.control_model import HealthState
 
 
 @pytest.fixture()

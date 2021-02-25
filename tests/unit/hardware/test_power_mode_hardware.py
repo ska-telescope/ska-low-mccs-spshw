@@ -14,7 +14,7 @@ from contextlib import nullcontext
 
 import pytest
 
-from ska.base.control_model import HealthState
+from ska_tango_base.control_model import HealthState
 from ska.low.mccs.hardware import (
     ConnectionStatus,
     OnOffHardwareSimulator,

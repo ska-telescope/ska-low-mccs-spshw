@@ -12,7 +12,7 @@ This module contains the tests of the cluster simulator.
 """
 import pytest
 
-from ska.base.control_model import HealthState, SimulationMode
+from ska_tango_base.control_model import HealthState, SimulationMode
 from ska.low.mccs.cluster_manager.cluster_simulator import (
     ClusterSimulator,
     JobConfig,

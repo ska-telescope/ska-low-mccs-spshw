@@ -25,9 +25,9 @@ from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice, DeviceStateModel
-from ska.base.control_model import HealthState
-from ska.base.commands import ResponseCommand, ResultCode
+from ska_tango_base import SKAMaster, SKABaseDevice
+from ska_tango_base.control_model import HealthState
+from ska_tango_base.commands import ResponseCommand, ResultCode
 
 from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
@@ -83,7 +83,7 @@ class MccsController(SKAMaster):
     """
     MccsController TANGO device class for the MCCS prototype.
 
-    This is a subclass of :py:class:`~ska.base.SKAMaster`.
+    This is a subclass of :py:class:`~ska_tango_base.SKAMaster`.
 
     **Properties:**
 
@@ -161,6 +161,8 @@ class MccsController(SKAMaster):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
+            :type state_model:
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
@@ -183,6 +185,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -211,6 +215,7 @@ class MccsController(SKAMaster):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -248,6 +253,7 @@ class MccsController(SKAMaster):
 
             :param device: the device for which power management is
                 being initialised
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             :param subrack_fqdns: the fqdns of subservient subracks.
             :param station_fqdns: the fqdns of subservient stations.
             """
@@ -277,6 +283,7 @@ class MccsController(SKAMaster):
 
             :param device: the device for which the health model is
                 being initialised
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
             """
@@ -296,6 +303,7 @@ class MccsController(SKAMaster):
 
             :param device: the device for which resource management is
                 being initialised
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices allocation of which
                 is managed by this device
             """
@@ -359,6 +367,7 @@ class MccsController(SKAMaster):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -371,6 +380,7 @@ class MccsController(SKAMaster):
         Return the commandResult attribute.
 
         :return: commandResult attribute
+        :rtype: :py:class:`~ska_tango_base.commands.ResultCode`
         """
         return self._command_result
 
@@ -414,6 +424,8 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -436,6 +448,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # TODO: For now, we need to get our devices to OFF state
             # (the highest state of device readiness for a device that
@@ -468,6 +482,8 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -490,6 +506,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -507,6 +525,8 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -529,6 +549,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -546,6 +568,8 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -568,6 +592,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -595,6 +621,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -614,6 +642,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyLow")
         (result_code, message) = handler()
@@ -638,6 +667,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -657,6 +688,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyFull")
         (result_code, message) = handler()
@@ -679,6 +711,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
@@ -707,6 +741,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Operate")
         (result_code, message) = handler()
@@ -733,8 +768,8 @@ class MccsController(SKAMaster):
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Reset` command
-            for this :py:class:`.MccsController` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Reset`
+            command for this :py:class:`.MccsController` device.
 
             This implementation resets the MCCS system as a whole as an
             attempt to clear a FAULT state.
@@ -742,6 +777,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
@@ -761,6 +798,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -813,6 +851,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
 
             controllerdevice = self.target
@@ -931,6 +971,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -987,6 +1029,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -1013,6 +1056,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             kwargs = json.loads(argin)
@@ -1076,6 +1121,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -1123,6 +1170,8 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 
@@ -1137,6 +1186,7 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Maintenance")
         (result_code, message) = handler()

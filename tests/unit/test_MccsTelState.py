@@ -13,8 +13,13 @@ This module contains the tests for MccsTelState.
 """
 import pytest
 from tango import AttrQuality, DevFailed, DevState, EventType
-from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.base.control_model import LoggingLevel
+from ska_tango_base.control_model import (
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
+from ska_tango_base.control_model import LoggingLevel
 from ska.low.mccs import release
 
 

@@ -23,9 +23,9 @@ from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # additional imports
-from ska.base import SKABaseDevice, SKAObsDevice
-from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import HealthState
+from ska_tango_base import SKABaseDevice, SKAObsDevice
+from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState
 
 from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
@@ -38,7 +38,7 @@ class MccsStation(SKAObsDevice):
     MccsStation is the Tango device class for the MCCS Station
     prototype.
 
-    This is a subclass of :py:class:`ska.base.SKAObsDevice`.
+    This is a subclass of :py:class:`ska_tango_base.SKAObsDevice`.
 
     **Properties:**
 
@@ -92,7 +92,7 @@ class MccsStation(SKAObsDevice):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -111,7 +111,7 @@ class MccsStation(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -154,7 +154,7 @@ class MccsStation(SKAObsDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -178,7 +178,7 @@ class MccsStation(SKAObsDevice):
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             prerequisite_fqdns = device._tile_fqdns
             if device._apiu_fqdn is not None:
@@ -201,7 +201,7 @@ class MccsStation(SKAObsDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             fqdns = device._tile_fqdns + device._antenna_fqdns
             if device._apiu_fqdn is not None:
@@ -255,7 +255,7 @@ class MccsStation(SKAObsDevice):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -463,14 +463,14 @@ class MccsStation(SKAObsDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.On` command for
-            this :py:class:`.MccsStation` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
+            command for this :py:class:`.MccsStation` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -487,14 +487,14 @@ class MccsStation(SKAObsDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
-            for this :py:class:`.MccsStation` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsStation` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -511,14 +511,14 @@ class MccsStation(SKAObsDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Standby`
             command for this :py:class:`.MccsStation` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -535,14 +535,14 @@ class MccsStation(SKAObsDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Disable`
             command for this :py:class:`.MccsStation` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -568,7 +568,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`ska_tango_base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
             stn_id = config_dict.get("station_id")
@@ -593,7 +593,7 @@ class MccsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -618,7 +618,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska.base.commands.ResultCode`, str)
+                (:py:class:`ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             for tile_id, tile in enumerate(device.TileFQDNs):
@@ -646,7 +646,7 @@ class MccsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 

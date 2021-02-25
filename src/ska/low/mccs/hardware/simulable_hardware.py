@@ -18,7 +18,7 @@ from time import sleep
 from scipy.stats import norm
 from tango import EnsureOmniThread
 
-from ska.base.control_model import SimulationMode, TestMode
+from ska_tango_base.control_model import SimulationMode, TestMode
 from ska.low.mccs.hardware import (
     ConnectionStatus,
     HardwareDriver,
@@ -431,7 +431,7 @@ class SimulableHardwareManager(HardwareManager):
         Property getter for simulation_mode.
 
         :return: the simulation mode
-        :rtype: :py:class:`~ska.base.control_model.SimulationMode`
+        :rtype: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         if self._factory.simulation_mode:
             return SimulationMode.TRUE
@@ -444,7 +444,7 @@ class SimulableHardwareManager(HardwareManager):
         Property setter for simulation_mode.
 
         :param mode: new value for simulation mode
-        :type mode: :py:class:`~ska.base.control_model.SimulationMode`
+        :type mode: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         self._factory.simulation_mode = mode == SimulationMode.TRUE
         self._update_health()
@@ -455,7 +455,7 @@ class SimulableHardwareManager(HardwareManager):
         Property getter for test_mode.
 
         :return: the test mode
-        :rtype: :py:class:`~ska.base.control_model.TestMode`
+        :rtype: :py:class:`~ska_tango_base.control_model.TestMode`
         """
         return TestMode.TEST if self._factory.test_mode else TestMode.NONE
 
@@ -465,7 +465,7 @@ class SimulableHardwareManager(HardwareManager):
         Property setter for test_mode.
 
         :param mode: new value for test mode
-        :type mode: :py:class:`~ska.base.control_model.TestMode`
+        :type mode: :py:class:`~ska_tango_base.control_model.TestMode`
         """
         self._factory.test_mode = mode == TestMode.TEST
         self._update_health()

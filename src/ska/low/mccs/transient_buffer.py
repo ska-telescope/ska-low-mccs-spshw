@@ -18,8 +18,8 @@ based upon architecture in SKA-TEL-LFAA-06000052-02.
 from tango.server import attribute
 
 # Additional import
-from ska.base.commands import ResultCode
-from ska.base.control_model import HealthState
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import HealthState
 
 from ska.low.mccs import MccsDevice
 from ska.low.mccs.events import EventManager
@@ -59,7 +59,7 @@ class MccsTransientBuffer(MccsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -108,7 +108,7 @@ class MccsTransientBuffer(MccsDevice):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return

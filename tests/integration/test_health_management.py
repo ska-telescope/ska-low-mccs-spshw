@@ -16,7 +16,7 @@ import time
 
 import pytest
 
-from ska.base.control_model import AdminMode, HealthState
+from ska_tango_base.control_model import AdminMode, HealthState
 from ska.low.mccs.tile.demo_tile_device import DemoTile
 from ska.low.mccs.utils import call_with_json
 

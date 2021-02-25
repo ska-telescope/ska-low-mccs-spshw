@@ -17,8 +17,8 @@ import time
 import pytest
 from tango import AttrQuality, EventType
 
-from ska.base.commands import ResultCode
-from ska.base.control_model import (
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
     HealthState,

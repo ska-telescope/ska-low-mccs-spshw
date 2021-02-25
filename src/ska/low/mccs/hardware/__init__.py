@@ -75,7 +75,7 @@ The classes fall into three groups:
 
   * :py:class:`.SimulableHardwareManager`: a hardware manager that
     manages a device's
-    :py:attr:`~ska.base.SKABaseDevice.simulationMode` attribute,
+    :py:attr:`~ska_tango_base.SKABaseDevice.simulationMode` attribute,
     allowing switching between hardware driver and hardware simulator
 
 * The "power mode" group of classes extend the base classes to handle

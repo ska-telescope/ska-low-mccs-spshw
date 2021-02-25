@@ -16,8 +16,8 @@ import json
 import pytest
 from tango import AttrQuality, DevFailed, EventType
 
-from ska.base.commands import ResultCode
-from ska.base.control_model import HealthState
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import HealthState
 from ska.low.mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
 
 

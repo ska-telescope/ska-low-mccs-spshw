@@ -13,7 +13,7 @@ An implementation of a cluster simulator for SKA-Low-MCCS.
 from enum import IntEnum
 from itertools import count
 
-from ska.base.control_model import HealthState
+from ska_tango_base.control_model import HealthState
 from ska.low.mccs.hardware import HardwareSimulator
 
 
@@ -502,7 +502,7 @@ class ClusterSimulator(HardwareSimulator):
         Return the statuses of nodes in the shadow master pool.
 
         :return: the statuses of nodes in the shadow master pool
-        :rtype: tuple(py:class:`~ska.base.control_model.HealthState`)
+        :rtype: tuple(py:class:`~ska_tango_base.control_model.HealthState`)
         """
         return tuple(
             self._node_statuses[node_id] for node_id in self.shadow_master_pool_node_ids

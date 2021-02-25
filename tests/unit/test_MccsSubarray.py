@@ -15,9 +15,9 @@ import pytest
 import tango
 from tango import AttrQuality, EventType, DevState
 
-from ska.base import SKASubarrayStateModel
-from ska.base.commands import ResultCode
-from ska.base.control_model import (
+from ska_tango_base import SKASubarrayStateModel
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
     HealthState,
@@ -39,7 +39,7 @@ def subarray_state_model(logger):
     :type logger: :py:class:`logging.Logger`
 
     :return: a new SKASubarrayStateModel for testing
-    :rtype: :py:class:`ska.base.SKASubarrayStateModel`
+    :rtype: :py:class:`ska_tango_base.SKASubarrayStateModel`
     """
     return SKASubarrayStateModel(logger)
 
@@ -576,7 +576,7 @@ class TestMccsSubarrayCommandClasses:
             to check that it is allowed to run, and that it drives
             with actions.
         :type subarray_state_model:
-            :py:class:`ska.base.SKASubarrayStateModel`
+            :py:class:`ska_tango_base.SKASubarrayStateModel`
         :param mocker: the pytest `mocker` fixture is a wrapper around
             the `unittest.mock` package
         :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -616,7 +616,7 @@ class TestMccsSubarrayCommandClasses:
             to check that it is allowed to run, and that it drives
             with actions.
         :type subarray_state_model:
-            :py:class:`ska.base.SKASubarrayStateModel`
+            :py:class:`ska_tango_base.SKASubarrayStateModel`
         """
         subarray_state_model._straight_to_state(
             op_state=DevState.ON,

@@ -28,6 +28,7 @@ import ska.low.mccs.release as release
 
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.hardware import (
+    ConnectionStatus,
     HardwareDriver,
     HardwareFactory,
     HardwareHealthEvaluator,
@@ -92,16 +93,14 @@ class StationBeamDriver(HardwareDriver):
         self._is_locked = is_locked
 
     @property
-    def is_connected(self):
+    def connection_status(self):
         """
-        Whether this station beam "hardware" driver has a connection to
-        the hardware.
+        Returns the status of the driver-hardware connection.
 
-        :return: whether this antenna hardware driver has a connection
-            to the hardware; hardwired to return True
-        :rtype: bool
+        :return: the status of the driver-hardware connection.
+        :rtype: py:class:`ska.low.mccs.hardware.ConnectionStatus`
         """
-        return True
+        return ConnectionStatus.CONNECTED
 
     @property
     def is_locked(self):

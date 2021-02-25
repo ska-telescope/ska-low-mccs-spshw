@@ -348,7 +348,7 @@ class TestMccsTile:
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.Mock`
         """
-        assert device_under_test.healthState == HealthState.OK
+        assert device_under_test.healthState == HealthState.UNKNOWN
 
         # Test that polling is turned on and subscription yields an
         # event as expected
@@ -359,7 +359,7 @@ class TestMccsTile:
 
         event_data = mock_callback.call_args[0][0].attr_value
         assert event_data.name == "healthState"
-        assert event_data.value == HealthState.OK
+        assert event_data.value == HealthState.UNKNOWN
         assert event_data.quality == AttrQuality.ATTR_VALID
 
     def test_logicalTileId(self, device_under_test):

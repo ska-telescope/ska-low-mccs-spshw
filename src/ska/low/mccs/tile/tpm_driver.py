@@ -10,7 +10,7 @@ case, or a NotImplementedError exception raised.
 import copy
 import numpy as np
 
-from ska.low.mccs.hardware import HardwareDriver
+from ska.low.mccs.hardware import ConnectionStatus, HardwareDriver
 from ska.low.mccs.tile import HwTile
 from pyfabil.base.definitions import Device
 
@@ -87,6 +87,10 @@ class TpmDriver(HardwareDriver):
         self.tile = HwTile(ip=self._ip, port=self._port, logger=self.logger)
         super().__init__()
 
+    def _connect(self):
+        self.tile.connect()
+        return self.tile.tpm is not None
+
     @property
     def firmware_available(self):
         """
@@ -138,18 +142,20 @@ class TpmDriver(HardwareDriver):
         self._is_programmed = self.tile.tpm.is_programmed()
         return self._is_programmed
 
-    def is_connected(self):
+    @property
+    def connection_status(self):
         """
-        Check if TPM is connected.
+        Returns the status of the driver-hardware connection.
 
-        :return: Connection status
-        :rtype: bool
+        :return: the status of the driver-hardware connection.
+        :rtype: py:class:`ska.low.mccs.hardware.ConnectionStatus`
         """
-        self.logger.debug("TpmDriver: is_connected")
-        connected = True
-        if self.tile.tpm is None:
-            connected = False
-        return connected
+        self.logger.debug("TpmDriver: connection_status")
+        return (
+            ConnectionStatus.NOT_CONNECTED
+            if self.tile.tpm is None
+            else ConnectionStatus.CONNECTED
+        )
 
     def download_firmware(self, bitfile):
         """

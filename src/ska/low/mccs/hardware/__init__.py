@@ -18,12 +18,12 @@ Conceptually, the model comprises:
   to the hardware.
 
 * Hardware simulators. These implement the interface of the
-   corresponding hardware driver, but in software. That is, a hardware
-   simulator pretends to be a hardware driver, but it does not wrap
-   actual hardware. In addition to implementing the driver interface,
-   a simulator may expose methods for external events that it can
-   simulate. For example, actual hardware can fail, so a simulator might
-   simulate failure via methods like `_simulate_cooling_failure` etc.
+  corresponding hardware driver, but in software. That is, a hardware
+  simulator pretends to be a hardware driver, but it does not wrap
+  actual hardware. In addition to implementing the driver interface,
+  a simulator may expose methods for external events that it can
+  simulate. For example, actual hardware can fail, so a simulator might
+  simulate failure via methods like `_simulate_cooling_failure` etc.
 
 * Hardware factories. These create and provide access to hardware
   drivers / simulators. For example, in a device that can switch between
@@ -46,9 +46,8 @@ The classes fall into three groups:
 
   * :py:class:`.HardwareDriver`: a base class for hardware drivers. The
     only functionality it specifies is an
-    :py:meth:`~HardwareDriver.is_connected` property, which captures
-    whether or not the hardware driver has established a connection to
-    the hardware.
+    :py:meth:`~HardwareDriver.connection_status` property, which
+    captures the status of the driver's connection to the hardware.
 
   * :py:class:`.HardwareFactory`: a base class for hardware factories.
 
@@ -56,8 +55,8 @@ The classes fall into three groups:
     health evaluators. The policy implemented determines health solely
     on the basis of whether there is a connection to the hardware.
 
-  * :py:class:`.HardwareManager`: a base class for hardware managers. Its
-    main function is to ensure that the hardware health evaluator is
+  * :py:class:`.HardwareManager`: a base class for hardware managers.
+    Its main function is to ensure that the hardware health evaluator is
     regularly polled.
 
 * The "simulator" group of classes extend the above to handle switching
@@ -65,7 +64,7 @@ The classes fall into three groups:
   comprise:
 
   * :py:class:`.HardwareSimulator`: a base class for hardware simulators.
-    This implements the :py:meth:`~HardwareSimulator.is_connected`
+    This implements the :py:meth:`~HardwareDriver.connection_status`
     property, and provides a
     :py:meth:`~HardwareSimulator.simulate_connection_failure` method by
     which failure of the connection to the hardware can be simulated.
@@ -100,15 +99,15 @@ The classes fall into three groups:
     property
 
   * :py:class:`.OnOffHardwareDriver` adds an
-      :py:meth:`~OnOffHardwareDriver.off` method.
+    :py:meth:`~OnOffHardwareDriver.off` method.
 
   * :py:class:`.OnStandbyHardwareDriver` add a
-      :py:meth:`~OnStandbyHardwareDriver.standby` method.
+    :py:meth:`~OnStandbyHardwareDriver.standby` method.
 
   * :py:class:`.OnStandbyOffHardwareDriver` combines the two and thus
-      supports both :py:meth:`~OnOffHardwareDriver.off` and
-      :py:meth:`~OnStandbyHardwareDriver.standby` methods. (It is really
-      just syntactic sugar.)
+    supports both :py:meth:`~OnOffHardwareDriver.off` and
+    :py:meth:`~OnStandbyHardwareDriver.standby` methods. (It is really
+    just syntactic sugar.)
 
   * A private
     :py:class:`~.BasePowerModeHardwareSimulator`
@@ -126,9 +125,9 @@ The classes fall into three groups:
     method
 
   * :py:class:`.OnStandbyOffHardwareSimulator` combines the two and thus
-      supports both :py:meth:`~OnOffHardwareSimulator.off` and
-      :py:meth:`~OnStandbyHardwareSimulator.standby` methods. (It is
-      really just syntactic sugar.)
+    supports both :py:meth:`~OnOffHardwareSimulator.off` and
+    :py:meth:`~OnStandbyHardwareSimulator.standby` methods. (It is
+    really just syntactic sugar.)
 
   * A private
     :py:class:`~.BasePowerModeHardwareManager`
@@ -145,15 +144,16 @@ The classes fall into three groups:
     :py:meth:`~.OnStandbyHardwareManager.standby` method.
 
   * :py:class:`.OnStandbyOffHardwareManager` combines the two and thus
-      supports both :py:meth:`~OnOffHardwareManager.off` and
-      :py:meth:`~OnStandbyHardwareManager.standby` methods. (It is
-      really just syntactic sugar.)
+    supports both :py:meth:`~OnOffHardwareManager.off` and
+    :py:meth:`~OnStandbyHardwareManager.standby` methods. (It is
+    really just syntactic sugar.)
 """
 
 __all__ = [
     "BasePowerModeHardwareDriver",
     "BasePowerModeHardwareSimulator",
     "BasePowerModeHardwareManager",
+    "ConnectionStatus",
     "HardwareDriver",
     "HardwareFactory",
     "HardwareHealthEvaluator",
@@ -175,6 +175,7 @@ __all__ = [
 ]
 
 from .base_hardware import (
+    ConnectionStatus,
     HardwareDriver,
     HardwareFactory,
     HardwareHealthEvaluator,

@@ -13,7 +13,7 @@ related classes.
 """
 import threading
 
-from tango import DebugIt, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
 
 from ska.base import SKABaseDevice
@@ -356,6 +356,15 @@ class MccsAPIU(SKABaseDevice):
     """
 
     AntennaFQDNs = device_property(dtype=(str,))
+
+    def init_device(self):
+        """
+        Initialise the device; overridden here to change the Tango
+        serialisation model
+        """
+        util = Util.instance()
+        util.set_serial_model(SerialModel.NO_SYNC)
+        super().init_device()
 
     def init_command_objects(self):
         """

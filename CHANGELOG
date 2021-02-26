@@ -3,6 +3,7 @@
 ## unreleased
 
 * MCCS-381 - Move "Configure" command implementation to station beams resource manager
+* MCCS-359 - Add scan, abort and obsreset unit tests
 * MCCS-239 - Subarray scan implementation
 * MCCS-334 - Fix unsafe dictionary look-ups
 * MCCS-252 - New and modified Tile commands for beam configuration and calibration

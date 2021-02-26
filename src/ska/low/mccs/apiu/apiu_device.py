@@ -292,6 +292,10 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
 
     def _update_are_antennas_on(self):
+        """
+        Update our record of which antennas are off/on, ensureing that
+        callbacks are called.
+        """
         are_antennas_on = self._factory.hardware.are_antennas_on()
         if are_antennas_on is None:
             are_antennas_on = [False] * self.antenna_count
@@ -301,6 +305,9 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
             self._are_antennas_on_change_callback(self._are_antennas_on)
 
     def poll(self):
+        """
+        Poll the hardware.
+        """
         super().poll()
         self._update_are_antennas_on()
 

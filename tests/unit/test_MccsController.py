@@ -15,7 +15,6 @@ prototype.
 
 import json
 import threading
-import time
 
 import pytest
 import tango
@@ -166,68 +165,6 @@ class TestMccsController:
     Tests of the MccsController device.
     """
 
-    @staticmethod
-    def _callback_event_data_check(mock_callback, name, result):
-        """
-        :param mock_callback: fixture that provides a mock callback object
-            that records registered callbacks from the DUT
-        :type mock_callback: :py:class:`tango.DeviceProxy`
-        :param name: name of the registered event
-        :type name: str
-        :param result: return code from the completed command
-            If set to None, value and quaility checks are bypassed
-        :type result: :py:class:`~ska.base.commands.ResultCode`
-        """
-        # push_change_event isn't synchronous, because it has to go
-        # through the 0MQ event system. So we have to sleep long enough
-        # for the event to arrive
-        time.sleep(0.2)
-
-        mock_callback.assert_called_once()
-        event_data = mock_callback.call_args[0][0].attr_value
-
-        assert event_data.name.lower() == name.lower()
-        if result is not None:
-            assert event_data.value == result
-            assert event_data.quality == tango.AttrQuality.ATTR_VALID
-        mock_callback.reset_mock()
-
-    @staticmethod
-    def _callback_commandResult_check(mock_callback, name, result):
-        """
-        Special callback check routine for commandResult. There should
-        always be two entries for commandResult; the first should reset
-        commandResult to ResultCode.UNKNOWN, the second should match the
-        expected result passed into this routine.
-
-        :param mock_callback: fixture that provides a mock callback object
-            that records registered callbacks from the DUT
-        :type mock_callback: :py:class:`tango.DeviceProxy`
-        :param name: name of the registered event
-        :type name: str
-        :param result: return code from the completed command
-            If set to None, value and quaility checks are bypassed
-        :type result: :py:class:`~ska.base.commands.ResultCode`
-        """
-        # push_change_event isn't synchronous, because it has to go
-        # through the 0MQ event system. So we have to sleep long enough
-        # for the event to arrive
-        time.sleep(0.2)
-
-        mock_callback.assert_called()
-        assert len(mock_callback.mock_calls) == 2  # exactly two calls
-
-        first_event_data = mock_callback.mock_calls[0][1][0].attr_value
-        second_event_data = mock_callback.mock_calls[1][1][0].attr_value
-        assert first_event_data.name.lower() == name.lower()
-        assert second_event_data.name.lower() == name.lower()
-        assert first_event_data.value == ResultCode.UNKNOWN
-        assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
-        if result is not None:
-            assert second_event_data.value == result
-            assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
-        mock_callback.reset_mock()
-
     def test_State(self, device_under_test):
         """
         Test for State.
@@ -291,7 +228,7 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_On(self, device_under_test, mock_callback):
+    def test_On(self, device_under_test, mock_event_callback):
         """
         Test for On (including end of command event testing).
 
@@ -299,28 +236,27 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :param mock_event_callback: fixture that provides a mock instance
+            with callback support methods
+        :type mock_event_callback: MockCallback
         """
         device_under_test.Off()
 
         # Test that subscription yields an event as expected
         _ = device_under_test.subscribe_event(
-            "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+            "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
         )
-        TestMccsController._callback_event_data_check(
-            mock_callback=mock_callback, name="commandResult", result=None
-        )
+        mock_event_callback.check_event_data(name="commandResult", result=None)
 
         # Call the On() command on the Controller device
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
         assert message == "On command completed OK"
-        TestMccsController._callback_commandResult_check(
-            mock_callback=mock_callback, name="commandResult", result=result_code
+        mock_event_callback.check_command_result(
+            name="commandResult", result=result_code
         )
 
-    def test_Off(self, device_under_test, mock_callback):
+    def test_Off(self, device_under_test, mock_event_callback):
         """
         Test for Off (including end of command event testing).
 
@@ -328,8 +264,9 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :param mock_event_callback: fixture that provides a mock instance
+            with callback support methods
+        :type mock_event_callback: MockCallback
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
@@ -338,18 +275,16 @@ class TestMccsController:
 
         # Test that subscription yields an event as expected
         _ = controller.subscribe_event(
-            "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+            "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
         )
-        TestMccsController._callback_event_data_check(
-            mock_callback=mock_callback, name="commandResult", result=None
-        )
+        mock_event_callback.check_event_data(name="commandResult", result=None)
 
         # Call the Off() command on the Controller device
         [[result_code], [message]] = controller.Off()
         assert result_code == ResultCode.OK
         assert message == "Off command completed OK"
-        TestMccsController._callback_commandResult_check(
-            mock_callback=mock_callback, name="commandResult", result=result_code
+        mock_event_callback.check_command_result(
+            name="commandResult", result=result_code
         )
 
     def test_StandbyLow(self, device_under_test):
@@ -495,7 +430,7 @@ class TestMccsController:
                 "low-mccs/station/002": _station_mock(),
             }
 
-        def test_Allocate(self, device_under_test, mock_callback):
+        def test_Allocate(self, device_under_test, mock_event_callback):
             """
             Test the Allocate command (including end of command event
             testing).
@@ -504,8 +439,9 @@ class TestMccsController:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
-            :param mock_callback: a mock to pass as a callback
-            :type mock_callback: :py:class:`unittest.Mock`
+            :param mock_event_callback: fixture that provides a mock instance
+                with callback support methods
+            :type mock_event_callback: MockCallback
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -539,11 +475,9 @@ class TestMccsController:
 
             # Test that subscription yields an event as expected
             _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
             )
-            TestMccsController._callback_event_data_check(
-                mock_callback=mock_callback, name="commandResult", result=None
-            )
+            mock_event_callback.check_event_data(name="commandResult", result=None)
 
             # Make the call to allocate
             ((result_code,), (_,)) = call_with_json(
@@ -554,9 +488,7 @@ class TestMccsController:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=None
-            )
+            mock_event_callback.check_command_result(name="commandResult", result=None)
 
             # check that the mock subarray_1 was told to assign that resource
             mock_subarray_1.On.assert_called_once_with()
@@ -589,9 +521,7 @@ class TestMccsController:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.FAILED
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=None
-            )
+            mock_event_callback.check_command_result(name="commandResult", result=None)
 
             # check no side-effects
             mock_subarray_1.On.assert_not_called()
@@ -602,6 +532,9 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 0
+
+            mock_subarray_1.reset_mock()
+            mock_subarray_2.reset_mock()
 
             # allocating stations 1 and 2 to subarray 1 should succeed,
             # because the already allocated station is allocated to the same
@@ -618,9 +551,7 @@ class TestMccsController:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=None
-            )
+            mock_event_callback.check_command_result(name="commandResult", result=None)
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -653,8 +584,8 @@ class TestMccsController:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+            mock_event_callback.check_command_result(
+                name="commandResult", result=result_code
             )
 
             # check
@@ -675,6 +606,9 @@ class TestMccsController:
             ((result_code,), (_,)) = call_with_json(
                 controller.Release, subarray_id=1, release_all=True
             )
+            mock_event_callback.check_command_result(
+                name="commandResult", result=result_code
+            )
             assert result_code == ResultCode.OK
 
             mock_subarray_1.On.assert_not_called()
@@ -693,8 +627,9 @@ class TestMccsController:
             # now that subarray 1 has been disabled, its resources should
             # have been released so we should be able to allocate them to
             # subarray 2
-            time.sleep(0.2)  # RCL???
-            mock_callback.reset_mock()
+            mock_subarray_1.reset_mock()
+            mock_subarray_2.reset_mock()
+
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate,
                 subarray_id=2,
@@ -703,8 +638,8 @@ class TestMccsController:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+            mock_event_callback.check_command_result(
+                name="commandResult", result=result_code
             )
 
             # check
@@ -725,7 +660,7 @@ class TestMccsController:
             assert mock_station_1.subarrayId == 2
             assert mock_station_2.subarrayId == 2
 
-        def test_Release(self, device_under_test, mock_callback):
+        def test_Release(self, device_under_test, mock_event_callback):
             """
             Test Release command.
 
@@ -733,8 +668,9 @@ class TestMccsController:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
-            :param mock_callback: a mock to pass as a callback
-            :type mock_callback: :py:class:`unittest.Mock`
+            :param mock_event_callback: fixture that provides a mock instance
+                with callback support methods
+            :type mock_event_callback: MockCallback
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
@@ -792,19 +728,17 @@ class TestMccsController:
 
             # Test that subscription yields an event as expected
             _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_callback
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
             )
-            TestMccsController._callback_event_data_check(
-                mock_callback=mock_callback, name="commandResult", result=None
-            )
+            mock_event_callback.check_event_data(name="commandResult", result=None)
 
             # release all resources from subarray_2
             ((result_code,), (_,)) = call_with_json(
                 controller.Release, subarray_id=2, release_all=True
             )
             assert result_code == ResultCode.OK
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+            mock_event_callback.check_command_result(
+                name="commandResult", result=result_code
             )
 
             # check
@@ -823,8 +757,8 @@ class TestMccsController:
                 controller.Release, subarray_id=2, release_all=True
             )
             assert result_code == ResultCode.FAILED
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+            mock_event_callback.check_command_result(
+                name="commandResult", result=result_code
             )
 
             # check no side-effect to failed release
@@ -843,8 +777,8 @@ class TestMccsController:
                 controller.Release, subarray_id=1, release_all=True
             )
             assert result_code == ResultCode.OK
-            TestMccsController._callback_commandResult_check(
-                mock_callback=mock_callback, name="commandResult", result=result_code
+            mock_event_callback.check_command_result(
+                name="commandResult", result=result_code
             )
 
             # check all released
@@ -878,7 +812,7 @@ class TestMccsController:
         """
         assert device_under_test.versionId == release.version
 
-    def test_healthState(self, device_under_test, mock_callback):
+    def test_healthState(self, device_under_test, mock_event_callback):
         """
         Test for healthState.
 
@@ -886,8 +820,9 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :param mock_event_callback: fixture that provides a mock instance
+            with callback support methods
+        :type mock_event_callback: MockCallback
         """
 
         # The device has subscribed to healthState change events on
@@ -898,12 +833,10 @@ class TestMccsController:
 
         # Test that subscription yields an event as expected
         _ = device_under_test.subscribe_event(
-            "healthState", tango.EventType.CHANGE_EVENT, mock_callback
+            "healthState", tango.EventType.CHANGE_EVENT, mock_event_callback
         )
-        TestMccsController._callback_event_data_check(
-            mock_callback=mock_callback,
-            name="healthState",
-            result=device_under_test.healthState,
+        mock_event_callback.check_event_data(
+            name="healthState", result=device_under_test.healthState
         )
 
         call_with_json(
@@ -928,7 +861,7 @@ class TestMccsController:
             health_state=HealthState.FAILED,
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
-        mock_callback.assert_not_called()
+        mock_event_callback.assert_not_called()
 
         call_with_json(
             device_under_test.simulateHealthStateChange,
@@ -936,7 +869,7 @@ class TestMccsController:
             health_state=HealthState.FAILED,
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
-        mock_callback.assert_not_called()
+        mock_event_callback.assert_not_called()
 
         call_with_json(
             device_under_test.simulateHealthStateChange,
@@ -944,10 +877,8 @@ class TestMccsController:
             health_state=HealthState.FAILED,
         )
         assert device_under_test.healthState == HealthState.FAILED
-        TestMccsController._callback_event_data_check(
-            mock_callback=mock_callback,
-            name="healthState",
-            result=device_under_test.healthState,
+        mock_event_callback.check_event_data(
+            name="healthState", result=device_under_test.healthState
         )
 
     def test_controlMode(self, device_under_test):

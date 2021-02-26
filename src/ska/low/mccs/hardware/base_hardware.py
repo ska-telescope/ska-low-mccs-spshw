@@ -10,6 +10,7 @@ subsystem.
 """
 __all__ = [
     "ConnectionStatus",
+    "ControlMode",
     "HardwareDriver",
     "HardwareFactory",
     "HardwareHealthEvaluator",
@@ -19,6 +20,26 @@ __all__ = [
 from enum import Enum
 
 from ska.base.control_model import HealthState
+
+
+class ControlMode(Enum):
+    """
+    The control modes for hardware.
+
+    Currently only MANUAL and AUTO modes are provided. In future we
+    might need to support CASCADE mode.
+    """
+
+    MANUAL = 1
+    """
+    The control element is controlled by an external operator, such as
+    a human or a TANGO device
+    """
+
+    AUTO = 2
+    """
+    The control element is controlled by an internal controller.
+    """
 
 
 class ConnectionStatus(Enum):
@@ -57,6 +78,15 @@ class HardwareDriver:
     """
 
     def __init__(self, is_connectible=True):
+        """
+        Initialise a new instance.
+
+        :param is_connectible: whether we expect the driver to be able
+            to connect to the hardware. For example, if we know that the
+            hardware is currently powered off, we wouldn't even try to
+            connect to it.
+        :type is_connectible: bool
+        """
         self._connection_status = (
             ConnectionStatus.NOT_CONNECTED
             if is_connectible

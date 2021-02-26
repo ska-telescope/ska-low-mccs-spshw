@@ -211,6 +211,15 @@ class MCCSDeviceTestContext:
         self._source_setting = source
 
     def _check_ready_condition(self, device):
+        """
+        Checks whether a device meets the ready condition.
+
+        :param device: the device to be checked
+        :type device: :py:class:`tango.DeviceProxy`
+
+        :return: whether ready
+        :rtype: bool
+        """
         try:
             return self._ready_condition(device)
         except tango.DevFailed as dev_failed:
@@ -374,17 +383,3 @@ def logger():
     :rtype logger: :py:class:`logging.Logger`
     """
     return logging.getLogger()
-
-
-@pytest.fixture()
-def mock_callback(mocker):
-    """
-    Fixture that returns a mock to use as a callback.
-
-    :param mocker: fixture that wraps unittest.Mock
-    :type mocker: wrapper for :py:mod:`unittest.mock`
-
-    :return: a mock to pass as a callback
-    :rtype: :py:class:`unittest.Mock`
-    """
-    return mocker.Mock()

@@ -324,6 +324,30 @@ class TestTilePowerManager:
         expected_return,
         expected_power_mode,
     ):
+        """
+        Test that turning on this TilePowerManager results in the right
+        return code and state for each possible subrack state.
+
+        :param device_under_test: a :py:class:`tango.DeviceProxy` to the
+            device under test, within a
+            :py:class:tango.test_context.DeviceTestContext`tile.
+            (The device is not actually under test here, but we need
+            this to ensure that the TANGO subsystem gets stood up.)
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param power_manager: the power_manager under test
+        :type power_manager: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :param initial_mocks: a dictionary of mock devices, keyed by
+            device FQDN, set up before device initialisation. This is
+            only used indirectly here, but included so that we can
+            indirectly parametrize it.
+        :type initial_mocks: dict of str
+        :param expected_return: the expected return value for the call
+        :type expected_return: bool
+        :param expected_power_mode: the expected power mode of this
+            TilePowerManager after the method has been executed.
+        :type expected_power_mode:
+            :py:class:`ska.low.mccs.hardware.PowerMode`
+        """
         assert power_manager.off() == expected_return
         assert power_manager.power_mode == expected_power_mode
 

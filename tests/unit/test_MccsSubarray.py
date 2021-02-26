@@ -13,18 +13,35 @@ import json
 import pytest
 
 import tango
-from tango import AttrQuality, EventType
+from tango import AttrQuality, EventType, DevState
 
+from ska.base import SKASubarrayStateModel
+from ska.base.commands import ResultCode
 from ska.base.control_model import (
     AdminMode,
     ControlMode,
     HealthState,
+    ObsState,
     SimulationMode,
     TestMode,
 )
-from ska.base.commands import ResultCode
 from ska.low.mccs import release
 from ska.low.mccs.utils import call_with_json
+from ska.low.mccs.subarray import MccsSubarray
+
+
+@pytest.fixture
+def subarray_state_model(logger):
+    """
+    Yields a new SKASubarrayStateModel for testing.
+
+    :param logger: the logger to be used by the object under test
+    :type logger: :py:class:`logging.Logger`
+
+    :return: a new SKASubarrayStateModel for testing
+    :rtype: :py:class:`ska.base.SKASubarrayStateModel`
+    """
+    return SKASubarrayStateModel(logger)
 
 
 @pytest.fixture()
@@ -243,7 +260,7 @@ class TestMccsSubarray:
         """
         Class containing fixtures and tests of the MccsController's
         :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-        :py:meth:`~ska.low.mccs.MccsController.Release` commands
+        :py:meth:`~ska.low.mccs.MccsController.Release` and
         :py:meth:`~ska.low.mccs.MccsController.Configure` commands
         """
 
@@ -255,7 +272,7 @@ class TestMccsSubarray:
             subarrays and stations respond suitably to actions taken on
             them by the controller as part of the controller's
             :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-            :py:meth:`~ska.low.mccs.MccsController.Release` commands
+            :py:meth:`~ska.low.mccs.MccsController.Release` and
             :py:meth:`~ska.low.mccs.MccsController.Configure` commands
 
             :param mock_factory: a factory for
@@ -538,6 +555,98 @@ class TestMccsSubarray:
             [[result_code], [message]] = device_under_test.Configure(json_str)
             assert result_code == ResultCode.OK
             assert message == "Configure command completed successfully"
+            assert device_under_test.obsState == ObsState.READY
+
             # remove preceeding "call(\" and trailing "\)"
             output = str(mock_subarray_beam.configure.call_args)[6:-2]
             assert json.loads(output) == expected
+
+
+# pylint: disable=invalid-name
+class TestMccsSubarrayCommandClasses:
+    """
+    This class contains tests of MCCSSubarray command classes.
+    """
+
+    def test_ScanCommand(self, subarray_state_model, mocker):
+        """
+        Test for MCCSSubarray.Scan()
+
+        :param subarray_state_model: the state model that this test uses
+            to check that it is allowed to run, and that it drives
+            with actions.
+        :type subarray_state_model:
+            :py:class:`ska.base.SKASubarrayStateModel`
+        :param mocker: the pytest `mocker` fixture is a wrapper around
+            the `unittest.mock` package
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        subarray_state_model._straight_to_state(
+            op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
+        )
+        mock = mocker.Mock()
+        mock._station_beam_pool_manager.scan.return_value = (None, "")
+        scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
+        scan_args = {"id": 1, "scan_time": 4}
+        json_str = json.dumps(scan_args)
+        (result_code, message) = scan_command(json_str)
+        assert result_code == ResultCode.STARTED
+        assert message == f"Scan command STARTED - config {scan_args}"
+
+        mock.reset_mock()
+        failure_code = ResultCode.FAILED
+        failure_message = "failure path unit test"
+        mock._station_beam_pool_manager.scan.return_value = (
+            failure_code,
+            failure_message,
+        )
+        subarray_state_model._straight_to_state(
+            op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
+        )
+        scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
+        (result_code, message) = scan_command(json_str)
+        assert result_code == failure_code
+        assert message == failure_message
+
+    def test_AbortCommand(self, subarray_state_model):
+        """
+        Test for MCCSSubarray.Abort()
+
+        :param subarray_state_model: the state model that this test uses
+            to check that it is allowed to run, and that it drives
+            with actions.
+        :type subarray_state_model:
+            :py:class:`ska.base.SKASubarrayStateModel`
+        """
+        subarray_state_model._straight_to_state(
+            op_state=DevState.ON,
+            admin_mode=AdminMode.ONLINE,
+            obs_state=ObsState.SCANNING,
+        )
+        abort_command = MccsSubarray.AbortCommand(self, subarray_state_model)
+        (result_code, message) = abort_command()
+        assert result_code == ResultCode.OK
+        assert message == "Abort command completed OK"
+
+    def test_ObsResetCommand(self, subarray_state_model, mocker):
+        """
+        Test for MCCSSubarray.ObsReset()
+
+        :param subarray_state_model: the state model that this test uses
+            to check that it is allowed to run, and that it drives
+            with actions.
+        :type subarray_state_model: :py:class:`SKASubarrayStateModel`
+        :param mocker: the pytest `mocker` fixture is a wrapper around
+            the `unittest.mock` package
+        :type mocker: wrapper for :py:mod:`unittest.mock`
+        """
+        subarray_state_model._straight_to_state(
+            op_state=DevState.ON,
+            admin_mode=AdminMode.ONLINE,
+            obs_state=ObsState.ABORTED,
+        )
+        mock = mocker.Mock()
+        obsreset_command = MccsSubarray.ObsResetCommand(mock, subarray_state_model)
+        (result_code, message) = obsreset_command()
+        assert result_code == ResultCode.OK
+        assert message == "ObsReset command completed OK"

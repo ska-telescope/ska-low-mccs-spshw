@@ -326,6 +326,10 @@ class MccsController(SKAMaster):
             return True
 
         def succeeded(self):
+            """
+            Hook called when the initialisation thread finishes
+            successfully.
+            """
             self.state_model.perform_action("init_succeeded_disable")
 
     def always_executed_hook(self):

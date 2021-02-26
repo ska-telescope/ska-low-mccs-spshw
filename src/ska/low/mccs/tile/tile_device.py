@@ -171,6 +171,13 @@ class TilePowerManager:
         self._update_power_mode(according_to_command)
 
     def _read_power_mode(self):
+        """
+        Helper method to read and interpret the power mode of the
+        hardware.
+
+        :return: the power mode of the hardware
+        :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
+        """
         try:
             subrack_state = self._subrack.state()
         except DevFailed:
@@ -189,6 +196,12 @@ class TilePowerManager:
         return PowerMode.ON if is_tpm_on else PowerMode.OFF
 
     def _update_power_mode(self, power_mode):
+        """
+        Update the power mode, ensuring that callbacks are called.
+
+        :param power_mode: the power mode of the hardware
+        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        """
         if self._power_mode != power_mode:
             self._power_mode = power_mode
             self._callback(power_mode)

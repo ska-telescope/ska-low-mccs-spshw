@@ -23,7 +23,7 @@ import time
 
 # PyTango imports
 import tango
-from tango import DebugIt, DevState, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
@@ -845,7 +845,7 @@ class MccsSubarray(SKASubarray):
             device._scan_id = kwargs.get("id")
             device._scan_time = kwargs.get("scan_time")
 
-            station_beam_pool_manager = self.target._station_beam_pool_manager
+            station_beam_pool_manager = device._station_beam_pool_manager
             (pool_failure_code, pool_message) = station_beam_pool_manager.scan(
                 self.logger, argin
             )
@@ -971,7 +971,7 @@ class MccsSubarray(SKASubarray):
             information purpose only.
         :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
-        self._command_result = DevState.UNKNOWN
+        self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
         command = self.get_command_object("Abort")
         (result_code, message) = command()

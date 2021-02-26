@@ -23,21 +23,46 @@ from pyfabil.base.definitions import Device, LibraryError, BoardError
 from pyfabil.boards.tpm import TPM
 
 
-# Helper to disallow certain function calls on unconnected tiles
-def connected(f):
-    @functools.wraps(f)
-    def wrapper(self, *args, **kwargs):
+def connected(method):
+    """
+    Helper to disallow certain function calls on unconnected tiles.
+
+    :param method: the method wrapped by this helper
+    :type method: callable
+
+    :return: the wrapped method
+    :rtype: callable
+    """
+
+    @functools.wraps(method)
+    def _wrapper(self, *args, **kwargs):
+        """
+        Wrapper that checks the TPM is connected before allowing the
+        wrapped method to proceed.
+
+        :param self: the method called
+        :type self: obj
+        :param args: positional arguments to the wrapped method
+        :type args: list
+        :param kwargs: keyword arguments to the wrapped method
+        :type kwargs: dict
+
+        :raises LibraryError: if the TPM is not connected
+
+        :return: whatever the wrapped method returns
+        :rtype: obj
+        """
         if self.tpm is None:
             self.logger.warning(
-                "Cannot call function " + str(f.__name__) + " on unconnected TPM"
+                "Cannot call function " + str(method.__name__) + " on unconnected TPM"
             )
             raise LibraryError(
-                "Cannot call function " + str(f.__name__) + " on unconnected TPM"
+                "Cannot call function " + str(method.__name__) + " on unconnected TPM"
             )
         else:
-            return f(self, *args, **kwargs)
+            return method(self, *args, **kwargs)
 
-    return wrapper
+    return _wrapper
 
 
 class HwTile(object):
@@ -1311,6 +1336,20 @@ class HwTile(object):
         self.tpm[key] = value
 
     def __getattr__(self, name):
+        """
+        Handler for any requested attribute not found in the usual way;
+        tries to return the corresponding attribute of the connected
+        TPM.
+
+        :param name: name of the requested attribute
+        :type name: str
+
+        :raises AttributeError: if neither this class nor the TPM has
+            the named attribute.
+
+        :return: the requested attribute
+        :rtype: obj
+        """
         if name in dir(self.tpm):
             return getattr(self.tpm, name)
         else:

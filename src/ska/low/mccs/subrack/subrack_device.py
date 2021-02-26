@@ -303,16 +303,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return self._factory.hardware.power_supply_voltages
 
     @property
-    def tpm_on_off(self):
-        """
-        Check whether the tpm are on or off.
-
-        :return: list of tpm on or off in the subrack
-        :rtype: list(int)
-        """
-        return self._factory.hardware.tpm_on_off(self)
-
-    @property
     def tpm_present(self):
         """
         Return the tpms detected in the subrack.
@@ -320,7 +310,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: list of tpm detected
         :rtype: list(bool)
         """
-        return self._factory.hardware.tpm_present(self)
+        return self._factory.hardware.tpm_present
 
     @property
     def tpm_supply_fault(self):
@@ -330,7 +320,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: the TPM supply fault status
         :rtype: list(int)
         """
-        return self._factory.hardware.tpm_supply_fault(self)
+        return self._factory.hardware.tpm_supply_fault
 
     @property
     def tpm_currents(self):

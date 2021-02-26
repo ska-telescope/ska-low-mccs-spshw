@@ -105,7 +105,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         self._temperature = temperature
         self._voltage_when_on = voltage
         self._current_when_on = current
-        self._voltage_when_on = voltage
         self._power_when_on = power
 
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
@@ -226,7 +225,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     The maximum simulated fan speed for the subrack;
     """
 
-    DEFAULT_FAN_MODE = [ControlMode.AUTO] * 4
+    DEFAULT_SUBRACK_FAN_MODE = [ControlMode.AUTO] * 4
     """
     The default initial simulated fan mode for the subrack; this can be
     overruled using the set_fan_mode method
@@ -273,7 +272,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         board_temperatures=DEFAULT_BOARD_TEMPERATURE,
         board_current=DEFAULT_BOARD_CURRENT,
         subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEED,
-        subrack_fan_mode=DEFAULT_FAN_MODE,
+        subrack_fan_mode=DEFAULT_SUBRACK_FAN_MODE,
         power_supply_powers=DEFAULT_POWER_SUPPLY_POWER,
         power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENT,
         power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGE,
@@ -822,7 +821,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             speed_percent / 100.0 * SubrackBoardSimulator.MAX_SUBRACK_FAN_SPEED
         )
 
-    def set_fan_mode(self, fan_id, mode):
+    def set_subrack_fan_mode(self, fan_id, mode):
         """
         Set Fan Operational Mode for the subrack's fan.
 

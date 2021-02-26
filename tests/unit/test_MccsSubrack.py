@@ -203,7 +203,7 @@ class TestSubrackBaySimulator:
         assert subrack_bay.temperature == temperature
         assert subrack_bay.current == current
         assert subrack_bay.voltage == voltage
-        assert subrack_bay.power == power
+        assert subrack_bay.power == current * voltage
 
 
 @pytest.fixture()

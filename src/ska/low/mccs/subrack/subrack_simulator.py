@@ -221,7 +221,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             management board
         :type subrack_fan_speeds: list(float)
         :param fan_mode: the initial fan mode of the subrack backplane
-        :type fan_mode: list(int)
+        :type fan_mode: list(:py:class:`ska.low.mccs.hardware.ControlMode`)
         :param power_supply_powers: the initial power for the 3 power supply in the
             subrack
         :type power_supply_powers: list(float)
@@ -392,7 +392,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         Return the subrack fan Mode.
 
         :return: subrack fan mode AUTO or  MANUAL
-        :rtype: list(str)
+        :rtype: list(:py:class:`ska.low.mccs.hardware.ControlMode`)
         """
         self.check_power_mode(PowerMode.ON)
         return self._subrack_fan_mode
@@ -667,8 +667,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :param fan_id: id of the selected fan accepted value: 1-4
         :type fan_id: int
-        :param mode: AUTO,  MANUAL
-        :type mode: str
+        :param mode: AUTO or MANUAL
+        :type mode: :py:class:`ska.low.mccs.hardware.ControlMode`
         """
         self.check_power_mode(PowerMode.ON)
         self._fan_mode[fan_id - 1] = mode
@@ -679,7 +679,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
         :param power_supply_fan_id: power supply id from 0 to 2
         :type power_supply_fan_id: int
-        :param speed_percent: fan speed in percent (MIN 0=0% - MAX 100=100%)
+        :param speed_percent: fan speed in percent
         :type speed_percent: float
         """
         self.check_power_mode(PowerMode.ON)

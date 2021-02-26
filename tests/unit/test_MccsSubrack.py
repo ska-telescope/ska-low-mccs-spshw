@@ -234,7 +234,6 @@ def subrack_bays(random_temperature, random_current, random_voltage, random_powe
             temperature=random_temperature(),
             current=random_current(),
             voltage=random_voltage(),
-            power=random_power(),
         )
         for bay in range(4)
     ]
@@ -486,7 +485,9 @@ class TestSubrackBoardSimulator:
         power_supply_fan_speeds = [random_fan_speed()] * 2
         power_supply_currents = [random_current()] * 2
         power_supply_voltages = [random_voltage()] * 2
-        power_supply_powers = [random_power()] * 2
+        power_supply_powers = [
+            power_supply_currents[i] * power_supply_voltages[i] for i in range(2)
+        ]
 
         subrack_board.simulate_backplane_temperatures(backplane_temperatures)
         subrack_board.simulate_board_temperatures(board_temperatures)
@@ -495,7 +496,6 @@ class TestSubrackBoardSimulator:
         subrack_board.simulate_power_supply_fan_speeds(power_supply_fan_speeds)
         subrack_board.simulate_power_supply_currents(power_supply_currents)
         subrack_board.simulate_power_supply_voltages(power_supply_voltages)
-        subrack_board.simulate_power_supply_powers(power_supply_powers)
 
         assert subrack_board.backplane_temperatures == backplane_temperatures
         assert subrack_board.board_temperatures == board_temperatures
@@ -527,7 +527,9 @@ class TestSubrackBoardSimulator:
         ]
         bay_currents = [random_current() for i in range(subrack_board.tpm_count)]
         bay_voltages = [random_voltage() for i in range(subrack_board.tpm_count)]
-        bay_powers = [random_power() for i in range(subrack_board.tpm_count)]
+        bay_powers = [
+            bay_currents[i] * bay_voltages[i] for i in range(subrack_board.tpm_count)
+        ]
 
         subrack_board.simulate_tpm_temperatures(bay_temperatures)
         subrack_board.simulate_tpm_currents(bay_currents)
@@ -597,7 +599,6 @@ class TestSubrackHardwareManager:
             power_supply_fan_speeds=[random_fan_speed()] * 2,
             power_supply_currents=[random_current()] * 2,
             power_supply_voltages=[random_voltage()] * 2,
-            power_supply_powers=[random_power()] * 2,
             _bays=subrack_bays,
         )
 

@@ -10,6 +10,7 @@ subsystem.
 """
 __all__ = [
     "ConnectionStatus",
+    "ControlMode",
     "HardwareDriver",
     "HardwareFactory",
     "HardwareHealthEvaluator",
@@ -19,6 +20,26 @@ __all__ = [
 from enum import Enum
 
 from ska.base.control_model import HealthState
+
+
+class ControlMode(Enum):
+    """
+    The control modes for hardware.
+
+    Currently only MANUAL and AUTO modes are provided. In future we
+    might need to support CASCADE mode.
+    """
+
+    MANUAL = 1
+    """
+    The control element is controlled by an external operator, such as
+    a human or a TANGO device
+    """
+
+    AUTO = 2
+    """
+    The control element is controlled by an internal controller.
+    """
 
 
 class ConnectionStatus(Enum):

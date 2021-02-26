@@ -156,7 +156,35 @@ def device_under_test(device_context, device_to_load):
 
 @pytest.fixture()
 def mock_callback(mocker):
-    class MockCallback(mocker.Mock):
+    """
+    Fixture that returns a mock to use as a callback.
+
+    :param mocker: fixture that wraps unittest.Mock
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+
+    :return: a mock to pass as a callback
+    :rtype: :py:class:`unittest.Mock`
+    """
+    return mocker.Mock()
+
+
+@pytest.fixture()
+def mock_event_callback(mocker):
+    """
+    Fixture that returns a mock for use as an event callback.
+
+    :param mocker: fixture that wraps unittest.Mock
+    :type mocker: wrapper for :py:mod:`unittest.mock`
+
+    :return: a mock to pass as an event callback
+    :rtype: :py:class:`unittest.Mock`
+    """
+
+    class _MockEventCallback(mocker.Mock):
+        """
+        Mocker private class.
+        """
+
         def check_event_data(self, name, result):
             """
             :param name: name of the registered event
@@ -211,4 +239,4 @@ def mock_callback(mocker):
                 assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
             self.reset_mock()
 
-    return MockCallback()
+    return _MockEventCallback()

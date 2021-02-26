@@ -12,7 +12,7 @@
 This module contains the tests for MccsSubrack.
 """
 import random
-
+import unittest
 import pytest
 from tango import DevState, AttrQuality, EventType
 
@@ -65,6 +65,28 @@ def random_temperature():
 
 
 @pytest.fixture()
+def random_power():
+    """
+    Return a callable that returns a random power.
+
+    :return: a callable that returns a random power
+    :rtype: float
+    """
+    return lambda: random.uniform(5.5, 12.5)
+
+
+@pytest.fixture()
+def random_voltage():
+    """
+    Return a callable that returns a random voltage.
+
+    :return: a callable that returns a random voltage
+    :rtype: float
+    """
+    return lambda: random.uniform(11.5, 12.5)
+
+
+@pytest.fixture()
 def random_fan_speed():
     """
     Return a callable that returns a random fan speed (in RPMs)
@@ -96,7 +118,7 @@ class TestSubrackBaySimulator:
         Test that:
 
         * we can turn the module in the subrack bay on and off.
-        * we can monitor its temperature and current irrespective of
+        * we can monitor its temperature, current, voltage and power irrespective of
           whether it is on or off.
 
         :param subrack_bay: a simulator for a subrack bay housing an
@@ -108,21 +130,32 @@ class TestSubrackBaySimulator:
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
+        assert subrack_bay.voltage == 0.0
+        assert subrack_bay.power == 0.0
 
         subrack_bay.on()
 
         assert subrack_bay.power_mode == PowerMode.ON
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == SubrackBaySimulator.DEFAULT_CURRENT
+        assert subrack_bay.voltage == SubrackBaySimulator.DEFAULT_VOLTAGE
+        assert subrack_bay.power == SubrackBaySimulator.DEFAULT_POWER
 
         subrack_bay.off()
 
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
+        assert subrack_bay.voltage == 0.0
+        assert subrack_bay.power == 0.0
 
     def test_subrack_bay_monitoring(
-        self, subrack_bay, random_current, random_temperature
+        self,
+        subrack_bay,
+        random_current,
+        random_temperature,
+        random_voltage,
+        random_power,
     ):
         """
         Test that we can simulate changes to the current and temperature
@@ -135,6 +168,12 @@ class TestSubrackBaySimulator:
         :param random_current: a random value within a reasonable range
             for a current measurement
         :type random_current: float
+        :param random_voltage: a random value within a reasonable range
+            for a voltage measurement
+        :type random_voltage: float
+        :param random_power: a random value within a reasonable range
+            for a power measurement
+        :type random_power: float
         :param random_temperature: a random value within a reasonable
             range for a temperature measurement
         :type random_temperature: float
@@ -142,6 +181,8 @@ class TestSubrackBaySimulator:
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
+        assert subrack_bay.voltage == 0.0
+        assert subrack_bay.power == 0.0
 
         temperature = random_temperature()
         subrack_bay.simulate_temperature(temperature)
@@ -151,13 +192,23 @@ class TestSubrackBaySimulator:
         subrack_bay.simulate_current(current)
         assert subrack_bay.current == 0.0
 
+        voltage = random_voltage()
+        subrack_bay.simulate_voltage(voltage)
+        assert subrack_bay.voltage == 0.0
+
+        power = random_power()
+        subrack_bay.simulate_power(power)
+        assert subrack_bay.power == 0.0
+
         subrack_bay.on()
         assert subrack_bay.temperature == temperature
         assert subrack_bay.current == current
+        assert subrack_bay.voltage == voltage
+        assert subrack_bay.power == power
 
 
 @pytest.fixture()
-def subrack_bays(random_temperature, random_current):
+def subrack_bays(random_temperature, random_current, random_voltage, random_power):
     """
     Return a list of subrack bay simulators for management by a subrack
     management board simulator.
@@ -168,13 +219,24 @@ def subrack_bays(random_temperature, random_current):
     :param random_current: a random value within a reasonable range
         for a current measurement
     :type random_current: float
+    :param random_voltage: a random value within a reasonable range
+        for a voltage measurement
+    :type random_voltage: float
+    :param random_power: a random value within a reasonable range
+        for a power measurement
+    :type random_power: float
 
     :return: a list of subrack bay simulators
     :rtype:
         list of :py:class:`~ska.low.mccs.subrack.SubrackBaySimulator`
     """
     return [
-        SubrackBaySimulator(temperature=random_temperature(), current=random_current())
+        SubrackBaySimulator(
+            temperature=random_temperature(),
+            current=random_current(),
+            voltage=random_voltage(),
+            power=random_power(),
+        )
         for bay in range(4)
     ]
 
@@ -225,6 +287,14 @@ class TestSubrackBoardSimulator:
                 _ = subrack_board.board_current
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = subrack_board.subrack_fan_speeds
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = subrack_board.power_supply_fan_speeds
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = subrack_board.power_supply_currents
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = subrack_board.power_supply_voltages
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = subrack_board.power_supply_powers
 
             assert subrack_board.are_tpms_on() is None
             for tpm_id in range(1, subrack_board.tpm_count + 1):
@@ -251,6 +321,22 @@ class TestSubrackBoardSimulator:
             assert (
                 subrack_board.subrack_fan_speeds
                 == SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_SPEED
+            )
+            assert (
+                subrack_board.power_supply_fan_speeds
+                == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEED
+            )
+            assert (
+                subrack_board.power_supply_currents
+                == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT
+            )
+            assert (
+                subrack_board.power_supply_voltages
+                == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE
+            )
+            assert (
+                subrack_board.power_supply_powers
+                == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_POWER
             )
 
             are_tpms_on = subrack_board.are_tpms_on()
@@ -330,6 +416,8 @@ class TestSubrackBoardSimulator:
         random_current,
         random_temperature,
         random_fan_speed,
+        random_power,
+        random_voltage,
     ):
         """
         Test that the monitoring attributes of this simulator return
@@ -351,6 +439,12 @@ class TestSubrackBoardSimulator:
         :param random_fan_speed: a random value within a reasonable
             range for a fan speed measurement
         :type random_fan_speed: float
+        :param random_power: a random value within a reasonable
+            range for a power measurement
+        :type random_power: float
+        :param random_voltage: a random value within a reasonable
+            range for a voltage measurement
+        :type random_voltage: float
         """
         subrack_board.on()
 
@@ -369,26 +463,56 @@ class TestSubrackBoardSimulator:
             subrack_board.subrack_fan_speeds
             == SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_SPEED
         )
+        assert (
+            subrack_board.power_supply_fan_speeds
+            == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEED
+        )
+        assert (
+            subrack_board.power_supply_currents
+            == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT
+        )
+        assert (
+            subrack_board.power_supply_voltages
+            == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE
+        )
+        assert (
+            subrack_board.power_supply_powers
+            == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_POWER
+        )
 
-        backplane_temperatures = random_temperature()
-        board_temperatures = random_temperature()
+        backplane_temperatures = [random_temperature()] * 2
+        board_temperatures = [random_temperature()] * 2
         board_current = random_current()
-        subrack_fan_speeds = random_fan_speed()
+        subrack_fan_speeds = [random_fan_speed()] * 4
+        power_supply_fan_speeds = [random_fan_speed()] * 2
+        power_supply_currents = [random_current()] * 2
+        power_supply_voltages = [random_voltage()] * 2
+        power_supply_powers = [random_power()] * 2
 
         subrack_board.simulate_backplane_temperatures(backplane_temperatures)
         subrack_board.simulate_board_temperatures(board_temperatures)
         subrack_board.simulate_board_current(board_current)
         subrack_board.simulate_subrack_fan_speeds(subrack_fan_speeds)
+        subrack_board.simulate_power_supply_fan_speeds(power_supply_fan_speeds)
+        subrack_board.simulate_power_supply_currents(power_supply_currents)
+        subrack_board.simulate_power_supply_voltages(power_supply_voltages)
+        subrack_board.simulate_power_supply_powers(power_supply_powers)
 
         assert subrack_board.backplane_temperatures == backplane_temperatures
         assert subrack_board.board_temperatures == board_temperatures
         assert subrack_board.board_current == board_current
         assert subrack_board.subrack_fan_speeds == subrack_fan_speeds
+        assert subrack_board.power_supply_fan_speeds == power_supply_fan_speeds
+        assert subrack_board.power_supply_currents == power_supply_currents
+        assert subrack_board.power_supply_voltages == power_supply_voltages
+        assert subrack_board.power_supply_powers == power_supply_powers
 
         assert subrack_board.tpm_temperatures == [
             bay.temperature for bay in subrack_bays
         ]
         assert subrack_board.tpm_currents == [0.0 for bay in subrack_bays]
+        assert subrack_board.tpm_voltages == [0.0 for bay in subrack_bays]
+        assert subrack_board.tpm_powers == [0.0 for bay in subrack_bays]
 
         subrack_board.turn_on_tpms()
 
@@ -396,22 +520,32 @@ class TestSubrackBoardSimulator:
             bay.temperature for bay in subrack_bays
         ]
         assert subrack_board.tpm_currents == [bay.current for bay in subrack_bays]
+        assert subrack_board.tpm_voltages == [bay.voltage for bay in subrack_bays]
+        assert subrack_board.tpm_powers == [bay.power for bay in subrack_bays]
 
         bay_temperatures = [
             random_temperature() for i in range(subrack_board.tpm_count)
         ]
         bay_currents = [random_current() for i in range(subrack_board.tpm_count)]
+        bay_voltages = [random_voltage() for i in range(subrack_board.tpm_count)]
+        bay_powers = [random_power() for i in range(subrack_board.tpm_count)]
 
         subrack_board.simulate_tpm_temperatures(bay_temperatures)
         subrack_board.simulate_tpm_currents(bay_currents)
+        subrack_board.simulate_tpm_voltages(bay_voltages)
+        subrack_board.simulate_tpm_powers(bay_powers)
 
         assert subrack_board.tpm_temperatures == bay_temperatures
         assert subrack_board.tpm_currents == bay_currents
+        assert subrack_board.tpm_voltages == bay_voltages
+        assert subrack_board.tpm_powers == bay_powers
 
         subrack_board.turn_off_tpms()
 
         assert subrack_board.tpm_temperatures == bay_temperatures
         assert subrack_board.tpm_currents == [0.0 for bay in subrack_bays]
+        assert subrack_board.tpm_voltages == [0.0 for bay in subrack_bays]
+        assert subrack_board.tpm_powers == [0.0 for bay in subrack_bays]
 
 
 class TestSubrackHardwareManager:
@@ -425,6 +559,8 @@ class TestSubrackHardwareManager:
         random_temperature,
         random_current,
         random_fan_speed,
+        random_power,
+        random_voltage,
         subrack_bays,
     ):
         """
@@ -439,6 +575,12 @@ class TestSubrackHardwareManager:
         :param random_fan_speed: a random value within a reasonable
             range for a fan speed measurement
         :type random_fan_speed: float
+        :param random_power: a random value within a reasonable
+            range for a power measurement
+        :type random_power: float
+        :param random_voltage: a random value within a reasonable
+            range for a voltage measurement
+        :type random_voltage: float
         :param subrack_bays: list of subrack bay simulators for
             management by this subrack management board simulator
         :type subrack_bays: list of
@@ -449,10 +591,14 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
-            backplane_temperatures=random_temperature(),
-            board_temperatures=random_temperature(),
+            backplane_temperatures=[random_temperature()] * 2,
+            board_temperatures=[random_temperature()] * 2,
             board_current=random_current(),
-            subrack_fan_speeds=random_fan_speed(),
+            subrack_fan_speeds=[random_fan_speed()] * 4,
+            power_supply_fan_speeds=[random_fan_speed()] * 2,
+            power_supply_currents=[random_current()] * 2,
+            power_supply_voltages=[random_voltage()] * 2,
+            power_supply_powers=[random_power()] * 2,
             _bays=subrack_bays,
         )
 
@@ -557,9 +703,21 @@ class TestSubrackHardwareManager:
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = hardware_manager.subrack_fan_speeds
             with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = hardware_manager.power_supply_fan_speeds
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = hardware_manager.power_supply_currents
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = hardware_manager.power_supply_voltages
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = hardware_manager.power_supply_powers
+            with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = hardware_manager.tpm_temperatures
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = hardware_manager.tpm_currents
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = hardware_manager.tpm_powers
+            with pytest.raises(ValueError, match="Subrack is not ON."):
+                _ = hardware_manager.tpm_voltages
             assert hardware_manager.health == HealthState.OK
 
         def assert_on_behaviour():
@@ -581,8 +739,26 @@ class TestSubrackHardwareManager:
             assert (
                 hardware_manager.subrack_fan_speeds == subrack_board.subrack_fan_speeds
             )
+            assert (
+                hardware_manager.power_supply_fan_speeds
+                == subrack_board.power_supply_fan_speeds
+            )
+            assert (
+                hardware_manager.power_supply_currents
+                == subrack_board.power_supply_currents
+            )
+            assert (
+                hardware_manager.power_supply_voltages
+                == subrack_board.power_supply_voltages
+            )
+            assert (
+                hardware_manager.power_supply_powers
+                == subrack_board.power_supply_powers
+            )
             assert hardware_manager.tpm_temperatures == subrack_board.tpm_temperatures
             assert hardware_manager.tpm_currents == subrack_board.tpm_currents
+            assert hardware_manager.tpm_powers == subrack_board.tpm_powers
+            assert hardware_manager.tpm_voltages == subrack_board.tpm_voltages
 
         assert_off_behaviour()
 
@@ -763,16 +939,37 @@ class TestMccsSubrack(object):
             device_under_test.boardCurrent
             == SubrackBoardSimulator.DEFAULT_BOARD_CURRENT
         )
-
         assert (
             list(device_under_test.subrackFanSpeeds)
             == SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_SPEED
+        )
+        assert (
+            list(device_under_test.powerSupplyFanSpeeds)
+            == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEED
+        )
+        assert (
+            not False in [abs(device_under_test.powerSupplyCurrents)[i]
+                                  - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT[
+                                      i] < 1e-6 for i in range(len(
+                SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT)) ]
+        )
+        assert (
+            not False in [abs(device_under_test.powerSupplyVoltages)[i]
+                                  - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE[
+                                      i] < 1e-6 for i in range(len(
+                SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE)) ]
+        )
+        assert (
+            list(device_under_test.powerSupplyPowers)
+            == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_POWER
         )
         assert (
             list(device_under_test.tpmTemperatures)
             == [SubrackBaySimulator.DEFAULT_TEMPERATURE] * 4
         )
         assert list(device_under_test.tpmCurrents) == [0.0, 0.0, 0.0, 0.0]
+        assert list(device_under_test.tpmPowers) == [0.0, 0.0, 0.0, 0.0]
+        assert list(device_under_test.tpmVoltages) == [0.0, 0.0, 0.0, 0.0]
 
     def test_PowerOnTpm(self, device_under_test):
         """

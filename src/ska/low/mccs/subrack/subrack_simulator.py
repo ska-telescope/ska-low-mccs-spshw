@@ -64,10 +64,24 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
     this subrack bay; this can be overruled in the constructor
     """
 
+    DEFAULT_VOLTAGE = 12.0
+    """
+    The default initial simulated voltage for the module contained in
+    this subrack bay; this can be overruled in the constructor
+    """
+
+    DEFAULT_POWER = DEFAULT_CURRENT * DEFAULT_VOLTAGE
+    """
+    The default initial simulated power for the module contained in
+    this subrack bay; this can be overruled in the constructor
+    """
+
     def __init__(
         self,
         temperature=DEFAULT_TEMPERATURE,
         current=DEFAULT_CURRENT,
+        voltage=DEFAULT_VOLTAGE,
+        power=DEFAULT_POWER,
         fail_connect=False,
         power_mode=PowerMode.OFF,
     ):
@@ -78,6 +92,10 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type temperature: float
         :param current: the initial current of this module (in amps)
         :type current: float
+        :param voltage: the initial voltage of this module (in volts)
+        :type voltage: float
+        :param power: the initial power of this module (in Watt)
+        :type power: float
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -86,6 +104,8 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         """
         self._temperature = temperature
         self._current_when_on = current
+        self._voltage_when_on = voltage
+        self._power_when_on = power
 
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
@@ -126,6 +146,44 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type current: float
         """
         self._current_when_on = current
+
+    @property
+    def voltage(self):
+        """
+        Return this module's voltage.
+
+        :return: this module's voltage.
+        :rtype: float
+        """
+        return self._voltage_when_on if self.power_mode == PowerMode.ON else 0.0
+
+    def simulate_voltage(self, voltage):
+        """
+        Set the simulated voltage of this module.
+
+        :param voltage: the simulated voltage of this module
+        :type voltage: float
+        """
+        self._voltage_when_on = voltage
+
+    @property
+    def power(self):
+        """
+        Return this module's power.
+
+        :return: this module's power.
+        :rtype: float
+        """
+        return self._power_when_on if self.power_mode == PowerMode.ON else 0.0
+
+    def simulate_power(self, power):
+        """
+        Set the simulated power of this module.
+
+        :param power: the simulated power of this module
+        :type power: float
+        """
+        self._power_when_on = power
 
 
 class SubrackBoardSimulator(OnOffHardwareSimulator):
@@ -179,16 +237,28 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         The default initial simulated tpm present in the subrack;
     """
 
-    DEFAULT_POWER_SUPPLY_POWER = [50, 60, 70]
+    DEFAULT_POWER_SUPPLY_POWER = [50.0, 60.0]
     """
         The default initial simulated PS power; this can be
         overruled in the constructor
     """
 
-    DEFAULT_POWER_SUPPLY_FAN_SPEED = [70, 71, 72, 73]
+    DEFAULT_POWER_SUPPLY_VOLTAGE = [12.0, 12.1]
     """
-        The default initial simulated power supply fan speed in percent; this can be
-        overruled using the set_power_supply_fan speed function
+    The default initial simulated power supply voltage; this can be
+    overruled in the constructor
+    """
+
+    DEFAULT_POWER_SUPPLY_CURRENT = [50.0 / 12.0, 70.0 / 12.1]
+    """
+    The default initial simulated power supply current; this can be
+    overruled in the constructor
+    """
+
+    DEFAULT_POWER_SUPPLY_FAN_SPEED = [90.0, 100.0]
+    """
+    The default initial simulated power supply fan speed in percent; this can be
+    overruled using the set_power_supply_fan speed function
     """
 
     def __init__(
@@ -199,6 +269,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEED,
         fan_mode=DEFAULT_FAN_MODE,
         power_supply_powers=DEFAULT_POWER_SUPPLY_POWER,
+        power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENT,
+        power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGE,
         power_supply_fan_speeds=DEFAULT_POWER_SUPPLY_FAN_SPEED,
         tpm_power_modes=DEFAULT_TPM_POWER_MODES,
         tpm_present=DEFAULT_TPM_PRESENT,
@@ -222,10 +294,16 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type subrack_fan_speeds: list(float)
         :param fan_mode: the initial fan mode of the subrack backplane
         :type fan_mode: list(:py:class:`ska.low.mccs.hardware.ControlMode`)
-        :param power_supply_powers: the initial power for the 3 power supply in the
+        :param power_supply_currents: the initial currents for the 2 power supply in the
+            subrack
+        :type power_supply_currents: list(float)
+        :param power_supply_voltages: the initial voltages for the 2 power supply in the
+            subrack
+        :type power_supply_voltages: list(float)
+        :param power_supply_powers: the initial power for the 2 power supply in the
             subrack
         :type power_supply_powers: list(float)
-        :param: power_supply_fan_speeds: the initial fan speeds in percent for the 3
+        :param: power_supply_fan_speeds: the initial fan speeds in percent for the 2
             power supply in the subrack
         :type power_supply_fan_speeds: list(float)
         :param tpm_power_modes: the initial power modes of the TPMs
@@ -253,6 +331,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._subrack_fan_speeds = subrack_fan_speeds
         self._fan_mode = fan_mode
         self._power_supply_powers = power_supply_powers
+        self._power_supply_currents = power_supply_currents
+        self._power_supply_voltages = power_supply_voltages
         self._power_supply_fan_speeds = power_supply_fan_speeds
         self._tpm_present = tpm_present
 
@@ -455,24 +535,94 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
                 bay.simulate_temperature(temperature)
 
     @property
-    def tpm_powers(self):
+    def tpm_currents(self):
         """
-        Return a list of bay powers for this subrack.
+        Return the currents of the TPMs housed in this subrack.
 
-        :return: a list of bay powers, in Watt
+        :return: the currents of the TPMs housed in this subrack
         :rtype: list(float)
         """
-        return self._tpm_powers
+        self.check_power_mode(PowerMode.ON)
+        with self._bay_lock:
+            return [bay.current for bay in self._bays]
+
+    def simulate_tpm_currents(self, tpm_currents):
+        """
+        Set the simulated currents for all TPMs housed in this subrack
+        simulator.
+
+        :param tpm_currents: the simulated TPM currents.
+        :type tpm_currents: list(float)
+
+        :raises ValueError: If the argument doesn't match the number of
+            TPMs in this subrack
+        """
+        if len(tpm_currents) != self.tpm_count:
+            raise ValueError("Argument does not match number of TPMs")
+
+        with self._bay_lock:
+            for (bay, current) in zip(self._bays, tpm_currents):
+                bay.simulate_current(current)
+
+    @property
+    def tpm_powers(self):
+        """
+        Return the powers of the TPMs housed in this subrack.
+
+        :return: the powers of the TPMs housed in this subrack
+        :rtype: list(float)
+        """
+        self.check_power_mode(PowerMode.ON)
+        with self._bay_lock:
+            return [bay.power for bay in self._bays]
+
+    def simulate_tpm_powers(self, tpm_powers):
+        """
+        Set the simulated powers for all TPMs housed in this subrack
+        simulator.
+
+        :param tpm_powers: the simulated TPM currents.
+        :type tpm_powers: list(float)
+
+        :raises ValueError: If the argument doesn't match the number of
+            TPMs in this subrack
+        """
+        if len(tpm_powers) != self.tpm_count:
+            raise ValueError("Argument does not match number of TPMs")
+
+        with self._bay_lock:
+            for (bay, power) in zip(self._bays, tpm_powers):
+                bay.simulate_power(power)
 
     @property
     def tpm_voltages(self):
         """
-        Return a list of bay voltages for this subrack.
+        Return the voltages of the TPMs housed in this subrack.
 
-        :return: a list of bay voltages, in volt
+        :return: the voltages of the TPMs housed in this subrack
         :rtype: list(float)
         """
-        return self._tpm_voltages
+        self.check_power_mode(PowerMode.ON)
+        with self._bay_lock:
+            return [bay.voltage for bay in self._bays]
+
+    def simulate_tpm_voltages(self, tpm_voltages):
+        """
+        Set the simulated voltages for all TPMs housed in this subrack
+        simulator.
+
+        :param tpm_voltages: the simulated TPM currents.
+        :type tpm_voltages: list(float)
+
+        :raises ValueError: If the argument doesn't match the number of
+            TPMs in this subrack
+        """
+        if len(tpm_voltages) != self.tpm_count:
+            raise ValueError("Argument does not match number of TPMs")
+
+        with self._bay_lock:
+            for (bay, voltage) in zip(self._bays, tpm_voltages):
+                bay.simulate_voltage(voltage)
 
     @property
     def power_supply_fan_speeds(self):
@@ -482,7 +632,17 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the power supply fan speed
         :rtype: list(float)
         """
+        self.check_power_mode(PowerMode.ON)
         return self._power_supply_fan_speeds
+
+    def simulate_power_supply_fan_speeds(self, power_supply_fan_speeds):
+        """
+        Set the the power supply fan_speeds for this subrack.
+
+        :param power_supply_fan_speeds: the simulated  power supply fan_speeds
+        :type power_supply_fan_speeds: list(float)
+        """
+        self._power_supply_fan_speeds = power_supply_fan_speeds
 
     @property
     def power_supply_currents(self):
@@ -492,7 +652,17 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the power supply current
         :rtype: list(float)
         """
+        self.check_power_mode(PowerMode.ON)
         return self._power_supply_currents
+
+    def simulate_power_supply_currents(self, power_supply_currents):
+        """
+        Set the the power supply current for this subrack.
+
+        :param power_supply_currents: the simulated  power supply current
+        :type power_supply_currents: list(float)
+        """
+        self._power_supply_currents = power_supply_currents
 
     @property
     def power_supply_powers(self):
@@ -522,7 +692,17 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the power supply voltages
         :rtype: list(float)
         """
+        self.check_power_mode(PowerMode.ON)
         return self._power_supply_voltages
+
+    def simulate_power_supply_voltages(self, power_supply_voltages):
+        """
+        Set the the power supply voltage for this subrack.
+
+        :param power_supply_voltages: the simulated  power supply voltage
+        :type power_supply_voltages: list(float)
+        """
+        self._power_supply_voltages = power_supply_voltages
 
     @property
     def tpm_present(self):
@@ -543,36 +723,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(int)
         """
         return self._tpm_supply_fault
-
-    @property
-    def tpm_currents(self):
-        """
-        Return the temperatures of the TPMs housed in this subrack.
-
-        :return: the temperatures of the TPMs housed in this subrack
-        :rtype: list(float)
-        """
-        self.check_power_mode(PowerMode.ON)
-        with self._bay_lock:
-            return [bay.current for bay in self._bays]
-
-    def simulate_tpm_currents(self, tpm_currents):
-        """
-        Set the simulated currents for all TPMs housed in this subrack
-        simulator.
-
-        :param tpm_currents: the simulated TPM currents.
-        :type tpm_currents: list(float)
-
-        :raises ValueError: If the argument doesn't match the number of
-            TPMs in this subrack
-        """
-        if len(tpm_currents) != self.tpm_count:
-            raise ValueError("Argument does not match number of TPMs")
-
-        with self._bay_lock:
-            for (bay, current) in zip(self._bays, tpm_currents):
-                bay.simulate_current(current)
 
     def is_tpm_on(self, logical_tpm_id):
         """

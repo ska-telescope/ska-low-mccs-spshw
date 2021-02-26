@@ -473,7 +473,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         Set the power supply  fan speed.
 
-        :param power_supply_fan_id: power supply id from 0 to 2
+        :param power_supply_fan_id: power supply id from 1 to 2
         :type power_supply_fan_id: int
         :param speed_percent: fan speed in percent (MIN 0=0% - MAX 100=100%)
         :type speed_percent: float
@@ -965,7 +965,7 @@ class MccsSubrack(SKABaseDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        max_dim_x=3,
+        max_dim_x=2,
         label="power_supply current",
     )
     def powerSupplyCurrents(self):
@@ -979,7 +979,7 @@ class MccsSubrack(SKABaseDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        max_dim_x=3,
+        max_dim_x=2,
         label="power_supply Powers",
     )
     def powerSupplyPowers(self):
@@ -993,7 +993,7 @@ class MccsSubrack(SKABaseDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        max_dim_x=3,
+        max_dim_x=2,
         label="power_supply voltage",
     )
     def powerSupplyVoltages(self):
@@ -1457,7 +1457,7 @@ class MccsSubrack(SKABaseDevice):
 
             :param argin: json dictionary with mandatory keywords:
 
-            * power_supply_id - (int) power supply id from 0 to 2
+            * power_supply_id - (int) power supply id from 1 to 2
             * speed_percent - (float) fanspeed in percent
 
             :type argin: str

@@ -12,7 +12,6 @@
 This module contains the tests for MccsSubrack.
 """
 import random
-import unittest
 import pytest
 from tango import DevState, AttrQuality, EventType
 
@@ -204,7 +203,7 @@ class TestSubrackBaySimulator:
         assert subrack_bay.temperature == temperature
         assert subrack_bay.current == current
         assert subrack_bay.voltage == voltage
-        assert subrack_bay.power == power
+        assert subrack_bay.power == current * voltage
 
 
 @pytest.fixture()
@@ -947,18 +946,18 @@ class TestMccsSubrack(object):
             list(device_under_test.powerSupplyFanSpeeds)
             == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEED
         )
-        assert (
-            not False in [abs(device_under_test.powerSupplyCurrents)[i]
-                                  - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT[
-                                      i] < 1e-6 for i in range(len(
-                SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT)) ]
-        )
-        assert (
-            not False in [abs(device_under_test.powerSupplyVoltages)[i]
-                                  - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE[
-                                      i] < 1e-6 for i in range(len(
-                SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE)) ]
-        )
+        assert True in [
+            abs(device_under_test.powerSupplyCurrents)[i]
+            - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT[i]
+            < 1e-6
+            for i in range(len(SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT))
+        ]
+        assert True in [
+            abs(device_under_test.powerSupplyVoltages)[i]
+            - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE[i]
+            < 1e-6
+            for i in range(len(SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE))
+        ]
         assert (
             list(device_under_test.powerSupplyPowers)
             == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_POWER

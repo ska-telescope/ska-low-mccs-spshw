@@ -448,7 +448,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         self._factory.hardware.set_subrack_fan_speed(fan_id, speed_percent)
 
-    def set_fan_mode(self, fan_id, mode):
+    def set_subrack_fan_mode(self, fan_id, mode):
         """
         Set subrack Fan Operational Mode.
 
@@ -457,7 +457,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :param mode:  1 AUTO, 0 MANUAL
         :type mode: int
         """
-        self._factory.hardware.set_fan_mode(fan_id, mode)
+        self._factory.hardware.set_subrack_fan_mode(fan_id, mode)
 
     def set_power_supply_fan_speed(self, power_supply_fan_id, speed_percent):
         """
@@ -629,7 +629,7 @@ class MccsSubrack(SKABaseDevice):
                 "SetSubrackFanSpeed", device.SetSubrackFanSpeedCommand(*args)
             )
             device.register_command_object(
-                "SetFanMode", device.SetFanModeCommand(*args)
+                "SetSubrackFanMode", device.SetSubrackFanModeCommand(*args)
             )
             device.register_command_object(
                 "SetPowerSupplyFanSpeed", device.SetPowerSupplyFanSpeedCommand(*args)
@@ -1342,9 +1342,9 @@ class MccsSubrack(SKABaseDevice):
             (return_code, message) = handler(argin)
             return [[return_code], [message]]
 
-    class SetFanModeCommand(ResponseCommand):
+    class SetSubrackFanModeCommand(ResponseCommand):
         """
-        Class for handling the SetFanMode() command.
+        Class for handling the SetSubrackFanMode() command.
 
         This command can set the selected fan to manual or auto mode.
         """
@@ -1352,7 +1352,8 @@ class MccsSubrack(SKABaseDevice):
         def do(self, argin):
             """
             Hook for the implementation of
-            py:meth:`.MccsSubrack.SetFanMode` command functionality.
+            py:meth:`.MccsSubrack.SetSubrackFanMode` command
+            functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -1371,8 +1372,8 @@ class MccsSubrack(SKABaseDevice):
                 self.logger.error("Fan_id and mode are mandatory parameters")
                 raise ValueError("Fan_id and mode are mandatory parameter")
 
-            success = hardware_manager.set_fan_mode(fan_id, mode)
-            message = "SetFanMode command completed"
+            success = hardware_manager.set_subrack_fan_mode(fan_id, mode)
+            message = "SetSubrackFanMode command completed"
             return create_return(success, message)
 
         @command(
@@ -1380,7 +1381,7 @@ class MccsSubrack(SKABaseDevice):
             dtype_out="DevVarLongStringArray",
         )
         @DebugIt()
-        def SetFanMode(self, argin):
+        def SetSubrackFanMode(self, argin):
             """
             Set Fan Operational Mode: 1 AUTO, 0 MANUAL.
 
@@ -1394,7 +1395,7 @@ class MccsSubrack(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            handler = self.get_command_object("SetFanMode")
+            handler = self.get_command_object("SetSubrackFanMode")
             (return_code, message) = handler(argin)
             return [[return_code], [message]]
 

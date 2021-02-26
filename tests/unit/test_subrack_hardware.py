@@ -155,7 +155,7 @@ class TestCommon:
                     for speed in SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_SPEED
                 ],
             ),
-            ("subrack_fan_mode", SubrackBoardSimulator.DEFAULT_FAN_MODE),
+            ("subrack_fan_mode", SubrackBoardSimulator.DEFAULT_SUBRACK_FAN_MODE),
             ("tpm_count", 8),
             ("tpm_temperatures", [SubrackBaySimulator.DEFAULT_TEMPERATURE] * 8),
             (
@@ -243,7 +243,7 @@ class TestCommon:
             ("turn_on_tpm", 1),
             ("turn_off_tpm", 1),
             ("set_subrack_fan_speed", 2),
-            ("set_fan_mode", 2),
+            ("set_subrack_fan_mode", 2),
             ("set_subrack_fan_speed", 2),
             ("set_power_supply_fan_speed", 2),
         ),

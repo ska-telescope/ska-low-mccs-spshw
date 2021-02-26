@@ -64,10 +64,17 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
     this subrack bay; this can be overruled in the constructor
     """
 
+    DEFAULT_VOLTAGE = 12.0
+    """
+    The default initial simulated voltage for the module contained in
+    this subrack bay; this can be overruled in the constructor
+    """
+
     def __init__(
         self,
         temperature=DEFAULT_TEMPERATURE,
         current=DEFAULT_CURRENT,
+        voltage=DEFAULT_VOLTAGE,
         fail_connect=False,
         power_mode=PowerMode.OFF,
     ):
@@ -78,6 +85,8 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type temperature: float
         :param current: the initial current of this module (in amps)
         :type current: float
+        :param voltage: the initial voltage of this module (in volts)
+        :type voltage: float
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -85,6 +94,7 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
         """
         self._temperature = temperature
+        self._voltage_when_on = voltage
         self._current_when_on = current
 
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
@@ -126,6 +136,16 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type current: float
         """
         self._current_when_on = current
+
+    @property
+    def voltage(self):
+        """
+        Return this module's voltage.
+
+        :return: this module's voltage.
+        :rtype: float
+        """
+        return self._voltage_when_on if self.power_mode == PowerMode.ON else 0.0
 
 
 class SubrackBoardSimulator(OnOffHardwareSimulator):
@@ -185,6 +205,18 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         overruled in the constructor
     """
 
+    DEFAULT_POWER_SUPPLY_VOLTAGE = [12.0, 12.0, 12.1]
+    """
+        The default initial simulated PS power; this can be
+        overruled in the constructor
+    """
+
+    DEFAULT_POWER_SUPPLY_CURRENT = [50.0 / 12.0, 60.0 / 12.0, 70.0 / 12.1]
+    """
+        The default initial simulated PS power; this can be
+        overruled in the constructor
+    """
+
     DEFAULT_POWER_SUPPLY_FAN_SPEED = [70, 71, 72, 73]
     """
         The default initial simulated power supply fan speed in percent; this can be
@@ -199,6 +231,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEED,
         fan_mode=DEFAULT_FAN_MODE,
         power_supply_powers=DEFAULT_POWER_SUPPLY_POWER,
+        power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENT,
+        power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGE,
         power_supply_fan_speeds=DEFAULT_POWER_SUPPLY_FAN_SPEED,
         tpm_power_modes=DEFAULT_TPM_POWER_MODES,
         tpm_present=DEFAULT_TPM_PRESENT,
@@ -225,6 +259,12 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param power_supply_powers: the initial power for the 3 power supply in the
             subrack
         :type power_supply_powers: list(float)
+        :param power_supply_currents: the initial currents for the 3 power supply in the
+            subrack
+        :type power_supply_currents: list(float)
+        :param power_supply_voltages: the initial voltages for the 3 power supply in the
+            subrack
+        :type power_supply_voltages: list(float)
         :param: power_supply_fan_speeds: the initial fan speeds in percent for the 3
             power supply in the subrack
         :type power_supply_fan_speeds: list(float)
@@ -253,6 +293,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._subrack_fan_speeds = subrack_fan_speeds
         self._fan_mode = fan_mode
         self._power_supply_powers = power_supply_powers
+        self._power_supply_currents = power_supply_currents
+        self._power_supply_voltages = power_supply_voltages
         self._power_supply_fan_speeds = power_supply_fan_speeds
         self._tpm_present = tpm_present
 

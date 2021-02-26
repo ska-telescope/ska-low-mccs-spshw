@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* MCCS-116 - Add station beam health monitoring to MCCS Station
+
 ## 0.7.0 
 
 * MCCS-381 - Move subarray configure command implementation to station beams resource manager

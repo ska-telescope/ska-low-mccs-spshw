@@ -9,3 +9,4 @@ flake8-fixme
 flake8-use-fstring
 flake8-rst-docstrings
 pep8-naming
+sphinx-autodoc-typehints

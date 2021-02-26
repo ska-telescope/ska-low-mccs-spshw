@@ -81,7 +81,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         temperature=DEFAULT_TEMPERATURE,
         current=DEFAULT_CURRENT,
         voltage=DEFAULT_VOLTAGE,
-        power=DEFAULT_POWER,
         fail_connect=False,
         power_mode=PowerMode.OFF,
     ):
@@ -94,8 +93,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type current: float
         :param voltage: the initial voltage of this module (in volts)
         :type voltage: float
-        :param power: the initial power of this module (in Watt)
-        :type power: float
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -105,7 +102,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         self._temperature = temperature
         self._voltage_when_on = voltage
         self._current_when_on = current
-        self._power_when_on = power
 
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
@@ -174,7 +170,11 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :return: this module's power.
         :rtype: float
         """
-        return self._power_when_on if self.power_mode == PowerMode.ON else 0.0
+        return (
+            self._voltage_when_on * self._current_when_on
+            if self.power_mode == PowerMode.ON
+            else 0.0
+        )
 
     def simulate_power(self, power):
         """
@@ -183,7 +183,8 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :param power: the simulated power of this module
         :type power: float
         """
-        self._power_when_on = power
+        pass
+        # self._power_when_on = power
 
 
 class SubrackBoardSimulator(OnOffHardwareSimulator):
@@ -242,7 +243,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         The default initial simulated tpm present in the subrack;
     """
 
-    DEFAULT_POWER_SUPPLY_POWER = [50.0, 60.0]
+    DEFAULT_POWER_SUPPLY_POWER = [50.0, 70.0]
     """
         The default initial simulated PS power; this can be
         overruled in the constructor
@@ -273,7 +274,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         board_current=DEFAULT_BOARD_CURRENT,
         subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEED,
         subrack_fan_mode=DEFAULT_SUBRACK_FAN_MODE,
-        power_supply_powers=DEFAULT_POWER_SUPPLY_POWER,
         power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENT,
         power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGE,
         power_supply_fan_speeds=DEFAULT_POWER_SUPPLY_FAN_SPEED,
@@ -305,9 +305,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param power_supply_voltages: the initial voltages for the 2 power supply in the
             subrack
         :type power_supply_voltages: list(float)
-        :param power_supply_powers: the initial power for the 2 power supply in the
-            subrack
-        :type power_supply_powers: list(float)
         :param: power_supply_fan_speeds: the initial fan speeds in percent for the 2
             power supply in the subrack
         :type power_supply_fan_speeds: list(float)
@@ -335,7 +332,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._board_current = board_current
         self._subrack_fan_speeds = subrack_fan_speeds
         self._subrack_fan_mode = subrack_fan_mode
-        self._power_supply_powers = power_supply_powers
         self._power_supply_currents = power_supply_currents
         self._power_supply_voltages = power_supply_voltages
         self._power_supply_fan_speeds = power_supply_fan_speeds
@@ -683,7 +679,11 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._power_supply_powers
+        powers = [
+            self._power_supply_currents[i] * self._power_supply_voltages[i]
+            for i in range(len(self._power_supply_currents))
+        ]
+        return powers
 
     def simulate_power_supply_powers(self, power_supply_powers):
         """
@@ -692,7 +692,10 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param power_supply_powers: the simulated  power supply power
         :type power_supply_powers: list(float)
         """
-        self._power_supply_powers = power_supply_powers
+        self._power_supply_currents = [
+            power_supply_powers[i] / self._power_supply_voltages[i]
+            for i in range(len(self._power_supply_currents))
+        ]
 
     @property
     def power_supply_voltages(self):

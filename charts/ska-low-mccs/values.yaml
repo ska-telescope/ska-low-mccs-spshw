@@ -21,11 +21,11 @@ global:
 
 resources:
   limits:
-    cpu: 300m
-    memory: 500Mi
+    cpu: 60m
+    memory: 150Mi
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 20m
+    memory: 50Mi
 
 # Main values to control for using the ska-low-mccs subchart
 

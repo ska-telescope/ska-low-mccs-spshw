@@ -218,3 +218,13 @@ To monitor MCCS with Grafana:
       make cli
       mccs-controller on
       mccs-controller off
+
+Resource Usage
+^^^^^^^^^^^^^^
+Resource usage for the MCCS pods is defined in ska-low-mccs/values.yaml.
+Currently, following a review of the resources required by the MCCS system,
+these are set to 20m CPU, and 50Mi memory, where 1000m is equivalent to
+1 vCPU/Core for cloud providers, or 1 hyperthread on a bare-metal intel
+processor. Should these need to be increased in future, values.yaml will
+need updating. More information on resource usage in kubernetes can be found
+here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/

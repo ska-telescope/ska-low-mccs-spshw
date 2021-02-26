@@ -78,6 +78,15 @@ class HardwareDriver:
     """
 
     def __init__(self, is_connectible=True):
+        """
+        Initialise a new instance.
+
+        :param is_connectible: whether we expect the driver to be able
+            to connect to the hardware. For example, if we know that the
+            hardware is currently powered off, we wouldn't even try to
+            connect to it.
+        :type is_connectible: bool
+        """
         self._connection_status = (
             ConnectionStatus.NOT_CONNECTED
             if is_connectible

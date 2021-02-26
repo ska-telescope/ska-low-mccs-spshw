@@ -47,6 +47,12 @@ class HardwareSimulator(HardwareDriver):
         super().__init__(is_connectible)
 
     def _connect(self):
+        """
+        Establish a connection to the hardware.
+
+        :return: whether successful, or None if already connected
+        :rtype: bool
+        """
         if self.connection_status == ConnectionStatus.CONNECTED:
             return None
         if self.connection_status == ConnectionStatus.NOT_CONNECTIBLE:

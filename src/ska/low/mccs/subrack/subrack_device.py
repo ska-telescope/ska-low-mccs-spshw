@@ -89,17 +89,17 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
     in simulation mode
     """
 
-    def __init__(self, simulation_mode, tpm_count):
+    def __init__(self, simulation_mode, tpm_count=None):
         """
         Create a new factory instance.
 
-        :param tpm_count: number of TPMs that are attached to the
-            subrack
-        :type tpm_count: int
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode:
             :py:class:`~ska.base.control_model.SimulationMode`
+        :param tpm_count: Optional number of TPMs that are attached to
+            the subrack. If omitted, the subrack uses its own default.
+        :type tpm_count: int
         """
         self._tpm_count = tpm_count
         super().__init__(simulation_mode)
@@ -112,7 +112,13 @@ class SubrackHardwareFactory(SimulableHardwareFactory):
         :rtype:
             :py:class:`.SubrackHardwareSimulator`
         """
-        return SubrackBoardSimulator(self._tpm_count)
+        if self._tpm_count is None:
+            return SubrackBoardSimulator()
+        else:
+            return SubrackBoardSimulator(
+                tpm_power_modes=[PowerMode.OFF] * self._tpm_count,
+                tpm_present=[True] * self._tpm_count,
+            )
 
 
 class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
@@ -123,7 +129,11 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     """
 
     def __init__(
-        self, simulation_mode, tpm_count, are_tpms_on_change_callback, _factory=None
+        self,
+        simulation_mode,
+        are_tpms_on_change_callback,
+        tpm_count=None,
+        _factory=None,
     ):
         """
         Initialise a new SubrackHardwareManager instance.
@@ -131,19 +141,20 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :param simulation_mode: the initial simulation mode of this
             hardware manager
         :type simulation_mode: :py:class:`~ska.base.control_model.SimulationMode`
-        :param tpm_count: number of TPMs that are attached to the
-            subrack
-        :type tpm_count: int
         :param are_tpms_on_change_callback: a callback to be called when
             the are_tpms_on property changes
         :type are_tpms_on_change_callback: callable
+        :param tpm_count: Optional number of TPMs that are attached to
+            the subrack. If omitted, the subrack uses its own default
+            value.
+        :type tpm_count: int
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
         :type _factory: :py:class:`.SubrackHardwareFactory`
         """
         hardware_factory = _factory or SubrackHardwareFactory(
-            simulation_mode == SimulationMode.TRUE, tpm_count
+            simulation_mode == SimulationMode.TRUE, tpm_count=tpm_count
         )
         super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
 
@@ -600,8 +611,8 @@ class MccsSubrack(SKABaseDevice):
             """
             device.hardware_manager = SubrackHardwareManager(
                 device._simulation_mode,
-                len(device._tile_fqdns),
                 device.are_tpms_on_changed,
+                tpm_count=len(device._tile_fqdns),
             )
 
             args = (device.hardware_manager, device.state_model, self.logger)
@@ -731,7 +742,6 @@ class MccsSubrack(SKABaseDevice):
         max_dim_x=2,
         label="Backplane temperatures",
         unit="Celsius",
-        doc="get backplane temperature from sensor 1 and sensor 2",
     )
     def backplaneTemperatures(self):
         """
@@ -747,7 +757,6 @@ class MccsSubrack(SKABaseDevice):
         max_dim_x=2,
         label="Subrack board temperatures",
         unit="Celsius",
-        doc="get subrack-management temperature from sensor 1 and sensor 2",
     )
     def boardTemperatures(self):
 
@@ -773,7 +782,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=4,
         label="Subrack fans speeds (RPM)",
-        doc="Rotation speed in RPM of each fan of subrack",
     )
     def subrackFanSpeeds(self):
         """
@@ -788,7 +796,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=4,
         label="Subrack fans speeds (%)",
-        doc="PWM in percentage of each Fan of Subrack",
     )
     def subrackFanSpeedsPercent(self):
         """
@@ -803,7 +810,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevString",),
         max_dim_x=4,
         label="Subrack Fan Mode",
-        doc="Operation mode of each Fan of Subrack: AUTO or MANUAL",
     )
     def subrackFanMode(self):
         """
@@ -818,8 +824,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevShort",),
         label="TPM On/Off",
         max_dim_x=8,
-        doc="Bits 7:0, bit 0 slot 1, bit 7 slot 8, 1 TPM power on, 0 no TPM "
-        "inserted or power off",
     )
     def tpmOnOff(self):
         """
@@ -835,9 +839,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevBoolean",),
         max_dim_x=8,
         label="TPM present",
-        doc="Method to get info about TPM board present on subrack: "
-        "True TPM detected, False no TPM inserted,bit 7:0, bit 0 slot 1, "
-        "bit 7 slot 8",
     )
     def tpmPresent(self):
         """
@@ -852,8 +853,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevUShort",),
         max_dim_x=8,
         label="TPM Supply Fault",
-        doc="Method to get info about TPM supply fault status. "
-        "1 fault, 0 no fault,bit 7:0, bit 0 slot 1, bit 7 slot 8",
     )
     def tpmSupplyFault(self):
         """
@@ -879,7 +878,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM power",
-        doc="Method to get power consumption of selected tpm",
     )
     def tpmPowers(self):
         """
@@ -894,7 +892,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM voltage",
-        doc="Method to get voltage consumption of selected tpm",
     )
     def tpmVoltages(self):
         """
@@ -909,9 +906,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM currents",
-        doc="Method to get current consumption in Ampere for each TPM in each "
-        "slot of subrack,values read from TPM control chip "
-        "on backplane board",
     )
     def tpmCurrents(self):
         """
@@ -952,7 +946,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=3,
         label="power supply fan speed",
-        doc="Method to get the power supply fan speed",
     )
     def powerSupplyFanSpeeds(self):
         """
@@ -967,7 +960,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=3,
         label="power_supply current",
-        doc="Method to get the power supply current",
     )
     def powerSupplyCurrents(self):
         """
@@ -982,7 +974,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=3,
         label="power_supply Powers",
-        doc="Method to get the power supply powers",
     )
     def powerSupplyPowers(self):
         """
@@ -997,7 +988,6 @@ class MccsSubrack(SKABaseDevice):
         dtype=("DevFloat",),
         max_dim_x=3,
         label="power_supply voltage",
-        doc="Method to get the power supply voltage",
     )
     def powerSupplyVoltages(self):
         """
@@ -1332,9 +1322,7 @@ class MccsSubrack(SKABaseDevice):
 
         @command(
             dtype_in="DevString",
-            doc_in="json dictionary with keywords:\n" "fan_id, speed_percent",
             dtype_out="DevVarLongStringArray",
-            doc_out="(ResultCode, 'informational message')",
         )
         @DebugIt()
         def SetSubrackFanSpeed(self, argin):
@@ -1392,9 +1380,7 @@ class MccsSubrack(SKABaseDevice):
 
         @command(
             dtype_in="DevString",
-            doc_in="json dictionary with keywords:\n" "fan_id,auto_mode",
             dtype_out="DevVarLongStringArray",
-            doc_out="(ResultCode, 'informational message')",
         )
         @DebugIt()
         def SetFanMode(self, argin):
@@ -1456,13 +1442,7 @@ class MccsSubrack(SKABaseDevice):
             message = "SetPowerSupplyFanSpeed command completed"
             return create_return(success, message)
 
-        @command(
-            dtype_in="DevString",
-            doc_in="json dictionary with keywords:\n"
-            "power_supply_fan_id,speed_percent",
-            dtype_out="DevVarLongStringArray",
-            doc_out="(ResultCode, 'informational message')",
-        )
+        @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
         @DebugIt()
         def SetPowerSupplyFanSpeed(self, argin):
             """

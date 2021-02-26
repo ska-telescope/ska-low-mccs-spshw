@@ -198,7 +198,7 @@ class TestSubrackBoardSimulator:
         :rtype:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
-        return SubrackBoardSimulator(tpm_count=len(subrack_bays), _bays=subrack_bays)
+        return SubrackBoardSimulator(_bays=subrack_bays)
 
     def test_subrack_on_off(self, subrack_board):
         """
@@ -449,7 +449,6 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
-            tpm_count=len(subrack_bays),
             backplane_temperatures=random_temperature(),
             board_temperatures=random_temperature(),
             board_current=random_current(),
@@ -492,7 +491,7 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.subrack_device.SubrackHardwareManager`
         """
         return SubrackHardwareManager(
-            SimulationMode.TRUE, 4, mock_callback, _factory=hardware_factory
+            SimulationMode.TRUE, mock_callback, _factory=hardware_factory
         )
 
     def test_init_simulation_mode(self, mock_callback):
@@ -506,7 +505,7 @@ class TestSubrackHardwareManager:
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):
-            _ = SubrackHardwareManager(SimulationMode.FALSE, 4, mock_callback)
+            _ = SubrackHardwareManager(SimulationMode.FALSE, mock_callback)
 
     def test_simulation_mode(self, hardware_manager):
         """

@@ -154,6 +154,7 @@ __all__ = [
     "BasePowerModeHardwareSimulator",
     "BasePowerModeHardwareManager",
     "ConnectionStatus",
+    "ControlMode",
     "HardwareDriver",
     "HardwareFactory",
     "HardwareHealthEvaluator",
@@ -176,6 +177,7 @@ __all__ = [
 
 from .base_hardware import (
     ConnectionStatus,
+    ControlMode,
     HardwareDriver,
     HardwareFactory,
     HardwareHealthEvaluator,

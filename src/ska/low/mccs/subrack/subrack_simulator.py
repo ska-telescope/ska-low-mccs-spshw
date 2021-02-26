@@ -103,6 +103,7 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
         """
         self._temperature = temperature
+        self._voltage_when_on = voltage
         self._current_when_on = current
         self._voltage_when_on = voltage
         self._power_when_on = power
@@ -185,7 +186,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         """
         self._power_when_on = power
 
-
 class SubrackBoardSimulator(OnOffHardwareSimulator):
     """
     A simulator of a subrack management board.
@@ -218,6 +218,11 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     """
     The default initial simulated fan speed for the subrack; this can be
     overruled using the set_subrack_fan_speed method
+    """
+
+    MAX_SUBRACK_FAN_SPEED = 8000.0
+    """
+    The maximum simulated fan speed for the subrack;
     """
 
     DEFAULT_FAN_MODE = [ControlMode.AUTO] * 4
@@ -267,7 +272,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         board_temperatures=DEFAULT_BOARD_TEMPERATURE,
         board_current=DEFAULT_BOARD_CURRENT,
         subrack_fan_speeds=DEFAULT_SUBRACK_FAN_SPEED,
-        fan_mode=DEFAULT_FAN_MODE,
+        subrack_fan_mode=DEFAULT_FAN_MODE,
         power_supply_powers=DEFAULT_POWER_SUPPLY_POWER,
         power_supply_currents=DEFAULT_POWER_SUPPLY_CURRENT,
         power_supply_voltages=DEFAULT_POWER_SUPPLY_VOLTAGE,
@@ -306,6 +311,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param: power_supply_fan_speeds: the initial fan speeds in percent for the 2
             power supply in the subrack
         :type power_supply_fan_speeds: list(float)
+        :param subrack_fan_mode: the initial fan mode of the subrack backplane
+        :type subrack_fan_mode: list(:py:class:`ska.low.mccs.hardware.ControlMode`)
         :param tpm_power_modes: the initial power modes of the TPMs
         :type tpm_power_modes:
             list(:py:class:`ska.low.mccs.hardware.PowerMode`)
@@ -329,7 +336,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._board_temperatures = board_temperatures
         self._board_current = board_current
         self._subrack_fan_speeds = subrack_fan_speeds
-        self._fan_mode = fan_mode
+        self._subrack_fan_mode = subrack_fan_mode
         self._power_supply_powers = power_supply_powers
         self._power_supply_currents = power_supply_currents
         self._power_supply_voltages = power_supply_voltages
@@ -464,7 +471,10 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :rtype: list(float)
         """
         self.check_power_mode(PowerMode.ON)
-        return self._subrack_fan_speeds_percent
+        return [
+            speed * 100.0 / SubrackBoardSimulator.MAX_SUBRACK_FAN_SPEED
+            for speed in self._subrack_fan_speeds
+        ]
 
     @property
     def subrack_fan_mode(self):
@@ -572,9 +582,10 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the powers of the TPMs housed in this subrack
         :rtype: list(float)
         """
+
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
-            return [bay.power for bay in self._bays]
+            return [bay.voltage * bay.current for bay in self._bays]
 
     def simulate_tpm_powers(self, tpm_powers):
         """
@@ -602,6 +613,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the voltages of the TPMs housed in this subrack
         :rtype: list(float)
         """
+
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
             return [bay.voltage for bay in self._bays]
@@ -809,7 +821,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type speed_percent: float
         """
         self.check_power_mode(PowerMode.ON)
-        self._subrack_fan_speeds[fan_id - 1] = speed_percent
+        self._subrack_fan_speeds[fan_id - 1] = (
+            speed_percent / 100.0 * SubrackBoardSimulator.MAX_SUBRACK_FAN_SPEED
+        )
 
     def set_fan_mode(self, fan_id, mode):
         """
@@ -821,7 +835,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type mode: :py:class:`ska.low.mccs.hardware.ControlMode`
         """
         self.check_power_mode(PowerMode.ON)
-        self._fan_mode[fan_id - 1] = mode
+        self.subrack_fan_mode[fan_id - 1] = mode
 
     def set_power_supply_fan_speed(self, power_supply_fan_id, speed_percent):
         """

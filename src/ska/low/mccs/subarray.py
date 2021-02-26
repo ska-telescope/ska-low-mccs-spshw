@@ -249,6 +249,7 @@ class StationBeamsResourceManager(ResourceManager):
         :param argin: JSON scan specification
         :type argin: str
         :return: A tuple containing a result code and a string
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
         subarray_beam_device_proxies = []

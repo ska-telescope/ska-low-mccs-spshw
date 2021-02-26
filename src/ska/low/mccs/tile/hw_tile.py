@@ -666,8 +666,8 @@ class HwTile(object):
         self.tpm.beamf_fd[1].set_regions([[start_channel, nof_channels, 0]])
         self.tpm.beamf_fd[0].antenna_tapering = [1.0] * 8
         self.tpm.beamf_fd[1].antenna_tapering = [1.0] * 8
-        self.tpm.beamf_fd[0].compute_calibration_coefficients()
-        self.tpm.beamf_fd[1].compute_calibration_coefficients()
+        self.tpm.beamf_fd[0].compute_calibration_coefs()
+        self.tpm.beamf_fd[1].compute_calibration_coefs()
 
         # Interface towards beamformer in FPGAs
         self.tpm.station_beamf[0].initialize()
@@ -793,8 +793,8 @@ class HwTile(object):
         Compute the calibration coefficients and load them in the
         hardware.
         """
-        self.tpm.beamf_fd[0].compute_calibration_coefficients()
-        self.tpm.beamf_fd[1].compute_calibration_coefficients()
+        self.tpm.beamf_fd[0].compute_calibration_coefs()
+        self.tpm.beamf_fd[1].compute_calibration_coefs()
 
     def switch_calibration_bank(self, switch_time=0):
         """

@@ -4,6 +4,7 @@
 
 ## 0.7.0 
 
+* MCCS-381 - Move "Configure" command implementation to station beams resource manager
 * MCCS-368 - Update resource usage
 * MCCS-258 - Update of TPI Tango device to obDevice of lmcBaseClasses
 * MCCS-359 - Add scan, abort and obsreset unit tests

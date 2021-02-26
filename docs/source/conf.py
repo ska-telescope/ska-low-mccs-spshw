@@ -256,8 +256,7 @@ epub_exclude_files = ["search.html"]
 # -- Extension configuration -------------------------------------------------
 
 set_type_checking_flag = True
-# always_document_param_types = True
-typehints_fully_qualified = True
+# typehints_fully_qualified = True
 typing.TYPE_CHECKING = True
 
 # Example configuration for intersphinx: refer to the Python standard library.

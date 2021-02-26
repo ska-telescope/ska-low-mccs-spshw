@@ -88,6 +88,12 @@ class TpmDriver(HardwareDriver):
         super().__init__()
 
     def _connect(self):
+        """
+        Connect to the hardware.
+
+        :return: whether successful
+        :rtype: bool
+        """
         self.tile.connect()
         return self.tile.tpm is not None
 

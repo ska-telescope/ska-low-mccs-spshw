@@ -11,7 +11,6 @@ This module contains the tests for MccsSubarray.
 """
 import json
 import pytest
-import logging
 
 import tango
 from tango import AttrQuality, EventType, DevState
@@ -32,13 +31,17 @@ from ska.low.mccs.subarray import MccsSubarray
 
 
 @pytest.fixture
-def subarray_state_model():
+def subarray_state_model(logger):
     """
     Yields a new SKASubarrayStateModel for testing.
 
-    :yield: a new SKASubarrayStateModel for testing
+    :param logger: the logger to be used by the object under test
+    :type logger: :py:class:`logging.Logger`
+
+    :return: a new SKASubarrayStateModel for testing
+    :rtype: :py:class:`ska.base.SKASubarrayStateModel`
     """
-    yield SKASubarrayStateModel(logging.getLogger())
+    return SKASubarrayStateModel(logger)
 
 
 @pytest.fixture()
@@ -572,9 +575,10 @@ class TestMccsSubarrayCommandClasses:
         :param subarray_state_model: the state model that this test uses
             to check that it is allowed to run, and that it drives
             with actions.
-        :type subarray_state_model: :py:class:`SKASubarrayStateModel`
-        :param mocker: the pytest `mocker` fixture is a wrapper around the
-            `unittest.mock` package
+        :type subarray_state_model:
+            :py:class:`ska.base.SKASubarrayStateModel`
+        :param mocker: the pytest `mocker` fixture is a wrapper around
+            the `unittest.mock` package
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         subarray_state_model._straight_to_state(
@@ -611,7 +615,8 @@ class TestMccsSubarrayCommandClasses:
         :param subarray_state_model: the state model that this test uses
             to check that it is allowed to run, and that it drives
             with actions.
-        :type subarray_state_model: :py:class:`SKASubarrayStateModel`
+        :type subarray_state_model:
+            :py:class:`ska.base.SKASubarrayStateModel`
         """
         subarray_state_model._straight_to_state(
             op_state=DevState.ON,
@@ -631,8 +636,8 @@ class TestMccsSubarrayCommandClasses:
             to check that it is allowed to run, and that it drives
             with actions.
         :type subarray_state_model: :py:class:`SKASubarrayStateModel`
-        :param mocker: the pytest `mocker` fixture is a wrapper around the
-            `unittest.mock` package
+        :param mocker: the pytest `mocker` fixture is a wrapper around
+            the `unittest.mock` package
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         subarray_state_model._straight_to_state(

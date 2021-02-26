@@ -306,6 +306,10 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return not any(self.are_tpms_on())
 
     def _update_are_tpms_on(self):
+        """
+        Update our record of which TPMs are off/on, ensureing that
+        registered callbacks are called.
+        """
         are_tpms_on = self._factory.hardware.are_tpms_on()
         if are_tpms_on is None:
             are_tpms_on = [False] * self.tpm_count
@@ -315,6 +319,9 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
             self._are_tpms_on_change_callback(self._are_tpms_on)
 
     def poll(self):
+        """
+        Poll the hardware.
+        """
         super().poll()
         self._update_are_tpms_on()
 

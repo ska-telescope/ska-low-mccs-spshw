@@ -2,12 +2,17 @@
 
 ## unreleased
 
+## 0.7.0 
+
+* MCCS-368 - Update resource usage
+* MCCS-258 - Update of TPI Tango device to obDevice of lmcBaseClasses
 * MCCS-359 - Add scan, abort and obsreset unit tests
+* MCCS-379 - Diagnose and fix/workaround PSI subrack/APIU bug
 * MCCS-239 - Subarray scan implementation
 * MCCS-334 - Fix unsafe dictionary look-ups
 * MCCS-252 - New and modified Tile commands for beam configuration and calibration
+* MCCS-374 - Correct initialisation values for controller commandResult
 * MCCS-309 - Integration of devices into end-to-end power flow
-* MCCS-347 - Correct initialisation values for controller commandResult
 * MCCS-307 - Add PSI chart configuration
 
 ## 0.6.0

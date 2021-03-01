@@ -51,7 +51,9 @@ prototype for the `Square Kilometre Array`_.
    api/cluster_simulator
    api/subrack_simulator
    api/tile_hardware
-   api/tpm_simulator
+   api/base_tpm_simulator
+   api/dynamic_tpm_simulator
+   api/static_tpm_simulator
    api/tpm_driver
    api/hw_tile
 

@@ -51,7 +51,7 @@ class TestMccsTelState(object):
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
-        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_State(self, device_under_test):
         """
@@ -192,7 +192,7 @@ class TestMccsTelState(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_elementsStates(self, device_under_test):
         """

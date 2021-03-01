@@ -570,7 +570,7 @@ class TestMccsAPIU(object):
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
-        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_healthState(self, device_under_test, mock_callback):
         """

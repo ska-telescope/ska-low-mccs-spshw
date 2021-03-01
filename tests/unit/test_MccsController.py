@@ -912,7 +912,7 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_commandProgress(self, device_under_test):
         """

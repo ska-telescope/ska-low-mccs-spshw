@@ -2,13 +2,7 @@
 
 ## unreleased
 
-* MCCS-116 - Add station beam health monitoring to MCCS Station
-
-## 0.7.0 
-
-* MCCS-381 - Move subarray configure command implementation to station beams resource manager
-* MCCS-368 - Update resource usage
-* MCCS-258 - Update of TPI Tango device to obDevice of lmcBaseClasses
+* MCCS-378 - Support for simulators with dynamic values
 * MCCS-359 - Add scan, abort and obsreset unit tests
 * MCCS-379 - Diagnose and fix/workaround PSI subrack/APIU bug
 * MCCS-239 - Subarray scan implementation

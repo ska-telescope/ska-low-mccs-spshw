@@ -64,17 +64,6 @@ def random_temperature():
 
 
 @pytest.fixture()
-def random_power():
-    """
-    Return a callable that returns a random power.
-
-    :return: a callable that returns a random power
-    :rtype: float
-    """
-    return lambda: random.uniform(5.5, 12.5)
-
-
-@pytest.fixture()
 def random_voltage():
     """
     Return a callable that returns a random voltage.
@@ -154,7 +143,6 @@ class TestSubrackBaySimulator:
         random_current,
         random_temperature,
         random_voltage,
-        random_power,
     ):
         """
         Test that we can simulate changes to the current and temperature
@@ -170,9 +158,6 @@ class TestSubrackBaySimulator:
         :param random_voltage: a random value within a reasonable range
             for a voltage measurement
         :type random_voltage: float
-        :param random_power: a random value within a reasonable range
-            for a power measurement
-        :type random_power: float
         :param random_temperature: a random value within a reasonable
             range for a temperature measurement
         :type random_temperature: float
@@ -195,8 +180,6 @@ class TestSubrackBaySimulator:
         subrack_bay.simulate_voltage(voltage)
         assert subrack_bay.voltage == 0.0
 
-        power = random_power()
-        subrack_bay.simulate_power(power)
         assert subrack_bay.power == 0.0
 
         subrack_bay.on()
@@ -207,7 +190,7 @@ class TestSubrackBaySimulator:
 
 
 @pytest.fixture()
-def subrack_bays(random_temperature, random_current, random_voltage, random_power):
+def subrack_bays(random_temperature, random_current, random_voltage):
     """
     Return a list of subrack bay simulators for management by a subrack
     management board simulator.
@@ -221,9 +204,6 @@ def subrack_bays(random_temperature, random_current, random_voltage, random_powe
     :param random_voltage: a random value within a reasonable range
         for a voltage measurement
     :type random_voltage: float
-    :param random_power: a random value within a reasonable range
-        for a power measurement
-    :type random_power: float
 
     :return: a list of subrack bay simulators
     :rtype:
@@ -414,7 +394,6 @@ class TestSubrackBoardSimulator:
         random_current,
         random_temperature,
         random_fan_speed,
-        random_power,
         random_voltage,
     ):
         """
@@ -437,9 +416,6 @@ class TestSubrackBoardSimulator:
         :param random_fan_speed: a random value within a reasonable
             range for a fan speed measurement
         :type random_fan_speed: float
-        :param random_power: a random value within a reasonable
-            range for a power measurement
-        :type random_power: float
         :param random_voltage: a random value within a reasonable
             range for a voltage measurement
         :type random_voltage: float
@@ -481,12 +457,13 @@ class TestSubrackBoardSimulator:
         backplane_temperatures = [random_temperature()] * 2
         board_temperatures = [random_temperature()] * 2
         board_current = random_current()
-        subrack_fan_speeds = [random_fan_speed()] * 4
-        power_supply_fan_speeds = [random_fan_speed()] * 2
-        power_supply_currents = [random_current()] * 2
-        power_supply_voltages = [random_voltage()] * 2
+        subrack_fan_speeds = [random_fan_speed() for i in range(4)]
+        power_supply_fan_speeds = [random_fan_speed() for i in range(2)]
+        power_supply_currents = [random_current() for i in range(2)]
+        power_supply_voltages = [random_voltage() for i in range(2)]
         power_supply_powers = [
-            power_supply_currents[i] * power_supply_voltages[i] for i in range(2)
+            current * voltage
+            for (current, voltage) in zip(power_supply_currents, power_supply_voltages)
         ]
 
         subrack_board.simulate_backplane_temperatures(backplane_temperatures)
@@ -496,6 +473,7 @@ class TestSubrackBoardSimulator:
         subrack_board.simulate_power_supply_fan_speeds(power_supply_fan_speeds)
         subrack_board.simulate_power_supply_currents(power_supply_currents)
         subrack_board.simulate_power_supply_voltages(power_supply_voltages)
+        subrack_board.simulate_power_supply_powers(power_supply_powers)
 
         assert subrack_board.backplane_temperatures == backplane_temperatures
         assert subrack_board.board_temperatures == board_temperatures
@@ -560,7 +538,6 @@ class TestSubrackHardwareManager:
         random_temperature,
         random_current,
         random_fan_speed,
-        random_power,
         random_voltage,
         subrack_bays,
     ):
@@ -576,9 +553,6 @@ class TestSubrackHardwareManager:
         :param random_fan_speed: a random value within a reasonable
             range for a fan speed measurement
         :type random_fan_speed: float
-        :param random_power: a random value within a reasonable
-            range for a power measurement
-        :type random_power: float
         :param random_voltage: a random value within a reasonable
             range for a voltage measurement
         :type random_voltage: float
@@ -595,10 +569,10 @@ class TestSubrackHardwareManager:
             backplane_temperatures=[random_temperature()] * 2,
             board_temperatures=[random_temperature()] * 2,
             board_current=random_current(),
-            subrack_fan_speeds=[random_fan_speed()] * 4,
-            power_supply_fan_speeds=[random_fan_speed()] * 2,
-            power_supply_currents=[random_current()] * 2,
-            power_supply_voltages=[random_voltage()] * 2,
+            subrack_fan_speeds=[random_fan_speed() for i in range(4)],
+            power_supply_fan_speeds=[random_fan_speed() for i in range(2)],
+            power_supply_currents=[random_current() for i in range(2)],
+            power_supply_voltages=[random_voltage() for i in range(2)],
             _bays=subrack_bays,
         )
 

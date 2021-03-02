@@ -16,6 +16,7 @@ When we eventually have a SubrackDriver that drives real hardware, this
 module could also be used to test that.
 """
 import pytest
+import unittest
 
 from ska.base.control_model import SimulationMode
 from ska.low.mccs.subrack import (
@@ -23,15 +24,6 @@ from ska.low.mccs.subrack import (
     SubrackBoardSimulator,
     SubrackBaySimulator,
 )
-
-
-def are_tpms_on_change_callback(are_tpms_on):
-    """
-    Dummy callback for tpms changing state.
-
-    :param are_tpms_on: List of TPM in status ON
-    """
-    return
 
 
 @pytest.fixture()
@@ -64,7 +56,8 @@ def subrack_hardware_manager(logger):
         simulation mode
     :rtype: SubrackHardwareManager
     """
-    return SubrackHardwareManager(SimulationMode.TRUE, are_tpms_on_change_callback)
+    mock_callback = unittest.mock.Mock()
+    return SubrackHardwareManager(SimulationMode.TRUE, mock_callback)
 
 
 class TestSubrackHardwareManager:
@@ -81,12 +74,11 @@ class TestSubrackHardwareManager:
             interface of :py:class:`logging.Logger`
         :type logger: :py:class:`logging.Logger`
         """
+        mock_callback = unittest.mock.Mock()
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):
-            _ = SubrackHardwareManager(
-                SimulationMode.FALSE, are_tpms_on_change_callback
-            )
+            _ = SubrackHardwareManager(SimulationMode.FALSE, mock_callback)
 
     def test_simulation_mode(self, subrack_hardware_manager):
         """

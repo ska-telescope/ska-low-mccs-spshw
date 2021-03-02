@@ -480,8 +480,12 @@ class TestSubrackBoardSimulator:
         assert subrack_board.board_current == board_current
         assert subrack_board.subrack_fan_speeds == subrack_fan_speeds
         assert subrack_board.power_supply_fan_speeds == power_supply_fan_speeds
-        assert subrack_board.power_supply_currents == power_supply_currents
-        assert subrack_board.power_supply_voltages == power_supply_voltages
+        assert subrack_board.power_supply_currents == pytest.approx(
+            power_supply_currents
+        )
+        assert subrack_board.power_supply_voltages == pytest.approx(
+            power_supply_voltages
+        )
         assert subrack_board.power_supply_powers == power_supply_powers
 
         assert subrack_board.tpm_temperatures == [

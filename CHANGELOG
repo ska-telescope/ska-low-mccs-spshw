@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-335 - Added typehints to MCCS controller_device
 * MCCS-378 - Support for simulators with dynamic values
 * MCCS-359 - Add scan, abort and obsreset unit tests
 * MCCS-379 - Diagnose and fix/workaround PSI subrack/APIU bug

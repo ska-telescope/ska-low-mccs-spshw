@@ -454,8 +454,8 @@ class TestSubrackBoardSimulator:
             == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_POWER
         )
 
-        backplane_temperatures = [random_temperature()] * 2
-        board_temperatures = [random_temperature()] * 2
+        backplane_temperatures = [random_temperature() for i in range(2)]
+        board_temperatures = [random_temperature() for i in range(2)]
         board_current = random_current()
         subrack_fan_speeds = [random_fan_speed() for i in range(4)]
         power_supply_fan_speeds = [random_fan_speed() for i in range(2)]
@@ -570,8 +570,8 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
-            backplane_temperatures=[random_temperature()] * 2,
-            board_temperatures=[random_temperature()] * 2,
+            backplane_temperatures=[random_temperature() for i in range(2)],
+            board_temperatures=[random_temperature() for i in range(2)],
             board_current=random_current(),
             subrack_fan_speeds=[random_fan_speed() for i in range(4)],
             power_supply_fan_speeds=[random_fan_speed() for i in range(2)],

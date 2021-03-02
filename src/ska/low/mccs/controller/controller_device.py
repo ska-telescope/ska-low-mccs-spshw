@@ -36,8 +36,6 @@ from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel, HealthMonitor
 from ska.low.mccs.resource import ResourceManager
 
-Resultant = (ResultCode, "str")
-
 
 class ControllerResourceManager(ResourceManager):
     """

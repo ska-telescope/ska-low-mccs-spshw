@@ -1,5 +1,6 @@
 backoff
 numpy == 1.19.2
+scipy
 pytango >= 9.3.3
 jsonschema >= 3.2.0
 lmcbaseclasses == 0.8.1

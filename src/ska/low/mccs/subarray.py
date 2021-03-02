@@ -178,7 +178,7 @@ class StationBeamsResourceManager(ResourceManager):
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
             if station_fqdn not in self._stations.station_fqdns:
-                self._stations.add_to_managed(stations)
+                self._stations.add_to_managed({station_id: station_fqdn})
 
         station_beams = {}
         for station_beam_fqdn in station_beam_fqdns:
@@ -186,6 +186,14 @@ class StationBeamsResourceManager(ResourceManager):
             station_beams[station_beam_id] = station_beam_fqdn
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = sorted(stations.keys())
+            # TODO While SubarrayBeam device is not yet fully implemented, we're still
+            # passing an array of Station ids to StationBeams. This list will end up
+            # going to SubarrayBeam while StationBeam gets a single Station device.
+            # As the Station FQDN is used by StationBeam to report health to
+            # SubarrayBeam, it makes sense to only keep this as a single sting rather
+            # than a list, as it will be implemented when the StationBeam health
+            # gets implemented in SubarrayBeam - hence we pass a single value here:
+            station_beam.stationFqdn = station_fqdns[0]
 
         self._add_to_managed(station_beams)
         for station_beam_fqdn in station_beam_fqdns:
@@ -194,6 +202,51 @@ class StationBeamsResourceManager(ResourceManager):
             self.update_resource_health(station_beam_fqdn, station_beam.healthState)
 
         super().assign(station_beams, list(stations.keys()))
+
+    def configure(self, logger, argin):
+        """
+        Configure devices from this subarray resource manager.
+
+        :param logger: the logger to be used.
+        :type logger: :py:class:`logging.Logger`
+        :param argin: JSON configuration specification
+                    {
+                    "stations":[{"station_id": 1},{"station_id": 2}],
+                    "subarray_beams":[{
+                    "subarray_id":1,
+                    "subarray_beam_id":1,
+                    "station_ids":[1,2],
+                    "channels":  [[0, 8, 1, 1], [8, 8, 2, 1]],
+                    "update_rate": 0.0,
+                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                    }
+        :type argin: str
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
+        kwargs = json.loads(argin)
+        stations = kwargs.get("stations", list())
+        for station in stations:
+            # TODO: This is here for future expansion of json strings
+            station.get("station_id")
+
+        subarray_beams = kwargs.get("subarray_beams", list())
+        for subarray_beam in subarray_beams:
+            subarray_beam_id = subarray_beam.get("subarray_beam_id")
+            if subarray_beam_id:
+                subarray_beam_fqdn = self.fqdn_from_id(subarray_beam_id)
+                if subarray_beam_fqdn:
+                    dp = backoff_connect(subarray_beam_fqdn, logger=logger)
+                    json_str = json.dumps(subarray_beam)
+                    dp.configure(json_str)
+
+        result_code = ResultCode.OK
+        message = "Configure command completed successfully"
+        return (result_code, message)
 
     def scan(self, logger, argin):
         """
@@ -204,10 +257,7 @@ class StationBeamsResourceManager(ResourceManager):
         :param argin: JSON scan specification
         :type argin: str
         :return: A tuple containing a result code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype:
-            (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
         subarray_beam_device_proxies = []
@@ -250,6 +300,7 @@ class StationBeamsResourceManager(ResourceManager):
         for station_beam_fqdn in station_beam_fqdns:
             station_beam = tango.DeviceProxy(station_beam_fqdn)
             station_beam.stationIds = []
+            station_beam.stationFqdn = None
         super().release(station_beam_fqdns)
 
     def release_all(self):
@@ -763,28 +814,8 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska.base.commands.ResultCode`, str)
             """
-            kwargs = json.loads(argin)
-            stations = kwargs.get("stations", list())
             station_beam_pool_manager = self.target._station_beam_pool_manager
-            for station in stations:
-                # This is here for future expansion of json strings
-                station.get("station_id")
-
-            subarray_beams = kwargs.get("subarray_beams", list())
-            for subarray_beam in subarray_beams:
-                subarray_beam_id = subarray_beam.get("subarray_beam_id")
-                if subarray_beam_id:
-                    subarray_beam_fqdn = station_beam_pool_manager.fqdn_from_id(
-                        subarray_beam_id
-                    )
-                    if subarray_beam_fqdn:
-                        dp = tango.DeviceProxy(subarray_beam_fqdn)
-                        json_str = json.dumps(subarray_beam)
-                        dp.configure(json_str)
-
-            result_code = ResultCode.OK
-            message = "Configure command completed successfully"
-            return (result_code, message)
+            return station_beam_pool_manager.configure(self.logger, argin)
 
         def check_allowed(self):
             """

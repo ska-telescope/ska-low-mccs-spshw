@@ -15,7 +15,8 @@ __all__ = [
     "MccsTile",
     "TileHardwareManager",
     "TilePowerManager",
-    "TpmSimulator",
+    "DynamicTpmSimulator",
+    "StaticTpmSimulator",
     "TpmDriver",
     "HwTile",
     "TpmTestFirmware",
@@ -29,7 +30,8 @@ __all__ = [
 ]
 
 from .hw_tile import HwTile
-from .tpm_simulator import TpmSimulator
+from .dynamic_tpm_simulator import DynamicTpmSimulator
+from .static_tpm_simulator import StaticTpmSimulator
 from .tpm_driver import TpmDriver
 from .tile_hardware import TileHardwareManager
 from .tile_device import MccsTile, TilePowerManager

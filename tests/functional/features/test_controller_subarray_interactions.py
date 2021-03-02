@@ -10,7 +10,7 @@ from pytest_bdd import scenario, given, when, then, parsers
 from tango import DevState, DevSource
 
 from ska.base.commands import ResultCode
-from ska.base.control_model import AdminMode, ObsState, HealthState
+from ska.base.control_model import AdminMode, ObsState, HealthState, TestMode
 
 
 # TODO: This has been temporarily moved from the conftest.py file
@@ -123,16 +123,15 @@ def devices(tango_context):
         "subarraybeam_04": tango_context.get_device("low-mccs/subarraybeam/04"),
     }
 
-    # Bypass the cache because stationFQDNs etc are polled attributes,
-    # and having written to them, we don't want to have to wait a
-    # polling period to test that the write has stuck.
-    # TODO: Need to investigate disabling this section for tests performed on
-    #       a real deployment (i.e. not in a test/development environment)
     for device in device_dict.values():
-        # HACK: increasing the timeout until we can make some commands synchronous
-        device.set_timeout_millis(5000)
-
+        # Bypass the cache because stationFQDNs etc are polled attributes,
+        # and having written to them, we don't want to have to wait a
+        # polling period to test that the write has stuck.
+        # TODO: Need to investigate disabling this section for tests performed on
+        #       a real deployment (i.e. not in a test/development environment)
         device.set_source(DevSource.DEV)
+        device.testMode = TestMode.TEST
+
     assert confirm_initialised(device_dict.values())
     return device_dict
 

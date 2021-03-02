@@ -102,7 +102,7 @@ class APIUHardwareFactory(SimulableHardwareFactory):
         self._antenna_count = antenna_count
         super().__init__(simulation_mode)
 
-    def _create_simulator(self):
+    def _create_static_simulator(self):
         """
         Returns a hardware simulator.
 

@@ -12,6 +12,7 @@
 This test module contains integration tests that exercise the power
 management functionality of the SKA Low MCCS system.
 """
+from time import sleep
 
 import pytest
 from tango import DevState
@@ -97,10 +98,27 @@ class TestPowerManagement:
         assert subrack.IsTpmOn(3)
         assert subrack.IsTpmOn(4)
         assert station.State() == DevState.ON
+
+        # The default testMode is TestMode.NONE, in which case certain
+        # attributes are continually updated. By design, these
+        # attributes sometimes go out of range, putting the device into
+        # ALARM state.
+        # Before testing, we set the testMode to TestMode.TEST, which
+        # gives us static in-bounds values to test against. But if the
+        # device was already in ALARM state by then, it can take a while
+        # (i.e. a polling period) for the device to update its state
+        # from ALARM to ON.
+        # TODO: Move this into conftest
+        if any(
+            tile.State() == DevState.ALARM for tile in [tile_1, tile_2, tile_3, tile_4]
+        ):
+            sleep(1.5)
+
         assert tile_1.State() == DevState.ON
         assert tile_2.State() == DevState.ON
         assert tile_3.State() == DevState.ON
         assert tile_4.State() == DevState.ON
+
         assert apiu.State() == DevState.ON
         assert apiu.IsAntennaOn(1)
         assert apiu.IsAntennaOn(2)

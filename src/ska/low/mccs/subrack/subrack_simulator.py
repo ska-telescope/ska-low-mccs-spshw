@@ -576,10 +576,9 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the powers of the TPMs housed in this subrack
         :rtype: list(float)
         """
-
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
-            return [bay.voltage * bay.current for bay in self._bays]
+            return [bay.power for bay in self._bays]
 
     def simulate_tpm_powers(self, tpm_powers):
         """
@@ -607,7 +606,6 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the voltages of the TPMs housed in this subrack
         :rtype: list(float)
         """
-
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
             return [bay.voltage for bay in self._bays]

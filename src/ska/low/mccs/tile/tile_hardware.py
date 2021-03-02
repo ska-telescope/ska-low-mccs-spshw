@@ -13,13 +13,13 @@ management of hardware.
 """
 __all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
-from ska.base.control_model import SimulationMode
+from ska.base.control_model import SimulationMode, TestMode
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
-from ska.low.mccs.tile import TpmSimulator, TpmDriver
+from ska.low.mccs.tile import DynamicTpmSimulator, StaticTpmSimulator, TpmDriver
 
 
 class TileHardwareHealthEvaluator(HardwareHealthEvaluator):
@@ -41,20 +41,24 @@ class TileHardwareFactory(SimulableHardwareFactory):
     A hardware factory for tile hardware.
 
     At present, this returns a
-    :py:class:`~ska.low.mccs.tile.tpm_simulator.TpmSimulator` object
-    when in simulation mode, and a
+    :py:class:`~ska.low.mccs.tile.base_tpm_simulator.BaseTpmSimulator`
+    object when in simulation mode, and a
     :py:class:`~ska.low.mccs.tile.tpm_driver.TpmDriver` object if
     the hardware is sought whilst not in simulation mode
     """
 
-    def __init__(self, simulation_mode, logger, tpm_ip="0.0.0.0", tpm_cpld_port=0):
+    def __init__(
+        self, simulation_mode, test_mode, logger, tpm_ip="0.0.0.0", tpm_cpld_port=0
+    ):
         """
         Create a new factory instance.
 
         :param simulation_mode: the initial simulation mode of this
-            hardware manager
+            hardware factory
         :type simulation_mode:
             :py:class:`~ska.base.control_model.SimulationMode`
+        :param test_mode: the initial test mode of this hardware factory
+        :type test_mode: :py:class:`~ska.base.control_model.TestMode`
         :param logger: the logger to be used by this hardware manager.
         :type logger: :py:class:`logging.Logger`
         :param tpm_ip: the IP addess of the tile
@@ -65,7 +69,7 @@ class TileHardwareFactory(SimulableHardwareFactory):
         self._logger = logger
         self._tpm_ip = tpm_ip
         self._tpm_cpld_port = tpm_cpld_port
-        super().__init__(simulation_mode)
+        super().__init__(simulation_mode, test_mode=test_mode)
 
     def _create_driver(self):
         """
@@ -76,14 +80,25 @@ class TileHardwareFactory(SimulableHardwareFactory):
         """
         return TpmDriver(self._logger, self._tpm_ip, self._tpm_cpld_port)
 
-    def _create_simulator(self):
+    def _create_dynamic_simulator(self):
         """
         Returns a hardware simulator.
 
         :return: a hardware simulator for the tile
-        :rtype: :py:class:`ska.low.mccs.tile.tpm_simulator.TpmSimulator`
+        :rtype:
+            :py:class:`ska.low.mccs.tile.dynamic_tpm_simulator.DynamicTpmSimulator`
         """
-        return TpmSimulator(self._logger)
+        return DynamicTpmSimulator(self._logger)
+
+    def _create_static_simulator(self):
+        """
+        Returns a hardware simulator.
+
+        :return: a hardware simulator for the tile
+        :rtype:
+            :py:class:`ska.low.mccs.tile.static_tpm_simulator.StaticTpmSimulator`
+        """
+        return StaticTpmSimulator(self._logger)
 
 
 class TileHardwareManager(SimulableHardwareManager):
@@ -91,7 +106,9 @@ class TileHardwareManager(SimulableHardwareManager):
     This class manages tile hardware.
     """
 
-    def __init__(self, simulation_mode, logger, tpm_ip, tpm_cpld_port, _factory=None):
+    def __init__(
+        self, simulation_mode, test_mode, logger, tpm_ip, tpm_cpld_port, _factory=None
+    ):
         """
         Initialise a new TileHardwareManager instance.
 
@@ -99,6 +116,10 @@ class TileHardwareManager(SimulableHardwareManager):
             tile hardware manager
         :type simulation_mode:
             :py:class:`~ska.base.control_model.SimulationMode`
+        :param test_mode: the initial test mode for this tile hardware
+            manager
+        :type test_mode:
+            :py:class:`~ska.base.control_model.TestMode`
         :param logger: a logger for this hardware manager to use
         :type logger: :py:class:`logging.Logger`
         :param tpm_ip: IP address of TPM board
@@ -111,7 +132,11 @@ class TileHardwareManager(SimulableHardwareManager):
         :type _factory: :py:class:`.TileHardwareFactory`
         """
         hardware_factory = _factory or TileHardwareFactory(
-            simulation_mode == SimulationMode.TRUE, logger, tpm_ip, tpm_cpld_port
+            simulation_mode == SimulationMode.TRUE,
+            test_mode == TestMode.TEST,
+            logger,
+            tpm_ip,
+            tpm_cpld_port,
         )
         super().__init__(hardware_factory, TileHardwareHealthEvaluator())
 

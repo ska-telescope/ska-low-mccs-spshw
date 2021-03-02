@@ -16,7 +16,7 @@ import pytest
 from tango import DevState
 
 from ska.base.commands import ResultCode
-from ska.base.control_model import AdminMode, LoggingLevel
+from ska.base.control_model import AdminMode, LoggingLevel, TestMode
 from ska.low.mccs import release
 
 
@@ -221,7 +221,7 @@ class TestMccsDevice(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.testMode == 0
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_isHardwareDevice(self, device_under_test):
         """

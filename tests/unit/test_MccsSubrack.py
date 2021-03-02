@@ -618,7 +618,7 @@ class TestSubrackHardwareManager:
             that uses the simulator provided via the `subrack_board` fixture.
         :rtype: :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
         """
-        return SimulableHardwareFactory(True, _simulator=subrack_board)
+        return SimulableHardwareFactory(True, _static_simulator=subrack_board)
 
     @pytest.fixture()
     def hardware_manager(self, hardware_factory, mock_callback):
@@ -889,7 +889,7 @@ class TestMccsSubrack(object):
         assert device_under_test.healthState == HealthState.OK
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.TRUE
-        assert device_under_test.testMode == TestMode.NONE
+        assert device_under_test.testMode == TestMode.TEST
 
     def test_healthState(self, device_under_test, mock_callback):
         """
@@ -947,22 +947,13 @@ class TestMccsSubrack(object):
             list(device_under_test.powerSupplyFanSpeeds)
             == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEED
         )
-        assert False not in [
-            abs(
-                device_under_test.powerSupplyCurrents[i]
-                - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT[i]
-            )
-            < 1e-6
-            for i in range(len(SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT))
-        ]
-        assert False not in [
-            abs(
-                device_under_test.powerSupplyVoltages[i]
-                - SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE[i]
-            )
-            < 1e-6
-            for i in range(len(SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE))
-        ]
+        assert device_under_test.powerSupplyCurrents == pytest.approx(
+            SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_CURRENT
+        )
+        assert device_under_test.powerSupplyVoltages == pytest.approx(
+            SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_VOLTAGE
+        )
+
         assert (
             list(device_under_test.powerSupplyPowers)
             == SubrackBoardSimulator.DEFAULT_POWER_SUPPLY_POWER

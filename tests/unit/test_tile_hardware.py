@@ -19,8 +19,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from ska.base.control_model import SimulationMode
-from ska.low.mccs.tile import TileHardwareManager, TpmSimulator
+from ska.base.control_model import SimulationMode, TestMode
+from ska.low.mccs.tile import TileHardwareManager, StaticTpmSimulator
 
 
 @pytest.fixture()
@@ -33,9 +33,10 @@ def tpm_simulator(logger):
     :type logger: :py:class:`logging.Logger`
 
     :return: a TPM simulator
-    :rtype: :py:class:`ska.low.mccs.tile.tpm_simulator.TpmSimulator`
+    :rtype:
+        :py:class:`ska.low.mccs.tile.static_tpm_simulator.StaticTpmSimulator`
     """
-    return TpmSimulator(logger=logger)
+    return StaticTpmSimulator(logger=logger)
 
 
 @pytest.fixture()
@@ -53,7 +54,8 @@ def tile_hardware_manager(logger):
     :rtype: TileHardwareManager
     """
     return TileHardwareManager(
-        simulation_mode=SimulationMode.TRUE,
+        SimulationMode.TRUE,
+        TestMode.TEST,
         logger=logger,
         tpm_ip="0.0.0.0",
         tpm_cpld_port=10000,
@@ -76,6 +78,7 @@ class TestTileHardwareManager:
         """
         _ = TileHardwareManager(
             SimulationMode.FALSE,
+            TestMode.TEST,
             logger=logger,
             tpm_ip="0.0.0.0",
             tpm_cpld_port=10000,
@@ -90,7 +93,22 @@ class TestTileHardwareManager:
         :type tile_hardware_manager:
             :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         """
+        assert tile_hardware_manager.simulation_mode == SimulationMode.TRUE
         tile_hardware_manager.simulation_mode = SimulationMode.FALSE
+        assert tile_hardware_manager.simulation_mode == SimulationMode.FALSE
+
+    def test_test_mode(self, tile_hardware_manager):
+        """
+        Test that we can take the tile hardware manager out of test
+        mode.
+
+        :param tile_hardware_manager: a manager for tile hardware
+        :type tile_hardware_manager:
+            :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
+        """
+        assert tile_hardware_manager.test_mode == TestMode.TEST
+        tile_hardware_manager.test_mode = TestMode.NONE
+        assert tile_hardware_manager.test_mode == TestMode.NONE
 
 
 class TestCommon:
@@ -114,7 +132,7 @@ class TestCommon:
 
         :param tpm_simulator: the TPM simulator to return
         :type tpm_simulator:
-            :py:class:`~ska.low.mccs.tile.tpm_simulator.TpmSimulator`
+            :py:class:`~ska.low.mccs.tile.static_tpm_simulator.StaticTpmSimulator`
         :param tile_hardware_manager: the tile hardware manager to
             return
         :type tile_hardware_manager:
@@ -137,21 +155,21 @@ class TestCommon:
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            ("current", TpmSimulator.CURRENT),
-            ("voltage", TpmSimulator.VOLTAGE),
-            ("board_temperature", TpmSimulator.BOARD_TEMPERATURE),
-            ("fpga1_temperature", TpmSimulator.FPGA1_TEMPERATURE),
-            ("fpga2_temperature", TpmSimulator.FPGA2_TEMPERATURE),
-            ("adc_rms", TpmSimulator.ADC_RMS),
-            ("fpga1_time", TpmSimulator.FPGA1_TIME),
-            ("fpga2_time", TpmSimulator.FPGA2_TIME),
+            ("current", StaticTpmSimulator.CURRENT),
+            ("voltage", StaticTpmSimulator.VOLTAGE),
+            ("board_temperature", StaticTpmSimulator.BOARD_TEMPERATURE),
+            ("fpga1_temperature", StaticTpmSimulator.FPGA1_TEMPERATURE),
+            ("fpga2_temperature", StaticTpmSimulator.FPGA2_TEMPERATURE),
+            ("adc_rms", StaticTpmSimulator.ADC_RMS),
+            ("fpga1_time", StaticTpmSimulator.FPGA1_TIME),
+            ("fpga2_time", StaticTpmSimulator.FPGA2_TIME),
             (
                 "current_tile_beamformer_frame",
-                TpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
-            ("pps_delay", TpmSimulator.PPS_DELAY),
-            ("firmware_available", TpmSimulator.FIRMWARE_AVAILABLE),
-            ("register_list", list(TpmSimulator.REGISTER_MAP[0].keys())),
+            ("pps_delay", StaticTpmSimulator.PPS_DELAY),
+            ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
+            ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )
     def test_read_attribute(self, hardware_under_test, attribute_name, expected_value):
@@ -176,7 +194,7 @@ class TestCommon:
 
     @pytest.mark.parametrize(
         ("attribute_name", "initial_value", "values_to_write"),
-        (("phase_terminal_count", TpmSimulator.PHASE_TERMINAL_COUNT, [1, 2]),),
+        (("phase_terminal_count", StaticTpmSimulator.PHASE_TERMINAL_COUNT, [1, 2]),),
     )
     def test_write_attribute(
         self, hardware_under_test, attribute_name, initial_value, values_to_write

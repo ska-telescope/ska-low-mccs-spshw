@@ -6,17 +6,14 @@ import copy
 
 from ska.low.mccs.hardware import HardwareSimulator
 
+__all__ = ["BaseTpmSimulator"]
 
-class TpmSimulator(HardwareSimulator):
+
+class BaseTpmSimulator(HardwareSimulator):
     """
     A simulator for a TPM.
     """
 
-    VOLTAGE = 4.7
-    CURRENT = 0.4
-    BOARD_TEMPERATURE = 36.0
-    FPGA1_TEMPERATURE = 38.0
-    FPGA2_TEMPERATURE = 37.5
     ADC_RMS = tuple(float(i) for i in range(32))
     FPGA1_TIME = 1
     FPGA2_TIME = 2
@@ -80,11 +77,6 @@ class TpmSimulator(HardwareSimulator):
         self._station_id = 0
         self._tile_id = 0
 
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._board_temperature = self.BOARD_TEMPERATURE
-        self._fpga1_temperature = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature = self.FPGA2_TEMPERATURE
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
@@ -225,55 +217,65 @@ class TpmSimulator(HardwareSimulator):
         """
         Return the temperature of the TPM.
 
-        :return: the temperature of the TPM
-        :rtype: float
+        :raises NotImplementedError: if this method has not been
+            implemented by a subclass
         """
-        self.logger.debug("TpmSimulator: board temperature")
-        return self._board_temperature
+        raise NotImplementedError(
+            "BaseTpmSimulator is abstract; property 'board_temperature' must be "
+            "implemented in a subclass."
+        )
 
     @property
     def voltage(self):
         """
         Return the voltage of the TPM.
 
-        :return: the voltage of the TPM
-        :rtype: float
+        :raises NotImplementedError: if this method has not been
+            implemented by a subclass
         """
-        self.logger.debug("TpmSimulator: voltage")
-        return self._voltage
+        raise NotImplementedError(
+            "BaseTpmSimulator is abstract; property 'voltage' must be "
+            "implemented in a subclass."
+        )
 
     @property
     def current(self):
         """
         Return the current of the TPM.
 
-        :return: the current of the TPM
-        :rtype: float
+        :raises NotImplementedError: if this method has not been
+            implemented by a subclass
         """
-        self.logger.debug("TpmSimulator: current")
-        return self._current
+        raise NotImplementedError(
+            "BaseTpmSimulator is abstract; property 'current' must be "
+            "implemented in a subclass."
+        )
 
     @property
     def fpga1_temperature(self):
         """
         Return the temperature of FPGA 1.
 
-        :return: the temperature of FPGA 1
-        :rtype: float
+        :raises NotImplementedError: if this method has not been
+            implemented by a subclass
         """
-        self.logger.debug("TpmSimulator: fpga1_temperature")
-        return self._fpga1_temperature
+        raise NotImplementedError(
+            "BaseTpmSimulator is abstract; property 'fpga1_temperature' must be "
+            "implemented in a subclass."
+        )
 
     @property
     def fpga2_temperature(self):
         """
         Return the temperature of FPGA 2.
 
-        :return: the temperature of FPGA 2
-        :rtype: float
+        :raises NotImplementedError: if this method has not been
+            implemented by a subclass
         """
-        self.logger.debug("TpmSimulator: fpga2_temperature")
-        return self._fpga2_temperature
+        raise NotImplementedError(
+            "BaseTpmSimulator is abstract; property 'fpga2_temperature' must be "
+            "implemented in a subclass."
+        )
 
     @property
     def adc_rms(self):

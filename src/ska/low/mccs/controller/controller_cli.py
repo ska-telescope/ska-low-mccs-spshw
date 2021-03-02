@@ -10,28 +10,40 @@
 
 """
 The command line interface for the MCCS Controller device server.
-
-Functionality to handle passing variables to be added as functionality
-is added to the Controller DS.
 """
 import types
 import functools
-import fire
+
+from fire import Fire
+from fire.core import FireError
 import tango
-from ska.low.mccs.utils import call_with_json
 
 from ska.base.commands import ResultCode
+from ska.low.mccs.utils import call_with_json
 
 
 class CliMeta(type):
     """
-    Metaclass to catch and disect :py:class:`tango.DevFailed` and other
+    Metaclass to catch and dissect :py:exc:`tango.DevFailed` and other
     exceptions for all class methods.
 
-    They get turned into `fire.core.FireError` exceptions.
+    They get turned into :py:exc:`fire.core.FireError` exceptions.
     """
 
     def __new__(cls, name, bases, attrs):
+        """
+        Class constructor.
+
+        :param name: name of the new class
+        :type name: str
+        :param bases: parent classes of the new class
+        :type bases: tuple(cls)
+        :param attrs: class attributes
+        :type attrs: dict
+
+        :return: new class
+        :rtype: cls
+        """
         for attr_name, attr_value in attrs.items():
             if isinstance(attr_value, types.FunctionType):
                 attrs[attr_name] = cls.fire_except(attr_value)
@@ -39,42 +51,86 @@ class CliMeta(type):
 
     @classmethod
     def fire_except(cls, method):
+        """
+        Wraps the method so that any :py:exc:`tango.DevFailed` exception
+        raised by a method is converted to a
+        :py:exc:`fire.core.FireError`, so that the CLI framework handles
+        it nicely.
+
+        :param method: the method to be wrapped
+        :type method: callable
+
+        :return: the wrapped method
+        :rtype: callable
+        """
+
         @functools.wraps(method)
-        def wrapper(*args, **kwargs):
+        def _wrapper(*args, **kwargs):
+            """
+            Wrapper that catches any :py:exc:`tango.DevFailed` exception
+            raised by the wrapped method, and converts it to a
+            :py:exc:`fire.core.FireError`, so that the CLI framework
+            handles it nicely.
+
+            :param args: positional arguments to the wrapped method
+            :type args: list
+            :param kwargs: keyword arguments to the wrapped method
+            :type kwargs: dict
+
+            :raises FireError: if a :py:exc:`tango.DevFailed`
+                exception is raised by the method.
+
+            :return: whatever the method returns
+            :rtype: obj
+            """
             try:
                 return method(*args, **kwargs)
             except tango.DevFailed as ptex:
-                raise fire.core.FireError(ptex.args[0].desc)
+                raise FireError(ptex.args[0].desc)
             except Exception as ex:
-                raise fire.core.FireError(str(ex))
+                raise FireError(str(ex))
 
-        return wrapper
+        return _wrapper
 
 
 def format_wrapper(method):
     """
-    Wrapper to format device command results as a two-line string.
+    Wraps a method with a wrapper that ensures that the method returns
+    results formatted as a two-line string.
 
-    :param method: function handle of the method to be wrapped
+    :param method: the method to be wrapped
     :type method: callable
 
-    :return: function handle of the wrapped method
+    :return: the wrapped method
     :rtype: callable
     """
 
     @functools.wraps(method)
-    def wrapper(*args, **kwargs):
+    def _wrapper(*args, **kwargs):
+        """
+        Wrapper that ensure device command methods return results
+        formatted as a a two-line string.
+
+        :param args: positional arguments to the wrapped method
+        :type args: list
+        :param kwargs: keyword arguments to the wrapped method
+        :type kwargs: dict
+
+        :return: what the method returns, formatted into a two-line
+             string
+        :rtype: str
+        """
         reslist = method(*args, **kwargs)
         return (
             f"Return code: {ResultCode(reslist[0][0]).name}\nMessage: {reslist[1][0]}"
         )
 
-    return wrapper
+    return _wrapper
 
 
 class MccsControllerCli(metaclass=CliMeta):
     """
-    Command-line tool to access the
+    Command-line interface to the
     :py:class:`ska.low.mccs.MccsController` tango device.
     """
 
@@ -82,9 +138,9 @@ class MccsControllerCli(metaclass=CliMeta):
         """
         Initialise a new CLI instance.
 
-        :param fqdn: the FQDN of the controller device, defaults to
-            "low-mccs/control/control"
-        :type fqdn: str, optional
+        :param fqdn: the FQDN of the controller device. Optional:
+            defaults to "low-mccs/control/control"
+        :type fqdn: str
         """
         self._dp = tango.DeviceProxy(fqdn)
         self._log_levels = [
@@ -150,26 +206,76 @@ class MccsControllerCli(metaclass=CliMeta):
 
     @format_wrapper
     def on(self):
+        """
+        Turn the controller (and hence all of MCCS) on.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("On")
 
     @format_wrapper
     def off(self):
+        """
+        Turn the controller (and hence all of MCCS) off.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("Off")
 
     @format_wrapper
     def standbylow(self):
+        """
+        Put the controller (and hence all of MCCS) into low-power
+        standby mode.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("StandbyLow")
 
     @format_wrapper
     def standbyfull(self):
+        """
+        Put the controller (and hence all of MCCS) into full-power
+        standby mode.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("StandbyFull")
 
     @format_wrapper
     def operate(self):
+        """
+        Call the "Operate" command on the controller.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("Operate")
 
     @format_wrapper
     def reset(self):
+        """
+        Reset the controller following a fatal error.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("Reset")
 
     @format_wrapper
@@ -216,11 +322,22 @@ class MccsControllerCli(metaclass=CliMeta):
 
     @format_wrapper
     def maintenance(self):
+        """
+        Set admin mode to maintenance.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        """
         return self._dp.command_inout("Maintenance")
 
 
 def main():
-    fire.Fire(MccsControllerCli)
+    """
+    Entry point for CLI.
+    """
+    Fire(MccsControllerCli)
 
 
 if __name__ == "__main__":

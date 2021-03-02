@@ -135,10 +135,22 @@ class MccsDevice(SKABaseDevice):
     # --------------------------------
     @attribute(dtype="DevString")
     def versionId(self):
+        """
+        The version id of this device.
+
+        :return: the version_id of this device
+        :rtype: str
+        """
         return release.version
 
     @attribute(dtype="DevString")
     def buildState(self):
+        """
+        The build state of this device.
+
+        :return: the build state of this device
+        :rtype: str
+        """
         return release.get_release_info()
 
     # ----------

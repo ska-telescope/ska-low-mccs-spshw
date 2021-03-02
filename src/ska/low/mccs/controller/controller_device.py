@@ -16,7 +16,8 @@ __all__ = ["MccsController", "ControllerResourceManager", "main"]
 import json
 import logging
 import threading
-from typing import List, Dict
+from typing import List, Dict, Tuple
+
 
 # PyTango imports
 import tango
@@ -34,6 +35,8 @@ from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel, HealthMonitor
 from ska.low.mccs.resource import ResourceManager
+
+Resultant = (ResultCode, "str")
 
 
 class ControllerResourceManager(ResourceManager):
@@ -169,7 +172,7 @@ class MccsController(SKAMaster):
             self._lock = threading.Lock()
             self._interrupt = False
 
-        def do(self) -> (ResultCode, str):
+        def do(self) -> Tuple(ResultCode, str):
             """
             Initialises the attributes and properties of the
             `MccsController`. State is managed under the hood; the basic

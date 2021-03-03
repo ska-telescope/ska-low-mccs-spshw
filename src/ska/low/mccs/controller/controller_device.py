@@ -14,7 +14,10 @@ This module contains the SKA Low MCCS Controller device prototype.
 __all__ = ["MccsController", "ControllerResourceManager", "main"]
 
 import json
+import logging
 import threading
+from typing import List, Dict, Tuple
+
 
 # PyTango imports
 import tango
@@ -22,7 +25,7 @@ from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska.base import SKAMaster, SKABaseDevice
+from ska.base import SKAMaster, SKABaseDevice, DeviceStateModel
 from ska.base.control_model import HealthState
 from ska.base.commands import ResponseCommand, ResultCode
 
@@ -30,7 +33,7 @@ from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
 from ska.low.mccs.events import EventManager
-from ska.low.mccs.health import HealthModel
+from ska.low.mccs.health import HealthModel, HealthMonitor
 from ska.low.mccs.resource import ResourceManager
 
 
@@ -44,17 +47,16 @@ class ControllerResourceManager(ResourceManager):
     that owns each managed device.
     """
 
-    def __init__(self, health_monitor, manager_name, station_fqdns):
+    def __init__(
+        self, health_monitor: HealthMonitor, manager_name: str, station_fqdns: List[str]
+    ):
         """
         Initialise the conroller resource manager.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: :py:class:`ska.low.mccs.health.HealthMonitor`
         :param manager_name: Name for this manager (imformation only)
-        :type manager_name: str
         :param station_fqdns: the FQDNs of the stations that this controller
             device manages
-        :type station_fqdns: list(str)
         """
         stations = {}
         for station_fqdn in station_fqdns:
@@ -62,15 +64,13 @@ class ControllerResourceManager(ResourceManager):
             stations[station_id] = station_fqdn
         super().__init__(health_monitor, manager_name, stations)
 
-    def assign(self, station_fqdns, subarray_id):
+    def assign(self, station_fqdns: List[str], subarray_id: int):
         """
         Assign stations to a subarray device.
 
         :param station_fqdns: list of station device FQDNs to assign
-        :type station_fqdns: list(str)
         :param subarray_id: ID of the subarray to which the stations
             should be assigned
-        :type subarray_id: int
         """
         stations = {}
         for station_fqdn in station_fqdns:
@@ -146,22 +146,23 @@ class MccsController(SKAMaster):
         called during :py:class:`~.MccsController`'s initialisation.
         """
 
-        def __init__(self, target, state_model, logger=None):
+        def __init__(
+            self,
+            target: object,
+            state_model: DeviceStateModel,
+            logger: logging.Logger = None,
+        ):
             """
             Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
                 command
-            :type target: object
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -169,7 +170,7 @@ class MccsController(SKAMaster):
             self._lock = threading.Lock()
             self._interrupt = False
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Initialises the attributes and properties of the
             `MccsController`. State is managed under the hood; the basic
@@ -182,8 +183,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -206,13 +205,12 @@ class MccsController(SKAMaster):
                 self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
-        def _initialise_connections(self, device):
+        def _initialise_connections(self, device: SKABaseDevice):
             """
             Thread target for asynchronous initialisation of connections
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -239,17 +237,19 @@ class MccsController(SKAMaster):
                 with self._lock:
                     self.succeeded()
 
-        def _initialise_device_pool(self, device, subrack_fqdns, station_fqdns):
+        def _initialise_device_pool(
+            self,
+            device: SKABaseDevice,
+            subrack_fqdns: List[str],
+            station_fqdns: List[str],
+        ):
             """
             Initialise the device pool for this device.
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
             :param subrack_fqdns: the fqdns of subservient subracks.
-            :type subrack_fqdns: list(str)
             :param station_fqdns: the fqdns of subservient stations.
-            :type station_fqdns: list(str)
             """
             subrack_pool = DevicePool(subrack_fqdns, self.logger)
             station_pool = DevicePool(station_fqdns, self.logger)
@@ -269,16 +269,16 @@ class MccsController(SKAMaster):
             device.register_command_object("On", device.OnCommand(*args))
             device.register_command_object("Startup", device.StartupCommand(*args))
 
-        def _initialise_health_monitoring(self, device, fqdns):
+        def _initialise_health_monitoring(
+            self, device: SKABaseDevice, fqdns: List[str]
+        ):
             """
             Initialise the health model for this device.
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
-            :type: list(str)
             """
             device.event_manager = EventManager(self.logger, fqdns)
 
@@ -288,16 +288,16 @@ class MccsController(SKAMaster):
                 None, fqdns, device.event_manager, device.health_changed
             )
 
-        def _initialise_resource_management(self, device, fqdns):
+        def _initialise_resource_management(
+            self, device: SKABaseDevice, fqdns: List[str]
+        ):
             """
             Initialise resource management for this device.
 
             :param device: the device for which resource management is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices allocation of which
                 is managed by this device
-            :type: list(str)
             """
             health_monitor = device.health_model._health_monitor
 
@@ -313,12 +313,11 @@ class MccsController(SKAMaster):
                 "Release", device.ReleaseCommand(*resource_args)
             )
 
-        def interrupt(self):
+        def interrupt(self) -> bool:
             """
             Interrupt the initialisation thread (if one is running)
 
             :return: whether the initialisation thread was interrupted
-            :rtype: bool
             """
             if self._thread is None:
                 return False
@@ -353,14 +352,13 @@ class MccsController(SKAMaster):
     # ----------
     # Attributes
     # ----------
-    def health_changed(self, health):
+    def health_changed(self, health: HealthState):
         """
         Callback to be called whenever the HealthModel's health state
         changes; responsible for updating the tango side of things i.e.
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -368,12 +366,11 @@ class MccsController(SKAMaster):
         self.push_change_event("healthState", health)
 
     @attribute(dtype="DevLong", format="%i", polling_period=1000)
-    def commandResult(self):
+    def commandResult(self) -> ResultCode:
         """
         Return the commandResult attribute.
 
         :return: commandResult attribute
-        :rtype: :py:class:`~ska.base.commands.ResultCode`
         """
         return self._command_result
 
@@ -386,23 +383,21 @@ class MccsController(SKAMaster):
         max_value=100,
         min_value=0,
     )
-    def commandProgress(self):
+    def commandProgress(self) -> int:
         """
         Return the commandProgress attribute value.
 
         :return: command progress as a percentage
-        :rtype: int
         """
         return 0
 
     @attribute(dtype="DevUShort", unit="s")
-    def commandDelayExpected(self):
+    def commandDelayExpected(self) -> int:
 
         """
         Return the commandDelayExpected attribute.
 
         :return: number of seconds it is expected to take to complete the command
-        :rtype: int
         """
         return 0
 
@@ -412,15 +407,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Startup(self):
+    def Startup(self) -> Tuple[ResultCode, str]:
         """
         Start up the MCCS subsystem.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -435,7 +428,7 @@ class MccsController(SKAMaster):
         Class for handling the Startup command.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Startup` command.
@@ -443,8 +436,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             # TODO: For now, we need to get our devices to OFF state
             # (the highest state of device readiness for a device that
@@ -470,15 +461,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def On(self):
+    def On(self) -> Tuple[ResultCode, str]:
         """
         Turn the controller on.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -493,7 +482,7 @@ class MccsController(SKAMaster):
         Class for handling the On command.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.On` command.
@@ -501,8 +490,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -513,15 +500,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Disable(self):
+    def Disable(self) -> Tuple[ResultCode, str]:
         """
         Disable the controller.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -536,7 +521,7 @@ class MccsController(SKAMaster):
         Class for handling the Disable command.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.Off` command
@@ -544,8 +529,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -556,15 +539,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Off(self):
+    def Off(self) -> Tuple[ResultCode, str]:
         """
         Turn the controller off.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -579,7 +560,7 @@ class MccsController(SKAMaster):
         Class for handling the Off command.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.Off` command
@@ -587,8 +568,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -605,7 +584,7 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyLow` command.
@@ -616,8 +595,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -628,7 +605,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def StandbyLow(self):
+    def StandbyLow(self) -> Tuple[ResultCode, str]:
         """
         StandbyLow Command.
 
@@ -637,7 +614,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyLow")
         (result_code, message) = handler()
@@ -651,7 +627,7 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
@@ -662,8 +638,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -674,7 +648,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def StandbyFull(self):
+    def StandbyFull(self) -> Tuple[ResultCode, str]:
         """
         StandbyFull Command.
 
@@ -683,7 +657,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyFull")
         (result_code, message) = handler()
@@ -697,7 +670,7 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless hook for implementation of
             :py:meth:`.MccsController.Operate` command
@@ -706,28 +679,25 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             return (
                 ResultCode.OK,
                 "Stub implementation of OperateCommand(), does nothing",
             )
 
-        def check_allowed(self):
+        def check_allowed(self) -> bool:
             """
             Whether this command is allowed to be run in current device
             state.
 
             :return: True if this command is allowed to be run in
                 current device state
-            :rtype: bool
             """
             return self.state_model.op_state == DevState.OFF
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Operate(self):
+    def Operate(self) -> Tuple[ResultCode, str]:
         """
         Transit to the OPERATE operating state, ready for signal
         processing.
@@ -737,20 +707,18 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Operate")
         (result_code, message) = handler()
         return [[result_code], [message]]
 
-    def is_Operate_allowed(self):
+    def is_Operate_allowed(self) -> bool:
         """
         Whether this command is allowed to be run in current device
         state.
 
         :return: True if this command is allowed to be run in
             current device state
-        :rtype: bool
         """
         handler = self.get_command_object("Operate")
         if not handler.check_allowed():
@@ -762,7 +730,7 @@ class MccsController(SKAMaster):
         Command class for the Reset() command.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska.base.SKABaseDevice.Reset` command
@@ -774,15 +742,13 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Allocate(self, argin):
+    def Allocate(self, argin: str) -> Tuple[ResultCode, str]:
         """
         Allocate a set of unallocated MCCS resources to a sub-array. The
         JSON argument specifies the overall sub-array composition in
@@ -791,11 +757,10 @@ class MccsController(SKAMaster):
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
-        :type argin: str
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
 
         :example:
 
@@ -828,7 +793,7 @@ class MccsController(SKAMaster):
         Sub-Array.
         """
 
-        def do(self, argin):
+        def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             :py:meth:`.MccsController.Allocate` command
@@ -844,12 +809,10 @@ class MccsController(SKAMaster):
                     "channels": list[list[int]],
                     "subarray_beam_ids": list[int],
                     }
-            :type argin: str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
 
             controllerdevice = self.target
@@ -949,29 +912,25 @@ class MccsController(SKAMaster):
 
             return (ResultCode.OK, "Allocate command successful")
 
-        def check_allowed(self):
+        def check_allowed(self) -> bool:
             """
             Whether this command is allowed to be run in current device
             state.
 
             :return: True if this command is allowed to be run in
                 current device state
-            :rtype: bool
             """
             return self.state_model.op_state == DevState.ON
 
-        def _enable_subarray(self, argin):
+        def _enable_subarray(self, argin: int) -> Tuple[ResultCode, str]:
             """
             Method to enable the specified subarray.
 
             :param argin: the subarray id
-            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -1004,14 +963,13 @@ class MccsController(SKAMaster):
             device._subarray_enabled[subarray_id - 1] = True
             return (ResultCode.OK, "_enable_subarray was successful")
 
-    def is_Allocate_allowed(self):
+    def is_Allocate_allowed(self) -> bool:
         """
         Whether this command is allowed to be run in current device
         state.
 
         :return: True if this command is allowed to be run in
             current device state
-        :rtype: bool
         """
         handler = self.get_command_object("Allocate")
         if not handler.check_allowed():
@@ -1019,18 +977,16 @@ class MccsController(SKAMaster):
         return True
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Release(self, argin):
+    def Release(self, argin: str) -> Tuple[ResultCode, str]:
         """
         Release resources from an MCCS Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, a release all flag and array resources (TBD).
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -1046,19 +1002,17 @@ class MccsController(SKAMaster):
         marking the resources and Capabilities as unassigned and idle.
         """
 
-        def do(self, argin):
+        def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for the
             :py:meth:`.MccsController.Release` command
 
             :param argin: JSON-formatted string containing an integer
                 subarray_id, a release all flag and array resources (TBD).
-            :type argin: str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device = self.target
             kwargs = json.loads(argin)
@@ -1103,29 +1057,25 @@ class MccsController(SKAMaster):
 
             return (ResultCode.OK, "Release() command successful")
 
-        def check_allowed(self):
+        def check_allowed(self) -> bool:
             """
             Whether this command is allowed to be run in current device
             state.
 
             :return: True if this command is allowed to be run in
                 current device state
-            :rtype: bool
             """
             return self.state_model.op_state == DevState.ON
 
-        def _disable_subarray(self, argin):
+        def _disable_subarray(self, argin: int) -> Tuple[ResultCode, str]:
             """
             Method to disable the specified subarray.
 
             :param argin: the subarray id
-            :type argin: int
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -1143,14 +1093,13 @@ class MccsController(SKAMaster):
             device._subarray_enabled[subarray_id - 1] = False
             return (ResultCode.OK, "_disable_subarray was successful")
 
-    def is_Release_allowed(self):
+    def is_Release_allowed(self) -> bool:
         """
         Whether this command is allowed to be run in current device
         state.
 
         :return: True if this command is allowed to be run in
             current device state
-        :rtype: bool
         """
         handler = self.get_command_object("Release")
         if not handler.check_allowed():
@@ -1166,7 +1115,7 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
-        def do(self):
+        def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for handling the
             :py:meth:`.MccsController.Maintenance` command.
@@ -1174,14 +1123,12 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Maintenance(self):
+    def Maintenance(self) -> Tuple[ResultCode, str]:
         """
         Transition the MCCS to a MAINTENANCE state.
 
@@ -1190,7 +1137,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Maintenance")
         (result_code, message) = handler()
@@ -1202,17 +1148,14 @@ class MccsController(SKAMaster):
 # ----------
 
 
-def main(args=None, **kwargs):
+def main(args: List = None, **kwargs: Dict) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
 
     return MccsController.run_server(args=args, **kwargs)

@@ -7,6 +7,7 @@ Standard sphinx config file.
 
 import sys
 import os
+import typing
 
 # Do we need this
 # import sphinx_rtd_theme
@@ -92,6 +93,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
     "plantweb.directive",
 ]
 
@@ -252,6 +254,10 @@ epub_exclude_files = ["search.html"]
 
 
 # -- Extension configuration -------------------------------------------------
+
+set_type_checking_flag = True
+typehints_fully_qualified = True
+typing.TYPE_CHECKING = True
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {

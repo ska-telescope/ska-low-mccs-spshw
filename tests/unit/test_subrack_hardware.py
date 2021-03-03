@@ -198,6 +198,7 @@ class TestCommon:
             "==" equality test.
         :type expected_value: any
         """
+        hardware_under_test.connect()
         hardware_under_test.on()
         hardware_under_test.turn_on_tpms()
         assert getattr(hardware_under_test, attribute_name) == expected_value
@@ -226,6 +227,7 @@ class TestCommon:
         :param num_args: the number of args the command takes
         :type num_args: int
         """
+        hardware_under_test.connect()
         hardware_under_test.on()
         _ = getattr(hardware_under_test, command_name)()
 
@@ -257,6 +259,7 @@ class TestCommon:
         :param num_args: the number of args the command takes
         :type num_args: int
         """
+        hardware_under_test.connect()
         hardware_under_test.on()
         if num_args == 1:
             _ = getattr(hardware_under_test, command_name)(1)

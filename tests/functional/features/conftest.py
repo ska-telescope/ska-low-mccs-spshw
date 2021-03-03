@@ -151,8 +151,21 @@ def _load_devices(path, device_names):
                     if class_name not in devices_by_class:
                         devices_by_class[class_name] = []
                     for fqdn, device_specs in device_info.items():
+                        properties = device_specs.get("properties", {})
+                        attribute_properties = device_specs.get(
+                            "attribute_properties", {}
+                        )
+                        memorized = {
+                            name: value["__value"]
+                            for name, value in attribute_properties.items()
+                            if "__value" in value
+                        }
                         devices_by_class[class_name].append(
-                            {"name": fqdn, **device_specs}
+                            {
+                                "name": fqdn,
+                                "properties": properties,
+                                "memorized": memorized,
+                            }
                         )
 
     devices_info = []

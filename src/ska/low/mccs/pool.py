@@ -36,7 +36,7 @@ class DevicePool:
     not STARTED or QUEUED.
     """
 
-    def __init__(self, fqdns, logger):
+    def __init__(self, fqdns, logger, connect=True):
         """
         Initialise a new DevicePool object.
 
@@ -44,14 +44,28 @@ class DevicePool:
         :type fqdns: list(str)
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
+        :param connect: whether to establish connections immediately.
+            Defaults to True. If False, the connections may be
+            established by calling the :py:meth:`.connect` method, or by
+            calling one of the supported commands.
+        :type connect: bool
         """
+        self._fqdns = fqdns or []
         self._logger = logger
-        if fqdns is None:
-            self._devices = None
-        else:
-            # TODO: it would save some time if we were connecting
-            # asynchronously.
-            self._devices = [backoff_connect(fqdn, logger) for fqdn in fqdns]
+        self._devices = None
+
+        if connect:
+            self.connect()
+
+    def connect(self):
+        """
+        Connect to the devices in the pool.
+        """
+        if self._devices is None:
+            # TODO: it would save some time if we were connecting asynchronously.
+            self._devices = [
+                backoff_connect(fqdn, self._logger) for fqdn in self._fqdns
+            ]
 
     def invoke_command(self, command_name, arg=None):
         """
@@ -65,16 +79,18 @@ class DevicePool:
         :return: Whether the command succeeded or not
         :rtype: bool
         """
-        if self._devices is not None:
-            async_ids = [
-                device.command_inout_asynch(command_name, arg)
-                for device in self._devices
-            ]
+        if self._devices is None:
+            self.connect()
 
-            for (async_id, device) in zip(async_ids, self._devices):
-                (result_code, _) = device.command_inout_reply(async_id, timeout=0)
-                if result_code == ResultCode.FAILED:
-                    return False
+        async_ids = [
+            device.command_inout_asynch(command_name, arg) for device in self._devices
+        ]
+
+        for (async_id, device) in zip(async_ids, self._devices):
+            (result_code, _) = device.command_inout_reply(async_id, timeout=0)
+            if result_code == ResultCode.FAILED:
+                return False
+
         return True
 
     def disable(self):
@@ -142,7 +158,7 @@ class DevicePoolSequence:
     not STARTED or QUEUED.
     """
 
-    def __init__(self, pools, logger):
+    def __init__(self, pools, logger, connect=True):
         """
         Initialise a new DevicePoolSequence object.
 
@@ -150,9 +166,24 @@ class DevicePoolSequence:
         :type pools: list(:py:class:`.DevicePool`)
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
+        :param connect: whether to establish connections immediately.
+            Defaults to True. If False, the connections may be
+            established by calling the :py:meth:`.connect` method, or by
+            calling one of the supported commands.
+        :type connect: bool
         """
         self._logger = logger
         self._pools = pools
+
+        if connect:
+            self.connect()
+
+    def connect(self):
+        """
+        Connect to the devices in the pools.
+        """
+        for pool in self._pools:
+            pool.connect()
 
     def invoke_command(
         self,

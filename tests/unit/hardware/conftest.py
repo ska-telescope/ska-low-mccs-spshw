@@ -33,7 +33,7 @@ def hardware_driver():
     :return: the hardware driver under test
     :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
     """
-    return HardwareSimulator()
+    return HardwareSimulator(is_connectible=True)
 
 
 @pytest.fixture()

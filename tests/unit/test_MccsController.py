@@ -1093,21 +1093,17 @@ class TestInitCommand:
             self._initialise_hardware_management_called = False
             self._initialise_health_monitoring_called = False
 
-        def _initialise_device_pool(self, device, subrack_fqdns, station_fqdns):
+        def _initialise_device_pool(self, device):
             """
             Initialise the device pool for this device (overridden here
             to inject a call trace attribute).
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            :param subrack_fqdns: the fqdns of subservient subracks.
-            :type subrack_fqdns: list(str)
-            :param station_fqdns: the fqdns of subservient stations.
-            :type station_fqdns: list(str)
+            :type device: :py:class:`~ska.base.SKABaseDevice`
             """
             self._initialise_device_pool_called = True
-            super()._initialise_device_pool(device, subrack_fqdns, station_fqdns)
+            super()._initialise_device_pool(device)
 
         def _initialise_health_monitoring(self, device):
             """

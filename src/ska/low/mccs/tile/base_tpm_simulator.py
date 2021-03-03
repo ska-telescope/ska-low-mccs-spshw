@@ -89,7 +89,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._address_map = {}
         self._forty_gb_core_list = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
-        super().__init__(fail_connect=fail_connect)
+        super().__init__(is_connectible=False, fail_connect=fail_connect)
 
     @property
     def firmware_available(self):

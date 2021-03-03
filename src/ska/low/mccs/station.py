@@ -141,6 +141,17 @@ class MccsStation(SKAObsDevice):
             device.set_change_event("transientBufferFQDN", True, False)
             device.set_archive_event("transientBufferFQDN", True, False)
 
+            prerequisite_fqdns = device._tile_fqdns
+            if device._apiu_fqdn is not None:
+                prerequisite_fqdns.append(device._apiu_fqdn)
+            prerequisite_device_pool = DevicePool(
+                prerequisite_fqdns, self.logger, connect=False
+            )
+            antenna_pool = DevicePool(device._antenna_fqdns, self.logger, connect=False)
+            device.device_pool = DevicePoolSequence(
+                [prerequisite_device_pool, antenna_pool], self.logger, connect=False
+            )
+
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
@@ -180,20 +191,7 @@ class MccsStation(SKAObsDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            prerequisite_fqdns = device._tile_fqdns
-            if device._apiu_fqdn is not None:
-                prerequisite_fqdns.append(device._apiu_fqdn)
-            prerequisite_device_pool = DevicePool(prerequisite_fqdns, self.logger)
-            antenna_pool = DevicePool(device._antenna_fqdns, self.logger)
-            device.device_pool = DevicePoolSequence(
-                [prerequisite_device_pool, antenna_pool], self.logger
-            )
-
-            args = (device.device_pool, device.state_model, self.logger)
-            device.register_command_object("Disable", device.DisableCommand(*args))
-            device.register_command_object("Standby", device.StandbyCommand(*args))
-            device.register_command_object("Off", device.OffCommand(*args))
-            device.register_command_object("On", device.OnCommand(*args))
+            device.device_pool.connect()
 
         def _initialise_health_monitoring(self, device):
             """
@@ -444,16 +442,17 @@ class MccsStation(SKAObsDevice):
         """
         Set up the handler objects for Commands.
         """
-        # TODO: Technical debt -- forced to register base class stuff rather than
-        # calling super(), because On() and Off() are registered on a
-        # thread, and we don't want the super() method clobbering them
+        super().init_command_objects()
+
         args = (self, self.state_model, self.logger)
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
-        )
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+
+        pool_args = (self.device_pool, self.state_model, self.logger)
+        self.register_command_object("Disable", self.DisableCommand(*pool_args))
+        self.register_command_object("Standby", self.StandbyCommand(*pool_args))
+        self.register_command_object("Off", self.OffCommand(*pool_args))
+        self.register_command_object("On", self.OnCommand(*pool_args))
 
     class OnCommand(SKABaseDevice.OnCommand):
         """

@@ -13,9 +13,7 @@ Device Server, based on the architecture in SKA-TEL-LFAA-06000052-02.
 __all__ = [
     "AntennaApiuProxy",
     "AntennaTileProxy",
-    "AntennaHardwareFactory",
     "AntennaHardwareHealthEvaluator",
-    "AntennaHardwareManager",
     "MccsAntenna",
     "main",
 ]
@@ -32,8 +30,6 @@ from ska_tango_base.control_model import HealthState, SimulationMode
 from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
-    HardwareFactory,
-    OnOffHardwareManager,
     PowerMode,
 )
 from ska.low.mccs.health import HealthModel
@@ -115,22 +111,32 @@ class AntennaApiuProxy:
 
         :raises AssertionError: if parameters are out of bounds
         """
-        self._logger = logger
-        self._power_callback = power_callback
+        self._fqdn = apiu_fqdn
+        self._apiu = None
 
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
-        self._apiu = backoff_connect(apiu_fqdn, logger, wait=True)
+
+        self._logger = logger
+
+        self._power_mode = PowerMode.UNKNOWN
+        self._power_callback = power_callback
+
+    def connect(self):
+        """
+        Establish a connection to the APIU device that manages the APIU
+        that powers this device's antenna.
+        """
+        self._apiu = backoff_connect(self._fqdn, self._logger, wait=True)
+        self._apiu_event_handler = EventSubscriptionHandler(
+            self._apiu, self._fqdn, "areAntennasOn", self._logger
+        )
+        self._apiu_event_handler.register_callback(self._apiu_power_changed)
 
         self._power_mode = self._read_power_mode()
         self._power_callback(self._power_mode)
-
-        self.apiu_event_handler = EventSubscriptionHandler(
-            self._apiu, apiu_fqdn, "areAntennasOn", logger
-        )
-        self.apiu_event_handler.register_callback(self._apiu_power_changed)
 
     def on(self):
         """
@@ -320,148 +326,22 @@ class AntennaTileProxy:
 
         :raises AssertionError: if parameters are out of bounds
         """
-        self._logger = logger
+        self._fqdn = tile_fqdn
+        self._tile = None
 
         assert (
             logical_antenna_id > 0
         ), "An APIU's logical antenna id must be positive integer."
         self._logical_antenna_id = logical_antenna_id
-        self._tile = backoff_connect(tile_fqdn, logger)
 
-
-class AntennaHardwareFactory(HardwareFactory):
-    """
-    A factory that returns a hardware driver for the antenna hardware...
-
-    though really it returns a proxy to the APIU.
-    """
-
-    def __init__(
-        self,
-        apiu_fqdn,
-        logical_apiu_antenna_id,
-        power_callback,
-        logger,
-    ):
-        """
-        Create a new antenna hardware factory instance.
-
-        :param apiu_fqdn: the FQDN of the APIU to which the antenna is
-            attached
-        :type apiu_fqdn: str
-        :param logical_apiu_antenna_id: the APIU's id for this antenna
-        :type logical_apiu_antenna_id: int
-        :param power_callback: to be called when the power mode of the
-            antenna changes
-        :type power_callback: callable
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-        """
         self._logger = logger
-        self._hardware = AntennaApiuProxy(
-            apiu_fqdn, logical_apiu_antenna_id, logger, power_callback
-        )
 
-    @property
-    def hardware(self):
+    def connect(self):
         """
-        Return an antenna hardware driver created by this factory... but
-        really a proxy to the APIU.
-
-        :return: an antenna hardware driver created by this factory
-        :rtype: :py:class:`.AntennaApiuProxy`
+        Establish a connection to the tile device that manages the TPM
+        that consumes the data stream from this device's antenna.
         """
-        return self._hardware
-
-
-class AntennaHardwareManager(OnOffHardwareManager):
-    """
-    This class manages antenna hardware.
-
-    :todo: So far this antenna hardware manager can only manage antenna
-        hardware via the APIU e.g. attributes voltage, current and
-        temperature. It also needs to manage antenna attributes via the
-        tile.
-    """
-
-    def __init__(
-        self,
-        apiu_fqdn,
-        logical_apiu_antenna_id,
-        tile_fqdn,
-        logical_tile_antenna_id,
-        power_callback,
-        logger,
-        _factory=None,
-    ):
-        """
-        Initialise a new AntennaHardwareManager instance.
-
-        :param apiu_fqdn: the FQDN of the APIU to which the antenna is
-            attached
-        :type apiu_fqdn: str
-        :param logical_apiu_antenna_id: the APIU's id for this antenna
-        :type logical_apiu_antenna_id: int
-        :param tile_fqdn: the FQDN of the tile to which the antenna is
-            attached.
-        :type tile_fqdn: str
-        :param logical_tile_antenna_id: the tile's id for this antenna
-        :type logical_tile_antenna_id: int
-        :param power_callback: to be called when the power mode of the
-            antenna changes
-        :type power_callback: callable
-        :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
-        :param _factory: allows for substitution of a hardware factory.
-            This is useful for testing, but generally should not be used
-            in operations.
-        :type _factory: :py:class:`.AntennaHardwareFactory`
-        """
-        super().__init__(
-            _factory
-            or AntennaHardwareFactory(
-                apiu_fqdn,
-                logical_apiu_antenna_id,
-                power_callback,
-                logger,
-            ),
-            AntennaHardwareHealthEvaluator(),
-        )
-        self._antenna_tile_proxy = (
-            AntennaTileProxy(tile_fqdn, logical_tile_antenna_id, logger)
-            if tile_fqdn is not None
-            else None
-        )
-
-    @property
-    def voltage(self):
-        """
-        The voltage of the hardware.
-
-        :return: the voltage of the hardware
-        :rtype: float
-        """
-        return self._factory.hardware.voltage
-
-    @property
-    def current(self):
-        """
-        The current of the hardware.
-
-        :return: the current of the hardware
-        :rtype: float
-        """
-        return self._factory.hardware.current
-
-    @property
-    def temperature(self):
-        """
-        Return the temperature of the hardware.
-
-        :return: the temperature of the hardware
-        :rtype: float
-        """
-        return self._factory.hardware.temperature
+        self._tile = backoff_connect(self._fqdn, self._logger)
 
 
 class MccsAntenna(SKABaseDevice):
@@ -486,15 +366,18 @@ class MccsAntenna(SKABaseDevice):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # TODO: Technical debt -- forced to register base class stuff rather than
-        # calling super(), because Disable(), Standby() and Off() are registered on a
-        # thread, and we don't want the super() method clobbering them.
-        args = (self, self.state_model, self.logger)
-        self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
-        )
+        super().init_command_objects()
+
+        for (command_name, command_object) in [
+            ("Reset", self.ResetCommand),
+            ("Disable", self.DisableCommand),
+            ("Standby", self.StandbyCommand),
+            ("Off", self.OffCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self._apiu_proxy, self.state_model, self.logger),
+            )
 
     # ---------------
     # General methods
@@ -542,18 +425,20 @@ class MccsAntenna(SKABaseDevice):
             super().do()
 
             device = self.target
+            device._apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
+            device._tile_fqdn = f"low-mccs/tile/{device.TileId:04}"
 
-            # TODO: the default value for simulationMode should be
-            # FALSE, but we don't have real hardware to test yet, so we
-            # can't take our devices out of simulation mode. However,
-            # simulationMode is a memorized attribute, and
-            # pytango.test_context.MultiDeviceTestContext will soon
-            # support memorized attributes. Once it does, we should
-            # figure out how to inject memorized values into our real
-            # tango deployment, then start honouring the default of
-            # FALSE by removing this next line.
-            device._simulation_mode = SimulationMode.TRUE
-            device.hardware_manager = None
+            device._apiu_proxy = AntennaApiuProxy(
+                device._apiu_fqdn,
+                device.LogicalApiuAntennaId,
+                self.logger,
+                device.power_changed,
+            )
+            device._tile_proxy = AntennaTileProxy(
+                device._tile_fqdn,
+                device.LogicalTileAntennaId,
+                self.logger,
+            )
 
             device._antennaId = 0
             device._gain = 0.0
@@ -632,30 +517,8 @@ class MccsAntenna(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
-            tile_fqdn = (
-                f"low-mccs/tile/{device.TileId:04}"
-                if device.TileId is not None
-                else None
-            )
-
-            device.hardware_manager = AntennaHardwareManager(
-                apiu_fqdn,
-                device.LogicalApiuAntennaId,
-                tile_fqdn,
-                device.LogicalTileAntennaId,
-                device.power_changed,
-                self.logger,
-            )
-            hardware_args = (device.hardware_manager, device.state_model, self.logger)
-            device.register_command_object("Reset", device.ResetCommand(*hardware_args))
-            device.register_command_object(
-                "Disable", device.DisableCommand(*hardware_args)
-            )
-            device.register_command_object(
-                "Standby", device.StandbyCommand(*hardware_args)
-            )
-            device.register_command_object("Off", device.OffCommand(*hardware_args))
+            device._apiu_proxy.connect()
+            device._tile_proxy.connect()
 
         def _initialise_health_monitoring(self, device):
             """
@@ -670,8 +533,8 @@ class MccsAntenna(SKABaseDevice):
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager,
                 None,
+                [device._apiu_fqdn, device._tile_fqdn],
                 device.event_manager,
                 device.health_changed,
             )
@@ -698,18 +561,18 @@ class MccsAntenna(SKABaseDevice):
             """
             device = self.target
 
-            if device.hardware_manager.power_mode == PowerMode.OFF:
+            if device._apiu_proxy.power_mode == PowerMode.OFF:
                 action = "init_succeeded_disable"
             else:
                 action = "init_succeeded_off"
             self.state_model.perform_action(action)
 
-    def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
-        if self.hardware_manager is not None:
-            self.hardware_manager.poll()
+    # def always_executed_hook(self):
+    #     """
+    #     Method always executed before any TANGO command is executed.
+    #     """
+    #     if self.hardware_manager is not None:
+    #         self.hardware_manager.poll()
 
     def delete_device(self):
         """
@@ -744,8 +607,8 @@ class MccsAntenna(SKABaseDevice):
 
     def power_changed(self, power_mode):
         """
-        Callback to be called whenever the AntennaHardwareManager's
-        record of the power mode of the antenna hardware changes;
+        Callback to be called whenever the power mode of the antenna
+        hardware changes (as reported by the AntennaApiuProxy);
         responsible for updating the tango side of things i.e. making
         sure the attribute is up to date, and events are pushed.
 
@@ -780,9 +643,12 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
-
-    # override from base classes so that it can be stored in the hardware manager
-    @attribute(dtype=SimulationMode, access=AttrWriteType.READ_WRITE, memorized=True)
+    @attribute(
+        dtype=SimulationMode,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+    )
     def simulationMode(self):
         """
         Return the simulation mode of this device.
@@ -853,7 +719,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the voltage
         :rtype: float
         """
-        return self.hardware_manager.voltage
+        return self._apiu_proxy.voltage
 
     @attribute(dtype="float", label="current", unit="amperes", polling_period=1000)
     def current(self):
@@ -863,7 +729,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the current
         :rtype: float
         """
-        return self.hardware_manager.current
+        return self._apiu_proxy.current
 
     @attribute(dtype="float", label="temperature", unit="DegC")
     def temperature(self):
@@ -873,7 +739,7 @@ class MccsAntenna(SKABaseDevice):
         :return: the temperature
         :rtype: float
         """
-        return self.hardware_manager.temperature
+        return self._apiu_proxy.temperature
 
     @attribute(dtype="bool", label="xPolarisationFaulty", polling_period=1000)
     def xPolarisationFaulty(self):
@@ -1118,8 +984,8 @@ class MccsAntenna(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            hardware_manager = self.target
-            success = hardware_manager.off()
+            apiu_proxy = self.target
+            success = apiu_proxy.off()
             return create_return(success, "disable")
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
@@ -1142,8 +1008,8 @@ class MccsAntenna(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            hardware_manager = self.target
-            success = hardware_manager.on()
+            apiu_proxy = self.target
+            success = apiu_proxy.on()
             return create_return(success, "standby")
 
     class OffCommand(SKABaseDevice.OffCommand):
@@ -1162,8 +1028,8 @@ class MccsAntenna(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            hardware_manager = self.target
-            success = hardware_manager.on()
+            apiu_proxy = self.target
+            success = apiu_proxy.on()
             return create_return(success, "off")
 
     class ResetCommand(SKABaseDevice.ResetCommand):

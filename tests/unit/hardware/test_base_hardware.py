@@ -119,6 +119,9 @@ class TestBaseHardware:
             mock_callback = mocker.Mock()
             another_mock_callback = mocker.Mock()
 
+            assert hardware_manager.health == HealthState.UNKNOWN
+
+            assert hardware_manager.connect()
             assert hardware_manager.health == HealthState.OK
 
             # Check that health callback gets called on registration

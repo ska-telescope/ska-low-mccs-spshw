@@ -551,13 +551,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
-            # can't take our devices out of simulation mode. However,
-            # simulationMode is a memorized attribute, and
-            # pytango.test_context.MultiDeviceTestContext will soon
-            # support memorized attributes. Once it does, we should
-            # figure out how to inject memorized values into our real
-            # tango deployment, then start honouring the default of
-            # FALSE by removing this next line.
+            # can't take our devices out of simulation mode. Once we
+            # have a driver for real hardware, we should change this
+            # default to FALSE.
             device._simulation_mode = SimulationMode.TRUE
             device.cluster_manager = None
 
@@ -674,6 +670,31 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     # ------------------
     # Attributes methods
     # ------------------
+    @attribute(
+        dtype="DevLong",
+        memorized=True,
+        hw_memorized=True,
+    )
+    def simulationMode(self):
+        """
+        Reports the simulation mode of the device.
+
+        :return: Return the current simulation mode
+        :rtype: int
+        """
+        return super().read_simulationMode()
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode.
+
+        :param value: The simulation mode, as a SimulationMode value
+        """
+        super().write_simulationMode(value)
+        self.logger.info("Switching simulation mode to " + str(value))
+        self.cluster_manager.simulation_mode = value
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state

@@ -152,7 +152,18 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         self._are_antennas_on = None
         self._are_antennas_on_change_callback = are_antennas_on_change_callback
-        self._update_are_antennas_on()
+
+    def connect(self):
+        """
+        Establish a connection to the APIU hardware.
+
+        :return: whether successful
+        :rtype: bool
+        """
+        success = super().connect()
+        if success:
+            self._update_are_antennas_on()
+        return success
 
     @property
     def voltage(self):
@@ -378,15 +389,22 @@ class MccsAPIU(SKABaseDevice):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # TODO: Technical debt -- forced to register base class stuff rather than
-        # calling super(), because Disable(), Standby() and Off() are registered on a
-        # thread, and we don't want the super() method clobbering them.
-        args = (self, self.state_model, self.logger)
-        self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
-        )
+        super().init_command_objects()
+
+        for (command_name, command_object) in [
+            ("Disable", self.DisableCommand),
+            ("Standby", self.StandbyCommand),
+            ("Off", self.OffCommand),
+            ("IsAntennaOn", self.IsAntennaOnCommand),
+            ("PowerUpAntenna", self.PowerUpAntennaCommand),
+            ("PowerDownAntenna", self.PowerDownAntennaCommand),
+            ("PowerUp", self.PowerUpCommand),
+            ("PowerDown", self.PowerDownCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.hardware_manager, self.state_model, self.logger),
+            )
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
@@ -432,25 +450,26 @@ class MccsAPIU(SKABaseDevice):
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
-            # can't take our devices out of simulation mode. However,
-            # simulationMode is a memorized attribute, and
-            # pytango.test_context.MultiDeviceTestContext will soon
-            # support memorized attributes. Once it does, we should
-            # figure out how to inject memorized values into our real
-            # tango deployment, then start honouring the default of
-            # FALSE by removing this next line.
+            # can't take our devices out of simulation mode. Once we
+            # have a driver for real hardware, we should change this
+            # default to FALSE.
             device._simulation_mode = SimulationMode.TRUE
 
             device._are_antennas_on = None
             device.set_change_event("areAntennasOn", True, False)
 
             device._antenna_fqdns = list(device.AntennaFQDNs)
-            device.hardware_manager = None
 
             device._isAlive = True
             device._overCurrentThreshold = 0.0
             device._overVoltageThreshold = 0.0
             device._humidityThreshold = 0.0
+
+            device.hardware_manager = APIUHardwareManager(
+                device._simulation_mode,
+                len(device._antenna_fqdns),
+                device.are_antennas_on_changed,
+            )
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -493,29 +512,7 @@ class MccsAPIU(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.hardware_manager = APIUHardwareManager(
-                device._simulation_mode,
-                len(device._antenna_fqdns),
-                device.are_antennas_on_changed,
-            )
-
-            args = (device.hardware_manager, device.state_model, self.logger)
-
-            device.register_command_object("Disable", device.DisableCommand(*args))
-            device.register_command_object("Standby", device.StandbyCommand(*args))
-            device.register_command_object("Off", device.OffCommand(*args))
-
-            device.register_command_object(
-                "IsAntennaOn", device.IsAntennaOnCommand(*args)
-            )
-            device.register_command_object(
-                "PowerUpAntenna", device.PowerUpAntennaCommand(*args)
-            )
-            device.register_command_object(
-                "PowerDownAntenna", device.PowerDownAntennaCommand(*args)
-            )
-            device.register_command_object("PowerUp", device.PowerUpCommand(*args))
-            device.register_command_object("PowerDown", device.PowerDownCommand(*args))
+            device.hardware_manager.connect()
 
         def _initialise_health_monitoring(self, device):
             """
@@ -616,6 +613,31 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevLong",
+        memorized=True,
+        hw_memorized=True,
+    )
+    def simulationMode(self):
+        """
+        Reports the simulation mode of the device.
+
+        :return: Return the current simulation mode
+        :rtype: int
+        """
+        return super().read_simulationMode()
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode.
+
+        :param value: The simulation mode, as a SimulationMode value
+        """
+        super().write_simulationMode(value)
+        self.logger.info("Switching simulation mode to " + str(value))
+        self.hardware_manager.simulation_mode = value
 
     @attribute(dtype=int, label="antennas count")
     def antennaCount(self):

@@ -170,6 +170,10 @@ class TestDemoTile:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.simulationMode == SimulationMode.TRUE
+        assert device_under_test.healthState == HealthState.UNKNOWN
+
+        device_under_test.Off()
+
         assert device_under_test.healthState == HealthState.OK
 
         device_under_test.SimulateConnectionFailure(True)

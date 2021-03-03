@@ -126,16 +126,19 @@ class MccsController(SKAMaster):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # TODO: Technical debt -- forced to register base class stuff rather than
-        # calling super(), because On() and Off() are registered on a
-        # thread, and we don't want the super() method clobbering them
+        super().init_command_objects()
+
         args = (self, self.state_model, self.logger)
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
-        )
         self.register_command_object("Operate", self.OperateCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
+
+        pool_args = (self.device_pool, self.state_model, self.logger)
+        self.register_command_object("Disable", self.DisableCommand(*pool_args))
+        self.register_command_object("StandbyLow", self.StandbyLowCommand(*pool_args))
+        self.register_command_object("StandbyFull", self.StandbyFullCommand(*pool_args))
+        self.register_command_object("Off", self.OffCommand(*pool_args))
+        self.register_command_object("On", self.OnCommand(*pool_args))
+        self.register_command_object("Startup", self.StartupCommand(*pool_args))
 
     class InitCommand(SKAMaster.InitCommand):
         """
@@ -200,6 +203,13 @@ class MccsController(SKAMaster):
             device._subrack_fqdns = list(device.MccsSubracks)
             device._station_fqdns = list(device.MccsStations)
 
+            subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
+            station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
+
+            device.device_pool = DevicePoolSequence(
+                [subrack_pool, station_pool], self.logger, connect=False
+            )
+
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
             )
@@ -217,9 +227,7 @@ class MccsController(SKAMaster):
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_device_pool(
-                    device, device._subrack_fqdns, device._station_fqdns
-                )
+                self._initialise_device_pool(device)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -239,37 +247,14 @@ class MccsController(SKAMaster):
                 with self._lock:
                     self.succeeded()
 
-        def _initialise_device_pool(
-            self,
-            device: SKABaseDevice,
-            subrack_fqdns: List[str],
-            station_fqdns: List[str],
-        ):
+        def _initialise_device_pool(self, device: SKABaseDevice):
             """
             Initialise the device pool for this device.
 
             :param device: the device for which power management is
                 being initialised
-            :param subrack_fqdns: the fqdns of subservient subracks.
-            :param station_fqdns: the fqdns of subservient stations.
             """
-            subrack_pool = DevicePool(subrack_fqdns, self.logger)
-            station_pool = DevicePool(station_fqdns, self.logger)
-            device.device_pool = DevicePoolSequence(
-                [subrack_pool, station_pool], self.logger
-            )
-
-            args = (device.device_pool, device.state_model, self.logger)
-            device.register_command_object("Disable", device.DisableCommand(*args))
-            device.register_command_object(
-                "StandbyLow", device.StandbyLowCommand(*args)
-            )
-            device.register_command_object(
-                "StandbyFull", device.StandbyFullCommand(*args)
-            )
-            device.register_command_object("Off", device.OffCommand(*args))
-            device.register_command_object("On", device.OnCommand(*args))
-            device.register_command_object("Startup", device.StartupCommand(*args))
+            device.device_pool.connect()
 
         def _initialise_health_monitoring(
             self, device: SKABaseDevice, fqdns: List[str]

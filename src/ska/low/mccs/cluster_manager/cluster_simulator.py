@@ -198,6 +198,9 @@ class ClusterSimulator(HardwareSimulator):
         for node_id in range(1, CONFIGURATION["nodes_total"] + 1)
     }
 
+    JOB_NOT_STAGING_MESSAGE = "Job cannot be started"
+    NONEXISTENT_JOB_MESSAGE = "No such job"
+
     def __init__(self):
         """
         Initialise a new ClusterSimulator instance.
@@ -540,7 +543,7 @@ class ClusterSimulator(HardwareSimulator):
         try:
             return self._open_jobs[job_id]
         except KeyError as key_error:
-            raise ValueError("No such job") from key_error
+            raise ValueError(self.NONEXISTENT_JOB_MESSAGE) from key_error
 
     def submit_job(self, job_config):
         """
@@ -569,7 +572,7 @@ class ClusterSimulator(HardwareSimulator):
         if self.get_job_status(job_id) == JobStatus.STAGING:
             self._open_jobs[job_id] = JobStatus.RUNNING
         else:
-            raise ValueError("Job cannot be started")
+            raise ValueError(self.JOB_NOT_STAGING_MESSAGE)
 
     def stop_job(self, job_id):
         """

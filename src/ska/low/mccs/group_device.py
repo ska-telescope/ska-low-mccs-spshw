@@ -48,6 +48,8 @@ class MccsGroupDevice(SKABaseDevice):
         Device.
         """
 
+        SUCCEEDED_MESSAGE = "Init command succeeded"
+
         def do(self):
             """
             Initialises the attributes and properties of the
@@ -64,7 +66,7 @@ class MccsGroupDevice(SKABaseDevice):
             device._member_list = ("",)
             device._version_id = release.version
             device._build_state = release.get_release_info()
-            return (ResultCode.OK, "Init command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     def always_executed_hook(self):
         """
@@ -134,6 +136,8 @@ class MccsGroupDevice(SKABaseDevice):
         Class for handling the AddMember(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "AddMember command succeeded"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -148,7 +152,7 @@ class MccsGroupDevice(SKABaseDevice):
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
 
-            return (ResultCode.OK, "AddMember command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -176,6 +180,8 @@ class MccsGroupDevice(SKABaseDevice):
         Class for handling the RemoveMember(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "RemoveMember command succeeded"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -189,7 +195,7 @@ class MccsGroupDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "RemoveMember command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -217,6 +223,8 @@ class MccsGroupDevice(SKABaseDevice):
         Class for handling the Run(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "Run command succeeded"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -230,7 +238,7 @@ class MccsGroupDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "Run command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",

@@ -863,7 +863,7 @@ class TestMccsTileCommands:
         """
         [[result_code], [message]] = device_under_test.Initialise()
         assert result_code == ResultCode.OK
-        assert message == "Initialise command completed OK"
+        assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
     def test_On(self, device_under_test):
         """
@@ -927,8 +927,8 @@ class TestMccsTileCommands:
         assert not device_under_test.isProgrammed
         bitfile = "tests/unit/testdata/Vivado_test_firmware_bitfile.bit"
         [[result_code], [message]] = device_under_test.DownloadFirmware(bitfile)
-        assert message == "DownloadFirmware command completed OK"
         assert result_code == ResultCode.OK
+        assert message == MccsTile.DownloadFirmwareCommand.SUCCEEDED_MESSAGE
         assert device_under_test.isProgrammed
         assert device_under_test.firmwareName == bitfile
 
@@ -1032,7 +1032,7 @@ class TestMccsTileCommands:
 
         [[result_code], [message]] = device_under_test.WriteRegister(json_arg)
         assert result_code == ResultCode.OK
-        assert message == "WriteRegister command completed OK"
+        assert message == MccsTile.WriteRegisterCommand.SUCCEEDED_MESSAGE
 
         for exclude_key in arg.keys():
             bad_arg = {key: value for key, value in arg.items() if key != exclude_key}
@@ -1087,7 +1087,7 @@ class TestMccsTileCommands:
 
         [[result_code], [message]] = device_under_test.WriteAddress([20, 1, 2, 3])
         assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert message == MccsTile.WriteAddressCommand.SUCCEEDED_MESSAGE
 
     def test_Configure40GCore(self, device_under_test):
         """

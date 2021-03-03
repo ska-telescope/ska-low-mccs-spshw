@@ -648,6 +648,8 @@ class MccsStationBeam(SKAObsDevice):
         Class for handling the Configure(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "Configure command completed successfully"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -668,7 +670,7 @@ class MccsStationBeam(SKAObsDevice):
             device._channels = config_dict.get("channels")
             device._update_rate = config_dict.get("update_rate")
             device._desired_pointing = config_dict.get("sky_coordinates")
-            return (ResultCode.OK, "Configure command completed successfully")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",

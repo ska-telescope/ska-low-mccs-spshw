@@ -245,7 +245,7 @@ class StationBeamsResourceManager(ResourceManager):
                     dp.configure(json_str)
 
         result_code = ResultCode.OK
-        message = "Configure command completed successfully"
+        message = MccsSubarray.ConfigureCommand.SUCCEEDED_MESSAGE
         return (result_code, message)
 
     def scan(self, logger, argin):
@@ -668,6 +668,8 @@ class MccsSubarray(SKASubarray):
         Class for handling the AssignResources(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "AssignResources command completed successfully"
+
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
@@ -696,7 +698,7 @@ class MccsSubarray(SKASubarray):
             station_beam_pool_manager.assign(subarray_beams, stations)
 
             # TODO: Should we always return success?
-            return [ResultCode.OK, "AssignResources command completed successfully"]
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
             """
@@ -713,6 +715,8 @@ class MccsSubarray(SKASubarray):
         """
         Class for handling the ReleaseResources(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "ReleaseResources command completed successfully"
 
         def do(self, argin):
             """
@@ -737,7 +741,7 @@ class MccsSubarray(SKASubarray):
             subarray_beams = kwargs.get("subarray_beam_fqdns", [])
             station_beam_pool_manager = self.target
             station_beam_pool_manager.release(subarray_beams, stations)
-            return [ResultCode.OK, "ReleaseResources command completed successfully"]
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
             """
@@ -754,6 +758,9 @@ class MccsSubarray(SKASubarray):
         """
         Class for handling the ReleaseAllResources() command.
         """
+
+        SUCCEEDED_MESSAGE = "ReleaseAllResources command completed successfully"
+        FAILED_MESSAGE_PREFIX = "ReleaseAllResources command failed"
 
         def do(self):
             """
@@ -774,10 +781,10 @@ class MccsSubarray(SKASubarray):
             try:
                 device.release_all()
             except ValueError as val:
-                return (ResultCode.FAILED, f"ReleaseAllResources command failed: {val}")
+                return (ResultCode.FAILED, f"{self.FAILED_MESSAGE_PREFIX}: {val}")
 
             device._health_monitor.remove_all_devices()
-            return (ResultCode.OK, "ReleaseAllResources command completed successfully")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
             """
@@ -794,6 +801,8 @@ class MccsSubarray(SKASubarray):
         """
         Class for handling the Configure(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "Configure command completed successfully"
 
         def do(self, argin):
             """
@@ -1091,6 +1100,8 @@ class MccsSubarray(SKASubarray):
         Class for handling the SendTransientBuffer(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SendTransientBuffer command completed successfully"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -1114,7 +1125,7 @@ class MccsSubarray(SKASubarray):
             """
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)
-            return (ResultCode.OK, "SendTransientBuffer command completed successfully")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     @DebugIt()

@@ -25,9 +25,8 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import release
+from ska.low.mccs import MccsSubarray, release
 from ska.low.mccs.utils import call_with_json
-from ska.low.mccs.subarray import MccsSubarray
 
 
 @pytest.fixture
@@ -206,7 +205,7 @@ class TestMccsSubarray:
         returned = device_under_test.sendTransientBuffer(segment_spec)
         assert returned == [
             [ResultCode.OK],
-            ["SendTransientBuffer command completed successfully"],
+            [MccsSubarray.SendTransientBufferCommand.SUCCEEDED_MESSAGE],
         ]
 
     # tests of overridden base class attributes
@@ -399,7 +398,7 @@ class TestMccsSubarray:
             )
 
             assert result_code == ResultCode.OK
-            assert message == "AssignResources command completed successfully"
+            assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
             assert sorted(list(device_under_test.stationFQDNs)) == sorted(
                 [station_fqdns[0]]
             )
@@ -420,7 +419,7 @@ class TestMccsSubarray:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
-            assert message == "AssignResources command completed successfully"
+            assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
             assert mock_subarray_beam.stationIds == [1, 2]
 
@@ -450,7 +449,7 @@ class TestMccsSubarray:
                 subarray_beams=subarray_beam_fqdns,
             )
             assert result_code == ResultCode.OK
-            assert message == "AssignResources command completed successfully"
+            assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
             assert sorted(list(device_under_test.stationFQDNs)) == sorted(station_fqdns)
 
             mock_station_1.InitialSetup.assert_called_once_with()
@@ -464,7 +463,7 @@ class TestMccsSubarray:
                 subarray_beam_fqdns=[subarray_beam_fqdns[0]],
             )
             assert result_code == ResultCode.OK
-            assert message == "ReleaseResources command completed successfully"
+            assert message == MccsSubarray.ReleaseResourcesCommand.SUCCEEDED_MESSAGE
 
             assert mock_subarray_beam_1.stationIds == []
             assert mock_subarray_beam_2.stationIds == [1, 2]
@@ -482,7 +481,7 @@ class TestMccsSubarray:
             # ReleaseAll again
             [[result_code], [message]] = device_under_test.ReleaseAllResources()
             assert result_code == ResultCode.OK
-            assert message == "ReleaseAllResources command completed successfully"
+            assert message == MccsSubarray.ReleaseAllResourcesCommand.SUCCEEDED_MESSAGE
 
             assert mock_subarray_beam_1.stationIds == []
             assert mock_subarray_beam_2.stationIds == []
@@ -513,7 +512,7 @@ class TestMccsSubarray:
             )
 
             assert result_code == ResultCode.OK
-            assert message == "AssignResources command completed successfully"
+            assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
             assert sorted(list(device_under_test.stationFQDNs)) == [station_fqdns[0]]
 
             assert mock_subarray_beam.stationIds == [1]
@@ -533,7 +532,7 @@ class TestMccsSubarray:
                 channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.OK
-            assert message == "AssignResources command completed successfully"
+            assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
             assert mock_subarray_beam.stationIds == [1, 2]
 
@@ -554,7 +553,7 @@ class TestMccsSubarray:
             expected = config_dict["subarray_beams"][0]
             [[result_code], [message]] = device_under_test.Configure(json_str)
             assert result_code == ResultCode.OK
-            assert message == "Configure command completed successfully"
+            assert message == MccsSubarray.ConfigureCommand.SUCCEEDED_MESSAGE
             assert device_under_test.obsState == ObsState.READY
 
             # remove preceeding "call(\" and trailing "\)"

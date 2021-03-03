@@ -562,6 +562,8 @@ class MccsSubarrayBeam(SKAObsDevice):
         Class for handling the Configure(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "Configure command completed successfully"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -587,7 +589,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             device._desired_pointing = config_dict.get("sky_coordinates", [])
 
             # TODO: Forward configuration settings to all the subservient Stations
-            return (ResultCode.OK, "Configure command completed successfully")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure(self, argin):
@@ -619,6 +621,8 @@ class MccsSubarrayBeam(SKAObsDevice):
         Class for handling the Scan(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "Scan command completed successfully"
+
         def do(self, argin):
             """
             Stateless do-hook for the
@@ -638,7 +642,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             device._scan_time = kwargs.get("scan_time")
 
             # TODO: Forward scan command and parameters to all the subservient Stations
-            return (ResultCode.OK, "Scan command completed successfully")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Scan(self, argin):

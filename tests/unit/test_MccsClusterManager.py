@@ -18,6 +18,8 @@ from tango import AttrQuality, DevFailed, EventType
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
+
+from ska.low.mccs import MccsClusterManagerDevice
 from ska.low.mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
 
 
@@ -466,12 +468,15 @@ class TestMccsClusterManagerDevice:
             [[result_code], [message]] = device_under_test.StartJob(job_id)
             if status == JobStatus.STAGING:
                 assert result_code == ResultCode.OK
-                assert message == "StartJob command successful"
+                assert (
+                    message
+                    == MccsClusterManagerDevice.StartJobCommand.SUCCEEDED_MESSAGE
+                )
 
                 assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
             else:
                 assert result_code == ResultCode.FAILED
-                assert message == "Job cannot be started"
+                assert message == ClusterSimulator.JOB_NOT_STAGING_MESSAGE
 
     def test_StopJob(self, device_under_test):
         """
@@ -485,11 +490,11 @@ class TestMccsClusterManagerDevice:
         for job_id in list(ClusterSimulator.OPEN_JOBS):
             [[result_code], [message]] = device_under_test.StopJob(job_id)
             assert result_code == ResultCode.OK
-            assert message == "StopJob command successful"
+            assert message == MccsClusterManagerDevice.StopJobCommand.SUCCEEDED_MESSAGE
 
             [[result_code], [message]] = device_under_test.StopJob(job_id)
             assert result_code == ResultCode.FAILED
-            assert message == "No such job"
+            assert message == ClusterSimulator.NONEXISTENT_JOB_MESSAGE
 
     def test_SubmitJob(self, device_under_test):
         """
@@ -528,7 +533,9 @@ class TestMccsClusterManagerDevice:
         """
         [[result_code], [message]] = device_under_test.ClearJobStats()
         assert result_code == ResultCode.OK
-        assert message == "Job stats cleared"
+        assert (
+            message == MccsClusterManagerDevice.ClearJobStatsCommand.SUCCEEDED_MESSAGE
+        )
 
     def test_PingMasterPool(self, device_under_test):
         """

@@ -17,7 +17,7 @@ from tango import DevState
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, LoggingLevel, TestMode
-from ska.low.mccs import release
+from ska.low.mccs import MccsDevice, release
 
 
 @pytest.fixture()
@@ -152,7 +152,7 @@ class TestMccsDevice(object):
         """
         assert list(device_under_test.ConstructDeviceProxyAddress("")) == [
             [ResultCode.OK],
-            ["Stub implementation, did nothing"],
+            [MccsDevice.ConstructDeviceProxyAddressCommand.SUCCEEDED_MESSAGE],
         ]
 
     def test_buildState(self, device_under_test):

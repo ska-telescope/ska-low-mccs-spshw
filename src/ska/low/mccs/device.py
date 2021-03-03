@@ -50,6 +50,8 @@ class MccsDevice(SKABaseDevice):
            usually off
         """
 
+        SUCCEEDED_MESSAGE = "Init command succeeded"
+
         def do(self):
             """
             Stateless hook for device initialisation: initialises the
@@ -81,7 +83,7 @@ class MccsDevice(SKABaseDevice):
             device._version_id = release.version
             device._build_state = release.get_release_info()
 
-            return (ResultCode.OK, "Init command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     def init_command_objects(self):
         """
@@ -323,6 +325,8 @@ class MccsDevice(SKABaseDevice):
             argument, and returns nothing.
         """
 
+        SUCCEEDED_MESSAGE = "ExceptionCallback command succeeded"
+
         def do(self):
             """
             Stateless hook for implementation of
@@ -334,7 +338,7 @@ class MccsDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command()
     @DebugIt()
@@ -361,6 +365,8 @@ class MccsDevice(SKABaseDevice):
             argument, and returns nothing.
         """
 
+        SUCCEEDED_MESSAGE = "DefaultAlarmOnCallback command succeeded"
+
         def do(self):
             """
             Stateless hook for implementation of
@@ -372,7 +378,7 @@ class MccsDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command()
     @DebugIt()
@@ -399,6 +405,8 @@ class MccsDevice(SKABaseDevice):
             argument, and returns nothing.
         """
 
+        SUCCEEDED_MESSAGE = "DefaultAlarmOffCallback command succeeded"
+
         def do(self):
             """
             Stateless hook for implementation of
@@ -410,7 +418,7 @@ class MccsDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "Stub implementation, does nothing")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command()
     @DebugIt()
@@ -528,6 +536,8 @@ class MccsDevice(SKABaseDevice):
             an address, but if so it doesn't return it.
         """
 
+        SUCCEEDED_MESSAGE = "ConstructDeviceProxyAddress command succeeded"
+
         def do(self, argin):
             """
             Stateless hook for implementation of
@@ -542,7 +552,7 @@ class MccsDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "Stub implementation, did nothing")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",

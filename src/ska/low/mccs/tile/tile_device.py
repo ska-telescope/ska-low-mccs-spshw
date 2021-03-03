@@ -425,6 +425,10 @@ class MccsTile(SKABaseDevice):
         Class for handling the Disable() command.
         """
 
+        REDUNDANT_MESSAGE = "TPM was already off: nothing to do to disable device."
+        FAILED_MESSAGE = "Failed to disable device: could not turn TPM off"
+        SUCCEEDED_MESSAGE = "Device disabled; TPM has been turned off"
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -439,17 +443,12 @@ class MccsTile(SKABaseDevice):
             result = self.target.power_manager.off()
             if result is None:
                 self.target.hardware_manager.set_connectible(False)
-                return (
-                    ResultCode.OK,
-                    "TPM was already off: nothing to do to disable device.",
-                )
-            if not result:
-                return (
-                    ResultCode.FAILED,
-                    "Failed to disable device: could not turn TPM off",
-                )
+                return (ResultCode.OK, self.REDUNDANT_MESSAGE)
 
-            return (ResultCode.OK, "Device disabled; TPM has been turned off")
+            if not result:
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
         """
@@ -458,6 +457,10 @@ class MccsTile(SKABaseDevice):
         Actually the TPM has no standby mode, so when this device is
         told to go to standby mode, it switches on / remains on.
         """
+
+        SUCCEEDED_FROM_ON_MESSAGE = "TPM was re-initialised; device is now on standby."
+        FAILED_MESSAGE = "Failed to go to standby: could not turn TPM on"
+        SUCCEEDED_FROM_OFF_MESSAGE = "TPM has been turned on"
 
         def do(self):
             """
@@ -483,16 +486,13 @@ class MccsTile(SKABaseDevice):
 
                 return (
                     ResultCode.OK,
-                    "TPM was re-initialised; device is now on standby.",
+                    self.SUCCEEDED_FROM_ON_MESSAGE,
                 )
             if not result:
-                return (
-                    ResultCode.FAILED,
-                    "Failed to go to standby: could not turn TPM on",
-                )
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             device.hardware_manager.set_connectible(True)
-            return (ResultCode.OK, "TPM has been turned on")
+            return (ResultCode.OK, self.SUCCEEDED_FROM_OFF_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -532,6 +532,10 @@ class MccsTile(SKABaseDevice):
         Class for handling the Off() command.
         """
 
+        SUCCEEDED_FROM_ON_MESSAGE = "TPM is on and programmed; device is now off."
+        SUCCEEDED_FROM_DISABLE_MESSAGE = "TPM has been turned on"
+        FAILED_MESSAGE = "Failed to go to OFF: could not turn TPM on"
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -555,13 +559,10 @@ class MccsTile(SKABaseDevice):
                 # But for now, let's pretend to flash some firmware.
                 if not device.hardware_manager.is_programmed:
                     device.hardware_manager.download_firmware("firmware1")
-                return (ResultCode.OK, "TPM is on and programmed; device is now off.")
+                return (ResultCode.OK, self.SUCCEEDED_FROM_ON_MESSAGE)
 
             if not result:
-                return (
-                    ResultCode.FAILED,
-                    "Failed to go to OFF: could not turn TPM on",
-                )
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             device.hardware_manager.set_connectible(True)
 
@@ -577,7 +578,7 @@ class MccsTile(SKABaseDevice):
             # the events system. Otherwise we run the risk of transitioning as a result
             # of command success, only to receive an old event telling us of an earlier
             # change in TPM power mode, making us transition again.
-            return (ResultCode.OK, "TPM has been turned on")
+            return (ResultCode.OK, self.SUCCEEDED_FROM_DISABLE_MESSAGE)
 
     def always_executed_hook(self):
         """
@@ -1237,6 +1238,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the Initialise() command.
         """
 
+        SUCCEEDED_MESSAGE = "Initialise command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -1251,7 +1254,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.initialise()
-            return (ResultCode.OK, "Initialise command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1328,6 +1331,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the DownloadFirmware(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "DownloadFirmware command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -1347,7 +1352,7 @@ class MccsTile(SKABaseDevice):
             bitfile = argin
             if os.path.isfile(bitfile):
                 hardware_manager.download_firmware(bitfile)
-                return (ResultCode.OK, "DownloadFirmware command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
                 return (ResultCode.FAILED, f"{bitfile} doesn't exist")
 
@@ -1386,6 +1391,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the ProgramCPLD(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "ProgramCPLD command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -1405,7 +1412,7 @@ class MccsTile(SKABaseDevice):
             bitfile = argin
             self.logger.info("Downloading bitstream to CPLD FLASH")
             hardware_manager.cpld_flash_write(bitfile)
-            return (ResultCode.OK, "ProgramCPLD command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -1550,6 +1557,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the WriteRegister(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "WriteRegister command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -1593,7 +1602,7 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("Device is a mandatory parameter")
 
             hardware_manager.write_register(name, values, offset, device)
-            return (ResultCode.OK, "WriteRegister command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -1687,6 +1696,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the WriteAddress(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "WriteAddress command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -1710,7 +1721,7 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
             hardware_manager.write_address(argin[0], argin[1:])
-            return (ResultCode.OK, "WriteAddress command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarULongArray",
@@ -1744,6 +1755,8 @@ class MccsTile(SKABaseDevice):
         """
         Class for handling the Configure40GCore(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
 
         def do(self, argin):
             """
@@ -1799,7 +1812,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.configure_40g_core(
                 core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
             )
-            return (ResultCode.OK, "Configure40GCore command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -1898,6 +1911,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SetLmcDownload(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -1933,7 +1948,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.set_lmc_download(
                 mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
             )
-            return (ResultCode.OK, "SetLmcDownload command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -1977,6 +1992,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SetChanneliserTruncation(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SetChanneliserTruncation command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2005,7 +2022,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.set_channeliser_truncation(arr)
-            return (ResultCode.OK, "SetChanneliserTruncation command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -2047,6 +2064,8 @@ class MccsTile(SKABaseDevice):
         """
         Class for handling the SetBeamFormerRegions(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "SetBeamFormerRegions command completed OK"
 
         def do(self, argin):
             """
@@ -2101,7 +2120,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.set_beamformer_regions(regions)
-            return (ResultCode.OK, "SetBeamFormerRegions command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -2145,6 +2164,8 @@ class MccsTile(SKABaseDevice):
         command.
         """
 
+        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2185,7 +2206,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.initialise_beamformer(
                 start_channel, ntiles, is_first, is_last
             )
-            return (ResultCode.OK, "ConfigureStationBeamformer command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -2227,6 +2248,8 @@ class MccsTile(SKABaseDevice):
         command.
         """
 
+        SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2266,7 +2289,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.load_calibration_coefficients(
                 antenna, calibration_coefficients
             )
-            return (ResultCode.OK, "LoadCalibrationCoefficients command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2327,6 +2350,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the LoadCalibrationCurve(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "LoadCalibrationCurve command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2367,7 +2392,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.load_calibration_curve(
                 antenna, beam, calibration_coefficients
             )
-            return (ResultCode.OK, "LoadCalibrationCurve command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -2430,6 +2455,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the LoadBeamAngle(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "LoadBeamAngle command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2447,7 +2474,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.load_beam_angle(argin)
-            return (ResultCode.OK, "LoadBeamAngle command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2485,6 +2512,8 @@ class MccsTile(SKABaseDevice):
         """
         Class for handling the LoadAntennaTapering(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "LoadAntennaTapering command completed OK"
 
         def __init__(self, target, state_model, logger, antennas_per_tile):
             """
@@ -2542,7 +2571,7 @@ class MccsTile(SKABaseDevice):
             tapering = argin[1:]
             hardware_manager = self.target
             hardware_manager.load_antenna_tapering(beam, tapering)
-            return (ResultCode.OK, "LoadAntennaTapering command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2579,6 +2608,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SwitchCalibrationBank(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SwitchCalibrationBank command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2597,7 +2628,7 @@ class MccsTile(SKABaseDevice):
             switch_time = argin
             hardware_manager = self.target
             hardware_manager.switch_calibration_bank(switch_time)
-            return (ResultCode.OK, "SwitchCalibrationBank command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevLong",
@@ -2629,6 +2660,8 @@ class MccsTile(SKABaseDevice):
         """
         Class for handling the SetPointingDelay(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "SetPointingDelay command completed OK"
 
         def __init__(self, target, state_model, logger, antennas_per_tile):
             """
@@ -2684,7 +2717,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.set_pointing_delay(delay_array, beam_index)
-            return (ResultCode.OK, "SetPointingDelay command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -2716,6 +2749,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the LoadPointingDelay(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "LoadPointingDelay command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2734,7 +2769,7 @@ class MccsTile(SKABaseDevice):
             load_time = argin
             hardware_manager = self.target
             hardware_manager.load_pointing_delay(load_time)
-            return (ResultCode.OK, "LoadPointingDelay command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevLong",
@@ -2767,6 +2802,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the StartBeamformer(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2789,7 +2826,7 @@ class MccsTile(SKABaseDevice):
             start_time = params.get("StartTime", 0)
             duration = params.get("Duration", -1)
             hardware_manager.start_beamformer(start_time, duration)
-            return (ResultCode.OK, "StartBeamformer command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -2827,6 +2864,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the StopBeamformer() command.
         """
 
+        SUCCEEDED_MESSAGE = "StopBeamformer command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -2841,7 +2880,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.stop_beamformer()
-            return (ResultCode.OK, "StopBeamformer command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -2871,6 +2910,8 @@ class MccsTile(SKABaseDevice):
         command.
         """
 
+        SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
+
         def do(self, argin):
             """
             Stateless do-hook for implementation of
@@ -2893,10 +2934,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_channel_data(integration_time)
-            return (
-                ResultCode.OK,
-                "ConfigureIntegratedChannelData command completed OK",
-            )
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevDouble",
@@ -2931,6 +2969,8 @@ class MccsTile(SKABaseDevice):
         command.
         """
 
+        SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -2952,7 +2992,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_beam_data(integration_time)
-            return (ResultCode.OK, "ConfigureIntegratedBeamData command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevDouble",
@@ -2986,6 +3026,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SendRawData(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SendRawData command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3010,7 +3052,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.send_raw_data(sync, period, timeout, timestamp, seconds)
-            return (ResultCode.OK, "SendRawData command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3050,6 +3092,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SendChannelisedData(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SendChannelisedData command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3084,7 +3128,7 @@ class MccsTile(SKABaseDevice):
                 timestamp,
                 seconds,
             )
-            return (ResultCode.OK, "SendChannelisedData command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3128,6 +3172,8 @@ class MccsTile(SKABaseDevice):
         command.
         """
 
+        SUCCEEDED_MESSAGE = "SendChannelisedDataContinuous command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3163,7 +3209,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.send_channelised_data_continuous(
                 channel_id, number_of_samples, wait_seconds, timeout, timestamp, seconds
             )
-            return (ResultCode.OK, "SendChannelisedDataContinuous command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3206,6 +3252,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SendBeamData(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SendBeamData command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3229,7 +3277,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.send_beam_data(period, timeout, timestamp, seconds)
-            return (ResultCode.OK, "SendBeamData command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3270,6 +3318,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the StopDataTransmission() command.
         """
 
+        SUCCEEDED_MESSAGE = "StopDataTransmission command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -3284,7 +3334,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.stop_data_transmission()
-            return (ResultCode.OK, "StopDataTransmission command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3313,6 +3363,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the ComputeCalibrationCoefficients() command.
         """
 
+        SUCCEEDED_MESSAGE = "ComputeCalibrationCoefficients command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -3327,10 +3379,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.compute_calibration_coefficients()
-            return (
-                ResultCode.OK,
-                "ComputeCalibrationCoefficients command completed OK",
-            )
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3362,6 +3411,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the StartAcquisition(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "StartAcquisition command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3383,7 +3434,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.start_acquisition(start_time, delay)
-            return (ResultCode.OK, "StartAcquisition command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3422,6 +3473,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SetTimeDelays(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SetTimeDelays command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3440,7 +3493,7 @@ class MccsTile(SKABaseDevice):
             delays = argin
             hardware_manager = self.target
             hardware_manager.set_time_delays(delays)
-            return (ResultCode.OK, "SetTimeDelays command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -3476,6 +3529,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SetCspRounding(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SetCspRounding command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3494,7 +3549,7 @@ class MccsTile(SKABaseDevice):
             rounding = argin
             hardware_manager = self.target
             hardware_manager.set_csp_rounding(rounding)
-            return (ResultCode.OK, "SetCspRounding command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevDouble",
@@ -3526,6 +3581,8 @@ class MccsTile(SKABaseDevice):
         """
         Class for handling the SetLmcIntegratedDownload(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
 
         def do(self, argin):
             """
@@ -3569,7 +3626,7 @@ class MccsTile(SKABaseDevice):
                 dst_port,
                 lmc_mac,
             )
-            return (ResultCode.OK, "SetLmcIntegratedDownload command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3614,6 +3671,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SendRawDataSynchronised(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "SendRawDataSynchronised command completed OK"
+
         def do(self, argin):
             """
             Implementation of
@@ -3639,7 +3698,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.send_raw_data_synchronised(
                 period, timeout, timestamp, seconds
             )
-            return (ResultCode.OK, "SendRawDataSynchronised command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3679,6 +3738,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SendChannelisedDataNarrowband(argin)
         command.
         """
+
+        SUCCEEDED_MESSAGE = "SendChannelisedDataNarrowband command completed OK"
 
         def do(self, argin):
             """
@@ -3724,7 +3785,7 @@ class MccsTile(SKABaseDevice):
                 timestamp,
                 seconds,
             )
-            return (ResultCode.OK, "SendChannelisedDataNarrowband command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -3774,6 +3835,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the TweakTransceivers() command.
         """
 
+        SUCCEEDED_MESSAGE = "TweakTransceivers command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -3788,7 +3851,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.tweak_transceivers()
-            return (ResultCode.OK, "TweakTransceivers command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3817,6 +3880,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the PostSynchronisation() command.
         """
 
+        SUCCEEDED_MESSAGE = "PostSynchronisation command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -3831,7 +3896,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.post_synchronisation()
-            return (ResultCode.OK, "PostSynchronisation command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3860,6 +3925,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the SyncFpgas() command.
         """
 
+        SUCCEEDED_MESSAGE = "SyncFpgas command completed OK"
+
         def do(self):
             """
             Implementation of
@@ -3874,7 +3941,7 @@ class MccsTile(SKABaseDevice):
             """
             hardware_manager = self.target
             hardware_manager.sync_fpgas()
-            return (ResultCode.OK, "SyncFpgas command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -3902,6 +3969,8 @@ class MccsTile(SKABaseDevice):
         """
         Class for handling the CalculateDelay(argin) command.
         """
+
+        SUCCEEDED_MESSAGE = "CalculateDelay command completed OK"
 
         def do(self, argin):
             """
@@ -3944,7 +4013,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
-            return (ResultCode.OK, "CalculateDelay command completed OK")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",

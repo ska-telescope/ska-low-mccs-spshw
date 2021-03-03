@@ -16,7 +16,6 @@ When we eventually have a SubrackDriver that drives real hardware, this
 module could also be used to test that.
 """
 import pytest
-import unittest
 
 from ska.base.control_model import SimulationMode
 from ska.low.mccs.subrack import (
@@ -43,7 +42,7 @@ def subrack_simulator(logger):
 
 
 @pytest.fixture()
-def subrack_hardware_manager(logger):
+def subrack_hardware_manager(logger, mock_callback):
     """
     Fixture that returns a hardware manager for the MCCS subrack device,
     in hardware simulation mode.
@@ -51,12 +50,13 @@ def subrack_hardware_manager(logger):
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
     :type logger: :py:class:`logging.Logger`
+    :param mock_callback: a mock to pass as a callback
+    :type mock_callback: :py:class:`unittest.Mock`
 
     :return: a hardware manager for the MCCS subrack device, in hardware
         simulation mode
     :rtype: SubrackHardwareManager
     """
-    mock_callback = unittest.mock.Mock()
     return SubrackHardwareManager(SimulationMode.TRUE, mock_callback)
 
 
@@ -65,7 +65,7 @@ class TestSubrackHardwareManager:
     Contains tests specific to SubrackHardwareManager.
     """
 
-    def test_init_simulation_mode(self, logger):
+    def test_init_simulation_mode(self, logger, mock_callback):
         """
         Test that we cannot create an hardware manager that isn't in
         simulation mode.
@@ -73,8 +73,9 @@ class TestSubrackHardwareManager:
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
         :type logger: :py:class:`logging.Logger`
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.Mock`
         """
-        mock_callback = unittest.mock.Mock()
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):

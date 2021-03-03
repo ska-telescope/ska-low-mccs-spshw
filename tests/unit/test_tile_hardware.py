@@ -15,8 +15,6 @@ TileHardwareManager class and the TpmSimulator.
 When we eventually have a TpmDriver that drives real hardware, this
 module could also be used to test that.
 """
-from unittest.mock import Mock
-
 import pytest
 
 from ska.base.control_model import SimulationMode, TestMode
@@ -264,12 +262,14 @@ class TestCommon:
             ("check_pending_data_requests", 0),
         ),
     )
-    def test_command(self, hardware_under_test, command_name, num_args):
+    def test_command(self, mocker, hardware_under_test, command_name, num_args):
         """
         Test of commands that aren't implemented yet. Since the comands
         don't really do anything, these tests simply check that the
         command can be called.
 
+        :param mocker: fixture that wraps unittest.mock
+        :type mocker: wrapper for :py:mod:`unittest.mock`
         :param hardware_under_test: the hardware object under test. This
             could be a TpmSimulator, or a TileHardwareManager, or, when
             we eventually write it, a TpmDriver of an actual hardware
@@ -280,7 +280,7 @@ class TestCommon:
         :param num_args: the number of args the command takes
         :type num_args: int
         """
-        args = [Mock()] * num_args
+        args = [mocker.Mock()] * num_args
         with pytest.raises(NotImplementedError):
             getattr(hardware_under_test, command_name)(*args)
 

@@ -303,16 +303,6 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return self._factory.hardware.power_supply_voltages
 
     @property
-    def tpm_on_off(self):
-        """
-        Check whether the tpm are on or off.
-
-        :return: list of tpm on or off in the subrack
-        :rtype: list(int)
-        """
-        return self._factory.hardware.tpm_on_off(self)
-
-    @property
     def tpm_present(self):
         """
         Return the tpms detected in the subrack.
@@ -320,7 +310,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: list of tpm detected
         :rtype: list(bool)
         """
-        return self._factory.hardware.tpm_present(self)
+        return self._factory.hardware.tpm_present
 
     @property
     def tpm_supply_fault(self):
@@ -330,7 +320,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :return: the TPM supply fault status
         :rtype: list(int)
         """
-        return self._factory.hardware.tpm_supply_fault(self)
+        return self._factory.hardware.tpm_supply_fault
 
     @property
     def tpm_currents(self):
@@ -458,7 +448,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         self._factory.hardware.set_subrack_fan_speed(fan_id, speed_percent)
 
-    def set_fan_mode(self, fan_id, mode):
+    def set_subrack_fan_mode(self, fan_id, mode):
         """
         Set subrack Fan Operational Mode.
 
@@ -467,13 +457,13 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :param mode:  1 AUTO, 0 MANUAL
         :type mode: int
         """
-        self._factory.hardware.set_fan_mode(fan_id, mode)
+        self._factory.hardware.set_subrack_fan_mode(fan_id, mode)
 
     def set_power_supply_fan_speed(self, power_supply_fan_id, speed_percent):
         """
         Set the power supply  fan speed.
 
-        :param power_supply_fan_id: power supply id from 0 to 2
+        :param power_supply_fan_id: power supply id from 1 to 2
         :type power_supply_fan_id: int
         :param speed_percent: fan speed in percent (MIN 0=0% - MAX 100=100%)
         :type speed_percent: float
@@ -639,7 +629,7 @@ class MccsSubrack(SKABaseDevice):
                 "SetSubrackFanSpeed", device.SetSubrackFanSpeedCommand(*args)
             )
             device.register_command_object(
-                "SetFanMode", device.SetFanModeCommand(*args)
+                "SetSubrackFanMode", device.SetSubrackFanModeCommand(*args)
             )
             device.register_command_object(
                 "SetPowerSupplyFanSpeed", device.SetPowerSupplyFanSpeedCommand(*args)
@@ -965,7 +955,7 @@ class MccsSubrack(SKABaseDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        max_dim_x=3,
+        max_dim_x=2,
         label="power_supply current",
     )
     def powerSupplyCurrents(self):
@@ -979,7 +969,7 @@ class MccsSubrack(SKABaseDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        max_dim_x=3,
+        max_dim_x=2,
         label="power_supply Powers",
     )
     def powerSupplyPowers(self):
@@ -993,7 +983,7 @@ class MccsSubrack(SKABaseDevice):
 
     @attribute(
         dtype=("DevFloat",),
-        max_dim_x=3,
+        max_dim_x=2,
         label="power_supply voltage",
     )
     def powerSupplyVoltages(self):
@@ -1352,9 +1342,9 @@ class MccsSubrack(SKABaseDevice):
             (return_code, message) = handler(argin)
             return [[return_code], [message]]
 
-    class SetFanModeCommand(ResponseCommand):
+    class SetSubrackFanModeCommand(ResponseCommand):
         """
-        Class for handling the SetFanMode() command.
+        Class for handling the SetSubrackFanMode() command.
 
         This command can set the selected fan to manual or auto mode.
         """
@@ -1362,7 +1352,8 @@ class MccsSubrack(SKABaseDevice):
         def do(self, argin):
             """
             Hook for the implementation of
-            py:meth:`.MccsSubrack.SetFanMode` command functionality.
+            py:meth:`.MccsSubrack.SetSubrackFanMode` command
+            functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -1381,8 +1372,8 @@ class MccsSubrack(SKABaseDevice):
                 self.logger.error("Fan_id and mode are mandatory parameters")
                 raise ValueError("Fan_id and mode are mandatory parameter")
 
-            success = hardware_manager.set_fan_mode(fan_id, mode)
-            message = "SetFanMode command completed"
+            success = hardware_manager.set_subrack_fan_mode(fan_id, mode)
+            message = "SetSubrackFanMode command completed"
             return create_return(success, message)
 
         @command(
@@ -1390,7 +1381,7 @@ class MccsSubrack(SKABaseDevice):
             dtype_out="DevVarLongStringArray",
         )
         @DebugIt()
-        def SetFanMode(self, argin):
+        def SetSubrackFanMode(self, argin):
             """
             Set Fan Operational Mode: 1 AUTO, 0 MANUAL.
 
@@ -1404,7 +1395,7 @@ class MccsSubrack(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
             """
-            handler = self.get_command_object("SetFanMode")
+            handler = self.get_command_object("SetSubrackFanMode")
             (return_code, message) = handler(argin)
             return [[return_code], [message]]
 
@@ -1457,7 +1448,7 @@ class MccsSubrack(SKABaseDevice):
 
             :param argin: json dictionary with mandatory keywords:
 
-            * power_supply_id - (int) power supply id from 0 to 2
+            * power_supply_id - (int) power supply id from 1 to 2
             * speed_percent - (float) fanspeed in percent
 
             :type argin: str

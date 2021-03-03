@@ -12,6 +12,7 @@ including a Tango device and an subrack hardware simulator.
 
 __all__ = [
     "MccsSubrack",
+    "SubrackHardwareManager",
     "SubrackBaySimulator",
     "SubrackBoardSimulator",
     "demo_subrack_device",
@@ -19,5 +20,5 @@ __all__ = [
     "subrack_board_simulator",
 ]
 
-from .subrack_device import MccsSubrack
+from .subrack_device import MccsSubrack, SubrackHardwareManager
 from .subrack_simulator import SubrackBaySimulator, SubrackBoardSimulator

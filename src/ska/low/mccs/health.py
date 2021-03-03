@@ -100,10 +100,10 @@ class DeviceHealthRollupPolicy:
         :param device_healths: sequence of healths of subservient
             devices
         :type device_healths:
-            list(:py:class:`ska_tango_base.control_model.HealthState`)
+            list(:py:class:`~ska_tango_base.control_model.HealthState`)
 
         :return: a rolled up health state
-        :rtype: :py:class:`ska_tango_base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if device_healths is None:
             return HealthState.OK

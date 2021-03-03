@@ -56,7 +56,7 @@ def create_return(success, action):
     :return: A tuple containing a return code and a string
         message indicating status. The message is for
         information purpose only.
-    :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+    :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
     """
     if success is None:
         return (ResultCode.OK, f"Subrack {action} is redundant")
@@ -544,7 +544,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
             device = self.target
@@ -579,7 +579,7 @@ class MccsSubrack(SKABaseDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -605,7 +605,7 @@ class MccsSubrack(SKABaseDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.hardware_manager = SubrackHardwareManager(
                 device._simulation_mode,
@@ -642,7 +642,7 @@ class MccsSubrack(SKABaseDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
@@ -1302,7 +1302,7 @@ class MccsSubrack(SKABaseDevice):
 
             :return: A tuple containing a return code and a string message
                 indicating status. The message is for information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             :raises ValueError: if the JSON input lacks mandatory parameters
             """
             hardware_manager = self.target
@@ -1337,7 +1337,7 @@ class MccsSubrack(SKABaseDevice):
 
             :return: A tuple containing a return code and a string message indicating
                 status. The message is for information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             handler = self.get_command_object("SetSubrackFanSpeed")
             (return_code, message) = handler(argin)
@@ -1362,7 +1362,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                     message indicating status. The message is for
                     information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
             hardware_manager = self.target
@@ -1394,7 +1394,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             handler = self.get_command_object("SetSubrackFanMode")
             (return_code, message) = handler(argin)
@@ -1419,7 +1419,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                     message indicating status. The message is for
                     information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             :raises ValueError: if the JSON input lacks of mandatory parameters
             """
             hardware_manager = self.target
@@ -1457,7 +1457,7 @@ class MccsSubrack(SKABaseDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             handler = self.get_command_object("SetPowerSupplyFanSpeed")
             (return_code, message) = handler(argin)
@@ -1468,7 +1468,7 @@ class MccsSubrack(SKABaseDevice):
         Update and push a change event for the healthState attribute.
 
         :param health_state: The new health state
-        :type health_state: :py:class:`ska_tango_base.control_model.HealthState`
+        :type health_state: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self.push_change_event("healthState", health_state)
         self._health_state = health_state

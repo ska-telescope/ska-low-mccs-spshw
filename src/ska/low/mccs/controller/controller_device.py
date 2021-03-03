@@ -25,7 +25,7 @@ from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska_tango_base import SKAMaster, SKABaseDevice
+from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
@@ -83,7 +83,7 @@ class MccsController(SKAMaster):
     """
     MccsController TANGO device class for the MCCS prototype.
 
-    This is a subclass of :py:class:`~ska_tango_base.SKAMaster`.
+    This is a subclass of :py:class:`ska_tango_base.SKAMaster`.
 
     **Properties:**
 
@@ -161,8 +161,6 @@ class MccsController(SKAMaster):
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             """
@@ -215,7 +213,6 @@ class MccsController(SKAMaster):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -253,7 +250,6 @@ class MccsController(SKAMaster):
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             :param subrack_fqdns: the fqdns of subservient subracks.
             :param station_fqdns: the fqdns of subservient stations.
             """
@@ -283,7 +279,6 @@ class MccsController(SKAMaster):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
             """
@@ -303,7 +298,6 @@ class MccsController(SKAMaster):
 
             :param device: the device for which resource management is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
             :param fqdns: the fqdns of subservient devices allocation of which
                 is managed by this device
             """
@@ -367,7 +361,6 @@ class MccsController(SKAMaster):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -380,7 +373,6 @@ class MccsController(SKAMaster):
         Return the commandResult attribute.
 
         :return: commandResult attribute
-        :rtype: :py:class:`~ska_tango_base.commands.ResultCode`
         """
         return self._command_result
 

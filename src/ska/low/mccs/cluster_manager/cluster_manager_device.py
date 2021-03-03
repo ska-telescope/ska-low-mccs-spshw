@@ -574,7 +574,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -600,7 +600,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.cluster_manager = ClusterManager(device._simulation_mode)
 
@@ -625,7 +625,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
@@ -1272,7 +1272,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Update and push a change event for the healthState attribute.
 
         :param health_state: The new health state
-        :type health_state: :py:class:`ska_tango_base.control_model.HealthState`
+        :type health_state: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self.push_change_event("healthState", health_state)
         self._health_state = health_state

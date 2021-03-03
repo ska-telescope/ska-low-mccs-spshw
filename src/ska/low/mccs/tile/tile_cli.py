@@ -314,7 +314,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {
             "Sync": sync,
@@ -339,7 +339,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("ConfigureIntegratedBeamData", integration_time)
 
@@ -356,7 +356,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout(
             "ConfigureIntegratedChannelData", integration_time
@@ -376,7 +376,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {"StartTime": start_time, "Duration": duration}
         jstr = json.dumps(args)
@@ -390,7 +390,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("StopBeamformer")
 
@@ -405,7 +405,7 @@ class MccsTileCli(metaclass=CliMeta):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         return self._dp.command_inout("LoadPointingDelay", load_time)
 

@@ -425,7 +425,7 @@ class TestInitCommand:
 
             :param device: the device for which the device pool is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             self._initialise_device_pool_called = True
             super()._initialise_device_pool(device)
@@ -440,7 +440,7 @@ class TestInitCommand:
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device)

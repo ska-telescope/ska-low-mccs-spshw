@@ -322,7 +322,7 @@ class MccsTile(SKABaseDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -353,7 +353,7 @@ class MccsTile(SKABaseDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.logger.info(
                 "Initialising hardware manager with ip"
@@ -518,7 +518,7 @@ class MccsTile(SKABaseDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
@@ -536,7 +536,7 @@ class MccsTile(SKABaseDevice):
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.power_manager = TilePowerManager(
                 device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed

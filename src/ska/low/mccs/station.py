@@ -154,7 +154,7 @@ class MccsStation(SKAObsDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -178,7 +178,7 @@ class MccsStation(SKAObsDevice):
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             prerequisite_fqdns = device._tile_fqdns
             if device._apiu_fqdn is not None:
@@ -201,7 +201,7 @@ class MccsStation(SKAObsDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             fqdns = device._tile_fqdns + device._antenna_fqdns
             if device._apiu_fqdn is not None:
@@ -568,7 +568,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska_tango_base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
             stn_id = config_dict.get("station_id")
@@ -593,7 +593,7 @@ class MccsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
@@ -618,7 +618,7 @@ class MccsStation(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`ska_tango_base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             for tile_id, tile in enumerate(device.TileFQDNs):

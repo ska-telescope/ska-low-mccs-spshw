@@ -442,7 +442,7 @@ class MccsSubarray(SKASubarray):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -466,7 +466,7 @@ class MccsSubarray(SKASubarray):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.OK
@@ -481,7 +481,7 @@ class MccsSubarray(SKASubarray):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns

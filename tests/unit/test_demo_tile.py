@@ -66,7 +66,7 @@ def initial_mocks(mock_factory, request):
         :type is_on: bool
         :param result_code: the result code this mock subrack device
             should return when told to turn a TPM on or off
-        :type result_code: :py:class:`ska_tango_base.commands.ResultCode`
+        :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
         :return: a mock for a :py:class:`tango.DeviceProxy` that
             connects to an
             :py:class:`~ska.low.mccs.MccsSubarray` device.

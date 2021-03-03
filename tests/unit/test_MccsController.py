@@ -1100,7 +1100,7 @@ class TestInitCommand:
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             :param subrack_fqdns: the fqdns of subservient subracks.
             :type subrack_fqdns: list(str)
             :param station_fqdns: the fqdns of subservient stations.
@@ -1116,7 +1116,7 @@ class TestInitCommand:
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device)

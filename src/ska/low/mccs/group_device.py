@@ -27,7 +27,7 @@ import ska.low.mccs.release as release
 class MccsGroupDevice(SKABaseDevice):
     """
     This class is a subclass of
-    :py:class:`~ska_tango_base.SKABaseDevice`.
+    :py:class:`ska_tango_base.SKABaseDevice`.
 
     **Properties:**
 

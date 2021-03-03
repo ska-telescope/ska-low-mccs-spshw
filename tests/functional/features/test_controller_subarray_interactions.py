@@ -77,7 +77,7 @@ def cached_obsstate():
 
     :return: cached_obsstate: pytest message box for the cached obsstate
     :rtype: cached_obsstate:
-        dict<string, :py:class:`ska_tango_base.control_model.ObsState`>
+        dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
     return {}
 
@@ -148,7 +148,7 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     :param argin: Optional argument to send to the command
     :type argin: str
     :param expected_result: The expected return code from the command
-    :type expected_result: :py:class:`ska_tango_base.commands.ResultCode`
+    :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
     """
     # Call the specified command synchronously
     result = device.command_inout(command, argin)
@@ -345,7 +345,7 @@ def subarray_obsstate_is_idle_or_empty(devices, cached_obsstate):
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate:
-        dict<string, :py:class:`ska_tango_base.control_model.ObsState`>
+        dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
 
     for device in ["subarray_01", "subarray_02"]:
@@ -447,7 +447,7 @@ def subarray_obsstate_is_not_changed(devices, cached_obsstate):
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate:
-        dict<string, :py:class:`ska_tango_base.control_model.ObsState`>
+        dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
     assert devices["subarray_01"].obsstate == cached_obsstate["subarray_01"]
     assert devices["subarray_02"].obsstate == cached_obsstate["subarray_02"]
@@ -485,7 +485,7 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
     :type desired_state: str
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate:
-        dict<string, :py:class:`ska_tango_base.control_model.ObsState`>
+        dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
     we_have_mvplow_running_an_instance_of(devices, devices_to_load, "mccs")
     component_is_ready_to_action_a_subarray(devices, "mccs", "allocate")

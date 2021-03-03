@@ -308,7 +308,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -336,7 +336,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.hardware_manager = SubarrayBeamHardwareManager()
 
@@ -346,7 +346,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska_tango_base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
 
@@ -573,7 +573,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
             device = self.target
@@ -607,7 +607,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
         (result_code, message) = handler(argin)
@@ -629,7 +629,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             kwargs = json.loads(argin)
             device = self.target
@@ -654,7 +654,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska_tango_base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Scan")
         (result_code, message) = handler(argin)

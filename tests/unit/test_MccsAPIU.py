@@ -16,8 +16,13 @@ import random
 import pytest
 from tango import DevState, AttrQuality, EventType
 
-from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.base.commands import ResultCode
+from ska_tango_base.control_model import (
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
+from ska_tango_base.commands import ResultCode
 from ska.low.mccs.apiu.apiu_device import APIUHardwareManager
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator, APIUSimulator
 from ska.low.mccs.hardware import PowerMode

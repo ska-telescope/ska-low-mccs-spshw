@@ -17,7 +17,7 @@ module could also be used to test that.
 """
 import pytest
 
-from ska.base.control_model import SimulationMode
+from ska_tango_base.control_model import SimulationMode
 from ska.low.mccs.subrack import (
     SubrackHardwareManager,
     SubrackBoardSimulator,

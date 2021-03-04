@@ -13,7 +13,7 @@ management of hardware.
 """
 __all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
-from ska.base.control_model import SimulationMode, TestMode
+from ska_tango_base.control_model import SimulationMode, TestMode
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     SimulableHardwareFactory,
@@ -56,9 +56,9 @@ class TileHardwareFactory(SimulableHardwareFactory):
         :param simulation_mode: the initial simulation mode of this
             hardware factory
         :type simulation_mode:
-            :py:class:`~ska.base.control_model.SimulationMode`
+            :py:class:`~ska_tango_base.control_model.SimulationMode`
         :param test_mode: the initial test mode of this hardware factory
-        :type test_mode: :py:class:`~ska.base.control_model.TestMode`
+        :type test_mode: :py:class:`~ska_tango_base.control_model.TestMode`
         :param logger: the logger to be used by this hardware manager.
         :type logger: :py:class:`logging.Logger`
         :param tpm_ip: the IP addess of the tile
@@ -115,11 +115,11 @@ class TileHardwareManager(SimulableHardwareManager):
         :param simulation_mode: the initial simulation mode for this
             tile hardware manager
         :type simulation_mode:
-            :py:class:`~ska.base.control_model.SimulationMode`
+            :py:class:`~ska_tango_base.control_model.SimulationMode`
         :param test_mode: the initial test mode for this tile hardware
             manager
         :type test_mode:
-            :py:class:`~ska.base.control_model.TestMode`
+            :py:class:`~ska_tango_base.control_model.TestMode`
         :param logger: a logger for this hardware manager to use
         :type logger: :py:class:`logging.Logger`
         :param tpm_ip: IP address of TPM board

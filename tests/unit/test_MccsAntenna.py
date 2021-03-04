@@ -17,13 +17,13 @@ import threading
 import pytest
 
 from tango import AttrQuality, DevFailed, DevState, EventType
-from ska.base.control_model import (
+from ska_tango_base.control_model import (
     ControlMode,
     LoggingLevel,
     HealthState,
     SimulationMode,
 )
-from ska.base.commands import ResultCode
+from ska_tango_base.commands import ResultCode
 
 from ska.low.mccs.antenna.antenna_device import AntennaHardwareManager, MccsAntenna
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator
@@ -233,7 +233,7 @@ def initial_mocks(mock_factory, request):
         :type is_on: bool
         :param result_code: the result code this mock APIU device
             should return when told to turn an Antenna on or off
-        :type result_code: :py:class:`ska.base.commands.ResultCode`
+        :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
         :return: a mock for a :py:class:`tango.DeviceProxy` that
             connects to an
             :py:class:`~ska.low.mccs.MccsAPIU` device.
@@ -751,7 +751,7 @@ class TestInitCommand:
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -769,7 +769,7 @@ class TestInitCommand:
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             self._initialise_hardware_management_called = True
             super()._initialise_hardware_management(device)
@@ -784,7 +784,7 @@ class TestInitCommand:
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device)

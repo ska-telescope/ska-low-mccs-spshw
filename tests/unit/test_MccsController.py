@@ -21,8 +21,8 @@ import tango
 from tango import AttrQuality
 from tango.server import command
 
-from ska.base.commands import ResultCode
-from ska.base.control_model import (
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import (
     AdminMode,
     ControlMode,
     HealthState,
@@ -1083,7 +1083,7 @@ class TestInitCommand:
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -1100,7 +1100,7 @@ class TestInitCommand:
 
             :param device: the device for which power management is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             :param subrack_fqdns: the fqdns of subservient subracks.
             :type subrack_fqdns: list(str)
             :param station_fqdns: the fqdns of subservient stations.
@@ -1116,7 +1116,7 @@ class TestInitCommand:
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device)

@@ -16,7 +16,7 @@ of subservient devices.
     that send commands in a sequence that complies with a complex
     dependency graph.
 """
-from ska.base.commands import ResultCode
+from ska_tango_base.commands import ResultCode
 from ska.low.mccs.utils import backoff_connect
 
 

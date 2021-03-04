@@ -14,7 +14,7 @@ from random import seed
 
 import pytest
 
-from ska.base.control_model import HealthState, SimulationMode
+from ska_tango_base.control_model import HealthState, SimulationMode
 from ska.low.mccs.hardware import (
     ConnectionStatus,
     HardwareSimulator,

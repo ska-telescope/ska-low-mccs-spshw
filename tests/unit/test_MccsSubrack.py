@@ -15,8 +15,13 @@ import random
 import pytest
 from tango import DevState, AttrQuality, EventType
 
-from ska.base.control_model import ControlMode, HealthState, SimulationMode, TestMode
-from ska.base.commands import ResultCode
+from ska_tango_base.control_model import (
+    ControlMode,
+    HealthState,
+    SimulationMode,
+    TestMode,
+)
+from ska_tango_base.commands import ResultCode
 from ska.low.mccs.hardware import SimulableHardwareFactory
 from ska.low.mccs.subrack.subrack_device import SubrackHardwareManager
 from ska.low.mccs.subrack.subrack_simulator import (

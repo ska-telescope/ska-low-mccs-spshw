@@ -25,9 +25,9 @@ import threading
 from tango import DevFailed, DevState, EnsureOmniThread
 from tango.server import attribute, device_property, AttrWriteType
 
-from ska.base import SKABaseDevice
-from ska.base.commands import ResultCode
-from ska.base.control_model import HealthState, SimulationMode
+from ska_tango_base import SKABaseDevice
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import HealthState, SimulationMode
 
 from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import (
@@ -43,7 +43,7 @@ from ska.low.mccs.utils import backoff_connect, tango_raise
 def create_return(success, action):
     """
     Helper function to package up a boolean result into a
-    (:py:class:`~ska.base.commands.ResultCode`, message) tuple.
+    (:py:class:`~ska_tango_base.commands.ResultCode`, message) tuple.
 
     :param success: whether execution of the action was successful. This
         may be None, in which case the action was not performed due to
@@ -56,7 +56,7 @@ def create_return(success, action):
     :return: A tuple containing a return code and a string
         message indicating status. The message is for
         information purpose only.
-    :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+    :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
     """
     if success is None:
         return (ResultCode.OK, f"Antenna {action} is redundant")
@@ -84,7 +84,7 @@ class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
             :py:class:`~ska.low.mccs.hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         return HealthState.OK
 
@@ -469,7 +469,8 @@ class MccsAntenna(SKABaseDevice):
     An implementation of the Antenna Device Server for the MCCS based
     upon architecture in SKA-TEL-LFAA-06000052-02.
 
-    This class is a subclass of :py:class:`ska.base.SKABaseDevice`.
+    This class is a subclass of
+    :py:class:`ska_tango_base.SKABaseDevice`.
     """
 
     # -----------------
@@ -516,7 +517,7 @@ class MccsAntenna(SKABaseDevice):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -536,7 +537,7 @@ class MccsAntenna(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -601,7 +602,7 @@ class MccsAntenna(SKABaseDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -629,7 +630,7 @@ class MccsAntenna(SKABaseDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
             tile_fqdn = (
@@ -662,7 +663,7 @@ class MccsAntenna(SKABaseDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
 
@@ -734,7 +735,7 @@ class MccsAntenna(SKABaseDevice):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -787,7 +788,7 @@ class MccsAntenna(SKABaseDevice):
         Return the simulation mode of this device.
 
         :return: the simulation mode of this device
-        :rtype: :py:class:`~ska.base.control_model.SimulationMode`
+        :rtype: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         return SimulationMode.FALSE
 
@@ -797,7 +798,7 @@ class MccsAntenna(SKABaseDevice):
         Set the simulation mode of this device.
 
         :param value: the new simulation mode
-        :type value: :py:class:`~ska.base.control_model.SimulationMode`
+        :type value: :py:class:`~ska_tango_base.control_model.SimulationMode`
         """
         if value == SimulationMode.TRUE:
             tango_raise(
@@ -1109,13 +1110,13 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Disable`
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Disable`
             command for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.off()
@@ -1133,13 +1134,13 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Standby`
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Standby`
             command for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.on()
@@ -1153,13 +1154,13 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
-            for this :py:class:`.MccsAntenna` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             hardware_manager = self.target
             success = hardware_manager.on()
@@ -1173,14 +1174,14 @@ class MccsAntenna(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Reset` command
-            for this :py:class:`.MccsAntenna` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Reset`
+            command for this :py:class:`.MccsAntenna` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
 
             (result_code, message) = super().do()

@@ -14,7 +14,7 @@ import pytest
 # from tango import DevState
 from tango import AttrQuality
 
-from ska.base.control_model import AdminMode, HealthState
+from ska_tango_base.control_model import AdminMode, HealthState
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import (
     DeviceHealthPolicy,
@@ -147,7 +147,7 @@ class TestDeviceHealthPolicy:
             should determine that the health state of the device should
             be ignored.
         :type expected_health:
-            :py:class:`~ska.base.control_model.HealthState`
+            :py:class:`~ska_tango_base.control_model.HealthState`
         """
         assert (
             DeviceHealthPolicy.compute_health(admin_mode, health_state)
@@ -217,13 +217,13 @@ class TestDeviceHealthRollupPolicy:
             elements must be health values, or None if the health of
             a given device should be ignored
         :type device_healths:
-            list(:py:class:`~ska.base.control_model.HealthState`)
+            list(:py:class:`~ska_tango_base.control_model.HealthState`)
         :param expected_health: the expected value for health, as
             evaluated by the policy under test, or None if the policy
             should determine that the health state of the device should
             be ignored.
         :type expected_health:
-            :py:class:`~ska.base.control_model.HealthState`
+            :py:class:`~ska_tango_base.control_model.HealthState`
         """
         assert (
             DeviceHealthRollupPolicy().compute_health(hardware_health, device_healths)

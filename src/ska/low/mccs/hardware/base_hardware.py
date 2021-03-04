@@ -19,7 +19,7 @@ __all__ = [
 
 from enum import Enum
 
-from ska.base.control_model import HealthState
+from ska_tango_base.control_model import HealthState
 
 
 class ControlMode(Enum):
@@ -175,7 +175,7 @@ class HardwareHealthEvaluator:
         :type hardware: :py:class:`.HardwareDriver`
 
         :return: the evaluated health of the hardware
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         connection_status = hardware.connection_status
         if connection_status == ConnectionStatus.NOT_CONNECTIBLE:
@@ -255,7 +255,7 @@ class HardwareManager:
         as evaluated by this manager.
 
         :return: the health of the hardware
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         return self._health
 

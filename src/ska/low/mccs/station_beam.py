@@ -21,9 +21,9 @@ from tango import EnsureOmniThread
 from tango.server import attribute, command
 from tango.server import device_property
 
-from ska.base import SKAObsDevice
-from ska.base.control_model import HealthState
-from ska.base.commands import ResponseCommand, ResultCode
+from ska_tango_base import SKAObsDevice
+from ska_tango_base.control_model import HealthState
+from ska_tango_base.commands import ResponseCommand, ResultCode
 import ska.low.mccs.release as release
 
 from ska.low.mccs.events import EventManager
@@ -62,7 +62,7 @@ class StationBeamHealthEvaluator(HardwareHealthEvaluator):
             :py:class:`~ska.low.mccs.hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if not hardware.is_locked:
             return HealthState.DEGRADED
@@ -211,7 +211,7 @@ class MccsStationBeam(SKAObsDevice):
     """
     Prototype TANGO device server for the MCCS Station Beam.
 
-    This class is a subclass of :py:class:`ska.base.SKAObsDevice`.
+    This class is a subclass of :py:class:`ska_tango_base.SKAObsDevice`.
 
     **Properties:**
 
@@ -246,7 +246,7 @@ class MccsStationBeam(SKAObsDevice):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -272,7 +272,7 @@ class MccsStationBeam(SKAObsDevice):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -306,7 +306,7 @@ class MccsStationBeam(SKAObsDevice):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -334,7 +334,7 @@ class MccsStationBeam(SKAObsDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.hardware_manager = StationBeamHardwareManager()
 
@@ -344,7 +344,7 @@ class MccsStationBeam(SKAObsDevice):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
 
@@ -410,7 +410,7 @@ class MccsStationBeam(SKAObsDevice):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -659,7 +659,7 @@ class MccsStationBeam(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
             device = self.target
@@ -690,7 +690,7 @@ class MccsStationBeam(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
         (result_code, message) = handler(argin)

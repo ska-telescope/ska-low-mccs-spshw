@@ -64,7 +64,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(1)
@@ -78,7 +78,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(2)
@@ -92,7 +92,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(3)
@@ -106,7 +106,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOnTpm")
         (return_code, message) = handler(4)
@@ -120,7 +120,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(1)
@@ -134,7 +134,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(2)
@@ -148,7 +148,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(3)
@@ -162,7 +162,7 @@ class DemoSubrack(MccsSubrack):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("PowerOffTpm")
         (return_code, message) = handler(4)

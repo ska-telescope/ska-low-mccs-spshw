@@ -52,7 +52,7 @@ setuptools.setup(
         ]
     },
     install_requires=[
-        "lmcbaseclasses >= 0.6.4",
+        "ska-tango-base >= 0.9.1",
         "pytango >= 9.3.3",
         "jsonschema >= 3.2.0",
         "fire",

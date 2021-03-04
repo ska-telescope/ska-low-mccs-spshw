@@ -19,7 +19,7 @@ __all__ = [
 from collections import Counter
 from functools import partial
 
-from ska.base.control_model import AdminMode, HealthState
+from ska_tango_base.control_model import AdminMode, HealthState
 
 
 class DeviceHealthPolicy:
@@ -39,13 +39,13 @@ class DeviceHealthPolicy:
 
         :param admin_mode: the value of the adminMode attribute of the
             device
-        :type admin_mode: :py:class:`~ska.base.control_model.AdminMode`
+        :type admin_mode: :py:class:`~ska_tango_base.control_model.AdminMode`
         :param health_state: the value of the healthState attribute of
             the device
         :type health_state:
-            :py:class:`~ska.base.control_model.HealthState`
+            :py:class:`~ska_tango_base.control_model.HealthState`
         :return: the evaluated health of the device
-        :rtype: :py:class:`~ska.base.control_model.HealthState`, or None
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`, or None
             if the health should be ignored.
         """
         if admin_mode is None:
@@ -100,10 +100,10 @@ class DeviceHealthRollupPolicy:
         :param device_healths: sequence of healths of subservient
             devices
         :type device_healths:
-            list(:py:class:`ska.base.control_model.HealthState`)
+            list(:py:class:`~ska_tango_base.control_model.HealthState`)
 
         :return: a rolled up health state
-        :rtype: :py:class:`ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if device_healths is None:
             return HealthState.OK
@@ -136,15 +136,15 @@ class DeviceHealthRollupPolicy:
         :param hardware_health: the health of the hardware, if any
             (optional)
         :type hardware_health:
-            :py:class:`~ska.base.control_model.HealthState`, optional
+            :py:class:`~ska_tango_base.control_model.HealthState`, optional
         :param device_healths: the healths of supervised devices: a
             list, where each value is either a
-            :py:class:`~ska.base.control_model.HealthState`, or None if
+            :py:class:`~ska_tango_base.control_model.HealthState`, or None if
             the device's health should be ignored.
         :type device_healths:
-            list(:py:class:`~ska.base.control_model.HealthState`)
+            list(:py:class:`~ska_tango_base.control_model.HealthState`)
         :return: the health of this device
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         rolled_up_device_health = self._compute_device_health(device_healths)
 
@@ -221,7 +221,7 @@ class DeviceHealthMonitor:
         :type event_name: str; will always be "healthState" for this
             callback
         :param event_value: the new healthState value
-        :type event_value: :py:class:`~ska.base.control_model.HealthState`
+        :type event_value: :py:class:`~ska_tango_base.control_model.HealthState`
         :param event_quality: the quality of the change event
         :type event_quality: :py:class:`tango.AttrQuality`
         """
@@ -244,7 +244,7 @@ class DeviceHealthMonitor:
         :type event_name: str; will always be "adminMode" for this
             callback
         :param event_value: the new adminMode value
-        :type event_value: :py:class:`~ska.base.control_model.AdminMode`
+        :type event_value: :py:class:`~ska_tango_base.control_model.AdminMode`
         :param event_quality: the quality of the change event
         :type event_quality: :py:class:`tango.AttrQuality`
 
@@ -273,7 +273,7 @@ class DeviceHealthMonitor:
         :param interpreted_health: the interpreted health of the device,
             or None if the device's health should be ignored
         :type interpreted_health:
-            :py:class:`~ska.base.control_model.HealthState`
+            :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._interpreted_health == interpreted_health:
             return
@@ -414,7 +414,7 @@ class HealthModel:
         Returns the health of this HealthModel.
 
         :return: the health state of this HealthModel
-        :rtype: :py:class:`~ska.base.control_model.HealthState`
+        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         return self._health
 
@@ -435,7 +435,7 @@ class HealthModel:
         the hardware health changes.
 
         :param health: the health of the hardware
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self._hardware_health = health
         self._compute_health()
@@ -449,7 +449,7 @@ class HealthModel:
         :type fqdn: str
         :param health: The device's new healthState attribute value, or
             None if the device's health is to be ignored
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self._device_health[fqdn] = health
         self._compute_health()
@@ -477,7 +477,7 @@ class HealthModel:
         callbacks are called.
 
         :param health: the new healthState of this device
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health == health:
             return

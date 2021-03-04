@@ -13,7 +13,7 @@ This module contains the tests for the
 
 import pytest
 
-from ska.base.control_model import HealthState
+from ska_tango_base.control_model import HealthState
 from ska.low.mccs.hardware import ConnectionStatus, HardwareManager
 
 
@@ -83,7 +83,7 @@ class TestBaseHardware:
                 :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
                 should report
             :type expected_health:
-                :py:class:`~ska.base.control_model.HealthState`
+                :py:class:`~ska_tango_base.control_model.HealthState`
             """
             mock_hardware = mocker.Mock()
             mock_hardware.connection_status = connection_status

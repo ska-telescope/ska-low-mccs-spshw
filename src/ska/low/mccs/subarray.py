@@ -27,9 +27,9 @@ from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
-from ska.base import SKASubarray
-from ska.base.commands import ResponseCommand, ResultCode
-from ska.base.control_model import HealthState, ObsState
+from ska_tango_base import SKASubarray
+from ska_tango_base.commands import ResponseCommand, ResultCode
+from ska_tango_base.control_model import HealthState, ObsState
 
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import MutableHealthModel
@@ -226,7 +226,7 @@ class StationBeamsResourceManager(ResourceManager):
             message indicating status. The message is for
             information purpose only.
         :rtype:
-            (:py:class:`~ska.base.commands.ResultCode`, str)
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         kwargs = json.loads(argin)
         stations = kwargs.get("stations", list())
@@ -257,7 +257,7 @@ class StationBeamsResourceManager(ResourceManager):
         :param argin: JSON scan specification
         :type argin: str
         :return: A tuple containing a result code and a string
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
         subarray_beam_device_proxies = []
@@ -362,7 +362,7 @@ class MccsSubarray(SKASubarray):
     MccsSubarray is the Tango device class for the MCCS Subarray
     prototype.
 
-    This is a subclass of :py:class:`ska.base.SKASubarray`.
+    This is a subclass of :py:class:`ska_tango_base.SKASubarray`.
     """
 
     # -----------------
@@ -390,7 +390,7 @@ class MccsSubarray(SKASubarray):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska.base.DeviceStateModel`
+                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`
@@ -409,7 +409,7 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -442,7 +442,7 @@ class MccsSubarray(SKASubarray):
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -466,7 +466,7 @@ class MccsSubarray(SKASubarray):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.OK
@@ -481,7 +481,7 @@ class MccsSubarray(SKASubarray):
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`~ska.base.SKABaseDevice`
+            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns
@@ -564,7 +564,7 @@ class MccsSubarray(SKASubarray):
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska.base.control_model.HealthState`
+        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -577,7 +577,7 @@ class MccsSubarray(SKASubarray):
         Return the commandResult attribute.
 
         :return: commandResult attribute
-        :rtype: :py:class:`~ska.base.commands.ResultCode`
+        :rtype: :py:class:`~ska_tango_base.commands.ResultCode`
         """
         return self._command_result
 
@@ -623,14 +623,14 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.On` command for
-            this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
+            command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -645,14 +645,14 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKABaseDevice.Off` command
-            for this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -667,7 +667,8 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.AssignResources`
+            (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.AssignResources`
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: json string with the resources to be assigned
@@ -677,7 +678,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -712,7 +713,8 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.ReleaseResources`
+            (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.ReleaseResources`
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: The resources to be released
@@ -722,7 +724,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -753,14 +755,14 @@ class MccsSubarray(SKASubarray):
             """
             Stateless hook implementing the functionality of the
             (inherited)
-            :py:meth:`ska.base.SKASubarray.ReleaseAllResources`
+            :py:meth:`ska_tango_base.SKASubarray.ReleaseAllResources`
             command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
@@ -792,7 +794,7 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.Configure`
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.Configure`
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
@@ -812,7 +814,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             station_beam_pool_manager = self.target._station_beam_pool_manager
             return station_beam_pool_manager.configure(self.logger, argin)
@@ -836,8 +838,8 @@ class MccsSubarray(SKASubarray):
         def do(self, argin):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.Scan` command for
-            this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.Scan`
+            command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON scan specification
             :type argin: str
@@ -846,7 +848,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do(argin)
 
@@ -872,14 +874,14 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.EndScan` command
-            for this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.EndScan`
+            command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -894,14 +896,14 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.End` command for
-            this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.End`
+            command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -916,8 +918,8 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.Abort` command
-            for this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.Abort`
+            command for this :py:class:`.MccsSubarray` device.
 
             An abort command will leave the system in an ABORTED state.
             Output to CSP is stopped, as is the beamformer and all running
@@ -929,7 +931,7 @@ class MccsSubarray(SKASubarray):
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -979,7 +981,7 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -997,14 +999,14 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.ObsReset` command
-            for this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.ObsReset`
+            command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -1044,7 +1046,7 @@ class MccsSubarray(SKASubarray):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
@@ -1062,14 +1064,14 @@ class MccsSubarray(SKASubarray):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska.base.SKASubarray.Restart` command
-            for this :py:class:`.MccsSubarray` device.
+            (inherited) :py:meth:`ska_tango_base.SKASubarray.Restart`
+            command for this :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
-                (:py:class:`~ska.base.commands.ResultCode`, str)
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -1104,7 +1106,7 @@ class MccsSubarray(SKASubarray):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska.base.commands.ResultCode`, str)
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             transient_buffer_manager = self.target
             transient_buffer_manager.send(argin)

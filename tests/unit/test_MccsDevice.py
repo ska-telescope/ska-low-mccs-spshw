@@ -15,8 +15,8 @@ This module contains the tests for MccsDevice.
 import pytest
 from tango import DevState
 
-from ska.base.commands import ResultCode
-from ska.base.control_model import AdminMode, LoggingLevel, TestMode
+from ska_tango_base.commands import ResultCode
+from ska_tango_base.control_model import AdminMode, LoggingLevel, TestMode
 from ska.low.mccs import release
 
 

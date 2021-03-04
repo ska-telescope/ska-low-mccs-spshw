@@ -5,7 +5,7 @@ particularly tango devices.
 
 import pytest
 
-from ska.base.commands import ResultCode
+from ska_tango_base.commands import ResultCode
 from ska.low.mccs.utils import call_with_json
 
 

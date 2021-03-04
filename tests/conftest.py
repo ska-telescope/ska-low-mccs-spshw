@@ -10,7 +10,7 @@ import logging
 import pytest
 import tango
 from tango.test_context import MultiDeviceTestContext
-from ska.base.control_model import TestMode
+from ska_tango_base.control_model import TestMode
 
 
 def pytest_sessionstart(session):

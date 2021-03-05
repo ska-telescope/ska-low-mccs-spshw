@@ -132,13 +132,18 @@ class MccsController(SKAMaster):
         self.register_command_object("Operate", self.OperateCommand(*args))
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
-        pool_args = (self.device_pool, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*pool_args))
-        self.register_command_object("StandbyLow", self.StandbyLowCommand(*pool_args))
-        self.register_command_object("StandbyFull", self.StandbyFullCommand(*pool_args))
-        self.register_command_object("Off", self.OffCommand(*pool_args))
-        self.register_command_object("On", self.OnCommand(*pool_args))
-        self.register_command_object("Startup", self.StartupCommand(*pool_args))
+        for (command_name, command_object) in [
+            ("Disable", self.DisableCommand),
+            ("StandbyLow", self.StandbyLowCommand),
+            ("StandbyFull", self.StandbyFullCommand),
+            ("Off", self.OffCommand),
+            ("On", self.OnCommand),
+            ("Startup", self.StartupCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.device_pool, self.state_model, self.logger),
+            )
 
     class InitCommand(SKAMaster.InitCommand):
         """

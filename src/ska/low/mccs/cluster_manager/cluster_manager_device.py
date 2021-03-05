@@ -600,20 +600,20 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             """
             device.cluster_manager = ClusterManager(device._simulation_mode)
 
-            args = (device.cluster_manager, device.state_model, self.logger)
-
-            device.register_command_object("StartJob", device.StartJobCommand(*args))
-            device.register_command_object("StopJob", device.StopJobCommand(*args))
-            device.register_command_object("SubmitJob", device.SubmitJobCommand(*args))
-            device.register_command_object(
-                "GetJobStatus", device.GetJobStatusCommand(*args)
-            )
-            device.register_command_object(
-                "ClearJobStats", device.ClearJobStatsCommand(*args)
-            )
-            device.register_command_object(
-                "PingMasterPool", device.PingMasterPoolCommand(*args)
-            )
+            for (command_name, command_object) in [
+                ("StartJob", device.StartJobCommand),
+                ("StopJob", device.StopJobCommand),
+                ("SubmitJob", device.SubmitJobCommand),
+                ("GetJobStatus", device.GetJobStatusCommand),
+                ("ClearJobStats", device.ClearJobStatsCommand),
+                ("PingMasterPool", device.PingMasterPoolCommand),
+            ]:
+                device.register_command_object(
+                    command_name,
+                    command_object(
+                        device.cluster_manager, device.state_model, self.logger
+                    ),
+                )
 
         def _initialise_health_monitoring(self, device):
             """

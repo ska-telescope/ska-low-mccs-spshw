@@ -184,7 +184,7 @@ class HardwareSimulator(HardwareDriver):
     failure state via a :py:meth:`simulate_connection_failure` method.
     """
 
-    def __init__(self, is_connectible=True, fail_connect=False):
+    def __init__(self, is_connectible, fail_connect=False):
         """
         Initialise a new instance.
 
@@ -208,10 +208,6 @@ class HardwareSimulator(HardwareDriver):
         :return: whether successful, or None if already connected
         :rtype: bool
         """
-        if self.connection_status == ConnectionStatus.CONNECTED:
-            return None
-        if self.connection_status == ConnectionStatus.NOT_CONNECTIBLE:
-            return False
         return not self._simulate_connection_failure
 
     def simulate_connection_failure(self, fail):
@@ -224,10 +220,8 @@ class HardwareSimulator(HardwareDriver):
         :type fail: bool
         """
         self._simulate_connection_failure = fail
-        if self._connection_status != ConnectionStatus.NOT_CONNECTIBLE:
-            self._connection_status = (
-                ConnectionStatus.NOT_CONNECTED if fail else ConnectionStatus.CONNECTED
-            )
+        if self._connection_status == ConnectionStatus.CONNECTED and fail:
+            self._connection_status = ConnectionStatus.NOT_CONNECTED
 
 
 class SimulableHardwareFactory(HardwareFactory):

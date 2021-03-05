@@ -92,6 +92,7 @@ class SubarrayBeamDriver(HardwareDriver):
         :param is_locked: initial value for whether this beam is locked
         :type is_locked: bool
         """
+        super().__init__(True)
         self._is_locked = is_locked
 
     @property

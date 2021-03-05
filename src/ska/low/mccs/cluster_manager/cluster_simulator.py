@@ -210,7 +210,7 @@ class ClusterSimulator(HardwareSimulator):
         self._node_statuses = dict(self.NODE_STATUSES)
         self._job_id_generator = JobIdGenerator(start=2000)
 
-        super().__init__()
+        super().__init__(is_connectible=True)
 
     @property
     def jobs_errored(self):

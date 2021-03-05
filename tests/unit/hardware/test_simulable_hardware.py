@@ -100,13 +100,12 @@ class TestSimulableHardware:
         :param request: A pytest object giving access to the requesting
             test context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
+
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
         """
-        parameter = getattr(request, "param", None)
-        if parameter is None:
-            return HardwareSimulator()
-        return HardwareSimulator(fail_connect=not parameter)
+        kwargs = getattr(request, "param", {"is_connectible": True})
+        return HardwareSimulator(**kwargs)
 
     @pytest.fixture()
     def dynamic_hardware_simulator(self, request):
@@ -119,13 +118,12 @@ class TestSimulableHardware:
         :param request: A pytest object giving access to the requesting
             test context.
         :type request: :py:class:`_pytest.fixtures.SubRequest`
+
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
         """
-        parameter = getattr(request, "param", None)
-        if parameter is None:
-            return HardwareSimulator()
-        return HardwareSimulator(fail_connect=not parameter)
+        kwargs = getattr(request, "param", {"is_connectible": True})
+        return HardwareSimulator(**kwargs)
 
     @pytest.fixture()
     def hardware_factory(
@@ -200,8 +198,14 @@ class TestSimulableHardware:
         @pytest.mark.parametrize(
             ("static_hardware_simulator", "connection_status"),
             [
-                (False, ConnectionStatus.NOT_CONNECTED),
-                (True, ConnectionStatus.CONNECTED),
+                (
+                    {"is_connectible": True, "fail_connect": False},
+                    ConnectionStatus.CONNECTED,
+                ),
+                (
+                    {"is_connectible": True, "fail_connect": True},
+                    ConnectionStatus.NOT_CONNECTED,
+                ),
             ],
             indirect=("static_hardware_simulator",),
         )
@@ -217,6 +221,11 @@ class TestSimulableHardware:
             :type connection_status:
                 :py:class:`ska.low.mccs.hardware.ConnectionStatus`
             """
+            assert (
+                static_hardware_simulator.connection_status
+                == ConnectionStatus.NOT_CONNECTED
+            )
+            _ = static_hardware_simulator.connect()
             assert static_hardware_simulator.connection_status == connection_status
 
         def test_simulate_connection_failure(self, static_hardware_simulator):
@@ -230,6 +239,11 @@ class TestSimulableHardware:
             """
             assert (
                 static_hardware_simulator.connection_status
+                == ConnectionStatus.NOT_CONNECTED
+            )
+            assert static_hardware_simulator.connect()
+            assert (
+                static_hardware_simulator.connection_status
                 == ConnectionStatus.CONNECTED
             )
             static_hardware_simulator.simulate_connection_failure(True)
@@ -237,7 +251,17 @@ class TestSimulableHardware:
                 static_hardware_simulator.connection_status
                 == ConnectionStatus.NOT_CONNECTED
             )
+            assert not static_hardware_simulator.connect()
+            assert (
+                static_hardware_simulator.connection_status
+                == ConnectionStatus.NOT_CONNECTED
+            )
             static_hardware_simulator.simulate_connection_failure(False)
+            assert (
+                static_hardware_simulator.connection_status
+                == ConnectionStatus.NOT_CONNECTED
+            )
+            assert static_hardware_simulator.connect()
             assert (
                 static_hardware_simulator.connection_status
                 == ConnectionStatus.CONNECTED
@@ -360,6 +384,9 @@ class TestSimulableHardware:
                 :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager`
             """
             assert hardware_manager.simulation_mode
+            assert hardware_manager.health == HealthState.UNKNOWN
+
+            hardware_manager.poll()
             assert hardware_manager.health == HealthState.OK
 
             static_hardware_simulator.simulate_connection_failure(True)
@@ -367,6 +394,7 @@ class TestSimulableHardware:
             assert hardware_manager.health == HealthState.FAILED
 
             hardware_manager.simulation_mode = SimulationMode.FALSE
+            hardware_manager.poll()
             assert hardware_manager.health == HealthState.OK
 
             hardware_manager.simulation_mode = SimulationMode.TRUE

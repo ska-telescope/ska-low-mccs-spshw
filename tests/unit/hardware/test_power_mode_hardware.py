@@ -66,7 +66,11 @@ class TestPowerModeHardware:
         if parameters is None:
             return OnOffHardwareSimulator(power_mode=PowerMode.OFF)
 
-        return parameters[0](fail_connect=not parameters[1], power_mode=parameters[2])
+        return parameters[0](
+            is_connectible=parameters[1],
+            fail_connect=parameters[2],
+            power_mode=parameters[3],
+        )
 
     @pytest.fixture()
     def hardware_manager(self, hardware_factory, hardware_health_evaluator):
@@ -107,81 +111,156 @@ class TestPowerModeHardware:
                 # element, and its power mode is that of the third.
                 #
                 # For example,
-                # "((OnOffHardwareSimulator, True, PowerMode.OFF), True, PowerMode.OFF)"
+                #     (
+                #         (OnOffHardwareSimulator, True, False, PowerMode.OFF),
+                #         True,
+                #         PowerMode.OFF
+                #     )
                 # means:
-                # * take a hardware simulator of class OnOffHardwareSimulator,
-                #   which has been initialised as connected but turned off; and
-                # * test that it behaves as though connected, but turned
-                #   off
+                # * take a hardware simulator of class OnOffHardwareSimulator, which has
+                #   has been initialised as connectible and not simulating connection
+                #   failure, but turned off;
+                #   and
+                # * test that it behaves as though connected, but turned off
                 (
-                    (OnOffHardwareSimulator, False, PowerMode.OFF),
-                    ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.OFF,
+                    (OnOffHardwareSimulator, False, False, PowerMode.OFF),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
                 ),
                 (
-                    (OnOffHardwareSimulator, False, PowerMode.ON),
-                    ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.ON,
+                    (OnOffHardwareSimulator, False, False, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
                 ),
                 (
-                    (OnOffHardwareSimulator, True, PowerMode.OFF),
+                    (OnOffHardwareSimulator, False, True, PowerMode.OFF),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnOffHardwareSimulator, False, True, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyHardwareSimulator, False, False, PowerMode.STANDBY),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyHardwareSimulator, False, False, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyHardwareSimulator, False, True, PowerMode.STANDBY),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyHardwareSimulator, False, True, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, False, False, PowerMode.OFF),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, False, False, PowerMode.STANDBY),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, False, False, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, False, True, PowerMode.OFF),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, False, True, PowerMode.STANDBY),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, False, True, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTIBLE,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnOffHardwareSimulator, True, False, PowerMode.OFF),
                     ConnectionStatus.CONNECTED,
                     PowerMode.OFF,
                 ),
                 (
-                    (OnOffHardwareSimulator, True, PowerMode.ON),
+                    (OnOffHardwareSimulator, True, False, PowerMode.ON),
                     ConnectionStatus.CONNECTED,
                     PowerMode.ON,
                 ),
                 (
-                    (OnStandbyHardwareSimulator, False, PowerMode.STANDBY),
+                    (OnOffHardwareSimulator, True, True, PowerMode.OFF),
                     ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.STANDBY,
+                    None,  # irrelevant
                 ),
                 (
-                    (OnStandbyHardwareSimulator, False, PowerMode.ON),
+                    (OnOffHardwareSimulator, True, True, PowerMode.ON),
                     ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.ON,
+                    None,  # irrelevant
                 ),
                 (
-                    (OnStandbyHardwareSimulator, True, PowerMode.STANDBY),
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.STANDBY),
                     ConnectionStatus.CONNECTED,
                     PowerMode.STANDBY,
                 ),
                 (
-                    (OnStandbyHardwareSimulator, True, PowerMode.ON),
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.ON),
                     ConnectionStatus.CONNECTED,
                     PowerMode.ON,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, False, PowerMode.OFF),
+                    (OnStandbyHardwareSimulator, True, True, PowerMode.STANDBY),
                     ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.OFF,
+                    None,  # irrelevant
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, False, PowerMode.STANDBY),
+                    (OnStandbyHardwareSimulator, True, True, PowerMode.ON),
                     ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.STANDBY,
+                    None,  # irrelevant
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, False, PowerMode.ON),
-                    ConnectionStatus.NOT_CONNECTED,
-                    PowerMode.ON,
-                ),
-                (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.OFF),
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.OFF),
                     ConnectionStatus.CONNECTED,
                     PowerMode.OFF,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.STANDBY),
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.STANDBY),
                     ConnectionStatus.CONNECTED,
                     PowerMode.STANDBY,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.ON),
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.ON),
                     ConnectionStatus.CONNECTED,
                     PowerMode.ON,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, True, PowerMode.OFF),
+                    ConnectionStatus.NOT_CONNECTED,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, True, PowerMode.STANDBY),
+                    ConnectionStatus.NOT_CONNECTED,
+                    None,  # irrelevant
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, True, PowerMode.ON),
+                    ConnectionStatus.NOT_CONNECTED,
+                    None,  # irrelevant
                 ),
             ],
             indirect=("hardware_simulator",),
@@ -201,11 +280,16 @@ class TestPowerModeHardware:
             :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
             """
             contexts = {
+                ConnectionStatus.NOT_CONNECTIBLE: pytest.raises(
+                    ConnectionError, match="Hardware is not currently connectible."
+                ),
                 ConnectionStatus.NOT_CONNECTED: pytest.raises(
                     ConnectionError, match="No connection to hardware"
                 ),
                 ConnectionStatus.CONNECTED: nullcontext(),
             }
+
+            hardware_simulator.connect()
 
             assert hardware_simulator.connection_status == connection_status
             with contexts[connection_status]:
@@ -222,77 +306,106 @@ class TestPowerModeHardware:
                 # element is None, we expect an exception.
                 #
                 # For example,
-                # "((OnOffHardwareSimulator, True, PowerMode.OFF), "on", PowerMode.ON)"
+                # (
+                #     (OnOffHardwareSimulator, True, False, PowerMode.OFF),
+                #     "on",
+                #     PowerMode.ON
+                # )
                 # means:
                 # * take a hardware simulator of class OnOffHardwareSimulator,
-                #   which has been initialised as connected but turned off; and
+                #   which has been initialised as connectible and not simulating
+                #   connection failure, but turned off; and
                 # * test that when we call the "on" command, the power mode become ON
-                ((OnOffHardwareSimulator, True, PowerMode.OFF), "off", PowerMode.OFF),
-                ((OnOffHardwareSimulator, True, PowerMode.OFF), "standby", None),
-                ((OnOffHardwareSimulator, True, PowerMode.OFF), "on", PowerMode.ON),
-                ((OnOffHardwareSimulator, True, PowerMode.ON), "off", PowerMode.OFF),
-                ((OnOffHardwareSimulator, True, PowerMode.ON), "standby", None),
-                ((OnOffHardwareSimulator, True, PowerMode.ON), "on", PowerMode.ON),
-                ((OnStandbyHardwareSimulator, True, PowerMode.STANDBY), "off", None),
                 (
-                    (OnStandbyHardwareSimulator, True, PowerMode.STANDBY),
-                    "standby",
-                    PowerMode.STANDBY,
-                ),
-                (
-                    (OnStandbyHardwareSimulator, True, PowerMode.STANDBY),
-                    "on",
-                    PowerMode.ON,
-                ),
-                ((OnStandbyHardwareSimulator, True, PowerMode.ON), "off", None),
-                (
-                    (OnStandbyHardwareSimulator, True, PowerMode.ON),
-                    "standby",
-                    PowerMode.STANDBY,
-                ),
-                ((OnStandbyHardwareSimulator, True, PowerMode.ON), "on", PowerMode.ON),
-                (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.OFF),
+                    (OnOffHardwareSimulator, True, False, PowerMode.OFF),
                     "off",
                     PowerMode.OFF,
                 ),
+                ((OnOffHardwareSimulator, True, False, PowerMode.OFF), "standby", None),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.OFF),
-                    "standby",
-                    PowerMode.STANDBY,
-                ),
-                (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.OFF),
+                    (OnOffHardwareSimulator, True, False, PowerMode.OFF),
                     "on",
                     PowerMode.ON,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.STANDBY),
+                    (OnOffHardwareSimulator, True, False, PowerMode.ON),
                     "off",
                     PowerMode.OFF,
                 ),
+                ((OnOffHardwareSimulator, True, False, PowerMode.ON), "standby", None),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.STANDBY),
-                    "standby",
-                    PowerMode.STANDBY,
-                ),
-                (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.STANDBY),
+                    (OnOffHardwareSimulator, True, False, PowerMode.ON),
                     "on",
                     PowerMode.ON,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.ON),
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.STANDBY),
                     "off",
-                    PowerMode.OFF,
+                    None,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.ON),
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.STANDBY),
                     "standby",
                     PowerMode.STANDBY,
                 ),
                 (
-                    (OnStandbyOffHardwareSimulator, True, PowerMode.ON),
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.STANDBY),
+                    "on",
+                    PowerMode.ON,
+                ),
+                ((OnStandbyHardwareSimulator, True, False, PowerMode.ON), "off", None),
+                (
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.ON),
+                    "standby",
+                    PowerMode.STANDBY,
+                ),
+                (
+                    (OnStandbyHardwareSimulator, True, False, PowerMode.ON),
+                    "on",
+                    PowerMode.ON,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.OFF),
+                    "off",
+                    PowerMode.OFF,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.OFF),
+                    "standby",
+                    PowerMode.STANDBY,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.OFF),
+                    "on",
+                    PowerMode.ON,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.STANDBY),
+                    "off",
+                    PowerMode.OFF,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.STANDBY),
+                    "standby",
+                    PowerMode.STANDBY,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.STANDBY),
+                    "on",
+                    PowerMode.ON,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.ON),
+                    "off",
+                    PowerMode.OFF,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.ON),
+                    "standby",
+                    PowerMode.STANDBY,
+                ),
+                (
+                    (OnStandbyOffHardwareSimulator, True, False, PowerMode.ON),
                     "on",
                     PowerMode.ON,
                 ),
@@ -318,6 +431,7 @@ class TestPowerModeHardware:
                 the command is expected not to exist on the simulator
             :type expected_power_mode: str
             """
+            hardware_simulator.connect()
             assert hardware_simulator.connection_status == ConnectionStatus.CONNECTED
 
             command = getattr(hardware_simulator, command_name, None)
@@ -326,44 +440,6 @@ class TestPowerModeHardware:
             else:
                 command()
                 assert hardware_simulator.power_mode == expected_power_mode
-
-        @pytest.mark.parametrize(
-            ("hardware_simulator",),
-            [
-                # We pass the test a hardware simulator that has been
-                # initialised with the first element of this triple, and
-                # then test that when we call the command specified by
-                # the second element, the resulting power mode is that
-                # specified in the third element. Or, if the third
-                # element is None, we expect an exception.
-                #
-                # For example,
-                # "((OnOffHardwareSimulator, True, PowerMode.OFF), "on", PowerMode.ON)"
-                # means:
-                # * take a hardware simulator of class OnOffHardwareSimulator,
-                #   which has been initialised as connected but turned off; and
-                # * test that when we call the "on" command, the power mode become ON
-                ((OnOffHardwareSimulator, False, PowerMode.ON),),
-                ((OnStandbyHardwareSimulator, False, PowerMode.ON),),
-                ((OnStandbyOffHardwareSimulator, False, PowerMode.ON),),
-            ],
-            indirect=("hardware_simulator",),
-        )
-        def test_connection_failure(self, hardware_simulator):
-            """
-            Test that power mode information is not accessible if the
-            hardware simulator is simulating connection failure.
-
-            :param hardware_simulator: the hardware simulator under
-                test
-            :type hardware_simulator:
-                :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
-            """
-            assert (
-                hardware_simulator.connection_status == ConnectionStatus.NOT_CONNECTED
-            )
-            with pytest.raises(ConnectionError, match="No connection to hardware"):
-                _ = hardware_simulator.power_mode
 
     class TestOnStandbyOffHardwareManager:
         """
@@ -388,6 +464,8 @@ class TestPowerModeHardware:
             :type hardware_manager:
                 :py:class:`~ska.low.mccs.hardware.OnStandbyOffHardwareManager`
             """
+            assert hardware_manager.health == HealthState.UNKNOWN
+            hardware_manager.poll()
             assert hardware_manager.health == HealthState.OK
 
             # check turning this healthy hardware off and on

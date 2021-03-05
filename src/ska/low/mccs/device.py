@@ -89,28 +89,18 @@ class MccsDevice(SKABaseDevice):
         """
         super().init_command_objects()
 
-        args = (self, self.state_model, self.logger)
-
-        self.register_command_object(
-            "ExceptionCallback", self.ExceptionCallbackCommand(*args)
-        )
-        self.register_command_object(
-            "DefaultAlarmOffCallback", self.DefaultAlarmOffCallbackCommand(*args)
-        )
-        self.register_command_object(
-            "DefaultAlarmOnCallback", self.DefaultAlarmOnCallbackCommand(*args)
-        )
-        self.register_command_object(
-            "ConstructDeviceProxyAddress",
-            self.ConstructDeviceProxyAddressCommand(*args),
-        )
-        self.register_command_object("GetFullReport", self.GetFullReportCommand(*args))
-        self.register_command_object(
-            "GetCommandReport", self.GetCommandReportCommand(*args)
-        )
-        self.register_command_object(
-            "GetAttributeReport", self.GetAttributeReportCommand(*args)
-        )
+        for (command_name, command_object) in [
+            ("ExceptionCallback", self.ExceptionCallbackCommand),
+            ("DefaultAlarmOffCallback", self.DefaultAlarmOffCallbackCommand),
+            ("DefaultAlarmOnCallback", self.DefaultAlarmOnCallbackCommand),
+            ("ConstructDeviceProxyAddress", self.ConstructDeviceProxyAddressCommand),
+            ("GetFullReport", self.GetFullReportCommand),
+            ("GetCommandReport", self.GetCommandReportCommand),
+            ("GetAttributeReport", self.GetAttributeReportCommand),
+        ]:
+            self.register_command_object(
+                command_name, command_object(self, self.state_model, self.logger)
+            )
 
     def always_executed_hook(self):
         """

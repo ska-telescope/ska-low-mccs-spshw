@@ -101,6 +101,13 @@
                             "TpmCpldPort": [
                                 "10000"
                             ]
+                        },
+                        "attribute_properties": {
+                            "simulationMode": {
+                                "__value": [
+                                    "1"
+                                ]
+                            }
                         }
                     }
                 }
@@ -130,6 +137,13 @@
                             "TpmCpldPort": [
                                 "10000"
                             ]
+                        },
+                        "attribute_properties": {
+                            "simulationMode": {
+                                "__value": [
+                                    "1"
+                                ]
+                            }
                         }
                     }
                 }
@@ -159,6 +173,13 @@
                             "TpmCpldPort": [
                                 "10000"
                             ]
+                        },
+                        "attribute_properties": {
+                            "simulationMode": {
+                                "__value": [
+                                    "1"
+                                ]
+                            }
                         }
                     }
                 }
@@ -188,6 +209,13 @@
                             "TpmCpldPort": [
                                 "10000"
                             ]
+                        },
+                        "attribute_properties": {
+                            "simulationMode": {
+                                "__value": [
+                                    "1"
+                                ]
+                            }
                         }
                     }
                 }

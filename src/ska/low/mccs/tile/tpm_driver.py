@@ -85,7 +85,8 @@ class TpmDriver(HardwareDriver):
         self._ip = ip
         self._port = port
         self.tile = HwTile(ip=self._ip, port=self._port, logger=self.logger)
-        super().__init__()
+
+        super().__init__(False)
 
     def _connect(self):
         """
@@ -162,6 +163,15 @@ class TpmDriver(HardwareDriver):
             if self.tile.tpm is None
             else ConnectionStatus.CONNECTED
         )
+
+    @connection_status.setter
+    def connection_status(self, status):
+        """
+        Sets the status of the driver-hardware connection.
+
+        :param status: new status of the driver-hardware connection.
+        """
+        self._connection_status = status
 
     def download_firmware(self, bitfile):
         """

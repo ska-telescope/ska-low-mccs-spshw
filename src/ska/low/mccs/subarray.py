@@ -516,24 +516,28 @@ class MccsSubarray(SKASubarray):
         # calling super(), because AssignResources(), ReleaseResources() and
         # ReleaseAllResources() are registered on a thread, and
         # we don't want the super() method clobbering them
-        args = (self, self.state_model, self.logger)
-        self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Off", self.OffCommand(*args))
-        self.register_command_object("Configure", self.ConfigureCommand(*args))
-        self.register_command_object("Scan", self.ScanCommand(*args))
-        self.register_command_object("EndScan", self.EndScanCommand(*args))
-        self.register_command_object("End", self.EndCommand(*args))
-        self.register_command_object("Abort", self.AbortCommand(*args))
-        self.register_command_object("ObsReset", self.ObsResetCommand(*args))
-        self.register_command_object("Restart", self.RestartCommand(*args))
+        for (command_name, command_object) in [
+            ("On", self.OnCommand),
+            ("Off", self.OffCommand),
+            ("Configure", self.ConfigureCommand),
+            ("Scan", self.ScanCommand),
+            ("EndScan", self.EndScanCommand),
+            ("End", self.EndCommand),
+            ("Abort", self.AbortCommand),
+            ("ObsReset", self.ObsResetCommand),
+            ("Restart", self.RestartCommand),
+            ("GetVersionInfo", self.GetVersionInfoCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self, self.state_model, self.logger),
+            )
+
         self.register_command_object(
             "SendTransientBuffer",
             self.SendTransientBufferCommand(
                 self._transient_buffer_manager, self.state_model, self.logger
             ),
-        )
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
         )
 
     def always_executed_hook(self):

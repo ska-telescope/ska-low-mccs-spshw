@@ -160,7 +160,18 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
         self._are_tpms_on = None
         self._are_tpms_on_change_callback = are_tpms_on_change_callback
-        self._update_are_tpms_on()
+
+    def connect(self):
+        """
+        Establish a connection to the subrack hardware.
+
+        :return: whether successful
+        :rtype: bool
+        """
+        success = super().connect()
+        if success:
+            self._update_are_tpms_on()
+        return success
 
     @property
     def backplane_temperatures(self):
@@ -497,15 +508,23 @@ class MccsSubrack(SKABaseDevice):
         Initialises the command handlers for commands supported by this
         device.
         """
-        # TODO: Technical debt -- forced to register base class stuff rather than
-        # calling super(), because Disable(), Standby() and Off() are registered on a
-        # thread, and we don't want the super() method clobbering them.
-        args = (self, self.state_model, self.logger)
-        self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
-        )
+        super().init_command_objects()
+
+        for (command_name, command_object) in [
+            ("Disable", self.DisableCommand),
+            ("Standby", self.StandbyCommand),
+            ("Off", self.OffCommand),
+            ("IsTpmOn", self.IsTpmOnCommand),
+            ("PowerOnTpm", self.PowerOnTpmCommand),
+            ("PowerOffTpm", self.PowerOffTpmCommand),
+            ("SetSubrackFanSpeed", self.SetSubrackFanSpeedCommand),
+            ("SetSubrackFanMode", self.SetSubrackFanModeCommand),
+            ("SetPowerSupplyFanSpeed", self.SetPowerSupplyFanSpeedCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.hardware_manager, self.state_model, self.logger),
+            )
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
@@ -552,19 +571,19 @@ class MccsSubrack(SKABaseDevice):
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
-            # can't take our devices out of simulation mode. However,
-            # simulationMode is a memorized attribute, and
-            # pytango.test_context.MultiDeviceTestContext will soon
-            # support memorized attributes. Once it does, we should
-            # figure out how to inject memorized values into our real
-            # tango deployment, then start honouring the default of
-            # FALSE by removing this next line.
+            # can't take our devices out of simulation mode. Once we
+            # have a driver for real hardware, we should change this
+            # default to FALSE.
             device._simulation_mode = SimulationMode.TRUE
 
             device._are_tpms_on = None
             device.set_change_event("areTpmsOn", True, False)
 
-            device.hardware_manager = None
+            device.hardware_manager = SubrackHardwareManager(
+                device._simulation_mode,
+                device.are_tpms_on_changed,
+                tpm_count=len(device._tile_fqdns),
+            )
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -607,34 +626,7 @@ class MccsSubrack(SKABaseDevice):
                 hardware is being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.hardware_manager = SubrackHardwareManager(
-                device._simulation_mode,
-                device.are_tpms_on_changed,
-                tpm_count=len(device._tile_fqdns),
-            )
-
-            args = (device.hardware_manager, device.state_model, self.logger)
-
-            device.register_command_object("Disable", device.DisableCommand(*args))
-            device.register_command_object("Standby", device.StandbyCommand(*args))
-            device.register_command_object("Off", device.OffCommand(*args))
-
-            device.register_command_object("IsTpmOn", device.IsTpmOnCommand(*args))
-            device.register_command_object(
-                "PowerOnTpm", device.PowerOnTpmCommand(*args)
-            )
-            device.register_command_object(
-                "PowerOffTpm", device.PowerOffTpmCommand(*args)
-            )
-            device.register_command_object(
-                "SetSubrackFanSpeed", device.SetSubrackFanSpeedCommand(*args)
-            )
-            device.register_command_object(
-                "SetSubrackFanMode", device.SetSubrackFanModeCommand(*args)
-            )
-            device.register_command_object(
-                "SetPowerSupplyFanSpeed", device.SetPowerSupplyFanSpeedCommand(*args)
-            )
+            device.hardware_manager.connect()
 
         def _initialise_health_monitoring(self, device):
             """
@@ -734,6 +726,31 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevLong",
+        memorized=True,
+        hw_memorized=True,
+    )
+    def simulationMode(self):
+        """
+        Reports the simulation mode of the device.
+
+        :return: Return the current simulation mode
+        :rtype: int
+        """
+        return super().read_simulationMode()
+
+    @simulationMode.write
+    def simulationMode(self, value):
+        """
+        Set the simulation mode.
+
+        :param value: The simulation mode, as a SimulationMode value
+        """
+        super().write_simulationMode(value)
+        self.logger.info("Switching simulation mode to " + str(value))
+        self.hardware_manager.simulation_mode = value
 
     @attribute(
         dtype=("DevFloat",),

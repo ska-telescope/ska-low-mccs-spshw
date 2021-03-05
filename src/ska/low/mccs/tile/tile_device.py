@@ -19,7 +19,7 @@ import numpy as np
 import threading
 import os.path
 
-from tango import DebugIt, DevFailed, EnsureOmniThread, DevState
+from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command
 from tango.server import device_property
 
@@ -28,7 +28,7 @@ from ska_tango_base.control_model import HealthState, SimulationMode
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska.low.mccs.events import EventManager, EventSubscriptionHandler
-from ska.low.mccs.hardware import PowerMode
+from ska.low.mccs.hardware import ConnectionStatus, PowerMode
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.tile import TileHardwareManager
 from ska.low.mccs.utils import backoff_connect
@@ -61,18 +61,27 @@ class TilePowerManager:
         :param callback: to be called when the power mode changes
         :type callback: callable
         """
-        self._logger = logger
+        self._subrack_fqdn = subrack_fqdn
+        self._subrack = None
+        self._subrack_bay = subrack_bay
 
+        self._logger = logger
         self._callback = callback
 
-        self._subrack = backoff_connect(subrack_fqdn, logger, wait=True)
-        self._subrack_bay = subrack_bay
+        self._power_mode = PowerMode.UNKNOWN
+
+    def connect(self):
+        """
+        Establish a connection to the subrack that powers this tile
+        device's TPM.
+        """
+        self._subrack = backoff_connect(self._subrack_fqdn, self._logger, wait=True)
 
         self._power_mode = self._read_power_mode()
         self._callback(self._power_mode)
 
         self.subrack_event_handler = EventSubscriptionHandler(
-            self._subrack, subrack_fqdn, "areTpmsOn", logger
+            self._subrack, self._subrack_fqdn, "areTpmsOn", self._logger
         )
         self.subrack_event_handler.register_callback(self._subrack_power_changed)
 
@@ -238,6 +247,14 @@ class MccsTile(SKABaseDevice):
     # ---------------
     # General methods
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device; overridden here to change the Tango
+        serialisation model.
+        """
+        util = Util.instance()
+        util.set_serial_model(SerialModel.NO_SYNC)
+        super().init_device()
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
@@ -287,17 +304,7 @@ class MccsTile(SKABaseDevice):
             (result_code, message) = super().do()
             device = self.target
 
-            # TODO: the default value for simulationMode should be
-            # FALSE, but we don't have real hardware to test yet, so we
-            # can't take our devices out of simulation mode. However,
-            # simulationMode is a memorized attribute, and
-            # pytango.test_context.MultiDeviceTestContext will soon
-            # support memorized attributes. Once it does, we should
-            # figure out how to inject memorized values into our real
-            # tango deployment, then start honouring the default of
-            # FALSE by removing this next line.
-            device._simulation_mode = SimulationMode.TRUE
-            device.hardware_manager = None
+            device._simulation_mode = SimulationMode.FALSE
 
             device._logical_tile_id = 0
             device._subarray_id = 0
@@ -308,6 +315,18 @@ class MccsTile(SKABaseDevice):
             device._csp_destination_port = 0
 
             device._antenna_ids = []
+
+            device.hardware_manager = TileHardwareManager(
+                device._simulation_mode,
+                device._test_mode,
+                device.logger,
+                device.TpmIp,
+                device.TpmCpldPort,
+            )
+
+            device.power_manager = TilePowerManager(
+                device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed
+            )
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -327,11 +346,6 @@ class MccsTile(SKABaseDevice):
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
             with EnsureOmniThread():
-                self._initialise_hardware_management(device)
-                if self._interrupt:
-                    self._thread = None
-                    self._interrupt = False
-                    return
                 self._initialise_health_monitoring(device)
                 if self._interrupt:
                     self._thread = None
@@ -344,173 +358,6 @@ class MccsTile(SKABaseDevice):
                     return
                 with self._lock:
                     self.succeeded()
-
-        def _initialise_hardware_management(self, device):
-            """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware.
-
-            :param device: the device for which a connection to the
-                hardware is being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            device.logger.info(
-                "Initialising hardware manager with ip"
-                + device.TpmIp
-                + ":"
-                + str(device.TpmCpldPort)
-            )
-
-            device.hardware_manager = TileHardwareManager(
-                device._simulation_mode,
-                device._test_mode,
-                device.logger,
-                device.TpmIp,
-                device.TpmCpldPort,
-            )
-            args = (device.hardware_manager, device.state_model, device.logger)
-            device.register_command_object(
-                "Initialise", device.InitialiseCommand(*args)
-            )
-            device.register_command_object(
-                "GetFirmwareAvailable", device.GetFirmwareAvailableCommand(*args)
-            )
-            device.register_command_object(
-                "DownloadFirmware", device.DownloadFirmwareCommand(*args)
-            )
-            device.register_command_object(
-                "ProgramCPLD", device.ProgramCPLDCommand(*args)
-            )
-            device.register_command_object(
-                "GetRegisterList", device.GetRegisterListCommand(*args)
-            )
-            device.register_command_object(
-                "ReadRegister", device.ReadRegisterCommand(*args)
-            )
-            device.register_command_object(
-                "WriteRegister", device.WriteRegisterCommand(*args)
-            )
-            device.register_command_object(
-                "ReadAddress", device.ReadAddressCommand(*args)
-            )
-            device.register_command_object(
-                "WriteAddress", device.WriteAddressCommand(*args)
-            )
-            device.register_command_object(
-                "Configure40GCore", device.Configure40GCoreCommand(*args)
-            )
-            device.register_command_object(
-                "Get40GCoreConfiguration", device.Get40GCoreConfigurationCommand(*args)
-            )
-            device.register_command_object(
-                "SetLmcDownload", device.SetLmcDownloadCommand(*args)
-            )
-            device.register_command_object(
-                "SetChanneliserTruncation",
-                device.SetChanneliserTruncationCommand(*args),
-            )
-            device.register_command_object(
-                "SetBeamFormerRegions", device.SetBeamFormerRegionsCommand(*args)
-            )
-            device.register_command_object(
-                "ConfigureStationBeamformer",
-                device.ConfigureStationBeamformerCommand(*args),
-            )
-            device.register_command_object(
-                "LoadCalibrationCoefficients",
-                device.LoadCalibrationCoefficientsCommand(*args),
-            )
-            device.register_command_object(
-                "LoadCalibrationCurve",
-                device.LoadCalibrationCurveCommand(*args),
-            )
-            device.register_command_object(
-                "LoadBeamAngle", device.LoadBeamAngleCommand(*args)
-            )
-            device.register_command_object(
-                "SwitchCalibrationBank", device.SwitchCalibrationBankCommand(*args)
-            )
-            device.register_command_object(
-                "LoadPointingDelay", device.LoadPointingDelayCommand(*args)
-            )
-            device.register_command_object(
-                "StartBeamformer", device.StartBeamformerCommand(*args)
-            )
-            device.register_command_object(
-                "StopBeamformer", device.StopBeamformerCommand(*args)
-            )
-            device.register_command_object(
-                "ConfigureIntegratedChannelData",
-                device.ConfigureIntegratedChannelDataCommand(*args),
-            )
-            device.register_command_object(
-                "ConfigureIntegratedBeamData",
-                device.ConfigureIntegratedBeamDataCommand(*args),
-            )
-            device.register_command_object(
-                "SendRawData", device.SendRawDataCommand(*args)
-            )
-            device.register_command_object(
-                "SendChannelisedData", device.SendChannelisedDataCommand(*args)
-            )
-            device.register_command_object(
-                "SendChannelisedDataContinuous",
-                device.SendChannelisedDataContinuousCommand(*args),
-            )
-            device.register_command_object(
-                "SendBeamData", device.SendBeamDataCommand(*args)
-            )
-            device.register_command_object(
-                "StopDataTransmission", device.StopDataTransmissionCommand(*args)
-            )
-            device.register_command_object(
-                "ComputeCalibrationCoefficients",
-                device.ComputeCalibrationCoefficientsCommand(*args),
-            )
-            device.register_command_object(
-                "StartAcquisition", device.StartAcquisitionCommand(*args)
-            )
-            device.register_command_object(
-                "SetTimeDelays", device.SetTimeDelaysCommand(*args)
-            )
-            device.register_command_object(
-                "SetCspRounding", device.SetCspRoundingCommand(*args)
-            )
-            device.register_command_object(
-                "SetLmcIntegratedDownload",
-                device.SetLmcIntegratedDownloadCommand(*args),
-            )
-            device.register_command_object(
-                "SendRawDataSynchronised", device.SendRawDataSynchronisedCommand(*args)
-            )
-            device.register_command_object(
-                "SendChannelisedDataNarrowband",
-                device.SendChannelisedDataNarrowbandCommand(*args),
-            )
-            device.register_command_object(
-                "TweakTransceivers", device.TweakTransceiversCommand(*args)
-            )
-            device.register_command_object(
-                "PostSynchronisation", device.PostSynchronisationCommand(*args)
-            )
-            device.register_command_object("SyncFpgas", device.SyncFpgasCommand(*args))
-            device.register_command_object(
-                "CalculateDelay", device.CalculateDelayCommand(*args)
-            )
-
-            antenna_args = (
-                device.hardware_manager,
-                device.state_model,
-                device.logger,
-                device.AntennasPerTile,
-            )
-            device.register_command_object(
-                "LoadAntennaTapering", device.LoadAntennaTaperingCommand(*antenna_args)
-            )
-            device.register_command_object(
-                "SetPointingDelay", device.SetPointingDelayCommand(*antenna_args)
-            )
 
         def _initialise_health_monitoring(self, device):
             """
@@ -538,18 +385,10 @@ class MccsTile(SKABaseDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.power_manager = TilePowerManager(
-                device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed
-            )
+            device.power_manager.connect()
 
-            power_args = (device, device.state_model, self.logger)
-            device.register_command_object(
-                "Disable", device.DisableCommand(*power_args)
-            )
-            device.register_command_object(
-                "Standby", device.StandbyCommand(*power_args)
-            )
-            device.register_command_object("Off", device.OffCommand(*power_args))
+            if device.power_manager.power_mode == PowerMode.ON:
+                device.hardware_manager.set_connectible(True)
 
         def interrupt(self):
             """
@@ -572,11 +411,9 @@ class MccsTile(SKABaseDevice):
             the state of its hardware
             """
             device = self.target
-            if device.power_manager.power_mode == PowerMode.OFF:
-                device.hardware_manager.set_connectible(False)
+            if device.hardware_manager.connection_status != ConnectionStatus.CONNECTED:
                 action = "init_succeeded_disable"
             else:
-                device.hardware_manager.set_connectible(True)
                 if device.hardware_manager.is_programmed:
                     action = "init_succeeded_off"
                 else:
@@ -1263,7 +1100,11 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.pps_delay
 
-    @attribute(dtype="DevLong")
+    @attribute(
+        dtype="DevLong",
+        memorized=True,
+        hw_memorized=True,
+    )
     def simulationMode(self):
         """
         Reports the simulation mode of the device.
@@ -1312,15 +1153,84 @@ class MccsTile(SKABaseDevice):
         """
         Set up the handler objects for Commands.
         """
-        # TODO: Technical debt -- forced to register base class stuff rather than
-        # calling super(), because On() and Off() are registered on a
-        # thread, and we don't want the super() method clobbering them
-        args = (self, self.state_model, self.logger)
-        self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("Reset", self.ResetCommand(*args))
-        self.register_command_object(
-            "GetVersionInfo", self.GetVersionInfoCommand(*args)
+        super().init_command_objects()
+
+        for (command_name, command_object) in [
+            ("Initialise", self.InitialiseCommand),
+            ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
+            ("DownloadFirmware", self.DownloadFirmwareCommand),
+            ("ProgramCPLD", self.ProgramCPLDCommand),
+            ("GetRegisterList", self.GetRegisterListCommand),
+            ("ReadRegister", self.ReadRegisterCommand),
+            ("WriteRegister", self.WriteRegisterCommand),
+            ("ReadAddress", self.ReadAddressCommand),
+            ("WriteAddress", self.WriteAddressCommand),
+            ("Configure40GCore", self.Configure40GCoreCommand),
+            ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
+            ("SetLmcDownload", self.SetLmcDownloadCommand),
+            ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
+            ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
+            ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
+            ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
+            ("LoadCalibrationCurve", self.LoadCalibrationCurveCommand),
+            ("LoadBeamAngle", self.LoadBeamAngleCommand),
+            ("SwitchCalibrationBank", self.SwitchCalibrationBankCommand),
+            ("LoadPointingDelay", self.LoadPointingDelayCommand),
+            ("StartBeamformer", self.StartBeamformerCommand),
+            ("StopBeamformer", self.StopBeamformerCommand),
+            (
+                "ConfigureIntegratedChannelData",
+                self.ConfigureIntegratedChannelDataCommand,
+            ),
+            ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
+            ("SendRawData", self.SendRawDataCommand),
+            ("SendChannelisedData", self.SendChannelisedDataCommand),
+            (
+                "SendChannelisedDataContinuous",
+                self.SendChannelisedDataContinuousCommand,
+            ),
+            ("SendBeamData", self.SendBeamDataCommand),
+            ("StopDataTransmission", self.StopDataTransmissionCommand),
+            (
+                "ComputeCalibrationCoefficients",
+                self.ComputeCalibrationCoefficientsCommand,
+            ),
+            ("StartAcquisition", self.StartAcquisitionCommand),
+            ("SetTimeDelays", self.SetTimeDelaysCommand),
+            ("SetCspRounding", self.SetCspRoundingCommand),
+            ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
+            ("SendRawDataSynchronised", self.SendRawDataSynchronisedCommand),
+            (
+                "SendChannelisedDataNarrowband",
+                self.SendChannelisedDataNarrowbandCommand,
+            ),
+            ("TweakTransceivers", self.TweakTransceiversCommand),
+            ("PostSynchronisation", self.PostSynchronisationCommand),
+            ("SyncFpgas", self.SyncFpgasCommand),
+            ("CalculateDelay", self.CalculateDelayCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.hardware_manager, self.state_model, self.logger),
+            )
+
+        antenna_args = (
+            self.hardware_manager,
+            self.state_model,
+            self.logger,
+            self.AntennasPerTile,
         )
+        self.register_command_object(
+            "LoadAntennaTapering", self.LoadAntennaTaperingCommand(*antenna_args)
+        )
+        self.register_command_object(
+            "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
+        )
+
+        power_args = (self, self.state_model, self.logger)
+        self.register_command_object("Disable", self.DisableCommand(*power_args))
+        self.register_command_object("Standby", self.StandbyCommand(*power_args))
+        self.register_command_object("Off", self.OffCommand(*power_args))
 
     class InitialiseCommand(ResponseCommand):
         """

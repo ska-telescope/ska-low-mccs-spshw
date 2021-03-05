@@ -119,6 +119,7 @@ class TestSubrackBaySimulator:
         :type subrack_bay:
             :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBaySimulator`
         """
+        subrack_bay.connect()
 
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
@@ -167,6 +168,8 @@ class TestSubrackBaySimulator:
             range for a temperature measurement
         :type random_temperature: float
         """
+        subrack_bay.connect()
+
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
@@ -329,6 +332,7 @@ class TestSubrackBoardSimulator:
             for tpm_id in range(1, subrack_board.tpm_count + 1):
                 assert not subrack_board.is_tpm_on(tpm_id)
 
+        subrack_board.connect()
         assert_off_behaviour()
         subrack_board.on()
         assert_on_behaviour()
@@ -346,6 +350,7 @@ class TestSubrackBoardSimulator:
         :type subrack_board:
             :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
         """
+        subrack_board.connect()
         subrack_board.on()
         for tpm_id in range(1, subrack_board.tpm_count + 1):
             assert not subrack_board.is_tpm_on(tpm_id)
@@ -379,6 +384,7 @@ class TestSubrackBoardSimulator:
             for tpm_id in range(1, subrack_board.tpm_count + 1):
                 assert subrack_board.is_tpm_on(tpm_id) == is_on
 
+        subrack_board.connect()
         subrack_board.on()
         assert_tpms_on(False)
         subrack_board.turn_on_tpms()
@@ -425,6 +431,7 @@ class TestSubrackBoardSimulator:
             range for a voltage measurement
         :type random_voltage: float
         """
+        subrack_board.connect()
         subrack_board.on()
 
         assert (
@@ -743,6 +750,7 @@ class TestSubrackHardwareManager:
             assert hardware_manager.tpm_powers == subrack_board.tpm_powers
             assert hardware_manager.tpm_voltages == subrack_board.tpm_voltages
 
+        hardware_manager.poll()
         assert_off_behaviour()
 
         mock_health_callback = mocker.Mock()
@@ -772,6 +780,7 @@ class TestSubrackHardwareManager:
         :type subrack_board:
             :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
         """
+        hardware_manager.poll()
         hardware_manager.on()
         for tpm_id in range(1, hardware_manager.tpm_count + 1):
             assert not hardware_manager.is_tpm_on(tpm_id)
@@ -806,6 +815,7 @@ class TestSubrackHardwareManager:
             for tpm_id in range(1, hardware_manager.tpm_count + 1):
                 assert hardware_manager.is_tpm_on(tpm_id) == is_on
 
+        hardware_manager.poll()
         hardware_manager.on()
         assert_tpms_on(False)
         hardware_manager.turn_on_tpms()

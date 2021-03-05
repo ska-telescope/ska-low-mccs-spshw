@@ -77,9 +77,14 @@ class HardwareDriver:
     this driver is connected to hardware.
     """
 
-    def __init__(self, is_connectible=True):
+    def __init__(self, is_connectible):
         """
         Initialise a new instance.
+
+        This initialiser should construct the driver object and return
+        ASAP. It therefore should not attempt anything that may suffer
+        latency; for example, it should not try to establish a network
+        connection to the hardware. Save that for the `connect` method.
 
         :param is_connectible: whether we expect the driver to be able
             to connect to the hardware. For example, if we know that the
@@ -92,16 +97,31 @@ class HardwareDriver:
             if is_connectible
             else ConnectionStatus.NOT_CONNECTIBLE
         )
-        if self._connection_status == ConnectionStatus.NOT_CONNECTED:
-            if self._connect():
-                self._connection_status = ConnectionStatus.CONNECTED
+
+    def connect(self):
+        """
+        Connect to the hardware.
+
+        :return: whether successful or not; or None if the hardware was
+            already connected.
+        :rtype: bool
+        """
+        if self._connection_status == ConnectionStatus.CONNECTED:
+            return None
+
+        if (
+            self._connection_status == ConnectionStatus.NOT_CONNECTED
+            and self._connect()
+        ):
+            self._connection_status = ConnectionStatus.CONNECTED
+            return True
+
+        return False
 
     def _connect(self):
         """
-        Try to connect to the hardware.
-
-        Returns whether successful or not; or None if the hardware was
-        already connected.
+        Try to connect to the hardware, and returns whether successful
+        or not.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a subclass
@@ -240,12 +260,14 @@ class HardwareManager:
         self._health = HealthState.UNKNOWN
         self._health_callbacks = []
         self._health_evaluator = health_evaluator
-        self._update_health()
+        # self._update_health()  # don't update health until after first connect attempt
 
     def poll(self):
         """
         Poll the hardware and respond to external events/changes.
         """
+        if self._factory.hardware.connection_status == ConnectionStatus.NOT_CONNECTED:
+            _ = self._factory.hardware.connect()  # attempt re-connection
         self._update_health()
 
     @property
@@ -282,6 +304,18 @@ class HardwareManager:
         """
         self._health_callbacks.append(callback)
         callback(self._health)
+
+    def connect(self):
+        """
+        Connect to the hardware.
+
+        :return: whether successful or not; or None if the hardware was
+            already connected.
+        :rtype: bool
+        """
+        success = self._factory.hardware.connect()
+        self._update_health()
+        return success
 
     @property
     def connection_status(self):
@@ -321,9 +355,6 @@ class HardwareManager:
                     self._factory.hardware.connection_status = (
                         ConnectionStatus.CONNECTED
                     )
-                else:
-                    self._factory.hardware.connection_status = (
-                        ConnectionStatus.NOT_CONNECTED
-                    )
         else:
             self._factory.hardware.connection_status = ConnectionStatus.NOT_CONNECTIBLE
+        self._update_health()

@@ -81,6 +81,7 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         temperature=DEFAULT_TEMPERATURE,
         current=DEFAULT_CURRENT,
         voltage=DEFAULT_VOLTAGE,
+        is_connectible=True,
         fail_connect=False,
         power_mode=PowerMode.OFF,
     ):
@@ -95,6 +96,11 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type voltage: float
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
+        :param is_connectible: whether we expect to be able to connect
+            to the hardware. For example, if we are simulating a subrack
+            that is currently powered off, then we wouldn't even try to
+            connect to it.
+        :type is_connectible: bool
         :type fail_connect: bool
         :param power_mode: the initial power mode of this module
         :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
@@ -103,7 +109,11 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         self._voltage_when_on = voltage
         self._current_when_on = current
 
-        super().__init__(fail_connect=fail_connect, power_mode=power_mode)
+        super().__init__(
+            is_connectible=is_connectible,
+            fail_connect=fail_connect,
+            power_mode=power_mode,
+        )
 
     @property
     def temperature(self):
@@ -279,6 +289,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         power_supply_fan_speeds=DEFAULT_POWER_SUPPLY_FAN_SPEED,
         tpm_power_modes=DEFAULT_TPM_POWER_MODES,
         tpm_present=DEFAULT_TPM_PRESENT,
+        is_connectible=True,
         fail_connect=False,
         power_mode=PowerMode.OFF,
         _bays=None,
@@ -313,6 +324,11 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             list(:py:class:`ska.low.mccs.hardware.PowerMode`)
         :param tpm_present: the initial TPM board present on subrack
         :type tpm_present: list(bool)
+        :param is_connectible: whether we expect to be able to connect
+            to the hardware. For example, if we are simulating a subrack
+            that is currently powered off, then we wouldn't even try to
+            connect to it.
+        :type is_connectible: bool
         :param fail_connect: whether this simulator should initially
             simulate failure to connect to the hardware
         :type fail_connect: bool
@@ -342,7 +358,19 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         ]
         self._bay_lock = Lock()
 
-        super().__init__(fail_connect=fail_connect, power_mode=power_mode)
+        super().__init__(
+            is_connectible=is_connectible,
+            fail_connect=fail_connect,
+            power_mode=power_mode,
+        )
+
+    def connect(self):
+        """
+        Establish a connection to the subrack hardware.
+        """
+        super().connect()
+        for bay in self._bays:
+            bay.connect()
 
     def off(self):
         """

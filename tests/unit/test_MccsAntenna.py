@@ -25,9 +25,8 @@ from ska_tango_base.control_model import (
 )
 from ska_tango_base.commands import ResultCode
 
-from ska.low.mccs.antenna.antenna_device import AntennaHardwareManager, MccsAntenna
+from ska.low.mccs.antenna.antenna_device import MccsAntenna
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator
-from ska.low.mccs.hardware import HardwareFactory, PowerMode
 
 
 @pytest.fixture()
@@ -59,146 +58,6 @@ def hardware_driver():
         :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
     """
     return AntennaHardwareSimulator()
-
-
-@pytest.fixture()
-def hardware_factory(hardware_driver):
-    """
-    Return a hardware factory for antenna hardware.
-
-    :param hardware_driver: the antenna hardware driver that the factory
-        will return
-    :type hardware_driver:
-        :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
-
-    :return: a hardware factory for antenna hardware
-    :rtype:
-        :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareFactory`
-    """
-
-    class BasicAntennaHardwareFactory(HardwareFactory):
-        """
-        A simple hardware factory that always returns the same, pre-
-        created hardware driver.
-        """
-
-        def __init__(self):
-            """
-            Create a new instance.
-            """
-            self._hardware = hardware_driver
-
-        @property
-        def hardware(self):
-            """
-            Return a hardware driver created by this factory.
-
-            :return: a hardware driver created by this factory
-            :rtype:
-                :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
-            """
-            return self._hardware
-
-    return BasicAntennaHardwareFactory()
-
-
-@pytest.fixture()
-def hardware_manager(hardware_factory, logger, mock_callback):
-    """
-    Return a hardware manager for antenna hardware.
-
-    :param hardware_factory: a factory that gives us control over, and
-        access to, the hardware driver that it returns, for testing
-        purposes
-    :type:
-        :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareDriver`
-    :param logger: a object that implements the standard logging interface of
-        :py:class:`logging.Logger`
-    :type logger: :py:class:`logging.Logger`
-    :param mock_callback: a mock to pass as a callback
-    :type mock_callback: :py:class:`unittest.Mock`
-
-    :return: a hardware manager for antenna hardware
-    :rtype: :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
-    """
-    return AntennaHardwareManager(
-        "low-mccs/apiu/001",
-        1,
-        # "low-mccs/tile/0001",
-        None,
-        1,
-        mock_callback,
-        logger,
-        _factory=hardware_factory,
-    )
-
-
-class TestAntennaHardwareManager:
-    """
-    Contains the tests of the
-    :py:class:`ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
-    """
-
-    def test_on_off(self, hardware_driver, hardware_manager, mocker):
-        """
-        Test that the hardware manager receives updated values, and re-
-        evaluates device health, each time it polls the hardware.
-
-        :param hardware_driver: the antenna hardware driver
-        :type hardware_driver:
-            :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
-        :param hardware_manager: a hardware manager for antenna hardware
-        :type hardware_manager:
-            :py:class:`~ska.low.mccs.antenna.antenna_device.AntennaHardwareManager`
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
-            module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
-        """
-        voltage = 3.5
-        current = 23.4
-        temperature = 120
-
-        assert hardware_manager.power_mode == PowerMode.OFF
-        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-            _ = hardware_manager.temperature
-        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-            _ = hardware_manager.voltage
-        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-            _ = hardware_manager.current
-
-        assert hardware_manager.health == HealthState.OK
-        mock_health_callback = mocker.Mock()
-        hardware_manager.register_health_callback(mock_health_callback)
-        mock_health_callback.assert_called_once_with(HealthState.OK)
-        mock_health_callback.reset_mock()
-
-        hardware_manager.on()
-        assert hardware_manager.power_mode == PowerMode.ON
-        assert hardware_manager.voltage == AntennaHardwareSimulator.VOLTAGE
-        assert hardware_manager.current == AntennaHardwareSimulator.CURRENT
-        assert hardware_manager.temperature == AntennaHardwareSimulator.TEMPERATURE
-        assert hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
-
-        hardware_driver.simulate_voltage(voltage)
-        assert hardware_manager.voltage == voltage
-
-        hardware_driver.simulate_current(current)
-        assert hardware_manager.voltage == voltage
-
-        hardware_driver.simulate_temperature(temperature)
-        assert hardware_manager.temperature == temperature
-
-        hardware_manager.off()
-        assert hardware_manager.power_mode == PowerMode.OFF
-        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-            _ = hardware_manager.temperature
-        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-            _ = hardware_manager.voltage
-        with pytest.raises(ValueError, match="Antenna hardware is not ON."):
-            _ = hardware_manager.current
-        assert hardware_manager.health == HealthState.OK
-        mock_health_callback.assert_not_called()
 
 
 @pytest.fixture()
@@ -799,6 +658,11 @@ class TestInitCommand:
         :type mocker: wrapper for :py:mod:`unittest.mock`
         """
         mock_device = mocker.MagicMock()
+        mock_device.ApiuId = 1
+        mock_device.LogicalApiuAntennaId = 1
+        mock_device.TileId = 1
+        mock_device.LogicalTileAntennaId = 1
+
         mock_state_model = mocker.Mock()
 
         init_command = self.HangableInitCommand(mock_device, mock_state_model)

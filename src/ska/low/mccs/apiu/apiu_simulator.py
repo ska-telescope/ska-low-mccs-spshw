@@ -181,6 +181,18 @@ class APIUSimulator(OnOffHardwareSimulator):
         self._antennas_lock = Lock()
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
+    def connect(self):
+        """
+        Establish a connection to the APIU hardware.
+
+        :return: whether successful
+        :rtype: bool
+        """
+        super().connect()
+        for antenna in self._antennas:
+            antenna.connect()
+        return True
+
     def off(self):
         """
         Turn me off.

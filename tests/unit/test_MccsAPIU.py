@@ -68,6 +68,7 @@ class TestAntennaHardwareSimulator:
         :type antenna_hardware_simulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
         """
+        assert antenna_hardware_simulator.connect()
         assert antenna_hardware_simulator.power_mode == PowerMode.OFF
         with pytest.raises(ValueError, match="Antenna hardware is not ON."):
             _ = antenna_hardware_simulator.voltage
@@ -121,6 +122,7 @@ class TestAPIUSimulator:
         :type apiu_simulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
+        assert apiu_simulator.connect()
         assert apiu_simulator.power_mode == PowerMode.OFF
         with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = apiu_simulator.voltage
@@ -172,6 +174,7 @@ class TestAPIUSimulator:
         :type apiu_simulator:
             :py:class:`~ska.low.mccs.apiu.apiu_simulator.APIUSimulator`
         """
+        assert apiu_simulator.connect()
         apiu_simulator.on()
         are_antennas_on = apiu_simulator.are_antennas_on()
         assert not any(are_antennas_on)
@@ -262,6 +265,7 @@ class TestAPIUSimulator:
             for antenna_id in range(1, apiu_simulator.antenna_count + 1):
                 assert apiu_simulator.is_antenna_on(antenna_id) == mode
 
+        assert apiu_simulator.connect()
         apiu_simulator.on()
 
         # check all antennas are off
@@ -357,6 +361,7 @@ class TestAPIUHardwareManager:
 
         hardware = hardware_manager._factory.hardware
 
+        hardware_manager.poll()
         assert hardware_manager.power_mode == PowerMode.OFF
         with pytest.raises(ValueError, match="APIU hardware is not ON."):
             _ = hardware_manager.current
@@ -413,6 +418,7 @@ class TestAPIUHardwareManager:
         :type hardware_manager:
             :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         """
+        hardware_manager.poll()
         assert hardware_manager.power_mode == PowerMode.OFF
 
         are_antennas_on = hardware_manager.are_antennas_on()
@@ -509,6 +515,7 @@ class TestAPIUHardwareManager:
             for antenna_id in range(1, hardware_manager.antenna_count + 1):
                 assert hardware_manager.is_antenna_on(antenna_id) == mode
 
+        hardware_manager.poll()
         assert hardware_manager.power_mode == PowerMode.OFF
 
         hardware_manager.on()

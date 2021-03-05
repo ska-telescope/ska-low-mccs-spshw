@@ -243,6 +243,8 @@ class TestTilePowerManager:
             :py:class:`tango.DeviceProxy` mocks
         :type mock_factory: object
         """
+        assert power_manager.power_mode == PowerMode.UNKNOWN
+        power_manager.connect()
         assert power_manager.power_mode == expected_power_mode
         mock_callback.assert_called_once_with(expected_power_mode)
 
@@ -297,6 +299,7 @@ class TestTilePowerManager:
         :param mock_callback: a mock for use as a callback
         :type mock_callback: :py:class:`unittest.Mock`
         """
+        power_manager.connect()
         assert power_manager.on() == expected_return
         assert power_manager.power_mode == expected_power_mode
 
@@ -348,6 +351,7 @@ class TestTilePowerManager:
         :type expected_power_mode:
             :py:class:`ska.low.mccs.hardware.PowerMode`
         """
+        power_manager.connect()
         assert power_manager.off() == expected_return
         assert power_manager.power_mode == expected_power_mode
 
@@ -372,7 +376,7 @@ class TestMccsTile:
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.Mock`
         """
-        assert device_under_test.healthState == HealthState.OK
+        assert device_under_test.healthState == HealthState.UNKNOWN
 
         # Test that polling is turned on and subscription yields an
         # event as expected
@@ -383,7 +387,7 @@ class TestMccsTile:
 
         event_data = mock_callback.call_args[0][0].attr_value
         assert event_data.name == "healthState"
-        assert event_data.value == HealthState.OK
+        assert event_data.value == HealthState.UNKNOWN
         assert event_data.quality == AttrQuality.ATTR_VALID
 
     def test_logicalTileId(self, device_under_test):

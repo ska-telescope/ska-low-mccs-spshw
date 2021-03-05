@@ -85,6 +85,15 @@ class MCCSDeviceInfo:
                 fqdn = next(iter(device_spec[class_name]))
                 properties = device_spec[class_name][fqdn]["properties"]
 
+                attribute_properties = device_spec[class_name][fqdn].get(
+                    "attribute_properties", {}
+                )
+                memorized = {
+                    name: value["__value"]
+                    for name, value in attribute_properties.items()
+                    if "__value" in value
+                }
+
                 if patch is None:
                     package = __import__(self._package, fromlist=[class_name])
                     klass = getattr(package, class_name)
@@ -96,6 +105,7 @@ class MCCSDeviceInfo:
                     "class": klass,
                     "fqdn": fqdn,
                     "properties": properties,
+                    "memorized": memorized,
                 }
                 break
         else:
@@ -133,7 +143,11 @@ class MCCSDeviceInfo:
         devices_by_class = defaultdict(list)
         for device in self._devices.values():
             devices_by_class[device["class"]].append(
-                {"name": device["fqdn"], "properties": device["properties"]}
+                {
+                    "name": device["fqdn"],
+                    "properties": device["properties"],
+                    "memorized": device["memorized"],
+                }
             )
         mdtc_device_info = [
             {"class": klass, "devices": devices}

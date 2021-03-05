@@ -81,7 +81,7 @@ class TilePowerManager:
         self._callback(self._power_mode)
 
         self.subrack_event_handler = EventSubscriptionHandler(
-            self._subrack, self._subrack_fqdn, "areTpmsOn", self._logger
+            self._subrack, "areTpmsOn", self._logger
         )
         self.subrack_event_handler.register_callback(self._subrack_power_changed)
 

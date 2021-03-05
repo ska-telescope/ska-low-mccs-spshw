@@ -40,12 +40,10 @@ class TestEventSubscriptionHandler:
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-        fqdn = "mock/mock/1"
-        mock_device_proxy = tango.DeviceProxy(fqdn)
-
+        mock_device_proxy = tango.DeviceProxy("mock/mock/1")
         event_name = "mock_event"
 
-        _ = EventSubscriptionHandler(mock_device_proxy, fqdn, event_name, logger)
+        _ = EventSubscriptionHandler(mock_device_proxy, event_name, logger)
 
         # check that initialisation resulted in the device at the fqdn
         # receiving a subscription to the event
@@ -69,15 +67,14 @@ class TestEventSubscriptionHandler:
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-        fqdn = "mock/mock/1"
         event_name = "mock_event"
         event_value = "mock_value"
         event_quality = "mock_quality"
         callback_count = 2  # test should pass for any positive value
 
-        mock_device_proxy = tango.DeviceProxy(fqdn)
+        mock_device_proxy = tango.DeviceProxy("mock/mock/1")
         event_subscription_handler = EventSubscriptionHandler(
-            mock_device_proxy, fqdn, event_name, logger
+            mock_device_proxy, event_name, logger
         )
 
         mock_callbacks = [mocker.Mock() for callback in range(callback_count)]
@@ -123,12 +120,11 @@ class TestEventSubscriptionHandler:
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-        fqdn = "mock/mock/1"
         event_name = "mock_event"
-        mock_device_proxy = tango.DeviceProxy(fqdn)
+        mock_device_proxy = tango.DeviceProxy("mock/mock/1")
 
         event_subscription_handler = EventSubscriptionHandler(
-            mock_device_proxy, fqdn, event_name, logger
+            mock_device_proxy, event_name, logger
         )
 
         # Ideally we would `del event_subscription_handler` here, but `"del x`

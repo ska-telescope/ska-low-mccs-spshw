@@ -64,7 +64,7 @@ with the Tango device commands that drive the switch.
 
 Note: this diagram will evolve over time.
 
-.. uml:: power_flow.uml
+.. image:: power_flow.svg
 
 Startup sequence
 ================
@@ -116,7 +116,7 @@ immediately on startup, so that when TM sends the MCCS Controller the
 Startup command, it need only start up the SPS cabinets and field
 equipment.
 
-.. uml:: power_sequence.uml
+.. image:: power_sequence.svg
 
 Implementation model
 ====================
@@ -132,7 +132,7 @@ subservient devices have completed, the device itself completes. the
 following diagram shows such a hierarchy for Controller, Cabinet,
 Subrack and Tile devices:
 
-.. uml:: power_sequence_hierarchy_example.uml
+.. image:: power_sequence_hierarchy_example.svg
 
 Unfortunately, such an approach leads to deadlock (in the default TANGO
 serialisation model), because in turning itself on, a Tile device must
@@ -143,7 +143,7 @@ command at a time (in the default TANGO serialisation model), the call
 to `Subrack.TurnOnTpm()` will be queued until `Subrack.On()` has
 completed. Hence, deadlock:
 
-.. uml:: power_sequence_deadlock_example.uml
+.. image:: power_sequence_deadlock_example.svg
 
 To resolve this, the implementation provides for sequencing of commands.
 A hierarchical model is still present, but rather that a device passing
@@ -158,7 +158,7 @@ In the example below, the deadlock is resolved by allowing the Cabinet
 to split its subservient devices into a pool of subracks and a pool of
 tiles, so that it can turn on subracks before tiles:
 
-.. uml:: power_sequence_deadlock_solved_example.uml
+.. image:: power_sequence_deadlock_solved_example.svg
 
 ***************************
 TANGO device initialisation

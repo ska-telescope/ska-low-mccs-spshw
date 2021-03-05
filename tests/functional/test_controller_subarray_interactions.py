@@ -224,7 +224,9 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
         assert result_code == expected_result
 
 
-@scenario("controller_subarray_interactions.feature", "MCCS Start up low telescope")
+@scenario(
+    "features/controller_subarray_interactions.feature", "MCCS Start up low telescope"
+)
 def test_start_up_low_telescope(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
@@ -406,7 +408,7 @@ def check_reset_state(controller, subarrays, stations):
     assert stations[2].subarrayId == 0
 
 
-@scenario("controller_subarray_interactions.feature", "MCCS Allocate subarray")
+@scenario("features/controller_subarray_interactions.feature", "MCCS Allocate subarray")
 def test_allocate_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
@@ -579,7 +581,9 @@ def subarray_obsstate_is_not_changed(subarrays, cached_obsstate):
     assert subarrays[2].obsstate == cached_obsstate[2]
 
 
-@scenario("controller_subarray_interactions.feature", "MCCS Configure a subarray")
+@scenario(
+    "features/controller_subarray_interactions.feature", "MCCS Configure a subarray"
+)
 def test_configure_a_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
@@ -740,7 +744,10 @@ def subarray_health_is_good(subarrays):
     assert subarrays[1].healthState == HealthState.OK
 
 
-@scenario("controller_subarray_interactions.feature", "MCCS Perform a scan on subarray")
+@scenario(
+    "features/controller_subarray_interactions.feature",
+    "MCCS Perform a scan on subarray",
+)
 def test_perform_a_scan_on_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
@@ -762,7 +769,7 @@ def test_perform_a_scan_on_subarray(controller, subarrays, stations):
 
 
 @scenario(
-    "controller_subarray_interactions.feature",
+    "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a scanning subarray",
 )
 def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):

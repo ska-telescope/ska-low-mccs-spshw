@@ -648,7 +648,7 @@ class MccsStationBeam(SKAObsDevice):
         Class for handling the Configure(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "Configure command completed successfully"
+        SUCCEEDED_MESSAGE = "Configure command completed OK"
 
         def do(self, argin):
             """

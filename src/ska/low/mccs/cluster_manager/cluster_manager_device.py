@@ -1038,7 +1038,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the StartJob(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "StartJob command successful"
+        SUCCEEDED_MESSAGE = "StartJob command completed OK"
 
         def do(self, argin):
             """
@@ -1087,7 +1087,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the StopJob(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "StopJob command successful"
+        SUCCEEDED_MESSAGE = "StopJob command completed OK"
 
         def do(self, argin):
             """
@@ -1258,7 +1258,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the PingMasterPool() command.
         """
 
-        SUCCEEDED_MESSAGE = "PingMasterPool command successful"
+        SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
 
         def do(self):
             """

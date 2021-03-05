@@ -29,7 +29,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsController, release
+from ska.low.mccs import MccsController, MccsSubarray, release
 from ska.low.mccs.controller import ControllerResourceManager
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
@@ -383,25 +383,28 @@ class TestMccsController:
                     :py:class:`~ska.low.mccs.MccsSubarray` device.
                 :rtype: :py:class:`unittest.Mock`
                 """
-                mock = mock_factory()
-                mock.On.return_value = (
+                mock_subarray = mock_factory()
+                mock_subarray.On.return_value = (
                     ResultCode.OK,
-                    "On command completed successfully",
+                    MccsSubarray.OnCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.AssignResources.return_value = (
+                mock_subarray.AssignResources.return_value = (
                     ResultCode.OK,
-                    "Resources assigned",
+                    MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.ReleaseResources.return_value = (
+                mock_subarray.ReleaseResources.return_value = (
                     ResultCode.OK,
-                    "Resources released",
+                    MccsSubarray.ReleaseResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.ReleaseAllResources.return_value = (
+                mock_subarray.ReleaseAllResources.return_value = (
                     ResultCode.OK,
-                    "Resources released",
+                    MccsSubarray.ReleaseAllResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.Off.return_value = (ResultCode.OK, "Subarray switched off")
-                return mock
+                mock_subarray.Off.return_value = (
+                    ResultCode.OK,
+                    "Subarray switched off",
+                )
+                return mock_subarray
 
             def _station_mock():
                 """
@@ -540,7 +543,7 @@ class TestMccsController:
             # because the already allocated station is allocated to the same
             # subarray
             mock_subarray_1.AssignResources.side_effect = (
-                (ResultCode.OK, "Resources assigned"),
+                (ResultCode.OK, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
             )
 
             ((result_code,), (_,)) = call_with_json(

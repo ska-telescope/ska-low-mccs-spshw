@@ -880,7 +880,7 @@ class TestMccsTileCommands:
         device_under_test.Off()
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert message == MccsTile.OnCommand.SUCCEEDED_MESSAGE
 
     def test_GetFirmwareAvailable(self, device_under_test):
         """
@@ -950,8 +950,8 @@ class TestMccsTileCommands:
         [[result_code], [message]] = device_under_test.DownloadFirmware(
             invalid_bitfile_path
         )
-        assert message != "DownloadFirmware command completed OK"
         assert result_code == ResultCode.FAILED
+        assert message != MccsTile.DownloadFirmwareCommand.SUCCEEDED_MESSAGE
         assert not device_under_test.isProgrammed
         assert device_under_test.firmwareName == existing_firmware_name
 
@@ -1065,7 +1065,7 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed):
             _ = device_under_test.ReadAddress([address])
 
-    def WriteAddress(self, device_under_test):
+    def test_WriteAddress(self, device_under_test):
         """
         Test for WriteAddress.
 

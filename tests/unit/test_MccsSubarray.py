@@ -298,29 +298,32 @@ class TestMccsSubarray:
                     :py:class:`~ska.low.mccs.MccsSubarray` device.
                 :rtype: :py:class:`unittest.Mock`
                 """
-                mock = mock_factory()
-                mock.On.return_value = (
+                mock_subarray = mock_factory()
+                mock_subarray.On.return_value = (
                     ResultCode.OK,
-                    "On command completed successfully",
+                    MccsSubarray.OnCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.AssignResources.return_value = (
+                mock_subarray.AssignResources.return_value = (
                     ResultCode.OK,
-                    "Resources assigned",
+                    MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.Configure.return_value = (
+                mock_subarray.Configure.return_value = (
                     ResultCode.OK,
-                    "Configure command completed successfully",
+                    MccsSubarray.ConfigureCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.ReleaseResources.return_value = (
+                mock_subarray.ReleaseResources.return_value = (
                     ResultCode.OK,
-                    "Resources released",
+                    MccsSubarray.ReleaseResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.ReleaseAllResources.return_value = (
+                mock_subarray.ReleaseAllResources.return_value = (
                     ResultCode.OK,
-                    "Resources released",
+                    MccsSubarray.ReleaseAllResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.Off.return_value = (ResultCode.OK, "Subarray switched off")
-                return mock
+                mock_subarray.Off.return_value = (
+                    ResultCode.OK,
+                    "Subarray switched off",
+                )
+                return mock_subarray
 
             def _station_mock():
                 """
@@ -625,7 +628,7 @@ class TestMccsSubarrayCommandClasses:
         abort_command = MccsSubarray.AbortCommand(self, subarray_state_model)
         (result_code, message) = abort_command()
         assert result_code == ResultCode.OK
-        assert message == "Abort command completed OK"
+        assert message == MccsSubarray.AbortCommand.SUCCEEDED_MESSAGE
 
     def test_ObsResetCommand(self, subarray_state_model, mocker):
         """
@@ -648,4 +651,4 @@ class TestMccsSubarrayCommandClasses:
         obsreset_command = MccsSubarray.ObsResetCommand(mock, subarray_state_model)
         (result_code, message) = obsreset_command()
         assert result_code == ResultCode.OK
-        assert message == "ObsReset command completed OK"
+        assert message == MccsSubarray.ObsResetCommand.SUCCEEDED_MESSAGE

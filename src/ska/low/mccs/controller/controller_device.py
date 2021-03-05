@@ -835,8 +835,9 @@ class MccsController(SKAMaster):
         )
         FAILED_TO_RELEASE_MESSAGE_PREFIX = "Failed to release resources from subarray"
         FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX = "Cannot enable subarray"
-        FAILED_TO_ASSIGN_MESSAGE_PREFIX = "Failed to assign resources to subarray"
-        SUCCEEDED_MESSAGE = "Allocate command successful"
+        FAILED_TO_ALLOCATE_MESSAGE_PREFIX = "Failed to allocate resources to subarray"
+        SUCCEEDED_MESSAGE = "Allocate command completed OK"
+        SUCCEEDED_ENABLE_SUBARRAY_MESSAGE = "_enable_subarray was successful"
 
         def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
@@ -948,7 +949,7 @@ class MccsController(SKAMaster):
                 if result_code == ResultCode.FAILED:
                     return (
                         ResultCode.FAILED,
-                        f"{self.FAILED_TO_ASSIGN_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
                         f"{message}",
                     )
                 for fqdn in stations_to_assign:
@@ -1013,7 +1014,7 @@ class MccsController(SKAMaster):
                     )
 
             device._subarray_enabled[subarray_id - 1] = True
-            return (ResultCode.OK, "_enable_subarray was successful")
+            return (ResultCode.OK, self.SUCCEEDED_ENABLE_SUBARRAY_MESSAGE)
 
     def is_Allocate_allowed(self) -> bool:
         """
@@ -1055,7 +1056,14 @@ class MccsController(SKAMaster):
         marking the resources and Capabilities as unassigned and idle.
         """
 
-        SUCCEEDED_MESSAGE = "Release() command successful"
+        SUCCEEDED_MESSAGE = "Release command completed OK"
+        SUCCEEDED_DISABLE_SUBARRAY_MESSAGE = "_disable_subarray was successful"
+        FAILED_RELEASE_ALL_OR_DISABLED_MESSAGE = (
+            "_disable_subarray() release all or disable subarray failed"
+        )
+        FAILED_PARTIAL_RELEASE_UNSUPPORTED_MESSAGE = (
+            "Release command failed - partial release currently unsupported"
+        )
 
         def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
@@ -1104,12 +1112,12 @@ class MccsController(SKAMaster):
                 if result[0] is not ResultCode.OK:
                     return (
                         result[0],
-                        "_disable_subarray() release all or disable subarray failed",
+                        self.FAILED_RELEASE_ALL_OR_DISABLED_MESSAGE,
                     )
             else:
                 return (
                     ResultCode.FAILED,
-                    "Release() command failed - partial release currently unsupported",
+                    self.FAILED_PARTIAL_RELEASE_UNSUPPORTED_MESSAGE,
                 )
 
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1150,7 +1158,7 @@ class MccsController(SKAMaster):
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
             device._subarray_enabled[subarray_id - 1] = False
-            return (ResultCode.OK, "_disable_subarray was successful")
+            return (ResultCode.OK, self.SUCCEEDED_DISABLE_SUBARRAY_MESSAGE)
 
     def is_Release_allowed(self) -> bool:
         """

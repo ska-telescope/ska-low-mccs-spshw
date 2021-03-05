@@ -562,7 +562,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         Class for handling the Configure(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "Configure command completed successfully"
+        SUCCEEDED_MESSAGE = "Configure command completed OK"
 
         def do(self, argin):
             """
@@ -621,7 +621,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         Class for handling the Scan(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "Scan command completed successfully"
+        SUCCEEDED_MESSAGE = "Scan command completed OK"
 
         def do(self, argin):
             """

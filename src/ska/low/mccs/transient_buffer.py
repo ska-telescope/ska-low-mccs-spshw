@@ -51,7 +51,7 @@ class MccsTransientBuffer(MccsDevice):
         Command class for device initialisation.
         """
 
-        SUCCEEDED_MESSAGE = "Init command succeeded"
+        SUCCEEDED_MESSAGE = "Init command completed OK"
 
         def do(self):
             """

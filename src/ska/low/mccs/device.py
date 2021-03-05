@@ -50,7 +50,7 @@ class MccsDevice(SKABaseDevice):
            usually off
         """
 
-        SUCCEEDED_MESSAGE = "Init command succeeded"
+        SUCCEEDED_MESSAGE = "Init command completed OK"
 
         def do(self):
             """
@@ -325,7 +325,7 @@ class MccsDevice(SKABaseDevice):
             argument, and returns nothing.
         """
 
-        SUCCEEDED_MESSAGE = "ExceptionCallback command succeeded"
+        SUCCEEDED_MESSAGE = "ExceptionCallback command completed OK"
 
         def do(self):
             """
@@ -365,7 +365,7 @@ class MccsDevice(SKABaseDevice):
             argument, and returns nothing.
         """
 
-        SUCCEEDED_MESSAGE = "DefaultAlarmOnCallback command succeeded"
+        SUCCEEDED_MESSAGE = "DefaultAlarmOnCallback command completed OK"
 
         def do(self):
             """
@@ -405,7 +405,7 @@ class MccsDevice(SKABaseDevice):
             argument, and returns nothing.
         """
 
-        SUCCEEDED_MESSAGE = "DefaultAlarmOffCallback command succeeded"
+        SUCCEEDED_MESSAGE = "DefaultAlarmOffCallback command completed OK"
 
         def do(self):
             """
@@ -536,7 +536,7 @@ class MccsDevice(SKABaseDevice):
             an address, but if so it doesn't return it.
         """
 
-        SUCCEEDED_MESSAGE = "ConstructDeviceProxyAddress command succeeded"
+        SUCCEEDED_MESSAGE = "ConstructDeviceProxyAddress command completed OK"
 
         def do(self, argin):
             """

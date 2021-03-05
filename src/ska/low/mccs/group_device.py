@@ -48,7 +48,7 @@ class MccsGroupDevice(SKABaseDevice):
         Device.
         """
 
-        SUCCEEDED_MESSAGE = "Init command succeeded"
+        SUCCEEDED_MESSAGE = "Init command completed OK"
 
         def do(self):
             """
@@ -136,7 +136,7 @@ class MccsGroupDevice(SKABaseDevice):
         Class for handling the AddMember(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "AddMember command succeeded"
+        SUCCEEDED_MESSAGE = "AddMember command completed OK"
 
         def do(self, argin):
             """
@@ -180,7 +180,7 @@ class MccsGroupDevice(SKABaseDevice):
         Class for handling the RemoveMember(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "RemoveMember command succeeded"
+        SUCCEEDED_MESSAGE = "RemoveMember command completed OK"
 
         def do(self, argin):
             """
@@ -223,7 +223,7 @@ class MccsGroupDevice(SKABaseDevice):
         Class for handling the Run(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "Run command succeeded"
+        SUCCEEDED_MESSAGE = "Run command completed OK"
 
         def do(self, argin):
             """

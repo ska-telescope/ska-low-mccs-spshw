@@ -623,7 +623,7 @@ class MccsStation(SKAObsDevice):
         Class for handling the InitialSetup() command.
         """
 
-        SUCCEEDED_MESSAGE = "InitialSetup command succeeded"
+        SUCCEEDED_MESSAGE = "InitialSetup command completed OK"
 
         def do(self):
             """

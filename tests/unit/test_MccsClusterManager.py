@@ -476,7 +476,10 @@ class TestMccsClusterManagerDevice:
                 assert device_under_test.GetJobStatus(job_id) == JobStatus.RUNNING
             else:
                 assert result_code == ResultCode.FAILED
-                assert message == ClusterSimulator.JOB_NOT_STAGING_MESSAGE
+                assert (
+                    message
+                    == ClusterSimulator.JOB_CANNOT_START_BECAUSE_NOT_STAGING_MESSAGE
+                )
 
     def test_StopJob(self, device_under_test):
         """

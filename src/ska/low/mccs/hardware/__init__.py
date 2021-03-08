@@ -46,7 +46,7 @@ The classes fall into three groups:
 
   * :py:class:`.HardwareDriver`: a base class for hardware drivers. The
     only functionality it specifies is an
-    :py:meth:`~HardwareDriver.connection_status` property, which
+    :py:meth:`~.HardwareDriver.connection_status` property, which
     captures the status of the driver's connection to the hardware.
 
   * :py:class:`.HardwareFactory`: a base class for hardware factories.
@@ -64,7 +64,7 @@ The classes fall into three groups:
   comprise:
 
   * :py:class:`.HardwareSimulator`: a base class for hardware simulators.
-    This implements the :py:meth:`~HardwareDriver.connection_status`
+    This implements the :py:meth:`~.HardwareDriver.connection_status`
     property, and provides a
     :py:meth:`~HardwareSimulator.simulate_connection_failure` method by
     which failure of the connection to the hardware can be simulated.
@@ -134,7 +134,7 @@ The classes fall into three groups:
     base class extends the hardware manager with an
     :py:meth:`~.BasePowerModeHardwareManager.on`
     method and a
-    :py:attr:`~ska.low.mccs.hardware.BasePowerModeHardwareManager.power_mode`
+    :py:attr:`~ska.low.mccs.hardware.power_mode_hardware.BasePowerModeHardwareManager.power_mode`
     property.
 
   * :py:class:`.OnOffHardwareManager`: add an

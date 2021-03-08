@@ -295,7 +295,7 @@ class TestTilePowerManager:
         :param expected_power_mode: the expected power mode of this
             TilePowerManager after the method has been executed.
         :type expected_power_mode:
-            :py:class:`ska.low.mccs.hardware.PowerMode`
+            :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         :param mock_callback: a mock for use as a callback
         :type mock_callback: :py:class:`unittest.Mock`
         """
@@ -349,7 +349,7 @@ class TestTilePowerManager:
         :param expected_power_mode: the expected power mode of this
             TilePowerManager after the method has been executed.
         :type expected_power_mode:
-            :py:class:`ska.low.mccs.hardware.PowerMode`
+            :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         power_manager.connect()
         assert power_manager.off() == expected_return

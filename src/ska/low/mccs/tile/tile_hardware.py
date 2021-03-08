@@ -25,7 +25,7 @@ from ska.low.mccs.tile import DynamicTpmSimulator, StaticTpmSimulator, TpmDriver
 class TileHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
     A very rudimentary stub
-    :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
+    :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator`
     for tile hardware.
 
     At present this returns

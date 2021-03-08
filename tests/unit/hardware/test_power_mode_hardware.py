@@ -277,7 +277,7 @@ class TestPowerModeHardware:
             :type connection_status:
                 :py:class:`ska.low.mccs.hardware.ConnectionStatus`
             :param power_mode: the initial power mode of the hardware
-            :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+            :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
             """
             contexts = {
                 ConnectionStatus.NOT_CONNECTIBLE: pytest.raises(

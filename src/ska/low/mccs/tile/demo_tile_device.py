@@ -25,7 +25,7 @@ class ConnectionFailableDevice(Device):
 
     This can be used with any tango device that has a
     hardware_manager attribute that is an instance of
-    :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager`.
+    :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareManager`.
     """
 
     def is_SimulateConnectionFailure_allowed(self):

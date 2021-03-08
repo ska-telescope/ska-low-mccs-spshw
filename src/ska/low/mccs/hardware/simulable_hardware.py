@@ -180,7 +180,7 @@ class HardwareSimulator(HardwareDriver):
     A base class for hardware simulators.
 
     It provides a concrete implementation of
-    :py:meth:`HardwareDriver.connection_status`, and can be put into a
+    :py:meth:`.HardwareDriver.connection_status`, and can be put into a
     failure state via a :py:meth:`simulate_connection_failure` method.
     """
 

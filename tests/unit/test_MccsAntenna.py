@@ -73,7 +73,7 @@ def initial_mocks(mock_factory, request):
     :type mock_factory: object
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
     :return: a dictionary of mocks, keyed by FQDN
     :rtype: dict
     """
@@ -81,9 +81,9 @@ def initial_mocks(mock_factory, request):
     def _apiu_mock(state=DevState.ON, is_on=False, result_code=ResultCode.OK):
         """
         Sets up a mock for a :py:class:`tango.DeviceProxy` that connects
-        to an :py:class:`~ska.low.mccs.MccsAPIU` device. The returned
-        mock will respond suitably to actions taken on it by the
-        AntennaApiuProxy.
+        to an :py:class:`~ska.low.mccs.apiu.apiu_device.MccsAPIU`
+        device. The returned mock will respond suitably to actions taken
+        on it by the AntennaApiuProxy.
 
         :param state: the device state that this mock APIU device
             should report
@@ -96,8 +96,8 @@ def initial_mocks(mock_factory, request):
         :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
         :return: a mock for a :py:class:`tango.DeviceProxy` that
             connects to an
-            :py:class:`~ska.low.mccs.MccsAPIU` device.
-        :rtype: :py:class:`unittest.Mock`
+            :py:class:`~ska.low.mccs.apiu.apiu_device.MccsAPIU` device.
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mock_factory()
         mock.state.return_value = state
@@ -126,13 +126,13 @@ def mock_factory(mocker, request):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     kwargs = getattr(request, "param", {})
@@ -157,7 +157,7 @@ def mock_factory(mocker, request):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -173,7 +173,7 @@ def mock_factory(mocker, request):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -407,7 +407,7 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         assert device_under_test.healthState == HealthState.OK
 
@@ -585,8 +585,8 @@ class TestMccsAntenna:
 
 class TestInitCommand:
     """
-    Contains the tests of :py:class:`~ska.low.mccs.MccsAntenna`'s
-    :py:class:`~ska.low.mccs.MccsAntenna.InitCommand`.
+    Contains the tests of :py:class:`~ska.low.mccs.antenna.antenna_device.MccsAntenna`'s
+    :py:class:`~ska.low.mccs.antenna.antenna_device.MccsAntenna.InitCommand`.
     """
 
     class HangableInitCommand(MccsAntenna.InitCommand):
@@ -660,7 +660,7 @@ class TestInitCommand:
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         mock_device = mocker.MagicMock()
         mock_device.ApiuId = 1

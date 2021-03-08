@@ -31,10 +31,10 @@ class TestDevicePool:
         results in a (ResultCode.OK, message) return.
 
         :param mocker: a wrapper around the :py:mod:`unittest.mock` package
-        :type mocker: obj
+        :type mocker: :py:class:`pytest_mock.mocker`
 
         :return: a factory for device proxy mocks
-        :rtype: :py:class:`unittest.Mock` (the class itself, not an instance)
+        :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
         """
 
         def custom_mock():
@@ -44,7 +44,7 @@ class TestDevicePool:
 
             :return: a mock that returns `(ResultCode.OK, message)` when
                 its `command_inout` method is called.
-            :rtype: :py:class:`unittest.Mock`
+            :rtype: :py:class:`unittest.mock.Mock`
             """
             mock_device_proxy = mocker.Mock()
             mock_device_proxy.command_inout_reply.return_value = (

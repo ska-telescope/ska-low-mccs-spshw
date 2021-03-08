@@ -44,7 +44,8 @@ class TestPowerModeHardware:
 
         :param request: A pytest object giving access to the requesting test
             context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :type request: :py:class:`pytest.FixtureRequest`
+
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator`
         """
@@ -57,7 +58,7 @@ class TestPowerModeHardware:
 
         :param request: A pytest object giving access to the requesting test
             context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :type request: :py:class:`pytest.FixtureRequest`
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator`
         """

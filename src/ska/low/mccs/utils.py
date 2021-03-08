@@ -155,7 +155,7 @@ class json_input:  # noqa: N801
             :type json_string: str
 
             :return: whatever the function to be wrapped returns
-            :rtype: any
+            :rtype: object
             """
             json_object = self._parse(json_string)
             return func(obj, **json_object)
@@ -170,7 +170,7 @@ class json_input:  # noqa: N801
         :type json_string: str
 
         :return: an object parsed from the input JSON string
-        :rtype: anything JSON-serialisable
+        :rtype: object
         """
         json_object = json.loads(json_string)
 

@@ -112,7 +112,7 @@ class EventSubscriptionHandler:
         empty attribute data.
 
         :return: the attribute value
-        :rtype: any
+        :rtype: object
         """
         return self._device.read_attribute(self._event_name)
 

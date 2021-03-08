@@ -68,10 +68,10 @@ def mock_factory(mocker):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
@@ -94,7 +94,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -110,7 +110,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -161,7 +161,7 @@ class TestMccsSubarray:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         # The device has neither hardware nor (yet) subsidiary devices,
         # so its healthState is OK
@@ -255,12 +255,12 @@ class TestMccsSubarray:
         """
         assert device_under_test.stationFQDNs is None
 
-    class TestAllocateAndConfigure:
+    class TestAssignResourcesAndConfigure:
         """
-        Class containing fixtures and tests of the MccsController's
-        :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-        :py:meth:`~ska.low.mccs.MccsController.Release` and
-        :py:meth:`~ska.low.mccs.MccsController.Configure` commands
+        Class containing fixtures and tests of the MccsSubarray's
+        :py:meth:`~ska_tango_base.SKASubarray.AssignResources` and
+        :py:meth:`~ska_tango_base.SKASubarray.ReleaseResources` and
+        :py:meth:`~ska_tango_base.SKASubarray.Configure` commands
         """
 
         @pytest.fixture()
@@ -269,10 +269,10 @@ class TestMccsSubarray:
             Fixture that registers device proxy mocks prior to patching.
             The default fixture is overridden here to ensure that mock
             subarrays and stations respond suitably to actions taken on
-            them by the controller as part of the controller's
-            :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-            :py:meth:`~ska.low.mccs.MccsController.Release` and
-            :py:meth:`~ska.low.mccs.MccsController.Configure` commands
+            them as part of the controller's
+            :py:meth:`~ska_tango_base.SKASubarray.AssignResources` and
+            :py:meth:`~ska_tango_base.SKASubarray.ReleaseResources` and
+            :py:meth:`~ska_tango_base.SKASubarray.Configure` commands
 
             :param mock_factory: a factory for
                 :py:class:`tango.DeviceProxy` mocks
@@ -284,19 +284,21 @@ class TestMccsSubarray:
             def _subarray_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsSubarray`
-                device. The returned mock will respond suitably to
-                actions taken on it by the controller as part of the
-                controller's
-                :py:meth:`~ska.low.mccs.MccsController.Allocate`,
-                :py:meth:`~ska.low.mccs.MccsController.Release` and
-                :py:meth:`~ska.low.mccs.MccsController.Configure`
+                connects to an
+                :py:class:`~ska.low.mccs.subarray.MccsSubarray` device.
+                The returned mock will respond suitably to
+                :py:meth:`~ska_tango_base.SKASubarray.AssignResources`
+                and
+                :py:meth:`~ska_tango_base.SKASubarray.ReleaseResources`
+                and
+                :py:meth:`~ska_tango_base.SKASubarray.Configure`
                 commands.
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
                     connects to an
-                    :py:class:`~ska.low.mccs.MccsSubarray` device.
-                :rtype: :py:class:`unittest.Mock`
+                    :py:class:`~ska.low.mccs.subarray.MccsSubarray`
+                    device.
+                :rtype: :py:class:`unittest.mock.Mock`
                 """
                 mock_subarray = mock_factory()
                 mock_subarray.On.return_value = (
@@ -328,18 +330,20 @@ class TestMccsSubarray:
             def _station_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsStation`
-                device. The returned mock will respond suitably to
-                actions taken on it by the controller as part of the
-                controller's
-                :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-                :py:meth:`~ska.low.mccs.MccsController.Release`
+                connects to an
+                :py:class:`~ska.low.mccs.station.MccsStation` device.
+                The returned mock will respond suitably to actions taken
+                on it by the controller as part of the controller's
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Allocate`
+                and
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Release`
                 commands.
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
                     connects to an
-                    :py:class:`~ska.low.mccs.MccsStation` device.
-                :rtype: :py:class:`unittest.Mock`
+                    :py:class:`~ska.low.mccs.station.MccsStation`
+                    device.
+                :rtype: :py:class:`unittest.mock.Mock`
                 """
                 mock = mock_factory()
                 mock.subarrayId = 0
@@ -348,18 +352,18 @@ class TestMccsSubarray:
             def _subarraybeam_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsSubarrayBeam`
+                connects to an :py:class:`~ska.low.mccs.subarray.MccsSubarrayBeam`
                 device. The returned mock will respond suitably to
                 actions taken on it by the subarray as part of the
                 subarray's
-                :py:meth:`~ska.low.mccs.MccsSubarray.Allocate` and
-                :py:meth:`~ska.low.mccs.MccsSubarray.Release`
+                :py:meth:`~ska_tango_base.SKASubarray.Allocate` and
+                :py:meth:`~ska_tango_base.SKASubarray.Release`
                 commands.
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
                     connects to an
-                    :py:class:`~ska.low.mccs.MccsSubarrayBeam` device.
-                :rtype: :py:class:`unittest.Mock`
+                    :py:class:`~ska.low.mccs.subarray.MccsSubarrayBeam` device.
+                :rtype: :py:class:`unittest.mock.Mock`
                 """
                 mock = mock_factory()
                 mock.healthState = HealthState.OK
@@ -587,7 +591,7 @@ class TestMccsSubarrayCommandClasses:
             :py:class:`ska_tango_base.SKASubarrayStateModel`
         :param mocker: the pytest `mocker` fixture is a wrapper around
             the `unittest.mock` package
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         subarray_state_model._straight_to_state(
             op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
@@ -643,10 +647,11 @@ class TestMccsSubarrayCommandClasses:
         :param subarray_state_model: the state model that this test uses
             to check that it is allowed to run, and that it drives
             with actions.
-        :type subarray_state_model: :py:class:`SKASubarrayStateModel`
+        :type subarray_state_model:
+            :py:class:`ska_tango_base.SKASubarrayStateModel`
         :param mocker: the pytest `mocker` fixture is a wrapper around
             the `unittest.mock` package
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         subarray_state_model._straight_to_state(
             op_state=DevState.ON,

@@ -119,9 +119,9 @@ class TestUtils:
         containing these keys.
 
         :param stations: value of "stations" key in JSON string
-        :type stations: could be anything JSON-serialisable
+        :type stations: list(str)
         :param tiles: value of "tiles" key in JSON string
-        :type tiles: could be anything JSON-serialisable
+        :type tiles: list(str)
         :return: the args extracted from the json input string
         :rtype: dict
         """

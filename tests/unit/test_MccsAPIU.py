@@ -310,7 +310,7 @@ class TestAPIUHardwareManager:
         Return a manager for APIU hardware.
 
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
 
         :return: a manager for APIU hardware
         :rtype:
@@ -324,7 +324,7 @@ class TestAPIUHardwareManager:
         simulation mode.
 
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -355,7 +355,7 @@ class TestAPIUHardwareManager:
             :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         voltage = 3.5
         temperature = 120
@@ -596,7 +596,7 @@ class TestMccsAPIU(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         assert device_under_test.healthState == HealthState.OK
 

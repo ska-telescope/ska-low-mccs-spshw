@@ -60,7 +60,7 @@ class TestPowerManagement:
         device.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         controller = device_context.get_device("controller")
         subrack = device_context.get_device("subrack_01")

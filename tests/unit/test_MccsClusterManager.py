@@ -53,7 +53,7 @@ class TestMccsClusterManagerDevice:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         assert device_under_test.healthState == HealthState.OK
 

@@ -14,11 +14,11 @@ from ska.low.mccs import MccsDeviceProxy
 def pytest_itemcollected(item):
     """
     pytest hook implementation; add the "forked" custom mark to all
-    tests that use the :py:meth:`device_context` fixture, causing them
-    to be sandboxed in their own process.
+    tests that use the ``device_context`` fixture, causing them to be
+    sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
-    :type item: a collected test
+    :type item: :py:class:`pytest.Item`
     """
     if "device_under_test" in item.fixturenames:
         item.add_marker("forked")
@@ -47,10 +47,10 @@ def mock_factory(mocker):
     behaviours.
 
     :param mocker: a wrapper around the :py:mod:`unittest.mock` package
-    :type mocker: obj
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an instance)
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
     """
     return mocker.Mock
 
@@ -58,12 +58,12 @@ def mock_factory(mocker):
 @pytest.fixture()
 def mock_device_proxies(mocker, mock_factory, initial_mocks):
     """
-    Fixture that sets ups :py:class:`ska.low.mccs.MccsDeviceProxy` to
+    Fixture that sets ups :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to
     build itself around a mock factory instead of
     :py:class:`tango.DeviceProxy`.
 
     :param mocker: fixture that wraps unittest.Mock
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
     :param mock_factory: a factory for producing
         :py:class:`tango.DeviceProxy` mocks
     :type mock_factory: object
@@ -142,20 +142,20 @@ def devices_to_load(device_to_load):
 @pytest.fixture()
 def device_under_test(device_context, device_to_load):
     """
-    Creates and returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to
+    Creates and returns a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to
     the device under test, in a
     :py:class:`tango.test_context.MultiDeviceTestContext`.
 
     :param device_context: a test context for a set of tango devices
-    :type device_context: :py:class:`tango.MultiDeviceTestContext`
+    :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
     :param device_to_load: fixture that provides a specification of a
         single device to load; used only in unit testing where tests
         will only ever stand up one device at a time.
     :type device_to_load: dict
 
-    :returns: a :py:class:`ska.low.mccs.MccsDeviceProxy` under a
+    :returns: a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` under a
         :py:class:`tango.test_context.MultiDeviceTestContext`
-    :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :rtype: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
     """
     device = device_context.get_device(device_to_load["device"])
     return device
@@ -167,10 +167,10 @@ def mock_callback(mocker):
     Fixture that returns a mock to use as a callback.
 
     :param mocker: fixture that wraps unittest.Mock
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a mock to pass as a callback
-    :rtype: :py:class:`unittest.Mock`
+    :rtype: :py:class:`unittest.mock.Mock`
     """
     return mocker.Mock()
 
@@ -181,10 +181,10 @@ def mock_event_callback(mocker):
     Fixture that returns a mock for use as an event callback.
 
     :param mocker: fixture that wraps unittest.Mock
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a mock to pass as an event callback
-    :rtype: :py:class:`unittest.Mock`
+    :rtype: :py:class:`unittest.mock.Mock`
     """
 
     class _MockEventCallback(mocker.Mock):

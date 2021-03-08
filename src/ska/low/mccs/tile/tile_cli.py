@@ -79,7 +79,7 @@ class CliMeta(type):
                 is raised by the method.
 
             :return: whatever the method returns
-            :rtype: obj
+            :rtype: object
             """
             try:
                 return method(*args, **kwargs)

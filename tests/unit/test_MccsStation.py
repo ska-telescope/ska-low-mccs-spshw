@@ -56,10 +56,10 @@ def mock_factory(mocker):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
@@ -83,7 +83,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -99,7 +99,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -158,7 +158,7 @@ class TestMccsStation:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
 
         # The device has subscribed to healthState change events on
@@ -386,8 +386,8 @@ class TestMccsStation:
 
 class TestInitCommand:
     """
-    Contains the tests of :py:class:`~ska.low.mccs.MccsStation`'s
-    :py:class:`~ska.low.mccs.MccsStation.InitCommand`.
+    Contains the tests of :py:class:`~ska.low.mccs.station.MccsStation`'s
+    :py:class:`~ska.low.mccs.station.MccsStation.InitCommand`.
     """
 
     class HangableInitCommand(MccsStation.InitCommand):
@@ -456,7 +456,7 @@ class TestInitCommand:
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         mock_device = mocker.MagicMock()
         mock_state_model = mocker.Mock()

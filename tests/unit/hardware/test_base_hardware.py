@@ -74,7 +74,7 @@ class TestBaseHardware:
             :type hardware_health_evaluator:
                 :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
             :param mocker: fixture that wraps unittest.Mock
-            :type mocker: wrapper for :py:mod:`unittest.mock`
+            :type mocker: :py:class:`pytest_mock.mocker`
             :param connection_status: the status of the simulated
                 software-hardware connection
             :type connection_status:
@@ -114,7 +114,7 @@ class TestBaseHardware:
             :type hardware_driver:
                 :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
             :param mocker: fixture that wraps unittest.Mock
-            :type mocker: wrapper for :py:mod:`unittest.mock`
+            :type mocker: :py:class:`pytest_mock.mocker`
             """
             mock_callback = mocker.Mock()
             another_mock_callback = mocker.Mock()

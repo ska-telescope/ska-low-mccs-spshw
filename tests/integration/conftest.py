@@ -17,7 +17,7 @@ def pytest_itemcollected(item):
     sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
-    :type item: a collected test
+    :type item: :py:class:`pytest.Item`
     """
     if "device_context" in item.fixturenames:
         item.add_marker("forked")
@@ -27,9 +27,9 @@ def pytest_itemcollected(item):
 def patch_device_proxy():
     """
     Fixture that provides a patcher that set up
-    :py:class:`ska.low.mccs.MccsDeviceProxy` to use a connection factory
+    :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to use a connection factory
     that wraps :py:class:`tango.DeviceProxy` with a workaround for a bug
-    in :py:class:`tango.MultiDeviceTestContext`, then returns the host
+    in :py:class:`tango.test_context.MultiDeviceTestContext`, then returns the host
     and port used by the patch.
 
     This is a factory; the patch won't be applied unless you actually
@@ -87,9 +87,9 @@ def tango_config(patch_device_proxy):
     the Tango system should be established and run.
 
     This implementation ensures that
-    :py:class:`ska.low.mccs.MccsDeviceProxy` uses a connection factory
+    :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` uses a connection factory
     that wraps :py:class:`tango.DeviceProxy` with a workaround for a bug
-    in :py:class:`tango.MultiDeviceTestContext`.
+    in :py:class:`tango.test_context.MultiDeviceTestContext`.
 
     :param patch_device_proxy: the host and port used by the wrapped
         :py:class:`tango.DeviceProxy`

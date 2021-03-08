@@ -51,11 +51,11 @@ def subrack_hardware_manager(logger, mock_callback):
         interface of :py:class:`logging.Logger`
     :type logger: :py:class:`logging.Logger`
     :param mock_callback: a mock to pass as a callback
-    :type mock_callback: :py:class:`unittest.Mock`
+    :type mock_callback: :py:class:`unittest.mock.Mock`
 
     :return: a hardware manager for the MCCS subrack device, in hardware
         simulation mode
-    :rtype: SubrackHardwareManager
+    :rtype: :py:class:`ska.low.mccs.subrack.subrack_device.SubrackHardwareManager`
     """
     return SubrackHardwareManager(SimulationMode.TRUE, mock_callback)
 
@@ -74,7 +74,7 @@ class TestSubrackHardwareManager:
             interface of :py:class:`logging.Logger`
         :type logger: :py:class:`logging.Logger`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -88,7 +88,7 @@ class TestSubrackHardwareManager:
 
         :param subrack_hardware_manager: a manager for subrack hardware
         :type subrack_hardware_manager:
-            :py:class:`~ska.low.mccs.subrack.SubrackHardwareManager`
+            :py:class:`~ska.low.mccs.subrack.subrack_device.SubrackHardwareManager`
         """
         assert subrack_hardware_manager.simulation_mode == SimulationMode.TRUE
         with pytest.raises(
@@ -196,7 +196,7 @@ class TestCommon:
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
-        :type expected_value: any
+        :type expected_value: object
         """
         hardware_under_test.connect()
         hardware_under_test.on()

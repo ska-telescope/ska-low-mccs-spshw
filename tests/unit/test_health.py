@@ -37,10 +37,10 @@ def mock_factory(mocker):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
@@ -63,7 +63,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -79,7 +79,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -139,9 +139,9 @@ class TestDeviceHealthPolicy:
         Test that this policy computes health as expected.
 
         :param admin_mode: the adminMode of the device
-        :type admin_mode: AdminMode
+        :type admin_mode: :py:class:`~ska_tango_base.control_model.AdminMode`
         :param health_state: the reported healthState of the device
-        :type health_state: HealthState
+        :type health_state: :py:class:`~ska_tango_base.control_model.HealthState`
         :param expected_health: the expected value for health, as
             evaluated by the policy under test, or None if the policy
             should determine that the health state of the device should
@@ -210,7 +210,7 @@ class TestDeviceHealthRollupPolicy:
         :param hardware_health: the health of the hardware managed under
             this policy, or None if no hardware is managed under this
             policy
-        :type hardware_health: HealthState
+        :type hardware_health: :py:class:`~ska_tango_base.control_model.HealthState`
         :param device_healths: the reported healthState values of the
             devices managed by this policy, or None if no devices are
             managed under this policy. If a list is provided, the
@@ -244,9 +244,9 @@ class TestDeviceHealthMonitor:
         health when the device emits relevant events.
 
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -301,9 +301,9 @@ class TestHealthMonitor:
         when devices emit relevant events.
 
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -378,9 +378,9 @@ class TestHealthModel:
         :param with_devices: whether the model manages devices or not
         :type with_devices: bool
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -430,9 +430,9 @@ class TestMutableHealthMonitor:
         MutableHealthMonitor behaves as expected.
 
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -505,9 +505,9 @@ class TestMutableHealthModel:
         :param with_hardware: whether the model manages hardware or not
         :type with_hardware: bool
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn

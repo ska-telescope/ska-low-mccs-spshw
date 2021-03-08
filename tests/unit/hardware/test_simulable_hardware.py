@@ -99,8 +99,7 @@ class TestSimulableHardware:
 
         :param request: A pytest object giving access to the requesting
             test context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
-
+        :type request: :py:class:`pytest.FixtureRequest`
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
         """
@@ -117,8 +116,7 @@ class TestSimulableHardware:
 
         :param request: A pytest object giving access to the requesting
             test context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
-
+        :type request: :py:class:`pytest.FixtureRequest`
         :return: a hardware simulator
         :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
         """
@@ -138,7 +136,7 @@ class TestSimulableHardware:
 
         :param request: A pytest object giving access to the requesting
             test context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :type request: :py:class:`pytest.FixtureRequest`
         :param hardware_driver: the hardware driver to be returned by
             by this hardware factory when not in simulation mode
         :type hardware_driver:

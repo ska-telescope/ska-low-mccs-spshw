@@ -131,7 +131,7 @@ class AntennaApiuProxy:
         """
         self._apiu = backoff_connect(self._fqdn, self._logger, wait=True)
         self._apiu_event_handler = EventSubscriptionHandler(
-            self._apiu, self._fqdn, "areAntennasOn", self._logger
+            self._apiu, "areAntennasOn", self._logger
         )
         self._apiu_event_handler.register_callback(self._apiu_power_changed)
 

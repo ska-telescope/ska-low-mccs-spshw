@@ -330,11 +330,6 @@ class MCCSDeviceTestContext:
         Returns a :py:class:`tango.DeviceProxy` to a device as specified
         by the device name provided in the configuration file.
 
-        This method also patches a bug in :py:class:`tango.DeviceProxy`,
-        namely that it's :py:meth:`~tango.DeviceProxy.get_fqdn` method
-        returns " " when run under a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-
         :param name: the name of the device for which a
             :py:class:`tango.DeviceProxy` is sought.
         :type name: str
@@ -344,7 +339,6 @@ class MCCSDeviceTestContext:
         """
         fqdn = self._devices_info.fqdn_map[name]
         device = self._multi_device_test_context.get_device(fqdn)
-        device.get_fqdn = lambda: fqdn
         return device
 
 

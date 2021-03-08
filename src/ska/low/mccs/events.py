@@ -65,19 +65,13 @@ class EventSubscriptionHandler:
     It allows registration of multiple callbacks.
     """
 
-    def __init__(self, device_proxy, fqdn, event_name, logger):
+    def __init__(self, device_proxy, event_name, logger):
         """
         Initialise a new EventSubscriptionHandler.
 
         :param device_proxy: proxy to the device upon which the change
             event is subscribed
         :type device_proxy: :py:class:`tango.DeviceProxy`
-        :param fqdn: fqdn of the device_proxy (this is passed as a
-            workaround for the problem that
-            :py:meth:`tango.DeviceProxy.get_fqdn()` returns an empty
-            string when run under a
-            :py:class:`tango.test_context.MultiDeviceTestContext`).
-        :type fqdn: str
         :param event_name: name of the event; that is, the name of the
             attribute for which change events are subscribed.
         :type event_name: str
@@ -87,8 +81,6 @@ class EventSubscriptionHandler:
         self._logger = logger
 
         self._device = device_proxy
-        self._fqdn = fqdn
-
         self._event_name = event_name
         self._event_value = None
         self._event_quality = None
@@ -261,10 +253,10 @@ class DeviceEventManager:
         :param event: the event for which change events are subscribed.
         :type event: str
 
-        :return: a device event manager for the device at a given FQDN
+        :return: a device event manager for the device
         :rtype: :py:class:`.DeviceEventManager`
         """
-        return EventSubscriptionHandler(self._device, self._fqdn, event, self._logger)
+        return EventSubscriptionHandler(self._device, event, self._logger)
 
 
 class EventManager:

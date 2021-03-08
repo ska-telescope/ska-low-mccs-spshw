@@ -87,7 +87,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.OK
 
         # check that station_1 and only station_1 is allocated
-        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
+        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -108,7 +108,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.FAILED
 
         # check no side-effects
-        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
+        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -133,8 +133,8 @@ class TestMccsIntegration:
 
         # check
         assert list(subarray_1.stationFQDNs) == [
-            station_1.get_fqdn(),
-            station_2.get_fqdn(),
+            station_1.dev_name(),
+            station_2.dev_name(),
         ]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
@@ -183,8 +183,8 @@ class TestMccsIntegration:
         )
 
         # check initial state
-        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
-        assert list(subarray_2.stationFQDNs) == [station_2.get_fqdn()]
+        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
+        assert list(subarray_2.stationFQDNs) == [station_2.dev_name()]
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 2
         assert tile_1.subarrayId == 1
@@ -199,7 +199,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.OK
 
         # check
-        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
+        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
@@ -215,7 +215,7 @@ class TestMccsIntegration:
         assert result_code == ResultCode.FAILED
 
         # check no side-effect to failed release
-        assert list(subarray_1.stationFQDNs) == [station_1.get_fqdn()]
+        assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0

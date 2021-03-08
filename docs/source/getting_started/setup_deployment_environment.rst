@@ -27,7 +27,7 @@ deployment of our project charts to the cluster.
 The following state chart summarises the steps to deploying MCCS.
 Detailed instructions follow.
 
-.. uml:: setup_overview.uml
+.. image:: setup_overview.uml
 
 
 Prerequisites and initial setup

@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-409 - Race condition workaround
 * MCCS-335 - Added typehints to MCCS controller_device
 * MCCS-384 - docstring coverage to 100%
 * MCCS-378 - Support for simulators with dynamic values

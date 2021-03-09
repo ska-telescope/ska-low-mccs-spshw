@@ -47,7 +47,8 @@ __all__ = [
 
 class ClusterHealthEvaluator(HardwareHealthEvaluator):
     """
-    A simple :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
+    A simple
+    :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator`
     for a cluster.
 
     Implements a policy to decide on the health state of the cluster

@@ -4,6 +4,7 @@ tests for TMC and MCCS interactions.
 """
 import backoff
 import json
+import time
 
 import pytest
 from pytest_bdd import scenario, given, when, then, parsers
@@ -224,6 +225,19 @@ def tmc_tells_mccs_controller_to_start_up(devices):
     :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     """
     assert_command(device=devices["controller"], command="Startup")
+
+    # TODO: Workaround for bug MCCS-409
+    #
+    # The stations have just turned on, and have published change
+    # events on their healthState. But events move through the event
+    # subsystem asynchronously, so the controller might not have
+    # received these events yet. Until it receives those change events,
+    # and updates its record of station health, it will refuse to
+    # allocate those stations to a subarray.
+    #
+    # For now, let's sleep for a secone, to allow time for the events to
+    # arrive. In future we need a better solution to this.
+    time.sleep(1.0)
 
 
 @when(parsers.parse("tmc turns mccs controller {device_state}"))

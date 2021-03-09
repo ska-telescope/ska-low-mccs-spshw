@@ -103,7 +103,7 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type is_connectible: bool
         :type fail_connect: bool
         :param power_mode: the initial power mode of this module
-        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         self._temperature = temperature
         self._voltage_when_on = voltage
@@ -309,7 +309,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             management board
         :type subrack_fan_speeds: list(float)
         :param subrack_fan_mode: the initial fan mode of the subrack backplane
-        :type subrack_fan_mode: list(:py:class:`ska.low.mccs.hardware.ControlMode`)
+        :type subrack_fan_mode: list(:py:class:`ska.low.mccs.hardware.base_hardware.ControlMode`)
         :param power_supply_currents: the initial currents for the 2 power supply in the
             subrack
         :type power_supply_currents: list(float)
@@ -321,7 +321,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type power_supply_fan_speeds: list(float)
         :param tpm_power_modes: the initial power modes of the TPMs
         :type tpm_power_modes:
-            list(:py:class:`ska.low.mccs.hardware.PowerMode`)
+            list(:py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`)
         :param tpm_present: the initial TPM board present on subrack
         :type tpm_present: list(bool)
         :param is_connectible: whether we expect to be able to connect
@@ -336,7 +336,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             hardware. For example, if the initial mode is ON, then
             this simulator will simulate connecting to hardware and
             finding it to be already powered on.
-        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        :type power_mode:
+            :py:class:`~ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         :param _bays: optional list of subrack bay simulators to be
             used. This is for testing purposes only, allowing us to
             inject our own bays instead of letting this simulator create
@@ -504,7 +505,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         Return the subrack fan Mode.
 
         :return: subrack fan mode AUTO or  MANUAL
-        :rtype: list(:py:class:`ska.low.mccs.hardware.ControlMode`)
+        :rtype: list(:py:class:`ska.low.mccs.hardware.base_hardware.ControlMode`)
         """
         self.check_power_mode(PowerMode.ON)
         return self._subrack_fan_mode
@@ -859,7 +860,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param fan_id: id of the selected fan accepted value: 1-4
         :type fan_id: int
         :param mode: AUTO or MANUAL
-        :type mode: :py:class:`ska.low.mccs.hardware.ControlMode`
+        :type mode: :py:class:`ska.low.mccs.hardware.base_hardware.ControlMode`
         """
         self.check_power_mode(PowerMode.ON)
         self.subrack_fan_mode[fan_id - 1] = mode
@@ -879,11 +880,11 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
     def check_power_mode(self, power_mode, error=None):
         """
         Overrides the
-        :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareDriver.check_power_mode`
+        :py:meth:`~ska.low.mccs.hardware.power_mode_hardware.BasePowerModeHardwareDriver.check_power_mode`
         helper method with a more specific error message
 
         :param power_mode: the asserted power mode
-        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         :param error: the error message for the exception to be raise if
             not connected
         :type error: str

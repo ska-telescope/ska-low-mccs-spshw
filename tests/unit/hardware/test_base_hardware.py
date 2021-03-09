@@ -24,14 +24,14 @@ class TestBaseHardware:
     * :py:class:`ska.low.mccs.hardware.HardwareDriver`
     * :py:class:`ska.low.mccs.hardware.HardwareFactory`
     * :py:class:`ska.low.mccs.hardware.HardwareHealthEvaluator`
-    * :py:class:`ska.low.mccs.hardware.HardwareManager`
+    * :py:class:`ska.low.mccs.hardware.base_hardware.HardwareManager`
     """
 
     @pytest.fixture()
     def hardware_manager(self, hardware_factory, hardware_health_evaluator):
         """
         Fixture that returns an
-        :py:class:`~ska.low.mccs.hardware.HardwareManager` for
+        :py:class:`~`ska.low.mccs.hardware.base_hardware.HardwareManager` for
         testing
 
         :param hardware_factory: the hardware factory used by this
@@ -45,7 +45,7 @@ class TestBaseHardware:
 
         :return: a hardware manager
         :rtype:
-            :py:class:`~ska.low.mccs.hardware.HardwareManager`
+            :py:class:`~`ska.low.mccs.hardware.base_hardware.HardwareManager`
         """
         return HardwareManager(hardware_factory, hardware_health_evaluator)
 
@@ -96,7 +96,7 @@ class TestBaseHardware:
     class TestHardwareManager:
         """
         This class contains the tests for the
-        :py:class:`~ska.low.mccs.hardware.HardwareManager` class
+        :py:class:`~`ska.low.mccs.hardware.base_hardware.HardwareManager` class
 
         (The HardwareManager class is a base class for classes that
         manage hardware on behalf of a device.

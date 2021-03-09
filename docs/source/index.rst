@@ -71,10 +71,12 @@ prototype for the `Square Kilometre Array`_.
    :maxdepth: 1
    :caption: Other modules
 
+   api/base_hardware
    api/events
-   api/hardware
    api/health
    api/pool
+   api/power_mode_hardware
+   api/simulable_hardware
    api/utils
 
 

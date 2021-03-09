@@ -105,11 +105,11 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
     def check_power_mode(self, power_mode, error=None):
         """
         Overrides the
-        :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareDriver.check_power_mode`
+        :py:meth:`~ska.low.mccs.hardware.power_mode_hardware.BasePowerModeHardwareDriver.check_power_mode`
         helper method with a more specific error message
 
         :param power_mode: the asserted power mode
-        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         :param error: the error message for the exception to be raised
             if not connected
         :type error: str
@@ -170,7 +170,8 @@ class APIUSimulator(OnOffHardwareSimulator):
             hardware. For example, if the initial mode is ON, then
             this simulator will simulate connecting to hardware and
             finding it to be already powered on.
-        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        :type power_mode:
+            :py:class:`~ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         self._voltage = None
         self._current = None
@@ -416,11 +417,11 @@ class APIUSimulator(OnOffHardwareSimulator):
     def check_power_mode(self, power_mode, error=None):
         """
         Overrides the
-        :py:meth:`~ska.low.mccs.hardware.BasePowerModeHardwareDriver.check_power_mode`
+        :py:meth:`~ska.low.mccs.hardware.power_mode_hardware.BasePowerModeHardwareDriver.check_power_mode`
         helper method with a more specific error message
 
         :param power_mode: the asserted power mode
-        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         :param error: the error message for the exception to be raise if
             not connected
         :type error: str

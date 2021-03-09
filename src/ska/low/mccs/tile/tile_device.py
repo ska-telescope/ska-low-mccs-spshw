@@ -12,7 +12,8 @@ SKA MCCS Tile Device Server.
 
 The Tile Device represents the TANGO interface to a Tile (TPM) unit
 """
-__all__ = ["MccsTile", "main"]
+__all__ = ["MccsTile", "TilePowerManager", "main"]
+
 
 import json
 import numpy as np
@@ -141,7 +142,7 @@ class TilePowerManager:
         Return the power mode of this PowerManager object.
 
         :return: the power mode of thei PowerManager object
-        :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        :rtype: :py:class:`~ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         return self._power_mode
 
@@ -185,7 +186,7 @@ class TilePowerManager:
         hardware.
 
         :return: the power mode of the hardware
-        :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :rtype: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         try:
             subrack_state = self._subrack.state()
@@ -209,7 +210,8 @@ class TilePowerManager:
         Update the power mode, ensuring that callbacks are called.
 
         :param power_mode: the power mode of the hardware
-        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :type power_mode:
+            :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         if self._power_mode != power_mode:
             self._power_mode = power_mode
@@ -661,7 +663,8 @@ class MccsTile(SKABaseDevice):
             ``self.state_model.perform_action("tpm_was_turned_off")``.
 
         :param power_mode: the new power_mode
-        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        :type power_mode:
+            :py:class:`~ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         if self.get_state() == DevState.INIT:
             # Don't respond to power mode changes while initialising.

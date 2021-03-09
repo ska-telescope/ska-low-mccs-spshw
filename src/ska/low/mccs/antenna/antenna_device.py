@@ -77,7 +77,7 @@ class AntennaHardwareHealthEvaluator(HardwareHealthEvaluator):
         :param hardware: the "hardware" for which health is being
             evaluated
         :type hardware:
-            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -196,7 +196,8 @@ class AntennaApiuProxy:
         Return the power mode of this antenna.
 
         :return: the power mode of this antenna
-        :rtype: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        :rtype:
+            :py:class:`~ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         return self._power_mode
 
@@ -270,7 +271,7 @@ class AntennaApiuProxy:
         hardware.
 
         :return: the power mode of the hardware
-        :rtype: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :rtype: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         try:
             apiu_state = self._apiu.state()
@@ -294,7 +295,7 @@ class AntennaApiuProxy:
         Update the power mode, ensuring that callbacks are called.
 
         :param power_mode: the power mode of the hardware
-        :type power_mode: :py:class:`ska.low.mccs.hardware.PowerMode`
+        :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         if self._power_mode != power_mode:
             self._power_mode = power_mode
@@ -618,7 +619,8 @@ class MccsAntenna(SKABaseDevice):
             ``self.state_model.perform_action("antenna_was_turned_off")``.
 
         :param power_mode: the new power_mode
-        :type power_mode: :py:class:`~ska.low.mccs.hardware.PowerMode`
+        :type power_mode:
+            :py:class:`~ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         """
         if self.get_state() == DevState.INIT:
             # Don't respond to power mode changes while initialising.

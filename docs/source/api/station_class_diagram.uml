@@ -1,0 +1,33 @@
+@startuml
+class MccsStation
+MccsStation : +__init__()
+MccsStation : +do()
+MccsStation : -_initialise_connections()
+MccsStation : -_initialise_device_pool()
+MccsStation : -_initialise_health_monitoring()
+MccsStation : +interrupt()
+MccsStation : +always_executed_hook()
+MccsStation : +delete_device()
+MccsStation : +health_changed()
+MccsStation : +subarrayId()
+MccsStation : +transientBufferFQDN()
+MccsStation : +isCalibrated()
+MccsStation : +isConfigured()
+MccsStation : +calibrationJobId()
+MccsStation : +daqJobId()
+MccsStation : +dataDirectory()
+MccsStation : +beamFQDNs()
+MccsStation : +delayCentre()
+MccsStation : +calibrationCoefficients()
+MccsStation : +init_command_objects()
+MccsStation : +Configure()
+MccsStation : +InitialSetup()
+MccsStation : -_thread
+MccsStation : -_lock
+MccsStation : -_interrupt
+MccsStation : -_health_state
+MccsStation : -_subarray_id
+MccsStation : -_delay_centre
+
+SKAObsDevice <|-- MccsStation
+@enduml

@@ -84,9 +84,9 @@ class TestSimulableHardware:
     """
     Contains tests of the hardware classes that support simulation:
 
-    * :py:class:`ska.low.mccs.hardware.HardwareSimulator`
-    * :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
-    * :py:class:`ska.low.mccs.hardware.SimulableHardwareManager`
+    * :py:class:`ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
+    * :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
+    * :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareManager`
     """
 
     @pytest.fixture()
@@ -101,7 +101,7 @@ class TestSimulableHardware:
             test context.
         :type request: :py:class:`pytest.FixtureRequest`
         :return: a hardware simulator
-        :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+        :rtype: :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
         """
         kwargs = getattr(request, "param", {"is_connectible": True})
         return HardwareSimulator(**kwargs)
@@ -118,7 +118,7 @@ class TestSimulableHardware:
             test context.
         :type request: :py:class:`pytest.FixtureRequest`
         :return: a hardware simulator
-        :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+        :rtype: :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
         """
         kwargs = getattr(request, "param", {"is_connectible": True})
         return HardwareSimulator(**kwargs)
@@ -140,21 +140,21 @@ class TestSimulableHardware:
         :param hardware_driver: the hardware driver to be returned by
             by this hardware factory when not in simulation mode
         :type hardware_driver:
-            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
         :param static_hardware_simulator: the hardware simulator to be
             returned by this hardware factory when in simulation mode
             and test mode
         :type static_hardware_simulator:
-            :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+            :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
         :param dynamic_hardware_simulator: the hardware simulator to be
             returned by this hardware factory when in simulation mode
             but not in test mode
         :type dynamic_hardware_simulator:
-            :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+            :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
 
         :return: a hardware factory for simulable hardware
         :rtype:
-            :py:class:`~ska.low.mccs.hardware.SimulableHardwareFactory`
+            :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         """
         return SimulableHardwareFactory(
             True,
@@ -167,21 +167,21 @@ class TestSimulableHardware:
     def hardware_manager(self, hardware_factory, hardware_health_evaluator):
         """
         Fixture that returns a
-        :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager` for
+        :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareManager` for
         testing
 
         :param hardware_factory: the hardware factory used by this
             hardware manager
         :type hardware_factory:
-            :py:class:`~ska.low.mccs.hardware.SimulableHardwareFactory`
+            :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         :param hardware_health_evaluator: the hardware health evaluator
             used by this hardware manager
         :type hardware_health_evaluator:
-            :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator`
 
         :return: a simulable hardware manager
         :rtype:
-            :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager`
+            :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareManager`
         """
         return SimulableHardwareManager(hardware_factory, hardware_health_evaluator)
 
@@ -213,11 +213,11 @@ class TestSimulableHardware:
 
             :param static_hardware_simulator: the hardware simulator under test
             :type static_hardware_simulator:
-                :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param connection_status: the status of the simulated
                 software-hardware connection
             :type connection_status:
-                :py:class:`ska.low.mccs.hardware.ConnectionStatus`
+                :py:class:`ska.low.mccs.hardware.base_hardware.ConnectionStatus`
             """
             assert (
                 static_hardware_simulator.connection_status
@@ -233,7 +233,7 @@ class TestSimulableHardware:
 
             :param static_hardware_simulator: the hardware simulator under test
             :type static_hardware_simulator:
-                :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             """
             assert (
                 static_hardware_simulator.connection_status
@@ -268,7 +268,7 @@ class TestSimulableHardware:
     class TestSimulableHardwareFactory:
         """
         This class contains tests of the
-        :py:class:`~ska.low.mccs.hardware.SimulableHardwareFactory`
+        :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         class.
         """
 
@@ -282,15 +282,15 @@ class TestSimulableHardware:
             :param hardware_driver: the hardware driver that the
                 hardware factory returns when not in simulation mode
             :type hardware_driver:
-                :py:class:`ska.low.mccs.hardware.HardwareDriver`
+                :py:class:`ska.low.mccs.hardware.base_hardware.HardwareDriver`
             :param static_hardware_simulator: the hardware simulator that the
                 hardware factory returns when in simulation mode
             :type static_hardware_simulator:
-                :py:class:`ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param hardware_factory: a hardware factory that returns a
                 driver or simulator depending on its simulation mode
             :type hardware_factory:
-                :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+                :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
             """
             # check precondition - the test doesn't make sense unless
             # these are unequal
@@ -321,21 +321,21 @@ class TestSimulableHardware:
             :param hardware_driver: the hardware driver that the
                 hardware factory returns when not in simulation mode
             :type hardware_driver:
-                :py:class:`ska.low.mccs.hardware.HardwareDriver`
+                :py:class:`ska.low.mccs.hardware.base_hardware.HardwareDriver`
             :param static_hardware_simulator: the hardware simulator
                 that the hardware factory returns when in simulation
                 mode and test mode
             :type static_hardware_simulator:
-                :py:class:`ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param dynamic_hardware_simulator: the hardware simulator
                 that the hardware factory returns when in simulation
                 mode but not in test mode
             :type dynamic_hardware_simulator:
-                :py:class:`ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param hardware_factory: a hardware factory that returns a
                 driver or simulator depending on its simulation mode
             :type hardware_factory:
-                :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+                :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
             """
             # check precondition - the test doesn't make sense unless
             # these are unequal
@@ -373,13 +373,13 @@ class TestSimulableHardware:
             :param hardware_driver: the hardware driver (simulated for
                 testing purposes)
             :type hardware_driver:
-                :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param static_hardware_simulator: the hardware simulator
             :type static_hardware_simulator:
-                :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param hardware_manager: the hardware manager under test
             :type hardware_manager:
-                :py:class:`~ska.low.mccs.hardware.SimulableHardwareManager`
+                :py:class:`~ska.low.mccs.hardware.simulable_hardware.SimulableHardwareManager`
             """
             assert hardware_manager.simulation_mode
             assert hardware_manager.health == HealthState.UNKNOWN

@@ -38,7 +38,7 @@ from ska.low.mccs.health import HealthModel
 
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator` for a
+    A :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator` for a
     subarray beam.
 
     A Subarray beam doesn't have hardware as such. Here we are
@@ -60,7 +60,7 @@ class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
         :param hardware: the "hardware" for which health is being
             evaluated
         :type hardware:
-            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -101,7 +101,7 @@ class SubarrayBeamDriver(HardwareDriver):
         Returns the status of the driver-hardware connection.
 
         :return: the status of the driver-hardware connection.
-        :rtype: py:class:`ska.low.mccs.hardware.ConnectionStatus`
+        :rtype: py:class:`ska.low.mccs.hardware.base_hardware.ConnectionStatus`
         """
         return ConnectionStatus.CONNECTED
 

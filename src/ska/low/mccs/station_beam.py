@@ -39,7 +39,7 @@ from ska.low.mccs.health import MutableHealthModel
 
 class StationBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator` for a
+    A :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator` for a
     station beam. A station beam doesn't have hardware as such. Here we
     are pretending it does because we have to set health to DEGRADED if
     the beam is not locked, so for now we pretend that the
@@ -59,7 +59,7 @@ class StationBeamHealthEvaluator(HardwareHealthEvaluator):
         :param hardware: the "hardware" for which health is being
             evaluated
         :type hardware:
-            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -99,7 +99,7 @@ class StationBeamDriver(HardwareDriver):
         Returns the status of the driver-hardware connection.
 
         :return: the status of the driver-hardware connection.
-        :rtype: py:class:`ska.low.mccs.hardware.ConnectionStatus`
+        :rtype: py:class:`ska.low.mccs.hardware.base_hardware.ConnectionStatus`
         """
         return ConnectionStatus.CONNECTED
 

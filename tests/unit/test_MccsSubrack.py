@@ -607,10 +607,10 @@ class TestSubrackHardwareManager:
             :py:class:`ska.low.mccs.subrack.subrack_device.SubrackHardwareFactory`,
             but for testing purposes we want to be able to access the
             underlying simulator, so we return a bespoke
-            :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+            :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
             that uses the simulator provided via the `subrack_board`
             fixture.
-        :rtype: :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+        :rtype: :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         """
         return SimulableHardwareFactory(True, _static_simulator=subrack_board)
 
@@ -622,7 +622,7 @@ class TestSubrackHardwareManager:
         :param hardware_factory: a factory that returns a subrack
             hardware simulator/driver
         :type hardware_factory:
-            :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+            :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
 

@@ -581,7 +581,7 @@ class MutableHealthModel(HealthModel):
         :param hardware_manager: the hardware managed by this device
             (optional)
         :type hardware_manager:
-            :py:class:`~`ska.low.mccs.hardware.base_hardware.HardwareManager`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareManager`
         :param fqdns: fqdns of supervised devices (optional)
         :type fqdns: list(str), optional
         :param event_manager: the event_manager to be used for keeping

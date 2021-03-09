@@ -30,10 +30,10 @@ class TestPowerModeHardware:
     Contains tests of the hardware classes that support `off`, `standby`
     and `on` modes:
 
-    * :py:class:`ska.low.mccs.hardware.OnOffHardwareSimulator`
-    * :py:class:`ska.low.mccs.hardware.OnStandbyHardwareSimulator`
-    * :py:class:`ska.low.mccs.hardware.OnStandbyOffHardwareSimulator`
-    * :py:class:`ska.low.mccs.hardware.OnOffHardwareManager`
+    * :py:class:`ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
+    * :py:class:`ska.low.mccs.hardware.power_mode_hardware.OnStandbyHardwareSimulator`
+    * :py:class:`ska.low.mccs.hardware.power_mode_hardware.OnStandbyOffHardwareSimulator`
+    * :py:class:`ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareManager`
     """
 
     @pytest.fixture()
@@ -47,7 +47,7 @@ class TestPowerModeHardware:
         :type request: :py:class:`pytest.FixtureRequest`
 
         :return: a hardware simulator
-        :rtype: :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator`
+        :rtype: :py:class:`~ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
         """
         return OnStandbyOffHardwareSimulator(power_mode=PowerMode.OFF)
 
@@ -60,7 +60,7 @@ class TestPowerModeHardware:
             context.
         :type request: :py:class:`pytest.FixtureRequest`
         :return: a hardware simulator
-        :rtype: :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator`
+        :rtype: :py:class:`~ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
         """
 
         parameters = getattr(request, "param", None)
@@ -77,19 +77,19 @@ class TestPowerModeHardware:
     def hardware_manager(self, hardware_factory, hardware_health_evaluator):
         """
         Fixture that returns an
-        :py:class:`~ska.low.mccs.hardware.OnOffHardwareManager` for testing
+        :py:class:`~ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareManager` for testing
 
         :param hardware_factory: the hardware driver factory used by
             this hardware manager
         :type hardware_factory:
-            :py:class:`~ska.low.mccs.hardware.HardwareFactory`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareFactory`
         :param hardware_health_evaluator: the hardware health evaluator
             used by this hardware manager
         :type hardware_health_evaluator:
-            :py:class:`ska.low.mccs.hardware.HardwareHealthEvaluator`
+            :py:class:`ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator`
 
         :return: a hardware manager
-        :rtype: :py:class:`~ska.low.mccs.hardware.OnOffHardwareManager`
+        :rtype: :py:class:`~ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareManager`
         """
 
         return OnStandbyOffHardwareManager(hardware_factory, hardware_health_evaluator)
@@ -272,11 +272,11 @@ class TestPowerModeHardware:
 
             :param hardware_simulator: the hardware simulator under test
             :type hardware_simulator:
-                :py:class:`~ska.low.mccs.hardware.OnOffHardwareSimulator`
+                :py:class:`~ska.low.mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
             :param connection_status: the status of the simulated
                 software-hardware connection
             :type connection_status:
-                :py:class:`ska.low.mccs.hardware.ConnectionStatus`
+                :py:class:`ska.low.mccs.hardware.base_hardware.ConnectionStatus`
             :param power_mode: the initial power mode of the hardware
             :type power_mode: :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
             """
@@ -424,7 +424,7 @@ class TestPowerModeHardware:
             :param hardware_simulator: the hardware simulator under
                 test
             :type hardware_simulator:
-                :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+                :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
             :param command_name: name of the command under test
             :type command_name: str
             :param expected_power_mode: the expected power mode of the
@@ -445,7 +445,7 @@ class TestPowerModeHardware:
     class TestOnStandbyOffHardwareManager:
         """
         This class contains the tests for the
-        :py:class:`ska.low.mccs.hardware.OnStandbyOffHardwareManager`
+        :py:class:`ska.low.mccs.hardware.power_mode_hardware.OnStandbyOffHardwareManager`
         class.
         """
 
@@ -460,10 +460,10 @@ class TestPowerModeHardware:
 
             :param hardware_driver: the hardware driver
             :type hardware_driver:
-                :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+                :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
             :param hardware_manager: the hardware_manager under test
             :type hardware_manager:
-                :py:class:`~ska.low.mccs.hardware.OnStandbyOffHardwareManager`
+                :py:class:`~ska.low.mccs.hardware.power_mode_hardware.OnStandbyOffHardwareManager`
             """
             assert hardware_manager.health == HealthState.UNKNOWN
             hardware_manager.poll()

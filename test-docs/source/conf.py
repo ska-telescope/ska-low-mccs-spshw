@@ -99,12 +99,7 @@ nitpick_ignore = [
     ("py:class", "callable"),
     ("py:class", "contextmanager"),  # actually a std type -- impossible to link to?
     ("py:class", "pytest.config.Config"),  # something not right at pytest end
-    ("py:class", "pytest_mock.module_mocker"),  # pytest_mock has no sphinx docs
     ("py:class", "pytest_mock.mocker"),  # pytest_mock has no sphinx docs
-    ("py:class", "pytest_mock.mocker.Mock"),  # pytest_mock has no sphinx docs
-    # workaround -- everything below here is missing ska-low-mccs documentation 
-    ("py:mod", "ska.low.mccs.hardware.base_hardware"),
-    ("py:mod", "ska.low.mccs.hardware.power_mode_hardware"),
-    ("py:mod", "ska.low.mccs.hardware.simulable_hardware"),
-    ("py:class", "ska.low.mccs.tile.tile_device.TilePowerManager"),
+    ("py:class", "pytest_mock.mocker.Mock"),
+    ("py:class", "pytest_mock.module_mocker"),
 ]

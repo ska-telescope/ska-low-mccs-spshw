@@ -155,7 +155,7 @@ class TpmDriver(HardwareDriver):
         Returns the status of the driver-hardware connection.
 
         :return: the status of the driver-hardware connection.
-        :rtype: py:class:`ska.low.mccs.hardware.ConnectionStatus`
+        :rtype: py:class:`ska.low.mccs.hardware.base_hardware.ConnectionStatus`
         """
         self.logger.debug("TpmDriver: connection_status")
         return (

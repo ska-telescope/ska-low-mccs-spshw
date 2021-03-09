@@ -17,7 +17,7 @@ def hardware_health_evaluator():
     Return the hardware health evaluator under test.
 
     :return: the hardware health evaluator under test
-    :rtype: :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator`
+    :rtype: :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator`
     """
     return HardwareHealthEvaluator()
 
@@ -31,7 +31,7 @@ def hardware_driver():
     mock driver, and the HardwareSimulator is just that.
 
     :return: the hardware driver under test
-    :rtype: :py:class:`~ska.low.mccs.hardware.HardwareSimulator`
+    :rtype: :py:class:`~ska.low.mccs.hardware.simulable_hardware.HardwareSimulator`
     """
     return HardwareSimulator(is_connectible=True)
 
@@ -45,11 +45,11 @@ def hardware_factory(hardware_driver):
     :param hardware_driver: the hardware driver for this factory to
         return
     :type hardware_driver:
-        :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+        :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
 
     :return: a hardware factory that always returns the pre-defined
         hardware driver
-    :rtype: :py:class:`~ska.low.mccs.hardware.HardwareFactory`
+    :rtype: :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareFactory`
     """
 
     class BasicHardwareFactory(HardwareFactory):
@@ -64,7 +64,7 @@ def hardware_factory(hardware_driver):
             :param hardware: the hardware that this factory will always
                 return
             :type hardware:
-                :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+                :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
             """
             self._hardware = hardware
 
@@ -75,7 +75,7 @@ def hardware_factory(hardware_driver):
 
             :return: this factory's hardware
             :rtype:
-                :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+                :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
             """
             return self._hardware
 

@@ -29,11 +29,11 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs.controller import MccsController, ControllerResourceManager
-from ska.low.mccs import release
-from ska.low.mccs.utils import call_with_json
+from ska.low.mccs import MccsController, MccsSubarray, release
+from ska.low.mccs.controller import ControllerResourceManager
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
+from ska.low.mccs.utils import call_with_json
 
 
 class ControllerWithFailableDevices(MccsController):
@@ -251,7 +251,7 @@ class TestMccsController:
         # Call the On() command on the Controller device
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.OK
-        assert message == "On command completed OK"
+        assert message == MccsController.OnCommand.SUCCEEDED_MESSAGE
         mock_event_callback.check_command_result(
             name="commandResult", result=result_code
         )
@@ -282,7 +282,7 @@ class TestMccsController:
         # Call the Off() command on the Controller device
         [[result_code], [message]] = controller.Off()
         assert result_code == ResultCode.OK
-        assert message == "Off command completed OK"
+        assert message == MccsController.OffCommand.SUCCEEDED_MESSAGE
         mock_event_callback.check_command_result(
             name="commandResult", result=result_code
         )
@@ -298,7 +298,7 @@ class TestMccsController:
         """
         [[result_code], [message]] = device_under_test.StandbyLow()
         assert result_code == ResultCode.OK
-        assert message == "StandbyLow command completed OK"
+        assert message == MccsController.StandbyLowCommand.SUCCEEDED_MESSAGE
 
     def test_StandbyFull(self, device_under_test):
         """
@@ -311,7 +311,7 @@ class TestMccsController:
         """
         [[result_code], [message]] = device_under_test.StandbyFull()
         assert result_code == ResultCode.OK
-        assert message == "StandbyFull command completed OK"
+        assert message == MccsController.StandbyFullCommand.SUCCEEDED_MESSAGE
 
     def test_Operate(self, device_under_test):
         """
@@ -327,7 +327,7 @@ class TestMccsController:
         # assert device_under_test.Operate() == 0
         [[result_code], [message]] = device_under_test.Operate()
         assert result_code == ResultCode.OK
-        assert message == "Stub implementation of OperateCommand(), does nothing"
+        assert message == MccsController.OperateCommand.SUCCEEDED_MESSAGE
 
     def test_Maintenance(self, device_under_test):
         """
@@ -341,7 +341,7 @@ class TestMccsController:
         # assert device_under_test.Maintenance() is None
         [[result_code], [message]] = device_under_test.Maintenance()
         assert result_code == ResultCode.OK
-        assert message == "Stub implementation of Maintenance(), does nothing"
+        assert message == MccsController.MaintenanceCommand.SUCCEEDED_MESSAGE
 
     class TestAllocateRelease:
         """
@@ -383,25 +383,28 @@ class TestMccsController:
                     :py:class:`~ska.low.mccs.MccsSubarray` device.
                 :rtype: :py:class:`unittest.Mock`
                 """
-                mock = mock_factory()
-                mock.On.return_value = (
+                mock_subarray = mock_factory()
+                mock_subarray.On.return_value = (
                     ResultCode.OK,
-                    "On command completed successfully",
+                    MccsSubarray.OnCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.AssignResources.return_value = (
+                mock_subarray.AssignResources.return_value = (
                     ResultCode.OK,
-                    "Resources assigned",
+                    MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.ReleaseResources.return_value = (
+                mock_subarray.ReleaseResources.return_value = (
                     ResultCode.OK,
-                    "Resources released",
+                    MccsSubarray.ReleaseResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.ReleaseAllResources.return_value = (
+                mock_subarray.ReleaseAllResources.return_value = (
                     ResultCode.OK,
-                    "Resources released",
+                    MccsSubarray.ReleaseAllResourcesCommand.SUCCEEDED_MESSAGE,
                 )
-                mock.Off.return_value = (ResultCode.OK, "Subarray switched off")
-                return mock
+                mock_subarray.Off.return_value = (
+                    ResultCode.OK,
+                    "Subarray switched off",
+                )
+                return mock_subarray
 
             def _station_mock():
                 """
@@ -540,7 +543,7 @@ class TestMccsController:
             # because the already allocated station is allocated to the same
             # subarray
             mock_subarray_1.AssignResources.side_effect = (
-                (ResultCode.OK, "Resources assigned"),
+                (ResultCode.OK, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
             )
 
             ((result_code,), (_,)) = call_with_json(

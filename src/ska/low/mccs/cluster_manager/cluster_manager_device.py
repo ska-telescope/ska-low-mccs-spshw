@@ -1038,6 +1038,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the StartJob(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "StartJob command completed OK"
+
         def do(self, argin):
             """
             Stateless do hook for the
@@ -1060,7 +1062,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             except ConnectionError as connection_error:
                 return (ResultCode.FAILED, str(connection_error))
             else:
-                return (ResultCode.OK, "StartJob command successful")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -1085,6 +1087,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the StopJob(argin) command.
         """
 
+        SUCCEEDED_MESSAGE = "StopJob command completed OK"
+
         def do(self, argin):
             """
             Stateless do hook for the
@@ -1107,7 +1111,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             except ConnectionError as connection_error:
                 return (ResultCode.FAILED, str(connection_error))
             else:
-                return (ResultCode.OK, "StopJob command successful")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -1212,6 +1216,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the ClearJobStats() command.
         """
 
+        SUCCEEDED_MESSAGE = "Job stats cleared"
+
         def do(self):
             """
             Stateless do hook for the
@@ -1230,7 +1236,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             except ConnectionError as connection_error:
                 return ResultCode.str(connection_error)
             else:
-                return (ResultCode.OK, "Job stats cleared")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -1252,6 +1258,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         Class for handling the PingMasterPool() command.
         """
 
+        SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
+
         def do(self):
             """
             Stateless do hook for the
@@ -1270,7 +1278,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             except ConnectionError as connection_error:
                 return (ResultCode.FAILED, str(connection_error))
             else:
-                return (ResultCode.OK, "PingMasterPool command successful")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()

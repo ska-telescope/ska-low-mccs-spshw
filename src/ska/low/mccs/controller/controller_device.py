@@ -422,6 +422,9 @@ class MccsController(SKAMaster):
         Class for handling the Startup command.
         """
 
+        SUCCEEDED_MESSAGE = "Startup command completed OK"
+        FAILED_MESSAGE = "Startup command failed"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
@@ -446,14 +449,14 @@ class MccsController(SKAMaster):
                 self.state_model.perform_action("off_succeeded")
             else:
                 self.state_model.perform_action("off_failed")
-                return (ResultCode.FAILED, "Startup command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             if device_pool.on():
                 self.state_model.perform_action("on_succeeded")
-                return (ResultCode.OK, "Startup command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
                 self.state_model.perform_action("on_failed")
-                return (ResultCode.FAILED, "Startup command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -480,6 +483,9 @@ class MccsController(SKAMaster):
         Class for handling the On command.
         """
 
+        SUCCEEDED_MESSAGE = "On command completed OK"
+        FAILED_MESSAGE = "On command failed"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
@@ -494,9 +500,9 @@ class MccsController(SKAMaster):
             device_pool = self.target
 
             if device_pool.on():
-                return (ResultCode.OK, "On command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "On command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -523,6 +529,9 @@ class MccsController(SKAMaster):
         Class for handling the Disable command.
         """
 
+        SUCCEEDED_MESSAGE = "Disable command completed OK"
+        FAILED_MESSAGE = "Disable command failed"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
@@ -537,9 +546,9 @@ class MccsController(SKAMaster):
             device_pool = self.target
 
             if device_pool.disable():
-                return (ResultCode.OK, "Off command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "Off command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -566,6 +575,9 @@ class MccsController(SKAMaster):
         Class for handling the Off command.
         """
 
+        SUCCEEDED_MESSAGE = "Off command completed OK"
+        FAILED_MESSAGE = "Off command failed"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
@@ -580,9 +592,9 @@ class MccsController(SKAMaster):
             device_pool = self.target
 
             if device_pool.off():
-                return (ResultCode.OK, "Off command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "Off command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class StandbyLowCommand(ResponseCommand):
         """
@@ -591,6 +603,9 @@ class MccsController(SKAMaster):
         :todo: What is this command supposed to do? It takes no
             argument, and returns nothing.
         """
+
+        SUCCEEDED_MESSAGE = "StandbyLow command completed OK"
+        FAILED_MESSAGE = "StandbyLow command failed"
 
         def do(self) -> Tuple[ResultCode, str]:
             """
@@ -609,9 +624,9 @@ class MccsController(SKAMaster):
             device_pool = self.target
 
             if device_pool.standby():
-                return (ResultCode.OK, "StandbyLow command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "StandbyLow command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -638,6 +653,9 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
+        SUCCEEDED_MESSAGE = "StandbyFull command completed OK"
+        FAILED_MESSAGE = "StandbyFull command failed"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
@@ -655,9 +673,9 @@ class MccsController(SKAMaster):
             device_pool = self.target
 
             if device_pool.standby():
-                return (ResultCode.OK, "StandbyFull command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "StandbyFull command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -684,6 +702,8 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
+        SUCCEEDED_MESSAGE = "Operate command completed OK"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless hook for implementation of
@@ -696,10 +716,7 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (
-                ResultCode.OK,
-                "Stub implementation of OperateCommand(), does nothing",
-            )
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self) -> bool:
             """
@@ -813,6 +830,15 @@ class MccsController(SKAMaster):
         Sub-Array.
         """
 
+        FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX = (
+            "Cannot allocate stations already allocated"
+        )
+        FAILED_TO_RELEASE_MESSAGE_PREFIX = "Failed to release resources from subarray"
+        FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX = "Cannot enable subarray"
+        FAILED_TO_ALLOCATE_MESSAGE_PREFIX = "Failed to allocate resources to subarray"
+        SUCCEEDED_MESSAGE = "Allocate command completed OK"
+        SUCCEEDED_ENABLE_SUBARRAY_MESSAGE = "_enable_subarray was successful"
+
         def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
@@ -879,7 +905,7 @@ class MccsController(SKAMaster):
                 aalist = ", ".join(stations_to_release)
                 return (
                     ResultCode.FAILED,
-                    f"Cannot allocate stations already allocated: {aalist}",
+                    f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
                 )
 
             subarray_device = tango.DeviceProxy(subarray_fqdn)
@@ -892,7 +918,7 @@ class MccsController(SKAMaster):
                 if result_code == ResultCode.FAILED:
                     return (
                         ResultCode.FAILED,
-                        f"Failed to release resources from subarray {subarray_fqdn}:"
+                        f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
                         f"{message}",
                     )
                 for station_fqdn in stations_to_release:
@@ -907,7 +933,10 @@ class MccsController(SKAMaster):
                 self._enable_subarray(subarray_id)
 
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
-                return (ResultCode.FAILED, f"Cannot enable subarray {subarray_fqdn}")
+                return (
+                    ResultCode.FAILED,
+                    f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
+                )
 
             # Manager gave this list of stations to assign
             if stations_to_assign is not None:
@@ -920,7 +949,7 @@ class MccsController(SKAMaster):
                 if result_code == ResultCode.FAILED:
                     return (
                         ResultCode.FAILED,
-                        f"Failed to assign resources to subarray {subarray_fqdn}:"
+                        f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
                         f"{message}",
                     )
                 for fqdn in stations_to_assign:
@@ -932,7 +961,7 @@ class MccsController(SKAMaster):
                     stations_to_assign, subarray_id
                 )
 
-            return (ResultCode.OK, "Allocate command successful")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self) -> bool:
             """
@@ -985,7 +1014,7 @@ class MccsController(SKAMaster):
                     )
 
             device._subarray_enabled[subarray_id - 1] = True
-            return (ResultCode.OK, "_enable_subarray was successful")
+            return (ResultCode.OK, self.SUCCEEDED_ENABLE_SUBARRAY_MESSAGE)
 
     def is_Allocate_allowed(self) -> bool:
         """
@@ -1026,6 +1055,15 @@ class MccsController(SKAMaster):
         Release a sub-array's Capabilities and resources (stations),
         marking the resources and Capabilities as unassigned and idle.
         """
+
+        SUCCEEDED_MESSAGE = "Release command completed OK"
+        SUCCEEDED_DISABLE_SUBARRAY_MESSAGE = "_disable_subarray was successful"
+        FAILED_RELEASE_ALL_OR_DISABLED_MESSAGE = (
+            "_disable_subarray() release all or disable subarray failed"
+        )
+        FAILED_PARTIAL_RELEASE_UNSUPPORTED_MESSAGE = (
+            "Release command failed - partial release currently unsupported"
+        )
 
         def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
@@ -1074,15 +1112,15 @@ class MccsController(SKAMaster):
                 if result[0] is not ResultCode.OK:
                     return (
                         result[0],
-                        "_disable_subarray() release all or disable subarray failed",
+                        self.FAILED_RELEASE_ALL_OR_DISABLED_MESSAGE,
                     )
             else:
                 return (
                     ResultCode.FAILED,
-                    "Release() command failed - partial release currently unsupported",
+                    self.FAILED_PARTIAL_RELEASE_UNSUPPORTED_MESSAGE,
                 )
 
-            return (ResultCode.OK, "Release() command successful")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self) -> bool:
             """
@@ -1120,7 +1158,7 @@ class MccsController(SKAMaster):
             if result_code == ResultCode.FAILED:
                 return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
             device._subarray_enabled[subarray_id - 1] = False
-            return (ResultCode.OK, "_disable_subarray was successful")
+            return (ResultCode.OK, self.SUCCEEDED_DISABLE_SUBARRAY_MESSAGE)
 
     def is_Release_allowed(self) -> bool:
         """
@@ -1144,6 +1182,8 @@ class MccsController(SKAMaster):
             argument, and returns nothing.
         """
 
+        SUCCEEDED_MESSAGE = "Maintenance command completed OK"
+
         def do(self) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for handling the
@@ -1155,7 +1195,7 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, "Stub implementation of Maintenance(), does nothing")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()

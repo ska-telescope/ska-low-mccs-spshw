@@ -459,6 +459,9 @@ class MccsStation(SKAObsDevice):
         Class for handling the On() command.
         """
 
+        SUCCEEDED_MESSAGE = "On command completed OK"
+        FAILED_MESSAGE = "On command failed"
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -474,14 +477,17 @@ class MccsStation(SKAObsDevice):
             device_pool = self.target
 
             if device_pool.on():
-                return (ResultCode.OK, "On command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "On command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
         Class for handling the Off() command.
         """
+
+        SUCCEEDED_MESSAGE = "Off command completed OK"
+        FAILED_MESSAGE = "Off command failed"
 
         def do(self):
             """
@@ -498,14 +504,17 @@ class MccsStation(SKAObsDevice):
             device_pool = self.target
 
             if device_pool.off():
-                return (ResultCode.OK, "On command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "On command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
         """
         Class for handling the Standby() command.
         """
+
+        SUCCEEDED_MESSAGE = "Standby command completed OK"
+        FAILED_MESSAGE = "Standby command failed"
 
         def do(self):
             """
@@ -522,14 +531,17 @@ class MccsStation(SKAObsDevice):
             device_pool = self.target
 
             if device_pool.standby():
-                return (ResultCode.OK, "Standby command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "Standby command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class DisableCommand(SKABaseDevice.DisableCommand):
         """
         Class for handling the Disable() command.
         """
+
+        SUCCEEDED_MESSAGE = "Disable command completed OK"
+        FAILED_MESSAGE = "Disable command failed"
 
         def do(self):
             """
@@ -546,14 +558,17 @@ class MccsStation(SKAObsDevice):
             device_pool = self.target
 
             if device_pool.disable():
-                return (ResultCode.OK, "Disable command completed OK")
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
-                return (ResultCode.FAILED, "Disable command failed")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class ConfigureCommand(ResponseCommand):
         """
         Class for handling the Configure() command.
         """
+
+        SUCCEEDED_MESSAGE = "Configure command completed OK"
+        FAILED_WRONG_STATION_MESSAGE = "Configure failed: wrong station_id"
 
         def do(self, argin):
             """
@@ -574,9 +589,9 @@ class MccsStation(SKAObsDevice):
             device = self.target
             # Make sure we're configuring the correct station
             if stn_id != device._station_id:
-                return (ResultCode.FAILED, "Configure failed: wrong station_id")
+                return (ResultCode.FAILED, self.FAILED_WRONG_STATION_MESSAGE)
             device._is_configured = True
-            return (ResultCode.OK, "Configure command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_in="DevString",
@@ -608,6 +623,8 @@ class MccsStation(SKAObsDevice):
         Class for handling the InitialSetup() command.
         """
 
+        SUCCEEDED_MESSAGE = "InitialSetup command completed OK"
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -633,7 +650,7 @@ class MccsStation(SKAObsDevice):
             #                 proxy.stationId = self.StationId
             #                 proxy.logicalBeamId = id + 1
 
-            return (ResultCode.OK, "InitialSetup command succeeded")
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
         dtype_out="DevVarLongStringArray",

@@ -24,7 +24,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import release
+from ska.low.mccs import MccsSubarrayBeam, release
 
 
 @pytest.fixture()
@@ -291,6 +291,7 @@ class TestMccsSubarrayBeam:
         json_str = json.dumps(config_dict)
         [[result_code], [message]] = device_under_test.Configure(json_str)
         assert result_code == ResultCode.OK
+        assert message == MccsSubarrayBeam.ConfigureCommand.SUCCEEDED_MESSAGE
         assert device_under_test.subarrayId == 1
         assert device_under_test.subarrayBeamId == 1
         assert device_under_test.updateRate == 3.14

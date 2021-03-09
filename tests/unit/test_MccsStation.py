@@ -377,6 +377,7 @@ class TestMccsStation:
         json_str = json.dumps(config_dict)
         [[result_code], [message]] = device_under_test.configure(json_str)
         assert result_code == ResultCode.OK
+        assert message == MccsStation.ConfigureCommand.SUCCEEDED_MESSAGE
         assert device_under_test.isConfigured is True
 
 

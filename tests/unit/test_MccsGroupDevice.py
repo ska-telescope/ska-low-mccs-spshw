@@ -23,6 +23,8 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 
+from ska.low.mccs import MccsGroupDevice
+
 
 @pytest.fixture()
 def device_to_load():
@@ -70,7 +72,7 @@ class TestMccsGroupDevice(object):
         """
         [[result_code], [message]] = device_under_test.AddMember("")
         assert result_code == ResultCode.OK
-        assert message == "AddMember command succeeded"
+        assert message == MccsGroupDevice.AddMemberCommand.SUCCEEDED_MESSAGE
 
     def test_RemoveMember(self, device_under_test):
         """
@@ -83,7 +85,7 @@ class TestMccsGroupDevice(object):
         """
         [[result_code], [message]] = device_under_test.RemoveMember("")
         assert result_code == ResultCode.OK
-        assert message == "RemoveMember command succeeded"
+        assert message == MccsGroupDevice.RemoveMemberCommand.SUCCEEDED_MESSAGE
 
     def test_RunCommand(self, device_under_test):
         """
@@ -96,7 +98,7 @@ class TestMccsGroupDevice(object):
         """
         [[result_code], [message]] = device_under_test.Run("")
         assert result_code == ResultCode.OK
-        assert message == "Run command succeeded"
+        assert message == MccsGroupDevice.RunCommand.SUCCEEDED_MESSAGE
 
     def test_memberStates(self, device_under_test):
         """

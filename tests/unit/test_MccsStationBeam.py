@@ -25,7 +25,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import release
+from ska.low.mccs import MccsStationBeam, release
 
 
 @pytest.fixture()
@@ -439,6 +439,8 @@ class TestMccsStationBeam:
         json_str = json.dumps(config_dict)
         [[result_code], [message]] = device_under_test.Configure(json_str)
         assert result_code == ResultCode.OK
+        assert message == MccsStationBeam.ConfigureCommand.SUCCEEDED_MESSAGE
+
         assert device_under_test.updateRate == 3.14
         assert list(device_under_test.stationIds) == [1, 2]
         assert list(device_under_test.channels) == [1, 2, 3, 4, 5, 6, 7, 8]

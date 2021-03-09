@@ -1308,6 +1308,8 @@ class MccsSubrack(SKABaseDevice):
         This command set the backplane fan speed.
         """
 
+        SUCCEEDED_MESSAGE = "SetSubrackFanSpeed command completed OK"
+
         def do(self, argin):
             """
             Hook for implementation of
@@ -1332,8 +1334,7 @@ class MccsSubrack(SKABaseDevice):
                 raise ValueError("fan_ID and fan speed are mandatory parameters")
 
             success = hardware_manager.set_subrack_fan_speed(fan_id, speed_percent)
-            message = "Set subrack fan speed command completed"
-            return create_return(success, message)
+            return create_return(success, self.SUCCEEDED_MESSAGE)
 
         @command(
             dtype_in="DevString",
@@ -1367,6 +1368,8 @@ class MccsSubrack(SKABaseDevice):
         This command can set the selected fan to manual or auto mode.
         """
 
+        SUCCEEDED_MESSAGE = "SetSubrackFanMode command completed OK"
+
         def do(self, argin):
             """
             Hook for the implementation of
@@ -1391,8 +1394,7 @@ class MccsSubrack(SKABaseDevice):
                 raise ValueError("Fan_id and mode are mandatory parameter")
 
             success = hardware_manager.set_subrack_fan_mode(fan_id, mode)
-            message = "SetSubrackFanMode command completed"
-            return create_return(success, message)
+            return create_return(success, self.SUCCEEDED_MESSAGE)
 
         @command(
             dtype_in="DevString",
@@ -1423,6 +1425,8 @@ class MccsSubrack(SKABaseDevice):
 
         This command set the selected power supply fan speed.
         """
+
+        SUCCEEDED_MESSAGE = "SetPowerSupplyFanSpeed command completed OK"
 
         def do(self, argin):
             """
@@ -1455,8 +1459,7 @@ class MccsSubrack(SKABaseDevice):
             success = hardware_manager.set_power_supply_fan_speed(
                 power_supply_fan_id, speed_percent
             )
-            message = "SetPowerSupplyFanSpeed command completed"
-            return create_return(success, message)
+            return create_return(success, self.SUCCEEDED_MESSAGE)
 
         @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
         @DebugIt()

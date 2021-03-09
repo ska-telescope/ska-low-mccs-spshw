@@ -44,10 +44,17 @@ _MockObject.__truediv__ = lambda self, other: _MockObject()
 
 
 # -- Project information -----------------------------------------------------
+release_filename = os.path.join("..", "..", "src", "ska", "low", "mccs", "release.py")
+version = None
+author = None
+for line in open(release_filename).readlines():
+    line = line.strip()
+    if line.startswith(("author", "version")):
+        exec(line)
 
 project = 'SKA Low MCCS tests'
-copyright = '2021, SKA Software, MCCS Team'
-author = 'SKA Software, MCCS Team'
+release = version
+copyright = '2021, SKA MCCS Team'
 
 
 # -- General configuration ---------------------------------------------------
@@ -71,12 +78,22 @@ exclude_patterns = []
 
 autodoc_mock_imports = ["pytest_bdd", "scipy", "ska", "ska_tango_base", "tango"]
 
+autodoc_default_options = {"special-members": "__init__"}
+
+def setup(app):
+    """
+    Initialise app.
+    """
+    app.add_css_file("css/custom.css")
+    app.add_js_file("js/gitlab.js")
+
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

@@ -23,7 +23,7 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 
-from ska.low.mccs import MccsGroupDevice
+from ska.low.mccs import MccsDeviceProxy, MccsGroupDevice
 
 
 @pytest.fixture()
@@ -38,6 +38,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/extra.json",
         "package": "ska.low.mccs",
         "device": "groupdevice",
+        "proxy": MccsDeviceProxy,
     }
 
 

@@ -73,6 +73,7 @@ prototype for the `Square Kilometre Array`_.
    :caption: Other modules
 
    api/base_hardware
+   api/device_proxy
    api/events
    api/health
    api/pool

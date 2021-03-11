@@ -17,6 +17,8 @@ import time
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
+
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.tile.demo_tile_device import DemoTile
 from ska.low.mccs.utils import call_with_json
 
@@ -35,27 +37,21 @@ def devices_to_load():
         "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska.low.mccs",
         "devices": [
-            "controller",
-            "subarray_01",
-            "subarray_02",
-            "station_001",
-            "station_002",
-            "subrack_01",
-            "tile_0001",
-            "tile_0002",
-            "tile_0003",
-            "tile_0004",
-            "beam_001",
-            "beam_002",
-            "beam_003",
-            "beam_004",
+            {"name": "controller", "proxy": MccsDeviceProxy},
+            {"name": "subarray_01", "proxy": MccsDeviceProxy},
+            {"name": "subarray_02", "proxy": MccsDeviceProxy},
+            {"name": "station_001", "proxy": MccsDeviceProxy},
+            {"name": "station_002", "proxy": MccsDeviceProxy},
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            {"name": "beam_001", "proxy": MccsDeviceProxy},
+            {"name": "beam_002", "proxy": MccsDeviceProxy},
+            {"name": "beam_003", "proxy": MccsDeviceProxy},
+            {"name": "beam_004", "proxy": MccsDeviceProxy},
         ],
-        "patch": {
-            "tile_0001": DemoTile,
-            "tile_0002": DemoTile,
-            "tile_0003": DemoTile,
-            "tile_0004": DemoTile,
-        },
     }
 
 

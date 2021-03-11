@@ -18,7 +18,6 @@ import json
 import threading
 
 # PyTango imports
-import tango
 from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
@@ -27,6 +26,7 @@ from ska_tango_base import SKABaseDevice, SKAObsDevice
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState
 
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
 from ska.low.mccs.events import EventManager
@@ -287,7 +287,7 @@ class MccsStation(SKAObsDevice):
         """
         self._subarray_id = subarray_id
         for fqdn in self._tile_fqdns:
-            tile = tango.DeviceProxy(fqdn)
+            tile = MccsDeviceProxy(fqdn, self.logger)
             tile.subarrayId = subarray_id
 
     @attribute(
@@ -638,7 +638,7 @@ class MccsStation(SKAObsDevice):
             """
             device = self.target
             for tile_id, tile in enumerate(device.TileFQDNs):
-                proxy = tango.DeviceProxy(tile)
+                proxy = MccsDeviceProxy(tile, self.logger)
                 proxy.subarrayId = device._subarray_id
                 proxy.stationId = device._station_id
                 proxy.logicalTileId = tile_id + 1

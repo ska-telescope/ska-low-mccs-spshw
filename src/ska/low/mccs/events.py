@@ -16,7 +16,7 @@ import warnings
 import backoff
 from tango import DevFailed, EventType
 
-from ska.low.mccs.utils import backoff_connect
+from ska.low.mccs import MccsDeviceProxy
 
 
 def _parse_spec(spec, allowed):
@@ -216,7 +216,7 @@ class DeviceEventManager:
         self._handlers = {}
 
         self._fqdn = fqdn
-        self._device = backoff_connect(fqdn, logger)
+        self._device = MccsDeviceProxy(fqdn, logger)
 
     def register_callback(self, callback, event_spec=None):
         """

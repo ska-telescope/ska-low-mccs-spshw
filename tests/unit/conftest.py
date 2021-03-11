@@ -6,7 +6,9 @@ from collections import defaultdict
 import pytest
 import time
 import tango
+
 from ska_tango_base.commands import ResultCode
+from ska.low.mccs import MccsDeviceProxy
 
 
 def pytest_itemcollected(item):
@@ -56,8 +58,9 @@ def mock_factory(mocker):
 @pytest.fixture()
 def mock_device_proxies(mocker, mock_factory, initial_mocks):
     """
-    Fixture that patches :py:class:`tango.DeviceProxy` to always return
-    the same mock for each fqdn.
+    Fixture that sets ups :py:class:`ska.low.mccs.MccsDeviceProxy` to
+    build itself around a mock factory instead of
+    :py:class:`tango.DeviceProxy`.
 
     :param mocker: fixture that wraps unittest.Mock
     :type mocker: wrapper for :py:mod:`unittest.mock`
@@ -73,8 +76,9 @@ def mock_device_proxies(mocker, mock_factory, initial_mocks):
     :rtype: dict
     """
     mocks = defaultdict(mock_factory, initial_mocks)
-    mocker.patch(
-        "tango.DeviceProxy", side_effect=lambda fqdn, *args, **kwargs: mocks[fqdn]
+
+    MccsDeviceProxy.set_default_connection_factory(
+        lambda fqdn, *args, **kwargs: mocks[fqdn]
     )
     return mocks
 
@@ -82,7 +86,7 @@ def mock_device_proxies(mocker, mock_factory, initial_mocks):
 @pytest.fixture()
 def tango_config(mock_device_proxies):
     """
-    Fixture that returns configuration information that specified how
+    Fixture that returns configuration information that specifies how
     the Tango system should be established and run.
 
     This implementation - for unit testing - ensures that mocking of
@@ -111,33 +115,36 @@ def devices_to_load(device_to_load):
     general multi-device spec.
 
     :param device_to_load: fixture that provides a specification of a
-        single devic to load; used only in unit testing where tests will
-        only ever stand up one device at a time.
+        single device to load; used only in unit testing where tests
+        will only ever stand up one device at a time.
     :type device_to_load: dict
 
     :return: specification of the devices (in this case, just one
         device) to load
     :rtype: dict
     """
-    spec = {
+    device_spec = {
         "path": device_to_load["path"],
         "package": device_to_load["package"],
-        "devices": [device_to_load["device"]],
+        "devices": [
+            {
+                "name": device_to_load["device"],
+                "proxy": device_to_load["proxy"],
+            }
+        ],
     }
     if "patch" in device_to_load:
-        spec["patch"] = {device_to_load["device"]: device_to_load["patch"]}
-    return spec
+        device_spec["devices"][0]["patch"] = device_to_load["patch"]
+
+    return device_spec
 
 
 @pytest.fixture()
 def device_under_test(device_context, device_to_load):
     """
-    Creates and returns a proxy to the device under test, in a
-    DeviceTestContext.
-
-    In addition, tango.DeviceProxy is mocked out,
-    since these are unit tests and there is neither any reason nor any
-    ability for device to be talking to each other.
+    Creates and returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to
+    the device under test, in a
+    :py:class:`tango.test_context.MultiDeviceTestContext`.
 
     :param device_context: a test context for a set of tango devices
     :type device_context: :py:class:`tango.MultiDeviceTestContext`
@@ -146,9 +153,9 @@ def device_under_test(device_context, device_to_load):
         will only ever stand up one device at a time.
     :type device_to_load: dict
 
-    :returns: a :py:class:`tango.DeviceProxy` under a
+    :returns: a :py:class:`ska.low.mccs.MccsDeviceProxy` under a
         :py:class:`tango.test_context.MultiDeviceTestContext`
-    :rtype: :py:class:`tango.DeviceProxy`
+    :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
     """
     device = device_context.get_device(device_to_load["device"])
     return device

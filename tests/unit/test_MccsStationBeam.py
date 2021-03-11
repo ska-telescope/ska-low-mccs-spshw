@@ -25,7 +25,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsStationBeam, release
+from ska.low.mccs import MccsDeviceProxy, MccsStationBeam, release
 
 
 @pytest.fixture()
@@ -40,6 +40,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "beam_001",
+        "proxy": MccsDeviceProxy,
     }
 
 

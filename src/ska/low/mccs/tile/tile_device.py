@@ -28,11 +28,11 @@ from ska_tango_base import SKABaseDevice
 from ska_tango_base.control_model import HealthState, SimulationMode
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import ConnectionStatus, PowerMode
 from ska.low.mccs.health import HealthModel
 from ska.low.mccs.tile import TileHardwareManager
-from ska.low.mccs.utils import backoff_connect
 
 
 class TilePowerManager:
@@ -76,7 +76,8 @@ class TilePowerManager:
         Establish a connection to the subrack that powers this tile
         device's TPM.
         """
-        self._subrack = backoff_connect(self._subrack_fqdn, self._logger, wait=True)
+        self._subrack = MccsDeviceProxy(self._subrack_fqdn, self._logger)
+        self._subrack.check_initialised()
 
         self._power_mode = self._read_power_mode()
         self._callback(self._power_mode)

@@ -280,7 +280,12 @@ class ResourceManager:
     """
 
     def __init__(
-        self, health_monitor, managername, devices, availability_policy=[HealthState.OK]
+        self,
+        health_monitor,
+        managername,
+        devices,
+        logger,
+        availability_policy=[HealthState.OK],
     ):
         """
         Initialize new ResourceManager instance.
@@ -292,11 +297,14 @@ class ResourceManager:
         :type managername: string
         :param devices: A dictionary of device IDs and FQDNs
         :type devices: dict<str, str>
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         :param availability_policy: availability policy for this
             resource manager
         :type availability_policy:
             list(:py:class:`~ska_tango_base.control_model.HealthState`)
         """
+        self._logger = logger
         self._managername = managername
         self._resources = dict()
         self._health_monitor = health_monitor

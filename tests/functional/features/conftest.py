@@ -3,13 +3,15 @@ This module contains pytest fixtures and other test setups for the
 ska.low.mccs functional (BDD) tests.
 """
 from collections import defaultdict
-from contextlib import contextmanager
 import json
 import socket
 
 import pytest
 import tango
-from tango.test_context import MultiDeviceTestContext, get_host_ip
+from tango.test_context import get_host_ip, MultiDeviceTestContext
+
+from ska_tango_base.control_model import TestMode
+from ska.low.mccs import MccsDeviceProxy
 
 
 def pytest_configure(config):
@@ -26,205 +28,444 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "XTP-1473: XRay BDD test marker")
 
 
-@contextmanager
-def _tango_true_context():
+@pytest.fixture(scope="module")
+def patch_device_proxy():
     """
-    Returns a context manager that provides access to a true TANGO
-    environment through an interface like that of
-    tango.MultiDeviceTestContext.
+    Fixture that provides a patcher that set up
+    :py:class:`ska.low.mccs.MccsDeviceProxy` to use a connection factory
+    that wraps :py:class:`tango.DeviceProxy` with a workaround for a bug
+    in :py:class:`tango.MultiDeviceTestContext`, then returns the host
+    and port used by the patch.
 
-    :yield: A tango.MultiDeviceTestContext-like interface to a true
-        Tango system
+    This is a factory; the patch won't be applied unless you actually
+    call the fixture.
+
+    :return: the callable patcher
+    :rtype: callable
     """
 
-    class _TangoTrueContext:
+    def patcher():
         """
-        Implements a context that provides access to a true TANGO
-        environment through an interface like that of
-        tango.MultiDeviceTestContext.
+        Callable returned by this parent fixture, which performs
+        patching when called.
+
+        :return: the host and port used by the patch
+        :rtype: tuple
         """
 
-        def get_device(self, fqdn):
+        def _get_open_port():
             """
-            Returns a device proxy to the specified device.
+            Helper function that returns an available port on the local
+            machine.
 
-            :param fqdn: the fully qualified domain name of the server
-            :type fqdn: str
+            Note the possibility of a race condition here. By the time the
+            calling method tries to make use of this port, it might already
+            have been taken by another process.
 
-            :return: a DeviceProxy to the device with the given fqdn
-            :rtype: :py:class:`tango.DeviceProxy`
+            :return: An open port
+            :rtype: int
             """
-            return tango.DeviceProxy(fqdn)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(("", 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+            s.close()
+            return port
 
-    yield _TangoTrueContext()
+        host = get_host_ip()
+        port = _get_open_port()
+
+        MccsDeviceProxy.set_default_connection_factory(
+            lambda fqdn, *args, **kwargs: tango.DeviceProxy(
+                f"tango://{host}:{port}/{fqdn}#dbase=no", *args, **kwargs
+            ),
+        )
+        return (host, port)
+
+    return patcher
 
 
-def _tango_test_context(_devices_info, _module_mocker):
+class MccsDeviceInfo:
     """
-    Creates and returns a TANGO MultiDeviceTestContext object, with a
-    tango.DeviceProxy patched to a work around a name resolving issue.
-
-    :param _devices_info: Information about the devices under test that
-        are needed to stand the device up in a DeviceTestContext, such
-        as the device classes and properties
-    :type _devices_info: dict
-    :param _module_mocker: module_scoped fixture that provides a thin
-        wrapper around the `unittest.mock` package
-    :type _module_mocker: pytest wrapper
-
-    :return: a test contest set up as specified by the _devices_info
-        argument
-    :rtype: :py:class:`tango.MultiDeviceTestContext`
+    Data structure class that loads and holds information about devices,
+    and can provide that information in the format required by
+    :py:class:`tango.test_context.MultiDeviceTestContext`.
     """
 
-    def _get_open_port():
+    def __init__(self, source_path, package):
         """
-        Helper function that returns an available port on the local
-        machine.
+        Create a new instance.
 
-        Note the possibility of a race condition here. By the time the
-        calling method tries to make use of this port, it might already
-        have been taken by another process.
-
-        :return: An open port
-        :rtype: int
+        :param source_path: the path to the configuration file that
+            contains information about all available devices.
+        :type source_path: str
+        :param package: name of the package from which to draw classes
+        :type package: str
         """
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("", 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-        s.close()
-        return port
+        with open(source_path, "r") as json_file:
+            self._source_data = json.load(json_file)
+        self._package = package
+        self._devices = {}
+        self._proxies = {}
 
-    host = get_host_ip()
-    port = _get_open_port()
+    def include_device(self, name, proxy, patch=None):
+        """
+        Include a device in this specification.
 
-    device_proxy_class = tango.DeviceProxy
-    _module_mocker.patch(
-        "tango.DeviceProxy",
-        wraps=lambda fqdn, *args, **kwargs: device_proxy_class(
-            f"tango://{host}:{port}/{fqdn}#dbase=no", *args, **kwargs
-        ),
-    )
+        :param name: the name of the device to be included. The
+            source data must contain configuration informatino for a
+            device listed under this name
+        :type name: str
+        :param proxy: the proxy class to use to access the device.
+        :type proxy: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :param patch: an optional device class with which to patch the
+            named device
+        :type patch: :py:class:`ska_tango_base.SKABaseDevice`
 
-    return MultiDeviceTestContext(_devices_info, process=True, host=host, port=port)
+        :raises ValueError: if the named device does not exist in the
+            source configuration data
+        """
+        for server in self._source_data["servers"]:
+            if name in self._source_data["servers"][server]:
+                device_spec = self._source_data["servers"][server][name]
+                class_name = next(iter(device_spec))
+                fqdn = next(iter(device_spec[class_name]))
+                properties = device_spec[class_name][fqdn]["properties"]
+
+                attribute_properties = device_spec[class_name][fqdn].get(
+                    "attribute_properties", {}
+                )
+                memorized = {
+                    name: value["__value"]
+                    for name, value in attribute_properties.items()
+                    if "__value" in value
+                }
+
+                if patch is None:
+                    package = __import__(self._package, fromlist=[class_name])
+                    klass = getattr(package, class_name)
+                else:
+                    klass = patch
+
+                self._devices[name] = {
+                    "server": server,
+                    "class": klass,
+                    "fqdn": fqdn,
+                    "properties": properties,
+                    "memorized": memorized,
+                }
+                break
+        else:
+            raise ValueError(f"Device {name} not found in source data.")
+
+        self._proxies[name] = proxy
+
+    @property
+    def device_map(self):
+        """
+        A dictionary that maps device names onto FQDNs.
+
+        :return: a mapping from device names to FQDNs
+        :rtype: dict
+        """
+        return {
+            name: {
+                "fqdn": self._devices[name]["fqdn"],
+                "proxy": self._proxies[name],
+            }
+            for name in self._devices
+        }
+
+    def as_mdtc_device_info(self):
+        """
+        Return this device info in a format required by
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+
+        :return: device info in a format required by
+            :py:class:`tango.test_context.MultiDeviceTestContext`.
+        :rtype: dict
+        """
+        devices_by_class = defaultdict(list)
+        for device in self._devices.values():
+            devices_by_class[device["class"]].append(
+                {
+                    "name": device["fqdn"],
+                    "properties": device["properties"],
+                    "memorized": device["memorized"],
+                }
+            )
+        mdtc_device_info = [
+            {"class": klass, "devices": devices}
+            for klass, devices in devices_by_class.items()
+        ]
+        return mdtc_device_info
 
 
-def _load_data_from_json(path):
+class MccsTangoContext:
     """
-    Loads a dataset from a named json file.
+    MCCS wrapper for a Tango context.
 
-    :param path: path to the JSON file from which the dataset is to be
-        loaded.
-    :type path: str
-
-    :return: data loaded and deserialised from a JSON data file
-    :rtype: anything JSON-serialisable
+    It allows for devices to be accessed by MCCS device names, rather
+    than the device FQDNs.
     """
-    with open(path, "r") as json_file:
-        return json.load(json_file)
+
+    def _load_devices(self, devices_to_load):
+        """
+        Loads device configuration data for specified devices from a
+        specified JSON configuration file.
+
+        :param devices_to_load: fixture that provides a specification of
+            the devices that are to be included in the devices_info
+            dictionary
+        :type devices_to_load: dictionary
+
+        :return: a devices_info spec in a format suitable for use by as
+            input to a
+            :py:class:`tango.test_context.MultiDeviceTestContext`
+        :rtype: dict
+        """
+        device_info = MccsDeviceInfo(
+            devices_to_load["path"], devices_to_load["package"]
+        )
+        for device_spec in devices_to_load["devices"]:
+            device_info.include_device(**device_spec)
+        return device_info
+
+    def __init__(
+        self,
+        devices_to_load,
+        logger,
+        source=None,
+    ):
+        """
+        Create a new instance.
+
+        :param devices_to_load: fixture that provides a specification of the
+            devices that are to be included in the devices_info dictionary
+        :type devices_to_load: dictionary
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
+        :param source: a source value to be set on all devices
+        :type source: :py:class:`tango.DevSource`, optional
+        """
+        self._logger = logger
+        self._devices_info = self._load_devices(devices_to_load)
+        self._source_setting = source
+
+    def __enter__(self):
+        """
+        Entry method for "with" context.
+
+        :return: the context object
+        :rtype: :py:class:`.MccsDeviceTestContext`
+        """
+        self._set_source()
+        assert self._check_ready()
+        self._set_test_mode()
+        return self
+
+    def __exit__(self, exc_type, exception, trace):
+        """
+        Exit method for "with" context.
+
+        :param exc_type: the type of exception thrown in the with block
+        :type: obj
+        :param exception: the exception thrown in the with block
+        :type exception: obj
+        :param trace: a traceback
+        :type trace: obj
+        """
+        pass
+
+    def _set_source(self):
+        """
+        Ensure that all included devices have the required source
+        setting applied.
+        """
+        if self._source_setting is None:
+            return
+        for device_name in self._devices_info.device_map:
+            self.get_device(device_name).set_source(self._source_setting)
+
+            # HACK: increasing the timeout until we can make some commands asynchronous
+            self.get_device(device_name).set_timeout_millis(5000)
+
+    def _check_ready(self):
+        """
+        Ensure that all included devices are checked against the
+        provided ready condition.
+
+        :return: whether all devices are initialised
+        :rtype: bool
+        """
+        for device_name in self._devices_info.device_map:
+            device = self.get_device(device_name)
+            if not device.check_initialised():
+                return False
+        else:
+            return True
+
+    def _set_test_mode(self):
+        """
+        Ensure that all included devices are set into test mode, since
+        we are testing.
+        """
+        for device_name in self._devices_info.device_map:
+            self.get_device(device_name).testMode = TestMode.TEST
+
+    def get_device(self, name):
+        """
+        Returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to a device
+        as specified by the device name provided in the configuration
+        file.
+
+        Each call to this method returns a fresh proxy. This is
+        deliberate.
+
+        :param name: the name of the device for which a
+            :py:class:`ska.low.mccs.MccsDeviceProxy` is sought.
+        :type name: str
+
+        :return: a :py:class:`ska.low.mccs.MccsDeviceProxy` to the named device
+        :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        """
+        fqdn = self._devices_info.device_map[name]["fqdn"]
+        proxy = self._devices_info.device_map[name]["proxy"]
+        device = proxy(fqdn, self._logger)
+        return device
 
 
-def _load_devices(path, device_names):
+class MccsDeviceTestContext(MccsTangoContext):
     """
-    Loads device configuration data for specified devices from a
-    specified JSON configuration file.
+    MCCS wrapper for a tango.test_context.MultiDeviceTestContext.
 
-    :param path: path to the JSON configuration file
-    :type path: str
-    :param device_names: names of the devices for which configuration
-        data should be loaded
-    :type device_names: list(str)
-
-    :return: a devices_info spec in a format suitable for use by as
-        input to a :py:class:`tango.test_context.MultiDeviceTestContext`
-    :rtype: dict
+    It allows for devices to be accessed by MCCS device names, rather
+    than the device FQDNs.
     """
-    configuration = _load_data_from_json(path)
-    devices_by_class = {}
 
-    servers = configuration["servers"]
-    for server in servers:
-        for device_name in servers[server]:
-            if device_name in device_names:
-                for class_name, device_info in servers[server][device_name].items():
-                    if class_name not in devices_by_class:
-                        devices_by_class[class_name] = []
-                    for fqdn, device_specs in device_info.items():
-                        properties = device_specs.get("properties", {})
-                        attribute_properties = device_specs.get(
-                            "attribute_properties", {}
-                        )
-                        memorized = {
-                            name: value["__value"]
-                            for name, value in attribute_properties.items()
-                            if "__value" in value
-                        }
-                        devices_by_class[class_name].append(
-                            {
-                                "name": fqdn,
-                                "properties": properties,
-                                "memorized": memorized,
-                            }
-                        )
+    def __init__(
+        self,
+        devices_to_load,
+        logger,
+        source=None,
+        process=False,
+        host=None,
+        port=None,
+    ):
+        """
+        Create a new instance.
 
-    devices_info = []
-    for device_class in devices_by_class:
-        device_info = []
-        for device in devices_by_class[device_class]:
-            device_info.append(device)
+        :param devices_to_load: fixture that provides a specification of the
+            devices that are to be included in the devices_info dictionary
+        :type devices_to_load: dictionary
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
+        :param source: a source value to be set on all devices
+        :type source: :py:class:`tango.DevSource`, optional
+        :param process: whether to run the test context in its own
+            process; if False, it is run on a thread.
+        :type: bool
+        :param host: hostname of the machine hosting the devices
+        :type host: str
+        :param port: port for the tango subsystem
+        :type port: int
+        """
+        super().__init__(devices_to_load, logger, source=source)
+        mdtc_devices_info = self._devices_info.as_mdtc_device_info()
+        self._multi_device_test_context = MultiDeviceTestContext(
+            mdtc_devices_info, process=process, host=host, port=port
+        )
 
-        devices_info.append({"class": device_class, "devices": device_info})
+    def __enter__(self):
+        """
+        Entry method for "with" context.
 
-    return devices_info
+        :return: the context object
+        :rtype: :py:class:`.MccsDeviceTestContext`
+        """
+        self._multi_device_test_context.__enter__()
+        return super().__enter__()
+
+    def __exit__(self, exc_type, exception, trace):
+        """
+        Exit method for "with" context.
+
+        :param exc_type: the type of exception thrown in the with block
+        :type: obj
+        :param exception: the exception thrown in the with block
+        :type exception: obj
+        :param trace: a traceback
+        :type trace: obj
+        """
+        self._multi_device_test_context.__exit__(exc_type, exception, trace)
+
+    def get_device(self, name):
+        """
+        Returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to a device
+        as specified by the device name provided in the configuration
+        file.
+
+        Each call to this method returns a fresh proxy. This is
+        deliberate.
+
+        :param name: the name of the device for which a
+            :py:class:`ska.low.mccs.MccsDeviceProxy` is sought.
+        :type name: str
+
+        :return: a :py:class:`ska.low.mccs.MccsDeviceProxy` to the named device
+        :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        """
+        fqdn = self._devices_info.device_map[name]["fqdn"]
+        proxy = self._devices_info.device_map[name]["proxy"]
+        device = proxy(
+            fqdn,
+            self._logger,
+            connection_factory=self._multi_device_test_context.get_device,
+        )
+        return device
 
 
 @pytest.fixture(scope="module")
-def devices_info(devices_to_load):
+def tango_config(patch_device_proxy):
     """
-    Constructs a devices_info dictionary in the form required by
-    tango.test_context.MultiDeviceTestContext, with devices as specified
-    by the devices_to_load fixture.
+    Fixture that returns configuration information that specified how
+    the Tango system should be established and run.
 
-    :param devices_to_load: fixture that provides a specification of the
-        devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dictionary
+    This implementation entures that :py:class:`tango.DeviceProxy` is
+    monkeypatched as a workaround for a bug in
+    :py:class:`tango.MultiDeviceTestContext`, then returns the host and
+    port used by the patch.
 
-    :return: a specification of devices
-    :rtype: dict
+    This is a factory; the config won't actually be provided until you
+    call it.
+
+    :param patch_device_proxy: a fixture that handles monkeypatching of
+        :py:class:`tango.DeviceProxy` as a workaround for a bug in
+        :py:class:`tango.MultiDeviceTestContext`, and returns the host
+        and port used in the patch
+    :type patch_device_proxy: tuple
+
+    :return: a callable that sets up the config
+    :rtype: callable
     """
-    devices = _load_devices(
-        path=devices_to_load["path"], device_names=devices_to_load["devices"]
-    )
 
-    patches = devices_to_load["patch"] if "patch" in devices_to_load else {}
+    def _config():
+        """
+        Function returned by the parent fixture that sets up the tango
+        config when called.
 
-    devices_to_patch = defaultdict(list)
-    devices_to_import = defaultdict(list)
+        :returns: tango configuration information: a dictionary with keys
+            "process", "host" and "port".
+        :rtype: dict
+        """
+        (host, port) = patch_device_proxy()
+        return {"process": True, "host": host, "port": port}
 
-    for group in devices:
-        for device in group["devices"]:
-            if device["name"] in patches:
-                patch = patches[device["name"]]
-                devices_to_patch[patch].append(device)
-            else:
-                devices_to_import[group["class"]].append(device)
-
-    patched_devices = [
-        {"class": cls, "devices": devices_to_patch[cls]} for cls in devices_to_patch
-    ]
-
-    package = __import__(devices_to_load["package"], fromlist=devices_to_import.keys())
-    imported_devices = [
-        {"class": getattr(package, cls), "devices": devices_to_import[cls]}
-        for cls in devices_to_import
-    ]
-
-    return imported_devices + patched_devices
+    return _config
 
 
 @pytest.fixture(scope="module")
-def tango_context(request, devices_info, module_mocker):
+def tango_context(request, devices_to_load, tango_config, logger):
     """
     Returns a Tango context. The Tango context returned depends upon
     whether or not pytest was invoked with the `--true-context` option.
@@ -236,16 +477,23 @@ def tango_context(request, devices_info, module_mocker):
     tango.test_context.MultiDeviceTestContext, but actually providing
     access to a true Tango context.
 
+    :todo: Even when testing against a true Tango context, we are still
+        setting up the test context. This will be fixed when we unify
+        the test harnesses (MCCS-329)
+
     :param request: A pytest object giving access to the requesting test
         context.
     :type request: :py:class:`_pytest.fixtures.SubRequest`
-    :param devices_info: Information about the devices under test that
-        are needed to stand the device up in a DeviceTestContext, such
-        as the device classes and properties
-    :type devices_info: dict
-    :param module_mocker: a module-scope thin wrapper for the
-        :py:mod:`unittest.mock` package
-    :type module_mocker: wrapper
+    :param devices_to_load: fixture that provides a specification of the
+        devices that are to be included in the devices_info dictionary
+    :type devices_to_load: dictionary
+    :param tango_config: fixture that returns configuration information
+        that specifies how the Tango system should be established and
+        run.
+    :type tango_config: dict
+    :param logger: the logger to be used by this object.
+    :type logger: :py:class:`logging.Logger`
+
     :yield: a tango context
     """
     try:
@@ -254,8 +502,32 @@ def tango_context(request, devices_info, module_mocker):
         true_context = False
 
     if true_context:
-        with _tango_true_context() as context:
+        with MccsTangoContext(
+            devices_to_load,
+            logger,
+            source=tango.DevSource.DEV,
+        ) as context:
             yield context
     else:
-        with _tango_test_context(devices_info, module_mocker) as context:
+        config = tango_config()
+        with MccsDeviceTestContext(
+            devices_to_load,
+            logger,
+            source=tango.DevSource.DEV,
+            process=config["process"],
+            host=config["host"],
+            port=config["port"],
+        ) as context:
             yield context
+
+
+@pytest.fixture(scope="module")
+def cached_obsstate():
+    """
+    Use a pytest message box to retain obsstate between test stages.
+
+    :return: cached_obsstate: pytest message box for the cached obsstate
+    :rtype: cached_obsstate:
+        dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
+    """
+    return {}

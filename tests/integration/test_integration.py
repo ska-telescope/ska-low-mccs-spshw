@@ -6,6 +6,8 @@ particularly tango devices.
 import pytest
 
 from ska_tango_base.commands import ResultCode
+
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.utils import call_with_json
 
 
@@ -23,20 +25,20 @@ def devices_to_load():
         "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska.low.mccs",
         "devices": [
-            "controller",
-            "subarray_01",
-            "subarray_02",
-            "station_001",
-            "station_002",
-            "subrack_01",
-            "tile_0001",
-            "tile_0002",
-            "tile_0003",
-            "tile_0004",
-            "subarraybeam_01",
-            "subarraybeam_02",
-            "subarraybeam_03",
-            "subarraybeam_04",
+            {"name": "controller", "proxy": MccsDeviceProxy},
+            {"name": "subarray_01", "proxy": MccsDeviceProxy},
+            {"name": "subarray_02", "proxy": MccsDeviceProxy},
+            {"name": "station_001", "proxy": MccsDeviceProxy},
+            {"name": "station_002", "proxy": MccsDeviceProxy},
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 

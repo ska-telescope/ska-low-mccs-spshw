@@ -10,9 +10,10 @@
 This module contains the tests for the ska.low.mccs.pool module.
 """
 import pytest
-import tango
 
 from ska_tango_base.commands import ResultCode
+
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.pool import DevicePool
 
 
@@ -85,7 +86,7 @@ class TestDevicePool:
         return DevicePool(fqdns, logger)
 
     @pytest.mark.parametrize("arg", ["Bah", None])
-    def test_invoke_command(self, fqdns, device_pool, arg):
+    def test_invoke_command(self, fqdns, device_pool, logger, arg):
         """
         Test of the
         :py:meth:`ska.low.mccs.pool.DevicePool.invoke_command`
@@ -95,6 +96,8 @@ class TestDevicePool:
         :type fqdns: list(str)
         :param device_pool: the device_pool under test
         :type device_pool: :py:class:`ska.low.mccs.pool.DevicePool`
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         :param arg: a dummy argument to use in testing
         :type arg: str
         """
@@ -104,10 +107,10 @@ class TestDevicePool:
             device_pool.invoke_command("Foo", arg)
 
         for fqdn in fqdns:
-            tango.DeviceProxy(fqdn).command_inout_asynch.assert_called_once_with(
+            MccsDeviceProxy(fqdn, logger).command_inout_asynch.assert_called_once_with(
                 "Foo", arg
             )
-            tango.DeviceProxy(fqdn).command_inout_reply.assert_called_once()
+            MccsDeviceProxy(fqdn, logger).command_inout_reply.assert_called_once()
 
     @pytest.mark.parametrize(
         ("method", "command"),
@@ -118,7 +121,7 @@ class TestDevicePool:
             ("on", "On"),
         ],
     )
-    def test_commands(self, fqdns, device_pool, method, command):
+    def test_commands(self, fqdns, device_pool, logger, method, command):
         """
         Test of command-specific methods.
 
@@ -126,6 +129,8 @@ class TestDevicePool:
         :type fqdns: list(str)
         :param device_pool: the device_pool under test
         :type device_pool: :py:class:`ska.low.mccs.pool.DevicePool`
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         :param method: the command-specific method to test
         :type method: str
         :param command: the device command expected to be called on each
@@ -135,7 +140,7 @@ class TestDevicePool:
         getattr(device_pool, method)()
 
         for fqdn in fqdns:
-            tango.DeviceProxy(fqdn).command_inout_asynch.assert_called_once_with(
+            MccsDeviceProxy(fqdn, logger).command_inout_asynch.assert_called_once_with(
                 command, None
             )
-            tango.DeviceProxy(fqdn).command_inout_reply.assert_called_once()
+            MccsDeviceProxy(fqdn, logger).command_inout_reply.assert_called_once()

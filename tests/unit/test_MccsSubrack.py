@@ -22,13 +22,14 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 from ska_tango_base.commands import ResultCode
-from ska.low.mccs.hardware import SimulableHardwareFactory
+
+from ska.low.mccs import MccsDeviceProxy
+from ska.low.mccs.hardware import PowerMode, SimulableHardwareFactory
 from ska.low.mccs.subrack.subrack_device import SubrackHardwareManager
 from ska.low.mccs.subrack.subrack_simulator import (
     SubrackBaySimulator,
     SubrackBoardSimulator,
 )
-from ska.low.mccs.hardware import PowerMode
 
 
 @pytest.fixture()
@@ -43,6 +44,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "subrack_01",
+        "proxy": MccsDeviceProxy,
     }
 
 

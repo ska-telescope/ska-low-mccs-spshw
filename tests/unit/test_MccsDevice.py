@@ -17,7 +17,8 @@ from tango import DevState
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, LoggingLevel, TestMode
-from ska.low.mccs import MccsDevice, release
+
+from ska.low.mccs import MccsDevice, MccsDeviceProxy, release
 
 
 @pytest.fixture()
@@ -32,6 +33,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/extra.json",
         "package": "ska.low.mccs",
         "device": "device",
+        "proxy": MccsDeviceProxy,
     }
 
 

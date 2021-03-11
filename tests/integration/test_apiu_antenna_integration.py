@@ -18,6 +18,8 @@ import time
 import pytest
 from tango import DevState
 
+from ska.low.mccs import MccsDeviceProxy
+
 
 @pytest.fixture()
 def devices_to_load():
@@ -32,16 +34,16 @@ def devices_to_load():
         "package": "ska.low.mccs",
         "devices": [
             # THESE ARE THE SYSTEM UNDER TEST
-            "apiu_001",
-            "antenna_000001",
-            "antenna_000002",
-            "antenna_000003",
-            "antenna_000004",
+            {"name": "apiu_001", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000001", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000002", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000003", "proxy": MccsDeviceProxy},
+            {"name": "antenna_000004", "proxy": MccsDeviceProxy},
             # THESE ARE NOT UNDER TEST BUT ARE NEEDED BY THE ABOVE
             # (An antenna needs its tile which needs its subrack...)
-            "subrack_01",
-            "tile_0001",
-            "tile_0002",
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
         ],
     }
 

@@ -27,7 +27,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsStation, release
+from ska.low.mccs import MccsDeviceProxy, MccsStation, release
 
 
 @pytest.fixture()
@@ -42,6 +42,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "station_001",
+        "proxy": MccsDeviceProxy,
     }
 
 
@@ -218,7 +219,7 @@ class TestMccsStation:
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
-    def test_subarrayId(self, device_under_test):
+    def test_subarrayId(self, device_under_test, logger):
         """
         Test for subarrayId attribute.
 
@@ -226,10 +227,12 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         """
         station = device_under_test  # to make test easier to read
-        mock_tile_1 = tango.DeviceProxy("low-mccs/tile/0001")
-        mock_tile_2 = tango.DeviceProxy("low-mccs/tile/0002")
+        mock_tile_1 = MccsDeviceProxy("low-mccs/tile/0001", logger)
+        mock_tile_2 = MccsDeviceProxy("low-mccs/tile/0002", logger)
 
         # These tiles are mock devices so we have to manually set their
         # initial states

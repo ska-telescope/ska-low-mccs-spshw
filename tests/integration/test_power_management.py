@@ -17,6 +17,8 @@ from time import sleep
 import pytest
 from tango import DevState
 
+from ska.low.mccs import MccsDeviceProxy
+
 
 class TestPowerManagement:
     """
@@ -37,18 +39,18 @@ class TestPowerManagement:
             "path": "charts/ska-low-mccs/data/configuration_without_beams.json",
             "package": "ska.low.mccs",
             "devices": [
-                "controller",
-                "station_001",
-                "subrack_01",
-                "tile_0001",
-                "tile_0002",
-                "tile_0003",
-                "tile_0004",
-                "apiu_001",
-                "antenna_000001",
-                "antenna_000002",
-                "antenna_000003",
-                "antenna_000004",
+                {"name": "controller", "proxy": MccsDeviceProxy},
+                {"name": "station_001", "proxy": MccsDeviceProxy},
+                {"name": "subrack_01", "proxy": MccsDeviceProxy},
+                {"name": "tile_0001", "proxy": MccsDeviceProxy},
+                {"name": "tile_0002", "proxy": MccsDeviceProxy},
+                {"name": "tile_0003", "proxy": MccsDeviceProxy},
+                {"name": "tile_0004", "proxy": MccsDeviceProxy},
+                {"name": "apiu_001", "proxy": MccsDeviceProxy},
+                {"name": "antenna_000001", "proxy": MccsDeviceProxy},
+                {"name": "antenna_000002", "proxy": MccsDeviceProxy},
+                {"name": "antenna_000003", "proxy": MccsDeviceProxy},
+                {"name": "antenna_000004", "proxy": MccsDeviceProxy},
             ],
         }
 

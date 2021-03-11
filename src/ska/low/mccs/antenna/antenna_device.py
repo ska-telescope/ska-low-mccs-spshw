@@ -27,13 +27,14 @@ from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, SimulationMode
 
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.events import EventManager, EventSubscriptionHandler
 from ska.low.mccs.hardware import (
     HardwareHealthEvaluator,
     PowerMode,
 )
 from ska.low.mccs.health import HealthModel
-from ska.low.mccs.utils import backoff_connect, tango_raise
+from ska.low.mccs.utils import tango_raise
 
 
 def create_return(success, action):
@@ -129,7 +130,9 @@ class AntennaApiuProxy:
         Establish a connection to the APIU device that manages the APIU
         that powers this device's antenna.
         """
-        self._apiu = backoff_connect(self._fqdn, self._logger, wait=True)
+        self._apiu = MccsDeviceProxy(self._fqdn, self._logger)
+        self._apiu.check_initialised()
+
         self._apiu_event_handler = EventSubscriptionHandler(
             self._apiu, "areAntennasOn", self._logger
         )
@@ -342,7 +345,7 @@ class AntennaTileProxy:
         Establish a connection to the tile device that manages the TPM
         that consumes the data stream from this device's antenna.
         """
-        self._tile = backoff_connect(self._fqdn, self._logger)
+        self._tile = MccsDeviceProxy(self._fqdn, self._logger)
 
 
 class MccsAntenna(SKABaseDevice):

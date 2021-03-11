@@ -22,7 +22,7 @@ from tango import AttrQuality, DevFailed, DevState, EventType
 from ska_tango_base import DeviceStateModel
 from ska_tango_base.control_model import HealthState, SimulationMode, TestMode
 from ska_tango_base.commands import ResultCode
-from ska.low.mccs import MccsTile
+from ska.low.mccs import MccsDeviceProxy, MccsTile
 from ska.low.mccs.hardware import PowerMode, SimulableHardwareFactory
 from ska.low.mccs.tile import TileHardwareManager, TilePowerManager, StaticTpmSimulator
 
@@ -39,6 +39,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "tile_0001",
+        "proxy": MccsDeviceProxy,
     }
 
 

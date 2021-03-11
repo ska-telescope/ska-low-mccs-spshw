@@ -13,6 +13,8 @@ This module contains the tests for the
 import pytest
 
 from ska_tango_base.commands import ResultCode
+
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.subrack.demo_subrack_device import DemoSubrack
 
 
@@ -29,6 +31,7 @@ def device_to_load():
         "package": "ska.low.mccs",
         "device": "subrack_01",
         "patch": DemoSubrack,
+        "proxy": MccsDeviceProxy,
     }
 
 

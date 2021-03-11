@@ -12,7 +12,6 @@
 #
 import os
 import sys
-# sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../..'))
 
 
@@ -65,7 +64,6 @@ copyright = '2021, SKA MCCS Team'
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    # "sphinx_autodoc_typehints",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

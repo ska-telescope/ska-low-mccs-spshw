@@ -591,7 +591,7 @@ class MccsSubarray(SKASubarray):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000)
+    @attribute(dtype="DevLong", format="%i")
     def commandResult(self):
         """
         Return the commandResult attribute.

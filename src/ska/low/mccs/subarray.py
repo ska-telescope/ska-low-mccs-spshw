@@ -601,7 +601,7 @@ class MccsSubarray(SKASubarray):
         """
         return self._command_result
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000)
+    @attribute(dtype="DevLong", format="%i")
     def scanId(self):
         """
         Return the scan id.

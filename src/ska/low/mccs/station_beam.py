@@ -39,11 +39,11 @@ from ska.low.mccs.health import MutableHealthModel
 
 class StationBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEvaluator` for a
-    station beam. A station beam doesn't have hardware as such. Here we
-    are pretending it does because we have to set health to DEGRADED if
-    the beam is not locked, so for now we pretend that the
-    `isBeamLocked` attribute is a hardware property.
+    A :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEval
+    uator` for a station beam. A station beam doesn't have hardware as
+    such. Here we are pretending it does because we have to set health
+    to DEGRADED if the beam is not locked, so for now we pretend that
+    the `isBeamLocked` attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -418,7 +418,7 @@ class MccsStationBeam(SKAObsDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000)
+    @attribute(dtype="DevLong", format="%i")
     def beamId(self):
         """
         Return the beam id.
@@ -524,10 +524,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self._update_rate
 
-    @attribute(
-        dtype="DevBoolean",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevBoolean")
     def isBeamLocked(self):
         """
         Return a flag indicating whether the beam is locked or not.

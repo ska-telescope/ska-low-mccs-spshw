@@ -325,7 +325,7 @@ def tmc_tells_mccs_controller_to_start_up(controller):
     # and updates its record of station health, it will refuse to
     # allocate those stations to a subarray.
     #
-    # For now, let's sleep for a secone, to allow time for the events to
+    # For now, let's sleep for a second, to allow time for the events to
     # arrive. In future we need a better solution to this.
     time.sleep(1.0)
 

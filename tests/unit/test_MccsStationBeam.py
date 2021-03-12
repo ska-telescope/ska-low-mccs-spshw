@@ -186,8 +186,6 @@ class TestMccsStationBeam:
         """
         assert device_under_test.healthState == HealthState.DEGRADED
 
-        # Test that polling is turned on and subscription yields an
-        # event as expected
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )
@@ -202,8 +200,8 @@ class TestMccsStationBeam:
         device_under_test.isBeamLocked = True
         assert device_under_test.healthState == HealthState.OK
 
-        # It seems that push_change_event isn't synchronous, so we have
-        # no choice but to sleep a polling period
+        # Tango's event system is asynchronous. We need to allow time
+        # for the event to arrive.
         time.sleep(0.2)
         mock_callback.assert_called_once()
 
@@ -216,8 +214,8 @@ class TestMccsStationBeam:
         device_under_test.isBeamLocked = False
         assert device_under_test.healthState == HealthState.DEGRADED
 
-        # It seems that push_change_event isn't synchronous, so we have
-        # no choice but to sleep a polling period
+        # Tango's event system is asynchronous. We need to allow time
+        # for the event to arrive.
         time.sleep(0.2)
         mock_callback.assert_called_once()
 

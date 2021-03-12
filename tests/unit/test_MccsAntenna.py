@@ -411,8 +411,6 @@ class TestMccsAntenna:
         """
         assert device_under_test.healthState == HealthState.OK
 
-        # Test that polling is turned on and subscription yields an
-        # event as expected
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )

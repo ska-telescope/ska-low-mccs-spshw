@@ -710,7 +710,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevShort", label="jobsErrored", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsErrored")
     def jobsErrored(self):
         """
         Return the number of errored jobs.
@@ -720,7 +720,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_errored
 
-    @attribute(dtype="DevShort", label="jobsFailed", max_alarm=1, polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsFailed", max_alarm=1)
     def jobsFailed(self):
         """
         Return the number of failed jobs.
@@ -730,7 +730,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_failed
 
-    @attribute(dtype="DevShort", label="jobsFinished", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsFinished")
     def jobsFinished(self):
         """
         Returns the number of finished jobs.
@@ -740,7 +740,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_finished
 
-    @attribute(dtype="DevShort", label="jobsKilled", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsKilled")
     def jobsKilled(self):
         """
         Return the number of killed jobs.
@@ -750,7 +750,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_killed
 
-    @attribute(dtype="DevShort", label="jobsKilling", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsKilling")
     def jobsKilling(self):
         """
         Return the number of jobs currently being killed.
@@ -760,7 +760,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_killing
 
-    @attribute(dtype="DevShort", label="jobsLost", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsLost")
     def jobsLost(self):
         """
         Return the number of lost jobs.
@@ -770,7 +770,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_lost
 
-    @attribute(dtype="DevShort", label="jobsRunning", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsRunning")
     def jobsRunning(self):
         """
         Return the number of running jobs.
@@ -780,7 +780,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_running
 
-    @attribute(dtype="DevShort", label="jobsStaging", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsStaging")
     def jobsStaging(self):
         """
         Return the number of staging jobs.
@@ -790,7 +790,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_staging
 
-    @attribute(dtype="DevShort", label="jobsStarting", polling_period=10000)
+    @attribute(dtype="DevShort", label="jobsStarting")
     def jobsStarting(self):
         """
         Return the number of starting jobs.
@@ -800,7 +800,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_starting
 
-    @attribute(dtype="DevShort", max_alarm=1, polling_period=10000)
+    @attribute(dtype="DevShort", max_alarm=1)
     def jobsUnreachable(self):
         """
         Return the number of unreachable jobs.
@@ -810,7 +810,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.jobs_unreachable
 
-    @attribute(dtype="DevFloat", label="memoryTotal", polling_period=10000)
+    @attribute(dtype="DevFloat", label="memoryTotal")
     def memoryTotal(self):
         """
         Return the total memory size.
@@ -820,7 +820,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.memory_total
 
-    @attribute(dtype="DevFloat", label="memoryAvail", polling_period=10000)
+    @attribute(dtype="DevFloat", label="memoryAvail")
     def memoryAvail(self):
         """
         Return the available memory.
@@ -830,7 +830,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.memory_avail
 
-    @attribute(dtype="DevFloat", label="memoryUsed", polling_period=10000)
+    @attribute(dtype="DevFloat", label="memoryUsed")
     def memoryUsed(self):
         """
         Return the amount of memory in use.
@@ -840,7 +840,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.memory_used
 
-    @attribute(dtype="DevShort", label="nodesInUse", polling_period=10000)
+    @attribute(dtype="DevShort", label="nodesInUse")
     def nodesInUse(self):
         """
         Return the number of nodes in use.
@@ -850,7 +850,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.nodes_in_use
 
-    @attribute(dtype="DevShort", label="nodesAvail", polling_period=10000)
+    @attribute(dtype="DevShort", label="nodesAvail")
     def nodesAvail(self):
         """
         Return the number of available nodes.
@@ -860,7 +860,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.nodes_avail
 
-    @attribute(dtype="DevShort", label="nodesTotal", polling_period=10000)
+    @attribute(dtype="DevShort", label="nodesTotal")
     def nodesTotal(self):
         """
         Return the total number of nodes.
@@ -870,7 +870,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.nodes_total
 
-    @attribute(dtype="DevShort", label="masterNodeId", polling_period=10000)
+    @attribute(dtype="DevShort", label="masterNodeId")
     def masterNodeId(self):
         """
         Return the id of the master node.
@@ -880,9 +880,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_node_id
 
-    @attribute(
-        dtype="DevFloat", label="masterCpusAllocatedPercent", polling_period=10000
-    )
+    @attribute(dtype="DevFloat", label="masterCpusAllocatedPercent")
     def masterCpusAllocatedPercent(self):
         """
         Return the percent allocation of the CPUs.
@@ -892,7 +890,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_cpus_allocated_percent
 
-    @attribute(dtype="DevShort", label="masterCpusUsed", polling_period=10000)
+    @attribute(dtype="DevShort", label="masterCpusUsed")
     def masterCpusUsed(self):
         """
         Return the number of CPUs in use on the master node.
@@ -902,7 +900,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_cpus_used
 
-    @attribute(dtype="DevShort", label="masterCpusTotal", polling_period=10000)
+    @attribute(dtype="DevShort", label="masterCpusTotal")
     def masterCpusTotal(self):
         """
         Return the number of CPUs that the master node has.
@@ -912,7 +910,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_cpus_total
 
-    @attribute(dtype="DevFloat", label="masterDiskPercent", polling_period=10000)
+    @attribute(dtype="DevFloat", label="masterDiskPercent")
     def masterDiskPercent(self):
         """
         Return the proportion of the master node disk that has been
@@ -924,7 +922,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_disk_percent
 
-    @attribute(dtype="DevDouble", label="masterDiskUsed", polling_period=10000)
+    @attribute(dtype="DevDouble", label="masterDiskUsed")
     def masterDiskUsed(self):
         """
         Return the amount of the master node disk that has been used.
@@ -935,7 +933,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_disk_used
 
-    @attribute(dtype="DevFloat", label="masterDiskTotal", polling_period=10000)
+    @attribute(dtype="DevFloat", label="masterDiskTotal")
     def masterDiskTotal(self):
         """
         The total disk size on the master node.
@@ -945,7 +943,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_disk_total
 
-    @attribute(dtype="DevFloat", label="masterMemPercent", polling_period=10000)
+    @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemPercent(self):
         """
         Return the proportion of memory that has been used on the master
@@ -957,7 +955,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_mem_percent
 
-    @attribute(dtype="DevFloat", label="masterMemPercent", polling_period=10000)
+    @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemUsed(self):
         """
         Return the amount of memory that has been used on the master
@@ -969,7 +967,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         """
         return self.cluster_manager.master_mem_used
 
-    @attribute(dtype="DevFloat", label="masterMemTotal", polling_period=10000)
+    @attribute(dtype="DevFloat", label="masterMemTotal")
     def masterMemTotal(self):
         """
         Return the total amount of memory on the master node.
@@ -983,7 +981,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         dtype=("DevShort",),
         max_dim_x=100,
         label="shadowMasterPoolNodeIds",
-        polling_period=10000,
     )
     def shadowMasterPoolNodeIds(self):
         """
@@ -998,7 +995,6 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         dtype=("DevState",),
         max_dim_x=100,
         label="shadowMasterPoolStatus",
-        polling_period=10000,
     )
     def shadowMasterPoolStatus(self):
         """

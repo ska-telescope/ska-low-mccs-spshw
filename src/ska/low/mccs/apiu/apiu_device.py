@@ -659,7 +659,7 @@ class MccsAPIU(SKABaseDevice):
         """
         return self.hardware_manager.are_antennas_on()
 
-    @attribute(dtype="DevDouble", label="Voltage", unit="Volts", polling_period=1000)
+    @attribute(dtype="DevDouble", label="Voltage", unit="Volts")
     def voltage(self):
         """
         Return the voltage attribute.
@@ -669,7 +669,7 @@ class MccsAPIU(SKABaseDevice):
         """
         return self.hardware_manager.voltage
 
-    @attribute(dtype="DevDouble", label="Current", unit="Amps", polling_period=1000)
+    @attribute(dtype="DevDouble", label="Current", unit="Amps")
     def current(self):
         """
         Return the current attribute.
@@ -679,7 +679,7 @@ class MccsAPIU(SKABaseDevice):
         """
         return self.hardware_manager.current
 
-    @attribute(dtype="DevDouble", label="Temperature", unit="degC", polling_period=1000)
+    @attribute(dtype="DevDouble", label="Temperature", unit="degC")
     def temperature(self):
         """
         Return the temperature attribute.
@@ -693,7 +693,6 @@ class MccsAPIU(SKABaseDevice):
         dtype="DevDouble",
         label="Humidity",
         unit="percent",
-        polling_period=1000,
         # max_value=0.0,
         # min_value=100.0,
     )

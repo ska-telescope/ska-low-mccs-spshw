@@ -22,7 +22,6 @@ import threading
 import time
 
 # PyTango imports
-import tango
 from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
@@ -31,11 +30,11 @@ from ska_tango_base import SKASubarray
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, ObsState
 
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import MutableHealthModel
 import ska.low.mccs.release as release
 from ska.low.mccs.resource import ResourceManager
-from ska.low.mccs.utils import backoff_connect
 
 
 class StationsResourceManager(ResourceManager):
@@ -46,7 +45,7 @@ class StationsResourceManager(ResourceManager):
     Inherits from ResourceManager.
     """
 
-    def __init__(self, health_monitor, station_fqdns):
+    def __init__(self, health_monitor, station_fqdns, logger):
         """
         Initialise a new StationsResourceManager.
 
@@ -55,13 +54,15 @@ class StationsResourceManager(ResourceManager):
         :param station_fqdns: the FQDNs of the stations that this
             subarray manages
         :type station_fqdns: list(str)
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         """
         self._devices = dict()
         stations = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
-        super().__init__(health_monitor, "Stations Resource Manager", stations)
+        super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
 
     def items(self):
         """
@@ -86,7 +87,8 @@ class StationsResourceManager(ResourceManager):
         """
         for station_fqdn in stations.values():
             if station_fqdn not in self.station_fqdns:
-                station = tango.DeviceProxy(station_fqdn)
+                # TODO: Establishment of connections should happen at initialization
+                station = MccsDeviceProxy(station_fqdn, logger=self._logger)
                 station.InitialSetup()
                 self._devices[station_fqdn] = station
         super()._add_to_managed(stations)
@@ -126,7 +128,7 @@ class StationBeamsResourceManager(ResourceManager):
     Inherits from ResourceManager.
     """
 
-    def __init__(self, health_monitor, station_beam_fqdns, stations_manager):
+    def __init__(self, health_monitor, station_beam_fqdns, stations_manager, logger):
         """
         Initialise a new StationBeamsResourceManager.
 
@@ -139,6 +141,8 @@ class StationBeamsResourceManager(ResourceManager):
             devices belonging to the parent Subarray
         :type stations_manager:
             :py:class:`ska.low.mccs.subarray.StationsResourceManager` object
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         """
         self._stations = stations_manager
         station_beams = {}
@@ -149,6 +153,7 @@ class StationBeamsResourceManager(ResourceManager):
             health_monitor,
             "Station Beams Resource Manager",
             station_beams,
+            logger,
             [HealthState.OK],
         )
 
@@ -184,7 +189,10 @@ class StationBeamsResourceManager(ResourceManager):
         for station_beam_fqdn in station_beam_fqdns:
             station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
             station_beams[station_beam_id] = station_beam_fqdn
-            station_beam = tango.DeviceProxy(station_beam_fqdn)
+
+            # TODO: Establishment of connections should happen at initialization
+            station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+
             station_beam.stationIds = sorted(stations.keys())
             # TODO While SubarrayBeam device is not yet fully implemented, we're still
             # passing an array of Station ids to StationBeams. This list will end up
@@ -197,7 +205,9 @@ class StationBeamsResourceManager(ResourceManager):
 
         self._add_to_managed(station_beams)
         for station_beam_fqdn in station_beam_fqdns:
-            station_beam = tango.DeviceProxy(station_beam_fqdn)
+            # TODO: Establishment of connections should happen at initialization
+            station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+
             station_beam.isBeamLocked = True
             self.update_resource_health(station_beam_fqdn, station_beam.healthState)
 
@@ -240,7 +250,9 @@ class StationBeamsResourceManager(ResourceManager):
             if subarray_beam_id:
                 subarray_beam_fqdn = self.fqdn_from_id(subarray_beam_id)
                 if subarray_beam_fqdn:
-                    dp = backoff_connect(subarray_beam_fqdn, logger=logger)
+                    # TODO: Establishment of connections should happen at initialization
+                    dp = MccsDeviceProxy(subarray_beam_fqdn, logger=logger)
+
                     json_str = json.dumps(subarray_beam)
                     dp.configure(json_str)
 
@@ -262,7 +274,8 @@ class StationBeamsResourceManager(ResourceManager):
         # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
         subarray_beam_device_proxies = []
         for subarray_beam_fqdn in self.station_beam_fqdns:
-            device_proxy = backoff_connect(subarray_beam_fqdn, logger=logger)
+            # TODO: Establishment of connections should be happening at initialization
+            device_proxy = MccsDeviceProxy(subarray_beam_fqdn, logger=logger)
             subarray_beam_device_proxies.append(device_proxy)
 
         result_failure = None
@@ -298,7 +311,9 @@ class StationBeamsResourceManager(ResourceManager):
 
         # release station beams by given fqdns
         for station_beam_fqdn in station_beam_fqdns:
-            station_beam = tango.DeviceProxy(station_beam_fqdn)
+            # TODO: Establishment of connections should happen at initialization
+            station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+
             station_beam.stationIds = []
             station_beam.stationFqdn = None
         super().release(station_beam_fqdns)
@@ -484,12 +499,13 @@ class MccsSubarray(SKASubarray):
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device._station_pool_manager = StationsResourceManager(
-                device.health_model._health_monitor, device._station_fqdns
+                device.health_model._health_monitor, device._station_fqdns, self.logger
             )
             device._station_beam_pool_manager = StationBeamsResourceManager(
                 device.health_model._health_monitor,
                 device._station_beam_fqdns,
                 device._station_pool_manager,
+                self.logger,
             )
             resourcing_args = (
                 device._station_beam_pool_manager,
@@ -575,7 +591,7 @@ class MccsSubarray(SKASubarray):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000)
+    @attribute(dtype="DevLong", format="%i")
     def commandResult(self):
         """
         Return the commandResult attribute.
@@ -605,7 +621,7 @@ class MccsSubarray(SKASubarray):
         """
         self._scan_id = scan_id
 
-    @attribute(dtype=("DevString",), max_dim_x=512, format="%s", polling_period=1000)
+    @attribute(dtype=("DevString",), max_dim_x=512, format="%s")
     def stationFQDNs(self):
         """
         Return the FQDNs of stations assigned to this subarray.

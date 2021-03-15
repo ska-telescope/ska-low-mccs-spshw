@@ -12,7 +12,6 @@ This module contains the tests for MccsSubarray.
 import json
 import pytest
 
-import tango
 from tango import AttrQuality, EventType, DevState
 
 from ska_tango_base import SKASubarrayStateModel
@@ -25,7 +24,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsSubarray, release
+from ska.low.mccs import MccsDeviceProxy, MccsSubarray, release
 from ska.low.mccs.utils import call_with_json
 
 
@@ -55,6 +54,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "subarray_01",
+        "proxy": MccsDeviceProxy,
     }
 
 
@@ -375,7 +375,7 @@ class TestMccsSubarray:
                 "low-mccs/subarraybeam/02": _subarraybeam_mock(),
             }
 
-        def test_AllocateResources(self, device_under_test):
+        def test_AllocateResources(self, device_under_test, logger):
             """
             Test for AllocateResources.
 
@@ -383,11 +383,13 @@ class TestMccsSubarray:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
-            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
+            mock_station_1 = MccsDeviceProxy(station_fqdns[0], logger)
             subarray_beam_fqdn = "low-mccs/subarraybeam/01"
-            mock_subarray_beam = tango.DeviceProxy(subarray_beam_fqdn)
+            mock_subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger)
 
             device_under_test.On()
             assert mock_subarray_beam.healthState == HealthState.OK
@@ -426,7 +428,7 @@ class TestMccsSubarray:
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
             assert mock_subarray_beam.stationIds == [1, 2]
 
-        def test_ReleaseAllResources(self, device_under_test):
+        def test_ReleaseAllResources(self, device_under_test, logger):
             """
             Test for ReleaseAllResources.
 
@@ -434,16 +436,18 @@ class TestMccsSubarray:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
-            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
-            mock_station_2 = tango.DeviceProxy(station_fqdns[1])
+            mock_station_1 = MccsDeviceProxy(station_fqdns[0], logger)
+            mock_station_2 = MccsDeviceProxy(station_fqdns[1], logger)
             subarray_beam_fqdns = [
                 "low-mccs/subarraybeam/01",
                 "low-mccs/subarraybeam/02",
             ]
-            mock_subarray_beam_1 = tango.DeviceProxy(subarray_beam_fqdns[0])
-            mock_subarray_beam_2 = tango.DeviceProxy(subarray_beam_fqdns[1])
+            mock_subarray_beam_1 = MccsDeviceProxy(subarray_beam_fqdns[0], logger)
+            mock_subarray_beam_2 = MccsDeviceProxy(subarray_beam_fqdns[1], logger)
 
             device_under_test.On()
             [[result_code], [message]] = call_with_json(
@@ -489,7 +493,7 @@ class TestMccsSubarray:
             assert mock_subarray_beam_1.stationIds == []
             assert mock_subarray_beam_2.stationIds == []
 
-        def test_configure(self, device_under_test):
+        def test_configure(self, device_under_test, logger):
             """
             Test for Configure.
 
@@ -497,11 +501,13 @@ class TestMccsSubarray:
                 :py:class:`tango.DeviceProxy` to the device under test, in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
-            mock_station_1 = tango.DeviceProxy(station_fqdns[0])
+            mock_station_1 = MccsDeviceProxy(station_fqdns[0], logger)
             subarray_beam_fqdn = "low-mccs/subarraybeam/01"
-            mock_subarray_beam = tango.DeviceProxy(subarray_beam_fqdn)
+            mock_subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger)
 
             device_under_test.On()
             assert mock_subarray_beam.healthState == HealthState.OK

@@ -11,7 +11,7 @@ This module contains unit tests for the ska.low.mccs.events module.
 """
 from contextlib import nullcontext
 import pytest
-import tango
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.events import (
     EventSubscriptionHandler,
     DeviceEventManager,
@@ -40,7 +40,7 @@ class TestEventSubscriptionHandler:
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-        mock_device_proxy = tango.DeviceProxy("mock/mock/1")
+        mock_device_proxy = MccsDeviceProxy("mock/mock/1", logger)
         event_name = "mock_event"
 
         _ = EventSubscriptionHandler(mock_device_proxy, event_name, logger)
@@ -72,7 +72,7 @@ class TestEventSubscriptionHandler:
         event_quality = "mock_quality"
         callback_count = 2  # test should pass for any positive value
 
-        mock_device_proxy = tango.DeviceProxy("mock/mock/1")
+        mock_device_proxy = MccsDeviceProxy("mock/mock/1", logger)
         event_subscription_handler = EventSubscriptionHandler(
             mock_device_proxy, event_name, logger
         )
@@ -121,7 +121,7 @@ class TestEventSubscriptionHandler:
         :type logger: :py:class:`logging.Logger`
         """
         event_name = "mock_event"
-        mock_device_proxy = tango.DeviceProxy("mock/mock/1")
+        mock_device_proxy = MccsDeviceProxy("mock/mock/1", logger)
 
         event_subscription_handler = EventSubscriptionHandler(
             mock_device_proxy, event_name, logger
@@ -217,7 +217,7 @@ class TestDeviceEventManager:
         event_count = 2  # test should pass for any positive number
         callbacks = [mocker.Mock() for i in range(event_count)]
 
-        mock_device_proxy = tango.DeviceProxy(fqdn)
+        mock_device_proxy = MccsDeviceProxy(fqdn, logger)
 
         for i in range(event_count):
             event_name = f"mock_event_{i}"
@@ -378,7 +378,7 @@ class TestEventManager:
         events = [f"mock_event_{i}" for i in range(1, event_count + 1)]
 
         for fqdn in fqdns:
-            mock_device_proxy = tango.DeviceProxy(fqdn)
+            mock_device_proxy = MccsDeviceProxy(fqdn, logger)
 
             for event in events:
                 mock_callback.reset_mock()

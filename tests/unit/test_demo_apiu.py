@@ -12,6 +12,7 @@ This module contains the tests for the
 """
 import pytest
 
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.apiu.demo_apiu_device import DemoAPIU
 
 
@@ -28,6 +29,7 @@ def device_to_load():
         "package": "ska.low.mccs",
         "device": "apiu_001",
         "patch": DemoAPIU,
+        "proxy": MccsDeviceProxy,
     }
 
 

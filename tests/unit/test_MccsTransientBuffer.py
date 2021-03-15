@@ -16,6 +16,8 @@ import pytest
 from tango import AttrQuality, EventType
 from ska_tango_base.control_model import HealthState
 
+from ska.low.mccs import MccsDeviceProxy
+
 
 @pytest.fixture()
 def device_to_load():
@@ -29,6 +31,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/extra.json",
         "package": "ska.low.mccs",
         "device": "transientbuffer",
+        "proxy": MccsDeviceProxy,
     }
 
 

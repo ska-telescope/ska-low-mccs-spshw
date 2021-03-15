@@ -17,7 +17,7 @@ of subservient devices.
     dependency graph.
 """
 from ska_tango_base.commands import ResultCode
-from ska.low.mccs.utils import backoff_connect
+from ska.low.mccs import MccsDeviceProxy
 
 
 class DevicePool:
@@ -64,7 +64,7 @@ class DevicePool:
         if self._devices is None:
             # TODO: it would save some time if we were connecting asynchronously.
             self._devices = [
-                backoff_connect(fqdn, self._logger) for fqdn in self._fqdns
+                MccsDeviceProxy(fqdn, self._logger) for fqdn in self._fqdns
             ]
 
     def invoke_command(self, command_name, arg=None):

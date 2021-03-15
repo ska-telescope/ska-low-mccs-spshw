@@ -29,7 +29,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
-from ska.low.mccs import MccsController, MccsSubarray, release
+from ska.low.mccs import MccsController, MccsDeviceProxy, MccsSubarray, release
 from ska.low.mccs.controller import ControllerResourceManager
 from ska.low.mccs.events import EventManager
 from ska.low.mccs.health import HealthModel
@@ -94,6 +94,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "controller",
+        "proxy": MccsDeviceProxy,
         "patch": ControllerWithFailableDevices,
     }
 
@@ -433,7 +434,7 @@ class TestMccsController:
                 "low-mccs/station/002": _station_mock(),
             }
 
-        def test_Allocate(self, device_under_test, mock_event_callback):
+        def test_Allocate(self, device_under_test, mock_event_callback, logger):
             """
             Test the Allocate command (including end of command event
             testing).
@@ -445,12 +446,14 @@ class TestMccsController:
             :param mock_event_callback: fixture that provides a mock instance
                 with callback support methods
             :type mock_event_callback: MockCallback
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
             """
             controller = device_under_test  # for readability
-            mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
-            mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
-            mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
-            mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
+            mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
+            mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
+            mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
 
             controller.Off()
             controller.On()
@@ -663,7 +666,7 @@ class TestMccsController:
             assert mock_station_1.subarrayId == 2
             assert mock_station_2.subarrayId == 2
 
-        def test_Release(self, device_under_test, mock_event_callback):
+        def test_Release(self, device_under_test, mock_event_callback, logger):
             """
             Test Release command.
 
@@ -674,12 +677,14 @@ class TestMccsController:
             :param mock_event_callback: fixture that provides a mock instance
                 with callback support methods
             :type mock_event_callback: MockCallback
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
             """
             controller = device_under_test  # for readability
-            mock_subarray_1 = tango.DeviceProxy("low-mccs/subarray/01")
-            mock_subarray_2 = tango.DeviceProxy("low-mccs/subarray/02")
-            mock_station_1 = tango.DeviceProxy("low-mccs/station/001")
-            mock_station_2 = tango.DeviceProxy("low-mccs/station/002")
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
+            mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
+            mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
+            mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
 
             controller.Off()
             controller.On()
@@ -999,7 +1004,7 @@ class TestControllerResourceManager:
 
         # Instantiate a resource manager for the Stations
         manager = ControllerResourceManager(
-            self.health_monitor, "Test Manager", self.stations
+            self.health_monitor, "Test Manager", self.stations, logger
         )
         return manager
 

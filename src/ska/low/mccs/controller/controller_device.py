@@ -20,7 +20,6 @@ from typing import List, Dict, Tuple
 
 
 # PyTango imports
-import tango
 from tango import DebugIt, DevState, EnsureOmniThread
 from tango.server import attribute, command, device_property
 
@@ -29,6 +28,7 @@ from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.pool import DevicePool, DevicePoolSequence
 import ska.low.mccs.release as release
 from ska.low.mccs.utils import call_with_json, tango_raise
@@ -48,7 +48,11 @@ class ControllerResourceManager(ResourceManager):
     """
 
     def __init__(
-        self, health_monitor: HealthMonitor, manager_name: str, station_fqdns: List[str]
+        self,
+        health_monitor: HealthMonitor,
+        manager_name: str,
+        station_fqdns: List[str],
+        logger: logging.Logger,
     ):
         """
         Initialise the conroller resource manager.
@@ -57,12 +61,13 @@ class ControllerResourceManager(ResourceManager):
         :param manager_name: Name for this manager (imformation only)
         :param station_fqdns: the FQDNs of the stations that this controller
             device manages
+        :param logger: the logger to be used by the object under test
         """
         stations = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
-        super().__init__(health_monitor, manager_name, stations)
+        super().__init__(health_monitor, manager_name, stations, logger)
 
     def assign(self, station_fqdns: List[str], subarray_id: int):
         """
@@ -295,7 +300,7 @@ class MccsController(SKAMaster):
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = ControllerResourceManager(
-                health_monitor, "StationsManager", fqdns
+                health_monitor, "StationsManager", fqdns, self.logger
             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
@@ -357,7 +362,7 @@ class MccsController(SKAMaster):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000)
+    @attribute(dtype="DevLong", format="%i")
     def commandResult(self) -> ResultCode:
         """
         Return the commandResult attribute.
@@ -908,7 +913,7 @@ class MccsController(SKAMaster):
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
                 )
 
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
+            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
 
             # Manager gave this list of stations to release (no longer required)
             if stations_to_release is not None:
@@ -922,7 +927,7 @@ class MccsController(SKAMaster):
                         f"{message}",
                     )
                 for station_fqdn in stations_to_release:
-                    station = tango.DeviceProxy(station_fqdn)
+                    station = MccsDeviceProxy(station_fqdn, self.logger)
                     station.subarrayId = 0
 
                 # Inform manager that we made the releases
@@ -953,7 +958,7 @@ class MccsController(SKAMaster):
                         f"{message}",
                     )
                 for fqdn in stations_to_assign:
-                    device = tango.DeviceProxy(fqdn)
+                    device = MccsDeviceProxy(fqdn, self.logger)
                     device.subarrayId = subarray_id
 
                 # Inform manager that we made the assignments
@@ -1002,7 +1007,7 @@ class MccsController(SKAMaster):
                     f"Subarray {subarray_fqdn} is already enabled",
                 )
 
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
+            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
             if not subarray_device.State() == DevState.ON:
                 (result_code, message) = subarray_device.On()
 
@@ -1103,7 +1108,7 @@ class MccsController(SKAMaster):
                 fqdns = self.target._stations_manager.get_assigned_fqdns(subarray_id)
                 # and clear the subarrayId in each
                 for fqdn in fqdns:
-                    station = tango.DeviceProxy(fqdn)
+                    station = MccsDeviceProxy(fqdn, self.logger)
                     station.subarrayId = 0
                 # Finally release them from assignment in the manager
                 self.target._stations_manager.release(fqdns)
@@ -1148,7 +1153,7 @@ class MccsController(SKAMaster):
             subarray_id = argin
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
-            subarray_device = tango.DeviceProxy(subarray_fqdn)
+            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
             # try:
             (result_code, message) = subarray_device.ReleaseAllResources()
             # except DevFailed:

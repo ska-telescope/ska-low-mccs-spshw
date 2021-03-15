@@ -14,6 +14,8 @@ import pytest
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, SimulationMode
+
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.tile.demo_tile_device import DemoTile
 
 
@@ -30,6 +32,7 @@ def device_to_load():
         "package": "ska.low.mccs",
         "device": "tile_0001",
         "patch": DemoTile,
+        "proxy": MccsDeviceProxy,
     }
 
 

@@ -19,7 +19,7 @@ from tango import AttrQuality, DevFailed, EventType
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
-from ska.low.mccs import MccsClusterManagerDevice
+from ska.low.mccs import MccsClusterManagerDevice, MccsDeviceProxy
 from ska.low.mccs.cluster_manager.cluster_simulator import ClusterSimulator, JobStatus
 
 
@@ -35,6 +35,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/extra.json",
         "package": "ska.low.mccs",
         "device": "clustermanager",
+        "proxy": MccsDeviceProxy,
     }
 
 

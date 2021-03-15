@@ -18,6 +18,8 @@ import time
 import pytest
 from tango import DevState
 
+from ska.low.mccs import MccsDeviceProxy
+
 
 @pytest.fixture()
 def devices_to_load():
@@ -31,11 +33,11 @@ def devices_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "devices": [
-            "subrack_01",
-            "tile_0001",
-            "tile_0002",
-            "tile_0003",
-            "tile_0004",
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy},
         ],
     }
 

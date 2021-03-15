@@ -10,6 +10,7 @@ Monitoring Control and Calibration Subsystem (MCCS).
 """
 
 __all__ = [
+    # devices
     "MccsAntenna",
     "MccsAPIU",
     "MccsClusterManagerDevice",
@@ -24,6 +25,8 @@ __all__ = [
     "MccsTelState",
     "MccsTile",
     "MccsTransientBuffer",
+    # proxies
+    "MccsDeviceProxy",
     # abstract device modules
     "device",
     "group_device",
@@ -51,6 +54,7 @@ __all__ = [
 ]
 
 from .device import MccsDevice
+from .device_proxy import MccsDeviceProxy
 from .group_device import MccsGroupDevice
 
 from .apiu import MccsAPIU

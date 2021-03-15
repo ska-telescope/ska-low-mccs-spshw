@@ -2,41 +2,17 @@
 This module contains the pytest-bdd implementation of the Gherkin BDD
 tests for TMC and MCCS interactions.
 """
-import backoff
 import json
 import time
 
 import pytest
 from pytest_bdd import scenario, given, when, then, parsers
-from tango import DevState, DevSource
+from tango import DevState
 
 from ska_tango_base.commands import ResultCode
-from ska_tango_base.control_model import AdminMode, ObsState, HealthState, TestMode
+from ska_tango_base.control_model import AdminMode, ObsState, HealthState
 
-
-# TODO: This has been temporarily moved from the conftest.py file
-# because of a weird pytest bug -- pytest tries to import it from a
-# different conftest.py, and throws an ImportError.
-# Besides, it's commonly considered bad practice to input from conftest
-# anyhow:
-# https://github.com/pytest-dev/pytest/issues/3272#issuecomment-369252005
-# This will be fixed when we get around to doing MCCS-329.
-@backoff.on_predicate(backoff.expo, factor=0.1, max_time=180)
-def confirm_initialised(devices):
-    """
-    Helper function that tries to confirm that a device has completed
-    its initialisation and transitioned out of INIT state, using an
-    exponential backoff-retry scheme in case of failure.
-
-    :param devices: the devices that we are waiting to initialise
-    :type devices: :py:class:`tango.DeviceProxy`
-
-    :returns: whether the devices are all initialised or not
-    :rtype: bool
-    """
-    return all(
-        device.state() not in [DevState.UNKNOWN, DevState.INIT] for device in devices
-    )
+from ska.low.mccs import MccsDeviceProxy
 
 
 @pytest.fixture(scope="module")
@@ -53,89 +29,177 @@ def devices_to_load():
         "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska.low.mccs",
         "devices": [
-            "controller",
-            "subarray_01",
-            "subarray_02",
-            "station_001",
-            "station_002",
-            "subrack_01",
-            "tile_0001",
-            "tile_0002",
-            "tile_0003",
-            "tile_0004",
-            "subarraybeam_01",
-            "subarraybeam_02",
-            "subarraybeam_03",
-            "subarraybeam_04",
+            {"name": "controller", "proxy": MccsDeviceProxy},
+            {"name": "subarray_01", "proxy": MccsDeviceProxy},
+            {"name": "subarray_02", "proxy": MccsDeviceProxy},
+            {"name": "station_001", "proxy": MccsDeviceProxy},
+            {"name": "station_002", "proxy": MccsDeviceProxy},
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
 
-@pytest.fixture(scope="module")
-def cached_obsstate():
+@pytest.fixture()
+def controller(tango_context):
     """
-    Use a pytest message box to retain obsstate between test stages.
+    Return the controller device.
 
-    :return: cached_obsstate: pytest message box for the cached obsstate
-    :rtype: cached_obsstate:
-        dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: the controller device
+    :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
     """
-    return {}
+    return tango_context.get_device("controller")
 
 
 @pytest.fixture()
-def devices(tango_context):
+def subarrays(tango_context):
     """
-    Fixture that provides access to devices via their names.
+    Return a dictionary of subarrays keyed by their number.
 
-    :todo: For now the purpose of this fixture is to isolate FQDNs in a
-        single place in this module. In future this will be changed to
-        extract the device FQDNs straight from the configuration file.
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
 
-    :param tango_context: fixture that provides a tango context of some
-        sort
-    :type tango_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
-
-    :return: a dictionary of devices keyed by name
-    :rtype: dict<string, :py:class:`tango.DeviceProxy`>
+    :return: subarrays by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    device_dict = {
-        "controller": tango_context.get_device("low-mccs/control/control"),
-        "subarray_01": tango_context.get_device("low-mccs/subarray/01"),
-        "subarray_02": tango_context.get_device("low-mccs/subarray/02"),
-        "station_001": tango_context.get_device("low-mccs/station/001"),
-        "station_002": tango_context.get_device("low-mccs/station/002"),
-        "subrack_01": tango_context.get_device("low-mccs/subrack/01"),
-        "tile_0001": tango_context.get_device("low-mccs/tile/0001"),
-        "tile_0002": tango_context.get_device("low-mccs/tile/0002"),
-        "tile_0003": tango_context.get_device("low-mccs/tile/0003"),
-        "tile_0004": tango_context.get_device("low-mccs/tile/0004"),
-        # workaround for https://github.com/tango-controls/cppTango/issues/816
-        # "apiu_001": tango_context.get_device("low-mccs/apiu/001"),
-        # "antenna_000001": tango_context.get_device("low-mccs/antenna/000001"),
-        # "antenna_000002": tango_context.get_device("low-mccs/antenna/000002"),
-        # "antenna_000003": tango_context.get_device("low-mccs/antenna/000003"),
-        # "antenna_000004": tango_context.get_device("low-mccs/antenna/000004"),
-        "subarraybeam_01": tango_context.get_device("low-mccs/subarraybeam/01"),
-        "subarraybeam_02": tango_context.get_device("low-mccs/subarraybeam/02"),
-        "subarraybeam_03": tango_context.get_device("low-mccs/subarraybeam/03"),
-        "subarraybeam_04": tango_context.get_device("low-mccs/subarraybeam/04"),
+    return {
+        1: tango_context.get_device("subarray_01"),
+        2: tango_context.get_device("subarray_02"),
     }
 
-    for device in device_dict.values():
-        # Bypass the cache because stationFQDNs etc are polled attributes,
-        # and having written to them, we don't want to have to wait a
-        # polling period to test that the write has stuck.
-        # TODO: Need to investigate disabling this section for tests performed on
-        #       a real deployment (i.e. not in a test/development environment)
-        device.set_source(DevSource.DEV)
-        device.testMode = TestMode.TEST
 
-    assert confirm_initialised(device_dict.values())
-    return device_dict
+@pytest.fixture()
+def stations(tango_context):
+    """
+    Return a dictionary of stations keyed by their number.
+
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: stations by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    """
+    return {
+        1: tango_context.get_device("station_001"),
+        2: tango_context.get_device("station_002"),
+    }
+
+
+@pytest.fixture()
+def subracks(tango_context):
+    """
+    Return a dictionary of subracks keyed by their number.
+
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: subracks by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    """
+    return {
+        1: tango_context.get_device("subrack_01"),
+    }
+
+
+@pytest.fixture()
+def tiles(tango_context):
+    """
+    Return a dictionary of tiles keyed by their number.
+
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: tiles by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    """
+    return {
+        1: tango_context.get_device("tile_0001"),
+        2: tango_context.get_device("tile_0002"),
+        3: tango_context.get_device("tile_0003"),
+        4: tango_context.get_device("tile_0004"),
+    }
+
+
+@pytest.fixture()
+def apius(tango_context):
+    """
+    Return a dictionary of APIUs keyed by their number.
+
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: APIUs by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    """
+    return {
+        # workaround for https://github.com/tango-controls/cppTango/issues/816
+        # 1: tango_context.get_device("apiu_001"),
+    }
+
+
+@pytest.fixture()
+def antennas(tango_context):
+    """
+    Return a dictionary of antennas keyed by their number.
+
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: antennas by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    """
+    return {
+        # workaround for https://github.com/tango-controls/cppTango/issues/816
+        # 1: tango_context.get_device("antenna_000001"),
+        # 2: tango_context.get_device("antenna_000002"),
+        # 3: tango_context.get_device("antenna_000003"),
+        # 4: tango_context.get_device("antenna_000004"),
+    }
+
+
+@pytest.fixture()
+def subarraybeams(tango_context):
+    """
+    Return a dictionary of subarray beams keyed by their number.
+
+    :param tango_context: a tango subsystem running the required devices
+        for this test run. This could be a real tango subsystem, or a
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+    :type tango_context: object
+
+    :return: subarray beams by number
+    :rtype: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    """
+    return {
+        1: tango_context.get_device("subarraybeam_01"),
+        2: tango_context.get_device("subarraybeam_02"),
+        3: tango_context.get_device("subarraybeam_03"),
+        4: tango_context.get_device("subarraybeam_04"),
+    }
 
 
 def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
@@ -161,55 +225,77 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
 
 
 @scenario("controller_subarray_interactions.feature", "MCCS Start up low telescope")
-def test_start_up_low_telescope(devices):
+def test_start_up_low_telescope(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert_command(device=devices["controller"], command="Off")
-    check_mccs_controller_state(devices, "off")
-    check_reset_state(devices)
+    assert_command(device=controller, command="Off")
+    check_mccs_controller_state(controller, "off")
+    check_reset_state(controller, subarrays, stations)
 
 
 @given(parsers.parse("we have mvplow running an instance of {component_name}"))
-def we_have_mvplow_running_an_instance_of(devices, devices_to_load, component_name):
+def we_have_mvplow_running_an_instance_of(
+    component_name,
+    controller,
+    subarrays,
+    stations,
+    subracks,
+    tiles,
+    apius,
+    antennas,
+    subarraybeams,
+):
     """
     Asserts the existence/availability of a component.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-    :param devices_to_load: fixture that provides a specification of the
-        devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dictionary
     :param component_name: name of the component
     :type component_name: str
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param subracks: proxies to the subrack devices, keyed by number
+    :type subracks: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param tiles: proxies to the tile devices, keyed by number
+    :type tiles: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param apius: proxies to the apiu devices, keyed by number
+    :type apius: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param antennas: proxies to the antenna devices, keyed by number
+    :type antennas: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param subarraybeams: proxies to the subarray beam devices, keyed by number
+    :type subarraybeams: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-
-    if component_name == "mccs":
-        for device_name in devices_to_load["devices"]:
-            assert device_name in devices
-    elif component_name == "tmc":
-        pass
-    else:
-        assert False
+    assert component_name in ["mccs", "tmc"]
+    # nothing more to do here, because we have already checked that our
+    # subsystem is ready to go, simply by instantiating the fixtures.
 
 
 @given(parsers.parse("{component_name} is ready to {direction} a startup command"))
-def component_is_ready_to_receive_a_startup_command(devices, component_name, direction):
+def component_is_ready_to_receive_a_startup_command(
+    controller, component_name, direction
+):
     """
     Asserts that a component is ready to receive an on command.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
     :param component_name: name of the component
     :type component_name: str
     :param direction: direction of communication
     :type direction: str
     """
     if component_name == "mccs":
-        assert devices["controller"].state() == DevState.DISABLE
+        assert controller.state() == DevState.DISABLE
     elif component_name == "tmc":
         pass
     else:
@@ -217,14 +303,14 @@ def component_is_ready_to_receive_a_startup_command(devices, component_name, dir
 
 
 @when(parsers.parse("tmc tells mccs controller to start up"))
-def tmc_tells_mccs_controller_to_start_up(devices):
+def tmc_tells_mccs_controller_to_start_up(controller):
     """
     Start up the MCCS subsystem.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
     """
-    assert_command(device=devices["controller"], command="Startup")
+    assert_command(device=controller, command="Startup")
 
     # TODO: Workaround for bug MCCS-409
     #
@@ -241,109 +327,130 @@ def tmc_tells_mccs_controller_to_start_up(devices):
 
 
 @when(parsers.parse("tmc turns mccs controller {device_state}"))
-def tmc_turns_mccs_controller_onoff(devices, device_state):
+def tmc_turns_mccs_controller_onoff(controller, device_state):
     """
     Turn the mccs controller device off/on.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
     :param device_state: the state to transition to (on/off)
     :type device_state: str
+
+    :raises ValueError: if passed a device_state other than "off" or
+        "on"
     """
-    {
-        "off": lambda device: assert_command(device=device, command="Off"),
-        "on": lambda device: assert_command(device=device, command="On"),
-    }[device_state](devices["controller"])
+    if device_state == "off":
+        command = "Off"
+    elif device_state == "on":
+        command = "On"
+    else:
+        raise ValueError(
+            "@when tmc_turns_mccs_controller_onoff only accepts 'on' or 'off'"
+        )
+
+    assert_command(device=controller, command=command)
 
 
 @then(parsers.parse("mccs controller state is {device_state}"))
-def check_mccs_controller_state(devices, device_state):
+def check_mccs_controller_state(controller, device_state):
     """
     Asserts that the mccs controller device is on/off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
     :param device_state: asserted state of the device -- either "off" or
         "on"
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-    assert devices["controller"].state() in state_map[device_state]
+
+    assert controller.state() in state_map[device_state]
 
 
 @then(parsers.parse("all mccs station states are {state}"))
-def all_mccs_station_states_are_onoff(devices, device_state):
+def all_mccs_station_states_are_onoff(stations, device_state):
     """
     Asserts that online or maintenance mccs station devices are on/off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     :param device_state: asserted state of the device -- either "off" or
         "on"
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-    for number in range(1, 513):
-        station_key = f"station_{number:03}"
-        if station_key in devices:
-            station = devices[station_key]
-            if station.AdminMode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
-                assert station.state() in state_map[device_state]
+    for i in stations:
+        if stations[i].AdminMode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]:
+            assert stations[i].state() in state_map[device_state]
 
 
-def check_reset_state(devices):
+def check_reset_state(controller, subarrays, stations):
     """
     Check that the MCCS devices are in a known reset state.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    check_mccs_controller_state(devices, "off")
-    assert devices["subarray_01"].State() == DevState.OFF
-    assert devices["subarray_02"].State() == DevState.OFF
-    assert devices["subarray_01"].stationFQDNs is None
-    assert devices["subarray_02"].stationFQDNs is None
-    assert devices["station_001"].State() == DevState.OFF
-    assert devices["station_002"].State() == DevState.OFF
-    assert devices["station_001"].subarrayId == 0
-    assert devices["station_002"].subarrayId == 0
+    check_mccs_controller_state(controller, "off")
+    assert subarrays[1].State() == DevState.OFF
+    assert subarrays[2].State() == DevState.OFF
+    assert subarrays[1].stationFQDNs is None
+    assert subarrays[2].stationFQDNs is None
+    assert stations[1].State() == DevState.OFF
+    assert stations[2].State() == DevState.OFF
+    assert stations[1].subarrayId == 0
+    assert stations[2].subarrayId == 0
 
 
 @scenario("controller_subarray_interactions.feature", "MCCS Allocate subarray")
-def test_allocate_subarray(devices):
+def test_allocate_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
-    assert_command(device=devices["controller"], command="Release", argin=json_string)
-    assert_command(device=devices["controller"], command="Off")
-    check_reset_state(devices)
+    assert_command(device=controller, command="Release", argin=json_string)
+    assert_command(device=controller, command="Off")
+    check_reset_state(controller, subarrays, stations)
 
 
 @given(parsers.parse("{component_name} is ready to {action} a subarray"))
-def component_is_ready_to_action_a_subarray(devices, component_name, action):
+def component_is_ready_to_action_a_subarray(
+    component_name, action, controller, subarrays, stations
+):
     """
     Asserts that a component is ready to perform an action on a
     subarray.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
     :param component_name: name of the component
     :type component_name: str
     :param action: action to perform on a subarray
     :type action: str
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
     if component_name == "mccs":
-        tmc_tells_mccs_controller_to_start_up(devices)
-        check_mccs_controller_state(devices, "on")
-        assert devices["subarray_01"].State() == DevState.OFF
-        assert devices["subarray_02"].State() == DevState.OFF
-        assert devices["station_001"].subarrayId == 0
-        assert devices["station_002"].subarrayId == 0
+        tmc_tells_mccs_controller_to_start_up(controller)
+        check_mccs_controller_state(controller, "on")
+        assert subarrays[1].State() == DevState.OFF
+        assert subarrays[2].State() == DevState.OFF
+        assert stations[1].subarrayId == 0
+        assert stations[2].subarrayId == 0
     elif component_name == "tmc":
         pass
     else:
@@ -351,31 +458,30 @@ def component_is_ready_to_action_a_subarray(devices, component_name, action):
 
 
 @given(parsers.parse("subarray obsstate is idle or empty"))
-def subarray_obsstate_is_idle_or_empty(devices, cached_obsstate):
+def subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate):
     """
     The obsstate of each subarray should be idle or empty.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate:
         dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
 
-    for device in ["subarray_01", "subarray_02"]:
-        obsstate = devices[device].obsstate
+    for i in subarrays:
+        obsstate = subarrays[i].obsstate
         assert (obsstate == ObsState.IDLE) or (obsstate == ObsState.EMPTY)
-        cached_obsstate["subarry_01"] = devices["subarray_01"].obsstate
-        cached_obsstate["subarry_02"] = devices["subarray_02"].obsstate
+        cached_obsstate[i] = obsstate
 
 
 @when(parsers.parse("tmc allocates a subarray with {validity} parameters"))
-def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
+def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
     """
     TMC allocates a subarray.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
     :param validity: whether the allocate has valid|invalid parameters
     :type validity: str
     """
@@ -393,7 +499,7 @@ def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
 
     json_string = json.dumps(parameters)
     assert_command(
-        device=devices["controller"],
+        device=controller,
         command="Allocate",
         argin=json_string,
         expected_result=expected_result,
@@ -401,124 +507,166 @@ def tmc_allocates_a_subarray_with_validity_parameters(devices, validity):
 
 
 @then(parsers.parse("the stations have the correct subarray id"))
-def the_stations_have_the_correct_subarray_id(devices):
+def the_stations_have_the_correct_subarray_id(stations):
     """
     Stations have the correct subarray id.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert devices["station_001"].subarrayId == 1
-    assert devices["station_002"].subarrayId == 1
+    assert stations[1].subarrayId == 1
+    assert stations[2].subarrayId == 1
 
 
 @then(parsers.parse("subarray state is on"))
-def subarray_state_is_on(devices):
+def subarray_state_is_on(subarrays):
     """
     The subarray should be on.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert devices["subarray_01"].State() == DevState.ON
+    assert subarrays[1].State() == DevState.ON
 
 
 @then(
     parsers.parse("according to allocation policy health of allocated subarray is good")
 )
-def according_to_allocation_policy_health_of_allocated_subarray_is_good(devices):
+def according_to_allocation_policy_health_of_allocated_subarray_is_good(
+    controller, subarrays, stations
+):
     """
     Health is good.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert devices["controller"].healthState == HealthState.OK
-    assert devices["station_001"].healthState == HealthState.OK
-    assert devices["station_002"].healthState == HealthState.OK
-    assert devices["subarray_01"].healthState == HealthState.OK
-    assert devices["subarray_02"].healthState == HealthState.OK
+    assert controller.healthState == HealthState.OK
+    assert subarrays[1].healthState == HealthState.OK
+    assert subarrays[2].healthState == HealthState.OK
+    assert stations[1].healthState == HealthState.OK
+    assert stations[2].healthState == HealthState.OK
 
 
 @then(parsers.parse("other resources are not affected"))
-def other_resources_are_not_affected(devices):
+def other_resources_are_not_affected(subarrays):
     """
     Other resource should not be affected.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert devices["subarray_02"].State() == DevState.OFF
-    assert devices["subarray_02"].obsState == ObsState.EMPTY
+    assert subarrays[2].State() == DevState.OFF
+    assert subarrays[2].obsState == ObsState.EMPTY
 
 
 @then(parsers.parse("subarray obsstate is not changed"))
-def subarray_obsstate_is_not_changed(devices, cached_obsstate):
+def subarray_obsstate_is_not_changed(subarrays, cached_obsstate):
     """
     Check that the subarray obsState has not changed.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate:
         dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
-    assert devices["subarray_01"].obsstate == cached_obsstate["subarray_01"]
-    assert devices["subarray_02"].obsstate == cached_obsstate["subarray_02"]
+    assert subarrays[1].obsstate == cached_obsstate[1]
+    assert subarrays[2].obsstate == cached_obsstate[2]
 
 
 @scenario("controller_subarray_interactions.feature", "MCCS Configure a subarray")
-def test_configure_a_subarray(devices):
+def test_configure_a_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert_command(device=devices["subarray_01"], command="End")
+    assert_command(device=subarrays[1], command="End")
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
-    assert_command(device=devices["controller"], command="Release", argin=json_string)
-    assert_command(device=devices["controller"], command="Off")
-    check_reset_state(devices)
+    assert_command(device=controller, command="Release", argin=json_string)
+    assert_command(device=controller, command="Off")
+    check_reset_state(controller, subarrays, stations)
 
 
 @given(parsers.parse("we have a successfully {desired_state} subarray"))
 def we_have_a_successfully_configured_and_or_allocated_subarray(
-    devices, devices_to_load, desired_state, cached_obsstate
+    controller,
+    subarrays,
+    stations,
+    subracks,
+    tiles,
+    apius,
+    antennas,
+    subarraybeams,
+    desired_state,
+    cached_obsstate,
 ):
     """
     Get the subarray into an configured and/or allocated state.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-    :param devices_to_load: fixture that provides a specification of the
-        devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dictionary
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param subracks: proxies to the subrack devices, keyed by number
+    :type subracks: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param tiles: proxies to the tile devices, keyed by number
+    :type tiles: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param apius: proxies to the apiu devices, keyed by number
+    :type apius: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param antennas: proxies to the antenna devices, keyed by number
+    :type antennas: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param subarraybeams: proxies to the subarray beam devices, keyed by number
+    :type subarraybeams: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     :param desired_state: The desired state to be in
     :type desired_state: str
     :param cached_obsstate: pytest message box for the cached obsstate
     :type cached_obsstate:
         dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
-    we_have_mvplow_running_an_instance_of(devices, devices_to_load, "mccs")
-    component_is_ready_to_action_a_subarray(devices, "mccs", "allocate")
-    subarray_obsstate_is_idle_or_empty(devices, cached_obsstate)
-    tmc_allocates_a_subarray_with_validity_parameters(devices, "valid")
+    we_have_mvplow_running_an_instance_of(
+        "mccs",
+        controller,
+        subarrays,
+        stations,
+        subracks,
+        tiles,
+        apius,
+        antennas,
+        subarraybeams,
+    )
+    component_is_ready_to_action_a_subarray(
+        "mccs", "allocate", controller, subarrays, stations
+    )
+    subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate)
+    tmc_allocates_a_subarray_with_validity_parameters(controller, "valid")
     if desired_state == "configured" or desired_state == "scanning":
-        configure_subarray(devices)
-        the_subarray_obsstate_is(devices, "ready")
+        configure_subarray(subarrays)
+        the_subarray_obsstate_is(subarrays, "ready")
     if desired_state == "scanning":
-        tmc_starts_a_scan_on_subarray(devices)
-        the_subarray_obsstate_is(devices, "scanning")
+        tmc_starts_a_scan_on_subarray(subarrays)
+        the_subarray_obsstate_is(subarrays, "scanning")
 
 
-def configure_subarray(devices):
+def configure_subarray(subarrays):
     """
     Configure the subarray.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
     # Configure the subarray
     configuration = {
@@ -535,23 +683,21 @@ def configure_subarray(devices):
         ],
     }
     json_string = json.dumps(configuration)
-    assert_command(
-        device=devices["subarray_01"], command="Configure", argin=json_string
-    )
+    assert_command(device=subarrays[1], command="Configure", argin=json_string)
 
 
 @when(parsers.parse("tmc starts a scan on subarray"))
-def tmc_starts_a_scan_on_subarray(devices):
+def tmc_starts_a_scan_on_subarray(subarrays):
     """
     TMC starts a scan on the subarray.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
     scan_config = {"id": 1, "scan_time": 4}
     json_string = json.dumps(scan_config)
     assert_command(
-        device=devices["subarray_01"],
+        device=subarrays[1],
         command="Scan",
         argin=json_string,
         expected_result=ResultCode.STARTED,
@@ -559,84 +705,92 @@ def tmc_starts_a_scan_on_subarray(devices):
 
 
 @when(parsers.parse("tmc configures the subarray"))
-def tmc_configures_the_subarray(devices):
+def tmc_configures_the_subarray(subarrays):
     """
     TMC configures a subarray.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    configure_subarray(devices)
-    the_subarray_obsstate_is(devices, "ready")
+    configure_subarray(subarrays)
+    the_subarray_obsstate_is(subarrays, "ready")
 
 
 @then(parsers.parse("the subarray obsstate is {obsstate}"))
-def the_subarray_obsstate_is(devices, obsstate):
+def the_subarray_obsstate_is(subarrays, obsstate):
     """
     The subarray obsstate is {obsstate}
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     :param obsstate: The observation state
     :type obsstate: str
     """
-    assert devices["subarray_01"].obsState.name == obsstate.upper()
+    assert subarrays[1].obsState.name == obsstate.upper()
 
 
 @then(parsers.parse("subarray health is good"))
-def subarray_health_is_good(devices):
+def subarray_health_is_good(subarrays):
     """
     The health of the subarray is good.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert devices["subarray_01"].healthState == HealthState.OK
+    assert subarrays[1].healthState == HealthState.OK
 
 
 @scenario("controller_subarray_interactions.feature", "MCCS Perform a scan on subarray")
-def test_perform_a_scan_on_subarray(devices):
+def test_perform_a_scan_on_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert_command(device=devices["subarray_01"], command="EndScan")
-    assert_command(device=devices["subarray_01"], command="End")
+    assert_command(device=subarrays[1], command="EndScan")
+    assert_command(device=subarrays[1], command="End")
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
-    assert_command(device=devices["controller"], command="Release", argin=json_string)
-    assert_command(device=devices["controller"], command="Off")
-    check_reset_state(devices)
+    assert_command(device=controller, command="Release", argin=json_string)
+    assert_command(device=controller, command="Off")
+    check_reset_state(controller, subarrays, stations)
 
 
 @scenario(
     "controller_subarray_interactions.feature",
     "MCCS Perform an abort on a scanning subarray",
 )
-def test_perform_an_abort_on_a_scanning_subarray(devices):
+def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska.low.mccs.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    assert_command(device=devices["subarray_01"], command="ObsReset")
+    assert_command(device=subarrays[1], command="ObsReset")
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
-    assert_command(device=devices["controller"], command="Release", argin=json_string)
-    assert_command(device=devices["controller"], command="Off")
-    check_reset_state(devices)
+    assert_command(device=controller, command="Release", argin=json_string)
+    assert_command(device=controller, command="Off")
+    check_reset_state(controller, subarrays, stations)
 
 
 @when(parsers.parse("tmc issues an abort on subarray"))
-def tmc_issues_an_abort_on_subarray(devices):
+def tmc_issues_an_abort_on_subarray(subarrays):
     """
     TMC issues an abort on the subarray.
 
-    :param devices: fixture that provides access to devices by name
-    :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska.low.mccs.MccsDeviceProxy`>
     """
-    the_subarray_obsstate_is(devices, "scanning")
-    assert_command(device=devices["subarray_01"], command="Abort")
+    the_subarray_obsstate_is(subarrays, "scanning")
+    assert_command(device=subarrays[1], command="Abort")

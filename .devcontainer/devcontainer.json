@@ -12,7 +12,13 @@
         "coverage-gutters.manualCoverageFilePaths": [
             "/workspaces/ska-low-mccs/build/reports/code-coverage.xml"
         ],
-        "coverage-gutters.showLineCoverage": true
+        "coverage-gutters.showLineCoverage": true,
+        "files.exclude": {
+            "**/.tox/**": true
+        },
+        "files.watcherExclude": {
+            "**/.tox/**": true
+        }
     },
     // Add the IDs of extensions you want installed when the container is created.
     "extensions": [

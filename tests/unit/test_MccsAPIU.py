@@ -23,6 +23,8 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 from ska_tango_base.commands import ResultCode
+
+from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.apiu.apiu_device import APIUHardwareManager
 from ska.low.mccs.apiu.apiu_simulator import AntennaHardwareSimulator, APIUSimulator
 from ska.low.mccs.hardware import PowerMode
@@ -40,6 +42,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska.low.mccs",
         "device": "apiu_001",
+        "proxy": MccsDeviceProxy,
     }
 
 

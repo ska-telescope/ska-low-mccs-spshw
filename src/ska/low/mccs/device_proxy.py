@@ -111,8 +111,9 @@ class MccsDeviceProxy:
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
             """
-            fqdn = details["args"][1]
-            elapsed = details["elapsed"]
+            args = details.get("args")
+            fqdn = args[1]
+            elapsed = details.get("elapsed")
             self._logger.warning(
                 f"Gave up trying to connect to device {fqdn} after "
                 f"{elapsed} seconds."
@@ -254,10 +255,14 @@ class MccsDeviceProxy:
 
         :param name: the name of the attribute to be set
         :param value: the new value for the attribute
+
+        :raises ConnectionError: if the device is not connected yet.
         """
         if name in self.__dict__:
             self.__dict__[name] = value
-        elif self._pass_through and self._device is not None:
+        elif self._pass_through:
+            if self._device is None:
+                raise ConnectionError("MccsDeviceProxy has not connected yet.")
             setattr(self._device, name, value)
 
     def __getattr__(self, name, default_value=None):

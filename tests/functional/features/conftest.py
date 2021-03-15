@@ -113,7 +113,7 @@ class MccsDeviceInfo:
         Include a device in this specification.
 
         :param name: the name of the device to be included. The
-            source data must contain configuration informatino for a
+            source data must contain configuration informotion for a
             device listed under this name
         :type name: str
         :param proxy: the proxy class to use to access the device.

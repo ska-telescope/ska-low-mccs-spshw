@@ -104,7 +104,7 @@ class TestSubrackBaySimulator:
 
         :return: a simulator for a subrack bay
         :rtype:
-            :py:class:`~ska.low.mccs.subrack.SubrackBaySimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBaySimulator`
         """
         return SubrackBaySimulator()
 
@@ -217,7 +217,7 @@ def subrack_bays(random_temperature, random_current, random_voltage):
 
     :return: a list of subrack bay simulators
     :rtype:
-        list of :py:class:`~ska.low.mccs.subrack.SubrackBaySimulator`
+        list of :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBaySimulator`
     """
     return [
         SubrackBaySimulator(
@@ -242,11 +242,11 @@ class TestSubrackBoardSimulator:
         :param subrack_bays: list of subrack bay simulators for
             management by this subrack management board simulator
         :type subrack_bays: list of
-            :py:class:`~ska.low.mccs.subrack.SubrackBaySimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBaySimulator`
 
         :return: a simulator for a subrack management board
         :rtype:
-            :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(_bays=subrack_bays)
 
@@ -350,7 +350,7 @@ class TestSubrackBoardSimulator:
 
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
-            :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
         """
         subrack_board.connect()
         subrack_board.on()
@@ -372,7 +372,7 @@ class TestSubrackBoardSimulator:
 
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
-            :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
         """
 
         def assert_tpms_on(is_on):
@@ -416,10 +416,10 @@ class TestSubrackBoardSimulator:
         :param subrack_bays: list of subrack bay simulators for
             management by this subrack management board simulator
         :type subrack_bays: list of
-            :py:class:`~ska.low.mccs.subrack.SubrackBaySimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBaySimulator`
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
-            :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
         :param random_temperature: a random value within a reasonable
             range for a temperature measurement
         :type random_temperature: float
@@ -577,11 +577,11 @@ class TestSubrackHardwareManager:
         :param subrack_bays: list of subrack bay simulators for
             management by this subrack management board simulator
         :type subrack_bays: list of
-            :py:class:`~ska.low.mccs.subrack.SubrackBaySimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBaySimulator`
 
         :return: a simulator for a subrack management board
         :rtype:
-            :py:class:`~ska.low.mccs.subrack.SubrackBoardSimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
         """
         return SubrackBoardSimulator(
             backplane_temperatures=[random_temperature() for i in range(2)],
@@ -604,11 +604,13 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
 
         :return: a subrack hardware factory. This would normally be a
-            :py:class:`ska.low.mccs.subrack.SubrackHardwareFactory`, but for testing
-            purposes we want to be able to access the underlying simulator, so we
-            return a bespoke :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
-            that uses the simulator provided via the `subrack_board` fixture.
-        :rtype: :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+            :py:class:`ska.low.mccs.subrack.subrack_device.SubrackHardwareFactory`,
+            but for testing purposes we want to be able to access the
+            underlying simulator, so we return a bespoke
+            :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
+            that uses the simulator provided via the `subrack_board`
+            fixture.
+        :rtype: :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         """
         return SimulableHardwareFactory(True, _static_simulator=subrack_board)
 
@@ -620,9 +622,9 @@ class TestSubrackHardwareManager:
         :param hardware_factory: a factory that returns a subrack
             hardware simulator/driver
         :type hardware_factory:
-            :py:class:`ska.low.mccs.hardware.SimulableHardwareFactory`
+            :py:class:`ska.low.mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
 
         :return: a manager for Subrack hardware
         :rtype:
@@ -638,7 +640,7 @@ class TestSubrackHardwareManager:
         simulation mode.
 
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
@@ -671,13 +673,13 @@ class TestSubrackHardwareManager:
 
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
-            :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
-        :param hardware_manager: a hardware manager for APIU hardware
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
+        :param hardware_manager: a hardware manager for subrack hardware
         :type hardware_manager:
-            :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
+            :py:class:`~ska.low.mccs.subrack.subrack_device.SubrackHardwareManager`
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
 
         def assert_off_behaviour():
@@ -780,7 +782,7 @@ class TestSubrackHardwareManager:
             :py:class:`~ska.low.mccs.apiu.apiu_device.APIUHardwareManager`
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
-            :py:class:`~ska.low.mccs.apiu.subrack_board.SubrackBoardSimulator`
+            :py:class:`~ska.low.mccs.subrack.subrack_simulator.SubrackBoardSimulator`
         """
         hardware_manager.poll()
         hardware_manager.on()
@@ -845,10 +847,10 @@ class TestMccsSubrack(object):
         results in a (ResultCode.OK, message) return.
 
         :param mocker: a wrapper around the :py:mod:`unittest.mock` package
-        :type mocker: obj
+        :type mocker: :py:class:`pytest_mock.mocker`
 
         :return: a factory for device proxy mocks
-        :rtype: :py:class:`unittest.Mock` (the class itself, not an instance)
+        :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
         """
 
         def custom_mock():
@@ -858,7 +860,7 @@ class TestMccsSubrack(object):
 
             :return: a mock that returns `(ResultCode.OK, message)` when
                 its `command_inout` method is called.
-            :rtype: :py:class:`unittest.Mock`
+            :rtype: :py:class:`unittest.mock.Mock`
             """
             mock_device_proxy = mocker.Mock()
             mock_device_proxy.command_inout.return_value = (
@@ -895,12 +897,10 @@ class TestMccsSubrack(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         assert device_under_test.healthState == HealthState.OK
 
-        # Test that polling is turned on and subscription yields an
-        # event as expected
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )

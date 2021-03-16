@@ -55,20 +55,21 @@ def initial_mocks(mock_factory, request):
     :type mock_factory: object
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
     :return: a dictionary of mocks, keyed by FQDN
     :rtype: dict
     """
 
     def _subrack_mock(state=DevState.ON, is_on=False, result_code=ResultCode.OK):
         """
-        Sets up a mock for a :py:class:`tango.DeviceProxy` that
-        connects to an :py:class:`~ska.low.mccs.MccsSubrack`
-        device. The returned mock will respond suitably to
-        actions taken on it by the TilePowerManager as part of the
-        controller's
-        :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-        :py:meth:`~ska.low.mccs.MccsController.Release`
+        Sets up a mock for a :py:class:`tango.DeviceProxy` that connects
+        to an
+        :py:class:`~ska.low.mccs.subrack.subrack_device.MccsSubrack`
+        device. The returned mock will respond suitably to actions taken
+        on it by the TilePowerManager as part of the controller's
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate`
+        and
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Release`
         commands.
 
         :param state: the device state that this mock subrack device
@@ -82,8 +83,8 @@ def initial_mocks(mock_factory, request):
         :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
         :return: a mock for a :py:class:`tango.DeviceProxy` that
             connects to an
-            :py:class:`~ska.low.mccs.MccsSubarray` device.
-        :rtype: :py:class:`unittest.Mock`
+            :py:class:`~ska.low.mccs.subarray.MccsSubarray` device.
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mock_factory()
         mock.state.return_value = state
@@ -112,13 +113,13 @@ def mock_factory(mocker, request):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     kwargs = getattr(request, "param", {})
@@ -143,7 +144,7 @@ def mock_factory(mocker, request):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -159,7 +160,7 @@ def mock_factory(mocker, request):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -171,7 +172,7 @@ def mock_factory(mocker, request):
 class TestTilePowerManager:
     """
     Test class for
-    :py:class:`ska.low.mccs.tile.TilePowerManager`.
+    :py:class:`ska.low.mccs.tile.tile_device.TilePowerManager`.
     """
 
     @pytest.fixture()
@@ -182,10 +183,10 @@ class TestTilePowerManager:
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param mock_callback: a mock for use as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
 
         :return: the power manager under test
-        :rtype: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :rtype: :py:class:`ska.low.mccs.tile.tile_device.TilePowerManager`
         """
         return TilePowerManager("low-mccs/subrack/01", 1, logger, mock_callback)
 
@@ -229,14 +230,14 @@ class TestTilePowerManager:
             this to ensure that the TANGO subsystem gets stood up.)
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param power_manager: the power_manager under test
-        :type power_manager: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :type power_manager: :py:class:`ska.low.mccs.tile.tile_device.TilePowerManager`
         :param mock_callback: a mock for use as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param initial_mocks: a dictionary of mock devices, keyed by
             device FQDN, set up before device initialisation. This is
             only used indirectly here, but included so that we can
             indirectly parametrize it.
-        :type initial_mocks: dict of str
+        :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
         :param expected_power_mode: the expected post-init power mode,
             given the indirect parametrisation of the subrack mock
             fixture.
@@ -285,12 +286,12 @@ class TestTilePowerManager:
             this to ensure that the TANGO subsystem gets stood up.)
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param power_manager: the power_manager under test
-        :type power_manager: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :type power_manager: :py:class:`ska.low.mccs.tile.tile_device.TilePowerManager`
         :param initial_mocks: a dictionary of mock devices, keyed by
             device FQDN, set up before device initialisation. This is
             only used indirectly here, but included so that we can
             indirectly parametrize it.
-        :type initial_mocks: dict of str
+        :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
         :param expected_return: the expected return value for the call
         :type expected_return: bool
         :param expected_power_mode: the expected power mode of this
@@ -298,7 +299,7 @@ class TestTilePowerManager:
         :type expected_power_mode:
             :py:class:`ska.low.mccs.hardware.power_mode_hardware.PowerMode`
         :param mock_callback: a mock for use as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         power_manager.connect()
         assert power_manager.on() == expected_return
@@ -339,12 +340,12 @@ class TestTilePowerManager:
             this to ensure that the TANGO subsystem gets stood up.)
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param power_manager: the power_manager under test
-        :type power_manager: :py:class:`ska.low.mccs.tile.TilePowerManager`
+        :type power_manager: :py:class:`ska.low.mccs.tile.tile_device.TilePowerManager`
         :param initial_mocks: a dictionary of mock devices, keyed by
             device FQDN, set up before device initialisation. This is
             only used indirectly here, but included so that we can
             indirectly parametrize it.
-        :type initial_mocks: dict of str
+        :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
         :param expected_return: the expected return value for the call
         :type expected_return: bool
         :param expected_power_mode: the expected power mode of this
@@ -375,12 +376,10 @@ class TestMccsTile:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        # Test that polling is turned on and subscription yields an
-        # event as expected
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )
@@ -760,7 +759,7 @@ class TestMccsTileCommands:
         :param device_command: the name of the device command under test
         :type device_command: str
         :param arg: argument to the command (optional)
-        :type arg: any
+        :type arg: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
@@ -804,11 +803,11 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param device_command: the name of the device command under test
         :type device_command: str
         :param arg: argument to the command (optional)
-        :type arg: any
+        :type arg: str
         :param tpm_command: the name of the tpm command that is expected
             to be called as a result of the device command being called
         :type tpm_command: str
@@ -1271,8 +1270,8 @@ class TestMccsTileCommands:
 
 class InitCommand:
     """
-    Contains the tests of :py:class:`~ska.low.mccs.MccsTile`'s
-    :py:class:`~ska.low.mccs.MccsTile.InitCommand`.
+    Contains the tests of :py:class:`~ska.low.mccs.tile.tile_device.MccsTile`'s
+    :py:class:`~ska.low.mccs.tile.tile_device.MccsTile.InitCommand`.
     """
 
     class HangableInitCommand(MccsTile.InitCommand):
@@ -1342,7 +1341,7 @@ class InitCommand:
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         mock_device = mocker.MagicMock()
         mock_state_model = mocker.Mock()

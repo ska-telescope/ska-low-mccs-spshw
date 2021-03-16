@@ -75,7 +75,7 @@ class TestClusterCommon:
             :py:class:`~ska.low.mccs.cluster_manager.cluster_manager_device.ClusterManager`
         :param request: A pytest object giving access to the requesting test
             context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :type request: :py:class:`pytest.FixtureRequest`
 
         :return: the hardware under test: a cluster manager or simulator
         :rtype: object
@@ -209,20 +209,20 @@ class TestClusterCommon:
             ),
             (
                 "master_cpus_allocated_percent",
-                100.0
-                * ClusterSimulator.RESOURCE_STATS["master_cpus_used"]
+                ClusterSimulator.RESOURCE_STATS["master_cpus_used"]
+                * 100.0
                 / ClusterSimulator.CONFIGURATION["master_cpus_total"],
             ),
             (
                 "master_disk_percent",
-                100.0
-                * ClusterSimulator.RESOURCE_STATS["master_disk_used"]
+                ClusterSimulator.RESOURCE_STATS["master_disk_used"]
+                * 100.0
                 / ClusterSimulator.CONFIGURATION["master_disk_total"],
             ),
             (
                 "master_mem_percent",
-                100.0
-                * ClusterSimulator.RESOURCE_STATS["master_mem_used"]
+                ClusterSimulator.RESOURCE_STATS["master_mem_used"]
+                * 100
                 / ClusterSimulator.CONFIGURATION["master_mem_total"],
             ),
         ),

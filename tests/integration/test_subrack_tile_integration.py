@@ -57,7 +57,7 @@ class TestSubrackTileIntegration:
           TPM
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         tile = device_context.get_device("tile_0001")
         subrack = device_context.get_device("subrack_01")
@@ -96,7 +96,7 @@ class TestSubrackTileIntegration:
         changes state.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         tile = device_context.get_device("tile_0001")
         subrack = device_context.get_device("subrack_01")

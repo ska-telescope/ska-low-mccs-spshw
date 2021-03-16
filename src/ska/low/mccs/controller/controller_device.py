@@ -374,7 +374,6 @@ class MccsController(SKAMaster):
     @attribute(
         dtype="DevUShort",
         label="Command progress percentage",
-        polling_period=3000,
         rel_change=2,
         abs_change=5,
         max_value=100,

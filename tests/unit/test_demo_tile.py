@@ -48,7 +48,7 @@ def initial_mocks(mock_factory, request):
     :type mock_factory: object
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
     :return: a dictionary of mocks, keyed by FQDN
     :rtype: dict
     """
@@ -56,12 +56,14 @@ def initial_mocks(mock_factory, request):
     def _subrack_mock(is_on=False, result_code=ResultCode.OK):
         """
         Sets up a mock for a :py:class:`tango.DeviceProxy` that
-        connects to an :py:class:`~ska.low.mccs.MccsSubrack`
+        connects to a
+        :py:class:`~ska.low.mccs.subrack.subrack_device.MccsSubrack`
         device. The returned mock will respond suitably to
         actions taken on it by the TilePowerManager as part of the
         controller's
-        :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-        :py:meth:`~ska.low.mccs.MccsController.Release`
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate`
+        and
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Release`
         commands.
 
         :param is_on: whether this mock subrack device should report
@@ -72,8 +74,8 @@ def initial_mocks(mock_factory, request):
         :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
         :return: a mock for a :py:class:`tango.DeviceProxy` that
             connects to an
-            :py:class:`~ska.low.mccs.MccsSubarray` device.
-        :rtype: :py:class:`unittest.Mock`
+            :py:class:`~ska.low.mccs.subarray.MccsSubarray` device.
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mock_factory()
         mock.IsTpmOn.return_value = is_on
@@ -101,13 +103,13 @@ def mock_factory(mocker, request):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     kwargs = getattr(request, "param", {})
@@ -132,7 +134,7 @@ def mock_factory(mocker, request):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -148,7 +150,7 @@ def mock_factory(mocker, request):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute

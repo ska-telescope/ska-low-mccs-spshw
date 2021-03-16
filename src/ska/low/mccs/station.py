@@ -305,10 +305,7 @@ class MccsStation(SKAObsDevice):
         """
         return self._transient_buffer_fqdn
 
-    @attribute(
-        dtype="DevBoolean",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevBoolean")
     def isCalibrated(self):
         """
         Return a flag indicating whether this station is currently
@@ -320,10 +317,7 @@ class MccsStation(SKAObsDevice):
         """
         return self._is_calibrated
 
-    @attribute(
-        dtype="DevBoolean",
-        polling_period=1000,
-    )
+    @attribute(dtype="DevBoolean")
     def isConfigured(self):
         """
         Return a flag indicating whether this station is currently

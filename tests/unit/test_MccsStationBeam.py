@@ -54,10 +54,10 @@ def mock_factory(mocker):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
@@ -80,7 +80,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -96,7 +96,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -126,14 +126,14 @@ class TestMccsStationBeam:
         def _station_mock():
             """
             Sets up a mock for a :py:class:`tango.DeviceProxy` that
-            connects to an :py:class:`~ska.low.mccs.MccsStation` device.
-            The returned mock will respond suitably to actions taken on
-            it by the station beam.
+            connects to an :py:class:`~ska.low.mccs.station.MccsStation`
+            device. The returned mock will respond suitably to actions
+            taken on it by the station beam.
 
             :return: a mock for a :py:class:`tango.DeviceProxy` that
                 connects to an
-                :py:class:`~ska.low.mccs.MccsStation` device.
-            :rtype: :py:class:`unittest.Mock`
+                :py:class:`~ska.low.mccs.station.MccsStation` device.
+            :rtype: :py:class:`unittest.mock.Mock`
             """
             mock = mock_factory()
             mock.healthState = HealthState.OK
@@ -182,12 +182,10 @@ class TestMccsStationBeam:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         """
         assert device_under_test.healthState == HealthState.DEGRADED
 
-        # Test that polling is turned on and subscription yields an
-        # event as expected
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback
         )
@@ -202,8 +200,8 @@ class TestMccsStationBeam:
         device_under_test.isBeamLocked = True
         assert device_under_test.healthState == HealthState.OK
 
-        # It seems that push_change_event isn't synchronous, so we have
-        # no choice but to sleep a polling period
+        # Tango's event system is asynchronous. We need to allow time
+        # for the event to arrive.
         time.sleep(0.2)
         mock_callback.assert_called_once()
 
@@ -216,8 +214,8 @@ class TestMccsStationBeam:
         device_under_test.isBeamLocked = False
         assert device_under_test.healthState == HealthState.DEGRADED
 
-        # It seems that push_change_event isn't synchronous, so we have
-        # no choice but to sleep a polling period
+        # Tango's event system is asynchronous. We need to allow time
+        # for the event to arrive.
         time.sleep(0.2)
         mock_callback.assert_called_once()
 

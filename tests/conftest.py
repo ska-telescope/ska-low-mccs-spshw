@@ -27,7 +27,7 @@ def pytest_addoption(parser):
     """
     Pytest hook; implemented to add the `--true-context` option, used to
     indicate that a true Tango subsystem is available, so there is no
-    need for a :py:class:`tango.MultiDeviceTestContext`.
+    need for a :py:class:`tango.test_context.MultiDeviceTestContext`.
 
     :param parser: the command line options parser
     :type parser: :py:class:`argparse.ArgumentParser`
@@ -74,7 +74,7 @@ class MccsDeviceInfo:
             device listed under this name
         :type name: str
         :param proxy: the proxy class to use to access the device.
-        :type proxy: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :type proxy: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
         :param patch: an optional device class with which to patch the
             named device
         :type patch: :py:class:`ska_tango_base.SKABaseDevice`
@@ -174,7 +174,7 @@ class MccsTangoContext:
         :param devices_to_load: fixture that provides a specification of
             the devices that are to be included in the devices_info
             dictionary
-        :type devices_to_load: dictionary
+        :type devices_to_load: dict
 
         :return: a devices_info spec in a format suitable for use by as
             input to a
@@ -199,7 +199,7 @@ class MccsTangoContext:
 
         :param devices_to_load: fixture that provides a specification of the
             devices that are to be included in the devices_info dictionary
-        :type devices_to_load: dictionary
+        :type devices_to_load: dict
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param source: a source value to be set on all devices
@@ -272,19 +272,19 @@ class MccsTangoContext:
 
     def get_device(self, name):
         """
-        Returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to a device
-        as specified by the device name provided in the configuration
-        file.
+        Returns a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
+        to a device as specified by the device name provided in the
+        configuration file.
 
         Each call to this method returns a fresh proxy. This is
         deliberate.
 
         :param name: the name of the device for which a
-            :py:class:`ska.low.mccs.MccsDeviceProxy` is sought.
+            :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` is sought.
         :type name: str
 
-        :return: a :py:class:`ska.low.mccs.MccsDeviceProxy` to the named device
-        :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :return: a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to the named device
+        :rtype: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
         """
         fqdn = self._devices_info.device_map[name]["fqdn"]
         proxy = self._devices_info.device_map[name]["proxy"]
@@ -314,7 +314,7 @@ class MccsDeviceTestContext(MccsTangoContext):
 
         :param devices_to_load: fixture that provides a specification of the
             devices that are to be included in the devices_info dictionary
-        :type devices_to_load: dictionary
+        :type devices_to_load: dict
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param source: a source value to be set on all devices
@@ -348,29 +348,29 @@ class MccsDeviceTestContext(MccsTangoContext):
         Exit method for "with" context.
 
         :param exc_type: the type of exception thrown in the with block
-        :type: obj
+        :type: object
         :param exception: the exception thrown in the with block
-        :type exception: obj
+        :type exception: object
         :param trace: a traceback
-        :type trace: obj
+        :type trace: object
         """
         self._multi_device_test_context.__exit__(exc_type, exception, trace)
 
     def get_device(self, name):
         """
-        Returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to a device
-        as specified by the device name provided in the configuration
-        file.
+        Returns a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
+        to a device as specified by the device name provided in the
+        configuration file.
 
         Each call to this method returns a fresh proxy. This is
         deliberate.
 
         :param name: the name of the device for which a
-            :py:class:`ska.low.mccs.MccsDeviceProxy` is sought.
+            :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` is sought.
         :type name: str
 
-        :return: a :py:class:`ska.low.mccs.MccsDeviceProxy` to the named device
-        :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :return: a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to the named device
+        :rtype: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
         """
         fqdn = self._devices_info.device_map[name]["fqdn"]
         proxy = self._devices_info.device_map[name]["proxy"]
@@ -402,7 +402,7 @@ def device_context(devices_to_load, tango_config, logger):
 
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dictionary
+    :type devices_to_load: dict
     :param tango_config: fixture that returns configuration information
         that specifies how the Tango system should be established and
         run.

@@ -41,7 +41,7 @@ def connected(method):
         wrapped method to proceed.
 
         :param self: the method called
-        :type self: obj
+        :type self: object
         :param args: positional arguments to the wrapped method
         :type args: list
         :param kwargs: keyword arguments to the wrapped method
@@ -50,7 +50,7 @@ def connected(method):
         :raises LibraryError: if the TPM is not connected
 
         :return: whatever the wrapped method returns
-        :rtype: obj
+        :rtype: object
         """
         if self.tpm is None:
             self.logger.warning(
@@ -1348,7 +1348,7 @@ class HwTile(object):
             the named attribute.
 
         :return: the requested attribute
-        :rtype: obj
+        :rtype: object
         """
         if name in dir(self.tpm):
             return getattr(self.tpm, name)

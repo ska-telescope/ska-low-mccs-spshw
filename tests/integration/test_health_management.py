@@ -60,8 +60,8 @@ def sleep(seconds=0.2):
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.
 
-    :param seconds: number of seconds to sleep, defaults to 0.1
-    :type seconds: float, optional
+    :param seconds: number of seconds to sleep; optional, defaults to 0.1
+    :type seconds: float
     """
     time.sleep(seconds)
 
@@ -70,12 +70,12 @@ def test_controller_health_rollup(device_context):
     """
     Test that health rolls up to the controller.
 
-    :param device_context: fixture that provides a tango context of some
-        sort
-    :type device_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
+    :param device_context: A tango context of some sort; possibly a
+        :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
+        the real thing. The only requirement is that it provide a
+        ``get_device(fqdn)`` method that returns a
+        :py:class:`tango.DeviceProxy`.
+    :type device_context: :py:class:`contextmanager`
     """
     controller = device_context.get_device("controller")
     station_1 = device_context.get_device("station_001")
@@ -192,12 +192,12 @@ def test_subarray_health_rollup(device_context):
     """
     Test that health rolls up to the subarray.
 
-    :param device_context: fixture that provides a tango context of some
-        sort
-    :type device_context: a tango context of some sort; possibly a
-        MultiDeviceTestContext, possibly the real thing. The only
-        requirement is that it provide a "get_device(fqdn)" method that
-        returns a DeviceProxy.
+    :param device_context: A tango context of some sort; possibly a
+        :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
+        the real thing. The only requirement is that it provide a
+        ``get_device(fqdn)`` method that returns a
+        :py:class:`tango.DeviceProxy`.
+    :type device_context: :py:class:`contextmanager`
     """
     controller = device_context.get_device("controller")
     subarray_1 = device_context.get_device("subarray_01")

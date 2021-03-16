@@ -117,7 +117,7 @@ class MccsTransientBuffer(MccsDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevString", label="stationId", polling_period=1000)
+    @attribute(dtype="DevString", label="stationId")
     def stationId(self):
         """
         Return the station id.
@@ -127,7 +127,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._station_id
 
-    @attribute(dtype="DevString", label="transientBufferJobId", polling_period=1000)
+    @attribute(dtype="DevString", label="transientBufferJobId")
     def transientBufferJobId(self):
         """
         Return the transient buffer job id.
@@ -137,7 +137,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._transient_buffer_job_id
 
-    @attribute(dtype="DevLong", label="resamplingBits", polling_period=1000)
+    @attribute(dtype="DevLong", label="resamplingBits")
     def resamplingBits(self):
         """
         Return the resampling bit depth.
@@ -147,7 +147,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._resampling_bits
 
-    @attribute(dtype="DevShort", label="nStations", polling_period=1000)
+    @attribute(dtype="DevShort", label="nStations")
     def nStations(self):
         """
         Return the number of stations.
@@ -161,7 +161,6 @@ class MccsTransientBuffer(MccsDevice):
         dtype=("DevDouble",),
         max_dim_x=100,
         label="transientFrequencyWindow",
-        polling_period=1000,
     )
     def transientFrequencyWindow(self):
         """
@@ -172,9 +171,7 @@ class MccsTransientBuffer(MccsDevice):
         """
         return self._transient_frequency_window
 
-    @attribute(
-        dtype=("DevString",), max_dim_x=100, label="stationIds", polling_period=1000
-    )
+    @attribute(dtype=("DevString",), max_dim_x=100, label="stationIds")
     def stationIds(self):
         """
         Return the station ids.

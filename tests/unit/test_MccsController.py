@@ -109,10 +109,10 @@ def mock_factory(mocker):
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
-    :type mocker: wrapper for :py:mod:`unittest.mock`
+    :type mocker: :py:class:`pytest_mock.mocker`
 
     :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.Mock` (the class itself, not an
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
     _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
@@ -135,7 +135,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceAttribute`
             instance, with name, value and quality values
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.name = name
@@ -151,7 +151,7 @@ def mock_factory(mocker):
 
         :return: a basic mock for a :py:class:`tango.DeviceProxy`
             instance,
-        :rtype: :py:class:`unittest.Mock`
+        :rtype: :py:class:`unittest.mock.Mock`
         """
         mock = mocker.Mock()
         mock.read_attribute.side_effect = _mock_attribute
@@ -237,9 +237,9 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_event_callback: fixture that provides a mock instance
-            with callback support methods
-        :type mock_event_callback: MockCallback
+        :param mock_event_callback: fixture that provides a mock
+            instance with callback support methods
+        :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         """
         device_under_test.Off()
 
@@ -265,9 +265,9 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_event_callback: fixture that provides a mock instance
-            with callback support methods
-        :type mock_event_callback: MockCallback
+        :param mock_event_callback: fixture that provides a mock
+            instance with callback support methods
+        :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
@@ -347,8 +347,10 @@ class TestMccsController:
     class TestAllocateRelease:
         """
         Class containing fixtures and tests of the MccsController's
-        :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-        :py:meth:`~ska.low.mccs.MccsController.Release` commands
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate`
+        and
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Release`
+        commands.
         """
 
         @pytest.fixture()
@@ -358,8 +360,10 @@ class TestMccsController:
             The default fixture is overridden here to ensure that mock
             subarrays and stations respond suitably to actions taken on
             them by the controller as part of the controller's
-            :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-            :py:meth:`~ska.low.mccs.MccsController.Release` commands
+            :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate`
+            and
+            :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Release`
+            commands.
 
             :param mock_factory: a factory for
                 :py:class:`tango.DeviceProxy` mocks
@@ -371,18 +375,20 @@ class TestMccsController:
             def _subarray_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsSubarray`
-                device. The returned mock will respond suitably to
-                actions taken on it by the controller as part of the
-                controller's
-                :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-                :py:meth:`~ska.low.mccs.MccsController.Release`
+                connects to an
+                :py:class:`~ska.low.mccs.subarray.MccsSubarray` device.
+                The returned mock will respond suitably to actions taken
+                on it by the controller as part of the controller's
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Allocate`
+                and
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Release`
                 commands.
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
                     connects to an
-                    :py:class:`~ska.low.mccs.MccsSubarray` device.
-                :rtype: :py:class:`unittest.Mock`
+                    :py:class:`~ska.low.mccs.subarray.MccsSubarray`
+                    device.
+                :rtype: :py:class:`unittest.mock.Mock`
                 """
                 mock_subarray = mock_factory()
                 mock_subarray.On.return_value = (
@@ -410,18 +416,20 @@ class TestMccsController:
             def _station_mock():
                 """
                 Sets up a mock for a :py:class:`tango.DeviceProxy` that
-                connects to an :py:class:`~ska.low.mccs.MccsStation`
-                device. The returned mock will respond suitably to
-                actions taken on it by the controller as part of the
-                controller's
-                :py:meth:`~ska.low.mccs.MccsController.Allocate` and
-                :py:meth:`~ska.low.mccs.MccsController.Release`
+                connects to an
+                :py:class:`~ska.low.mccs.station.MccsStation` device.
+                The returned mock will respond suitably to actions taken
+                on it by the controller as part of the controller's
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Allocate`
+                and
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Release`
                 commands.
 
                 :return: a mock for a :py:class:`tango.DeviceProxy` that
                     connects to an
-                    :py:class:`~ska.low.mccs.MccsStation` device.
-                :rtype: :py:class:`unittest.Mock`
+                    :py:class:`~ska.low.mccs.station.MccsStation`
+                    device.
+                :rtype: :py:class:`unittest.mock.Mock`
                 """
                 mock = mock_factory()
                 mock.subarrayId = 0
@@ -440,12 +448,14 @@ class TestMccsController:
             testing).
 
             :param device_under_test: fixture that provides a
-                :py:class:`tango.DeviceProxy` to the device under test, in a
+                :py:class:`tango.DeviceProxy` to the device under test,
+                in a
                 :py:class:`tango.test_context.DeviceTestContext`.
             :type device_under_test: :py:class:`tango.DeviceProxy`
-            :param mock_event_callback: fixture that provides a mock instance
-                with callback support methods
-            :type mock_event_callback: MockCallback
+            :param mock_event_callback: fixture that provides a mock
+                instance with callback support methods
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
             """
@@ -676,8 +686,10 @@ class TestMccsController:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param mock_event_callback: fixture that provides a mock instance
                 with callback support methods
-            :type mock_event_callback: MockCallback
-            :param logger: the logger to be used by the object under test
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
+            :param logger: the logger to be used by the object under
+                test
             :type logger: :py:class:`logging.Logger`
             """
             controller = device_under_test  # for readability
@@ -830,7 +842,7 @@ class TestMccsController:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param mock_event_callback: fixture that provides a mock instance
             with callback support methods
-        :type mock_event_callback: MockCallback
+        :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         """
 
         # The device has subscribed to healthState change events on
@@ -1013,7 +1025,8 @@ class TestControllerResourceManager:
         Test assignment operations of the ControllerResourceManager.
 
         :param resource_manager: test fixture providing a manager object
-        :type resource_manager: ControllerResourceManager
+        :type resource_manager:
+            :py:class:`~ska.low.mccs.controller.controller_device.ControllerResourceManager`
         """
         stations = ("low-mccs/station/001", "low-mccs/station/002")
         # Assign both stations
@@ -1065,8 +1078,9 @@ class TestControllerResourceManager:
 
 class TestInitCommand:
     """
-    Contains the tests of :py:class:`~ska.low.mccs.MccsController`'s
-    :py:class:`~ska.low.mccs.MccsController.InitCommand`.
+    Contains the tests of
+    :py:class:`~ska.low.mccs.controller.controller_device.MccsController`'s
+    :py:class:`~ska.low.mccs.controller.controller_device.MccsController.InitCommand`.
     """
 
     class HangableInitCommand(MccsController.InitCommand):
@@ -1132,7 +1146,7 @@ class TestInitCommand:
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         mock_device = mocker.MagicMock()
         mock_state_model = mocker.Mock()

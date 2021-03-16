@@ -60,7 +60,7 @@ class TestPowerManagement:
         device.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         controller = device_context.get_device("controller")
         subrack = device_context.get_device("subrack_01")
@@ -108,8 +108,7 @@ class TestPowerManagement:
         # Before testing, we set the testMode to TestMode.TEST, which
         # gives us static in-bounds values to test against. But if the
         # device was already in ALARM state by then, it can take a while
-        # (i.e. a polling period) for the device to update its state
-        # from ALARM to ON.
+        # for the device to update its state from ALARM to ON.
         # TODO: Move this into conftest
         if any(
             tile.State() == DevState.ALARM for tile in [tile_1, tile_2, tile_3, tile_4]

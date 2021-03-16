@@ -38,8 +38,8 @@ from ska.low.mccs.health import HealthModel
 
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska.low.mccs.hardware.HardwareHealthEvaluator` for a
-    subarray beam.
+    A :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareHealthEval
+    uator` for a subarray beam.
 
     A Subarray beam doesn't have hardware as such. Here we are
     pretending it does because we have to set health to DEGRADED if the
@@ -60,7 +60,7 @@ class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
         :param hardware: the "hardware" for which health is being
             evaluated
         :type hardware:
-            :py:class:`~ska.low.mccs.hardware.HardwareDriver`
+            :py:class:`~ska.low.mccs.hardware.base_hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
         :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -101,7 +101,7 @@ class SubarrayBeamDriver(HardwareDriver):
         Returns the status of the driver-hardware connection.
 
         :return: the status of the driver-hardware connection.
-        :rtype: py:class:`ska.low.mccs.hardware.ConnectionStatus`
+        :rtype: py:class:`ska.low.mccs.hardware.base_hardware.ConnectionStatus`
         """
         return ConnectionStatus.CONNECTED
 
@@ -421,7 +421,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i", polling_period=1000)
+    @attribute(dtype="DevLong", format="%i")
     def subarrayId(self):
         """
         Return the subarray id.
@@ -496,7 +496,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         return self._update_rate
 
-    @attribute(dtype="DevBoolean", polling_period=1000)
+    @attribute(dtype="DevBoolean")
     def isBeamLocked(self):
         """
         Return a flag indicating whether the beam is locked or not.

@@ -58,7 +58,7 @@ class TestEventSubscriptionHandler:
         registered callbacks.
 
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -111,7 +111,7 @@ class TestEventSubscriptionHandler:
         at that.
 
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -178,9 +178,9 @@ class TestDeviceEventManager:
         :type event_spec: str or list(str) or None
         :param raise_context: a context indicating whether this test
             should raise a Value error or not
-        :type raise_context: context
+        :type raise_context: :py:class:`contextmanager`
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -202,7 +202,7 @@ class TestDeviceEventManager:
         subscribe_event call for the specified event.
 
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -239,7 +239,7 @@ class TestDeviceEventManager:
         callbacks.
 
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -334,9 +334,9 @@ class TestEventManager:
         :type fqdn_spec: str or list(str) or None
         :param raise_context: a context indicating whether this test
             should raise a Value error or not
-        :type raise_context: context
+        :type raise_context: :py:class:`contextmanager`
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -360,7 +360,7 @@ class TestEventManager:
         the specified event.
 
         :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.Mock`
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn
@@ -400,7 +400,7 @@ class TestEventManager:
         its own callbacks.
 
         :param mocker: fixture that wraps unittest.Mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_device_proxies: fixture that patches
             :py:class:`tango.DeviceProxy` to always return the same mock
             for each fqdn

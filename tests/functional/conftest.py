@@ -19,7 +19,7 @@ def pytest_configure(config):
     Register custom markers to avoid pytest warnings.
 
     :param config: the pytest config object
-    :type config: pytest config class
+    :type config: :py:class:`pytest.config.Config`
     """
     config.addinivalue_line("markers", "XTP-1170: XRay BDD test marker")
     config.addinivalue_line("markers", "XTP-1257: XRay BDD test marker")
@@ -32,9 +32,9 @@ def pytest_configure(config):
 def patch_device_proxy():
     """
     Fixture that provides a patcher that set up
-    :py:class:`ska.low.mccs.MccsDeviceProxy` to use a connection factory
+    :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to use a connection factory
     that wraps :py:class:`tango.DeviceProxy` with a workaround for a bug
-    in :py:class:`tango.MultiDeviceTestContext`, then returns the host
+    in :py:class:`tango.test_context.MultiDeviceTestContext`, then returns the host
     and port used by the patch.
 
     This is a factory; the patch won't be applied unless you actually
@@ -117,7 +117,7 @@ class MccsDeviceInfo:
             device listed under this name
         :type name: str
         :param proxy: the proxy class to use to access the device.
-        :type proxy: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :type proxy: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
         :param patch: an optional device class with which to patch the
             named device
         :type patch: :py:class:`ska_tango_base.SKABaseDevice`
@@ -217,7 +217,7 @@ class MccsTangoContext:
         :param devices_to_load: fixture that provides a specification of
             the devices that are to be included in the devices_info
             dictionary
-        :type devices_to_load: dictionary
+        :type devices_to_load: dict
 
         :return: a devices_info spec in a format suitable for use by as
             input to a
@@ -242,7 +242,7 @@ class MccsTangoContext:
 
         :param devices_to_load: fixture that provides a specification of the
             devices that are to be included in the devices_info dictionary
-        :type devices_to_load: dictionary
+        :type devices_to_load: dict
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param source: a source value to be set on all devices
@@ -315,19 +315,19 @@ class MccsTangoContext:
 
     def get_device(self, name):
         """
-        Returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to a device
-        as specified by the device name provided in the configuration
-        file.
+        Returns a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
+        to a device as specified by the device name provided in the
+        configuration file.
 
         Each call to this method returns a fresh proxy. This is
         deliberate.
 
         :param name: the name of the device for which a
-            :py:class:`ska.low.mccs.MccsDeviceProxy` is sought.
+            :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` is sought.
         :type name: str
 
-        :return: a :py:class:`ska.low.mccs.MccsDeviceProxy` to the named device
-        :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :return: a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to the named device
+        :rtype: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
         """
         fqdn = self._devices_info.device_map[name]["fqdn"]
         proxy = self._devices_info.device_map[name]["proxy"]
@@ -357,7 +357,7 @@ class MccsDeviceTestContext(MccsTangoContext):
 
         :param devices_to_load: fixture that provides a specification of the
             devices that are to be included in the devices_info dictionary
-        :type devices_to_load: dictionary
+        :type devices_to_load: dict
         :param logger: the logger to be used by this object.
         :type logger: :py:class:`logging.Logger`
         :param source: a source value to be set on all devices
@@ -401,19 +401,19 @@ class MccsDeviceTestContext(MccsTangoContext):
 
     def get_device(self, name):
         """
-        Returns a :py:class:`ska.low.mccs.MccsDeviceProxy` to a device
-        as specified by the device name provided in the configuration
-        file.
+        Returns a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
+        to a device as specified by the device name provided in the
+        configuration file.
 
         Each call to this method returns a fresh proxy. This is
         deliberate.
 
         :param name: the name of the device for which a
-            :py:class:`ska.low.mccs.MccsDeviceProxy` is sought.
+            :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` is sought.
         :type name: str
 
-        :return: a :py:class:`ska.low.mccs.MccsDeviceProxy` to the named device
-        :rtype: :py:class:`ska.low.mccs.MccsDeviceProxy`
+        :return: a :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy` to the named device
+        :rtype: :py:class:`ska.low.mccs.device_proxy.MccsDeviceProxy`
         """
         fqdn = self._devices_info.device_map[name]["fqdn"]
         proxy = self._devices_info.device_map[name]["proxy"]
@@ -433,7 +433,7 @@ def tango_config(patch_device_proxy):
 
     This implementation entures that :py:class:`tango.DeviceProxy` is
     monkeypatched as a workaround for a bug in
-    :py:class:`tango.MultiDeviceTestContext`, then returns the host and
+    :py:class:`tango.test_context.MultiDeviceTestContext`, then returns the host and
     port used by the patch.
 
     This is a factory; the config won't actually be provided until you
@@ -441,7 +441,7 @@ def tango_config(patch_device_proxy):
 
     :param patch_device_proxy: a fixture that handles monkeypatching of
         :py:class:`tango.DeviceProxy` as a workaround for a bug in
-        :py:class:`tango.MultiDeviceTestContext`, and returns the host
+        :py:class:`tango.test_context.MultiDeviceTestContext`, and returns the host
         and port used in the patch
     :type patch_device_proxy: tuple
 
@@ -483,10 +483,10 @@ def tango_context(request, devices_to_load, tango_config, logger):
 
     :param request: A pytest object giving access to the requesting test
         context.
-    :type request: :py:class:`_pytest.fixtures.SubRequest`
+    :type request: :py:class:`pytest.FixtureRequest`
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
-    :type devices_to_load: dictionary
+    :type devices_to_load: dict
     :param tango_config: fixture that returns configuration information
         that specifies how the Tango system should be established and
         run.

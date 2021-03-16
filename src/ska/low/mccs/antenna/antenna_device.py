@@ -715,7 +715,6 @@ class MccsAntenna(SKABaseDevice):
         max_value=5.5,
         min_alarm=2.75,
         max_alarm=5.45,
-        polling_period=1000,
     )
     def voltage(self):
         """
@@ -726,7 +725,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._apiu_proxy.voltage
 
-    @attribute(dtype="float", label="current", unit="amperes", polling_period=1000)
+    @attribute(dtype="float", label="current", unit="amperes")
     def current(self):
         """
         Return the current attribute.
@@ -746,7 +745,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._apiu_proxy.temperature
 
-    @attribute(dtype="bool", label="xPolarisationFaulty", polling_period=1000)
+    @attribute(dtype="bool", label="xPolarisationFaulty")
     def xPolarisationFaulty(self):
         """
         Return the xPolarisationFaulty attribute.
@@ -756,7 +755,7 @@ class MccsAntenna(SKABaseDevice):
         """
         return self._xPolarisationFaulty
 
-    @attribute(dtype="bool", label="yPolarisationFaulty", polling_period=1000)
+    @attribute(dtype="bool", label="yPolarisationFaulty")
     def yPolarisationFaulty(self):
         """
         Return the yPolarisationFaulty attribute.

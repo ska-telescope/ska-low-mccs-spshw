@@ -871,7 +871,6 @@ class MccsTile(SKABaseDevice):
         max_value=5.5,
         min_alarm=4.55,
         max_alarm=5.45,
-        polling_period=1000,
     )
     def voltage(self):
         """
@@ -891,7 +890,6 @@ class MccsTile(SKABaseDevice):
         max_warning=2.85,
         min_alarm=0.05,
         max_alarm=2.95,
-        polling_period=1000,
     )
     def current(self):
         """
@@ -921,7 +919,6 @@ class MccsTile(SKABaseDevice):
         max_value=50.0,
         min_alarm=16.0,
         max_alarm=47.0,
-        polling_period=1000,
     )
     def board_temperature(self):
         """
@@ -939,7 +936,6 @@ class MccsTile(SKABaseDevice):
         max_value=50.0,
         min_alarm=16.0,
         max_alarm=47.0,
-        polling_period=1000,
     )
     def fpga1_temperature(self):
         """
@@ -957,7 +953,6 @@ class MccsTile(SKABaseDevice):
         max_value=50.0,
         min_alarm=16.0,
         max_alarm=47.0,
-        polling_period=1000,
     )
     def fpga2_temperature(self):
         """

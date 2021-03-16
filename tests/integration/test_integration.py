@@ -54,7 +54,7 @@ class TestMccsIntegration:
         MccsSubarray device.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         controller = device_context.get_device("controller")
         subarray_1 = device_context.get_device("subarray_01")
@@ -152,7 +152,7 @@ class TestMccsIntegration:
         an MccsSubarray device.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         controller = device_context.get_device("controller")
         subarray_1 = device_context.get_device("subarray_01")
@@ -249,7 +249,7 @@ class TestMccsIntegration:
         MccsTiles.
 
         :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.MultiDeviceTestContext`
+        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
         """
         station = device_context.get_device("station_001")
         tile_1 = device_context.get_device("tile_0001")

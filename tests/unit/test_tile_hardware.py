@@ -49,7 +49,8 @@ def tile_hardware_manager(logger):
 
     :return: a hardware manager for the MCCS tile device, in hardware
         simulation mode
-    :rtype: TileHardwareManager
+    :rtype:
+        :py:class:`ska.low.mccs.tile.tile_hardware.TileHardwareManager`
     """
     return TileHardwareManager(
         SimulationMode.TRUE,
@@ -137,7 +138,7 @@ class TestCommon:
             :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         :param request: A pytest object giving access to the requesting test
             context.
-        :type request: :py:class:`_pytest.fixtures.SubRequest`
+        :type request: :py:class:`pytest.FixtureRequest`
 
         :return: the hardware under test: a tile hardware manager or a
             TPM simulator
@@ -186,7 +187,7 @@ class TestCommon:
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
-        :type expected_value: any
+        :type expected_value: object
         """
         assert getattr(hardware_under_test, attribute_name) == expected_value
 
@@ -214,7 +215,7 @@ class TestCommon:
         :param initial_value: the expected initial value of the
             attribute. This can be any type, but the test of the
             attribute is a simple "==" equality test.
-        :type initial_value: any
+        :type initial_value: object
         :param values_to_write: a sequence of values to write, in order
             to check that the writes are sticking. The values can be of
             any type, but the test of the attribute is a simple "=="
@@ -269,7 +270,7 @@ class TestCommon:
         command can be called.
 
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         :param hardware_under_test: the hardware object under test. This
             could be a TpmSimulator, or a TileHardwareManager, or, when
             we eventually write it, a TpmDriver of an actual hardware
@@ -314,7 +315,7 @@ class TestCommon:
         :type hardware_under_test: object
             :py:class:`~ska.low.mccs.tile.tile_hardware.TileHardwareManager`
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         assert not hardware_under_test.is_programmed
         mock_bitfile = mocker.Mock()
@@ -449,7 +450,7 @@ class TestCommon:
             TPM
         :type hardware_under_test: object
         :param mocker: fixture that wraps unittest.mock
-        :type mocker: wrapper for :py:mod:`unittest.mock`
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         assert not hardware_under_test.is_beamformer_running
         hardware_under_test.start_beamformer()

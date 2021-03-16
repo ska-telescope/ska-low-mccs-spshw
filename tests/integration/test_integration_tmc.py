@@ -53,7 +53,7 @@ def devices_to_load():
 
 class TestMccsIntegrationTmc:
     """
-    Integration test cases for interactions between TMC and Mccs device
+    Integration test cases for interactions between TMC and MCCS device
     classes.
     """
 
@@ -62,16 +62,17 @@ class TestMccsIntegrationTmc:
         """
         Fixture that provides access to devices via their names.
 
-        :todo: For now the purpose of this fixture is to isolate FQDNs in a
-            single place in this module. In future this will be changed to
-            extract the device FQDNs straight from the configuration file.
+        :todo: For now the purpose of this fixture is to isolate FQDNs
+            in a single place in this module. In future this will be
+            changed to extract the device FQDNs straight from the
+            configuration file.
 
-        :param device_context: fixture that provides a tango context of some
-            sort
-        :type device_context: a tango context of some sort; possibly a
-            MultiDeviceTestContext, possibly the real thing. The only
-            requirement is that it provide a "get_device(fqdn)" method that
-            returns a DeviceProxy.
+        :param device_context: a tango context of some sort; possibly a
+            :py:class:`tango.test_context.MultiDeviceTestContext`,
+            possibly the real thing. The only requirement is that it
+            provide a ``get_device(fqdn)`` method that returns a
+            :py:class:`tango.DeviceProxy`.
+        :type device_context: :py:class:`contextmanager`
 
         :return: a dictionary of devices keyed by their name
         :rtype: dict<string, :py:class:`tango.DeviceProxy`>

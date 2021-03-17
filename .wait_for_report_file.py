@@ -11,7 +11,7 @@ import sys
 
 TIME_TO_WAIT = 60
 TIME_COUNTER = 0
-FILE_PATH = "./test-results/cucumber.json"
+FILE_PATH = "./testing/results/cucumber.json"
 
 while not os.path.exists(FILE_PATH):
     time.sleep(1)

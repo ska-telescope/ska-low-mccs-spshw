@@ -253,11 +253,11 @@ understanding of what your IDE is doing for you.
    .. code-block:: shell-session
 
      root@0852a572ffff:/app# ls
-     CHANGELOG   PrivateRules.mak  demos                 requirements-tst.txt  setup.py      tox.ini
-     Dockerfile  README.md         docs                  requirements.txt      src           values-gitlab-ci.yaml
-     LICENSE     charts            pogo                  scripts               test-results
-     Makefile    dashboards        requirements-dev.txt  setup.cfg             tests
-
+     CHANGELOG   README.md   demos                 requirements-lint.txt  setup.py  values-demo.yaml         values-test.yaml
+     Dockerfile  build       docs                  requirements.txt       src       values-development.yaml
+     LICENSE     charts      pogo                  scripts                testing   values-gitlab-ci.yaml
+     Makefile    dashboards  requirements-dev.txt  setup.cfg              tox.ini   values-psi.yaml
+     
 
 3. Before you can run tests in the Docker container, you need to install
    the SKA-Low-MCCS dependencies. Run this command (inside your
@@ -265,7 +265,7 @@ understanding of what your IDE is doing for you.
 
    .. code-block:: shell-session
 
-     $ root@0852a572ffff:/app# python3 -m pip install -r requirements-dev.txt -r requirements-lint.txt -r requirements-tst.txt
+     $ root@0852a572ffff:/app# python3 -m pip install -r requirements-dev.txt -r requirements-lint.txt -r testing/requirements.txt
      
 4. Hooray, your container now has all dependencies installed, and can
    now run the tests. To run the tests (inside the container):

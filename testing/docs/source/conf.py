@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../../src'))
 
 
 # This is an elaborate hack to insert write property into _all_
@@ -43,7 +43,9 @@ _MockObject.__truediv__ = lambda self, other: _MockObject()
 
 
 # -- Project information -----------------------------------------------------
-release_filename = os.path.join("..", "..", "src", "ska", "low", "mccs", "release.py")
+release_filename = os.path.join(
+    "..", "..", "..", "src", "ska", "low", "mccs", "release.py"
+)
 version = None
 author = None
 for line in open(release_filename).readlines():

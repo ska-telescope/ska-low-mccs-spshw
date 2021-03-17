@@ -38,7 +38,7 @@ For a basic environment in which devices may be tested:
 
 4. Install project dependencies:
 
-       root@caa98e8e264d:/app# python3 -m pip install -r requirements-dev.txt -r requirements-tst.txt
+       root@caa98e8e264d:/app# python3 -m pip install -r requirements-dev.txt -r testing/requirements.txt
 
 Testing and linting code, and building docs
 -------------------------------------------

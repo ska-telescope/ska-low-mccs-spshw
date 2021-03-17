@@ -7,15 +7,8 @@ MCCS documentation, see the `MCCS Prototype documentation`_.
 
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Harness:
-
-   mocks
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tests:
+   :maxdepth: 2
+   :caption: Contents:
 
    unit
    integration

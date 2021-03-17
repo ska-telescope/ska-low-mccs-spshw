@@ -27,9 +27,6 @@ from ska.low.mccs.health import (
 )
 
 
-from tests.mocks import MockDeviceBuilder
-
-
 @pytest.fixture()
 def mock_factory(mocker):
     """
@@ -46,10 +43,49 @@ def mock_factory(mocker):
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
-    builder = MockDeviceBuilder()
-    builder.add_attribute("healthState", HealthState.UNKNOWN)
-    builder.add_attribute("adminMode", AdminMode.ONLINE)
-    return builder
+    _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
+
+    def _mock_attribute(name, *args, **kwargs):
+        """
+        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
+        for a given attribute name.
+
+        :param name: name of the attribute
+        :type name: str
+        :param args: positional args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type args: list
+        :param kwargs: named args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type kwargs: dict
+
+        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
+            instance, with name, value and quality values
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mocker.Mock()
+        mock.name = name
+        mock.value = _values.get(name, "MockValue")
+        mock.quality = "MockQuality"
+        return mock
+
+    def _mock_device():
+        """
+        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
+        with its :py:meth:`tango.DeviceProxy.read_attribute` method
+        mocked to return :py:class:`tango.DeviceAttribute` mocks.
+
+        :return: a basic mock for a :py:class:`tango.DeviceProxy`
+            instance,
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mocker.Mock()
+        mock.read_attribute.side_effect = _mock_attribute
+        return mock
+
+    return _mock_device
 
 
 class TestDeviceHealthPolicy:

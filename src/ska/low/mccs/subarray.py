@@ -669,9 +669,6 @@ class MccsSubarray(SKASubarray):
         Class for handling the Off() command.
         """
 
-        SUCCEEDED_MESSAGE = "Off command completed OK"
-        FAILED_MESSAGE = "Off command failed"
-
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -687,11 +684,7 @@ class MccsSubarray(SKASubarray):
             (result_code, message) = super().do()
 
             # MCCS-specific stuff goes here
-
-            if result_code == ResultCode.OK:
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+            return (result_code, message)
 
     class AssignResourcesCommand(SKASubarray.AssignResourcesCommand):
         """

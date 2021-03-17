@@ -12,6 +12,8 @@ This module contains the tests for the
 """
 import pytest
 
+from ska_tango_base.commands import ResultCode
+
 from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.subrack.demo_subrack_device import DemoSubrack
 
@@ -37,6 +39,38 @@ class TestDemoSubrack:
     """
     This class contains the tests for the DemoSubrack device class.
     """
+
+    @pytest.fixture()
+    def mock_factory(self, mocker):
+        """
+        Fixture that provides a mock factory for device proxy mocks.
+        This factory ensures that calls to a mock's command_inout method
+        results in a (ResultCode.OK, message) return.
+
+        :param mocker: a wrapper around the :py:mod:`unittest.mock` package
+        :type mocker: :py:class:`pytest_mock.mocker`
+
+        :return: a factory for device proxy mocks
+        :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
+        """
+
+        def custom_mock():
+            """
+            Return a mock that returns `(ResultCode.OK, message)` when
+            its `command_inout` method is called.
+
+            :return: a mock that returns `(ResultCode.OK, message)` when
+                its `command_inout` method is called.
+            :rtype: :py:class:`unittest.mock.Mock`
+            """
+            mock_device_proxy = mocker.Mock()
+            mock_device_proxy.command_inout.return_value = (
+                (ResultCode.OK,),
+                ("mock message",),
+            )
+            return mock_device_proxy
+
+        return custom_mock
 
     def test(self, device_under_test):
         """

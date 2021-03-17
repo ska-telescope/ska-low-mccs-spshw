@@ -16,7 +16,7 @@ __all__ = ["MccsController", "ControllerResourceManager", "main"]
 import json
 import logging
 import threading
-from typing import List, Tuple
+from typing import List, Dict, Tuple
 
 
 # PyTango imports
@@ -1224,7 +1224,7 @@ class MccsController(SKAMaster):
 # ----------
 
 
-def main(*args: str, **kwargs: str) -> int:
+def main(args: List = None, **kwargs: Dict) -> int:
     """
     Entry point for module.
 
@@ -1234,7 +1234,7 @@ def main(*args: str, **kwargs: str) -> int:
     :return: exit code
     """
 
-    return MccsController.run_server(args=args or None, **kwargs)
+    return MccsController.run_server(args=args, **kwargs)
 
 
 if __name__ == "__main__":

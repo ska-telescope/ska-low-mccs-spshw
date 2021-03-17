@@ -27,8 +27,6 @@ from ska_tango_base.control_model import (
 from ska.low.mccs import MccsDeviceProxy, MccsSubarray, release
 from ska.low.mccs.utils import call_with_json
 
-from tests.mocks import MockDeviceBuilder, MockSubarrayBuilder
-
 
 @pytest.fixture
 def subarray_state_model(logger):
@@ -76,10 +74,49 @@ def mock_factory(mocker):
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
-    builder = MockDeviceBuilder()
-    builder.add_attribute("healthState", HealthState.UNKNOWN)
-    builder.add_attribute("adminMode", AdminMode.ONLINE)
-    return builder
+    _values = {"healthState": HealthState.UNKNOWN, "adminMode": AdminMode.ONLINE}
+
+    def _mock_attribute(name, *args, **kwargs):
+        """
+        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
+        for a given attribute name.
+
+        :param name: name of the attribute
+        :type name: str
+        :param args: positional args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type args: list
+        :param kwargs: named args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type kwargs: dict
+
+        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
+            instance, with name, value and quality values
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mocker.Mock()
+        mock.name = name
+        mock.value = _values.get(name, "MockValue")
+        mock.quality = "MockQuality"
+        return mock
+
+    def _mock_device():
+        """
+        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
+        with its :py:meth:`tango.DeviceProxy.read_attribute` method
+        mocked to return :py:class:`tango.DeviceAttribute` mocks.
+
+        :return: a basic mock for a :py:class:`tango.DeviceProxy`
+            instance,
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mocker.Mock()
+        mock.read_attribute.side_effect = _mock_attribute
+        return mock
+
+    return _mock_device
 
 
 # pylint: disable=invalid-name
@@ -242,22 +279,102 @@ class TestMccsSubarray:
             :rtype: dict
             """
 
-            mock_subarray_factory = MockSubarrayBuilder(mock_factory)
+            def _subarray_mock():
+                """
+                Sets up a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an
+                :py:class:`~ska.low.mccs.subarray.MccsSubarray` device.
+                The returned mock will respond suitably to
+                :py:meth:`~ska_tango_base.SKASubarray.AssignResources`
+                and
+                :py:meth:`~ska_tango_base.SKASubarray.ReleaseResources`
+                and
+                :py:meth:`~ska_tango_base.SKASubarray.Configure`
+                commands.
 
-            mock_station_factory = MockDeviceBuilder(mock_factory)
-            mock_station_factory.add_attribute("subarrayId", 0)
+                :return: a mock for a :py:class:`tango.DeviceProxy` that
+                    connects to an
+                    :py:class:`~ska.low.mccs.subarray.MccsSubarray`
+                    device.
+                :rtype: :py:class:`unittest.mock.Mock`
+                """
+                mock_subarray = mock_factory()
+                mock_subarray.On.return_value = (
+                    ResultCode.OK,
+                    MccsSubarray.OnCommand.SUCCEEDED_MESSAGE,
+                )
+                mock_subarray.AssignResources.return_value = (
+                    ResultCode.OK,
+                    MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE,
+                )
+                mock_subarray.Configure.return_value = (
+                    ResultCode.OK,
+                    MccsSubarray.ConfigureCommand.SUCCEEDED_MESSAGE,
+                )
+                mock_subarray.ReleaseResources.return_value = (
+                    ResultCode.OK,
+                    MccsSubarray.ReleaseResourcesCommand.SUCCEEDED_MESSAGE,
+                )
+                mock_subarray.ReleaseAllResources.return_value = (
+                    ResultCode.OK,
+                    MccsSubarray.ReleaseAllResourcesCommand.SUCCEEDED_MESSAGE,
+                )
+                mock_subarray.Off.return_value = (
+                    ResultCode.OK,
+                    "Subarray switched off",
+                )
+                return mock_subarray
 
-            mock_subarraybeam_factory = MockDeviceBuilder(mock_factory)
-            mock_subarraybeam_factory.add_attribute("healthState", HealthState.OK)
-            mock_subarraybeam_factory.add_attribute("updateRate", 0)
+            def _station_mock():
+                """
+                Sets up a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an
+                :py:class:`~ska.low.mccs.station.MccsStation` device.
+                The returned mock will respond suitably to actions taken
+                on it by the controller as part of the controller's
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Allocate`
+                and
+                :py:meth:`~.mccs.controller.controller_device.MccsController.Release`
+                commands.
+
+                :return: a mock for a :py:class:`tango.DeviceProxy` that
+                    connects to an
+                    :py:class:`~ska.low.mccs.station.MccsStation`
+                    device.
+                :rtype: :py:class:`unittest.mock.Mock`
+                """
+                mock = mock_factory()
+                mock.subarrayId = 0
+                return mock
+
+            def _subarraybeam_mock():
+                """
+                Sets up a mock for a :py:class:`tango.DeviceProxy` that
+                connects to an :py:class:`~ska.low.mccs.subarray.MccsSubarrayBeam`
+                device. The returned mock will respond suitably to
+                actions taken on it by the subarray as part of the
+                subarray's
+                :py:meth:`~ska_tango_base.SKASubarray.Allocate` and
+                :py:meth:`~ska_tango_base.SKASubarray.Release`
+                commands.
+
+                :return: a mock for a :py:class:`tango.DeviceProxy` that
+                    connects to an
+                    :py:class:`~ska.low.mccs.subarray.MccsSubarrayBeam` device.
+                :rtype: :py:class:`unittest.mock.Mock`
+                """
+                mock = mock_factory()
+                mock.healthState = HealthState.OK
+                mock._update_rate = 0.0
+                return mock
 
             return {
-                "low-mccs/subarray/01": mock_subarray_factory(),
-                "low-mccs/subarray/02": mock_subarray_factory(),
-                "low-mccs/station/001": mock_station_factory(),
-                "low-mccs/station/002": mock_station_factory(),
-                "low-mccs/subarraybeam/01": mock_subarraybeam_factory(),
-                "low-mccs/subarraybeam/02": mock_subarraybeam_factory(),
+                "low-mccs/subarray/01": _subarray_mock(),
+                "low-mccs/subarray/02": _subarray_mock(),
+                "low-mccs/station/001": _station_mock(),
+                "low-mccs/station/002": _station_mock(),
+                "low-mccs/subarraybeam/01": _subarraybeam_mock(),
+                "low-mccs/subarraybeam/02": _subarraybeam_mock(),
             }
 
         def test_AllocateResources(self, device_under_test, logger):

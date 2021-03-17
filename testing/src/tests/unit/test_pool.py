@@ -16,6 +16,8 @@ from ska_tango_base.commands import ResultCode
 from ska.low.mccs import MccsDeviceProxy
 from ska.low.mccs.pool import DevicePool
 
+from tests.mocks import MockDeviceBuilder
+
 
 class TestDevicePool:
     """
@@ -36,24 +38,13 @@ class TestDevicePool:
         :return: a factory for device proxy mocks
         :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
         """
-
-        def custom_mock():
-            """
-            Return a mock that returns `(ResultCode.OK, message)` when
-            its `command_inout` method is called.
-
-            :return: a mock that returns `(ResultCode.OK, message)` when
-                its `command_inout` method is called.
-            :rtype: :py:class:`unittest.mock.Mock`
-            """
-            mock_device_proxy = mocker.Mock()
-            mock_device_proxy.command_inout_reply.return_value = (
-                (ResultCode.OK,),
-                ("mock message",),
-            )
-            return mock_device_proxy
-
-        return custom_mock
+        builder = MockDeviceBuilder()
+        builder.add_result_command("Foo", ResultCode.OK)
+        builder.add_result_command("Disable", ResultCode.OK)
+        builder.add_result_command("Off", ResultCode.OK)
+        builder.add_result_command("Standby", ResultCode.OK)
+        builder.add_result_command("On", ResultCode.OK)
+        return builder
 
     @pytest.fixture()
     def fqdns(self):

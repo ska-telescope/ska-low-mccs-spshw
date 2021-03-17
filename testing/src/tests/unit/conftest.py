@@ -11,6 +11,9 @@ from ska_tango_base.commands import ResultCode
 from ska.low.mccs import MccsDeviceProxy
 
 
+from tests.mocks import MockDeviceBuilder
+
+
 def pytest_itemcollected(item):
     """
     pytest hook implementation; add the "forked" custom mark to all
@@ -52,7 +55,7 @@ def mock_factory(mocker):
     :return: a factory for device proxy mocks
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
     """
-    return mocker.Mock
+    return MockDeviceBuilder()
 
 
 @pytest.fixture()

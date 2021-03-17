@@ -501,6 +501,9 @@ class MccsSubarray(SKASubarray):
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns, self.logger
             )
+            # RCL: Hack to see if this works
+            device.resource_manager = device._station_pool_manager
+
             device._station_beam_pool_manager = StationBeamsResourceManager(
                 device.health_model._health_monitor,
                 device._station_beam_fqdns,
@@ -781,7 +784,6 @@ class MccsSubarray(SKASubarray):
         """
         Class for handling the ReleaseAllResources() command.
         """
-
         SUCCEEDED_MESSAGE = "ReleaseAllResources command completed OK"
         FAILED_MESSAGE_PREFIX = "ReleaseAllResources command failed"
 
@@ -1122,9 +1124,36 @@ class MccsSubarray(SKASubarray):
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
+            device = self.target
+            device._station_beam_pool_manager.release_all()
+
+            # TODO: Remove this delay. It simply emulates the time to achieve the restart for testing.
+            time.sleep(0.3)
 
             # MCCS-specific stuff goes here
             return (result_code, message)
+
+    @command(dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def Restart(self):
+        """
+        Restart the current observation process.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self._command_result = ResultCode.UNKNOWN
+        self.push_change_event("commandResult", self._command_result)
+        command = self.get_command_object("Restart")
+        (result_code, message) = command()
+        self._command_result = result_code
+        self.push_change_event("commandResult", self._command_result)
+        return [[result_code], [message]]
 
     # ---------------------
     # MccsSubarray Commands

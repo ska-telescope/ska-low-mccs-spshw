@@ -26,8 +26,6 @@ from ska.low.mccs import MccsDeviceProxy, MccsTile
 from ska.low.mccs.hardware import PowerMode, SimulableHardwareFactory
 from ska.low.mccs.tile import TileHardwareManager, TilePowerManager, StaticTpmSimulator
 
-from tests.mocks import MockDeviceBuilder
-
 
 @pytest.fixture()
 def device_to_load():
@@ -61,18 +59,48 @@ def initial_mocks(mock_factory, request):
     :return: a dictionary of mocks, keyed by FQDN
     :rtype: dict
     """
+
+    def _subrack_mock(state=DevState.ON, is_on=False, result_code=ResultCode.OK):
+        """
+        Sets up a mock for a :py:class:`tango.DeviceProxy` that connects
+        to an
+        :py:class:`~ska.low.mccs.subrack.subrack_device.MccsSubrack`
+        device. The returned mock will respond suitably to actions taken
+        on it by the TilePowerManager as part of the controller's
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Allocate`
+        and
+        :py:meth:`~ska.low.mccs.controller.controller_device.MccsController.Release`
+        commands.
+
+        :param state: the device state that this mock subrack device
+            should report
+        :type state: :py:class:`tango.DevState`
+        :param is_on: whether this mock subrack device should report
+            that its TPMs are turned on
+        :type is_on: bool
+        :param result_code: the result code this mock subrack device
+            should return when told to turn a TPM on or off
+        :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
+        :return: a mock for a :py:class:`tango.DeviceProxy` that
+            connects to an
+            :py:class:`~ska.low.mccs.subarray.MccsSubarray` device.
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mock_factory()
+        mock.state.return_value = state
+        mock.IsTpmOn.return_value = is_on
+        mock.PowerOffTpm.return_value = [
+            [result_code],
+            ["Mock information_only message"],
+        ]
+        mock.PowerOnTpm.return_value = [
+            [result_code],
+            ["Mock information_only message"],
+        ]
+        return mock
+
     kwargs = getattr(request, "param", {})
-    state = kwargs.get("state", DevState.ON)
-    is_on = kwargs.get("is_on", False)
-    result_code = kwargs.get("result_code", ResultCode.OK)
-
-    mock_subrack_factory = MockDeviceBuilder(mock_factory)
-    mock_subrack_factory.set_state(state)
-    mock_subrack_factory.add_command("IsTpmOn", is_on)
-    mock_subrack_factory.add_result_command("PowerOffTpm", result_code)
-    mock_subrack_factory.add_result_command("PowerOnTpm", result_code)
-
-    return {"low-mccs/subrack/01": mock_subrack_factory()}
+    return {"low-mccs/subrack/01": _subrack_mock(**kwargs)}
 
 
 @pytest.fixture()
@@ -96,10 +124,49 @@ def mock_factory(mocker, request):
     """
     kwargs = getattr(request, "param", {})
     is_on = kwargs.get("is_on", False)
+    _values = {"areTpmsOn": [is_on, True, False, True]}
 
-    builder = MockDeviceBuilder()
-    builder.add_attribute("areTpmsOn", [is_on, True, False, True])
-    return builder
+    def _mock_attribute(name, *args, **kwargs):
+        """
+        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
+        for a given attribute name.
+
+        :param name: name of the attribute
+        :type name: str
+        :param args: positional args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type args: list
+        :param kwargs: named args to the
+            :py:meth:`tango.DeviceProxy.read_attribute` method patched
+            by this mock factory
+        :type kwargs: dict
+
+        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
+            instance, with name, value and quality values
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mocker.Mock()
+        mock.name = name
+        mock.value = _values.get(name, "MockValue")
+        mock.quality = "MockQuality"
+        return mock
+
+    def _mock_device():
+        """
+        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
+        with its :py:meth:`tango.DeviceProxy.read_attribute` method
+        mocked to return :py:class:`tango.DeviceAttribute` mocks.
+
+        :return: a basic mock for a :py:class:`tango.DeviceProxy`
+            instance,
+        :rtype: :py:class:`unittest.mock.Mock`
+        """
+        mock = mocker.Mock()
+        mock.read_attribute.side_effect = _mock_attribute
+        return mock
+
+    return _mock_device
 
 
 class TestTilePowerManager:

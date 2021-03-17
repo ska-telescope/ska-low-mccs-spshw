@@ -41,7 +41,7 @@ KUBERNETES_VERSION = v1.19.2
 MINIKUBE_TMP = /tmp/minikube-tango
 
 # where to put the output of "make functional-test"
-TEST_RESULTS_DIR = test-results
+TEST_RESULTS_DIR = testing/results
 
 # Docker, K8s and Gitlab CI variables
 # gitlab-runner debug mode - turn on with non-empty value

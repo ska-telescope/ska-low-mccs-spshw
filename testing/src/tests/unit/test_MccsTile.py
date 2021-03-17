@@ -925,7 +925,7 @@ class TestMccsTileCommands:
         device_under_test.Standby()
 
         assert not device_under_test.isProgrammed
-        bitfile = "tests/unit/testdata/Vivado_test_firmware_bitfile.bit"
+        bitfile = "testing/data/Vivado_test_firmware_bitfile.bit"
         [[result_code], [message]] = device_under_test.DownloadFirmware(bitfile)
         assert result_code == ResultCode.OK
         assert message == MccsTile.DownloadFirmwareCommand.SUCCEEDED_MESSAGE

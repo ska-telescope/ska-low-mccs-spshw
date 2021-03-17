@@ -98,7 +98,7 @@ functional_test:
     - make functional-test
   artifacts:
     paths:
-      - ./test-results
+      - ./testing/results
     when: always
 
 # Wait for report and send to Jira
@@ -111,7 +111,7 @@ xray_report:
   script:
     - 'curl -X POST -H "Content-type: application/json" --fail
          -H "Authorization: Basic $JIRA_AUTH"
-         --data @./test-results/cucumber.json
+         --data @./testing/results/cucumber.json
          https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
   when: always
   only: [master]

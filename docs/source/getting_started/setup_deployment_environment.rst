@@ -17,6 +17,44 @@ a completely different machine.
 These instructions assume a Linux environment; it should be possible to
 deploy in other environments.
 
+Machine requirements
+--------------------
+
+Memory requirements
+^^^^^^^^^^^^^^^^^^^
+Currently, the MCCS chart consumes about 3Gb of memory. This chart only
+deploys a small number of devices. Operationally, the number of devices
+to be deployed will grow over time by several orders of magnitude; but
+there will always be smaller charts available, that deploy a small
+number of representative devices, for development, demonstration and
+testing purposes. These charts are not expected to grow very much larger
+than they are at present, so it is probably safe to assume that an MCCS
+chart (for development, testing and demonstration purposes) consumes no
+more than 4Gb of memory.
+
+So if you want to be able to deploy MCCS on a machine, and still be able
+to use the machine for other purposes, you are recommended to have at
+least 8Gb of memory. Team members have managed to deploy on hardware
+with less than this, but they were restricted to deploying minimal
+charts, and experienced difficulties running other applications at the
+same time.
+
+CPU requirements
+^^^^^^^^^^^^^^^^
+CPU requirements are much more forgiving; if you have less CPU
+available, MCCS will mostly just run more slowly.
+
+However, Tango commands timeout after three seconds (by default), and
+some MCCS commands currently take not much less than that to run. So if
+you deploy MCCS on a machine with slow or busy CPU, you may find that
+these commands exceed the three second limit, resulting in timeout
+issues.
+
+Roughly speaking: you probably won't see timeouts on machines with four
+or more cores; but you may seem them on machines with fewer.
+
+(These slow commands should not exist. MCCS plans improvements in this
+area. So in future, these timeouts will not be an issue.)
 
 Overview of setup / teardown
 ----------------------------

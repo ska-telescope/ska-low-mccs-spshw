@@ -22,22 +22,30 @@ Machine requirements
 
 Memory requirements
 ^^^^^^^^^^^^^^^^^^^
-Currently, the MCCS chart consumes about 3Gb of memory. This chart only
-deploys a small number of devices. Operationally, the number of devices
-to be deployed will grow over time by several orders of magnitude; but
-there will always be smaller charts available, that deploy a small
-number of representative devices, for development, demonstration and
-testing purposes. These charts are not expected to grow very much larger
-than they are at present, so it is probably safe to assume that an MCCS
-chart (for development, testing and demonstration purposes) consumes no
-more than 4Gb of memory.
+As described below, MCCS uses the SKA `deploy-minikube` project to
+manage cluster deployment. By default, `deploy-minikube` requests 8Gb of
+memory for minikube. This implies that, assuming you want to be able to
+do other things with your computer while minikube is running, you will
+need upwards of 12Gb of memory.
 
-So if you want to be able to deploy MCCS on a machine, and still be able
-to use the machine for other purposes, you are recommended to have at
-least 8Gb of memory. Team members have managed to deploy on hardware
-with less than this, but they were restricted to deploying minimal
-charts, and experienced difficulties running other applications at the
-same time.
+Actually, the MCCS chart currently requires only about 3Gb of memory, so
+if you need to deploy on a memory-constrained machine, it should be okay
+to overrule the `deploy-minikube` default with a setting of 4Gb or even
+slightly less.
+
+Team members have managed to deploy on hardware with even less memory,
+but they were restricted to deploying minimal charts, and experienced
+difficulties running other applications at the same time.
+
+(Note that, operationally, the number of devices deployed by MCCS will
+increase over time by several orders of magnitude, eventually
+outstripping the capacity of any development machine. MCCS will maintain
+smaller "development" charts, that deploy a small number of
+representative devices, for development, demonstration and testing
+purposes. These charts are not expected to grow very much larger than
+they are at present, so it is probably safe to assume that an MCCS
+development chart will not require more than 4Gb of memory.)
+
 
 CPU requirements
 ^^^^^^^^^^^^^^^^
@@ -116,11 +124,18 @@ Start the cluster manager
    (Obviously there is no need to do this if you have only just cloned
    the project.)
 
-#. Used ``deploy-minikube`` to install and configure the cluster:
+#. Use ``deploy-minikube`` to install and configure the cluster:
 
    .. code-block:: bash
 
       make all
+
+   If deploying to a memory-constrained machine, the memory provided to
+   minikube can be reduced from the 8Gb default:
+
+    .. code-block:: bash
+
+       make MEM=4096mb all
 
 #. **IMPORTANT** Because we are using docker as our driver, the
    environment must be set in your terminal. This command must be run in

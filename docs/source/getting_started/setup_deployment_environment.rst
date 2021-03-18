@@ -171,16 +171,18 @@ The basic steps to deploying MCCS are:
 
    This too may take a very long time the first time it is run.
 
-   MCCS also has a "mccs-demo" chart configuration for deploying a separate
-   configuration for demo and testing purposes. To deploy this instead, use:
+   MCCS also has a "demo" chart configuration for deploying a separate
+   configuration for demo and testing purposes. To deploy this instead,
+   use:
 
    .. code-block:: bash
 
       make VALUES_FILE=values-demo.yaml install-chart
 
-   Similarly, if you want to deploy on the PSI cluster this can be controlled
-   using the `VALUES_FILE=values-psi.yaml` environment variable.
-   For PSI which is on a shared cluster it is also recommended to set:
+   Similarly, if you want to deploy on the PSI cluster this can be
+   controlled using the `VALUES_FILE=values-psi.yaml` environment
+   variable. For PSI which is on a shared cluster it is also recommended
+   to set the `RELEASE_NAME`:
 
    .. code-block:: bash
 
@@ -199,20 +201,35 @@ The basic steps to deploying MCCS are:
      the device containers be created, and then the devices initialise.
      At first some devices may error; this is normal, and they will be
      automatically restarted. After several minutes, the cluster should
-     stabilise and you will see that all devices are `Running`.
+     stabilise and you will see that all devices are `Running` (except
+     for the configuration pod, which will be `Completed`).
 
    * To block until the cluster is ready:
 
      .. code-block:: bash
    
         make wait
-        
+
      Because this option blocks until the cluster is ready, it can be
-     useful for queueing up commands:
+     useful for queueing up commands. For example, to deploy MCCS, wait
+     for the cluster to be ready, and then run the tests:
    
      .. code-block:: shell-session
 
         $ make install-chart; make wait; make functional-test
+
+     Note that on slower machines, `make wait` may time out. This need
+     not mean that there is a problem with the cluster; it is just
+     taking a long time. If `make wait` is timing out for you, you won't
+     be able to use it. You will need to monitor the cluster for
+     readiness yourself:
+   
+     .. code-block:: shell-session
+
+        $ make install-chart
+        $ make watch  # watch the cluster yourself and exit when it is ready
+        $ make functional-test
+
 
 Using the MCCS Deployment
 -------------------------
@@ -230,7 +247,7 @@ Once you have finished with the deployment, you can tear it down:
    make watch
 
 This may take a minute or so; use `make watch` to monitor
-deletion.
+deletion. You cannot use `make wait` for this.
 
 Note that this does not teardown the minikube deployment, it simply
 unloads the MCCS charts.

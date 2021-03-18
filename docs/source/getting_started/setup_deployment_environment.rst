@@ -56,13 +56,14 @@ However, Tango commands timeout after three seconds (by default), and
 some MCCS commands currently take not much less than that to run. So if
 you deploy MCCS on a machine with slow or busy CPU, you may find that
 these commands exceed the three second limit, resulting in timeout
-issues.
+issues. (These slow commands should not exist. MCCS plans improvements
+in this area. So in future, these timeouts will not be an issue.)
 
-Roughly speaking: you probably won't see timeouts on machines with four
-or more cores; but you may seem them on machines with fewer.
+By default, `deploy-minikube` tells minikube to use two CPUs. As a rough
+rule of thumb: you probably won't see timeouts if minikube can get the
+two CPUs that it asks for; but if there is contention for those CPUs,
+you may see timeouts.
 
-(These slow commands should not exist. MCCS plans improvements in this
-area. So in future, these timeouts will not be an issue.)
 
 Overview of setup / teardown
 ----------------------------
@@ -136,6 +137,21 @@ Start the cluster manager
     .. code-block:: bash
 
        make MEM=4096mb all
+
+   The number of CPUs that minikube is allowed to use can also be
+   changed from the default of 2:
+
+   .. code-block:: bash
+
+      make CPUS=4 all
+
+   Note that to change these resource values on a cluster that has
+   already been deployed, it must first be deleted:
+
+   .. code-block:: bash
+
+      make delete
+      make MEM=16384mb CPUS=8 all
 
 #. **IMPORTANT** Because we are using docker as our driver, the
    environment must be set in your terminal. This command must be run in
@@ -244,10 +260,6 @@ Once you have finished with the deployment, you can tear it down:
 .. code-block:: bash
 
    make uninstall-chart
-   make watch
-
-This may take a minute or so; use `make watch` to monitor
-deletion. You cannot use `make wait` for this.
 
 Note that this does not teardown the minikube deployment, it simply
 unloads the MCCS charts.

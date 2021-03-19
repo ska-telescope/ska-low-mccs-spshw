@@ -1,5 +1,5 @@
 ==================================================
-Tile Device module (ska.low.mccs.tile.tile_device)
+Tile Device module (ska_low_mccs.tile.tile_device)
 ==================================================
 
 .. toctree::
@@ -7,5 +7,5 @@ Tile Device module (ska.low.mccs.tile.tile_device)
 
 .. image:: tile_device_class_diagram.svg
 
-.. automodule:: ska.low.mccs.tile.tile_device
+.. automodule:: ska_low_mccs.tile.tile_device
    :members:

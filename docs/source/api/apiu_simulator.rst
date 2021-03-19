@@ -1,9 +1,9 @@
 ========================================================
-APIU Simulator module (ska.low.mccs.apiu.apiu_simulator)
+APIU Simulator module (ska_low_mccs.apiu.apiu_simulator)
 ========================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.apiu.apiu_simulator
+.. automodule:: ska_low_mccs.apiu.apiu_simulator
    :members:

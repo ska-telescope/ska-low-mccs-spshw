@@ -1,9 +1,9 @@
 ======================================================================
-Power mode hardware module (ska.low.mccs.hardware.power_mode_hardware)
+Power mode hardware module (ska_low_mccs.hardware.power_mode_hardware)
 ======================================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.hardware.power_mode_hardware
+.. automodule:: ska_low_mccs.hardware.power_mode_hardware
    :members:

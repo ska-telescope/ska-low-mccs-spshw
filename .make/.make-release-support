@@ -107,7 +107,7 @@ function nextMajorLevel() {
 
 function applyRelease()  {
 	NEWVERSION=${1:-$(getRelease)}
-	sed -i -e "s/\(version = \"\)[^\"]*\"/\1$NEWVERSION\"/" src/ska/low/mccs/release.py
+	sed -i -e "s/\(version = \"\)[^\"]*\"/\1$NEWVERSION\"/" src/ska_low_mccs/release.py
 	sed -i -e "s/\(version: \"\)[^\"]*\"/\1$NEWVERSION\"/;s/\(appVersion: \"\)[^\"]*\"/\1$NEWVERSION\"/" charts/ska-low-mccs/Chart.yaml
 	perl -pi -e 's/(tag:).+?([ ]+#VERSION.+$)/\1 '$NEWVERSION'\2/;' charts/ska-low-mccs/values.yaml
 	perl -pi -e 's/(version:).+?([ ]+#VERSION.+$)/\1 '$NEWVERSION'\2/;' charts/mccs-umbrella/Chart.yaml

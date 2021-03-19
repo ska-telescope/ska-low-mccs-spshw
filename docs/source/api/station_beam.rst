@@ -1,5 +1,5 @@
 ===============================================
-Station Beam module (ska.low.mccs.station_beam)
+Station Beam module (ska_low_mccs.station_beam)
 ===============================================
 
 .. toctree::
@@ -7,5 +7,5 @@ Station Beam module (ska.low.mccs.station_beam)
 
 .. image:: station_beam_class_diagram.svg
 
-.. automodule:: ska.low.mccs.station_beam
+.. automodule:: ska_low_mccs.station_beam
    :members:

@@ -1,9 +1,9 @@
 ================================================================
-Base TPM Simulator module (ska.low.mccs.tile.base_tpm_simulator)
+Base TPM Simulator module (ska_low_mccs.tile.base_tpm_simulator)
 ================================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.tile.base_tpm_simulator
+.. automodule:: ska_low_mccs.tile.base_tpm_simulator
    :members:

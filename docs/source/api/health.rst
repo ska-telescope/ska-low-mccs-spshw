@@ -1,9 +1,9 @@
 ===================================
-Health module (ska.low.mccs.health)
+Health module (ska_low_mccs.health)
 ===================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.health
+.. automodule:: ska_low_mccs.health
    :members:

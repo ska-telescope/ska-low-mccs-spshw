@@ -1,9 +1,9 @@
 ===================================
-Device module (ska.low.mccs.device)
+Device module (ska_low_mccs.device)
 ===================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.device
+.. automodule:: ska_low_mccs.device
    :members:

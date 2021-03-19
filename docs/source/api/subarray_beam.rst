@@ -1,5 +1,5 @@
 =================================================
-Subarray Beam module (ska.low.mccs.subarray_beam)
+Subarray Beam module (ska_low_mccs.subarray_beam)
 =================================================
 
 .. toctree::
@@ -7,5 +7,5 @@ Subarray Beam module (ska.low.mccs.subarray_beam)
 
 .. image:: subarray_beam_class_diagram.svg
 
-.. automodule:: ska.low.mccs.subarray_beam
+.. automodule:: ska_low_mccs.subarray_beam
    :members:

@@ -5,6 +5,8 @@ MARK ?= all
 TANGO_HOST ?= tango-host-databaseds-from-makefile-$(RELEASE_NAME):10000## TANGO_HOST is an input!
 LINTING_OUTPUT=$(shell helm lint charts/* | grep ERROR -c | tail -1)
 SLEEPTIME ?= 30
+MAX_WAIT ?= 120s
+
 EXTERNAL_IP ?= $(shell kubectl config view | gawk 'match($$0, /server: https:\/\/(.*):/, ip) {print ip[1]}')
 
 CHARTS ?= ska-low-mccs mccs-umbrella
@@ -159,7 +161,7 @@ functional-test helm-test test: ## test the application on K8s
 	yaml=$$(mktemp --suffix=.yaml); \
 	sed -e "s/\(claimName:\).*/\1 teststore-$(HELM_CHART)-$(RELEASE_NAME)/" charts/test-fetcher.yaml >> $$yaml; \
 	kubectl apply -n $(KUBE_NAMESPACE) -f $$yaml; \
-	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -f $$yaml; \
+	kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -f $$yaml; \
 	rm -rf $(TEST_RESULTS_DIR); mkdir $(TEST_RESULTS_DIR); \
 	kubectl -n $(KUBE_NAMESPACE) cp test-fetcher:/results $(TEST_RESULTS_DIR); \
 	python3 .wait_for_report_file.py; \
@@ -175,8 +177,8 @@ wait:
 	@date
 	@kubectl -n $(KUBE_NAMESPACE) get pods
 	@jobs=$$(kubectl get job --output=jsonpath={.items..metadata.name} -n $(KUBE_NAMESPACE)); \
-	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=120s $$jobs 
-	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=120s -l 'app=$(PROJECT)' pods || exit 1
+	kubectl -n $(KUBE_NAMESPACE) wait job --for=condition=complete --timeout=${MAX_WAIT} $$jobs 
+	@kubectl -n $(KUBE_NAMESPACE) wait --for=condition=ready --timeout=${MAX_WAIT} -l 'app=$(PROJECT)' pods || exit 1
 	@date
 
 bounce:

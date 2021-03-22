@@ -225,6 +225,15 @@ The basic steps to deploying MCCS are:
      .. code-block:: bash
    
         make wait
+   
+     This command blocks for up to 120 seconds, waiting for the cluster
+     to be ready. If running on a CPU-constrained machine, 120 seconds
+     may not be enough; in that case the wait time can be changed with
+     the `MAX_WAIT` variable:
+
+     .. code-block:: bash
+   
+        make MAX_WAIT=300s wait
 
      Because this option blocks until the cluster is ready, it can be
      useful for queueing up commands. For example, to deploy MCCS, wait

@@ -28,6 +28,8 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.apiu.apiu_simulator import AntennaHardwareSimulator
 
+from testing.harness.mock import MockDeviceBuilder
+
 
 @pytest.fixture()
 def device_to_load():
@@ -77,43 +79,18 @@ def initial_mocks(mock_factory, request):
     :return: a dictionary of mocks, keyed by FQDN
     :rtype: dict
     """
-
-    def _apiu_mock(state=DevState.ON, is_on=False, result_code=ResultCode.OK):
-        """
-        Sets up a mock for a :py:class:`tango.DeviceProxy` that connects
-        to an :py:class:`~ska_low_mccs.apiu.apiu_device.MccsAPIU`
-        device. The returned mock will respond suitably to actions taken
-        on it by the AntennaApiuProxy.
-
-        :param state: the device state that this mock APIU device
-            should report
-        :type state: :py:class:`tango.DevState`
-        :param is_on: whether this mock APIU device should report
-            that its Antennas are turned on
-        :type is_on: bool
-        :param result_code: the result code this mock APIU device
-            should return when told to turn an Antenna on or off
-        :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
-        :return: a mock for a :py:class:`tango.DeviceProxy` that
-            connects to an
-            :py:class:`~ska_low_mccs.apiu.apiu_device.MccsAPIU` device.
-        :rtype: :py:class:`unittest.mock.Mock`
-        """
-        mock = mock_factory()
-        mock.state.return_value = state
-        mock.IsAntennaOn.return_value = is_on
-        mock.PowerDownAntenna.return_value = [
-            [result_code],
-            ["Mock information_only message"],
-        ]
-        mock.PowerUpAntenna.return_value = [
-            [result_code],
-            ["Mock information_only message"],
-        ]
-        return mock
-
     kwargs = getattr(request, "param", {})
-    return {"low-mccs/apiu/001": _apiu_mock(**kwargs)}
+    state = kwargs.get("state", DevState.ON)
+    is_on = kwargs.get("is_on", False)
+    result_code = kwargs.get("result_code", ResultCode.OK)
+
+    mock_apiu_factory = MockDeviceBuilder(mock_factory)
+    mock_apiu_factory.set_state(state)
+    mock_apiu_factory.add_command("IsAntennaOn", is_on)
+    mock_apiu_factory.add_result_command("PowerDownAntenna", result_code)
+    mock_apiu_factory.add_result_command("PowerUpAntenna", result_code)
+
+    return {"low-mccs/apiu/001": mock_apiu_factory()}
 
 
 @pytest.fixture()
@@ -137,49 +114,10 @@ def mock_factory(mocker, request):
     """
     kwargs = getattr(request, "param", {})
     is_on = kwargs.get("is_on", False)
-    _values = {"areAntennasOn": [is_on, True, False, True]}
 
-    def _mock_attribute(name, *args, **kwargs):
-        """
-        Returns a mock of a :py:class:`tango.DeviceAttribute` instance,
-        for a given attribute name.
-
-        :param name: name of the attribute
-        :type name: str
-        :param args: positional args to the
-            :py:meth:`tango.DeviceProxy.read_attribute` method patched
-            by this mock factory
-        :type args: list
-        :param kwargs: named args to the
-            :py:meth:`tango.DeviceProxy.read_attribute` method patched
-            by this mock factory
-        :type kwargs: dict
-
-        :return: a basic mock for a :py:class:`tango.DeviceAttribute`
-            instance, with name, value and quality values
-        :rtype: :py:class:`unittest.mock.Mock`
-        """
-        mock = mocker.Mock()
-        mock.name = name
-        mock.value = _values.get(name, "MockValue")
-        mock.quality = "MockQuality"
-        return mock
-
-    def _mock_device():
-        """
-        Returns a mock for a :py:class:`tango.DeviceProxy` instance,
-        with its :py:meth:`tango.DeviceProxy.read_attribute` method
-        mocked to return :py:class:`tango.DeviceAttribute` mocks.
-
-        :return: a basic mock for a :py:class:`tango.DeviceProxy`
-            instance,
-        :rtype: :py:class:`unittest.mock.Mock`
-        """
-        mock = mocker.Mock()
-        mock.read_attribute.side_effect = _mock_attribute
-        return mock
-
-    return _mock_device
+    builder = MockDeviceBuilder()
+    builder.add_attribute("areAntennasOn", [is_on, True, False, True])
+    return builder
 
 
 class TestMccsAntenna:

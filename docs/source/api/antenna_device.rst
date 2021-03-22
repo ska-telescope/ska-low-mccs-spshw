@@ -1,5 +1,5 @@
 ===========================================================
-Antenna Device module (ska.low.mccs.antenna.antenna_device)
+Antenna Device module (ska_low_mccs.antenna.antenna_device)
 ===========================================================
 
 .. toctree::
@@ -7,6 +7,6 @@ Antenna Device module (ska.low.mccs.antenna.antenna_device)
 
 .. image:: antenna_device_class_diagram.svg
 
-.. automodule:: ska.low.mccs.antenna.antenna_device
+.. automodule:: ska_low_mccs.antenna.antenna_device
    :members:
 

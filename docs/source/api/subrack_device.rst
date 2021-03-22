@@ -1,5 +1,5 @@
 ===========================================================
-Subrack Device module (ska.low.mccs.subrack.subrack_device)
+Subrack Device module (ska_low_mccs.subrack.subrack_device)
 ===========================================================
 
 .. toctree::
@@ -7,6 +7,6 @@ Subrack Device module (ska.low.mccs.subrack.subrack_device)
 
 .. image:: subrack_device_class_diagram.svg
 
-.. automodule:: ska.low.mccs.subrack.subrack_device
+.. automodule:: ska_low_mccs.subrack.subrack_device
    :members:
 

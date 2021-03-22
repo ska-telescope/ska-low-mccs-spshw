@@ -1,9 +1,9 @@
 ======================================================
-TPM hardware tile module (ska.low.mccs.tile.hw_tile)
+TPM hardware tile module (ska_low_mccs.tile.hw_tile)
 ======================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.tile.hw_tile
+.. automodule:: ska_low_mccs.tile.hw_tile
    :members:

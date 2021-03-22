@@ -56,7 +56,7 @@ def setup(app):
 
 
 # -- Project information -----------------------------------------------------
-release_filename = os.path.join("..", "..", "src", "ska", "low", "mccs", "release.py")
+release_filename = os.path.join("..", "..", "src", "ska_low_mccs", "release.py")
 version = None
 author = None
 for line in open(release_filename).readlines():

@@ -1,5 +1,5 @@
 =======================================
-Subarray module (ska.low.mccs.subarray)
+Subarray module (ska_low_mccs.subarray)
 =======================================
 
 .. toctree::
@@ -7,5 +7,5 @@ Subarray module (ska.low.mccs.subarray)
 
 .. image:: subarray_class_diagram.svg
 
-.. automodule:: ska.low.mccs.subarray
+.. automodule:: ska_low_mccs.subarray
    :members:

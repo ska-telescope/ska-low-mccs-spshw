@@ -44,7 +44,7 @@ _MockObject.__truediv__ = lambda self, other: _MockObject()
 
 # -- Project information -----------------------------------------------------
 release_filename = os.path.join(
-    "..", "..", "..", "src", "ska", "low", "mccs", "release.py"
+    "..", "..", "..", "src", "ska_low_mccs", "release.py"
 )
 version = None
 author = None
@@ -76,7 +76,7 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-autodoc_mock_imports = ["pytest_bdd", "scipy", "ska", "ska_tango_base", "tango"]
+autodoc_mock_imports = ["pytest_bdd", "scipy", "ska_low_mccs", "ska_tango_base", "tango"]
 
 autodoc_default_options = {"special-members": "__init__"}
 

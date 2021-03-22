@@ -1,9 +1,9 @@
 =================================
-Utils module (ska.low.mccs.utils)
+Utils module (ska_low_mccs.utils)
 =================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.utils
+.. automodule:: ska_low_mccs.utils
    :members:

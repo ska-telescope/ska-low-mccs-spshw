@@ -2,7 +2,7 @@
 # docker image required by this script
 # >docker pull think/plantuml
 
-SOURCE_CODE_DIR=../../src/ska/low/mccs
+SOURCE_CODE_DIR=../../src/ska_low_mccs
 DOCS_SOURCE_DIR=../source/api
 
 FILES="antenna/antenna_device.py \

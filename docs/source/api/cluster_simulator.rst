@@ -1,9 +1,9 @@
 =========================================================================
-Cluster Simulator module (ska.low.mccs.cluster_manager.cluster_simulator)
+Cluster Simulator module (ska_low_mccs.cluster_manager.cluster_simulator)
 =========================================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.cluster_manager.cluster_simulator
+.. automodule:: ska_low_mccs.cluster_manager.cluster_simulator
    :members:

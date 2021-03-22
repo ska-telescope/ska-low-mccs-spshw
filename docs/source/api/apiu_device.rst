@@ -1,5 +1,5 @@
 ==================================================
-APIU Device module (ska.low.mccs.apiu.apiu_device)
+APIU Device module (ska_low_mccs.apiu.apiu_device)
 ==================================================
 
 .. toctree::
@@ -7,6 +7,6 @@ APIU Device module (ska.low.mccs.apiu.apiu_device)
 
 .. image:: apiu_device_class_diagram.svg
 
-.. automodule:: ska.low.mccs.apiu.apiu_device
+.. automodule:: ska_low_mccs.apiu.apiu_device
    :members:
 

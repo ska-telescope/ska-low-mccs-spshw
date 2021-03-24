@@ -387,7 +387,6 @@ class MccsSubarray(SKASubarray):
     # ---------------
     # General methods
     # ---------------
-
     class InitCommand(SKASubarray.InitCommand):
         """
         Command class for device initialisation.
@@ -1003,20 +1002,6 @@ class MccsSubarray(SKASubarray):
             else:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
-        def check_allowed(self):
-            """
-            Whether this command is allowed to be run in current device
-            state.
-
-            :todo: The Abort command is currently limited based on the
-                available implementaion of MCCS.
-
-            :return: True if this command is allowed to be run in
-                current device obsstates
-            :rtype: bool
-            """
-            return self.state_model.obs_state in [ObsState.SCANNING]
-
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Abort(self):
@@ -1074,20 +1059,6 @@ class MccsSubarray(SKASubarray):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
-        def check_allowed(self):
-            """
-            Whether this command is allowed to be run in current device
-            state.
-
-            :todo: The ObsReset command is currently limited based on the
-                available implementaion of MCCS.
-
-            :return: True if this command is allowed to be run in
-                current device obsstates
-            :rtype: bool
-            """
-            return self.state_model.obs_state in [ObsState.ABORTED]
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()

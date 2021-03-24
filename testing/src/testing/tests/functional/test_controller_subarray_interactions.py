@@ -665,6 +665,8 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
     if desired_state == "scanning":
         tmc_starts_a_scan_on_subarray(subarrays)
         the_subarray_obsstate_is(subarrays, "scanning")
+    if desired_state == "allocated":
+        the_subarray_obsstate_is(subarrays, "idle")
 
 
 def configure_subarray(subarrays):
@@ -770,13 +772,9 @@ def test_perform_a_scan_on_subarray(controller, subarrays, stations):
     check_reset_state(controller, subarrays, stations)
 
 
-@scenario(
-    "features/controller_subarray_interactions.feature",
-    "MCCS Perform an abort on a scanning subarray",
-)
-def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):
+def abort_post_operations(controller, subarrays, stations):
     """
-    This is run at the end of the scenario. Turn MCCS Controller Off.
+    Collection of operations to perform after an abort command.
 
     :param controller: a proxy to the controller device
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
@@ -793,6 +791,60 @@ def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations
     check_reset_state(controller, subarrays, stations)
 
 
+@scenario(
+    "features/controller_subarray_interactions.feature",
+    "MCCS Perform an abort on a scanning subarray",
+)
+def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):
+    """
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    """
+    abort_post_operations(controller, subarrays, stations)
+
+
+@scenario(
+    "features/controller_subarray_interactions.feature",
+    "MCCS Perform an abort on an idle subarray",
+)
+def test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
+    """
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    """
+    abort_post_operations(controller, subarrays, stations)
+
+
+@scenario(
+    "features/controller_subarray_interactions.feature",
+    "MCCS Perform an abort on a configured subarray",
+)
+def test_perform_an_abort_on_a_configured_subarray(controller, subarrays, stations):
+    """
+    This is run at the end of the scenario. Turn MCCS Controller Off.
+
+    :param controller: a proxy to the controller device
+    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param stations: proxies to the station devices, keyed by number
+    :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    """
+    abort_post_operations(controller, subarrays, stations)
+
+
 @when(parsers.parse("tmc issues an abort on subarray"))
 def tmc_issues_an_abort_on_subarray(subarrays):
     """
@@ -801,5 +853,4 @@ def tmc_issues_an_abort_on_subarray(subarrays):
     :param subarrays: proxies to the subarray devices, keyed by number
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    the_subarray_obsstate_is(subarrays, "scanning")
     assert_command(device=subarrays[1], command="Abort")

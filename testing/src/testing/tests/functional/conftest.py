@@ -10,7 +10,7 @@ from tango.test_context import get_host_ip
 
 from ska_low_mccs import MccsDeviceProxy
 
-from testing.tests.conftest import MccsDeviceTestContext, MccsTangoContext
+from testing.harness.tango_harness import MccsDeviceTestContext, MccsTangoContext
 
 
 def pytest_configure(config):

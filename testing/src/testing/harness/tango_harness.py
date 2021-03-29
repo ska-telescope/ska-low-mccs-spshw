@@ -100,11 +100,10 @@ class MccsDeviceInfo:
                     "properties": properties,
                     "memorized": memorized,
                 }
+                self._proxies[fqdn] = proxy
                 break
         else:
             raise ValueError(f"Device {name} not found in source data.")
-
-        self._proxies[name] = proxy
 
     @property
     def device_map(self) -> typing.Dict[str, str]:
@@ -116,7 +115,7 @@ class MccsDeviceInfo:
         return {
             name: {
                 "fqdn": self._devices[name]["fqdn"],
-                "proxy": self._proxies[name],
+                "proxy": self._proxies[self._devices[name]["fqdn"]],
             }
             for name in self._devices
         }
@@ -197,8 +196,9 @@ class MccsTangoContext:
         :param logger: the logger to be used by this object.
         :param source: a source value to be set on all devices
         """
-        self._logger = logger
         self._devices_info = self._load_devices(devices_to_load)
+
+        self._base_harness = BaseTangoHarness(logger, self._devices_info.proxy_map)
         self._source_setting = source
 
     def __enter__(self) -> MccsTangoContext:
@@ -207,6 +207,7 @@ class MccsTangoContext:
 
         :return: the context object
         """
+        self._base_harness.__enter__()
         self._set_source()
         assert self._check_ready()
         self._set_test_mode()
@@ -228,6 +229,7 @@ class MccsTangoContext:
         :returns: whether the exception (if any) has been fully handled
             by this method and should be swallowed i.e. not re-raised
         """
+        self._base_harness.__exit__(exc_type, exception, trace)
         return False
 
     def _set_source(self) -> None:
@@ -281,14 +283,16 @@ class MccsTangoContext:
         :param name: the name of the device for which a
             :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy` is
             sought.
+        :param connection_factory: an optional connection factory to use
+            instead of the default
 
         :return: a :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
             to the named device
         """
         fqdn = self._devices_info.device_map[name]["fqdn"]
-        proxy = self._devices_info.device_map[name]["proxy"]
-        device = proxy(fqdn, self._logger)
-        return device
+        return self._base_harness.get_device(
+            fqdn, connection_factory=connection_factory
+        )
 
 
 class MccsDeviceTestContext(MccsTangoContext):
@@ -322,6 +326,7 @@ class MccsDeviceTestContext(MccsTangoContext):
         :param port: port for the tango subsystem
         """
         super().__init__(devices_to_load, logger, source=source)
+        self._logger = self._base_harness.logger
         mdtc_devices_info = self._devices_info.as_mdtc_device_info()
         self._multi_device_test_context = MultiDeviceTestContext(
             mdtc_devices_info, process=process, host=host, port=port
@@ -371,11 +376,81 @@ class MccsDeviceTestContext(MccsTangoContext):
         :return: a :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
             to the named device
         """
-        fqdn = self._devices_info.device_map[name]["fqdn"]
-        proxy = self._devices_info.device_map[name]["proxy"]
-        device = proxy(
-            fqdn,
-            self._logger,
-            connection_factory=self._multi_device_test_context.get_device,
+        return super().get_device(
+            name, connection_factory=self._multi_device_test_context.get_device
         )
-        return device
+
+
+class BaseTangoHarness:
+    """
+    This is a basic test harness for testing Tango devices.
+
+    It doesn't stand any devices up; it assumes that the devices are
+    already running.
+
+    All it really does is make sure that the right type of client proxy
+    (i.e. the right subclass of
+    :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`) is created
+    when we ask for a proxy to a device.
+    """
+
+    def __init__(
+        self,
+        logger: logging.Logger,
+        proxy_map: typing.Dict[str, typing.Type[MccsDeviceProxy]] = None,
+    ):
+        """
+        Create a new instance.
+
+        :param proxy_map: a optional mapping that assigns a type of
+            device proxy to each FQDN.
+        :param logger: a logger for this harness
+        """
+        self._proxy_map = proxy_map or {}
+        self.logger = logger
+
+    def __enter__(self) -> BaseTangoHarness:
+        """
+        Entry method for "with" context.
+
+        :return: the context object
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: typing.Type[BaseException],
+        exception: BaseException,
+        trace: typing.TracebackType,
+    ) -> bool:
+        """
+        Exit method for "with" context.
+
+        :param exc_type: the type of exception thrown in the with block
+        :param exception: the exception thrown in the with block
+        :param trace: a traceback
+
+        :returns: whether the exception (if any) has been fully handled
+            by this method and should be swallowed i.e. not re-raised
+        """
+        return False
+
+    def get_device(
+        self,
+        fqdn: str,
+        connection_factory: typing.Callable[[str], tango.DeviceProxy] = None,
+    ) -> MccsDeviceProxy:
+        """
+        Create and return a proxy to the device at the given FQDN.
+
+        :param fqdn: FQDN of the device for which a proxy is required
+        :param connection_factory: an optional connection factory to use
+            instead of the default
+
+        :return: If the proxy map has an entry for the FQDN, then this
+            will return a proxy of the type specified; otherwise, it
+            returns an
+            :py:class:`~ska_low_mccs.device_proxy.MccsDeviceProxy`.
+        """
+        proxy = self._proxy_map.get(fqdn, MccsDeviceProxy)
+        return proxy(fqdn, self.logger, connection_factory=connection_factory)

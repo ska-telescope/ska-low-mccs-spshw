@@ -1,0 +1,194 @@
+@startuml
+class StationsResourceManager
+StationsResourceManager : +__init__()
+StationsResourceManager : +items()
+StationsResourceManager : +add_to_managed()
+StationsResourceManager : +release_all()
+StationsResourceManager : +station_fqdns()
+StationsResourceManager : +station_ids()
+class StationBeamsResourceManager
+StationBeamsResourceManager : +__init__()
+StationBeamsResourceManager : +__len__()
+StationBeamsResourceManager : +assign()
+StationBeamsResourceManager : +configure()
+StationBeamsResourceManager : +scan()
+StationBeamsResourceManager : +release()
+StationBeamsResourceManager : +release_all()
+StationBeamsResourceManager : +station_beam_fqdns()
+StationBeamsResourceManager : +station_fqdns()
+class TransientBufferManager
+TransientBufferManager : +__init__()
+TransientBufferManager : +send()
+class MccsSubarray
+MccsSubarray : +__init__()
+MccsSubarray : +do()
+MccsSubarray : -_initialise_connections()
+MccsSubarray : -_initialise_health_monitoring()
+MccsSubarray : -_initialise_resource_management()
+MccsSubarray : +init_command_objects()
+MccsSubarray : +always_executed_hook()
+MccsSubarray : +delete_device()
+MccsSubarray : +health_changed()
+MccsSubarray : +commandResult()
+MccsSubarray : +scanId()
+MccsSubarray : +stationFQDNs()
+MccsSubarray : +succeeded()
+MccsSubarray : +check_allowed()
+MccsSubarray : +Abort()
+MccsSubarray : +ObsReset()
+MccsSubarray : +SendTransientBuffer()
+StationsResourceManager : -_devices
+StationBeamsResourceManager : -_stations
+MccsSubarray : -_thread
+MccsSubarray : -_lock
+MccsSubarray : -_interrupt
+MccsSubarray : -_health_state
+MccsSubarray : -_scan_id
+MccsSubarray : -_command_result
+
+class SubarrayBeamHealthEvaluator
+SubarrayBeamHealthEvaluator : +evaluate_health()
+class SubarrayBeamDriver
+SubarrayBeamDriver : +__init__()
+SubarrayBeamDriver : +connection_status()
+SubarrayBeamDriver : +is_locked()
+class SubarrayBeamHardwareFactory
+SubarrayBeamHardwareFactory : +__init__()
+SubarrayBeamHardwareFactory : +hardware()
+class SubarrayBeamHardwareManager
+SubarrayBeamHardwareManager : +__init__()
+SubarrayBeamHardwareManager : +is_locked()
+class MccsSubarrayBeam
+MccsSubarrayBeam : +__init__()
+MccsSubarrayBeam : +do()
+MccsSubarrayBeam : -_initialise_connections()
+MccsSubarrayBeam : -_initialise_hardware_management()
+MccsSubarrayBeam : -_initialise_health_monitoring()
+MccsSubarrayBeam : +interrupt()
+MccsSubarrayBeam : +init_command_objects()
+MccsSubarrayBeam : +always_executed_hook()
+MccsSubarrayBeam : +delete_device()
+MccsSubarrayBeam : +health_changed()
+MccsSubarrayBeam : +subarrayId()
+MccsSubarrayBeam : +subarrayBeamId()
+MccsSubarrayBeam : +stationIds()
+MccsSubarrayBeam : +logicalBeamId()
+MccsSubarrayBeam : +updateRate()
+MccsSubarrayBeam : +isBeamLocked()
+MccsSubarrayBeam : +channels()
+MccsSubarrayBeam : +desiredPointing()
+MccsSubarrayBeam : +Configure()
+MccsSubarrayBeam : +Scan()
+SubarrayBeamDriver : -_is_locked
+SubarrayBeamHardwareFactory : -_hardware
+MccsSubarrayBeam : -_thread
+MccsSubarrayBeam : -_lock
+MccsSubarrayBeam : -_interrupt
+MccsSubarrayBeam : -_health_state
+MccsSubarrayBeam : -_station_ids
+MccsSubarrayBeam : -_logical_beam_id
+MccsSubarrayBeam : -_desired_pointing
+
+class StationBeamHealthEvaluator
+StationBeamHealthEvaluator : +evaluate_health()
+class StationBeamDriver
+StationBeamDriver : +__init__()
+StationBeamDriver : +connection_status()
+StationBeamDriver : +is_locked()
+class StationBeamHardwareFactory
+StationBeamHardwareFactory : +__init__()
+StationBeamHardwareFactory : +hardware()
+class StationBeamHardwareManager
+StationBeamHardwareManager : +__init__()
+StationBeamHardwareManager : +is_locked()
+class MccsStationBeam
+MccsStationBeam : +__init__()
+MccsStationBeam : +do()
+MccsStationBeam : -_initialise_connections()
+MccsStationBeam : -_initialise_hardware_management()
+MccsStationBeam : -_initialise_health_monitoring()
+MccsStationBeam : +interrupt()
+MccsStationBeam : +init_command_objects()
+MccsStationBeam : +always_executed_hook()
+MccsStationBeam : +delete_device()
+MccsStationBeam : +health_changed()
+MccsStationBeam : +beamId()
+MccsStationBeam : +stationIds()
+MccsStationBeam : +stationFqdn()
+MccsStationBeam : +logicalBeamId()
+MccsStationBeam : +updateRate()
+MccsStationBeam : +isBeamLocked()
+MccsStationBeam : +channels()
+MccsStationBeam : +desiredPointing()
+MccsStationBeam : +pointingDelay()
+MccsStationBeam : +pointingDelayRate()
+MccsStationBeam : +antennaWeights()
+MccsStationBeam : +Configure()
+StationBeamDriver : -_is_locked
+StationBeamHardwareFactory : -_hardware
+MccsStationBeam : -_thread
+MccsStationBeam : -_lock
+MccsStationBeam : -_interrupt
+MccsStationBeam : -_health_state
+MccsStationBeam : -_station_ids
+MccsStationBeam : -_station_fqdn
+MccsStationBeam : -_logical_beam_id
+MccsStationBeam : -_desired_pointing
+MccsStationBeam : -_antenna_weights
+
+class MccsStation
+MccsStation : +__init__()
+MccsStation : +do()
+MccsStation : -_initialise_connections()
+MccsStation : -_initialise_device_pool()
+MccsStation : -_initialise_health_monitoring()
+MccsStation : +interrupt()
+MccsStation : +always_executed_hook()
+MccsStation : +delete_device()
+MccsStation : +health_changed()
+MccsStation : +subarrayId()
+MccsStation : +transientBufferFQDN()
+MccsStation : +isCalibrated()
+MccsStation : +isConfigured()
+MccsStation : +calibrationJobId()
+MccsStation : +daqJobId()
+MccsStation : +dataDirectory()
+MccsStation : +beamFQDNs()
+MccsStation : +delayCentre()
+MccsStation : +calibrationCoefficients()
+MccsStation : +init_command_objects()
+MccsStation : +Configure()
+MccsStation : +InitialSetup()
+MccsStation : -_thread
+MccsStation : -_lock
+MccsStation : -_interrupt
+MccsStation : -_health_state
+MccsStation : -_subarray_id
+MccsStation : -_delay_centre
+
+ResourceManager <|-- StationsResourceManager
+ResourceManager <|-- StationBeamsResourceManager
+SKASubarray <|-- MccsSubarray
+HardwareHealthEvaluator <|-- SubarrayBeamHealthEvaluator
+HardwareDriver <|-- SubarrayBeamDriver
+HardwareFactory <|-- SubarrayBeamHardwareFactory
+HardwareManager <|-- SubarrayBeamHardwareManager
+SKAObsDevice <|-- MccsSubarrayBeam
+HardwareHealthEvaluator <|-- StationBeamHealthEvaluator
+HardwareDriver <|-- StationBeamDriver
+HardwareFactory <|-- StationBeamHardwareFactory
+HardwareManager <|-- StationBeamHardwareManager
+SKAObsDevice <|-- MccsStationBeam
+SKAObsDevice <|-- MccsStation
+MccsSubarray -- TransientBufferManager
+MccsSubarray -- StationsResourceManager
+MccsSubarray -- StationBeamsResourceManager
+SubarrayBeamHardwareFactory -- SubarrayBeamDriver
+SubarrayBeamHardwareManager -- SubarrayBeamHardwareFactory
+SubarrayBeamHardwareManager -- SubarrayBeamHealthEvaluator
+MccsSubarrayBeam -- SubarrayBeamHardwareManager
+StationBeamHardwareFactory -- StationBeamDriver
+StationBeamHardwareManager -- StationBeamHardwareFactory
+StationBeamHardwareManager -- StationBeamHealthEvaluator
+MccsStationBeam -- StationBeamHardwareManager
+@enduml

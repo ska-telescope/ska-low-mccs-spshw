@@ -2,15 +2,11 @@
 This module contains pytest fixtures and other test setups for the
 ska_low_mccs functional (BDD) tests.
 """
-import socket
-
 import pytest
-import tango
-from tango.test_context import get_host_ip
+import typing
 
-from ska_low_mccs import MccsDeviceProxy
-
-from testing.harness.tango_harness import MccsDeviceTestContext, MccsTangoContext
+from testing.harness.mock.mock_device import MockDeviceBuilder
+from testing.harness.tango_harness import TangoHarness
 
 
 def pytest_configure(config):
@@ -30,156 +26,83 @@ def pytest_configure(config):
 
 
 @pytest.fixture(scope="module")
-def patch_device_proxy():
+def initial_mocks():
     """
-    Fixture that provides a patcher that set up
-    :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy` to use a connection factory
-    that wraps :py:class:`tango.DeviceProxy` with a workaround for a bug
-    in :py:class:`tango.test_context.MultiDeviceTestContext`, then returns the host
-    and port used by the patch.
+    Fixture that registers device proxy mocks prior to patching. By
+    default no initial mocks are registered, but this fixture can be
+    overridden by test modules/classes that need to register initial
+    mocks.
 
-    This is a factory; the patch won't be applied unless you actually
-    call the fixture.
+    (Overruled here with the same implementation, just to give the
+    fixture module scope)
 
-    :return: the callable patcher
-    :rtype: callable
+    :return: an empty dictionary
+    :rtype: dict
     """
-
-    def patcher():
-        """
-        Callable returned by this parent fixture, which performs
-        patching when called.
-
-        :return: the host and port used by the patch
-        :rtype: tuple
-        """
-
-        def _get_open_port():
-            """
-            Helper function that returns an available port on the local
-            machine.
-
-            Note the possibility of a race condition here. By the time the
-            calling method tries to make use of this port, it might already
-            have been taken by another process.
-
-            :return: An open port
-            :rtype: int
-            """
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("", 0))
-            s.listen(1)
-            port = s.getsockname()[1]
-            s.close()
-            return port
-
-        host = get_host_ip()
-        port = _get_open_port()
-
-        MccsDeviceProxy.set_default_connection_factory(
-            lambda fqdn, *args, **kwargs: tango.DeviceProxy(
-                f"tango://{host}:{port}/{fqdn}#dbase=no", *args, **kwargs
-            ),
-        )
-        return (host, port)
-
-    return patcher
+    return {}
 
 
 @pytest.fixture(scope="module")
-def tango_config(patch_device_proxy):
+def mock_factory():
     """
-    Fixture that returns configuration information that specified how
-    the Tango system should be established and run.
+    Fixture that provides a mock factory for device proxy mocks. This
+    default factory provides vanilla mocks, but this fixture can be
+    overridden by test modules/classes to provide mocks with specified
+    behaviours.
 
-    This implementation entures that :py:class:`tango.DeviceProxy` is
-    monkeypatched as a workaround for a bug in
-    :py:class:`tango.test_context.MultiDeviceTestContext`, then returns the host and
-    port used by the patch.
+    (Overruled here with the same implementation, just to give the
+    fixture module scope)
 
-    This is a factory; the config won't actually be provided until you
-    call it.
-
-    :param patch_device_proxy: a fixture that handles monkeypatching of
-        :py:class:`tango.DeviceProxy` as a workaround for a bug in
-        :py:class:`tango.test_context.MultiDeviceTestContext`, and returns the host
-        and port used in the patch
-    :type patch_device_proxy: tuple
-
-    :return: a callable that sets up the config
-    :rtype: callable
+    :return: a factory for device proxy mocks
+    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
     """
-
-    def _config():
-        """
-        Function returned by the parent fixture that sets up the tango
-        config when called.
-
-        :returns: tango configuration information: a dictionary with keys
-            "process", "host" and "port".
-        :rtype: dict
-        """
-        (host, port) = patch_device_proxy()
-        return {"process": True, "host": host, "port": port}
-
-    return _config
+    return MockDeviceBuilder()
 
 
 @pytest.fixture(scope="module")
-def tango_context(request, devices_to_load, tango_config, logger):
+def tango_config():
     """
-    Returns a Tango context. The Tango context returned depends upon
-    whether or not pytest was invoked with the `--true-context` option.
+    Fixture that returns basic configuration information for a Tango
+    test harness, such as whether or not to run in a separate process.
 
-    If no, then this returns a tango.test_context.MultiDeviceTestContext
-    set up with the devices specified in the module's devices_info.
+    :return: a dictionary of configuration key-value pairs
+    """
+    return {"process": True}
 
-    If yes, then this returns a context with an interface like that of
-    tango.test_context.MultiDeviceTestContext, but actually providing
-    access to a true Tango context.
 
-    :todo: Even when testing against a true Tango context, we are still
-        setting up the test context. This will be fixed when we unify
-        the test harnesses (MCCS-329)
+@pytest.fixture(scope="module")
+def tango_harness(
+    tango_harness_factory: typing.Callable[[], TangoHarness],
+    tango_config: typing.Dict[str, str],
+    devices_to_load,
+    mock_factory,
+    initial_mocks,
+):
+    """
+    Creates a test harness for testing Tango devices.
 
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: :py:class:`pytest.FixtureRequest`
+    (This overwrites the `tango_harness` fixture, in order to change the
+    fixture scope.)
+
+    :param tango_harness_factory: a factory that provides a test harness
+        for testing tango devices
+    :param tango_config: basic configuration information for a tango
+        test harness
     :param devices_to_load: fixture that provides a specification of the
         devices that are to be included in the devices_info dictionary
     :type devices_to_load: dict
-    :param tango_config: fixture that returns configuration information
-        that specifies how the Tango system should be established and
-        run.
-    :type tango_config: dict
-    :param logger: the logger to be used by this object.
-    :type logger: :py:class:`logging.Logger`
+    :param mock_factory: the factory to be used to build mocks
+    :type mock_factory: object
+    :param initial_mocks: a pre-build dictionary of mocks to be used
+        for particular
+    :type initial_mocks: dict<str, :py:class:`pytest_mock.mocker.Mock`>
 
-    :yield: a tango context
+    :yields: the test harness
     """
-    try:
-        true_context = request.config.getoption("--true-context")
-    except ValueError:
-        true_context = False
-
-    if true_context:
-        with MccsTangoContext(
-            devices_to_load,
-            logger,
-            source=tango.DevSource.DEV,
-        ) as context:
-            yield context
-    else:
-        config = tango_config()
-        with MccsDeviceTestContext(
-            devices_to_load,
-            logger,
-            source=tango.DevSource.DEV,
-            process=config["process"],
-            host=config["host"],
-            port=config["port"],
-        ) as context:
-            yield context
+    with tango_harness_factory(
+        tango_config, devices_to_load, mock_factory, initial_mocks
+    ) as harness:
+        yield harness
 
 
 @pytest.fixture(scope="module")

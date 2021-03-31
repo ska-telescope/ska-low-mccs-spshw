@@ -12,23 +12,33 @@ This module implements a MCCS test harness for Tango devices.
 """
 
 from __future__ import annotations  # Allow forward refs in type hints; see PEP 563
-
-
 from collections import defaultdict
 import json
 import logging
+import socket
+from types import TracebackType
 import typing
+import unittest.mock
 
 import tango
-from tango.test_context import MultiDeviceTestContext
+from tango.test_context import MultiDeviceTestContext, get_host_ip
+
 
 import ska_tango_base
-from ska_tango_base.control_model import TestMode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
-__all__ = ["MccsDeviceInfo", "MccsTangoContext", "MccsDeviceTestContext"]
+__all__ = [
+    "MccsDeviceInfo",
+    "TangoHarness",
+    "BaseTangoHarness",
+    "TestContextTangoHarness",
+    "ClientProxyTangoHarness",
+    "ClientProxyTestContextTangoHarness",
+    "StartingStateTangoHarness",
+    "MockingTangoHarness",
+]
 
 
 class MccsDeviceInfo:
@@ -38,19 +48,31 @@ class MccsDeviceInfo:
     :py:class:`tango.test_context.MultiDeviceTestContext`.
     """
 
-    def __init__(self, source_path: str, package: str):
+    def __init__(
+        self,
+        path: str,
+        package: str,
+        devices: typing.Dict = None,
+    ):
         """
         Create a new instance.
 
-        :param source_path: the path to the configuration file that
+        :param path: the path to the configuration file that
             contains information about all available devices.
         :param package: name of the package from which to draw classes
+        :param devices: option specification of devices. If not
+            provided, then devices can be added via the
+            :py:meth:`.include_device` method.
         """
-        with open(source_path, "r") as json_file:
+        with open(path, "r") as json_file:
             self._source_data = json.load(json_file)
         self._package = package
         self._devices = {}
         self._proxies = {}
+
+        if devices is not None:
+            for device_spec in devices:
+                self.include_device(**device_spec)
 
     def include_device(
         self,
@@ -106,19 +128,22 @@ class MccsDeviceInfo:
             raise ValueError(f"Device {name} not found in source data.")
 
     @property
-    def device_map(self) -> typing.Dict[str, str]:
+    def fqdns(self) -> typing.List[str]:
+        """
+        Return a list of device fqdns.
+
+        :returns: a list of device FQDNs
+        """
+        return self.fqdn_map.values()
+
+    @property
+    def fqdn_map(self) -> typing.Dict[str, str]:
         """
         A dictionary that maps device names onto FQDNs.
 
         :return: a mapping from device names to FQDNs
         """
-        return {
-            name: {
-                "fqdn": self._devices[name]["fqdn"],
-                "proxy": self._proxies[self._devices[name]["fqdn"]],
-            }
-            for name in self._devices
-        }
+        return {name: self._devices[name]["fqdn"] for name in self._devices}
 
     @property
     def proxy_map(self) -> typing.Dict[str, MccsDeviceProxy]:
@@ -153,71 +178,69 @@ class MccsDeviceInfo:
         return mdtc_device_info
 
 
-class MccsTangoContext:
+class TangoHarness:
     """
-    MCCS wrapper for a Tango context.
+    Abstract base class for Tango test harnesses. This does very little,
+    because it needs to support both harnesses that directly interact
+    with Tango, and wrapper harnesses that add functionality to another
+    harness.
 
-    It allows for devices to be accessed by MCCS device names, rather
-    than the device FQDNs.
+    The one really important thing it does do, is ensure that
+    :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy` uses this
+    harness's ``connection factory`` to make connections.
     """
 
-    def _load_devices(self, devices_to_load: typing.Dict) -> typing.Dict:
+    def __init__(self):
         """
-        Loads device configuration data for specified devices from a
-        specified JSON configuration file.
-
-        :param devices_to_load: fixture that provides a specification of
-            the devices that are to be included in the devices_info
-            dictionary
-
-        :return: a devices_info spec in a format suitable for use by as
-            input to a
-            :py:class:`tango.test_context.MultiDeviceTestContext`
+        Initialise a new instance.
         """
-        device_info = MccsDeviceInfo(
-            devices_to_load["path"], devices_to_load["package"]
-        )
-        for device_spec in devices_to_load["devices"]:
-            device_info.include_device(**device_spec)
-        return device_info
+        MccsDeviceProxy.set_default_connection_factory(self.connection_factory)
 
-    def __init__(
+    @property
+    def connection_factory(self) -> tango.DeviceProxy:
+        """
+        The connection factory to use when establishing connections to
+        devices.
+
+        :raises NotImplementedError: because this method is abstract
+        """
+        raise NotImplementedError("TangoHarness is abstract.")
+
+    @property
+    def fqdns(self) -> typing.List[str]:
+        """
+        The FQDNs of devices in this harness.
+
+        :raises NotImplementedError: because this method is abstract
+        """
+        raise NotImplementedError("TangoHarness is abstract.")
+
+    def get_device(
         self,
-        devices_to_load: typing.Dict,
-        logger: logging.Logger,
-        source: tango.DevSource = None,
-    ):
+        fqdn: str,
+    ) -> MccsDeviceProxy:
         """
-        Create a new instance.
+        Create and return a proxy to the device at the given FQDN.
 
-        :param devices_to_load: fixture that provides a specification of
-            the devices that are to be included in the `devices_info`
-            dictionary
-        :param logger: the logger to be used by this object.
-        :param source: a source value to be set on all devices
+        :param fqdn: FQDN of the device for which a proxy is required
+
+        :raises NotImplementedError: because this method is abstract
         """
-        self._devices_info = self._load_devices(devices_to_load)
+        raise NotImplementedError("TangoHarness is abstract.")
 
-        self._base_harness = BaseTangoHarness(logger, self._devices_info.proxy_map)
-        self._source_setting = source
-
-    def __enter__(self) -> MccsTangoContext:
+    def __enter__(self) -> TangoHarness:
         """
         Entry method for "with" context.
 
         :return: the context object
         """
-        self._base_harness.__enter__()
-        self._set_source()
-        assert self._check_ready()
-        self._set_test_mode()
         return self
 
     def __exit__(
         self,
         exc_type: typing.Type[BaseException],
         exception: BaseException,
-        trace: typing.TracebackType,
+        trace: TracebackType,
     ) -> bool:
         """
         Exit method for "with" context.
@@ -229,123 +252,203 @@ class MccsTangoContext:
         :returns: whether the exception (if any) has been fully handled
             by this method and should be swallowed i.e. not re-raised
         """
-        self._base_harness.__exit__(exc_type, exception, trace)
-        return False
+        return exception is None
 
-    def _set_source(self) -> None:
-        """
-        Ensure that all included devices have the required source
-        setting applied.
-        """
-        if self._source_setting is None:
-            return
-        for device_name in self._devices_info.device_map:
-            self.get_device(device_name).set_source(self._source_setting)
 
-            # HACK: increasing the timeout until we can make some commands asynchronous
-            self.get_device(device_name).set_timeout_millis(5000)
+class BaseTangoHarness(TangoHarness):
+    """
+    A basic test harness for Tango devices.
 
-    def _check_ready(self) -> bool:
-        """
-        Ensure that all included devices are checked against the
-        provided ready condition.
+    This harness doesn't stand up any device; it assumes that devices
+    are already running. It is thus useful for testing against deployed
+    devices.
+    """
 
-        :return: whether all devices are initialised
+    def __init__(self, device_info: MccsDeviceInfo, logger: logging.Logger):
         """
-        for device_name in self._devices_info.device_map:
-            device = self.get_device(device_name)
-            if not device.check_initialised():
-                return False
-        else:
-            return True
+        Initialise a new instance.
 
-    def _set_test_mode(self) -> None:
+        :param device_info: object that makes device info available
+        :param logger: a logger for the harness
         """
-        Ensure that all included devices are set into test mode, since
-        we are testing.
+        self._fqdns = list(device_info.fqdns)
+        self.logger = logger
+        super().__init__()
+
+    @property
+    def connection_factory(self) -> tango.DeviceProxy:
         """
-        for device_name in self._devices_info.device_map:
-            self.get_device(device_name).testMode = TestMode.TEST
+        The connection factory to use when establishing connections to
+        devices.
+
+        This class uses :py:class:`tango.DeviceProxy` as its connection
+        factory.
+
+        :return: a DeviceProxy for use in establishing connections.
+        """
+        return tango.DeviceProxy
+
+    @property
+    def fqdns(self) -> typing.List[str]:
+        """
+        The FQDNs of devices in this harness.
+
+        :return: a list of FQDNs of devices in this harness.
+        """
+        return list(self._fqdns)
 
     def get_device(
         self,
-        name: str,
-        connection_factory: typing.Callable[[str], tango.DeviceProxy] = None,
+        fqdn: str,
     ) -> MccsDeviceProxy:
         """
-        Returns a :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
-        to a device as specified by the device name provided in the
-        configuration file.
+        Create and return a proxy to the device at the given FQDN.
 
-        Each call to this method returns a fresh proxy. This is
-        deliberate.
+        :param fqdn: FQDN of the device for which a proxy is required
 
-        :param name: the name of the device for which a
-            :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy` is
-            sought.
-        :param connection_factory: an optional connection factory to use
-            instead of the default
-
-        :return: a :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
-            to the named device
+        :return: A proxy of the type specified by the proxy map.
         """
-        fqdn = self._devices_info.device_map[name]["fqdn"]
-        return self._base_harness.get_device(
-            fqdn, connection_factory=connection_factory
-        )
+        return MccsDeviceProxy(fqdn, self.logger)
 
 
-class MccsDeviceTestContext(MccsTangoContext):
+class ClientProxyTangoHarness(BaseTangoHarness):
     """
-    MCCS wrapper for a tango.test_context.MultiDeviceTestContext.
-
-    It allows for devices to be accessed by MCCS device names, rather
-    than the device FQDNs.
+    A test harness for Tango devices that can return tailored client
+    proxies.
     """
 
     def __init__(
         self,
-        devices_to_load: typing.Dict,
+        device_info: MccsDeviceInfo,
         logger: logging.Logger,
-        source: tango.DevSource = None,
-        process: bool = False,
-        host: str = None,
-        port: int = None,
+        **kwargs: typing.Any,
     ):
         """
-        Create a new instance.
+        Initialise a new instance.
 
-        :param devices_to_load: fixture that provides a specification of
-            the devices that are to be included in the `devices_info`
-            dictionary
-        :param logger: the logger to be used by this object.
-        :param source: a source value to be set on all devices
-        :param process: whether to run the test context in its own
-            process; if False, it is run on a thread.
-        :param host: hostname of the machine hosting the devices
-        :param port: port for the tango subsystem
+        :param device_info: object that makes device info available
+        :param logger: a logger for the harness
+        :param kwargs: keyword arguments
         """
-        super().__init__(devices_to_load, logger, source=source)
-        self._logger = self._base_harness.logger
-        mdtc_devices_info = self._devices_info.as_mdtc_device_info()
-        self._multi_device_test_context = MultiDeviceTestContext(
-            mdtc_devices_info, process=process, host=host, port=port
-        )
+        self._proxy_map = dict(device_info.proxy_map)
+        super().__init__(device_info, logger, **kwargs)
 
-    def __enter__(self) -> MccsDeviceTestContext:
+    def get_device(
+        self,
+        fqdn: str,
+    ) -> MccsDeviceProxy:
+        """
+        Create and return a proxy to the device at the given FQDN.
+
+        :param fqdn: FQDN of the device for which a proxy is required
+
+        :return: A proxy of the type specified by the proxy map.
+        """
+        proxy = self._proxy_map.get(fqdn, MccsDeviceProxy)
+        return proxy(fqdn, self.logger)
+
+
+class TestContextTangoHarness(BaseTangoHarness):
+    """
+    A test harness for testing MCCS Tango devices in a lightweight test
+    context.
+
+    It stands up a
+    :py:class:`tango.test_context.MultiDeviceTestContext` with the
+    specified devices.
+    """
+
+    def __init__(
+        self,
+        device_info: MccsDeviceInfo,
+        logger: logging.Logger,
+        process: bool = False,
+        **kwargs,
+    ):
+        """
+        Initialise a new instance.
+
+        :param device_info: object that makes device info available
+        :param logger: a logger for the harness
+        :param process: whether to run the test context in a separate
+            process or not
+        :param kwargs: keyword arguments
+        """
+        self._host = get_host_ip()
+
+        def _get_open_port():
+            """
+            Helper function that returns an available port on the local
+            machine.
+
+            TODO: Note the possibility of a race condition here. By the
+            time the calling method tries to make use of this port, it
+            might already have been taken by another process.
+
+            :return: An open port
+            :rtype: int
+            """
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(("", 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+            s.close()
+            return port
+
+        self._port = _get_open_port()
+
+        self._test_context = MultiDeviceTestContext(
+            device_info.as_mdtc_device_info(),
+            process=process,
+            host=self._host,
+            port=self._port,
+        )
+        super().__init__(device_info, logger, **kwargs)
+
+    @property
+    def connection_factory(self):
+        """
+        The connection factory to use when establishing connections to
+        devices.
+
+        This class uses :py:class:`tango.DeviceProxy` but patches it to
+        use the long-form FQDN, as a workaround to an issue with
+        :py:class:`tango.test_context.MultiDeviceTestContext`.
+
+        :return: a DeviceProxy for use in establishing connections.
+        """
+
+        def connect(fqdn, *args, **kwargs):
+            """
+            Connect to the device.
+
+            :param fqdn: the FQDN of the device to connect to
+            :param args: positional args to pass to the underlying connection
+            :param kwargs: keyword args to pass to the underlying connection
+
+            :return: a connection to the device
+            """
+            return tango.DeviceProxy(
+                f"tango://{self._host}:{self._port}/{fqdn}#dbase=no", *args, **kwargs
+            )
+
+        # return self._test_context.get_device
+        return connect
+
+    def __enter__(self) -> TestContextTangoHarness:
         """
         Entry method for "with" context.
 
         :return: the context object
         """
-        self._multi_device_test_context.__enter__()
+        self._test_context.__enter__()
         return super().__enter__()
 
     def __exit__(
         self,
         exc_type: typing.Type[BaseException],
         exception: BaseException,
-        trace: typing.TracebackType,
+        trace: TracebackType,
     ) -> bool:
         """
         Exit method for "with" context.
@@ -357,74 +460,61 @@ class MccsDeviceTestContext(MccsTangoContext):
         :returns: whether the exception (if any) has been fully handled
             by this method and should be swallowed i.e. not re-raised
         """
-        self._multi_device_test_context.__exit__(exc_type, exception, trace)
-        return False
-
-    def get_device(self, name: str) -> MccsDeviceProxy:
-        """
-        Returns a :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
-        to a device as specified by the device name provided in the
-        configuration file.
-
-        Each call to this method returns a fresh proxy. This is
-        deliberate.
-
-        :param name: the name of the device for which a
-            :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy` is
-            sought.
-
-        :return: a :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
-            to the named device
-        """
-        return super().get_device(
-            name, connection_factory=self._multi_device_test_context.get_device
-        )
+        if self._test_context.__exit__(exc_type, exception, trace):
+            return super().__exit__(None, None, None)
+        else:
+            return super().__exit__(exc_type, exception, trace)
 
 
-class BaseTangoHarness:
+class ClientProxyTestContextTangoHarness(
+    ClientProxyTangoHarness, TestContextTangoHarness
+):
     """
-    This is a basic test harness for testing Tango devices.
-
-    It doesn't stand any devices up; it assumes that the devices are
-    already running.
-
-    All it really does is make sure that the right type of client proxy
-    (i.e. the right subclass of
-    :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`) is created
-    when we ask for a proxy to a device.
+    A Tango test harness that gives access to the client proxy
+    functionality of :py:class:`.ClientProxyTangoHarness` within the
+    lightweight test context provided by
+    :py:class:`TestContextTangoHarness`.
     """
 
-    def __init__(
-        self,
-        logger: logging.Logger,
-        proxy_map: typing.Dict[str, typing.Type[MccsDeviceProxy]] = None,
-    ):
-        """
-        Create a new instance.
+    pass
 
-        :param proxy_map: a optional mapping that assigns a type of
-            device proxy to each FQDN.
-        :param logger: a logger for this harness
-        """
-        self._proxy_map = proxy_map or {}
-        self.logger = logger
 
-    def __enter__(self) -> BaseTangoHarness:
+class WrapperTangoHarness(TangoHarness):
+    """
+    A base class for a Tango test harness that wraps another harness,
+    providing some functionality in the wrapper.
+    """
+
+    def __init__(self, harness: TangoHarness):
+        """
+        Initialise a new instance.
+
+        :param harness: the harness to be wrapped
+        """
+        self._harness = harness
+        super().__init__()
+
+    def __enter__(self) -> WrapperTangoHarness:
         """
         Entry method for "with" context.
 
+        This just calls the entry method of the wrapped harness.
+
         :return: the context object
         """
+        self._harness.__enter__()
         return self
 
     def __exit__(
         self,
         exc_type: typing.Type[BaseException],
         exception: BaseException,
-        trace: typing.TracebackType,
+        trace: TracebackType,
     ) -> bool:
         """
         Exit method for "with" context.
+
+        This just calls the entry method of the wrapped harness.
 
         :param exc_type: the type of exception thrown in the with block
         :param exception: the exception thrown in the with block
@@ -433,24 +523,170 @@ class BaseTangoHarness:
         :returns: whether the exception (if any) has been fully handled
             by this method and should be swallowed i.e. not re-raised
         """
-        return False
+        return self._harness.__exit__(exc_type, exception, trace)
 
-    def get_device(
+    @property
+    def connection_factory(self):
+        """
+        The connection factory to use when establishing connections to
+        devices.
+
+        This just uses the connection factory of the wrapped harness.
+
+        :return: a DeviceProxy for use in establishing connections.
+        """
+
+        return self._harness.connection_factory
+
+    @property
+    def fqdns(self) -> typing.List[str]:
+        """
+        Return the FQDNs of devices in this harness.
+
+        This implementation just returns FQDNs of devices in the wrapped
+        harness.
+
+        :returns: list of FQDNs of devices in this harness
+        """
+        return self._harness.fqdns
+
+    def get_device(self, fqdn: str) -> MccsDeviceProxy:
+        """
+        Return a device proxy to the device at the given FQDN.
+
+        This implementation just gets the device from the wrapped
+        harness.
+
+        :param fqdn: the FQDN of the device
+
+        :return: a proxy to the device
+        """
+        return self._harness.get_device(fqdn)
+
+
+class StartingStateTangoHarness(WrapperTangoHarness):
+    """
+    A test harness for testing Tango devices, that provides for certain
+    actions and checks that ensure that devices are in a desired initial
+    state prior to testing.
+
+    Specifically, it can:
+
+    * Tell devices to bypass their attribute cache, so that written
+      values can be read back immediately
+    * Check that devices have completed initialisation and transitioned
+      out of the INIT state
+    * Set device testMode to TestMode.TEST
+    """
+
+    def __init__(
         self,
-        fqdn: str,
-        connection_factory: typing.Callable[[str], tango.DeviceProxy] = None,
-    ) -> MccsDeviceProxy:
+        harness: TangoHarness,
+        bypass_cache: bool = True,
+        check_ready: bool = True,
+        set_test_mode: bool = True,
+    ):
         """
-        Create and return a proxy to the device at the given FQDN.
+        Initialise a new instance.
 
-        :param fqdn: FQDN of the device for which a proxy is required
-        :param connection_factory: an optional connection factory to use
-            instead of the default
-
-        :return: If the proxy map has an entry for the FQDN, then this
-            will return a proxy of the type specified; otherwise, it
-            returns an
-            :py:class:`~ska_low_mccs.device_proxy.MccsDeviceProxy`.
+        :param harness: the wrapped harness
+        :param bypass_cache: whether to tell each device to bypass its
+            attribute cache so that written attribute values can be read
+            back again immediately
+        :param check_ready: whether to check whether each device has
+            completed initialisation and transitioned out of INIT state
+            before allowing tests to be run.
+        :param set_test_mode: whether to set the device into test mode
+            before allowing tests to be run.
         """
-        proxy = self._proxy_map.get(fqdn, MccsDeviceProxy)
-        return proxy(fqdn, self.logger, connection_factory=connection_factory)
+        self._bypass_cache = bypass_cache
+        self._check_ready = check_ready
+        self._set_test_mode = set_test_mode
+
+        super().__init__(harness)
+
+    def __enter__(self) -> TangoHarness:
+        """
+        Entry method for "with" context.
+
+        This is where we make sure that devices are ready to be tested.
+
+        :return: the context object
+        """
+        super().__enter__()
+        self._make_devices_ready()
+        return self
+
+    def _make_devices_ready(self):
+        """
+        Helper method that applies actions and checks to ensure that
+        devices are ready to be tested.
+        """
+        if self._bypass_cache or self._check_ready or self._set_test_mode:
+            for fqdn in self.fqdns:
+                device = self.get_device(fqdn)
+                if self._bypass_cache:
+                    device.set_source(tango.DevSource.DEV)
+                if self._check_ready:
+                    assert device.check_initialised()
+                if self._set_test_mode:
+                    device.testMode = ska_tango_base.control_model.TestMode.TEST
+
+
+class MockingTangoHarness(WrapperTangoHarness):
+    """
+    A Tango test harness that wraps another harness, but only uses that
+    harness for a specified set of devices under test, and mocks out all
+    other devices.
+    """
+
+    def __init__(
+        self,
+        harness: TangoHarness,
+        mock_factory: typing.Callable[[str], unittest.mock.Mock],
+        initial_mocks: typing.Dict[str, unittest.mock.Mock],
+    ):
+        """
+        Initialise a new instance.
+
+        :param harness: the wrapped harness
+        :param mock_factory: the factory to be used to build mocks
+        :param initial_mocks: a pre-build dictionary of mocks to be used
+            for particular
+        """
+        self._mocks = defaultdict(mock_factory, initial_mocks)
+        super().__init__(harness)
+
+    @property
+    def connection_factory(self) -> MccsDeviceProxy:
+        """
+        The connection factory to use when establishing connections to
+        devices.
+
+        This is where we check whether the requested device is on our
+        list. Devices on the list are passed to the connection factory
+        of the wrapped harness. Devices not on the list are intercepted
+        and given a mock factory instead.
+
+        :return: a factory that putatively provides device connections,
+            but might actually provide mocks.
+        """
+
+        def connect(
+            fqdn: str, *args: typing.Any, **kwargs: typing.Any
+        ) -> typing.Callable:
+            """
+            Connect to the device.
+
+            :param fqdn: the FQDN of the device to connect to
+            :param args: positional args to pass to the underlying connection
+            :param kwargs: keyword args to pass to the underlying connection
+
+            :return: a connection (possibly mocked) to the device
+            """
+            if fqdn in self.fqdns:
+                return self._harness.connection_factory(fqdn, *args, **kwargs)
+            else:
+                return self._mocks[fqdn]
+
+        return connect

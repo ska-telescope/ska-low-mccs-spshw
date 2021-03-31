@@ -18,6 +18,8 @@ from ska_tango_base.control_model import ObsState
 
 from ska_low_mccs import MccsDeviceProxy
 
+from testing.harness.tango_harness import TangoHarness
+
 
 @pytest.fixture()
 def devices_to_load():
@@ -58,7 +60,7 @@ class TestMccsIntegrationTmc:
     """
 
     @pytest.fixture()
-    def devices(self, device_context):
+    def devices(self, tango_harness: TangoHarness):
         """
         Fixture that provides access to devices via their names.
 
@@ -67,35 +69,30 @@ class TestMccsIntegrationTmc:
             changed to extract the device FQDNs straight from the
             configuration file.
 
-        :param device_context: a tango context of some sort; possibly a
-            :py:class:`tango.test_context.MultiDeviceTestContext`,
-            possibly the real thing. The only requirement is that it
-            provide a ``get_device(fqdn)`` method that returns a
-            :py:class:`tango.DeviceProxy`.
-        :type device_context: :py:class:`contextmanager`
+        :param tango_harness: a test harness for tango devices
 
         :return: a dictionary of devices keyed by their name
         :rtype: dict<string, :py:class:`tango.DeviceProxy`>
         """
         device_dict = {
-            "controller": device_context.get_device("controller"),
-            "subarray_01": device_context.get_device("subarray_01"),
-            "subarray_02": device_context.get_device("subarray_02"),
-            "station_001": device_context.get_device("station_001"),
-            "station_002": device_context.get_device("station_002"),
-            "tile_0001": device_context.get_device("tile_0001"),
-            "tile_0002": device_context.get_device("tile_0002"),
-            "tile_0003": device_context.get_device("tile_0003"),
-            "tile_0004": device_context.get_device("tile_0004"),
+            "controller": tango_harness.get_device("low-mccs/control/control"),
+            "subarray_01": tango_harness.get_device("low-mccs/subarray/01"),
+            "subarray_02": tango_harness.get_device("low-mccs/subarray/02"),
+            "station_001": tango_harness.get_device("low-mccs/station/001"),
+            "station_002": tango_harness.get_device("low-mccs/station/002"),
+            "tile_0001": tango_harness.get_device("low-mccs/tile/0001"),
+            "tile_0002": tango_harness.get_device("low-mccs/tile/0002"),
+            "tile_0003": tango_harness.get_device("low-mccs/tile/0003"),
+            "tile_0004": tango_harness.get_device("low-mccs/tile/0004"),
             # workaround for https://github.com/tango-controls/cppTango/issues/816
-            # "antenna_000001": device_context.get_device("antenna_000001"),
-            # "antenna_000002": device_context.get_device("antenna_000002"),
-            # "antenna_000003": device_context.get_device("antenna_000003"),
-            # "antenna_000004": device_context.get_device("antenna_000004"),
-            "subarraybeam_01": device_context.get_device("subarraybeam_01"),
-            "subarraybeam_02": device_context.get_device("subarraybeam_02"),
-            "subarraybeam_03": device_context.get_device("subarraybeam_03"),
-            "subarraybeam_04": device_context.get_device("subarraybeam_04"),
+            # "antenna_000001": tango_harness.get_device("low-mccs/antenna/000001"),
+            # "antenna_000002": tango_harness.get_device("low-mccs/antenna/000002"),
+            # "antenna_000003": tango_harness.get_device("low-mccs/antenna/000003"),
+            # "antenna_000004": tango_harness.get_device("low-mccs/antenna/000004"),
+            "subarraybeam_01": tango_harness.get_device("low-mccs/subarraybeam/01"),
+            "subarraybeam_02": tango_harness.get_device("low-mccs/subarraybeam/02"),
+            "subarraybeam_03": tango_harness.get_device("low-mccs/subarraybeam/03"),
+            "subarraybeam_04": tango_harness.get_device("low-mccs/subarraybeam/04"),
         }
         return device_dict
 

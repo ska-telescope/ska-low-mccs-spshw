@@ -498,16 +498,18 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_FROM_OFF_MESSAGE)
 
     @command(
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
-    def On(self):
+    def On(self, argin):
         """
         Turn device on and program TPM firmware.
 
         This command will transition a Tile from Off/Standby to
         On and program the TPM firmware.
 
+        :param argin: Messaging system and command arguments
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -535,10 +537,10 @@ class MccsTile(SKABaseDevice):
         Class for handling the On() command.
         """
 
-        SUCCEEDED_MESSAGE = "On command completed OK"
-        FAILED_MESSAGE = "On command failed"
+        SUCCEEDED_MESSAGE = "Tile On command completed OK"
+        FAILED_MESSAGE = "Tile On command failed"
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
@@ -547,13 +549,14 @@ class MccsTile(SKABaseDevice):
             At present this does nothing but call its `super().do()`
             method, and interfere in the return message.
 
+            :param argin: Messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            (result_code, _) = super().do()
 
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

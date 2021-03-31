@@ -31,6 +31,7 @@ from ska_low_mccs.hardware import (
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.subrack.subrack_simulator import SubrackBoardSimulator
 from ska_low_mccs.subrack.subrack_driver import SubrackBoardDriver
+from ska_low_mccs.msg_queue import MessageQueue
 
 
 __all__ = [
@@ -630,6 +631,14 @@ class MccsSubrack(SKABaseDevice):
             )
             self.logger.info("Adding command " + command_name)
 
+        for (command_name, command_object) in [
+            ("On", self.OnCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self, self.state_model, self.logger),
+            )
+
     class InitCommand(SKABaseDevice.InitCommand):
         """
         Class that implements device initialisation for the MCCS Subrack
@@ -658,6 +667,8 @@ class MccsSubrack(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._msg_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -672,6 +683,7 @@ class MccsSubrack(SKABaseDevice):
             super().do()
             device = self.target
             device._tile_fqdns = list(device.TileFQDNs)
+            device.queue_debug = ""
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
@@ -690,6 +702,12 @@ class MccsSubrack(SKABaseDevice):
                 device.SubrackPort,
                 tpm_count=len(device._tile_fqdns),
             )
+
+            # Start the Message queue for this device
+            device._msg_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._msg_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -796,7 +814,7 @@ class MccsSubrack(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        self._msg_queue.terminate_thread()
 
     # ----------
     # Callbacks
@@ -832,6 +850,25 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
 
     @attribute(
         dtype="DevLong",
@@ -1748,6 +1785,57 @@ class MccsSubrack(SKABaseDevice):
         self.push_change_event("healthState", health_state)
         self._health_state = health_state
         self.logger.info("health state = " + str(health_state))
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def On(self, argin):
+        """
+        Send message with response.
+
+        :param argin: Messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        kwargs = json.loads(argin)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        (result_code, _, msg_uid,) = self._msg_queue.send_message_with_response(
+            command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+        )
+        return [[result_code], [msg_uid]]
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On() command.
+        """
+
+        SUCCEEDED_MESSAGE = "Subrack On command completed OK"
+        FAILED_MESSAGE = "Subrack On command failed"
+
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
+            command for this :py:class:`.MccsStation` device.
+
+            :param argin: Messaging system and command arguments
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            # :rcltodo We can't add simulated time here because
+            # a) it should be simulated in a simulator (ideally)
+            # b) the startup command doesn't use messages throughout so would
+            #    cause a Tango command timeout
+            # time.sleep(5)
+
+            # rcltodo: Is this parent class call required?
+            # super().do()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
 
 # ----------

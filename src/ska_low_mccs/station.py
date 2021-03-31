@@ -16,9 +16,10 @@ __all__ = ["MccsStation", "main"]
 
 import json
 import threading
+from time import sleep
 
 # PyTango imports
-from tango import DebugIt, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
 
 # additional imports
@@ -31,6 +32,7 @@ from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
+from ska_low_mccs.msg_queue import MessageQueue
 
 
 class MccsStation(SKAObsDevice):
@@ -68,6 +70,14 @@ class MccsStation(SKAObsDevice):
     # ---------------
     # General methods
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device; overridden here to change the Tango
+        serialisation model.
+        """
+        util = Util.instance()
+        util.set_serial_model(SerialModel.NO_SYNC)
+        super().init_device()
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
@@ -102,6 +112,8 @@ class MccsStation(SKAObsDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._msg_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -115,7 +127,8 @@ class MccsStation(SKAObsDevice):
             """
             super().do()
             device = self.target
-
+            device.queue_debug = ""
+            device._progress = 0
             device._subarray_id = 0
             device._apiu_fqdn = device.APIUFQDN
             device._tile_fqdns = list(device.TileFQDNs)
@@ -151,6 +164,12 @@ class MccsStation(SKAObsDevice):
             device.device_pool = DevicePoolSequence(
                 [prerequisite_device_pool, antenna_pool], self.logger, connect=False
             )
+
+            # Start the Message queue for this device
+            device._msg_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._msg_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -241,7 +260,7 @@ class MccsStation(SKAObsDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        self._msg_queue.terminate_thread()
 
     # ----------
     # Attributes
@@ -429,6 +448,41 @@ class MccsStation(SKAObsDevice):
         """
         return self._calibration_coefficients
 
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
+
+    @attribute(
+        dtype="DevUShort",
+        label="Command progress percentage",
+        rel_change=2,
+        abs_change=5,
+        max_value=100,
+        min_value=0,
+    )
+    def commandProgress(self):
+        """
+        Return the commandProgress attribute value.
+
+        :return: command progress as a percentage
+        """
+        return self._progress
+
     # --------
     # Commands
     # --------
@@ -441,6 +495,7 @@ class MccsStation(SKAObsDevice):
         args = (self, self.state_model, self.logger)
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("BTest", self.BTestCommand(*args))
 
         pool_args = (self.device_pool, self.state_model, self.logger)
         self.register_command_object("Disable", self.DisableCommand(*pool_args))
@@ -448,28 +503,98 @@ class MccsStation(SKAObsDevice):
         self.register_command_object("Off", self.OffCommand(*pool_args))
         self.register_command_object("On", self.OnCommand(*pool_args))
 
-    class OnCommand(SKABaseDevice.OnCommand):
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def BTest(self, argin):
         """
-        Class for handling the On() command.
+        A test command.
+
+        :param argin: Messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        kwargs = json.loads(argin)
+        fqdn = kwargs.get("respond_to_fqdn")
+        cb = kwargs.get("callback")
+        (result_code, message, _) = self._msg_queue.send_message_with_response(
+            command="BTest", respond_to_fqdn=fqdn, callback=cb
+        )
+        return [[result_code], [message]]
+
+    class BTestCommand(ResponseCommand):
+        """
+        Class for handling the a test command.
         """
 
-        SUCCEEDED_MESSAGE = "On command completed OK"
-        FAILED_MESSAGE = "On command failed"
+        SUCCEEDED_MESSAGE = "BTest command completed OK"
 
-        def do(self):
+        def do(self, argin):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
-            command for this :py:class:`.MccsStation` device.
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsStation.BTest` command.
 
+            :param argin: Messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            device_pool = self.target
+            sleep(10)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def On(self, argin):
+        """
+        Send a message to turn the station on.
+
+        Method returns as soon as the message has been enqueued.
+
+        :param argin: Messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        kwargs = json.loads(argin)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        (result_code, _, msg_uid,) = self._msg_queue.send_message_with_response(
+            command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+        )
+        return [[result_code], [msg_uid]]
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On() command.
+        """
+
+        SUCCEEDED_MESSAGE = "Station On command completed OK"
+        FAILED_MESSAGE = "Station On command failed"
+
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
+            command for this :py:class:`.MccsStation` device.
+
+            :param argin: Messaging system and command arguments
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            # rcltodo: just return straight away for now!
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+            # rcltodo: will need to be invoke_command_with_callback call when the
+            #          subservient pool devices (tiles, antennas) have msg queues
+            device_pool = self.target
             if device_pool.on():
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
@@ -495,6 +620,9 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            # rcltodo: just return straight away for now!
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
             device_pool = self.target
 
             if device_pool.off():

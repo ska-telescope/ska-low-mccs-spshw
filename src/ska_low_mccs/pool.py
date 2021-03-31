@@ -18,6 +18,7 @@ of subservient devices.
 """
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsDeviceProxy
+import json
 
 
 class DevicePool:
@@ -53,6 +54,8 @@ class DevicePool:
         self._fqdns = fqdns or []
         self._logger = logger
         self._devices = None
+        self._responses = {}
+        self._results = []
 
         if connect:
             self.connect()
@@ -67,6 +70,7 @@ class DevicePool:
                 MccsDeviceProxy(fqdn, self._logger) for fqdn in self._fqdns
             ]
 
+    # Deprecate this call (once converted to messaging system)
     def invoke_command(self, command_name, arg=None):
         """
         A generic method for invoking a command on all devices in the
@@ -82,9 +86,10 @@ class DevicePool:
         if self._devices is None:
             self.connect()
 
-        async_ids = [
-            device.command_inout_asynch(command_name, arg) for device in self._devices
-        ]
+        async_ids = []
+        for device in self._devices:
+            asyncid = device.command_inout_asynch(command_name, arg)
+            async_ids.append(asyncid)
 
         for (async_id, device) in zip(async_ids, self._devices):
             (result_code, _) = device.command_inout_reply(async_id, timeout=0)
@@ -92,6 +97,93 @@ class DevicePool:
                 return False
 
         return True
+
+    def invoke_command_with_callback(self, command_name, fqdn, callback):
+        """
+        A generic method to send a message to the pool of devices.
+
+        :param command_name: the name of the command to be invoked
+        :type command_name: str
+        :param fqdn: FQDN to return message to
+        :type fqdn: str
+        :param callback: Callback command to call reply to
+        :type callback: str
+        :return: Whether the messages were sent or not
+        :rtype: bool
+        :raises ValueError: If we have pending responses to a previous command
+        """
+        if self._devices is None:
+            self.connect()
+
+        if len(self._responses):
+            self._logger.error(f"{len(self._responses)} pool messages in progress")
+            raise ValueError
+        self._results = []
+
+        # Send a message to all of the registered devices in the pool
+        for device in self._devices:
+            self._logger.debug(f"cmd={command_name}, rtnfqdn={fqdn}, cb={callback}")
+
+            # rcltodo: Need to expand this to include arguments passed to commands...
+            args = {
+                "respond_to_fqdn": fqdn,
+                "callback": callback,
+            }
+            json_string = json.dumps(args)
+            self._logger.debug(
+                f"Calling {command_name} on device.name() with json={json_string}"
+            )
+            async_id = device.command_inout_asynch(command_name, json_string)
+            (result_code, msg_uid) = device.command_inout_reply(async_id, timeout=0)
+            if result_code == ResultCode.FAILED:
+                return False
+
+            if result_code == ResultCode.QUEUED:
+                self._logger.info(f"Added response {msg_uid[0]}")
+                self._responses[msg_uid[0]] = False
+
+        return True
+
+    def pool_stats(self):
+        """
+        Statistics on which pool command replies are pending.
+
+        :return: Number of pending responses for this pool
+        """
+        return len(self._responses)
+
+    def on_callback(self, argin):
+        """
+        A generic method to send a message to the pool of devices.
+
+        :param argin: result of the command
+        :return: Whether all of the messages were completed, return_code and message
+        """
+
+        # check that each received message is on _msg_obj and mark off as recevied
+        kwargs = json.loads(argin)
+        msg_obj = kwargs.get("msg_obj")
+        result_code = kwargs.get("result_code")
+        self._results.append(result_code)
+        key = msg_obj.get("msg_uid")
+        self._logger.debug(f"Got reply key {key}")
+        if key in self._responses:
+            self._responses[key] = True
+        # else OK, this reply was not for this pool - exit as normal below
+
+        # When all callbacks have been received, derive the result code
+        if self._results.count(ResultCode.OK) == len(self._results):
+            result_code = ResultCode.OK
+        else:
+            result_code = ResultCode.FAILED
+
+        # and return to the caller (the device)
+        if all(self._responses.values()):
+            self._responses.clear()
+            return (True, result_code)
+        else:
+            # We have some responses pending...
+            return (False, result_code)
 
     def disable(self):
         """
@@ -219,6 +311,42 @@ class DevicePoolSequence:
         else:
             return None if did_nothing else True
 
+    def invoke_command_with_callback(
+        self,
+        command_name,
+        fqdn,
+        callback,
+        reverse=False,
+    ):
+        """
+        A generic method for sequential invoking a command on a list of
+        device pools.
+
+        :param command_name: the name of the command to be invoked
+        :type command_name: str
+        :param fqdn: FQDN to return message to
+        :type fqdn: str
+        :param callback: Callback command to call reply to
+        :type callback: str
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.)
+        :type reverse: bool
+
+        :return: Whether the command succeeded or not
+        :rtype: bool
+        """
+        all_ok = True
+
+        pools = reversed(self._pools) if reverse else self._pools
+        for pool in pools:
+            success = pool.invoke_command_with_callback(
+                command_name=command_name, fqdn=fqdn, callback=callback
+            )
+            if success is False:
+                all_ok = False
+        return all_ok
+
     def disable(self, reverse=False):
         """
         Call Disable() on all the devices in this device pool.
@@ -277,4 +405,52 @@ class DevicePoolSequence:
         :return: Whether the command succeeded or not
         :rtype: bool
         """
-        return self.invoke_command("On", reverse=reverse)
+        args = {
+            "respond_to_fqdn": "",
+            "callback": "",
+        }
+        json_string = json.dumps(args)
+        return self.invoke_command(command_name="On", arg=json_string, reverse=reverse)
+
+    def pool_stats(self):
+        """
+        Stats on the pool.
+
+        :return: The pool stats
+        :rtype: str
+        """
+        msg = ""
+        for pool in self._pools:
+            msg += f"{str(pool.pool_stats())} "
+        return msg
+
+    # TODO: This could be made generic
+    def on_callback(self, argin):
+        """
+        We need to check all pools have received their callbacks
+        whenever we get a callback message.
+
+        :param argin: results from executed command
+        :return: A tuple containing a flag indicating whether pools are complete,
+            an overall return code and an information status
+        :rtype: (bool, :py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        responses_pending_message = "Message responses pending"
+        all_responses_received_message = "All message responses received"
+
+        pools_complete = 0
+        results = []
+        for pool in self._pools:
+            (pool_done, result_code) = pool.on_callback(argin=argin)
+            if pool_done:
+                pools_complete += 1
+            results.append(result_code)
+
+        if results.count(ResultCode.OK) == len(results):
+            result_code = ResultCode.OK
+        else:
+            result_code = ResultCode.FAILED
+
+        if pools_complete == len(self._pools):
+            return (True, result_code, all_responses_received_message)
+        return (False, result_code, responses_pending_message)

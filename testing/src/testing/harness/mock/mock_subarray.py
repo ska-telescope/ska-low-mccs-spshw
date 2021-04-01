@@ -10,8 +10,7 @@
 """
 This module implements infrastructure for mocking MCCS subarray devices.
 """
-
-__all__ = ["MockSubarrayBuilder"]
+from __future__ import annotations  # allow forward references in type hints
 
 import unittest.mock
 
@@ -22,12 +21,17 @@ from ska_low_mccs import MccsSubarray
 from testing.harness.mock import MockDeviceBuilder
 
 
+__all__ = ["MockSubarrayBuilder"]
+
+
 class MockSubarrayBuilder(MockDeviceBuilder):
     """
     This module implements a mock builder for MCCS subarray devices.
     """
 
-    def __init__(self, from_factory: unittest.mock.Mock = unittest.mock.Mock):
+    def __init__(
+        self: MockSubarrayBuilder, from_factory: unittest.mock.Mock = unittest.mock.Mock
+    ) -> None:
         """
         Create a new instance.
 

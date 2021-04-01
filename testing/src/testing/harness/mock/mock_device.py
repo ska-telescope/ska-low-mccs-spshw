@@ -11,7 +11,7 @@
 This module implements infrastructure for mocking tango devices.
 """
 
-__all__ = ["MockDeviceBuilder"]
+from __future__ import annotations  # allow forward references in type hints
 
 import typing
 import unittest.mock
@@ -20,13 +20,17 @@ import tango
 
 from ska_tango_base.commands import ResultCode
 
+__all__ = ["MockDeviceBuilder"]
+
 
 class MockDeviceBuilder:
     """
     This module implements a mock builder for tango devices.
     """
 
-    def __init__(self, from_factory: unittest.mock.Mock = unittest.mock.Mock):
+    def __init__(
+        self: MockDeviceBuilder, from_factory: unittest.mock.Mock = unittest.mock.Mock
+    ) -> None:
         """
         Create a new instance.
 
@@ -36,7 +40,7 @@ class MockDeviceBuilder:
         self._from_factory = from_factory
         self._configuration = {}
 
-    def add_attribute(self, name: str, value: typing.Any) -> None:
+    def add_attribute(self: MockDeviceBuilder, name: str, value: typing.Any) -> None:
         """
         Tell this builder to build mocks with a given attribute.
 
@@ -47,7 +51,9 @@ class MockDeviceBuilder:
         """
         self._configuration[name] = value
 
-    def add_command(self, name: str, return_value: typing.Any) -> None:
+    def add_command(
+        self: MockDeviceBuilder, name: str, return_value: typing.Any
+    ) -> None:
         """
         Tell this builder to build mocks with a specified command that
         returns the provided value.
@@ -58,7 +64,7 @@ class MockDeviceBuilder:
         self._configuration[f"{name}.return_value"] = return_value
 
     def add_result_command(
-        self,
+        self: MockDeviceBuilder,
         name: str,
         result_code: ResultCode,
         message: str = "Mock information-only message",
@@ -76,7 +82,7 @@ class MockDeviceBuilder:
         """
         self.add_command(name, [[result_code], [message]])
 
-    def set_state(self, state: tango.DevState) -> None:
+    def set_state(self: MockDeviceBuilder, state: tango.DevState) -> None:
         """
         Tell this builder to build mocks with the state set as
         specified.
@@ -85,7 +91,9 @@ class MockDeviceBuilder:
         """
         self.add_command("state", state)
 
-    def _setup_read_attribute(self, mock_device: unittest.mock.Mock) -> None:
+    def _setup_read_attribute(
+        self: MockDeviceBuilder, mock_device: unittest.mock.Mock
+    ) -> None:
         """
         Set up attribute reads for a mock device.
 
@@ -119,7 +127,9 @@ class MockDeviceBuilder:
 
         mock_device.read_attribute.side_effect = _mock_read_attribute
 
-    def _setup_command_inout(self, mock_device: unittest.mock.Mock) -> None:
+    def _setup_command_inout(
+        self: MockDeviceBuilder, mock_device: unittest.mock.Mock
+    ) -> None:
         """
         Set up command_inout for a mock device.
 
@@ -189,7 +199,7 @@ class MockDeviceBuilder:
 
         mock_device.command_inout_reply.side_effect = _mock_command_inout_reply
 
-    def __call__(self) -> unittest.mock.Mock:
+    def __call__(self: MockDeviceBuilder) -> unittest.mock.Mock:
         """
         Call method for this builder: builds and returns a mock object.
 

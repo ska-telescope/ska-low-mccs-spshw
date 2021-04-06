@@ -110,7 +110,7 @@ class TestMccsSubarray:
         # properly implemented
         assert device_under_test.scanId == -1
         assert list(device_under_test.configuredCapabilities) == ["BAND1:0", "BAND2:0"]
-        assert device_under_test.stationFQDNs is None
+        assert device_under_test.stationFQDNs == ()
         #         assert device_under_test.tileFQDNs is None
         #         assert device_under_test.stationBeamFQDNs is None
         assert device_under_test.activationTime == 0
@@ -214,7 +214,7 @@ class TestMccsSubarray:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.stationFQDNs is None
+        assert device_under_test.stationFQDNs == ()
 
     class TestAssignResourcesAndConfigure:
         """
@@ -260,6 +260,10 @@ class TestMccsSubarray:
                 "low-mccs/subarraybeam/02": mock_subarraybeam_factory(),
             }
 
+        @pytest.mark.skip(
+            reason="This needs to be reimplemented in MCCS-406"
+            # TODO MCCS-406
+        )
         def test_AllocateResources(self, device_under_test, logger):
             """
             Test for AllocateResources.
@@ -313,6 +317,10 @@ class TestMccsSubarray:
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
             assert mock_subarray_beam.stationIds == [1, 2]
 
+        @pytest.mark.skip(
+            reason="This needs to be reimplemented in MCCS-407"
+            # TODO MCCS-407
+        )
         def test_ReleaseAllResources(self, device_under_test, logger):
             """
             Test for ReleaseAllResources.
@@ -378,6 +386,10 @@ class TestMccsSubarray:
             assert mock_subarray_beam_1.stationIds == []
             assert mock_subarray_beam_2.stationIds == []
 
+        @pytest.mark.skip(
+            reason="This needs to be reimplemented in MCCS-269"
+            # TODO MCCS-269
+        )
         def test_configure(self, device_under_test, logger):
             """
             Test for Configure.

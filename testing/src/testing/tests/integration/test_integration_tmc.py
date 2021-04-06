@@ -193,6 +193,7 @@ class TestMccsIntegrationTmc:
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
+        assert devices["subarray_01"].stationFQDNs == ()
 
         # Allocate stations to a subarray
         parameters = {
@@ -210,7 +211,10 @@ class TestMccsIntegrationTmc:
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].State() == DevState.ON
         assert devices["subarray_01"].obsState == ObsState.IDLE
-        assert len(devices["subarray_01"].stationFQDNs) == 2
+        assert sorted(devices["subarray_01"].stationFQDNs) == [
+            "low-mccs/station/001",
+            "low-mccs/station/002",
+        ]
 
         # Release Resources
         release_config = {"subarray_id": 1, "release_all": True}

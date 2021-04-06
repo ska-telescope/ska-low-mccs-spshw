@@ -402,8 +402,8 @@ def check_reset_state(controller, subarrays, stations):
     check_mccs_controller_state(controller, "off")
     assert subarrays[1].State() == DevState.OFF
     assert subarrays[2].State() == DevState.OFF
-    assert subarrays[1].stationFQDNs is None
-    assert subarrays[2].stationFQDNs is None
+    assert subarrays[1].stationFQDNs == () or subarrays[1].stationFQDNs is None
+    assert subarrays[2].stationFQDNs == () or subarrays[2].stationFQDNs is None
     assert stations[1].State() == DevState.OFF
     assert stations[2].State() == DevState.OFF
     assert stations[1].subarrayId == 0

@@ -33,7 +33,7 @@ from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
 from ska_low_mccs.utils import call_with_json, tango_raise
 from ska_low_mccs.events import EventManager
-from ska_low_mccs.health import HealthModel
+from ska_low_mccs.health import HealthModel, HealthMonitor
 from ska_low_mccs.resource import ResourceManager
 
 
@@ -48,12 +48,17 @@ class StationsResourceManager(ResourceManager):
     Inherits from ResourceManager.
     """
 
-    def __init__(self, health_monitor, station_fqdns, logger):
+    def __init__(
+        self: StationsResourceManager,
+        health_monitor: HealthMonitor,
+        station_fqdns: List(str),
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new StationsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: :py:class:`ska.low.mccs.health.HealthModel` object
+        :type health_monitor: HealthMonitor
         :param station_fqdns: the FQDNs of the stations that this
             subarray manages
         :type station_fqdns: list(str)
@@ -67,7 +72,7 @@ class StationsResourceManager(ResourceManager):
             stations[station_id] = station_fqdn
         super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
 
-    def items(self):
+    def items(self: StationsResourceManager) -> dict(str, str):
         """
         Return the stations managed by this device.
 
@@ -80,7 +85,9 @@ class StationsResourceManager(ResourceManager):
             devices[key] = resource._fqdn
         return devices
 
-    def assign(self, station_fqdns: List[str], subarray_id: int):
+    def assign(
+        self: StationsResourceManager, station_fqdns: List[str], subarray_id: int
+    ) -> None:
         """
         Assign stations to a subarray device.
 
@@ -94,14 +101,14 @@ class StationsResourceManager(ResourceManager):
             stations[station_id] = station_fqdn
         super().assign(stations, subarray_id)
 
-    def release_all(self):
+    def release_all(self: StationsResourceManager) -> None:
         """
         Remove all stations from this resource manager.
         """
         self._remove_from_managed(self.get_all_fqdns())
 
     @property
-    def station_fqdns(self):
+    def station_fqdns(self: StationsResourceManager) -> List(str):
         """
         Returns the FQDNs of currently assigned stations.
 
@@ -111,7 +118,7 @@ class StationsResourceManager(ResourceManager):
         return sorted(self.get_all_fqdns())
 
     @property
-    def station_ids(self):
+    def station_ids(self: StationsResourceManager) -> List(str):
         """
         Returns the device IDs of currently assigned stations.
 

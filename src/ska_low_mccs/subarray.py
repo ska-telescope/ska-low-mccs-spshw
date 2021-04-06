@@ -11,7 +11,6 @@ Subarray prototype.
 """
 __all__ = [
     "MccsSubarray",
-    "StationsResourceManager",
     "StationBeamsResourceManager",
     "main",
 ]
@@ -35,89 +34,7 @@ from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import MutableHealthModel
 import ska_low_mccs.release as release
 from ska_low_mccs.resource import ResourceManager
-
-
-class StationsResourceManager(ResourceManager):
-    """
-    A simple manager for the pool of stations that are assigned to a
-    subarray.
-
-    Inherits from ResourceManager.
-    """
-
-    def __init__(self, health_monitor, station_fqdns, logger):
-        """
-        Initialise a new StationsResourceManager.
-
-        :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: :py:class:`ska_low_mccs.health.HealthModel` object
-        :param station_fqdns: the FQDNs of the stations that this
-            subarray manages
-        :type station_fqdns: list(str)
-        :param logger: the logger to be used by the object under test
-        :type logger: :py:class:`logging.Logger`
-        """
-        self._devices = dict()
-        stations = {}
-        for station_fqdn in station_fqdns:
-            station_id = int(station_fqdn.split("/")[-1:][0])
-            stations[station_id] = station_fqdn
-        super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
-
-    def items(self):
-        """
-        Return the stations managed by this device.
-
-        :return: A dictionary of Station IDs, FQDNs managed by this
-            StationsResourceManager
-        :rtype: dict
-        """
-        devices = dict()
-        for key, resource in self._resources.items():
-            devices[key] = resource._fqdn
-        return devices
-
-    def add_to_managed(self, stations):
-        """
-        Add new stations(s) to be managed by this resource manager, will
-        also run InitialSetup() on stations.
-
-        :param stations: The IDs and FQDNs of devices to add
-        :type stations: dict
-        """
-        for station_fqdn in stations.values():
-            if station_fqdn not in self.station_fqdns:
-                # TODO: Establishment of connections should happen at initialization
-                station = MccsDeviceProxy(station_fqdn, logger=self._logger)
-                station.InitialSetup()
-                self._devices[station_fqdn] = station
-        super()._add_to_managed(stations)
-
-    def release_all(self):
-        """
-        Remove all stations from this resource manager.
-        """
-        self._remove_from_managed(self.get_all_fqdns())
-
-    @property
-    def station_fqdns(self):
-        """
-        Returns the FQDNs of currently assigned stations.
-
-        :return: FQDNs of currently assigned stations
-        :rtype: list(str)
-        """
-        return sorted(self.get_all_fqdns())
-
-    @property
-    def station_ids(self):
-        """
-        Returns the device IDs of currently assigned stations.
-
-        :return: IDs of currently assigned stations
-        :rtype: list(str)
-        """
-        return sorted(self._resources.keys())
+from ska_low_mccs.controller import StationsResourceManager
 
 
 class StationBeamsResourceManager(ResourceManager):
@@ -182,8 +99,6 @@ class StationBeamsResourceManager(ResourceManager):
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
-            if station_fqdn not in self._stations.station_fqdns:
-                self._stations.add_to_managed({station_id: station_fqdn})
 
         station_beams = {}
         for station_beam_fqdn in station_beam_fqdns:
@@ -211,6 +126,7 @@ class StationBeamsResourceManager(ResourceManager):
             station_beam.isBeamLocked = True
             self.update_resource_health(station_beam_fqdn, station_beam.healthState)
 
+        self._health_monitor.add_devices(stations.values())
         super().assign(station_beams, list(stations.keys()))
 
     def configure(self, logger, argin):
@@ -437,9 +353,6 @@ class MccsSubarray(SKASubarray):
             device._station_fqdns = list()
             device._station_beam_fqdns = list()
 
-            device.set_change_event("stationFQDNs", True, True)
-            device.set_archive_event("stationFQDNs", True, True)
-
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
@@ -497,6 +410,7 @@ class MccsSubarray(SKASubarray):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
+            # TODO: remove both resource managers as part of MCCS-404
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns, self.logger
             )
@@ -620,7 +534,13 @@ class MccsSubarray(SKASubarray):
         """
         self._scan_id = scan_id
 
-    @attribute(dtype=("DevString",), max_dim_x=512, format="%s")
+    @attribute(
+        dtype=[
+            "DevString",
+        ],
+        max_dim_x=512,
+        format="%s",
+    )
     def stationFQDNs(self):
         """
         Return the FQDNs of stations assigned to this subarray.
@@ -628,7 +548,19 @@ class MccsSubarray(SKASubarray):
         :return: FQDNs of stations assigned to this subarray
         :rtype: list(str)
         """
-        return sorted(self._station_pool_manager.station_fqdns)
+        if len(self._station_fqdns or []) == 0:
+            return list()
+        return list(self._station_fqdns)
+
+    @stationFQDNs.write
+    def stationFQDNs(self, station_fqdns):
+        """
+        Set the stationFQDNs attribute.
+
+        :param station_fqdns: the new stationFQDNs
+        :type station_fqdns: list(str)
+        """
+        self._station_fqdns = list(station_fqdns or [])
 
     # -------------------------------------------
     # Base class command and gatekeeper overrides

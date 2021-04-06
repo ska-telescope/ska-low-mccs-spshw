@@ -33,48 +33,54 @@ from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
 from ska_low_mccs.utils import call_with_json, tango_raise
 from ska_low_mccs.events import EventManager
-from ska_low_mccs.health import HealthModel, HealthMonitor
+from ska_low_mccs.health import HealthModel
 from ska_low_mccs.resource import ResourceManager
 
 
-__all__ = ["MccsController", "ControllerResourceManager", "main"]
+__all__ = ["MccsController", "StationsResourceManager", "main"]
 
 
-class ControllerResourceManager(ResourceManager):
+class StationsResourceManager(ResourceManager):
     """
-    This class implements a resource manger for the MCCS controller
-    device.
+    A simple manager for the pool of stations that are assigned to this
+    controller.
 
-    Initialize with a list of FQDNs of devices to be managed. The
-    ResourceManager holds the FQDN and the (1-based) ID of the device
-    that owns each managed device.
+    Inherits from ResourceManager.
     """
 
-    def __init__(
-        self: ControllerResourceManager,
-        health_monitor: HealthMonitor,
-        manager_name: str,
-        station_fqdns: List[str],
-        logger: logging.Logger,
-    ) -> None:
+    def __init__(self, health_monitor, station_fqdns, logger):
         """
-        Initialise the conroller resource manager.
+        Initialise a new StationsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :param manager_name: Name for this manager (imformation only)
-        :param station_fqdns: the FQDNs of the stations that this controller
-            device manages
+        :type health_monitor: :py:class:`ska.low.mccs.health.HealthModel` object
+        :param station_fqdns: the FQDNs of the stations that this
+            subarray manages
+        :type station_fqdns: list(str)
         :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
         """
+        self._devices = dict()
         stations = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
-        super().__init__(health_monitor, manager_name, stations, logger)
+        super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
 
-    def assign(
-        self: ControllerResourceManager, station_fqdns: List[str], subarray_id: int
-    ) -> None:
+    def items(self):
+        """
+        Return the stations managed by this device.
+
+        :return: A dictionary of Station IDs, FQDNs managed by this
+            StationsResourceManager
+        :rtype: dict
+        """
+        devices = dict()
+        for key, resource in self._resources.items():
+            devices[key] = resource._fqdn
+        return devices
+
+    def assign(self, station_fqdns: List[str], subarray_id: int):
         """
         Assign stations to a subarray device.
 
@@ -87,6 +93,32 @@ class ControllerResourceManager(ResourceManager):
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
         super().assign(stations, subarray_id)
+
+    def release_all(self):
+        """
+        Remove all stations from this resource manager.
+        """
+        self._remove_from_managed(self.get_all_fqdns())
+
+    @property
+    def station_fqdns(self):
+        """
+        Returns the FQDNs of currently assigned stations.
+
+        :return: FQDNs of currently assigned stations
+        :rtype: list(str)
+        """
+        return sorted(self.get_all_fqdns())
+
+    @property
+    def station_ids(self):
+        """
+        Returns the device IDs of currently assigned stations.
+
+        :return: IDs of currently assigned stations
+        :rtype: list(str)
+        """
+        return sorted(self._resources.keys())
 
 
 class MccsController(SKAMaster):
@@ -308,8 +340,8 @@ class MccsController(SKAMaster):
             health_monitor = device.health_model._health_monitor
 
             # Instantiate a resource manager for the Stations
-            device._stations_manager = ControllerResourceManager(
-                health_monitor, "StationsManager", fqdns, self.logger
+            device._stations_manager = StationsResourceManager(
+                health_monitor, fqdns, self.logger
             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
@@ -939,6 +971,7 @@ class MccsController(SKAMaster):
                 for station_fqdn in stations_to_release:
                     station = MccsDeviceProxy(station_fqdn, self.logger)
                     station.subarrayId = 0
+                    subarray_device.stationFQDNs.remove(station_fqdn)
 
                 # Inform manager that we made the releases
                 controllerdevice._stations_manager.release(stations_to_release)
@@ -970,6 +1003,10 @@ class MccsController(SKAMaster):
                 for fqdn in stations_to_assign:
                     device = MccsDeviceProxy(fqdn, self.logger)
                     device.subarrayId = subarray_id
+                    currently_assigned_stations = subarray_device.stationFQDNs or []
+                    subarray_device.stationFQDNs = sorted(
+                        list(currently_assigned_stations) + [fqdn]
+                    )
 
                 # Inform manager that we made the assignments
                 controllerdevice._stations_manager.assign(
@@ -1170,10 +1207,13 @@ class MccsController(SKAMaster):
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-            # try:
             (result_code, message) = subarray_device.ReleaseAllResources()
-            # except DevFailed:
-            # pass  # it probably has no resources to release
+            if result_code == ResultCode.FAILED:
+                return (
+                    ResultCode.FAILED,
+                    f"Subarray failed to release resources: {message}",
+                )
+            subarray_device.stationFQDNs = []
 
             (result_code, message) = subarray_device.Off()
             if result_code == ResultCode.FAILED:

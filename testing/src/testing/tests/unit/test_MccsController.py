@@ -30,7 +30,7 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 from ska_low_mccs import MccsController, MccsDeviceProxy, MccsSubarray, release
-from ska_low_mccs.controller import ControllerResourceManager
+from ska_low_mccs.controller import StationsResourceManager
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import call_with_json
@@ -370,6 +370,8 @@ class TestMccsController:
             mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
+            mock_subarray_1.configure_mock(stationFQDNs=[])
+            mock_subarray_2.configure_mock(stationFQDNs=[])
 
             controller.Off()
             controller.On()
@@ -429,6 +431,8 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 0
+            assert mock_subarray_1.stationFQDNs == ["low-mccs/station/001"]
+            assert mock_subarray_2.stationFQDNs == []
 
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
@@ -492,6 +496,11 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 1
+            assert mock_subarray_1.stationFQDNs == [
+                "low-mccs/station/001",
+                "low-mccs/station/002",
+            ]
+            assert mock_subarray_2.stationFQDNs == []
 
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
@@ -521,6 +530,8 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 0
             assert mock_station_2.subarrayId == 1
+            assert mock_subarray_1.stationFQDNs == ["low-mccs/station/002"]
+            assert mock_subarray_2.stationFQDNs == []
 
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
@@ -603,6 +614,8 @@ class TestMccsController:
             mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
+            mock_subarray_1.configure_mock(stationFQDNs=[])
+            mock_subarray_2.configure_mock(stationFQDNs=[])
 
             controller.Off()
             controller.On()
@@ -885,10 +898,10 @@ class TestMccsController:
         assert device_under_test.availableCapabilities is None
 
 
-class TestControllerResourceManager:
+class TestStationsResourceManager:
     """
     This class contains tests of the
-    :py:class:`~ska_low_mccs.controller.controller_device.ControllerResourceManager`
+    :py:class:`~ska_low_mccs.controller.controller_device.StationsResourceManager`
     class.
 
     This class is already exercised through the Tango commands of
@@ -910,7 +923,7 @@ class TestControllerResourceManager:
 
         :return: a resource manager with 2 subservient station devices
         :rtype:
-            :py:class:`ska_low_mccs.controller.controller_device.ControllerResourceManager`
+            :py:class:`ska_low_mccs.controller.controller_device.StationsResourceManager`
         """
         self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
 
@@ -921,18 +934,16 @@ class TestControllerResourceManager:
         self.health_monitor = self.health_model._health_monitor
 
         # Instantiate a resource manager for the Stations
-        manager = ControllerResourceManager(
-            self.health_monitor, "Test Manager", self.stations, logger
-        )
+        manager = StationsResourceManager(self.health_monitor, self.stations, logger)
         return manager
 
     def test_assign(self, resource_manager):
         """
-        Test assignment operations of the ControllerResourceManager.
+        Test assignment operations of the StationsResourceManager.
 
         :param resource_manager: test fixture providing a manager object
         :type resource_manager:
-            :py:class:`~ska_low_mccs.controller.controller_device.ControllerResourceManager`
+            :py:class:`~ska_low_mccs.controller.controller_device.StationsResourceManager`
         """
         stations = ("low-mccs/station/001", "low-mccs/station/002")
         # Assign both stations

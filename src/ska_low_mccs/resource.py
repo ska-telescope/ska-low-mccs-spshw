@@ -350,7 +350,6 @@ class ResourceManager:
                 self._resources[fqdn] = Resource(
                     self.resource_availability_policy, fqdn, device_id
                 )
-                # TODO add to health monitor
                 self._health_monitor.register_callback(
                     self._resources[fqdn]._health_changed, fqdn
                 )

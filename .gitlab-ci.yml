@@ -100,6 +100,10 @@ functional_test:
     paths:
       - ./testing/results
     when: always
+  environment:
+    name: test
+    kubernetes:
+      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
 
 # Wait for report and send to Jira
 xray_report:

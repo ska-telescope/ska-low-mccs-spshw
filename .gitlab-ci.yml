@@ -100,6 +100,10 @@ functional_test:
     paths:
       - ./testing/results
     when: always
+  environment:
+    name: test
+    kubernetes:
+      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
 
 # Wait for report and send to Jira
 xray_report:
@@ -129,6 +133,10 @@ functional_test_tear_down:
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
     - make uninstall-chart
     - make delete-namespace
+  environment:
+    name: test
+    kubernetes:
+      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
   when: always
 
 linting:

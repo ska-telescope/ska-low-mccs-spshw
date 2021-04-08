@@ -226,8 +226,8 @@ The basic steps to deploying MCCS are:
    
         make wait
    
-     This command blocks for up to 120 seconds, waiting for the cluster
-     to be ready. If running on a CPU-constrained machine, 120 seconds
+     This command blocks for up to 180 seconds, waiting for the cluster
+     to be ready. If running on a CPU-constrained machine, 180 seconds
      may not be enough; in that case the wait time can be changed with
      the `MAX_WAIT` variable:
 

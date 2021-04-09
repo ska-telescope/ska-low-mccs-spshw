@@ -15,6 +15,7 @@ __all__ = [
     "SubrackHardwareManager",
     "SubrackBaySimulator",
     "SubrackBoardSimulator",
+    "SubrackBoardDriver",
     "demo_subrack_device",
     "subrack_device",
     "subrack_board_simulator",
@@ -22,3 +23,4 @@ __all__ = [
 
 from .subrack_device import MccsSubrack, SubrackHardwareManager
 from .subrack_simulator import SubrackBaySimulator, SubrackBoardSimulator
+from .subrack_driver import SubrackBoardDriver

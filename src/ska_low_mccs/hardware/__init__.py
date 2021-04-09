@@ -173,6 +173,8 @@ __all__ = [
     "SimulableHardwareFactory",
     "SimulableHardwareManager",
     "power_mode_hardware",
+    "HardwareClient",
+    "WebHardwareClient",
 ]
 
 from .base_hardware import (
@@ -204,4 +206,9 @@ from .power_mode_hardware import (
     OnStandbyOffHardwareManager,
     OnStandbyOffHardwareSimulator,
     PowerMode,
+)
+
+from .hardware_client import (
+    HardwareClient,
+    WebHardwareClient,
 )

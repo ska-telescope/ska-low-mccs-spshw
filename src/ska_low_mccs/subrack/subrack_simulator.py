@@ -30,7 +30,7 @@ Some assumptions of this class are:
   to turn the TPM on and query it in order to find out what its
   temperature is.
 
-These assumptions are unconfirmed and may need to change in future.
+These assumptions may need to change in future.
 """
 
 from threading import Lock
@@ -39,7 +39,7 @@ from ska_low_mccs.hardware import OnOffHardwareSimulator, ControlMode, PowerMode
 __all__ = ["SubrackBaySimulator", "SubrackBoardSimulator"]
 
 
-class SubrackBaySimulator(OnOffHardwareSimulator):
+class SubrackBaySimulator:
     """
     A generic simulator for a subrack bay that contains and supplies
     power to some electronic module, such as a TPM. From the subrack's
@@ -81,8 +81,6 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         temperature=DEFAULT_TEMPERATURE,
         current=DEFAULT_CURRENT,
         voltage=DEFAULT_VOLTAGE,
-        is_connectible=True,
-        fail_connect=False,
         power_mode=PowerMode.OFF,
     ):
         """
@@ -94,26 +92,13 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         :type current: float
         :param voltage: the initial voltage of this module (in volts)
         :type voltage: float
-        :param fail_connect: whether this simulator should initially
-            simulate failure to connect to the hardware
-        :param is_connectible: whether we expect to be able to connect
-            to the hardware. For example, if we are simulating a subrack
-            that is currently powered off, then we wouldn't even try to
-            connect to it.
-        :type is_connectible: bool
-        :type fail_connect: bool
         :param power_mode: the initial power mode of this module
         :type power_mode: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
         """
         self._temperature = temperature
         self._voltage_when_on = voltage
         self._current_when_on = current
-
-        super().__init__(
-            is_connectible=is_connectible,
-            fail_connect=fail_connect,
-            power_mode=power_mode,
-        )
+        self._power_mode = power_mode
 
     @property
     def temperature(self):
@@ -195,6 +180,33 @@ class SubrackBaySimulator(OnOffHardwareSimulator):
         """
         pass
         # self._power_when_on = power
+
+    @property
+    def power_mode(self):
+        """
+        Return this module's power.
+
+        :return: this module's power mode.
+        """
+        return self._power_mode
+
+    def on(self):
+        """
+        Turn bay on.
+
+        :return: success status
+        """
+        self._power_mode = PowerMode.ON
+        return True
+
+    def off(self):
+        """
+        Turn bay off.
+
+        :return: success status
+        """
+        self._power_mode = PowerMode.OFF
+        return True
 
 
 class SubrackBoardSimulator(OnOffHardwareSimulator):
@@ -352,12 +364,14 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         self._power_supply_currents = power_supply_currents
         self._power_supply_voltages = power_supply_voltages
         self._power_supply_fan_speeds = power_supply_fan_speeds
-        self._tpm_present = tpm_present
 
         self._bays = _bays or [
             SubrackBaySimulator(power_mode=power_mode) for power_mode in tpm_power_modes
         ]
         self._bay_lock = Lock()
+        self._bay_count = len(self._bays)
+        self._tpm_present = tpm_present[0 : self._bay_count]
+        self._tpm_supply_fault = [0] * self._bay_count
 
         super().__init__(
             is_connectible=is_connectible,
@@ -370,24 +384,21 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         Establish a connection to the subrack hardware.
         """
         super().connect()
-        for bay in self._bays:
-            bay.connect()
 
     def off(self):
         """
-        Turn me off.
+        Turn me off. Before turning off, turns off all modules. If we
+        turn the subrack off, any housed equipment will lose power.
 
         :todo: for now we assume that the subrack management board can
             turn itself off and on. Actually, this would be done via the
             SPS cabinet. Once we have an SPS cabinet simulator, we
-            should delete this method.
+            should delete the call at the super() method
         """
-        super().off()
-
-        # If we turn the subrack off, any housed equipment will lose power
         with self._bay_lock:
             for module in self._bays:
                 module.off()
+        super().off()
 
     def on(self):
         """
@@ -511,6 +522,16 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         return self._subrack_fan_mode
 
     @property
+    def bay_count(self):
+        """
+        Return the number of TPM bays housed in this subrack.
+
+        :return: the number of TPM bays housed in this subrack
+        :rtype: int
+        """
+        return self._bay_count
+
+    @property
     def tpm_count(self):
         """
         Return the number of TPMs housed in this subrack.
@@ -518,7 +539,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :return: the number of TPMs housed in this subrack
         :rtype: int
         """
-        return len(self._bays)
+        return self._tpm_present.count(True)
 
     def _check_tpm_id(self, logical_tpm_id):
         """
@@ -529,12 +550,16 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :type logical_tpm_id: int
 
         :raises ValueError: if the tpm id is out of range for this
-            subrack
+            subrack or the TPM is not installed
         """
-        if logical_tpm_id < 1 or logical_tpm_id > self.tpm_count:
+        if logical_tpm_id < 1 or logical_tpm_id > self.bay_count:
             raise ValueError(
                 f"Cannot access TPM {logical_tpm_id}; "
-                f"this subrack has {self.tpm_count} antennas."
+                f"this subrack has {self.bay_count} TPM bays."
+            )
+        if self._tpm_present[logical_tpm_id - 1] is False:
+            raise ValueError(
+                f"Cannot access TPM {logical_tpm_id}; TPM not present in this bay"
             )
 
     @property
@@ -560,7 +585,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :raises ValueError: If the argument doesn't match the number of
             TPMs in this subrack
         """
-        if len(tpm_temperatures) != self.tpm_count:
+        if len(tpm_temperatures) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
         with self._bay_lock:
@@ -590,7 +615,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :raises ValueError: If the argument doesn't match the number of
             TPMs in this subrack
         """
-        if len(tpm_currents) != self.tpm_count:
+        if len(tpm_currents) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
         with self._bay_lock:
@@ -620,7 +645,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :raises ValueError: If the argument doesn't match the number of
             TPMs in this subrack
         """
-        if len(tpm_powers) != self.tpm_count:
+        if len(tpm_powers) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
         with self._bay_lock:
@@ -650,7 +675,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :raises ValueError: If the argument doesn't match the number of
             TPMs in this subrack
         """
-        if len(tpm_voltages) != self.tpm_count:
+        if len(tpm_voltages) != self.bay_count:
             raise ValueError("Argument does not match number of TPMs")
 
         with self._bay_lock:
@@ -802,11 +827,12 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned off
         :type logical_tpm_id: int
+        :return: success
         """
         self.check_power_mode(PowerMode.ON)
         self._check_tpm_id(logical_tpm_id)
         with self._bay_lock:
-            self._bays[logical_tpm_id - 1].off()
+            return self._bays[logical_tpm_id - 1].off()
 
     def turn_on_tpm(self, logical_tpm_id):
         """
@@ -815,20 +841,22 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         :param logical_tpm_id: this subrack's internal id for the
             TPM to be turned on
         :type logical_tpm_id: int
+        :return: success
         """
         self.check_power_mode(PowerMode.ON)
         self._check_tpm_id(logical_tpm_id)
         with self._bay_lock:
-            self._bays[logical_tpm_id - 1].on()
+            return self._bays[logical_tpm_id - 1].on()
 
     def turn_on_tpms(self):
         """
-        Turn on all TPMs.
+        Turn on all TPMs. Only if they are actually present.
         """
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
-            for bay in self._bays:
-                bay.on()
+            for (bay, present) in zip(self._bays, self._tpm_present):
+                if present:
+                    bay.on()
 
     def turn_off_tpms(self):
         """

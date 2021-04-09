@@ -121,8 +121,6 @@ class TestSubrackBaySimulator:
         :type subrack_bay:
             :py:class:`~ska_low_mccs.subrack.subrack_simulator.SubrackBaySimulator`
         """
-        subrack_bay.connect()
-
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
@@ -170,7 +168,6 @@ class TestSubrackBaySimulator:
             range for a temperature measurement
         :type random_temperature: float
         """
-        subrack_bay.connect()
 
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
@@ -285,7 +282,7 @@ class TestSubrackBoardSimulator:
                 _ = subrack_board.power_supply_powers
 
             assert subrack_board.are_tpms_on() is None
-            for tpm_id in range(1, subrack_board.tpm_count + 1):
+            for tpm_id in range(1, subrack_board.bay_count + 1):
                 assert subrack_board.is_tpm_on(tpm_id) is None
 
         def assert_on_behaviour():
@@ -329,9 +326,9 @@ class TestSubrackBoardSimulator:
 
             are_tpms_on = subrack_board.are_tpms_on()
             assert not any(are_tpms_on)
-            assert len(are_tpms_on) == subrack_board.tpm_count
+            assert len(are_tpms_on) == subrack_board.bay_count
 
-            for tpm_id in range(1, subrack_board.tpm_count + 1):
+            for tpm_id in range(1, subrack_board.bay_count + 1):
                 assert not subrack_board.is_tpm_on(tpm_id)
 
         subrack_board.connect()
@@ -354,7 +351,7 @@ class TestSubrackBoardSimulator:
         """
         subrack_board.connect()
         subrack_board.on()
-        for tpm_id in range(1, subrack_board.tpm_count + 1):
+        for tpm_id in range(1, subrack_board.bay_count + 1):
             assert not subrack_board.is_tpm_on(tpm_id)
 
             subrack_board.turn_on_tpm(tpm_id)
@@ -363,7 +360,7 @@ class TestSubrackBoardSimulator:
         subrack_board.off()
 
         subrack_board.on()
-        for tpm_id in range(1, subrack_board.tpm_count + 1):
+        for tpm_id in range(1, subrack_board.bay_count + 1):
             assert not subrack_board.is_tpm_on(tpm_id)
 
     def test_tpms_on_off(self, subrack_board):
@@ -383,7 +380,7 @@ class TestSubrackBoardSimulator:
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
             """
-            for tpm_id in range(1, subrack_board.tpm_count + 1):
+            for tpm_id in range(1, subrack_board.bay_count + 1):
                 assert subrack_board.is_tpm_on(tpm_id) == is_on
 
         subrack_board.connect()
@@ -519,12 +516,12 @@ class TestSubrackBoardSimulator:
         assert subrack_board.tpm_powers == [bay.power for bay in subrack_bays]
 
         bay_temperatures = [
-            random_temperature() for i in range(subrack_board.tpm_count)
+            random_temperature() for i in range(subrack_board.bay_count)
         ]
-        bay_currents = [random_current() for i in range(subrack_board.tpm_count)]
-        bay_voltages = [random_voltage() for i in range(subrack_board.tpm_count)]
+        bay_currents = [random_current() for i in range(subrack_board.bay_count)]
+        bay_voltages = [random_voltage() for i in range(subrack_board.bay_count)]
         bay_powers = [
-            bay_currents[i] * bay_voltages[i] for i in range(subrack_board.tpm_count)
+            bay_currents[i] * bay_voltages[i] for i in range(subrack_board.bay_count)
         ]
 
         subrack_board.simulate_tpm_temperatures(bay_temperatures)
@@ -615,7 +612,7 @@ class TestSubrackHardwareManager:
         return SimulableHardwareFactory(True, _static_simulator=subrack_board)
 
     @pytest.fixture()
-    def hardware_manager(self, hardware_factory, mock_callback):
+    def hardware_manager(self, logger, hardware_factory, mock_callback):
         """
         Return a manager for Subrack hardware.
 
@@ -625,41 +622,42 @@ class TestSubrackHardwareManager:
             :py:class:`ska_low_mccs.hardware.simulable_hardware.SimulableHardwareFactory`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
 
         :return: a manager for Subrack hardware
         :rtype:
             :py:class:`~ska_low_mccs.subrack.subrack_device.SubrackHardwareManager`
         """
         return SubrackHardwareManager(
-            SimulationMode.TRUE, mock_callback, _factory=hardware_factory
+            SimulationMode.TRUE,
+            mock_callback,
+            logger=logger,
+            subrack_ip="0.0.0.0",
+            subrack_port=8081,
+            _factory=hardware_factory,
         )
 
-    def test_init_simulation_mode(self, mock_callback):
+    def test_init_simulation_mode(self, logger, mock_callback):
         """
         Test that we can't create an hardware manager that isn't in
         simulation mode.
 
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
+        :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         """
-        with pytest.raises(
-            NotImplementedError, match=("._create_driver method not implemented.")
-        ):
-            _ = SubrackHardwareManager(SimulationMode.FALSE, mock_callback)
-
-    def test_simulation_mode(self, hardware_manager):
-        """
-        Test that we can't take the hardware manager out of simulation
-        mode.
-
-        :param hardware_manager: a hardware manager for subrack hardware
-        :type hardware_manager:
-            :py:class:`~ska_low_mccs.subrack.subrack_device.SubrackHardwareManager`
-        """
-        with pytest.raises(
-            NotImplementedError, match=("._create_driver method not implemented.")
-        ):
-            hardware_manager.simulation_mode = SimulationMode.FALSE
+        # with pytest.raises(
+        #     NotImplementedError, match=("._create_driver method not implemented.")
+        # ):
+        _ = SubrackHardwareManager(
+            SimulationMode.FALSE,
+            mock_callback,
+            logger=logger,
+            subrack_ip="0.0.0.0",
+            subrack_port=8081,
+        )
 
     def test_on_off(self, subrack_board, hardware_manager, mocker):
         """
@@ -786,7 +784,7 @@ class TestSubrackHardwareManager:
         """
         hardware_manager.poll()
         hardware_manager.on()
-        for tpm_id in range(1, hardware_manager.tpm_count + 1):
+        for tpm_id in range(1, hardware_manager.bay_count + 1):
             assert not hardware_manager.is_tpm_on(tpm_id)
 
             hardware_manager.turn_on_tpm(tpm_id)
@@ -796,7 +794,7 @@ class TestSubrackHardwareManager:
         hardware_manager.off()
 
         hardware_manager.on()
-        for tpm_id in range(1, hardware_manager.tpm_count + 1):
+        for tpm_id in range(1, hardware_manager.bay_count + 1):
             assert not hardware_manager.is_tpm_on(tpm_id)
 
     def test_tpms_on_off(self, hardware_manager):
@@ -816,7 +814,7 @@ class TestSubrackHardwareManager:
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
             """
-            for tpm_id in range(1, hardware_manager.tpm_count + 1):
+            for tpm_id in range(1, hardware_manager.bay_count + 1):
                 assert hardware_manager.is_tpm_on(tpm_id) == is_on
 
         hardware_manager.poll()

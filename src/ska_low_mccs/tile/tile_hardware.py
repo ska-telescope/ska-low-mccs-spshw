@@ -61,7 +61,7 @@ class TileHardwareFactory(SimulableHardwareFactory):
         :type test_mode: :py:class:`~ska_tango_base.control_model.TestMode`
         :param logger: the logger to be used by this hardware manager.
         :type logger: :py:class:`logging.Logger`
-        :param tpm_ip: the IP addess of the tile
+        :param tpm_ip: the IP address of the tile
         :type tpm_ip: str
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :type tpm_cpld_port: int

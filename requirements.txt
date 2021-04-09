@@ -7,3 +7,4 @@ ska-tango-base >= 0.9.1
 fire
 future
 pyfabil == 1.0.0+ska
+uritools

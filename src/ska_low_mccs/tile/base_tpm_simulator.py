@@ -89,6 +89,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._address_map = {}
         self._forty_gb_core_list = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
+        self._test_generator_active = False
         super().__init__(is_connectible=False, fail_connect=fail_connect)
 
     @property
@@ -1070,6 +1071,120 @@ class BaseTpmSimulator(HardwareSimulator):
         """
         self.logger.debug("TpmSimulator: sync_fpgas")
         raise NotImplementedError
+
+    def test_generator_set_tone(
+        self, dds, frequency, amplitude, phase=0.0, load_time=0
+    ):
+        """
+        test generator tone setting.
+
+        :param dds: DDS select. 0 or 1
+        :type dds: int
+        :param frequency: Tone frequency in Hz
+        :type frequency: float
+        :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
+        :type amplitude: float
+        :param phase: Initial tone phase, in turns
+        :type phase: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        amplitude_adu = round(amplitude * 255) / 8.0
+        self.logger.debug(
+            "TpmSimulator: test_generator_set_tone("
+            + str(dds)
+            + "): "
+            + str(frequency)
+            + "Hz, "
+            + str(amplitude_adu)
+            + " ADUs @"
+            + str(load_time)
+        )
+        raise NotImplementedError
+
+    def test_generator_set_noise(self, amplitude, load_time):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        amplitude_adu = round(amplitude * 255) * 0.102
+        self.logger.debug(
+            "TpmSimulator: test_generator_set_noise: "
+            + str(amplitude_adu)
+            + " ADUs @"
+            + str(load_time)
+        )
+        raise NotImplementedError
+
+    def test_generator_set_pulse(self, pulse_code, amplitude):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param pulse_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :type pulse_code: int
+        :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude: float
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        freqs = [16, 12, 8, 6, 4, 3, 2, 1]
+        frequency = 0.925925 * freqs[pulse_code]
+        amplitude_adu = round(amplitude * 255) * 0.5
+        self.logger.debug(
+            "TpmSimulator: test_generator_set_pulse: "
+            + str(frequency)
+            + "Hz, "
+            + str(amplitude_adu)
+            + " ADUs"
+        )
+        raise NotImplementedError
+
+    def test_generator_input_select(self, inputs):
+        """
+        Specify ADC inputs which are substitute to test signal.
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param inputs: Bit mask of inputs using test signal
+        :type inputs: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug(
+            "TpmSimulator: test_generator_input_select: " + str(hex(inputs))
+        )
+        raise NotImplementedError
+
+    @property
+    def test_generator_active(self):
+        """
+        check if the test generator is active.
+
+        :return: whether the test generator is active
+        :rtype: bool
+        """
+        return self._test_generator_active
+
+    @test_generator_active.setter
+    def test_generator_active(self, active):
+        """
+        set the test generator active flag.
+
+        :param active: True if the generator has been activated
+        :type active: bool
+        """
+        self._test_generator_active = active
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):

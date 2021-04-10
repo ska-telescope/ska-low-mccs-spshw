@@ -679,6 +679,18 @@ class TestMccsTileCommands:
                     {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
                 ),
             ),
+            (
+                "SetTestGenerator",
+                json.dumps(
+                    {
+                        "ToneFrequency": 150e6,
+                        "ToneAmplitude": 0.1,
+                        "NoiseAmplitude": 0.9,
+                        "PulseFrequency": 7,
+                        "SetTime": 0,
+                    }
+                ),
+            ),
         ),
     )
     def test_command_not_implemented(self, device_under_test, device_command, arg):

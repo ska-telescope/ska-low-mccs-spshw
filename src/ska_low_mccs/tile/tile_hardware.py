@@ -347,6 +347,26 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         return self._factory.hardware.is_beamformer_running
 
+    @property
+    def test_generator_active(self):
+        """
+        check if the test generator is active.
+
+        :return: whether the test generator is active
+        :rtype: bool
+        """
+        return self._factory.hardware.test_generator_active
+
+    @test_generator_active.setter
+    def test_generator_active(self, active):
+        """
+        set the test generator active flag.
+
+        :param active: True if the generator has been activated
+        :type active: bool
+        """
+        self._factory.hardware.test_generator_active = active
+
     def start_beamformer(self, start_time=None, duration=None):
         """
         Start the beamformer at the specified time.
@@ -1023,3 +1043,56 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.calculate_delay(
             current_delay, current_tc, ref_lo, ref_hi
         )
+
+    def test_generator_set_tone(
+        self, dds, frequency, amplitude, phase=0.0, load_time=0
+    ):
+        """
+        test generator tone setting.
+
+        :param dds: DDS select. 0 or 1
+        :type dds: int
+        :param frequency: Tone frequency in Hz
+        :type frequency: float
+        :param phase: Initial tone phase, in turns
+        :type phase: float
+        :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
+        :type amplitude: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+        """
+        self._factory.hardware.test_generator_set_tone(
+            dds, frequency, amplitude, phase, load_time
+        )
+
+    def test_generator_set_noise(self, amplitude, load_time):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+        """
+        self._factory.hardware.test_generator_set_noise(amplitude, load_time)
+
+    def test_generator_set_pulse(self, pulse_code, amplitude):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param pulse_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2,1 times frame frequency
+        :type pulse_code: int
+        :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude: float
+        """
+        self._factory.hardware.test_generator_set_pulse(pulse_code, amplitude)
+
+    def test_generator_input_select(self, inputs):
+        """
+        Specify ADC inputs which are substitute to test signal.
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param inputs: Bit mask of inputs using test signal
+        :type inputs: int
+        """
+        self._factory.hardware.test_generator_input_select(inputs)

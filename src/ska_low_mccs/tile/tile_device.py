@@ -25,7 +25,7 @@ from tango.server import attribute, command
 from tango.server import device_property
 
 from ska_tango_base import SKABaseDevice
-from ska_tango_base.control_model import HealthState, SimulationMode
+from ska_tango_base.control_model import HealthState, SimulationMode, AdminMode
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
@@ -1176,6 +1176,16 @@ class MccsTile(SKABaseDevice):
         self.logger.info("Switching test mode to " + str(value))
         self.hardware_manager.test_mode = value
 
+    @attribute(dtype="DevBoolean")
+    def TestGeneratorActive(self):
+        """
+        Reports if the test generator is used for some channels.
+
+        :return: test generator status
+        :rtype: bool
+        """
+        return self.hardware_manager.test_generator_active
+
     # # --------
     # # Commands
     # # --------
@@ -1238,6 +1248,7 @@ class MccsTile(SKABaseDevice):
             ("PostSynchronisation", self.PostSynchronisationCommand),
             ("SyncFpgas", self.SyncFpgasCommand),
             ("CalculateDelay", self.CalculateDelayCommand),
+            ("SetTestGenerator", self.SetTestGeneratorCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -4077,6 +4088,140 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("CalculateDelay")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
+
+    class SetTestGeneratorCommand(BaseCommand):
+        """
+        Class for handling the SetTestGenerator(argin) command.
+        """
+
+        def do(self, argin):
+            """
+            Implementation of :py:meth:`.MccsTile.SetTestGenerator`
+            command functionality.
+
+            :param argin: a JSON-encoded dictionary of arguments
+            :type argin: str
+            :raises ValueError: if the JSON input has invalid parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                   against a schema
+            :return: A tuple containing a return code and a string
+                   message indicating status. The message is for
+                   information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+
+            params = json.loads(argin)
+            active = False
+            set_time = params.get("SetTime", 0)
+            if "ToneFrequency" in params:
+                freq = params["ToneFrequency"]
+                amplitude = params.get("ToneAmplitude", 1.0)
+                active = True
+                hardware_manager.test_generator_set_tone(0, freq, amplitude, set_time)
+            else:
+                hardware_manager.set_(0, 0.0, 0.0, set_time)
+            if "Tone2Frequency" in params:
+                freq = params["Tone2Frequency"]
+                amplitude = params.get("Tone2Amplitude", 1.0)
+                active = True
+                hardware_manager.test_generator_set_tone(1, freq, amplitude, set_time)
+            else:
+                hardware_manager.test_generator_set_tone(1, 0.0, 0.0, set_time)
+            if "NoiseAmplitude" in params:
+                amplitude = params.get("NoiseAmplitude", 1.0)
+                active = True
+                hardware_manager.test_generator_set_noise(amplitude, set_time)
+            else:
+                hardware_manager.test_generator_set_noise(0.0, set_time)
+            if "PulseFreq" in params:
+                pulse_code = params["PulseFreq"]
+                if (pulse_code < 0) or (pulse_code > 7):
+                    raise ValueError("PulseFreq must be between 0 and 7")
+                amplitude = params.get("PulseAmplitude", 1.0)
+                active = True
+            else:
+                pulse_code = 7
+                amplitude = 0.0
+            hardware_manager.test_generator_set_pulse(pulse_code, amplitude)
+
+            chans = params.get("AdcChannels")
+            inputs = 0
+            if chans is None:
+                if active:
+                    inputs = 0xFFFFFFFF
+            else:
+                for channel in chans:
+                    inputs = inputs | (1 << channel)
+            hardware_manager.test_generator_input_select(self, inputs)
+            hardware_manager.test_generator_active = active
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+        def check_allowed(self):
+            """
+            command is allowed only in maintenance mode.
+
+            :returns: whether the command is allowed
+            :rtype: bool
+            """
+            return self.state_model.admin_mode == AdminMode.MAINTENANCE
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongArray",
+    )
+    @DebugIt()
+    def SetTestGenerator(self, argin):
+        """
+        Set the test signal generator.
+
+        :param argin: json dictionary with keywords:
+
+        * ToneFrequency: first tone frequency, in Hz. The frequency
+            is rounded to the resolution of the generator. If this
+            is not specified, the tone generator is disabled.
+        * ToneAmplitude: peak tone amplitude, normalized to 31.875 ADC
+            units. The amplitude is rounded to 1/8 ADC unit. Default
+            is 1.0. A value of -1.0 keeps the previously set value.
+        * Tone2Frequency: frequency for the second tone. Same
+            as ToneFrequency.
+        * Tone2Amplitude: peak tone amplitude for the second tone.
+            Same as ToneAmplitude.
+        * NoiseAmplitude: RMS amplitude of the pseudorandom Gaussian
+            white noise, normalized to 26.03 ADC units.
+        * PulseFrequency: frequency of the periodic pulse. A code
+            in the range 0 to 7, corresponding to (16, 12, 8, 6, 4, 3, 2)
+            times the ADC frame frequency.
+        * PulseAmplitude: peak amplitude of the periodic pulse, normalized
+            to 127 ADC units. Default is 1.0. A value of -1.0 keeps the
+            previously set value.
+        * SetTime: time at which the generator is set, for synchronization
+            among different TPMs.
+        * AdcChannels: list of adc channels which will be substituted with
+            the test signal. Channels are numbered from 0 to 31, with each
+            even-odd pair (2N, 2N+1) corresponding to X and Y polarizations
+            of channel N. Default to all signals if at least one generator
+            is specified, or none if no generator is specified (empty
+            json string).
+
+        :type argin: str
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"ToneFrequency": 150e6, "ToneAmplitude": 0.1,
+                "NoiseAmplitude": 0.9, "PulseFrequency": 7, "LoadTime":0}
+        >>> jstr = json.dumps(dict)
+        >>> values = dp.command_inout("SetTestGenerator", jstr)
+        """
+        handler = self.get_command_object("SetTestGenerator")
+        return handler(argin)
 
 
 # ----------

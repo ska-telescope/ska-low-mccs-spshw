@@ -1141,85 +1141,6 @@ class HwTile(object):
         for fpga in self.tpm.tpm_fpga:
             fpga.fpga_apply_sync_delay(t0 + int(delay))
 
-    # Wrapper for test generator ----------------------------
-
-    def test_generator_set_tone(
-        self, dds, frequency=100e6, ampl=0.0, phase=0.0, delay=128
-    ):
-        """
-        Set tone frequency and amplitude fro one of the two DDS in the
-        internal tone generator.
-
-        :param dds: DDS Id, 0 or 1
-        :param frequency: Tone frequency in Hz
-        :param ampl: Normalized amplitude, max 1.0 for 32 ADUs peak
-        :param phase: Phase in turns optional
-        :param delay: delay for actua setting, to synchronize between tiles
-        :return: 0 for OK, 1 for timing error
-        """
-        t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        self.tpm.test_generator[0].set_tone(dds, frequency, ampl, phase, t0 + delay)
-        self.tpm.test_generator[1].set_tone(dds, frequency, ampl, phase, t0 + delay)
-        t1 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        if t1 >= t0 + delay or t1 <= t0:
-            self.logger.info("Set tone test pattern generators synchronisation failed.")
-            self.logger.info("Start Time   = " + str(t0))
-            self.logger.info("Finish time  = " + str(t1))
-            self.logger.info("Maximum time = " + str(t0 + delay))
-            return -1
-        return 0
-
-    def test_generator_disable_tone(self, dds, delay=128):
-        """
-        disable tone generator.
-
-        :param dds: DDS Id, 0 or 1
-        :param delay: delay for actua setting, to synchronize between tiles
-        :return: 0 for OK, 1 for timing error
-        """
-        t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        self.tpm.test_generator[0].set_tone(dds, 0, 0, 0, t0 + delay)
-        self.tpm.test_generator[1].set_tone(dds, 0, 0, 0, t0 + delay)
-        t1 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        if t1 >= t0 + delay or t1 <= t0:
-            self.logger.info("Set tone test pattern generators synchronisation failed.")
-            self.logger.info("Start Time   = " + str(t0))
-            self.logger.info("Finish time  = " + str(t1))
-            self.logger.info("Maximum time = " + str(t0 + delay))
-            return -1
-        return 0
-
-    def test_generator_set_noise(self, ampl=0.0, delay=128):
-        """
-        Set noise generator amplitude.
-
-        :param ampl: Normalized amplitude, max 1.0 for 32 ADUs peak
-        :param delay: delay for actua setting, to synchronize between tiles
-        :return: 0 for OK, 1 for timing error
-        """
-        t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        self.tpm.test_generator[0].enable_prdg(ampl, t0 + delay)
-        self.tpm.test_generator[1].enable_prdg(ampl, t0 + delay)
-        t1 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        if t1 >= t0 + delay or t1 <= t0:
-            self.logger.info("Set tone test pattern generators synchronisation failed.")
-            self.logger.info("Start Time   = " + str(t0))
-            self.logger.info("Finish time  = " + str(t1))
-            self.logger.info("Maximum time = " + str(t0 + delay))
-            return -1
-        return 0
-
-    def test_generator_input_select(self, inputs):
-        """
-        Select which signals use the internal test generator.
-
-        Bit mapped, 1 for test generator, 0 for ADC.
-
-        :param inputs: Bitmapped selector
-        """
-        self.tpm.test_generator[0].channel_select(inputs & 0xFFFF)
-        self.tpm.test_generator[1].channel_select((inputs >> 16) & 0xFFFF)
-
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_low, ref_hi):
         """
@@ -1287,6 +1208,72 @@ class HwTile(object):
             else:
                 tile_id = self["fpga1.dsp_regfile.config_id.station_id"]
             return tile_id
+
+    # ------------------------ Wrapper for test generator ----------------------
+    @connected
+    def test_generator_set_tone(
+        self, dds, frequency=100e6, amplitude=0.0, phase=0.0, load_time=0
+    ):
+        """
+        test generator tone setting.
+
+        :param dds: DDS select. 0 or 1
+        :type dds: int
+        :param frequency: Tone frequency in Hz
+        :type frequency: float
+        :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
+        :type amplitude: float
+        :param phase: Initial tone phase, in turns
+        :type phase: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+        """
+        if load_time == 0:
+            t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
+            load_time = t0 + 128
+        self.tpm.test_generator[0].set_tone(dds, frequency, amplitude, phase, load_time)
+        self.tpm.test_generator[1].set_tone(dds, frequency, amplitude, phase, load_time)
+
+    @connected
+    def test_generator_set_noise(self, amplitude=0.0, load_time=0):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+        """
+        if load_time == 0:
+            t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
+            load_time = t0 + 128
+        self.tpm.test_generator[0].enable_prdg(amplitude, load_time)
+        self.tpm.test_generator[1].enable_prdg(amplitude, load_time)
+
+    @connected
+    def test_generator_set_pulse(self, freq_code, amplitude=0.0):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param freq_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :type freq_code: int
+        :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude: float
+        """
+        self.tpm.test_generator[0].set_pulse_frequency(freq_code, amplitude)
+        self.tpm.test_generator[1].set_pulse_frequency(freq_code, amplitude)
+
+    @connected
+    def test_generator_input_select(self, inputs):
+        """
+        Specify ADC inputs which are substitute to test signal.
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param inputs: Bit mask of inputs using test signal
+        :type inputs: int
+        """
+        self.tpm.test_generator[0].channel_select(inputs & 0xFFFF)
+        self.tpm.test_generator[1].channel_select((inputs >> 16) & 0xFFFF)
 
     @connected
     def get_tile_id(self):

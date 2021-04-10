@@ -75,6 +75,7 @@ class TpmDriver(HardwareDriver):
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
+        self._test_generator_active = False
 
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
@@ -145,7 +146,7 @@ class TpmDriver(HardwareDriver):
         :return: whether this TPM is programmed
         :rtype: bool
         """
-        self.logger.debug(f"TpmDriver: is_programmed {self._is_programmed}")
+        self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         self._is_programmed = self.tile.tpm.is_programmed()
         return self._is_programmed
 
@@ -1125,6 +1126,77 @@ class TpmDriver(HardwareDriver):
         """
         self.logger.debug("TpmDriver: sync_fpgas")
         raise NotImplementedError
+
+    @property
+    def test_generator_active(self):
+        """
+        check if the test generator is active.
+
+        :return: whether the test generator is active
+        :rtype: bool
+        """
+        return self._test_generator_active
+
+    @test_generator_active.setter
+    def test_generator_active(self, active):
+        """
+        set the test generator active flag.
+
+        :param active: True if the generator has been activated
+        :type active: bool
+        """
+        self._test_generator_active = active
+
+    def test_generator_set_tone(
+        self, dds, frequency, amplitude, phase=0.0, load_time=0
+    ):
+        """
+        test generator tone setting.
+
+        :param dds: DDS select. 0 or 1
+        :type dds: int
+        :param frequency: Tone frequency in Hz
+        :type frequency: float
+        :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
+        :type amplitude: float
+        :param phase: Initial tone phase, in turns
+        :type phase: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+        """
+        self.tile.test_generator_set_tone(dds, frequency, amplitude, load_time)
+
+    def test_generator_set_noise(self, amplitude=0.0, load_time=0):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+        """
+        self.tile.test_generator_set_noise(amplitude, load_time)
+
+    def test_generator_set_pulse(self, pulse_code, amplitude=0.0):
+        """
+        test generator Gaussian white noise  setting.
+
+        :param pulse_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :type pulse_code: int
+        :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude: float
+        """
+        self.tile.test_generator_set_pulse(pulse_code, amplitude)
+
+    def test_generator_input_select(self, inputs=0):
+        """
+        Specify ADC inputs which are substitute to test signal.
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param inputs: Bit mask of inputs using test signal
+        :type inputs: int
+        """
+        self.tile.test_generator_input_select(inputs)
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):

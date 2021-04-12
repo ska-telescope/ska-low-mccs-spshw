@@ -57,7 +57,13 @@ def subrack_hardware_manager(logger, mock_callback):
         simulation mode
     :rtype: :py:class:`ska_low_mccs.subrack.subrack_device.SubrackHardwareManager`
     """
-    return SubrackHardwareManager(SimulationMode.TRUE, mock_callback)
+    return SubrackHardwareManager(
+        SimulationMode.TRUE,
+        mock_callback,
+        logger=logger,
+        subrack_ip="0.0.0.0",
+        subrack_port=8081,
+    )
 
 
 class TestSubrackHardwareManager:
@@ -76,10 +82,13 @@ class TestSubrackHardwareManager:
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
         """
-        with pytest.raises(
-            NotImplementedError, match=("._create_driver method not implemented.")
-        ):
-            _ = SubrackHardwareManager(SimulationMode.FALSE, mock_callback)
+        _ = SubrackHardwareManager(
+            SimulationMode.FALSE,
+            mock_callback,
+            logger=logger,
+            subrack_ip="0.0.0.0",
+            subrack_port=8081,
+        )
 
     def test_simulation_mode(self, subrack_hardware_manager):
         """
@@ -91,11 +100,8 @@ class TestSubrackHardwareManager:
             :py:class:`~ska_low_mccs.subrack.subrack_device.SubrackHardwareManager`
         """
         assert subrack_hardware_manager.simulation_mode == SimulationMode.TRUE
-        with pytest.raises(
-            NotImplementedError, match=("._create_driver method not implemented.")
-        ):
-            subrack_hardware_manager.simulation_mode = SimulationMode.FALSE
-        # assert subrack_hardware_manager.simulation_mode == SimulationMode.FALSE
+        subrack_hardware_manager.simulation_mode = SimulationMode.FALSE
+        assert subrack_hardware_manager.simulation_mode == SimulationMode.FALSE
 
 
 class TestCommon:
@@ -128,8 +134,6 @@ class TestCommon:
             return subrack_simulator
         elif request.param == "subrack_hardware_manager":
             return subrack_hardware_manager
-        # elif request.param == "subrack_driver":
-        #     return subrack_driver
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),

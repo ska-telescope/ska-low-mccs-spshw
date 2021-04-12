@@ -101,11 +101,18 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 
+mccs_inventory_path = os.path.join("..", "..", "..", "docs", "build", "html", "objects.inv")
+mccs_inventory = mccs_inventory_path if os.path.exists(mccs_inventory_path) else None
+print(f"MCCS inventory path is {mccs_inventory_path}.")
+
 intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
     "pytest": ("https://docs.pytest.org/en/stable/", None),
-    "ska_low_mccs": ("https://developer.skatelescope.org/projects/ska-low-mccs/en/master/", None),
+    "ska_low_mccs": (
+        "https://developer.skatelescope.org/projects/ska-low-mccs/en/master/",
+         mccs_inventory_path
+    ),
     "ska-tango-base": (
         "https://developer.skatelescope.org/projects/ska-tango-base/en/latest/",
         None,

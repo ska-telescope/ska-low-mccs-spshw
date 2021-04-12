@@ -26,6 +26,7 @@ stages:
   - upload_results
   - teardown
   - docs
+  - testdocs
   - pages
   - publish
   - release
@@ -168,6 +169,20 @@ docs:
     paths:
       - ./build
       - ./docs/build/html
+    when: always
+    expire_in: 7 days
+
+testdocs:
+  tags:
+    - k8srunner
+  stage: testdocs
+  dependencies:
+    - docs
+  script:
+    - tox -e testdocs
+  artifacts:
+    paths:
+      - ./testing/docs/build/html
     when: always
     expire_in: 7 days
 

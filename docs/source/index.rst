@@ -24,6 +24,7 @@ prototype for the `Square Kilometre Array`_.
    reference/power
    reference/tile_device_to_tpm
    reference/class_diagrams.rst
+   reference/subrack_driver.rst
 
 .. toctree::
    :maxdepth: 1
@@ -51,6 +52,8 @@ prototype for the `Square Kilometre Array`_.
    api/apiu_simulator
    api/cluster_simulator
    api/subrack_simulator
+   api/subrack_driver
+   api/web_hardware_client
    api/tile_hardware
    api/base_tpm_simulator
    api/dynamic_tpm_simulator

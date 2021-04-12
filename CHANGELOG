@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-410 - Interface to subrack management board
 * MCCS-517 - Fix to integration tests
 * MCCS-402 - Moved StationsResourceManager into Controller
 * MCCS-409 - Race condition workaround

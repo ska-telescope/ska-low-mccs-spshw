@@ -345,6 +345,14 @@ class MccsController(SKAMaster):
                 is managed by this device
             """
             health_monitor = device.health_model._health_monitor
+            device._subarray_dict = {
+                fqdn: MccsDeviceProxy(fqdn, self.logger)
+                for fqdn in device._subarray_fqdns
+            }
+            device._station_dict = {
+                fqdn: MccsDeviceProxy(fqdn, self.logger)
+                for fqdn in device._station_fqdns
+            }
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = StationsResourceManager(
@@ -962,7 +970,7 @@ class MccsController(SKAMaster):
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
                 )
 
-            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
+            subarray_device = controllerdevice._subarray_dict[subarray_fqdn]
 
             # Manager gave this list of stations to release (no longer required)
             if stations_to_release is not None:
@@ -976,7 +984,7 @@ class MccsController(SKAMaster):
                         f"{message}",
                     )
                 for station_fqdn in stations_to_release:
-                    station = MccsDeviceProxy(station_fqdn, self.logger)
+                    station = controllerdevice._station_dict[station_fqdn]
                     station.subarrayId = 0
                     subarray_device.stationFQDNs.remove(station_fqdn)
 
@@ -1008,8 +1016,8 @@ class MccsController(SKAMaster):
                         f"{message}",
                     )
                 for fqdn in stations_to_assign:
-                    device = MccsDeviceProxy(fqdn, self.logger)
-                    device.subarrayId = subarray_id
+                    station = controllerdevice._station_dict[fqdn]
+                    station.subarrayId = subarray_id
                     currently_assigned_stations = subarray_device.stationFQDNs or []
                     subarray_device.stationFQDNs = sorted(
                         list(currently_assigned_stations) + [fqdn]

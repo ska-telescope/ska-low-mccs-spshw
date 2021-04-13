@@ -12,11 +12,11 @@ from testing.harness.mock import MockDeviceBuilder
 
 from testing.harness.tango_harness import (
     ClientProxyTangoHarness,
-    ClientProxyTestContextTangoHarness,
     MccsDeviceInfo,
     MockingTangoHarness,
     StartingStateTangoHarness,
     TangoHarness,
+    TestContextTangoHarness,
 )
 
 
@@ -106,6 +106,17 @@ def tango_harness_factory(request, logger):
 
     :return: a tango harness factory
     """
+
+    class _CPTCTangoHarness(ClientProxyTangoHarness, TestContextTangoHarness):
+        """
+        A Tango test harness with the client proxy functionality of
+        :py:class:`~testing.harness.tango_harness.ClientProxyTangoHarness`
+        within the lightweight test context provided by
+        :py:class:`~testing.harness.tango_harness.TestContextTangoHarness`.
+        """
+
+        pass
+
     true_context = request.config.getoption("--true-context")
 
     def build_harness(
@@ -135,9 +146,7 @@ def tango_harness_factory(request, logger):
         if true_context:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
         else:
-            tango_harness = ClientProxyTestContextTangoHarness(
-                device_info, logger, **tango_config
-            )
+            tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
 
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 

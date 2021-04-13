@@ -35,7 +35,6 @@ __all__ = [
     "BaseTangoHarness",
     "TestContextTangoHarness",
     "ClientProxyTangoHarness",
-    "ClientProxyTestContextTangoHarness",
     "StartingStateTangoHarness",
     "MockingTangoHarness",
 ]
@@ -390,11 +389,10 @@ class TestContextTangoHarness(BaseTangoHarness):
             :return: An open port
             :rtype: int
             """
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("", 0))
-            s.listen(1)
-            port = s.getsockname()[1]
-            s.close()
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("", 0))
+                s.listen(1)
+                port = s.getsockname()[1]
             return port
 
         self._port = _get_open_port()
@@ -438,7 +436,6 @@ class TestContextTangoHarness(BaseTangoHarness):
                 f"tango://{self._host}:{self._port}/{fqdn}#dbase=no", *args, **kwargs
             )
 
-        # return self._test_context.get_device
         return connect
 
     def __enter__(self: TestContextTangoHarness) -> TestContextTangoHarness:
@@ -470,19 +467,6 @@ class TestContextTangoHarness(BaseTangoHarness):
             return super().__exit__(None, None, None)
         else:
             return super().__exit__(exc_type, exception, trace)
-
-
-class ClientProxyTestContextTangoHarness(
-    ClientProxyTangoHarness, TestContextTangoHarness
-):
-    """
-    A Tango test harness that gives access to the client proxy
-    functionality of :py:class:`.ClientProxyTangoHarness` within the
-    lightweight test context provided by
-    :py:class:`TestContextTangoHarness`.
-    """
-
-    pass
 
 
 class WrapperTangoHarness(TangoHarness):

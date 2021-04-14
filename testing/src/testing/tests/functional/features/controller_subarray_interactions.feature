@@ -24,7 +24,7 @@ Scenario: MCCS Allocate subarray
     And according to allocation policy health of allocated subarray is good
     And other resources are not affected
 
-@XTP-1260
+@XTP-1260 @skip
 Scenario: MCCS Configure a subarray
     Given we have a successfully allocated subarray
     When tmc configures the subarray

@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-421 - Support for TPM test signal generator
 * MCCS-410 - Interface to subrack management board
 * MCCS-517 - Fix to integration tests
 * MCCS-409 - Race condition workaround

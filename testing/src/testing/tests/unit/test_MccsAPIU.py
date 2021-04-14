@@ -570,6 +570,17 @@ class TestMccsAPIU(object):
     Test class for MccsAPIU tests.
     """
 
+    @pytest.fixture()
+    def device_under_test(self, tango_harness):
+        """
+        Fixture that returns the device under test.
+
+        :param tango_harness: a test harness for Tango devices
+
+        :return: the device under test
+        """
+        return tango_harness.get_device("low-mccs/apiu/001")
+
     def test_InitDevice(self, device_under_test):
         """
         Test for Initial state.

@@ -20,6 +20,8 @@ from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 
+from testing.harness.tango_harness import TangoHarness
+
 
 @pytest.fixture()
 def devices_to_load():
@@ -47,7 +49,7 @@ class TestSubrackTileIntegration:
     Integration test cases for MCCS subsystem's power management.
     """
 
-    def test_tile_on(self, device_context):
+    def test_tile_on(self, tango_harness: TangoHarness):
         """
         Test that:
 
@@ -56,11 +58,10 @@ class TestSubrackTileIntegration:
         * when MccsTile is turned off, the subrack denies power to the
           TPM
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        tile = device_context.get_device("tile_0001")
-        subrack = device_context.get_device("subrack_01")
+        tile = tango_harness.get_device("low-mccs/tile/0001")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
 
         assert subrack.state() == DevState.DISABLE
         assert tile.state() == DevState.DISABLE
@@ -89,17 +90,16 @@ class TestSubrackTileIntegration:
         assert tile.state() == DevState.STANDBY
         assert subrack.IsTpmOn(1)
 
-    def test_tpm_on(self, device_context):
+    def test_tpm_on(self, tango_harness: TangoHarness):
         """
         Test that wnen we tell the subrack drive to turn a given TPM on,
         the tile device recognises that its TPM has been powered, and
         changes state.
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        tile = device_context.get_device("tile_0001")
-        subrack = device_context.get_device("subrack_01")
+        tile = tango_harness.get_device("low-mccs/tile/0001")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
 
         subrack.Off()
         subrack.On()

@@ -66,37 +66,37 @@ def sleep(seconds=0.2):
     time.sleep(seconds)
 
 
-def test_controller_health_rollup(device_context):
+def test_controller_health_rollup(tango_harness):
     """
     Test that health rolls up to the controller.
 
-    :param device_context: A tango context of some sort; possibly a
+    :param tango_harness: A tango context of some sort; possibly a
         :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
         the real thing. The only requirement is that it provide a
         ``get_device(fqdn)`` method that returns a
         :py:class:`tango.DeviceProxy`.
-    :type device_context: :py:class:`contextmanager`
+    :type tango_harness: :py:class:`contextmanager`
     """
-    controller = device_context.get_device("controller")
-    station_1 = device_context.get_device("station_001")
-    station_2 = device_context.get_device("station_002")
-    subrack = device_context.get_device("subrack_01")
-    tile_1 = device_context.get_device("tile_0001")
-    tile_2 = device_context.get_device("tile_0002")
-    tile_3 = device_context.get_device("tile_0003")
-    tile_4 = device_context.get_device("tile_0004")
+    controller = tango_harness.get_device("low-mccs/control/control")
+    station_1 = tango_harness.get_device("low-mccs/station/001")
+    station_2 = tango_harness.get_device("low-mccs/station/002")
+    subrack = tango_harness.get_device("low-mccs/subrack/01")
+    tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+    tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+    tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+    tile_4 = tango_harness.get_device("low-mccs/tile/0004")
     # workaround for https://github.com/tango-controls/cppTango/issues/816
-    # apiu_1 = device_context.get_device("apiu_001")
+    # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
 
-    # antenna_1 = device_context.get_device("antenna_000001")
-    # antenna_2 = device_context.get_device("antenna_000002")
-    # antenna_3 = device_context.get_device("antenna_000003")
-    # antenna_4 = device_context.get_device("antenna_000004")
+    # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
+    # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
+    # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
+    # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
 
-    # beam_1 = device_context.get_device("low-mccs/beam/001")
-    # beam_2 = device_context.get_device("low-mccs/beam/002")
-    # beam_3 = device_context.get_device("low-mccs/beam/003")
-    # beam_4 = device_context.get_device("low-mccs/beam/004")
+    # beam_1 = tango_harness.get_device("low-mccs/beam/001")
+    # beam_2 = tango_harness.get_device("low-mccs/beam/002")
+    # beam_3 = tango_harness.get_device("low-mccs/beam/003")
+    # beam_4 = tango_harness.get_device("low-mccs/beam/004")
 
     # TODO: For now, we need to get our devices to OFF state (the highest state of
     # device readiness for a device that isn't actual on -- and a state in which the
@@ -188,37 +188,37 @@ def test_controller_health_rollup(device_context):
     assert controller.healthState == HealthState.OK
 
 
-def test_subarray_health_rollup(device_context):
+def test_subarray_health_rollup(tango_harness):
     """
     Test that health rolls up to the subarray.
 
-    :param device_context: A tango context of some sort; possibly a
+    :param tango_harness: A tango context of some sort; possibly a
         :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
         the real thing. The only requirement is that it provide a
         ``get_device(fqdn)`` method that returns a
         :py:class:`tango.DeviceProxy`.
-    :type device_context: :py:class:`contextmanager`
+    :type tango_harness: :py:class:`contextmanager`
     """
-    controller = device_context.get_device("controller")
-    subarray_1 = device_context.get_device("subarray_01")
-    subarray_2 = device_context.get_device("subarray_02")
-    station_1 = device_context.get_device("station_001")
-    station_2 = device_context.get_device("station_002")
-    tile_1 = device_context.get_device("tile_0001")
-    tile_2 = device_context.get_device("tile_0002")
-    tile_3 = device_context.get_device("tile_0003")
-    tile_4 = device_context.get_device("tile_0004")
+    controller = tango_harness.get_device("low-mccs/control/control")
+    subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
+    subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
+    station_1 = tango_harness.get_device("low-mccs/station/001")
+    station_2 = tango_harness.get_device("low-mccs/station/002")
+    tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+    tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+    tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+    tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
     # workaround for https://github.com/tango-controls/cppTango/issues/816
-    # apiu_1 = device_context.get_device("apiu_001")
-    # antenna_1 = device_context.get_device("antenna_000001")
-    # antenna_2 = device_context.get_device("antenna_000002")
-    # antenna_3 = device_context.get_device("antenna_000003")
-    # antenna_4 = device_context.get_device("antenna_000004")
-    # beam_1 = device_context.get_device("low-mccs/beam/001")
-    # beam_2 = device_context.get_device("low-mccs/beam/002")
-    # beam_3 = device_context.get_device("low-mccs/beam/003")
-    # beam_4 = device_context.get_device("low-mccs/beam/004")
+    # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
+    # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
+    # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
+    # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
+    # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
+    # beam_1 = tango_harness.get_device("low-mccs/beam/001")
+    # beam_2 = tango_harness.get_device("low-mccs/beam/002")
+    # beam_3 = tango_harness.get_device("low-mccs/beam/003")
+    # beam_4 = tango_harness.get_device("low-mccs/beam/004")
 
     _ = controller.Startup()
 

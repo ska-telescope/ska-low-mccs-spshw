@@ -37,19 +37,19 @@ Scenario: MCCS Perform a scan on subarray
     When tmc starts a scan on subarray
     Then the subarray obsstate is scanning
 
-@XTP-1473
+@XTP-1473 @skip
 Scenario: MCCS Perform an abort on a scanning subarray
     Given we have a successfully scanning subarray
     When tmc issues an abort on subarray
     Then the subarray obsstate is aborted
 
-@XTP-1762
+@XTP-1762 @skip
 Scenario: MCCS Perform an abort on an idle subarray
     Given we have a successfully allocated subarray
     When tmc issues an abort on subarray
     Then the subarray obsstate is aborted
 
-@XTP-1763
+@XTP-1763 @skip
 Scenario: MCCS Perform an abort on a configured subarray
     Given we have a successfully configured subarray
     When tmc issues an abort on subarray

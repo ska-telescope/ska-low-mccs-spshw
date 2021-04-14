@@ -795,9 +795,7 @@ def abort_post_operations(controller, subarrays, stations):
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a scanning subarray",
 )
-def disable_test_perform_an_abort_on_a_scanning_subarray(
-    controller, subarrays, stations
-):
+def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -815,7 +813,7 @@ def disable_test_perform_an_abort_on_a_scanning_subarray(
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on an idle subarray",
 )
-def disable_test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -833,9 +831,7 @@ def disable_test_perform_an_abort_on_an_idle_subarray(controller, subarrays, sta
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a configured subarray",
 )
-def disable_test_perform_an_abort_on_a_configured_subarray(
-    controller, subarrays, stations
-):
+def test_perform_an_abort_on_a_configured_subarray(controller, subarrays, stations):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 

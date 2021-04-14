@@ -196,7 +196,8 @@ class TilePowerManager:
 
         if subrack_state == DevState.DISABLE:
             return PowerMode.OFF
-        elif subrack_state not in [DevState.OFF, DevState.ON]:
+        # Subrack power state is on, can provide power state
+        elif subrack_state not in [DevState.OFF, DevState.ON, DevState.STANDBY]:
             return PowerMode.UNKNOWN
 
         try:

@@ -182,7 +182,7 @@ class TpmDriver(HardwareDriver):
         :type bitfile: bytes
         """
         self.logger.debug("TpmDriver: download_firmware")
-        self.tile.program_fpgas(bitfile + ".bit")
+        self.tile.program_fpgas(bitfile)
         self._firmware_name = bitfile
         self._is_programmed = True
 

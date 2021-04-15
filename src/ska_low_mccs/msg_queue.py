@@ -6,15 +6,14 @@
 # See LICENSE.txt for more info.
 """
 This module implements a message queue that executes messages (in a
-serial fashion) in it's own thread.
+serial fashion) in its own thread.
 """
 import threading
 import json
 from uuid import uuid4
-from json import JSONEncoder
-
-from tango import EnsureOmniThread  # , DeviceProxy
-from queue import Queue, Empty
+import tango
+from tango import EnsureOmniThread
+from queue import SimpleQueue, Empty
 from ska_tango_base.commands import ResultCode
 
 
@@ -62,21 +61,6 @@ class MessageQueue(threading.Thread):
             self.respond_to_fqdn = respond_to_fqdn
             self.callback = callback
 
-    class GenericObjectEncoder(JSONEncoder):
-        """
-        A custom encoder so we can serialise generic objects.
-        """
-
-        def default(self, obj):
-            """
-            Routine to return the object's dictionary.
-
-            :param obj: the object to serialise
-            :return: the object's dictionary
-            :rtype: dict
-            """
-            return obj.__dict__
-
     def __init__(self, target, lock, logger=None):
         """
         Initialise a new MessageQueue object.
@@ -86,7 +70,7 @@ class MessageQueue(threading.Thread):
         :param logger: the logger to be used by this object.
         """
         threading.Thread.__init__(self)
-        self._msg_queue = Queue()
+        self._msg_queue = SimpleQueue()
         self._terminate = False
         self._target = target
         self._qdebuglock = lock
@@ -110,9 +94,7 @@ class MessageQueue(threading.Thread):
         # #using-clients-with-multithreading
         with EnsureOmniThread():
             self._qdebug("msgQRunning")
-            while True:
-                if self._terminate:
-                    break
+            while not self._terminate:
                 self._check_msg_queue()
 
     def _notify_listener(self, command, progress):
@@ -136,7 +118,7 @@ class MessageQueue(threading.Thread):
             # Check we have a device to respond to before executing a command
             response_device = None
             if msg.respond_to_fqdn:
-                response_device = self.DeviceProxy(msg.respond_to_fqdn)
+                response_device = tango.DeviceProxy(msg.respond_to_fqdn)
                 if not response_device:
                     self._qdebug(f"Response device {msg.respond_to_fqdn} not found")
                     return
@@ -188,7 +170,8 @@ class MessageQueue(threading.Thread):
                 "result_code": result_code,
                 "message": message,
             }
-            json_string = json.dumps(response, cls=self.GenericObjectEncoder)
+            # Custom JSON encode required due to msg object embedded in our response
+            json_string = json.dumps(response, default=lambda obj: obj.__dict__)
             self._qdebug(f'Reply to {response_device}.command_inout("{msg.callback}")')
             # Post response message
             response_device.command_inout(msg.callback, json_string)
@@ -200,8 +183,6 @@ class MessageQueue(threading.Thread):
     def _check_msg_queue(self):
         """
         Check to see if a message is waiting to be executed.
-
-        Note: This method blocks if the message queue is empty
         """
         try:
             msg = self._msg_queue.get_nowait()

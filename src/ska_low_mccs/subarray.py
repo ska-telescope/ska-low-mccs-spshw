@@ -541,6 +541,11 @@ class MccsSubarray(SKASubarray):
         max_dim_x=512,
         format="%s",
     )
+    # Attribute defined as a list, but being returned as a tuple.
+    # There is also a Tango bug in which an empty list is written/read as None
+    # (hence extra logic) which may be related, see for instance
+    # https://github.com/tango-controls/pytango/issues/229 and
+    # and https://github.com/tango-controls/pytango/issues/230
     def stationFQDNs(self):
         """
         Return the FQDNs of stations assigned to this subarray.

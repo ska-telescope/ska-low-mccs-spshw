@@ -58,12 +58,9 @@ class StationsResourceManager(ResourceManager):
         Initialise a new StationsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: HealthMonitor
         :param station_fqdns: the FQDNs of the stations that this
             subarray manages
-        :type station_fqdns: list(str)
         :param logger: the logger to be used by the object under test
-        :type logger: :py:class:`logging.Logger`
         """
         self._devices = dict()
         stations = {}
@@ -78,7 +75,6 @@ class StationsResourceManager(ResourceManager):
 
         :return: A dictionary of Station IDs, FQDNs managed by this
             StationsResourceManager
-        :rtype: dict
         """
         devices = dict()
         for key, resource in self._resources.items():
@@ -113,7 +109,6 @@ class StationsResourceManager(ResourceManager):
         Returns the FQDNs of currently assigned stations.
 
         :return: FQDNs of currently assigned stations
-        :rtype: list(str)
         """
         return sorted(self.get_all_fqdns())
 
@@ -123,7 +118,6 @@ class StationsResourceManager(ResourceManager):
         Returns the device IDs of currently assigned stations.
 
         :return: IDs of currently assigned stations
-        :rtype: list(str)
         """
         return sorted(self._resources.keys())
 

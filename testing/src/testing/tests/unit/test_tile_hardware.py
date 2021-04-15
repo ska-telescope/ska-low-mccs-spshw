@@ -255,7 +255,6 @@ class TestCommon:
             ("set_time_delays", 1),
             ("set_csp_rounding", 1),
             ("set_lmc_integrated_download", 3),
-            ("send_raw_data_synchronised", 0),
             ("send_channelised_data_narrowband", 2),
             ("tweak_transceivers", 0),
             ("post_synchronisation", 0),

@@ -906,9 +906,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: set_lmc_integrated_download")
         raise NotImplementedError
 
-    def send_raw_data_synchronised(
-        self, timestamp=None, seconds=0.2
-    ):
+    def send_raw_data_synchronised(self, timestamp=None, seconds=0.2):
         """
         Send synchronised raw data.
 

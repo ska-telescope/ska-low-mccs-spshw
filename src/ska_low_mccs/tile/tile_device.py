@@ -3719,7 +3719,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.send_raw_data(
-                sync=True, timestamp, seconds
+                sync=True, timestamp=timestamp, seconds=seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 

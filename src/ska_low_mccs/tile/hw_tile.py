@@ -115,12 +115,6 @@ class HwTile(object):
 
         self._sampling_rate = sampling_rate
 
-        # Threads for continuously sending data
-        self._RUNNING = 2
-        self._ONCE = 1
-        self._STOP = 0
-        self._daq_threads = {}
-
         # Mapping between preadu and TPM inputs
         self.fibre_preadu_mapping = {
             0: 1,
@@ -192,6 +186,17 @@ class HwTile(object):
                     )
             else:
                 self.logger.warn("TPM is not programmed! No plugins loaded")
+
+    def is_programmed(self):
+        """
+        Check whether the TPM is connected and programmed.
+
+        :return: If the TPM is programmed
+        :rtype: bool
+        """
+        if self.tpm is None:
+            return False
+        return self.tpm.is_programmed()
 
     def initialise(self, enable_ada=False, enable_test=False):
         """
@@ -661,7 +666,7 @@ class HwTile(object):
                 self["fpga1.channelizer.rescale_data"] = trunc_vec1
                 self["fpga1.channelizer.block_sel"] = 2 * i + 1
                 self["fpga1.channelizer.rescale_data"] = trunc_vec2
-            elif i > 16 and i < 32:
+            elif i >= 16 and i < 32:
                 i = i - 16
                 self["fpga2.channelizer.block_sel"] = 2 * i
                 self["fpga2.channelizer.rescale_data"] = trunc_vec1
@@ -1275,6 +1280,26 @@ class HwTile(object):
         self.tpm.test_generator[0].channel_select(inputs & 0xFFFF)
         self.tpm.test_generator[1].channel_select((inputs >> 16) & 0xFFFF)
 
+    # ------------------------ Wrapper for spigot generators ----------------------
+    @connected
+    def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
+        """
+        send raw data from the TPM.
+
+        :param timestamp: When to start. Default now.
+        :param seconds: delay with respect to timestamp, in seconds
+        :param sync: Get synchronised packets
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(seconds, timestamp)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            if sync:
+                self.tpm.tpm_test_firmware[i].send_raw_data_synchronised()
+            else:
+                self.tpm.tpm_test_firmware[i].send_raw_data()
+
+    # ------------------------ Wrapper for index and attribute methods ---------------
     @connected
     def get_tile_id(self):
         """

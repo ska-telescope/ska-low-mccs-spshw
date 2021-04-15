@@ -729,18 +729,12 @@ class TileHardwareManager(SimulableHardwareManager):
             integration_time=integration_time
         )
 
-    def send_raw_data(
-        self, sync=False, period=None, timeout=None, timestamp=None, seconds=None
-    ):
+    def send_raw_data(self, sync=False, timestamp=None, seconds=None):
         """
         Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
-        :param period: duration to send data, in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -748,8 +742,6 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         self._factory.hardware.send_raw_data(
             sync=sync,
-            period=period,
-            timeout=timeout,
             timestamp=timestamp,
             seconds=seconds,
         )
@@ -759,8 +751,6 @@ class TileHardwareManager(SimulableHardwareManager):
         number_of_samples=None,
         first_channel=None,
         last_channel=None,
-        period=None,
-        timeout=None,
         timestamp=None,
         seconds=None,
     ):
@@ -774,10 +764,6 @@ class TileHardwareManager(SimulableHardwareManager):
         :type first_channel: int, optional
         :param last_channel: last channel to send, defaults to 511
         :type last_channel: int, optional
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -787,8 +773,6 @@ class TileHardwareManager(SimulableHardwareManager):
             number_of_samples=number_of_samples,
             first_channel=first_channel,
             last_channel=last_channel,
-            period=period,
-            timeout=timeout,
             timestamp=timestamp,
             seconds=seconds,
         )
@@ -798,7 +782,6 @@ class TileHardwareManager(SimulableHardwareManager):
         channel_id,
         number_of_samples=None,
         wait_seconds=None,
-        timeout=None,
         timestamp=None,
         seconds=None,
     ):
@@ -811,8 +794,6 @@ class TileHardwareManager(SimulableHardwareManager):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data
         :type wait_seconds: float
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -822,27 +803,20 @@ class TileHardwareManager(SimulableHardwareManager):
             channel_id,
             number_of_samples=number_of_samples,
             wait_seconds=wait_seconds,
-            timeout=timeout,
             timestamp=timestamp,
             seconds=seconds,
         )
 
-    def send_beam_data(self, period=None, timeout=None, timestamp=None, seconds=None):
+    def send_beam_data(self, timestamp=None, seconds=None):
         """
         Transmit a snapshot containing beamformed data.
 
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
         """
-        self._factory.hardware.send_beam_data(
-            period=period, timeout=timeout, timestamp=timestamp, seconds=seconds
-        )
+        self._factory.hardware.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     def stop_data_transmission(self):
         """
@@ -921,25 +895,6 @@ class TileHardwareManager(SimulableHardwareManager):
             lmc_mac=lmc_mac,
         )
 
-    def send_raw_data_synchronised(
-        self, period=None, timeout=None, timestamp=None, seconds=None
-    ):
-        """
-        Send synchronised raw data.
-
-        :param period: period of time in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
-        :param timestamp: when to start(?), defaults to None
-        :type timestamp: int, optional
-        :param seconds: when to synchronise, defaults to 0.2
-        :type seconds: float, optional
-        """
-        self._factory.hardware.send_raw_data_synchronised(
-            period=period, timeout=timeout, timestamp=timestamp, seconds=seconds
-        )
-
     def check_pending_data_requests(self):
         """
         Check the TPM for pending data requests.
@@ -955,7 +910,6 @@ class TileHardwareManager(SimulableHardwareManager):
         round_bits,
         number_of_samples=None,
         wait_seconds=None,
-        timeout=None,
         timestamp=None,
         seconds=None,
     ):
@@ -972,8 +926,6 @@ class TileHardwareManager(SimulableHardwareManager):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data, defaults to 0
         :type wait_seconds: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start, defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -984,7 +936,6 @@ class TileHardwareManager(SimulableHardwareManager):
             round_bits,
             number_of_samples=number_of_samples,
             wait_seconds=wait_seconds,
-            timeout=timeout,
             timestamp=timestamp,
             seconds=seconds,
         )
@@ -1044,48 +995,52 @@ class TileHardwareManager(SimulableHardwareManager):
             current_delay, current_tc, ref_lo, ref_hi
         )
 
-    def test_generator_set_tone(
-        self, dds, frequency, amplitude, phase=0.0, load_time=0
+    def test_generator_set(
+        self,
+        frequency0,
+        amplitude0,
+        frequency1,
+        amplitude1,
+        amplitude_noise,
+        pulse_code,
+        amplitude_pulse,
+        load_time=0,
     ):
         """
-        test generator tone setting.
+        test generator setting.
 
-        :param dds: DDS select. 0 or 1
-        :type dds: int
-        :param frequency: Tone frequency in Hz
-        :type frequency: float
-        :param phase: Initial tone phase, in turns
-        :type phase: float
-        :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
-        :type amplitude: float
-        :param load_time: Time to start the tone.
-        :type load_time: int
-        """
-        self._factory.hardware.test_generator_set_tone(
-            dds, frequency, amplitude, phase, load_time
-        )
-
-    def test_generator_set_noise(self, amplitude, load_time):
-        """
-        test generator Gaussian white noise  setting.
-
-        :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
-        :type amplitude: float
-        :param load_time: Time to start the tone.
-        :type load_time: int
-        """
-        self._factory.hardware.test_generator_set_noise(amplitude, load_time)
-
-    def test_generator_set_pulse(self, pulse_code, amplitude):
-        """
-        test generator Gaussian white noise  setting.
-
-        :param pulse_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2,1 times frame frequency
+        :param frequency0: Tone frequency in Hz of DDC 0
+        :type frequency0: float
+        :param amplitude0: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude0: float
+        :param frequency1: Tone frequency in Hz of DDC 1
+        :type frequency1: float
+        :param amplitude1: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude1: float
+        :param amplitude_noise: Amplitude of pseudorandom noise
+            normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude_noise: float
+        :param pulse_code: Code for pulse frequency.
+            Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
         :type pulse_code: int
-        :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
-        :type amplitude: float
+        :param amplitude_pulse: pulse peak amplitude, normalized
+            to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude_pulse: float
+        :param load_time: Time to start the generator.
+        :type load_time: int
         """
-        self._factory.hardware.test_generator_set_pulse(pulse_code, amplitude)
+        self._factory.hardware.test_generator_set(
+            frequency0,
+            amplitude0,
+            frequency1,
+            amplitude1,
+            amplitude_noise,
+            pulse_code,
+            amplitude_pulse,
+            load_time,
+        )
 
     def test_generator_input_select(self, inputs):
         """

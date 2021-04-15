@@ -146,8 +146,8 @@ class TpmDriver(HardwareDriver):
         :return: whether this TPM is programmed
         :rtype: bool
         """
+        self._is_programmed = self.tile.is_programmed()
         self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
-        self._is_programmed = self.tile.tpm.is_programmed()
         return self._is_programmed
 
     @property
@@ -158,12 +158,13 @@ class TpmDriver(HardwareDriver):
         :return: the status of the driver-hardware connection.
         :rtype: py:class:`ska_low_mccs.hardware.base_hardware.ConnectionStatus`
         """
-        self.logger.debug("TpmDriver: connection_status")
-        return (
+        status = (
             ConnectionStatus.NOT_CONNECTED
             if self.tile.tpm is None
             else ConnectionStatus.CONNECTED
         )
+        self.logger.debug("TpmDriver: connection_status " + str(status))
+        return status
 
     @connection_status.setter
     def connection_status(self, status):
@@ -207,7 +208,7 @@ class TpmDriver(HardwareDriver):
         """
         self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
-            self.tile.program_fpgas(self._firmware_name + ".bit")
+            self.tile.program_fpgas(self._firmware_name)
         if self.tile.tpm.is_programmed():
             self._is_programmed = True
             self.tile.initialise()
@@ -782,36 +783,25 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
         raise NotImplementedError
 
-    def send_raw_data(
-        self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
-    ):
+    def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
-        :param period: duration to send data, in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
-        :param timestamp: when to start(?), defaults to None
+        :param timestamp: when to start, defaults to now
         :type timestamp: int, optional
-        :param seconds: when to synchronise, defaults to 0.2
+        :param seconds: delay with respect to timestamp, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_raw_data")
-        raise NotImplementedError
+        self.tile.send_raw_data(sync, timestamp, seconds)
 
     def send_channelised_data(
         self,
         number_of_samples=1024,
         first_channel=0,
         last_channel=511,
-        period=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -825,10 +815,6 @@ class TpmDriver(HardwareDriver):
         :type first_channel: int, optional
         :param last_channel: last channel to send, defaults to 511
         :type last_channel: int, optional
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -845,7 +831,6 @@ class TpmDriver(HardwareDriver):
         channel_id,
         number_of_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -858,8 +843,6 @@ class TpmDriver(HardwareDriver):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data
         :type wait_seconds: float
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -871,14 +854,10 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
         raise NotImplementedError
 
-    def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+    def send_beam_data(self, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing beamformed data.
 
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -977,15 +956,11 @@ class TpmDriver(HardwareDriver):
         raise NotImplementedError
 
     def send_raw_data_synchronised(
-        self, period=0, timeout=0, timestamp=None, seconds=0.2
+        self, timestamp=None, seconds=0.2
     ):
         """
         Send synchronised raw data.
 
-        :param period: period of time in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -1037,7 +1012,6 @@ class TpmDriver(HardwareDriver):
         round_bits,
         number_of_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -1054,8 +1028,6 @@ class TpmDriver(HardwareDriver):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data, defaults to 0
         :type wait_seconds: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start, defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -1147,46 +1119,66 @@ class TpmDriver(HardwareDriver):
         """
         self._test_generator_active = active
 
-    def test_generator_set_tone(
-        self, dds, frequency, amplitude, phase=0.0, load_time=0
+    def test_generator_set(
+        self,
+        frequency0,
+        amplitude0,
+        frequency1,
+        amplitude1,
+        amplitude_noise,
+        pulse_code,
+        amplitude_pulse,
+        load_time=0,
     ):
         """
-        test generator tone setting.
+        test generator setting.
 
-        :param dds: DDS select. 0 or 1
-        :type dds: int
-        :param frequency: Tone frequency in Hz
-        :type frequency: float
-        :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
-        :type amplitude: float
-        :param phase: Initial tone phase, in turns
-        :type phase: float
-        :param load_time: Time to start the tone.
-        :type load_time: int
-        """
-        self.tile.test_generator_set_tone(dds, frequency, amplitude, load_time)
-
-    def test_generator_set_noise(self, amplitude=0.0, load_time=0):
-        """
-        test generator Gaussian white noise  setting.
-
-        :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
-        :type amplitude: float
-        :param load_time: Time to start the tone.
-        :type load_time: int
-        """
-        self.tile.test_generator_set_noise(amplitude, load_time)
-
-    def test_generator_set_pulse(self, pulse_code, amplitude=0.0):
-        """
-        test generator Gaussian white noise  setting.
-
-        :param pulse_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :param frequency0: Tone frequency in Hz of DDC 0
+        :type frequency0: float
+        :param amplitude0: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude0: float
+        :param frequency1: Tone frequency in Hz of DDC 1
+        :type frequency1: float
+        :param amplitude1: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude1: float
+        :param amplitude_noise: Amplitude of pseudorandom noise
+            normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude_noise: float
+        :param pulse_code: Code for pulse frequency.
+            Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
         :type pulse_code: int
-        :param amplitude: Tone peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU
-        :type amplitude: float
+        :param amplitude_pulse: pulse peak amplitude, normalized
+            to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude_pulse: float
+        :param load_time: Time to start the generator.
+        :type load_time: int
         """
-        self.tile.test_generator_set_pulse(pulse_code, amplitude)
+        self.logger.debug(
+            "Test generator: set tone 0: "
+            + str(frequency0)
+            + " Hz"
+            + ", tone 1: "
+            + str(frequency1)
+            + " Hz"
+        )
+        # If load time not specified, is "now" + 30 ms
+        if load_time == 0:
+            load_time = self.tile.get_fpga_timestamp() + 108
+        # Set everything at same time
+        self.tile.test_generator_set_tone(0, frequency0, amplitude0, 0.0, load_time)
+        self.tile.test_generator_set_tone(1, frequency1, amplitude1, 0.0, load_time)
+        self.tile.test_generator_set_noise(amplitude_noise, load_time)
+        self.tile.test_generator_set_pulse(pulse_code, amplitude_pulse)
+        end_time = self.tile.get_fpga_timestamp()
+        if end_time < load_time:
+            self.logger.warning(
+                "Test generator: load time="
+                + str(load_time)
+                + " after current time "
+                + str(end_time)
+            )
 
     def test_generator_input_select(self, inputs=0):
         """
@@ -1196,6 +1188,7 @@ class TpmDriver(HardwareDriver):
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int
         """
+        self.logger.debug("Test generator: set inputs " + hex(inputs))
         self.tile.test_generator_input_select(inputs)
 
     @staticmethod

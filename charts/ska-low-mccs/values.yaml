@@ -93,6 +93,11 @@ deviceServers:
     domain: ska-low-mccs
     command: "MccsTile"
     instances: ["tile_0001", "tile_0002", "tile_0003", "tile_0004"]
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 512Mi
     depends_on:
       - device: low-mccs/control/control
   apius:
@@ -143,11 +148,11 @@ cli:
   resources:
     requests:
       cpu: 100m     # 00m = 0.1 CPU
-      memory: 128Mi # 128Mi = 0.125 GB mem
+      memory: 512Mi # 128Mi = 0.125 GB mem
       ephemeral-storage: 512Mi
     limits:
       cpu: 100m     # 00m = 0.1 CPU
-      memory: 128Mi # 128Mi = 0.125 GB mem
+      memory: 512Mi # 128Mi = 0.125 GB mem
       ephemeral-storage: 512Mi
 
 nodeSelector: {}

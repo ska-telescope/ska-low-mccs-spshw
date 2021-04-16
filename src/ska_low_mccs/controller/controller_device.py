@@ -758,15 +758,13 @@ class MccsController(SKAMaster):
                 fqdn="low-mccs/control/control",
                 callback="OnCallback",
             ):
-                # rcltodo: This is odd, message from system:
-                # "ska_tango_base.faults.ResultCodeError:
-                #  ActionCommands that do not have a started action may
-                #  only return with code OK or FAILED, not ResultCode.QUEUED."
-                # return (ResultCode.QUEUED, self.QUEUED_MESSAGE)
                 return (ResultCode.OK, self.QUEUED_MESSAGE)
             else:
                 self.logger.error('Controller device pool "On" command not queued')
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                device._command_result = ResultCode.FAILED
+                device.push_change_event("commandResult", device._command_result)
+                # This needs to be successful or it drives the state machine into FAULT
+                return (ResultCode.OK, self.FAILED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()

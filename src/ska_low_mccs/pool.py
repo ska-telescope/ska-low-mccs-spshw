@@ -110,14 +110,14 @@ class DevicePool:
         :type callback: str
         :return: Whether the messages were sent or not
         :rtype: bool
-        :raises ValueError: If we have pending responses to a previous command
         """
+        if len(self._responses):
+            self._logger.error(f"{len(self._responses)} pool messages in progress")
+            return False
+
         if self._devices is None:
             self.connect()
 
-        if len(self._responses):
-            self._logger.error(f"{len(self._responses)} pool messages in progress")
-            raise ValueError
         self._results = []
 
         # Send a message to all of the registered devices in the pool

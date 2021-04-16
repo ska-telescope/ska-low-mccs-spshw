@@ -38,7 +38,7 @@ class MessageQueue(threading.Thread):
         def __init__(
             self,
             command: str,
-            argin: str,
+            json_args: str,
             msg_uid: str,
             notifications: bool,
             respond_to_fqdn: str,
@@ -48,14 +48,14 @@ class MessageQueue(threading.Thread):
             Message constructor.
 
             :param command: Tango command
-            :param argin: Optional argument to send to the command
+            :param json_args: JSON encoded arguments to send to the command
             :param msg_uid: The message's unique identifier
             :param notifications: Does the client require push notifications?
             :param respond_to_fqdn: Response message FQDN
             :param callback: The callback (command) to call when command is complete
             """
             self.command = command
-            self.argin = argin
+            self.json_args = json_args
             self.msg_uid = msg_uid
             self.notifications = notifications
             self.respond_to_fqdn = respond_to_fqdn
@@ -133,16 +133,16 @@ class MessageQueue(threading.Thread):
                     self._qdebug(f"^({msg.msg_uid})")
                     self._notify_listener(msg.command, ResultCode.STARTED)
 
-                # Incorporate FQDN and callback into args dictionary
-                # Add to argin and deal with the case if it's not a JSON encoded string
+                # Incorporate FQDN and callback into command args dictionary
+                # Add to kwargs and deal with the case if it's not a JSON encoded string
                 try:
-                    kwargs = json.loads(msg.argin)
+                    kwargs = json.loads(msg.json_args)
                 except ValueError:
                     kwargs = {}
                 except TypeError:
                     self._qdebug(f"TypeError({msg.command})")
                     self._logger.error(
-                        f"TypeError: argin for {msg.command} should be a JSON encoded string"
+                        f"TypeError: json_args for {msg.command} should be a JSON encoded string"
                     )
                     return
                 kwargs["respond_to_fqdn"] = msg.respond_to_fqdn
@@ -201,7 +201,7 @@ class MessageQueue(threading.Thread):
     def send_message(
         self,
         command: str,
-        argin: str = "",
+        json_args: str = "",
         notifications: bool = False,
         respond_to_fqdn: str = "",
         callback: str = "",
@@ -212,7 +212,7 @@ class MessageQueue(threading.Thread):
         completion to subscribed listeners.
 
         :param command: Command to add to Tango device's message queue
-        :param argin: Optional argument to send to the command
+        :param json_args: JSON encoded arguments to send to the command
         :param notifications: Client requirement for push notifications
             for command's result attribute
         :param respond_to_fqdn: Response message FQDN
@@ -225,7 +225,7 @@ class MessageQueue(threading.Thread):
         msg_uid = f"{str(uuid4())}:{command}"
         msg = self.Message(
             command=command,
-            argin=argin,
+            json_args=json_args,
             msg_uid=msg_uid,
             notifications=notifications,
             respond_to_fqdn=respond_to_fqdn,
@@ -245,7 +245,7 @@ class MessageQueue(threading.Thread):
         command: str,
         respond_to_fqdn: str,
         callback: str,
-        argin: str = "",
+        json_args: str = "",
         notifications: bool = False,
     ):
         """
@@ -256,7 +256,7 @@ class MessageQueue(threading.Thread):
         :param command: Command to add to Tango device's message queue
         :param respond_to_fqdn: Response message FQDN
         :param callback: The callback (command) to call when command is complete
-        :param argin: Optional argument to send to the command
+        :param json_args: JSON encoded arguments to send to the command
         :param notifications: Client requirement for push notifications for
             command's result attribute
         :return: A tuple containing a result code (QUEUED, ERROR),
@@ -265,7 +265,7 @@ class MessageQueue(threading.Thread):
         """
         return self.send_message(
             command=command,
-            argin=argin,
+            json_args=json_args,
             notifications=notifications,
             respond_to_fqdn=respond_to_fqdn,
             callback=callback,

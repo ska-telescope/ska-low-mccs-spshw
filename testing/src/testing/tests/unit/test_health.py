@@ -15,6 +15,7 @@ import pytest
 from tango import AttrQuality
 
 from ska_tango_base.control_model import AdminMode, HealthState
+from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import (
     DeviceHealthPolicy,
@@ -28,6 +29,7 @@ from ska_low_mccs.health import (
 
 
 from testing.harness.mock import MockDeviceBuilder
+from testing.harness.tango_harness import TangoHarness
 
 
 @pytest.fixture()
@@ -195,6 +197,31 @@ class TestDeviceHealthRollupPolicy:
         )
 
 
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing.
+
+    This is a slightly lazy hack to allow us to test event subscription
+    against mock devices. We need our tango harness to be up and running
+    for this to work, but the Tango test contexts require at least one
+    device to be running. So we stand up a single device, which we won't
+    actually be using in any way.
+
+    TODO: Find a way to stand up a Tango test harness that is 100% mock
+    devices, and thus doesn't use a Tango test context at all.
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/extra.json",
+        "package": "ska_low_mccs",
+        "device": "device",
+        "proxy": MccsDeviceProxy,
+    }
+
+
 class TestDeviceHealthMonitor:
     """
     This class contains the tests for the DeviceHealthMonitor class.
@@ -202,20 +229,16 @@ class TestDeviceHealthMonitor:
     (The DeviceHealthMonitor monitors the health of a single device.)
     """
 
-    def test(self, mocker, mock_callback, mock_device_proxies, logger):
+    def test(self, tango_harness: TangoHarness, mocker, mock_callback, logger):
         """
         Test that a DeviceHealthMonitor registers a change in device
         health when the device emits relevant events.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
         :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -259,20 +282,16 @@ class TestHealthMonitor:
     subservient devices.)
     """
 
-    def test(self, mocker, mock_callback, mock_device_proxies, logger):
+    def test(self, tango_harness: TangoHarness, mocker, mock_callback, logger):
         """
         Test that a HealthMonitor registers changes in device health
         when devices emit relevant events.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
         :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -328,9 +347,9 @@ class TestHealthModel:
         self,
         with_hardware,
         with_devices,
+        tango_harness: TangoHarness,
         mocker,
         mock_callback,
-        mock_device_proxies,
         logger,
     ):
         """
@@ -341,15 +360,11 @@ class TestHealthModel:
         :type with_hardware: bool
         :param with_devices: whether the model manages devices or not
         :type with_devices: bool
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -388,20 +403,16 @@ class TestMutableHealthMonitor:
     collection of subservient devices.)
     """
 
-    def test(self, mocker, mock_callback, mock_device_proxies, logger):
+    def test(self, tango_harness: TangoHarness, mocker, mock_callback, logger):
         """
         Test that one can add and remove device, and a
         MutableHealthMonitor behaves as expected.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
         :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -461,22 +472,20 @@ class TestMutableHealthModel:
     """
 
     @pytest.mark.parametrize("with_hardware", [False, True])
-    def test(self, with_hardware, mocker, mock_callback, mock_device_proxies, logger):
+    def test(
+        self, with_hardware, tango_harness: TangoHarness, mocker, mock_callback, logger
+    ):
         """
         Test that the health of a MutableHealthModel changes with
         changes to the collection of managed devices.
 
         :param with_hardware: whether the model manages hardware or not
         :type with_hardware: bool
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: :py:class:`pytest_mock.mocker`
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """

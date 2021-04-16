@@ -20,6 +20,8 @@ from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 
+from testing.harness.tango_harness import TangoHarness
+
 
 @pytest.fixture()
 def devices_to_load():
@@ -53,7 +55,7 @@ class TestApiuAntennaIntegration:
     Integration test cases for MCCS subsystem's power management.
     """
 
-    def test_antenna_on(self, device_context):
+    def test_antenna_on(self, tango_harness: TangoHarness):
         """
         Test that:
 
@@ -62,11 +64,10 @@ class TestApiuAntennaIntegration:
         * when MccsAntenna is turned off, the APIU denies power to the
           TPM
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        antenna = device_context.get_device("antenna_000001")
-        apiu = device_context.get_device("apiu_001")
+        antenna = tango_harness.get_device("low-mccs/antenna/000001")
+        apiu = tango_harness.get_device("low-mccs/apiu/001")
 
         assert apiu.state() == DevState.DISABLE
         assert antenna.state() == DevState.DISABLE
@@ -91,17 +92,16 @@ class TestApiuAntennaIntegration:
         assert antenna.state() == DevState.DISABLE
         assert not apiu.IsAntennaOn(1)
 
-    def test_apiu_antenna_on(self, device_context):
+    def test_apiu_antenna_on(self, tango_harness: TangoHarness):
         """
         Test that wnen we tell the APIU drive to turn a given antenna
         on, the antenna device recognises that its hardware has been
         powered, and changes state.
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        antenna = device_context.get_device("antenna_000001")
-        apiu = device_context.get_device("apiu_001")
+        antenna = tango_harness.get_device("low-mccs/antenna/000001")
+        apiu = tango_harness.get_device("low-mccs/apiu/001")
 
         apiu.Off()
         apiu.On()

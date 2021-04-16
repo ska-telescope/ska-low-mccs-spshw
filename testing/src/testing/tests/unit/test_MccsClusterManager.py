@@ -44,6 +44,17 @@ class TestMccsClusterManagerDevice:
     Test class for MccsClusterManagerDevice tests.
     """
 
+    @pytest.fixture()
+    def device_under_test(self, tango_harness):
+        """
+        Fixture that returns the device under test.
+
+        :param tango_harness: a test harness for Tango devices
+
+        :return: the device under test
+        """
+        return tango_harness.get_device("low-mccs/clustermanager/clustermanager")
+
     def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.

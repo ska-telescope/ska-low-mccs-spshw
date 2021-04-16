@@ -547,20 +547,20 @@ class MccsStation(SKAObsDevice):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def On(self, argin):
+    def On(self, json_args):
         """
         Send a message to turn the station on.
 
         Method returns as soon as the message has been enqueued.
 
-        :param argin: Messaging system and command arguments
+        :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        kwargs = json.loads(argin)
+        kwargs = json.loads(json_args)
         respond_to_fqdn = kwargs.get("respond_to_fqdn")
         callback = kwargs.get("callback")
         (result_code, _, msg_uid,) = self._msg_queue.send_message_with_response(
@@ -582,7 +582,7 @@ class MccsStation(SKAObsDevice):
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
             command for this :py:class:`.MccsStation` device.
 
-            :param argin: Messaging system and command arguments
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

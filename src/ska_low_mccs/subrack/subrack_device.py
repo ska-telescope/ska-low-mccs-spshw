@@ -1792,7 +1792,7 @@ class MccsSubrack(SKABaseDevice):
         """
         Send message with response.
 
-        :param argin: Messaging system and command arguments
+        :param argin: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -1820,7 +1820,7 @@ class MccsSubrack(SKABaseDevice):
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
             command for this :py:class:`.MccsStation` device.
 
-            :param argin: Messaging system and command arguments
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

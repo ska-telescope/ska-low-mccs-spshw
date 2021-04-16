@@ -742,7 +742,7 @@ class MccsController(SKAMaster):
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.On` command.
 
-            :param argin: Messaging system and command arguments
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -772,7 +772,7 @@ class MccsController(SKAMaster):
         """
         On callback method.
 
-        :param argin: Argument containing command message and result
+        :param argin: Argument containing JSON encoded command message and result
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -780,7 +780,7 @@ class MccsController(SKAMaster):
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         (result_code, message, _) = self._msg_queue.send_message(
-            command="OnCallback", argin=argin
+            command="OnCallback", json_args=argin
         )
         return [[result_code], [message]]
 
@@ -796,7 +796,7 @@ class MccsController(SKAMaster):
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.OnCallback` command.
 
-            :param argin: Argument containing command message and result
+            :param argin: Argument containing JSON encoded command message and result
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

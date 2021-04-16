@@ -133,7 +133,7 @@ class TestMessageQueue:
         argin = {"Myarg1": 42, "Myarg2": "42"}
         json_string = json.dumps(argin)
         (_, _, msg_uid) = msg_queue.send_message(
-            command=self.test_command, argin=json_string
+            command=self.test_command, json_args=json_string
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
         self.target_mock.get_command_object.assert_called_once_with(self.test_command)
@@ -153,7 +153,7 @@ class TestMessageQueue:
         command_exe = mocker.Mock()
         self.target_mock.get_command_object = mocker.Mock(return_value=command_exe)
         argin = {"Myarg1": 42, "Myarg2": "42"}
-        msg_queue.send_message(command=self.test_command, argin=argin)
+        msg_queue.send_message(command=self.test_command, json_args=argin)
         time.sleep(0.1)  # Required to allow DUT thread to run
         self.target_mock.get_command_object.assert_called_once_with(self.test_command)
         command_exe.assert_not_called()
@@ -225,7 +225,7 @@ class TestMessageQueue:
             args = {
                 "msg_obj": {
                     "command": self.test_command,
-                    "argin": "",
+                    "json_args": "",
                     "msg_uid": msg_uid,
                     "notifications": False,
                     "respond_to_fqdn": self.respond_to_fqdn,

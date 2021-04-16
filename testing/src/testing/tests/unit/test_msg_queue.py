@@ -14,8 +14,7 @@ import threading
 import time
 import json
 
-# import tango
-
+from tango import DevFailed
 from unittest import mock
 
 from ska_tango_base.commands import ResultCode
@@ -239,21 +238,22 @@ class TestMessageQueue:
             device.command_inout.assert_called_once_with(callback, json_string)
 
     def test_send_msg_with_command_with_incorrect_response_fqdn(
-        self, msg_queue, mocker
+        self, specialised_msg_queue, mocker
     ):
         """
         Test that we can handle a message with an incorrect response
         FQDN.
 
-        :param msg_queue: message queue fixture
+        :param specialised_msg_queue: specialised message queue fixture
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
         """
-        with mock.patch("tango.DeviceProxy") as mock_device_proxy:
+        with mock.patch(
+            "tango.DeviceProxy", side_effect=DevFailed()
+        ) as mock_device_proxy:
             self.target_mock.get_command_object = mocker.Mock(return_value=None)
-            mock_device_proxy.return_value = None
             incorrect_fqdn = "a/bad/fqdn"
             callback = "callback_command"
-            msg_queue.send_message_with_response(
+            specialised_msg_queue.send_message_with_response(
                 command=self.test_command,
                 respond_to_fqdn=incorrect_fqdn,
                 callback=callback,
@@ -263,4 +263,8 @@ class TestMessageQueue:
             assert (
                 f"Response device {incorrect_fqdn} not found"
                 in self.target_mock.queue_debug
+            )
+            assert specialised_msg_queue.notify == (
+                self.test_command,
+                ResultCode.UNKNOWN,
             )

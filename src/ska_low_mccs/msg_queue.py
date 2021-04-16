@@ -10,9 +10,9 @@ serial fashion) in its own thread.
 """
 import threading
 import json
-from uuid import uuid4
 import tango
-from tango import EnsureOmniThread
+from uuid import uuid4
+from tango import EnsureOmniThread, DevFailed
 from queue import SimpleQueue, Empty
 from ska_tango_base.commands import ResultCode
 
@@ -118,9 +118,11 @@ class MessageQueue(threading.Thread):
             # Check we have a device to respond to before executing a command
             response_device = None
             if msg.respond_to_fqdn:
-                response_device = tango.DeviceProxy(msg.respond_to_fqdn)
-                if not response_device:
+                try:
+                    response_device = tango.DeviceProxy(msg.respond_to_fqdn)
+                except DevFailed:
                     self._qdebug(f"Response device {msg.respond_to_fqdn} not found")
+                    self._notify_listener(msg.command, ResultCode.UNKNOWN)
                     return
 
             self._logger.info(f"_execute_msg{msg.msg_uid}")

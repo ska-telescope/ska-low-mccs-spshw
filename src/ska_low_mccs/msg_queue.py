@@ -185,9 +185,10 @@ class MessageQueue(threading.Thread):
     def _check_msg_queue(self):
         """
         Check to see if a message is waiting to be executed.
+        Note: Timeout present to detect thread termination events.
         """
         try:
-            msg = self._msg_queue.get_nowait()
+            msg = self._msg_queue.get(timeout=1.0)
         except Empty:
             return
         self._execute_msg(msg)

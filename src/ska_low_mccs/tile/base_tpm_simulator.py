@@ -1044,7 +1044,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: sync_fpgas")
         raise NotImplementedError
 
-    def test_generator_set(
+    def configure_test_generator(
         self,
         frequency0,
         amplitude0,
@@ -1056,7 +1056,7 @@ class BaseTpmSimulator(HardwareSimulator):
         load_time=0,
     ):
         """
-        test generator setting.
+        test generator configuration.
 
         :param frequency0: Tone frequency in Hz of DDC 0
         :type frequency0: float
@@ -1085,7 +1085,7 @@ class BaseTpmSimulator(HardwareSimulator):
         """
         amplitude_adu = round(amplitude0 * 255) / 8.0
         self.logger.debug(
-            "TpmSimulator: test_generator_set tone(0):"
+            "TpmSimulator: set_test_generator tone(0):"
             + str(frequency0)
             + "Hz, "
             + str(amplitude_adu)
@@ -1103,7 +1103,7 @@ class BaseTpmSimulator(HardwareSimulator):
         )
         amplitude_adu = round(amplitude_noise * 255) * 0.102
         self.logger.debug(
-            "TpmSimulator: test_generator_set noise: "
+            "TpmSimulator: set_test_generator noise: "
             + str(amplitude_adu)
             + " ADUs @"
             + str(load_time)
@@ -1112,7 +1112,7 @@ class BaseTpmSimulator(HardwareSimulator):
         frequency = 0.925925 * freqs[pulse_code]
         amplitude_adu = round(amplitude_pulse * 255) * 0.25
         self.logger.debug(
-            "TpmSimulator: test_generator_set pulse: "
+            "TpmSimulator: set_test_generator pulse: "
             + str(frequency)
             + "Hz, "
             + str(amplitude_adu)
@@ -1127,14 +1127,11 @@ class BaseTpmSimulator(HardwareSimulator):
 
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug(
             "TpmSimulator: test_generator_input_select: " + str(hex(inputs))
         )
-        raise NotImplementedError
+        # raise NotImplementedError
 
     @property
     def test_generator_active(self):

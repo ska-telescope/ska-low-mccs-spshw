@@ -1216,14 +1216,14 @@ class HwTile(object):
 
     # ------------------------ Wrapper for test generator ----------------------
     @connected
-    def test_generator_set_tone(
-        self, dds, frequency=100e6, amplitude=0.0, phase=0.0, load_time=0
+    def set_test_generator_tone(
+        self, generator, frequency=100e6, amplitude=0.0, phase=0.0, load_time=0
     ):
         """
         test generator tone setting.
 
-        :param dds: DDS select. 0 or 1
-        :type dds: int
+        :param generator: generator select. 0 or 1
+        :type generator: int
         :param frequency: Tone frequency in Hz
         :type frequency: float
         :param amplitude: Tone peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU
@@ -1236,11 +1236,15 @@ class HwTile(object):
         if load_time == 0:
             t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
             load_time = t0 + 128
-        self.tpm.test_generator[0].set_tone(dds, frequency, amplitude, phase, load_time)
-        self.tpm.test_generator[1].set_tone(dds, frequency, amplitude, phase, load_time)
+        self.tpm.test_generator[0].set_tone(
+            generator, frequency, amplitude, phase, load_time
+        )
+        self.tpm.test_generator[1].set_tone(
+            generator, frequency, amplitude, phase, load_time
+        )
 
     @connected
-    def test_generator_set_noise(self, amplitude=0.0, load_time=0):
+    def set_test_generator_noise(self, amplitude=0.0, load_time=0):
         """
         test generator Gaussian white noise  setting.
 
@@ -1256,7 +1260,7 @@ class HwTile(object):
         self.tpm.test_generator[1].enable_prdg(amplitude, load_time)
 
     @connected
-    def test_generator_set_pulse(self, freq_code, amplitude=0.0):
+    def set_test_generator_pulse(self, freq_code, amplitude=0.0):
         """
         test generator Gaussian white noise  setting.
 

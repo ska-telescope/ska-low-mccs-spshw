@@ -690,6 +690,23 @@ class MccsTile(SKABaseDevice):
             self.hardware_manager.set_connectible(True)
             self.state_model.perform_action("off_succeeded")
 
+    def _update_admin_mode(self, admin_mode):
+        """
+        Helper method for changing admin_mode; passed to the state model
+        as a callback Deselect test generator if mode is not
+        MAINTENANCE.
+
+        :param admin_mode: the new admin_mode value
+        :type admin_mode: :py:class:`~ska_tango_base.control_model.AdminMode`
+        """
+        if not (admin_mode == AdminMode.MAINTENANCE) and self.TestGeneratorActive:
+            self.TestGeneratorActive = False
+            if self.hardware_manager is not None:
+                self.hardware_manager.test_generator_input_select(0)
+                self.hardware_manager.test_generator_active = False
+
+        super()._update_admin_mode(admin_mode)
+
     # ----------
     # Attributes
     # ----------
@@ -1249,7 +1266,7 @@ class MccsTile(SKABaseDevice):
             ("PostSynchronisation", self.PostSynchronisationCommand),
             ("SyncFpgas", self.SyncFpgasCommand),
             ("CalculateDelay", self.CalculateDelayCommand),
-            ("SetTestGenerator", self.SetTestGeneratorCommand),
+            ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -4068,17 +4085,18 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    class SetTestGeneratorCommand(BaseCommand):
+    class ConfigureTestGeneratorCommand(BaseCommand):
         """
-        Class for handling the SetTestGenerator(argin) command.
+        Class for handling the ConfigureTestGenerator(argin) command.
         """
 
-        SUCCEEDED_MESSAGE = "SetTestGenerator command completed OK"
+        SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
 
         def do(self, argin):
             """
-            Implementation of :py:meth:`.MccsTile.SetTestGenerator`
-            command functionality.
+            Implementation of
+            :py:meth:`.MccsTile.ConfigureTestGenerator` command
+            functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -4128,7 +4146,7 @@ class MccsTile(SKABaseDevice):
                 pulse_code = 7
                 amplitude_pulse = 0.0
 
-            hardware_manager.test_generator_set(
+            hardware_manager.configure_test_generator(
                 frequency0,
                 amplitude0,
                 frequency1,
@@ -4165,7 +4183,7 @@ class MccsTile(SKABaseDevice):
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
-    def SetTestGenerator(self, argin):
+    def ConfigureTestGenerator(self, argin):
         """
         Set the test signal generator.
 
@@ -4211,9 +4229,9 @@ class MccsTile(SKABaseDevice):
         >>> dict = {"ToneFrequency": 150e6, "ToneAmplitude": 0.1,
                 "NoiseAmplitude": 0.9, "PulseFrequency": 7, "LoadTime":0}
         >>> jstr = json.dumps(dict)
-        >>> values = dp.command_inout("SetTestGenerator", jstr)
+        >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """
-        handler = self.get_command_object("SetTestGenerator")
+        handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 

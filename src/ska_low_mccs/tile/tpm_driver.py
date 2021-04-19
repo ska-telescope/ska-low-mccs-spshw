@@ -1117,7 +1117,7 @@ class TpmDriver(HardwareDriver):
         """
         self._test_generator_active = active
 
-    def test_generator_set(
+    def set_test_generator(
         self,
         frequency0,
         amplitude0,
@@ -1165,10 +1165,10 @@ class TpmDriver(HardwareDriver):
         if load_time == 0:
             load_time = self.tile.get_fpga_timestamp() + 108
         # Set everything at same time
-        self.tile.test_generator_set_tone(0, frequency0, amplitude0, 0.0, load_time)
-        self.tile.test_generator_set_tone(1, frequency1, amplitude1, 0.0, load_time)
-        self.tile.test_generator_set_noise(amplitude_noise, load_time)
-        self.tile.test_generator_set_pulse(pulse_code, amplitude_pulse)
+        self.tile.set_test_generator_tone(0, frequency0, amplitude0, 0.0, load_time)
+        self.tile.set_test_generator_tone(1, frequency1, amplitude1, 0.0, load_time)
+        self.tile.set_test_generator_noise(amplitude_noise, load_time)
+        self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
         end_time = self.tile.get_fpga_timestamp()
         if end_time < load_time:
             self.logger.warning(

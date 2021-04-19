@@ -690,7 +690,7 @@ class TestMccsTileCommands:
                 ),
             ),
             (
-                "SetTestGenerator",
+                "ConfigureTestGenerator",
                 json.dumps(
                     {
                         "ToneFrequency": 150e6,

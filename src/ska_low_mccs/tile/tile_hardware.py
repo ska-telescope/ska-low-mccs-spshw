@@ -995,7 +995,7 @@ class TileHardwareManager(SimulableHardwareManager):
             current_delay, current_tc, ref_lo, ref_hi
         )
 
-    def test_generator_set(
+    def configure_test_generator(
         self,
         frequency0,
         amplitude0,
@@ -1007,7 +1007,7 @@ class TileHardwareManager(SimulableHardwareManager):
         load_time=0,
     ):
         """
-        test generator setting.
+        test generator configuration.
 
         :param frequency0: Tone frequency in Hz of DDC 0
         :type frequency0: float
@@ -1031,7 +1031,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :param load_time: Time to start the generator.
         :type load_time: int
         """
-        self._factory.hardware.test_generator_set(
+        self._factory.hardware.configure_test_generator(
             frequency0,
             amplitude0,
             frequency1,

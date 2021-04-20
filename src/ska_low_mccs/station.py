@@ -564,14 +564,14 @@ class MccsStation(SKAObsDevice):
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         # Cache "On" command callback
-        self.logger.debug("RCL: Send message to Station On")
+        self.logger.info("RCL: Send message to Station On")
         kwargs = json.loads(json_args)
         self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
         self._on_callback = kwargs.get("callback")
         (result_code, _, msg_uid,) = self._msg_queue.send_message(command="On")
         return [[result_code], [msg_uid]]
 
-    class OnCommand(ResponseCommand):# SKABaseDevice.OnCommand):
+    class OnCommand(SKABaseDevice.OnCommand):
         """
         Class for handling the On() command.
         """
@@ -592,11 +592,13 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            return (ResultCode.OK, self.QUEUED_MESSAGE)
+
             device = self.target
             device_pool = device.device_pool
 
             # rcltodo: Why doesn't .dev_name() work?
-            device.logger.debug("RCL: Pool invoke_command_with_callback('On', fqdn=station1, 'OnCallback')")
+            device.logger.info("RCL: Pool invoke_command_with_callback('On', fqdn=station1, 'OnCallback')")
             if device_pool.invoke_command_with_callback(
                 command_name="On",
                 fqdn=f"low-mccs/station/{device._station_id:03}",

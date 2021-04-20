@@ -525,7 +525,7 @@ class MccsTile(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.debug(f"RCL: Tile On")
+        self.logger.info("RCL: Tile On")
         self._command_sequence = ["Off", "OnLow", "Initialise", "OnCallback"]
         #if self.state_model.op_state == DevState.STANDBY or self.state_model.op_state == DevState.DISABLE:
         #    self._command_sequence.insert(0, "Off")
@@ -554,10 +554,9 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            device.logger.debug(f"RCL: Tile On")
             device = self.target
             # Execute the following commands to:
-            device.logger.debug(f"RCL: Tile OnCommand")
+            device.logger.info(f"RCL: Tile OnCommand")
             # 1. Off - Transition out of Standby state (if required)
             # 2. On - Turn the power on to the Tile
             # 3. Initialise - Download TPM firmware and initialise

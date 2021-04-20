@@ -14,11 +14,11 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 """
 __all__ = ["MccsTile", "TilePowerManager", "main"]
 
-
 import json
 import numpy as np
 import threading
 import os.path
+import tango
 
 from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command
@@ -33,6 +33,7 @@ from ska_low_mccs.events import EventManager, EventSubscriptionHandler
 from ska_low_mccs.hardware import ConnectionStatus, PowerMode
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.tile import TileHardwareManager
+from ska_low_mccs.msg_queue import MessageQueue
 
 
 class TilePowerManager:
@@ -292,6 +293,8 @@ class MccsTile(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._msg_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -307,6 +310,7 @@ class MccsTile(SKABaseDevice):
             (result_code, message) = super().do()
             device = self.target
 
+            device.queue_debug = ""
             device._simulation_mode = SimulationMode.FALSE
 
             device._logical_tile_id = 0
@@ -330,6 +334,12 @@ class MccsTile(SKABaseDevice):
             device.power_manager = TilePowerManager(
                 device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed
             )
+
+            # Start the Message queue for this device
+            device._msg_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._msg_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -502,37 +512,98 @@ class MccsTile(SKABaseDevice):
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
-    def On(self, argin):
+    def On(self, json_args):
         """
         Turn device on and program TPM firmware.
 
         This command will transition a Tile from Off/Standby to
         On and program the TPM firmware.
 
-        :param argin: Messaging system and command arguments
+        :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        command_sequence = ["On", "Initialise"]
-        if self.state_model.op_state == DevState.STANDBY:
-            command_sequence.insert(0, "Off")
+        self.logger.debug(f"RCL: Tile On")
+        self._command_sequence = ["Off", "OnLow", "Initialise", "OnCallback"]
+        #if self.state_model.op_state == DevState.STANDBY or self.state_model.op_state == DevState.DISABLE:
+        #    self._command_sequence.insert(0, "Off")
 
-        # Execute the following commands to:
-        # 1. Off - Transition out of Standby state (if required)
-        # 2. On - Turn the power on to the Tile
-        # 3. Initialise - Download TPM firmware and initialise
-        return_code = ResultCode.UNKNOWN
-        message = ""
-        for step in command_sequence:
-            command = self.get_command_object(step)
-            (return_code, message) = command()
-            if return_code == ResultCode.FAILED:
-                return [[return_code], [message]]
-        return [[return_code], ["On command completed OK"]]
+        #self.logger.error(f"RCL: seq = {self._command_sequence}")
+        kwargs = json.loads(json_args)
+        self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        self._on_callback = kwargs.get("callback")
+        (result_code, message, _) = self._msg_queue.send_message(command="On")
+        return [[result_code], [message]]
 
     class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On command sequence.
+        """
+
+        def do(self, argin):
+            """
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsTile.On` command.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device.logger.debug(f"RCL: Tile On")
+            device = self.target
+            # Execute the following commands to:
+            device.logger.debug(f"RCL: Tile OnCommand")
+            # 1. Off - Transition out of Standby state (if required)
+            # 2. On - Turn the power on to the Tile
+            # 3. Initialise - Download TPM firmware and initialise
+            # 4. Callback - Call the requestor
+            return_code = ResultCode.UNKNOWN
+            message = ""
+            for step in device._command_sequence:
+                command = device.get_command_object(step)
+                (return_code, message) = command()
+                if return_code == ResultCode.FAILED:
+                    return [[return_code], [message]]
+            return [[return_code], ["On command sequence completed OK"]]
+
+    class OnCallbackCommand(ResponseCommand):
+        """
+        Class for handling the callback for the On() (sequence) command.
+        """
+
+        FAILED_MESSAGE = "On callback command failed"
+
+        def do(self):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.OnCallback`
+            command for this :py:class:`.MccsTile` device.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            # Post response back to requestor
+            try:
+                response_device = tango.DeviceProxy(device._on_respond_to_fqdn)
+            except DevFailed:
+                device._qdebug(f"Response device {device._on_respond_to_fqdn} not found")
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+            # Call the specified command asynchronously
+            async_id = response_device.command_inout_asynch(device._on_callback)
+            (result_code, message) = response_device.command_inout_reply(async_id, timeout=0)
+            return (result_code, message)
+
+    class OnLowCommand(SKABaseDevice.OnCommand):
         """
         Class for handling the On() command.
         """
@@ -540,7 +611,7 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "Tile On command completed OK"
         FAILED_MESSAGE = "Tile On command failed"
 
-        def do(self, argin):
+        def do(self):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
@@ -549,7 +620,6 @@ class MccsTile(SKABaseDevice):
             At present this does nothing but call its `super().do()`
             method, and interfere in the return message.
 
-            :param argin: Messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -695,6 +765,25 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
+
     @attribute(dtype="DevLong")
     def logicalTileId(self):
         """
@@ -1260,10 +1349,19 @@ class MccsTile(SKABaseDevice):
             "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
         )
 
-        power_args = (self, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*power_args))
-        self.register_command_object("Standby", self.StandbyCommand(*power_args))
-        self.register_command_object("Off", self.OffCommand(*power_args))
+        for (command_name, command_object) in [
+            ("Disable", self.DisableCommand),
+            ("Standby", self.StandbyCommand),
+            ("Off", self.OffCommand),
+            ("On", self.OnCommand),
+            ("OnLow", self.OnLowCommand),
+            ("OnCallback", self.OnCallbackCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self, self.state_model, self.logger),
+            )
+
 
     class InitialiseCommand(ResponseCommand):
         """

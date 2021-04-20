@@ -17,9 +17,10 @@ __all__ = ["MccsStation", "main"]
 import json
 import threading
 from time import sleep
+import tango
 
 # PyTango imports
-from tango import DebugIt, EnsureOmniThread, SerialModel, Util
+from tango import DebugIt, EnsureOmniThread, SerialModel, Util, DevFailed
 from tango.server import attribute, command, device_property
 
 # additional imports
@@ -496,12 +497,14 @@ class MccsStation(SKAObsDevice):
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
         self.register_command_object("BTest", self.BTestCommand(*args))
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("OnCallback", self.OnCallbackCommand(*args))
 
         pool_args = (self.device_pool, self.state_model, self.logger)
         self.register_command_object("Disable", self.DisableCommand(*pool_args))
         self.register_command_object("Standby", self.StandbyCommand(*pool_args))
         self.register_command_object("Off", self.OffCommand(*pool_args))
-        self.register_command_object("On", self.OnCommand(*pool_args))
+
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -560,20 +563,20 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
+        # Cache "On" command callback
+        self.logger.debug("RCL: Send message to Station On")
         kwargs = json.loads(json_args)
-        respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        callback = kwargs.get("callback")
-        (result_code, _, msg_uid,) = self._msg_queue.send_message_with_response(
-            command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
-        )
+        self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        self._on_callback = kwargs.get("callback")
+        (result_code, _, msg_uid,) = self._msg_queue.send_message(command="On")
         return [[result_code], [msg_uid]]
 
-    class OnCommand(SKABaseDevice.OnCommand):
+    class OnCommand(ResponseCommand):# SKABaseDevice.OnCommand):
         """
         Class for handling the On() command.
         """
 
-        SUCCEEDED_MESSAGE = "Station On command completed OK"
+        QUEUED_MESSAGE = "Station On command queued"
         FAILED_MESSAGE = "Station On command failed"
 
         def do(self, argin):
@@ -589,16 +592,79 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            # rcltodo: just return straight away for now!
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            device = self.target
+            device_pool = device.device_pool
 
-            # rcltodo: will need to be invoke_command_with_callback call when the
-            #          subservient pool devices (tiles, antennas) have msg queues
-            device_pool = self.target
-            if device_pool.on():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            # rcltodo: Why doesn't .dev_name() work?
+            device.logger.debug("RCL: Pool invoke_command_with_callback('On', fqdn=station1, 'OnCallback')")
+            if device_pool.invoke_command_with_callback(
+                command_name="On",
+                fqdn=f"low-mccs/station/{device._station_id:03}",
+                callback="OnCallback",
+            ):
+                return (ResultCode.OK, self.QUEUED_MESSAGE)
             else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                device.logger.error('Station device pool "On" command not queued')
+                # This needs to be successful or it drives the state machine into FAULT
+                return (ResultCode.OK, self.FAILED_MESSAGE)
+
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def OnCallback(self, argin):
+        """
+        On callback method.
+
+        :param argin: Argument containing JSON encoded command message and result
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        (result_code, message, _) = self._msg_queue.send_message(
+            command="OnCallback", json_args=argin
+        )
+        return [[result_code], [message]]
+
+    class OnCallbackCommand(ResponseCommand):
+        """
+        Class for handling the On Callback command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsStation.OnCallback` command.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            device_pool = device.device_pool
+
+            # Defer callback to our pool device
+            (command_complete, result_code, message) = device_pool.on_callback(argin)
+
+            if command_complete:
+                if device._on_respond_to_fqdn:
+                    # Post response back to requestor
+                    try:
+                        response_device = tango.DeviceProxy(device._on_respond_to_fqdn)
+                    except DevFailed:
+                        device._qdebug(f"Response device {device._on_respond_to_fqdn} not found")
+
+                    # Call the specified command asynchronously
+                    async_id = response_device.command_inout_asynch(device._on_callback, argin)
+                    (result_code, message) = response_device.command_inout_reply(async_id, timeout=0)
+
+                return (result_code, message)
+            else:
+                return (ResultCode.STARTED, message)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """

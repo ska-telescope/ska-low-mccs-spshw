@@ -20,7 +20,7 @@ __all__ = [
 
 import threading
 
-from tango import DevFailed, DevState, EnsureOmniThread
+from tango import DevFailed, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, device_property, AttrWriteType
 
 from ska_tango_base import SKABaseDevice
@@ -35,6 +35,7 @@ from ska_low_mccs.hardware import (
 )
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import tango_raise
+from ska_low_mccs.msg_queue import MessageQueue
 
 
 def create_return(success, action):
@@ -386,6 +387,15 @@ class MccsAntenna(SKABaseDevice):
     # ---------------
     # General methods
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device; overridden here to change the Tango
+        serialisation model.
+        """
+        util = Util.instance()
+        util.set_serial_model(SerialModel.NO_SYNC)
+        super().init_device()
+
     class InitCommand(SKABaseDevice.InitCommand):
         """
         Initialises the command handlers for commands supported by this
@@ -414,6 +424,8 @@ class MccsAntenna(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._msg_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -429,6 +441,7 @@ class MccsAntenna(SKABaseDevice):
             super().do()
 
             device = self.target
+            device.queue_debug = ""
             device._apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
             device._tile_fqdn = f"low-mccs/tile/{device.TileId:04}"
 
@@ -477,6 +490,12 @@ class MccsAntenna(SKABaseDevice):
             for name in event_names:
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
+
+            # Start the Message queue for this device
+            device._msg_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._msg_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -648,6 +667,25 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
+
     @attribute(
         dtype=SimulationMode,
         access=AttrWriteType.READ_WRITE,

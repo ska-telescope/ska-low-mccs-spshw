@@ -190,7 +190,7 @@ class TestMccsIntegrationTmc:
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
-        assert devices["subarray_01"].stationFQDNs == ()
+        assert list(devices["subarray_01"].stationFQDNs) == []
 
         # Allocate stations to a subarray
         parameters = {

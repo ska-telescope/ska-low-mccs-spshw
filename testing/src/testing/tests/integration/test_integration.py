@@ -68,8 +68,8 @@ class TestMccsIntegration:
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         # check initial state
-        assert subarray_1.stationFQDNs == ()
-        assert subarray_2.stationFQDNs == ()
+        assert list(subarray_1.stationFQDNs) == []
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 0
@@ -91,7 +91,7 @@ class TestMccsIntegration:
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs == ()
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 1
@@ -112,7 +112,7 @@ class TestMccsIntegration:
 
         # check no side-effects
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs == ()
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
         assert tile_1.subarrayId == 1
@@ -139,7 +139,7 @@ class TestMccsIntegration:
             station_1.dev_name(),
             station_2.dev_name(),
         ]
-        assert subarray_2.stationFQDNs == ()
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
         assert tile_1.subarrayId == 1

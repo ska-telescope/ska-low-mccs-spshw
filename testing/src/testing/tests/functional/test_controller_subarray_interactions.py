@@ -14,6 +14,8 @@ from ska_tango_base.control_model import AdminMode, ObsState, HealthState
 
 from ska_low_mccs import MccsDeviceProxy
 
+from testing.harness.tango_harness import TangoHarness
+
 
 @pytest.fixture(scope="module")
 def devices_to_load():
@@ -48,159 +50,133 @@ def devices_to_load():
 
 
 @pytest.fixture()
-def controller(tango_context):
+def controller(tango_harness: TangoHarness):
     """
     Return the controller device.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: the controller device
     :rtype: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
-    return tango_context.get_device("controller")
+    return tango_harness.get_device("low-mccs/control/control")
 
 
 @pytest.fixture()
-def subarrays(tango_context):
+def subarrays(tango_harness: TangoHarness):
     """
     Return a dictionary of subarrays keyed by their number.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: subarrays by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
-        1: tango_context.get_device("subarray_01"),
-        2: tango_context.get_device("subarray_02"),
+        1: tango_harness.get_device("low-mccs/subarray/01"),
+        2: tango_harness.get_device("low-mccs/subarray/02"),
     }
 
 
 @pytest.fixture()
-def stations(tango_context):
+def stations(tango_harness: TangoHarness):
     """
     Return a dictionary of stations keyed by their number.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: stations by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
-        1: tango_context.get_device("station_001"),
-        2: tango_context.get_device("station_002"),
+        1: tango_harness.get_device("low-mccs/station/001"),
+        2: tango_harness.get_device("low-mccs/station/002"),
     }
 
 
 @pytest.fixture()
-def subracks(tango_context):
+def subracks(tango_harness: TangoHarness):
     """
     Return a dictionary of subracks keyed by their number.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: subracks by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
-        1: tango_context.get_device("subrack_01"),
+        1: tango_harness.get_device("low-mccs/subrack/01"),
     }
 
 
 @pytest.fixture()
-def tiles(tango_context):
+def tiles(tango_harness: TangoHarness):
     """
     Return a dictionary of tiles keyed by their number.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: tiles by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
-        1: tango_context.get_device("tile_0001"),
-        2: tango_context.get_device("tile_0002"),
-        3: tango_context.get_device("tile_0003"),
-        4: tango_context.get_device("tile_0004"),
+        1: tango_harness.get_device("low-mccs/tile/0001"),
+        2: tango_harness.get_device("low-mccs/tile/0002"),
+        3: tango_harness.get_device("low-mccs/tile/0003"),
+        4: tango_harness.get_device("low-mccs/tile/0004"),
     }
 
 
 @pytest.fixture()
-def apius(tango_context):
+def apius(tango_harness: TangoHarness):
     """
     Return a dictionary of APIUs keyed by their number.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: APIUs by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         # workaround for https://github.com/tango-controls/cppTango/issues/816
-        # 1: tango_context.get_device("apiu_001"),
+        # 1: tango_harness.get_device("low-mccs/apiu/001"),
     }
 
 
 @pytest.fixture()
-def antennas(tango_context):
+def antennas(tango_harness: TangoHarness):
     """
     Return a dictionary of antennas keyed by their number.
 
-    :param tango_context: A tango context of some sort; possibly a
-        :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
-        the real thing. The only requirement is that it provide a
-        ``get_device(fqdn)`` method that returns a
-        :py:class:`tango.DeviceProxy`.
-    :type tango_context: :py:class:`contextmanager`
+    :param tango_harness: a test harness for tango devices
 
     :return: antennas by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
         # workaround for https://github.com/tango-controls/cppTango/issues/816
-        # 1: tango_context.get_device("antenna_000001"),
-        # 2: tango_context.get_device("antenna_000002"),
-        # 3: tango_context.get_device("antenna_000003"),
-        # 4: tango_context.get_device("antenna_000004"),
+        # 1: tango_harness.get_device("low-mccs/antenna/000001"),
+        # 2: tango_harness.get_device("low-mccs/antenna/000002"),
+        # 3: tango_harness.get_device("low-mccs/antenna/000003"),
+        # 4: tango_harness.get_device("low-mccs/antenna/000004"),
     }
 
 
 @pytest.fixture()
-def subarraybeams(tango_context):
+def subarraybeams(tango_harness: TangoHarness):
     """
     Return a dictionary of subarray beams keyed by their number.
 
-    :param tango_context: a tango subsystem running the required devices
-        for this test run. This could be a real tango subsystem, or a
-        :py:class:`tango.test_context.MultiDeviceTestContext`.
-    :type tango_context: object
+    :param tango_harness: a test harness for tango devices
 
     :return: subarray beams by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     return {
-        1: tango_context.get_device("subarraybeam_01"),
-        2: tango_context.get_device("subarraybeam_02"),
-        3: tango_context.get_device("subarraybeam_03"),
-        4: tango_context.get_device("subarraybeam_04"),
+        1: tango_harness.get_device("low-mccs/subarraybeam/01"),
+        2: tango_harness.get_device("low-mccs/subarraybeam/02"),
+        3: tango_harness.get_device("low-mccs/subarraybeam/03"),
+        4: tango_harness.get_device("low-mccs/subarraybeam/04"),
     }
 
 

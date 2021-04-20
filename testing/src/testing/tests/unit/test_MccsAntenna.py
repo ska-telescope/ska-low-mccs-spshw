@@ -29,6 +29,7 @@ from ska_low_mccs import MccsAntenna, MccsDeviceProxy
 from ska_low_mccs.apiu.apiu_simulator import AntennaHardwareSimulator
 
 from testing.harness.mock import MockDeviceBuilder
+from testing.harness.tango_harness import TangoHarness
 
 
 @pytest.fixture()
@@ -125,6 +126,17 @@ class TestMccsAntenna:
     Test class for MccsAntenna tests.
     """
 
+    @pytest.fixture()
+    def device_under_test(self, tango_harness):
+        """
+        Fixture that returns the device under test.
+
+        :param tango_harness: a test harness for Tango devices
+
+        :return: the device under test
+        """
+        return tango_harness.get_device("low-mccs/antenna/000001")
+
     def test_Reset(self, device_under_test):
         """
         Test for Reset. Expected to fail as can't reset in the Off
@@ -172,66 +184,59 @@ class TestMccsAntenna:
         assert device_under_test.rms == 0.0
 
     @pytest.mark.parametrize("voltage", [19.0])
-    def test_voltage(self, device_under_test, mock_device_proxies, voltage):
+    def test_voltage(self, tango_harness: TangoHarness, device_under_test, voltage):
         """
         Test for voltage.
 
+        :param tango_harness: a test harness for tango devices
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict
         :param voltage: a voltage value to use for testing
         :type voltage: float
         """
-        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
         mock_apiu.get_antenna_voltage.return_value = voltage
 
         assert device_under_test.voltage == voltage
         assert mock_apiu.get_antenna_voltage.called_once_with(1)
 
     @pytest.mark.parametrize("current", [4.5])
-    def test_current(self, device_under_test, mock_device_proxies, current):
+    def test_current(self, tango_harness: TangoHarness, device_under_test, current):
         """
         Test for current.
 
+        :param tango_harness: a test harness for tango devices
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict
         :param current: a current value to use for testing
         :type current: float
         """
-        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
         mock_apiu.get_antenna_current.return_value = current
 
         assert device_under_test.current == current
         assert mock_apiu.get_antenna_current.called_once_with(1)
 
     @pytest.mark.parametrize("temperature", [37.4])
-    def test_temperature(self, device_under_test, mock_device_proxies, temperature):
+    def test_temperature(
+        self, tango_harness: TangoHarness, device_under_test, temperature
+    ):
         """
         Test for temperature.
 
+        :param tango_harness: a test harness for tango devices
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict
         :param temperature: a temperature value to use for testing
         :type temperature: float
         """
-        mock_apiu = mock_device_proxies["low-mccs/apiu/001"]
+        mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
         mock_apiu.get_antenna_temperature.return_value = temperature
 
         assert device_under_test.temperature == temperature

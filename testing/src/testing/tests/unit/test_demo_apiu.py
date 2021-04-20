@@ -38,6 +38,17 @@ class TestDemoAPIU:
     This class contains the tests for the DemoAPIU device class.
     """
 
+    @pytest.fixture()
+    def device_under_test(self, tango_harness):
+        """
+        Fixture that returns the device under test.
+
+        :param tango_harness: a test harness for Tango devices
+
+        :return: the device under test
+        """
+        return tango_harness.get_device("low-mccs/apiu/001")
+
     def test(self, device_under_test):
         """
         Test:

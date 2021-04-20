@@ -558,6 +558,7 @@ class MccsTile(SKABaseDevice):
             """
             self.logger.warning("RCL: Tile OnCommand EXE")
             (result_code, _) = super().do()
+            # TRYRCL RCLTRY: Early return to check mechanism is working OK
             return (result_code, "RCL: Tile on command is good!")
 
             device = self.target

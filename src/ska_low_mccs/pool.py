@@ -122,7 +122,7 @@ class DevicePool:
 
         # Send a message to all of the registered devices in the pool
         for device in self._devices:
-            self._logger.debug(f"cmd={command_name}, rtnfqdn={fqdn}, cb={callback}")
+            self._logger.warning(f"cmd={command_name}, rtnfqdn={fqdn}, cb={callback}")
 
             # rcltodo: Need to expand this to include arguments passed to commands...
             args = {
@@ -130,7 +130,7 @@ class DevicePool:
                 "callback": callback,
             }
             json_string = json.dumps(args)
-            self._logger.debug(
+            self._logger.warning(
                 f"Calling {command_name} on device.name() with json={json_string}"
             )
             async_id = device.command_inout_asynch(command_name, json_string)
@@ -139,7 +139,7 @@ class DevicePool:
                 return False
 
             if result_code == ResultCode.QUEUED:
-                self._logger.info(f"Added response {msg_uid[0]}")
+                self._logger.warning(f"Added response {msg_uid[0]}")
                 self._responses[msg_uid[0]] = False
 
         return True
@@ -166,7 +166,7 @@ class DevicePool:
         result_code = kwargs.get("result_code")
         self._results.append(result_code)
         key = msg_obj.get("msg_uid")
-        self._logger.debug(f"Got reply key {key}")
+        self._logger.warning(f"Got reply key {key}")
         if key in self._responses:
             self._responses[key] = True
         # else OK, this reply was not for this pool - exit as normal below

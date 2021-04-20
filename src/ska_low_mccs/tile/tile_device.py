@@ -309,7 +309,7 @@ class MccsTile(SKABaseDevice):
             """
             (result_code, message) = super().do()
             device = self.target
-
+            device._heart_beat = 0
             device.queue_debug = ""
             device._simulation_mode = SimulationMode.FALSE
 
@@ -525,15 +525,17 @@ class MccsTile(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.info("RCL: Tile On")
+        self.logger.warning("RCL: Tile On")
+        #return [[ResultCode.OK], ["RCL: Tile is good!"]]
+
         self._command_sequence = ["Off", "OnLow", "Initialise", "OnCallback"]
         #if self.state_model.op_state == DevState.STANDBY or self.state_model.op_state == DevState.DISABLE:
         #    self._command_sequence.insert(0, "Off")
 
-        #self.logger.error(f"RCL: seq = {self._command_sequence}")
-        kwargs = json.loads(json_args)
-        self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        self._on_callback = kwargs.get("callback")
+        #self.logger.warning(f"RCL: seq = {self._command_sequence}")
+        # kwargs = json.loads(json_args)
+        # self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        # self._on_callback = kwargs.get("callback")
         (result_code, message, _) = self._msg_queue.send_message(command="On")
         return [[result_code], [message]]
 
@@ -554,9 +556,13 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            self.logger.warning("RCL: Tile OnCommand EXE")
+            (result_code, _) = super().do()
+            return (result_code, "RCL: Tile on command is good!")
+
             device = self.target
             # Execute the following commands to:
-            device.logger.info(f"RCL: Tile OnCommand")
+            device.logger.warning(f"RCL: Tile OnCommand")
             # 1. Off - Transition out of Standby state (if required)
             # 2. On - Turn the power on to the Tile
             # 3. Initialise - Download TPM firmware and initialise
@@ -567,8 +573,8 @@ class MccsTile(SKABaseDevice):
                 command = device.get_command_object(step)
                 (return_code, message) = command()
                 if return_code == ResultCode.FAILED:
-                    return [[return_code], [message]]
-            return [[return_code], ["On command sequence completed OK"]]
+                    return (return_code, message)
+            return (return_code, "On command sequence completed OK")
 
     class OnCallbackCommand(ResponseCommand):
         """
@@ -709,6 +715,15 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Callbacks
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state

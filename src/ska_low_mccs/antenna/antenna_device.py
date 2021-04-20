@@ -441,6 +441,7 @@ class MccsAntenna(SKABaseDevice):
             super().do()
 
             device = self.target
+            device._heart_beat = 0
             device.queue_debug = ""
             device._apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
             device._tile_fqdn = f"low-mccs/tile/{device.TileId:04}"
@@ -667,6 +668,15 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
     @attribute(dtype="DevString")
     def aQueueDebug(self):
         """

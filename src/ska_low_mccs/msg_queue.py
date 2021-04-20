@@ -95,6 +95,7 @@ class MessageQueue(threading.Thread):
         with EnsureOmniThread():
             self._qdebug("msgQRunning")
             while not self._terminate:
+                self._target._heart_beat += 1
                 self._check_msg_queue()
 
     def _notify_listener(self, command, progress):

@@ -684,6 +684,7 @@ class MccsSubrack(SKABaseDevice):
             device = self.target
             device._tile_fqdns = list(device.TileFQDNs)
             device.queue_debug = ""
+            device._heart_beat = 0
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
@@ -850,6 +851,15 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
 
     @attribute(dtype="DevString")
     def aQueueDebug(self):

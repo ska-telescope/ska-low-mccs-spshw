@@ -129,6 +129,7 @@ class MccsStation(SKAObsDevice):
             super().do()
             device = self.target
             device.queue_debug = ""
+            device._heart_beat = 0
             device._progress = 0
             device._subarray_id = 0
             device._apiu_fqdn = device.APIUFQDN
@@ -266,6 +267,15 @@ class MccsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state
@@ -564,7 +574,7 @@ class MccsStation(SKAObsDevice):
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         # Cache "On" command callback
-        self.logger.info("RCL: Send message to Station On")
+        self.logger.warning("RCL: Send message to Station On")
         kwargs = json.loads(json_args)
         self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
         self._on_callback = kwargs.get("callback")
@@ -592,13 +602,11 @@ class MccsStation(SKAObsDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            return (ResultCode.OK, self.QUEUED_MESSAGE)
-
             device = self.target
             device_pool = device.device_pool
 
             # rcltodo: Why doesn't .dev_name() work?
-            device.logger.info("RCL: Pool invoke_command_with_callback('On', fqdn=station1, 'OnCallback')")
+            self.logger.warning("RCL: Pool invoke_command_with_callback('On', fqdn=station1, 'OnCallback')")
             if device_pool.invoke_command_with_callback(
                 command_name="On",
                 fqdn=f"low-mccs/station/{device._station_id:03}",
@@ -607,8 +615,7 @@ class MccsStation(SKAObsDevice):
                 return (ResultCode.OK, self.QUEUED_MESSAGE)
             else:
                 device.logger.error('Station device pool "On" command not queued')
-                # This needs to be successful or it drives the state machine into FAULT
-                return (ResultCode.OK, self.FAILED_MESSAGE)
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -624,6 +631,7 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
+        self.logger.warning("RCL: Station OnCallback")
         (result_code, message, _) = self._msg_queue.send_message(
             command="OnCallback", json_args=argin
         )
@@ -649,6 +657,7 @@ class MccsStation(SKAObsDevice):
             device = self.target
             device_pool = device.device_pool
 
+            device.logger.warning("RCL: Station OnCallbackCommand class do()")
             # Defer callback to our pool device
             (command_complete, result_code, message) = device_pool.on_callback(argin)
 
@@ -664,8 +673,10 @@ class MccsStation(SKAObsDevice):
                     async_id = response_device.command_inout_asynch(device._on_callback, argin)
                     (result_code, message) = response_device.command_inout_reply(async_id, timeout=0)
 
+                device.logger.warning(f"RCL: Station OnCallbackCommand class do() res={result_code}, msg={message}")
                 return (result_code, message)
             else:
+                device.logger.warning(f"RCL: Station OnCallbackCommand class do() STARTED, msg={message}")
                 return (ResultCode.STARTED, message)
 
     class OffCommand(SKABaseDevice.OffCommand):

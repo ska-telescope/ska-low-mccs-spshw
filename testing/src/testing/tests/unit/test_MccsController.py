@@ -126,6 +126,18 @@ def mock_factory(mocker):
     return builder
 
 
+@pytest.fixture()
+def device_under_test(tango_harness):
+    """
+    Fixture that returns the device under test.
+
+    :param tango_harness: a test harness for Tango devices
+
+    :return: the device under test
+    """
+    return tango_harness.get_device("low-mccs/control/control")
+
+
 class TestMccsController:
     """
     Tests of the MccsController device.

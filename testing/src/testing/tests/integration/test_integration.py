@@ -10,6 +10,8 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.utils import call_with_json
 
+from testing.harness.tango_harness import TangoHarness
+
 
 @pytest.fixture()
 def devices_to_load():
@@ -48,23 +50,22 @@ class TestMccsIntegration:
     Integration test cases for the Mccs device classes.
     """
 
-    def test_controller_allocate_subarray(self, device_context):
+    def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
         """
         Test that an MccsController device can allocate resources to an
         MccsSubarray device.
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        controller = device_context.get_device("controller")
-        subarray_1 = device_context.get_device("subarray_01")
-        subarray_2 = device_context.get_device("subarray_02")
-        station_1 = device_context.get_device("station_001")
-        station_2 = device_context.get_device("station_002")
-        tile_1 = device_context.get_device("tile_0001")
-        tile_2 = device_context.get_device("tile_0002")
-        tile_3 = device_context.get_device("tile_0003")
-        tile_4 = device_context.get_device("tile_0004")
+        controller = tango_harness.get_device("low-mccs/control/control")
+        subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
+        subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
+        station_1 = tango_harness.get_device("low-mccs/station/001")
+        station_2 = tango_harness.get_device("low-mccs/station/002")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         # check initial state
         assert subarray_1.stationFQDNs == ()
@@ -146,23 +147,22 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 1
         assert tile_4.subarrayId == 1
 
-    def test_controller_release_subarray(self, device_context):
+    def test_controller_release_subarray(self, tango_harness: TangoHarness):
         """
         Test that an MccsController device can release the resources of
         an MccsSubarray device.
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        controller = device_context.get_device("controller")
-        subarray_1 = device_context.get_device("subarray_01")
-        subarray_2 = device_context.get_device("subarray_02")
-        station_1 = device_context.get_device("station_001")
-        station_2 = device_context.get_device("station_002")
-        tile_1 = device_context.get_device("tile_0001")
-        tile_2 = device_context.get_device("tile_0002")
-        tile_3 = device_context.get_device("tile_0003")
-        tile_4 = device_context.get_device("tile_0004")
+        controller = tango_harness.get_device("low-mccs/control/control")
+        subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
+        subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
+        station_1 = tango_harness.get_device("low-mccs/station/001")
+        station_2 = tango_harness.get_device("low-mccs/station/002")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         controller.Startup()
 
@@ -242,18 +242,17 @@ class TestMccsIntegration:
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-    def test_station_tile_subarray_id(self, device_context):
+    def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
         """
         Test that a write to attribute subarrayId on an MccsStation
         device also results in an update to attribute subarrayId on its
         MccsTiles.
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        station = device_context.get_device("station_001")
-        tile_1 = device_context.get_device("tile_0001")
-        tile_2 = device_context.get_device("tile_0002")
+        station = tango_harness.get_device("low-mccs/station/001")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
 
         # check initial state
         assert station.subarrayId == 0

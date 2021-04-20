@@ -18,6 +18,33 @@ from ska_low_mccs.events import (
     EventManager,
 )
 
+from testing.harness.tango_harness import TangoHarness
+
+
+@pytest.fixture()
+def device_to_load():
+    """
+    Fixture that specifies the device to be loaded for testing.
+
+    This is a slightly lazy hack to allow us to test event subscription
+    against mocking. We want our tango harness to be up and running for
+    this to work, but the Tango test contexts require at least one
+    device to be running. So we stand up a single device, which we won't
+    actually be using in any way.
+
+    TODO: Find a way to stand up a Tango test harness that is 100% mock
+    devices, and thus doesn't use a Tango test context at all.
+
+    :return: specification of the device to be loaded
+    :rtype: dict
+    """
+    return {
+        "path": "charts/ska-low-mccs/data/extra.json",
+        "package": "ska_low_mccs",
+        "device": "device",
+        "proxy": MccsDeviceProxy,
+    }
+
 
 class TestEventSubscriptionHandler:
     """
@@ -25,22 +52,18 @@ class TestEventSubscriptionHandler:
     class.
     """
 
-    def test_subscribe(self, mock_device_proxies, logger):
+    def test_subscribe(self, tango_harness: TangoHarness, logger):
         """
         Test subscription: specifically, test that when an instance is
         initialised with a given fqdn and the name of an event, the
         device at that fqdn receives a subscribe_event call for that
         event.
 
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
+        :param tango_harness: a test harness for tango devices
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-        mock_device_proxy = MccsDeviceProxy("mock/mock/1", logger)
+        mock_device_proxy = tango_harness.get_device("mock/mock/1")
         event_name = "mock_event"
 
         _ = EventSubscriptionHandler(mock_device_proxy, event_name, logger)
@@ -51,19 +74,15 @@ class TestEventSubscriptionHandler:
         args, kwargs = mock_device_proxy.subscribe_event.call_args
         assert args[0] == event_name
 
-    def test_event_pushing(self, mocker, mock_device_proxies, logger):
+    def test_event_pushing(self, tango_harness: TangoHarness, mocker, logger):
         """
         Test that when an instance's push_event subscription callback
         method is called, it passes the event on by invoking its own
         registered callbacks.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
         :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -72,7 +91,7 @@ class TestEventSubscriptionHandler:
         event_quality = "mock_quality"
         callback_count = 2  # test should pass for any positive value
 
-        mock_device_proxy = MccsDeviceProxy("mock/mock/1", logger)
+        mock_device_proxy = tango_harness.get_device("mock/mock/1")
         event_subscription_handler = EventSubscriptionHandler(
             mock_device_proxy, event_name, logger
         )
@@ -98,7 +117,7 @@ class TestEventSubscriptionHandler:
                 event_name, event_value, event_quality
             )
 
-    def test_unsubscribe(self, mocker, mock_device_proxies, logger):
+    def test_unsubscribe(self, tango_harness: TangoHarness, logger):
         """
         Test that when an instance is deleted, the device receives an
         unsubcribe_event call.
@@ -110,18 +129,12 @@ class TestEventSubscriptionHandler:
         we just that exactly one unsubscribe call is made, and leave it
         at that.
 
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
+        :param tango_harness: a test harness for tango devices
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
         event_name = "mock_event"
-        mock_device_proxy = MccsDeviceProxy("mock/mock/1", logger)
+        mock_device_proxy = tango_harness.get_device("mock/mock/1")
 
         event_subscription_handler = EventSubscriptionHandler(
             mock_device_proxy, event_name, logger
@@ -162,8 +175,8 @@ class TestDeviceEventManager:
         allowed_events,
         event_spec,
         raise_context,
-        mocker,
-        mock_device_proxies,
+        tango_harness: TangoHarness,
+        mock_callback,
         logger,
     ):
         """
@@ -179,35 +192,27 @@ class TestDeviceEventManager:
         :param raise_context: a context indicating whether this test
             should raise a Value error or not
         :type raise_context: :py:class:`contextmanager`
-        :param mocker: fixture that wraps unittest.Mock
-        :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
+        :param tango_harness: a test harness for tango devices
+        :param mock_callback: a mock to pass as a callback
+        :type mock_callback: :py:class:`unittest.mock.Mock`
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
         device_event_manager = DeviceEventManager("mock/mock/1", logger, allowed_events)
 
         with raise_context:
-            device_event_manager.register_callback(mocker.Mock(), event_spec=event_spec)
+            device_event_manager.register_callback(mock_callback, event_spec=event_spec)
 
-    def test_subscription(self, mocker, mock_device_proxies, logger):
+    def test_subscription(self, tango_harness: TangoHarness, mocker, logger):
         """
         Test subscription: specifically, test that when a a client
         subscribes to a specified event from a DeviceEventManager, the
         device managed by that DeviceEventManager receives a
         subscribe_event call for the specified event.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -217,7 +222,7 @@ class TestDeviceEventManager:
         event_count = 2  # test should pass for any positive number
         callbacks = [mocker.Mock() for i in range(event_count)]
 
-        mock_device_proxy = MccsDeviceProxy(fqdn, logger)
+        mock_device_proxy = tango_harness.get_device("mock/mock/1")
 
         for i in range(event_count):
             event_name = f"mock_event_{i}"
@@ -231,20 +236,16 @@ class TestDeviceEventManager:
 
             mock_device_proxy.reset_mock()
 
-    def test_event_pushing(self, mocker, mock_device_proxies, logger):
+    def test_event_pushing(self, tango_harness: TangoHarness, mocker, logger):
         """
         Test that when a EventSubscriptionHandler's push_event callback
         method is called, this DeviceEventMonitor receives the event and
         passes it down the change by invoking its own registered
         callbacks.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -318,8 +319,8 @@ class TestEventManager:
         allowed_fqdns,
         fqdn_spec,
         raise_context,
+        tango_harness: TangoHarness,
         mocker,
-        mock_device_proxies,
         logger,
     ):
         """
@@ -335,13 +336,9 @@ class TestEventManager:
         :param raise_context: a context indicating whether this test
             should raise a Value error or not
         :type raise_context: :py:class:`contextmanager`
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -352,20 +349,16 @@ class TestEventManager:
                 mocker.Mock(), fqdn_spec=fqdn_spec, event_spec="mock"
             )
 
-    def test_subscribe(self, mock_callback, mock_device_proxies, logger):
+    def test_subscribe(self, tango_harness: TangoHarness, mock_callback, logger):
         """
         Test subscription: specifically, test that when a a client uses
         an EventManager to subscribe to a specified event from a
         specified device, the device receives a subscribe_event call for
         the specified event.
 
+        :param tango_harness: a test harness for tango devices
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
@@ -378,7 +371,7 @@ class TestEventManager:
         events = [f"mock_event_{i}" for i in range(1, event_count + 1)]
 
         for fqdn in fqdns:
-            mock_device_proxy = MccsDeviceProxy(fqdn, logger)
+            mock_device_proxy = tango_harness.get_device(fqdn)
 
             for event in events:
                 mock_callback.reset_mock()
@@ -393,19 +386,15 @@ class TestEventManager:
 
                 mock_device_proxy.reset_mock()
 
-    def test_event_pushing(self, mocker, mock_device_proxies, logger):
+    def test_event_pushing(self, tango_harness: TangoHarness, mocker, logger):
         """
         Test that when an device pushes an event, the event moves down
         the tree and eventually causes the EventManager instance to call
         its own callbacks.
 
+        :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
         :type mocker: :py:class:`pytest_mock.mocker`
-        :param mock_device_proxies: fixture that patches
-            :py:class:`tango.DeviceProxy` to always return the same mock
-            for each fqdn
-        :type mock_device_proxies: dict (but don't access it directly,
-            access it through :py:class:`tango.DeviceProxy` calls)
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """

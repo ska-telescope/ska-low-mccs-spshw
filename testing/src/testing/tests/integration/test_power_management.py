@@ -19,6 +19,8 @@ from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 
+from testing.harness.tango_harness import TangoHarness
+
 
 class TestPowerManagement:
     """
@@ -54,26 +56,25 @@ class TestPowerManagement:
             ],
         }
 
-    def test_power_on_off(self, device_context):
+    def test_power_on_off(self, tango_harness: TangoHarness):
         """
         Test that a MccsController device can enable an MccsSubarray
         device.
 
-        :param device_context: a test context for a set of tango devices
-        :type device_context: :py:class:`tango.test_context.MultiDeviceTestContext`
+        :param tango_harness: a test harness for tango devices
         """
-        controller = device_context.get_device("controller")
-        subrack = device_context.get_device("subrack_01")
-        station = device_context.get_device("station_001")
-        tile_1 = device_context.get_device("tile_0001")
-        tile_2 = device_context.get_device("tile_0002")
-        tile_3 = device_context.get_device("tile_0003")
-        tile_4 = device_context.get_device("tile_0004")
-        apiu = device_context.get_device("apiu_001")
-        antenna_1 = device_context.get_device("antenna_000001")
-        antenna_2 = device_context.get_device("antenna_000002")
-        antenna_3 = device_context.get_device("antenna_000003")
-        antenna_4 = device_context.get_device("antenna_000004")
+        controller = tango_harness.get_device("low-mccs/control/control")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        station = tango_harness.get_device("low-mccs/station/001")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        apiu = tango_harness.get_device("low-mccs/apiu/001")
+        antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
+        antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
+        antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
+        antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
 
         assert controller.State() == DevState.DISABLE
         assert subrack.State() == DevState.DISABLE

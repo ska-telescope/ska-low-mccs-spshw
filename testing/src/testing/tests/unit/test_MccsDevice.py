@@ -42,6 +42,17 @@ class TestMccsDevice(object):
     Test class for MccsDevice tests.
     """
 
+    @pytest.fixture()
+    def device_under_test(self, tango_harness):
+        """
+        Fixture that returns the device under test.
+
+        :param tango_harness: a test harness for Tango devices
+
+        :return: the device under test
+        """
+        return tango_harness.get_device("low-mccs/device/device")
+
     def test_State(self, device_under_test):
         """
         Test for State.

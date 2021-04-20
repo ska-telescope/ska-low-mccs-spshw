@@ -915,7 +915,7 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            (result_code, _) = super().do()
 
             # TODO: MCCS-specific stuff goes here
             # 1. Interrupt the current running scan, like EndScan
@@ -930,10 +930,6 @@ class MccsSubarray(SKASubarray):
             #          transmitted while aborting the observation
             #       b. Stop the beam former in the TPM
             # 2. Send Abort to the Cluster Manager to stop all running jobs
-
-            # TODO: Remove this delay. It simply emulates the time to achieve the above.
-            time.sleep(1)
-
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:

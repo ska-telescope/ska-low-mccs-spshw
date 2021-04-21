@@ -29,6 +29,9 @@ from ska_tango_base.commands import ResultCode
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
+__all__ = ["DevicePool", "DevicePoolSequence"]
+
+
 class DevicePool:
     """
     A class for managing a static pool of devices.

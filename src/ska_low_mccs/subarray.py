@@ -1110,6 +1110,13 @@ class MccsSubarray(SKASubarray):
             # 2. All elements should be deconfigured (as if they had just
             #    been allocated).
 
+<<<<<<< HEAD
+=======
+            # TODO: Remove this delay. It simply emulates the time to achieve the above.
+            time.sleep(1)
+            result_code = ResultCode.OK
+
+>>>>>>> MCCS-404 moved stationbeam_resource manager to controller
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:

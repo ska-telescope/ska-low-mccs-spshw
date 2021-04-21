@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -142,6 +141,136 @@ class MccsControllerQueue(MessageQueue):
         device.push_change_event("commandResult", json_results)
 
 
+class StationBeamsResourceManager(ResourceManager):
+    """
+    A simple manager for the pool of station beams that are assigned to
+    a subarray.
+
+    Initialize with a list of FQDNs of devices to be managed. The
+    ResourceManager holds the FQDN and the (1-based) ID of the device
+    that owns each managed device.
+    """
+
+    def __init__(
+        self: StationBeamsResourceManager,
+        health_monitor: HealthMonitor,
+        station_beam_fqdns: list[str],
+        stations_manager: ControllerResourceManager,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        Initialise a new StationBeamsResourceManager.
+
+        :param health_monitor: Provides for monitoring of health states
+        :param station_beam_fqdns: the FQDNs of the station beams that this
+            subarray manages
+        :param stations_manager: the StationResourceManager holding the station
+            devices belonging to the parent Subarray
+        :param logger: the logger to be used by the object under test
+        """
+        self._stations_manager = stations_manager
+        station_beams = {}
+        for station_beam_fqdn in station_beam_fqdns:
+            station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
+            station_beams[station_beam_id] = station_beam_fqdn
+        super().__init__(
+            health_monitor,
+            "Station Beams Resource Manager",
+            station_beams,
+            logger,
+            [HealthState.OK],
+        )
+
+    def assign(
+        self: StationBeamsResourceManager,
+        station_beam_fqdns: list[str],
+        station_fqdns: list[str],
+    ) -> None:
+        """
+        Assign devices to this subarray resource manager.
+
+        :param station_beam_fqdns: list of FQDNs of station beams to be assigned
+        :param station_fqdns: list of FQDNs of stations to be assigned
+        """
+        stations = {}
+        for station_fqdn in station_fqdns:
+            station_id = int(station_fqdn.split("/")[-1:][0])
+            stations[station_id] = station_fqdn
+
+        station_beams = {}
+
+    #         for station_beam_fqdn in station_beam_fqdns:
+    #             station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
+    #             station_beams[station_beam_id] = station_beam_fqdn
+    #
+    #             # TODO: Establishment of connections should happen at initialization
+    #             station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+    #             station_beam.stationIds = sorted(stations.keys())
+    #             # TODO While SubarrayBeam device is not yet fully implemented, we're still
+    #             # passing an array of Station ids to StationBeams. This list will end up
+    #             # going to SubarrayBeam while StationBeam gets a single Station device.
+    #             # As the Station FQDN is used by StationBeam to report health to
+    #             # SubarrayBeam, it makes sense to only keep this as a single string rather
+    #             # than a list, as it will be implemented when the StationBeam health
+    #             # gets implemented in SubarrayBeam - hence we pass a single value here:
+    #             station_beam.stationFqdn = station_fqdns[0]
+    #
+    #         self._add_to_managed(station_beams)
+    #         for station_beam_fqdn in station_beam_fqdns:
+    #
+    #             # TODO: Establishment of connections should happen at initialization
+    #             station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+    #             station_beam.isBeamLocked = True
+    #             self.update_resource_health(station_beam_fqdn, station_beam.healthState)
+    #
+    #         super().assign(station_beams, list(stations.keys()))
+
+    def release(
+        self: StationBeamsResourceManager,
+        station_beam_fqdns: list[str],
+        station_fqdns: list[str],
+    ) -> None:
+        """
+        Release devices from this subarray resource manager.
+
+        :param station_beam_fqdns: list of  FQDNs of station beams to be released
+        :param station_fqdns: list of  FQDNs of the stations which if assigned to,
+            station beams should be released
+        """
+        station_ids_to_release = []
+        # release station beams assigned to station_fqdns
+        for station_id, station_fqdn in self._stations_manager.items().items():
+            if station_fqdn in station_fqdns:
+                station_ids_to_release.append(station_id)
+        for station_beam in self._resources.values():
+            if station_beam._assigned_to in station_ids_to_release:
+                if station_beam.fqdn not in station_beam_fqdns:
+                    station_beam_fqdns.append(station_beam.fqdn)
+
+        # release station beams by given fqdns
+        for station_beam_fqdn in station_beam_fqdns:
+            station_beam.stationIds = []
+            station_beam.stationFqdn = None
+        super().release(station_beam_fqdns)
+
+    def release_all(self: StationBeamsResourceManager) -> None:
+        """
+        Release all devices from this subarray resource manager.
+        """
+        devices = self.get_all_fqdns()
+        self.release(devices, list())
+        self._stations_manager.release_all()
+
+    @property
+    def station_beam_fqdns(self: StationBeamsResourceManager) -> list[str]:
+        """
+        Returns the FQDNs of currently assigned station beams.
+
+        :return: FQDNs of currently assigned station beams
+        """
+        return sorted(self.get_all_fqdns())
+
+
 class MccsController(SKAMaster):
     """
     MccsController TANGO device class for the MCCS prototype.
@@ -155,19 +284,19 @@ class MccsController(SKAMaster):
             - The FQDNs of the Mccs sub-arrays
             - Type: list(str)
         MccsStations
-            - List of MCCS station  TANGO Device names
+            - list of MCCS station  TANGO Device names
             - Type: list(str)
         MccsStationBeams
-            - List of MCCS station beam TANGO Device names
+            - list of MCCS station beam TANGO Device names
             - Type: list(str)
         MccsSubarrayBeams
-            - List of MCCS subarray beam TANGO Device names
+            - list of MCCS subarray beam TANGO Device names
             - Type: list(str)
         MccsTiles
-            - List of MCCS Tile TANGO Device names.
+            - list of MCCS Tile TANGO Device names.
             - Type: list(str)
         MccsAntenna
-            - List of MCCS Antenna TANGO Device names
+            - list of MCCS Antenna TANGO Device names
             - Type: list(str)
     """
 
@@ -179,6 +308,7 @@ class MccsController(SKAMaster):
     MccsSubracks = device_property(dtype="DevVarStringArray", default_value=[])
     MccsStations = device_property(dtype="DevVarStringArray", default_value=[])
     MccsSubarrayBeams = device_property(dtype="DevVarStringArray", default_value=[])
+    MccsStationBeams = device_property(dtype="DevVarStringArray", default_value=[])
 
     # ---------------
     # General methods
@@ -258,7 +388,7 @@ class MccsController(SKAMaster):
             self._message_queue = None
             self._qdebuglock = threading.Lock()
 
-        def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.InitCommand) -> tuple[ResultCode, str]:
             """
             Initialises the attributes and properties of the `MccsController`. State is
             managed under the hood; the basic sequence is:
@@ -295,6 +425,7 @@ class MccsController(SKAMaster):
 
             device._subrack_fqdns = list(device.MccsSubracks)
             device._station_fqdns = list(device.MccsStations)
+            device._stationbeam_fqdns = list(device.MccsStationBeams)
 
             subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
             station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
@@ -334,13 +465,17 @@ class MccsController(SKAMaster):
                     self._interrupt = False
                     return
                 self._initialise_health_monitoring(
-                    device, device._subrack_fqdns + device._station_fqdns
+                    device,
+                    device._subrack_fqdns + device._station_fqdns
+                    #                    + device._stationbeam_fqdns,
                 )
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_resource_management(device, device._station_fqdns)
+                self._initialise_resource_management(
+                    device, device._station_fqdns  # + device._stationbeam_fqdns
+                )
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -360,7 +495,7 @@ class MccsController(SKAMaster):
             device.device_pool.connect()
 
         def _initialise_health_monitoring(
-            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: List[str]
+            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: list[str]
         ) -> None:
             """
             Initialise the health model for this device.
@@ -377,7 +512,7 @@ class MccsController(SKAMaster):
             )
 
         def _initialise_resource_management(
-            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: List[str]
+            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: list[str]
         ) -> None:
             """
             Initialise resource management for this device.
@@ -393,10 +528,19 @@ class MccsController(SKAMaster):
             device._stations_manager = StationsResourceManager(
                 health_monitor, fqdns, self.logger
             )
+            #             device._stationbeams_manager = StationBeamsResourceManager(
+            #                 device.health_model._health_monitor,
+            #                 device._station_beam_fqdns,
+            #                 device._stations_manager,
+            #                 self.logger,
+            #             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
                 "Allocate", device.AllocateCommand(*resource_args)
-            )
+            )  #             stationbeams_pool = DevicePool(
+            #                 device._stationbeam_fqdns, self.logger, connect=False
+            #             )
+
             device.register_command_object(
                 "Release", device.ReleaseCommand(*resource_args)
             )
@@ -687,7 +831,7 @@ class MccsController(SKAMaster):
         QUEUED_MESSAGE = "Controller On command queued"
         FAILED_MESSAGE = "Controller On command failed"
 
-        def do(self: MccsController.OnCommand, argin: str) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.OnCommand, argin: str) -> tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.On` command.
@@ -790,7 +934,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "Disable command completed OK"
         FAILED_MESSAGE = "Disable command failed"
 
-        def do(self: MccsController.DisableCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.DisableCommand) -> tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.Off` command
@@ -829,7 +973,7 @@ class MccsController(SKAMaster):
         QUEUED_MESSAGE = "Controller Off command queued"
         FAILED_MESSAGE = "Controller Off command failed"
 
-        def do(self: MccsController.OffCommand, argin: str) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.OffCommand, argin: str) -> tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Off` command.
@@ -867,7 +1011,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "StandbyLow command completed OK"
         FAILED_MESSAGE = "StandbyLow command failed"
 
-        def do(self: MccsController.StandbyLowCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.StandbyLowCommand) -> tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyLow` command.
@@ -915,7 +1059,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "StandbyFull command completed OK"
         FAILED_MESSAGE = "StandbyFull command failed"
 
-        def do(self: MccsController.StandbyFullCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.StandbyFullCommand) -> tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
@@ -962,7 +1106,7 @@ class MccsController(SKAMaster):
 
         SUCCEEDED_MESSAGE = "Operate command completed OK"
 
-        def do(self: MccsController.OperateCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.OperateCommand) -> tuple[ResultCode, str]:
             """
             Stateless hook for implementation of
             :py:meth:`.MccsController.Operate` command
@@ -1014,7 +1158,7 @@ class MccsController(SKAMaster):
     class ResetCommand(SKABaseDevice.ResetCommand):
         """Command class for the Reset() command."""
 
-        def do(self: MccsController.ResetCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.ResetCommand) -> tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the (inherited)
             :py:meth:`ska_tango_base.SKABaseDevice.Reset` command for this
@@ -1112,7 +1256,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.AllocateCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             :py:meth:`.MccsController.Allocate` command
@@ -1808,7 +1952,7 @@ class MccsController(SKAMaster):
 
         SUCCEEDED_MESSAGE = "Maintenance command completed OK"
 
-        def do(self: MccsController.MaintenanceCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.MaintenanceCommand) -> tuple[ResultCode, str]:
             """
             Stateless do-hook for handling the
             :py:meth:`.MccsController.Maintenance` command.

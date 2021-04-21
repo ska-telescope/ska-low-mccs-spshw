@@ -39,7 +39,7 @@ class MessageQueue(threading.Thread):
             self,
             command: str,
             json_args: str,
-            msg_uid: str,
+            message_uid: str,
             notifications: bool,
             respond_to_fqdn: str,
             callback: str,
@@ -49,14 +49,14 @@ class MessageQueue(threading.Thread):
 
             :param command: Tango command
             :param json_args: JSON encoded arguments to send to the command
-            :param msg_uid: The message's unique identifier
+            :param message_uid: The message's unique identifier
             :param notifications: Does the client require push notifications?
             :param respond_to_fqdn: Response message FQDN
             :param callback: The callback (command) to call when command is complete
             """
             self.command = command
             self.json_args = json_args
-            self.msg_uid = msg_uid
+            self.message_uid = message_uid
             self.notifications = notifications
             self.respond_to_fqdn = respond_to_fqdn
             self.callback = callback
@@ -70,7 +70,7 @@ class MessageQueue(threading.Thread):
         :param logger: the logger to be used by this object.
         """
         threading.Thread.__init__(self)
-        self._msg_queue = SimpleQueue()
+        self._message_queue = SimpleQueue()
         self._terminate = False
         self._target = target
         self._qdebuglock = lock
@@ -93,9 +93,9 @@ class MessageQueue(threading.Thread):
         # https://pytango.readthedocs.io/en/stable/howto.html
         # #using-clients-with-multithreading
         with EnsureOmniThread():
-            self._qdebug("msgQRunning")
+            self._qdebug("MessageQueueRunning")
             while not self._terminate:
-                self._check_msg_queue()
+                self._check_message_queue()
 
     def _notify_listener(self, command, progress):
         """
@@ -112,91 +112,91 @@ class MessageQueue(threading.Thread):
         # Terminate the thread execution loop
         self._terminate = True
 
-    def _execute_msg(self, msg):
+    def _execute_message(self, message):
         """
         Execute message from the message queue.
 
-        :param msg: The message to execute
+        :param message: The message to execute
         """
         try:
             # Check we have a device to respond to before executing a command
             response_device = None
-            if msg.respond_to_fqdn:
+            if message.respond_to_fqdn:
                 try:
-                    response_device = tango.DeviceProxy(msg.respond_to_fqdn)
+                    response_device = tango.DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
-                    self._qdebug(f"Response device {msg.respond_to_fqdn} not found")
-                    self._notify_listener(msg.command, ResultCode.UNKNOWN)
+                    self._qdebug(f"Response device {message.respond_to_fqdn} not found")
+                    self._notify_listener(message.command, ResultCode.UNKNOWN)
                     return
 
-            self._logger.info(f"_execute_msg{msg.msg_uid}")
-            self._qdebug(f"Exe({msg.msg_uid})")
-            command = self._target.get_command_object(msg.command)
+            self._logger.info(f"_execute_message{message.message_uid}")
+            self._qdebug(f"Exe({message.message_uid})")
+            command = self._target.get_command_object(message.command)
             if command:
-                if msg.notifications:
-                    self._qdebug(f"^({msg.msg_uid})")
-                    self._notify_listener(msg.command, ResultCode.STARTED)
+                if message.notifications:
+                    self._qdebug(f"^({message.message_uid})")
+                    self._notify_listener(message.command, ResultCode.STARTED)
 
                 # Incorporate FQDN and callback into command args dictionary
                 # Add to kwargs and deal with the case if it's not a JSON encoded string
                 try:
-                    kwargs = json.loads(msg.json_args)
+                    kwargs = json.loads(message.json_args)
                 except ValueError:
                     kwargs = {}
                 except TypeError:
-                    self._qdebug(f"TypeError({msg.command})")
+                    self._qdebug(f"TypeError({message.command})")
                     self._logger.error(
-                        f"TypeError: json_args for {msg.command} should be a JSON encoded string"
+                        f"TypeError: json_args for {message.command} should be a JSON encoded string"
                     )
                     return
-                kwargs["respond_to_fqdn"] = msg.respond_to_fqdn
-                kwargs["callback"] = msg.callback
+                kwargs["respond_to_fqdn"] = message.respond_to_fqdn
+                kwargs["callback"] = message.callback
                 json_string = json.dumps(kwargs)
                 self._logger.info(
-                    f"Calling {command} returning to fqdn={msg.respond_to_fqdn} "
-                    + f"and callback={msg.callback}"
+                    f"Calling {command} returning to fqdn={message.respond_to_fqdn} "
+                    + f"and callback={message.callback}"
                 )
-                self._qdebug(f"msg kwargs({kwargs})")
-                (result_code, message) = command(json_string)
-                self._qdebug(f"Result({msg.msg_uid},rc={result_code.name})")
+                self._qdebug(f"Message kwargs({kwargs})")
+                (result_code, status) = command(json_string)
+                self._qdebug(f"Result({message.message_uid},rc={result_code.name})")
             else:
                 raise KeyError
         except KeyError:
-            message = (
-                f"KeyError: Command {msg.command} not registered with this Tango device"
-            )
-            self._qdebug(f"KeyError({msg.command})")
-            self._logger.error(message)
+            status = f"KeyError: Command {message.command} not registered with this Tango device"
+            self._qdebug(f"KeyError({message.command})")
+            self._logger.error(status)
             return
 
         # Determine if we need to respond to a device
         if response_device:
             response = {
-                "msg_obj": msg,
+                "message_object": message,
                 "result_code": result_code,
-                "message": message,
+                "status": status,
             }
-            # Custom JSON encode required due to msg object embedded in our response
+            # Custom JSON encode required due to message object embedded in our response
             json_string = json.dumps(response, default=lambda obj: obj.__dict__)
-            self._qdebug(f'Reply to {response_device}.command_inout("{msg.callback}")')
+            self._qdebug(
+                f'Reply to {response_device}.command_inout("{message.callback}")'
+            )
             # Post response message
-            response_device.command_inout(msg.callback, json_string)
-            self._qdebug("Reply msg sent")
+            response_device.command_inout(message.callback, json_string)
+            self._qdebug("Reply message sent")
         else:
             self._qdebug("No reply required")
-        self._qdebug(f"EndOfMsg({msg.msg_uid})")
+        self._qdebug(f"EndOfMessage({message.message_uid})")
 
-    def _check_msg_queue(self):
+    def _check_message_queue(self):
         """
         Check to see if a message is waiting to be executed.
 
         Note: Timeout present to detect thread termination events.
         """
         try:
-            msg = self._msg_queue.get(timeout=1.0)
+            message = self._message_queue.get(timeout=1.0)
         except Empty:
             return
-        self._execute_msg(msg)
+        self._execute_message(message)
 
     def terminate_thread(self):
         """
@@ -228,11 +228,11 @@ class MessageQueue(threading.Thread):
             a message string indicating status and a message object
         :rtype: (ResultCode, str, Message)
         """
-        msg_uid = f"{str(uuid4())}:{command}"
-        msg = self.Message(
+        message_uid = f"{str(uuid4())}:{command}"
+        message = self.Message(
             command=command,
             json_args=json_args,
-            msg_uid=msg_uid,
+            message_uid=message_uid,
             notifications=notifications,
             respond_to_fqdn=respond_to_fqdn,
             callback=callback,
@@ -240,11 +240,11 @@ class MessageQueue(threading.Thread):
         # rcltodo: protect with a try except for "Full" exception
         # rcltodo: Also limit the number of messages in a queue?
         #          Could be dangerous if many callbacks though - think!
-        self._msg_queue.put(msg)
-        self._qdebug(f"\nQ({msg.msg_uid})")
-        status = f"Queued message {msg.msg_uid}"
+        self._message_queue.put(message)
+        self._qdebug(f"\nQ({message.message_uid})")
+        status = f"Queued message {message.message_uid}"
         self._logger.info(status)
-        return (ResultCode.QUEUED, status, msg.msg_uid)
+        return (ResultCode.QUEUED, status, message.message_uid)
 
     def send_message_with_response(
         self,

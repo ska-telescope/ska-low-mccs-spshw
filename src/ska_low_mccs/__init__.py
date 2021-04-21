@@ -48,7 +48,7 @@ __all__ = [
     "events",
     "hardware",
     "health",
-    "msg_queue",
+    "message_queue",
     "pool",
     "utils",
     "resource",

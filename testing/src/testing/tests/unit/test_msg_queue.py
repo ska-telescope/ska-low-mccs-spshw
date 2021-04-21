@@ -16,6 +16,7 @@ import json
 
 from tango import DevFailed
 from unittest import mock
+from collections import defaultdict
 
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs.msg_queue import MessageQueue
@@ -74,6 +75,17 @@ class TestMessageQueue:
         """
         mock = mocker.Mock()
         mock.queue_debug = ""
+        return mock
+
+    @pytest.fixture()
+    def mock_device_proxy_with_devfailed(self, mocker):
+        """
+        A fixture that monkey patches Tango's DeviceProxy.
+
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
+        :return: A monkey patched Tango device proxy
+        """
+        mock = mocker.patch("tango.DeviceProxy", side_effect=DevFailed())
         return mock
 
     @pytest.fixture
@@ -296,7 +308,7 @@ class TestMessageQueue:
             device.command_inout.assert_called_once_with(callback, json_string)
 
     def test_send_msg_with_command_with_incorrect_response_fqdn(
-        self, specialised_msg_queue, mocker, target_mock, test_command, invalid_fqdn
+        self, specialised_msg_queue, mocker, target_mock, test_command, invalid_fqdn, mock_device_proxy_with_devfailed
     ):
         """
         Test that we can handle a message with an incorrect response
@@ -307,24 +319,22 @@ class TestMessageQueue:
         :param target_mock: fixture that mocks a target device
         :param test_command: a test command to send to the message queue
         :param invalid_fqdn: an invalid FQDN string
+        :param mock_device_proxy_with_devfailed: monkey patched device proxy which raises DevFailed exception
         """
-        with mock.patch(
-            "tango.DeviceProxy", side_effect=DevFailed()
-        ) as mock_device_proxy:
-            target_mock.get_command_object = mocker.Mock(return_value=None)
-            callback = "callback_command"
-            specialised_msg_queue.send_message_with_response(
-                command=test_command,
-                respond_to_fqdn=invalid_fqdn,
-                callback=callback,
-            )
-            time.sleep(0.1)  # Required to allow DUT thread to run
-            mock_device_proxy.assert_called_once_with(invalid_fqdn)
-            assert (
-                f"Response device {invalid_fqdn} not found"
-                in target_mock.queue_debug
-            )
-            assert specialised_msg_queue.notify == (
-                test_command,
-                ResultCode.UNKNOWN,
-            )
+        target_mock.get_command_object = mocker.Mock(return_value=None)
+        callback = "callback_command"
+        specialised_msg_queue.send_message_with_response(
+            command=test_command,
+            respond_to_fqdn=invalid_fqdn,
+            callback=callback,
+        )
+        time.sleep(0.1)  # Required to allow DUT thread to run
+        mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
+        assert (
+            f"Response device {invalid_fqdn} not found"
+            in target_mock.queue_debug
+        )
+        assert specialised_msg_queue.notify == (
+            test_command,
+            ResultCode.UNKNOWN,
+        )

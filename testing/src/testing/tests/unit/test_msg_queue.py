@@ -15,8 +15,6 @@ import time
 import json
 
 from tango import DevFailed
-from unittest import mock
-from collections import defaultdict
 
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs.msg_queue import MessageQueue
@@ -42,7 +40,7 @@ class TestMessageQueue:
         """
         A fixture returning a valid FQDN string.
 
-        :return a valid FQDN string
+        :return: a valid FQDN string
         """
         return "low-mccs/control/control"
 
@@ -51,7 +49,7 @@ class TestMessageQueue:
         """
         A fixture returning an invalid FQDN string.
 
-        :return an invalid FQDN string
+        :return: an invalid FQDN string
         """
         return "an/invalid/fqdn"
 
@@ -80,12 +78,35 @@ class TestMessageQueue:
     @pytest.fixture()
     def mock_device_proxy_with_devfailed(self, mocker):
         """
+        A fixture that monkey patches Tango's DeviceProxy and raises a
+        DevFailed exception.
+
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
+        :return: A monkey patched Tango device proxy which raises a DevFailed exception
+        """
+        mock = mocker.patch("tango.DeviceProxy", side_effect=DevFailed())
+        return mock
+
+    @pytest.fixture()
+    def device(self, mocker):
+        """
+        A fixture that mocks a device.
+
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
+        :return: A mocked device
+        """
+        return mocker.Mock()
+
+    @pytest.fixture()
+    def mock_device_proxy(self, mocker, device):
+        """
         A fixture that monkey patches Tango's DeviceProxy.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
+        :param device: fixture that mocks a device
         :return: A monkey patched Tango device proxy
         """
-        mock = mocker.patch("tango.DeviceProxy", side_effect=DevFailed())
+        mock = mocker.patch("tango.DeviceProxy", return_value=device)
         return mock
 
     @pytest.fixture
@@ -143,7 +164,9 @@ class TestMessageQueue:
         # Ensure the message queue's event loop has terminated
         msg_queue.join()
 
-    def test_send_msg_with_supported_command(self, msg_queue, mocker, target_mock, command_return_ok, test_command):
+    def test_send_msg_with_supported_command(
+        self, msg_queue, mocker, target_mock, command_return_ok, test_command
+    ):
         """
         Test that we can send a message.
 
@@ -162,7 +185,9 @@ class TestMessageQueue:
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({msg_uid},rc=OK)" in target_mock.queue_debug
 
-    def test_send_msg_with_unsupported_command(self, msg_queue, mocker, target_mock, test_command):
+    def test_send_msg_with_unsupported_command(
+        self, msg_queue, mocker, target_mock, test_command
+    ):
         """
         Test that we can handle a message with an unsupported command.
 
@@ -177,7 +202,9 @@ class TestMessageQueue:
         target_mock.get_command_object.assert_called_once_with(test_command)
         assert f"KeyError({test_command})" in target_mock.queue_debug
 
-    def test_send_msg_with_command_and_args(self, msg_queue, mocker, target_mock, command_return_ok, test_command):
+    def test_send_msg_with_command_and_args(
+        self, msg_queue, mocker, target_mock, command_return_ok, test_command
+    ):
         """
         Test that we can send a message with args.
 
@@ -201,7 +228,9 @@ class TestMessageQueue:
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({msg_uid},rc=OK)" in target_mock.queue_debug
 
-    def test_send_msg_with_command_and_incorrect_args(self, msg_queue, mocker, target_mock, command_return_ok, test_command):
+    def test_send_msg_with_command_and_incorrect_args(
+        self, msg_queue, mocker, target_mock, command_return_ok, test_command
+    ):
         """
         Test that we can send a message with incorrect args format.
 
@@ -220,7 +249,12 @@ class TestMessageQueue:
         assert f"TypeError({test_command})" in target_mock.queue_debug
 
     def test_send_msg_with_command_with_notifications(
-        self, specialised_msg_queue, mocker, target_mock, command_return_ok, test_command
+        self,
+        specialised_msg_queue,
+        mocker,
+        target_mock,
+        command_return_ok,
+        test_command,
     ):
         """
         Test that we can send a message with notifications.
@@ -243,7 +277,9 @@ class TestMessageQueue:
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({msg_uid},rc=OK)" in target_mock.queue_debug
 
-    def test_send_msg_with_command_with_no_notifications_src(self, msg_queue, mocker, target_mock, test_command):
+    def test_send_msg_with_command_with_no_notifications_src(
+        self, msg_queue, mocker, target_mock, test_command
+    ):
         """
         Test that we can send a message with notifications (but without
         derived class implementation)
@@ -251,7 +287,6 @@ class TestMessageQueue:
         :param msg_queue: message queue fixture
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
         :param target_mock: fixture that mocks a target device
-        :param command_return_ok: fixture for command that return ResultCode.OK
         :param test_command: a test command to send to the message queue
         """
         target_mock.get_command_object = mocker.Mock()
@@ -262,9 +297,19 @@ class TestMessageQueue:
         time.sleep(0.1)  # Required to allow DUT thread to run
         # The message queue should terminate if caller asked for notifications but
         # doesn't implement _notify_listener method.
-        assert msg_queue.is_alive() == False
+        assert not msg_queue.is_alive()
 
-    def test_send_msg_with_command_with_response(self, msg_queue, mocker, target_mock, command_return_ok, test_command, valid_fqdn):
+    def test_send_msg_with_command_with_response(
+        self,
+        msg_queue,
+        mocker,
+        target_mock,
+        command_return_ok,
+        test_command,
+        valid_fqdn,
+        mock_device_proxy,
+        device,
+    ):
         """
         Test that we can send a message with response callback.
 
@@ -274,41 +319,46 @@ class TestMessageQueue:
         :param command_return_ok: fixture for command that return ResultCode.OK
         :param test_command: a test command to send to the message queue
         :param valid_fqdn: a valid FQDN string
+        :param mock_device_proxy: monkey patched device proxy
+        :param device: fixture that mocks a device
         """
-        with mock.patch("tango.DeviceProxy") as mock_device_proxy:
-            target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
-            device = mocker.Mock()
-            mock_device_proxy.return_value = device
-            callback = "callback_command"
-            (_, _, msg_uid) = msg_queue.send_message_with_response(
-                command=test_command,
-                respond_to_fqdn=valid_fqdn,
-                callback=callback,
-            )
-            time.sleep(0.1)  # Required to allow DUT thread to run
-            target_mock.get_command_object.assert_called_once_with(test_command)
-            msg_args = {"respond_to_fqdn": valid_fqdn, "callback": callback}
-            json_string = json.dumps(msg_args)
-            command_return_ok.assert_called_once_with(json_string)
-            assert f"Result({msg_uid},rc=OK)" in target_mock.queue_debug
-            mock_device_proxy.assert_called_once_with(valid_fqdn)
-            args = {
-                "msg_obj": {
-                    "command": test_command,
-                    "json_args": "",
-                    "msg_uid": msg_uid,
-                    "notifications": False,
-                    "respond_to_fqdn": valid_fqdn,
-                    "callback": callback,
-                },
-                "result_code": 0,
-                "message": "",
-            }
-            json_string = json.dumps(args)
-            device.command_inout.assert_called_once_with(callback, json_string)
+        target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
+        callback = "callback_command"
+        (_, _, msg_uid) = msg_queue.send_message_with_response(
+            command=test_command,
+            respond_to_fqdn=valid_fqdn,
+            callback=callback,
+        )
+        time.sleep(0.1)  # Required to allow DUT thread to run
+        target_mock.get_command_object.assert_called_once_with(test_command)
+        msg_args = {"respond_to_fqdn": valid_fqdn, "callback": callback}
+        json_string = json.dumps(msg_args)
+        command_return_ok.assert_called_once_with(json_string)
+        assert f"Result({msg_uid},rc=OK)" in target_mock.queue_debug
+        mock_device_proxy.assert_called_once_with(valid_fqdn)
+        args = {
+            "msg_obj": {
+                "command": test_command,
+                "json_args": "",
+                "msg_uid": msg_uid,
+                "notifications": False,
+                "respond_to_fqdn": valid_fqdn,
+                "callback": callback,
+            },
+            "result_code": 0,
+            "message": "",
+        }
+        json_string = json.dumps(args)
+        device.command_inout.assert_called_once_with(callback, json_string)
 
     def test_send_msg_with_command_with_incorrect_response_fqdn(
-        self, specialised_msg_queue, mocker, target_mock, test_command, invalid_fqdn, mock_device_proxy_with_devfailed
+        self,
+        specialised_msg_queue,
+        mocker,
+        target_mock,
+        test_command,
+        invalid_fqdn,
+        mock_device_proxy_with_devfailed,
     ):
         """
         Test that we can handle a message with an incorrect response
@@ -330,10 +380,7 @@ class TestMessageQueue:
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
         mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
-        assert (
-            f"Response device {invalid_fqdn} not found"
-            in target_mock.queue_debug
-        )
+        assert f"Response device {invalid_fqdn} not found" in target_mock.queue_debug
         assert specialised_msg_queue.notify == (
             test_command,
             ResultCode.UNKNOWN,

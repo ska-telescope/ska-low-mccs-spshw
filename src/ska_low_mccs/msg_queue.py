@@ -106,7 +106,9 @@ class MessageQueue(threading.Thread):
         :param progress: The notification to send to any subscribed listeners
         """
         self._qdebug("Error(_notify_listener) Thread Terminated")
-        self._logger.error("Derived class should implement _notify_listener(). Thread terminated")
+        self._logger.error(
+            "Derived class should implement _notify_listener(). Thread terminated"
+        )
         # Terminate the thread execution loop
         self._terminate = True
 
@@ -187,6 +189,7 @@ class MessageQueue(threading.Thread):
     def _check_msg_queue(self):
         """
         Check to see if a message is waiting to be executed.
+
         Note: Timeout present to detect thread termination events.
         """
         try:

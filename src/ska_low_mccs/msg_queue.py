@@ -105,8 +105,10 @@ class MessageQueue(threading.Thread):
         :param command: The command that needs a push notification
         :param progress: The notification to send to any subscribed listeners
         """
-        self._qdebug("Error(_notify_listener)")
-        self._logger.error("Derived class should implement _notify_listener()")
+        self._qdebug("Error(_notify_listener) Thread Terminated")
+        self._logger.error("Derived class should implement _notify_listener(). Thread terminated")
+        # Terminate the thread execution loop
+        self._terminate = True
 
     def _execute_msg(self, msg):
         """

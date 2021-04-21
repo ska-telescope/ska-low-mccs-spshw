@@ -35,7 +35,7 @@ from ska_low_mccs.utils import call_with_json, tango_raise
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel, HealthMonitor
 from ska_low_mccs.resource import ResourceManager
-from ska_low_mccs.msg_queue import MessageQueue
+from ska_low_mccs.message_queue import MessageQueue
 
 __all__ = ["MccsController", "ControllerResourceManager", "main"]
 
@@ -229,7 +229,7 @@ class MccsController(SKAMaster):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
-            self._msg_queue = None
+            self._message_queue = None
             self._qdebuglock = threading.Lock()
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
@@ -274,10 +274,10 @@ class MccsController(SKAMaster):
             )
 
             # Start the Message queue for this device
-            device._msg_queue = MccsControllerQueue(
+            device._message_queue = MccsControllerQueue(
                 target=device, lock=self._qdebuglock, logger=self.logger
             )
-            device._msg_queue.start()
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -407,7 +407,7 @@ class MccsController(SKAMaster):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        self._msg_queue.terminate_thread()
+        self._message_queue.terminate_thread()
 
     # ----------
     # Attributes
@@ -515,7 +515,7 @@ class MccsController(SKAMaster):
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
-        (result_code, message, _) = self._msg_queue.send_message(
+        (result_code, message, _) = self._message_queue.send_message(
             command="ATest", notifications=True
         )
         self._command_result = ResultCode.QUEUED
@@ -567,7 +567,7 @@ class MccsController(SKAMaster):
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
-        (result_code, message, _) = self._msg_queue.send_message(
+        (result_code, message, _) = self._message_queue.send_message(
             command="BTest", notifications=True
         )
         self._command_result = ResultCode.QUEUED
@@ -616,7 +616,7 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        (result_code, message, _) = self._msg_queue.send_message(
+        (result_code, message, _) = self._message_queue.send_message(
             command="BTestCallback", argin=argin
         )
         return [[result_code], [message]]
@@ -662,7 +662,7 @@ class MccsController(SKAMaster):
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
         self.logger.info("send_message(Startup)")
-        (result_code, message, _) = self._msg_queue.send_message(
+        (result_code, message, _) = self._message_queue.send_message(
             command="Startup", notifications=True
         )
         self._command_result = result_code
@@ -732,7 +732,7 @@ class MccsController(SKAMaster):
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
         self.logger.info("send_message(On)")
-        (result_code, message, _) = self._msg_queue.send_message(
+        (result_code, message, _) = self._message_queue.send_message(
             command="On", notifications=True
         )
         self._command_result = result_code
@@ -789,7 +789,7 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        (result_code, message, _) = self._msg_queue.send_message(
+        (result_code, message, _) = self._message_queue.send_message(
             command="OnCallback", json_args=argin
         )
         return [[result_code], [message]]

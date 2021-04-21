@@ -31,7 +31,7 @@ from ska_low_mccs.hardware import (
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.subrack.subrack_simulator import SubrackBoardSimulator
 from ska_low_mccs.subrack.subrack_driver import SubrackBoardDriver
-from ska_low_mccs.msg_queue import MessageQueue
+from ska_low_mccs.message_queue import MessageQueue
 
 
 __all__ = [
@@ -667,7 +667,7 @@ class MccsSubrack(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
-            self._msg_queue = None
+            self._message_queue = None
             self._qdebuglock = threading.Lock()
 
         def do(self):
@@ -705,10 +705,10 @@ class MccsSubrack(SKABaseDevice):
             )
 
             # Start the Message queue for this device
-            device._msg_queue = MessageQueue(
+            device._message_queue = MessageQueue(
                 target=device, lock=self._qdebuglock, logger=self.logger
             )
-            device._msg_queue.start()
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -815,7 +815,7 @@ class MccsSubrack(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        self._msg_queue.terminate_thread()
+        self._message_queue.terminate_thread()
 
     # ----------
     # Callbacks
@@ -1811,10 +1811,10 @@ class MccsSubrack(SKABaseDevice):
         kwargs = json.loads(argin)
         respond_to_fqdn = kwargs.get("respond_to_fqdn")
         callback = kwargs.get("callback")
-        (result_code, _, msg_uid,) = self._msg_queue.send_message_with_response(
+        (result_code, _, message_uid,) = self._message_queue.send_message_with_response(
             command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
         )
-        return [[result_code], [msg_uid]]
+        return [[result_code], [message_uid]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """

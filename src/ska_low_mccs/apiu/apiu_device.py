@@ -839,6 +839,47 @@ class MccsAPIU(SKABaseDevice):
             success = hardware_manager.on()
             return create_return(success, "standby")
 
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def On(self, json_args):
+        """
+        Turn APIU "On".
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self.logger.warning("RCL: APIU On")
+        command = self.get_command_object("On")
+        (result_code, message) = command(json_args)
+        return [[result_code], [message]]
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On() command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsAPIU` device.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            (result_code, message) = super().do()
+            # MCCS-specific Reset functionality goes here
+            return (result_code, message)
+
     class OffCommand(SKABaseDevice.OffCommand):
         """
         Class for handling the Off() command.

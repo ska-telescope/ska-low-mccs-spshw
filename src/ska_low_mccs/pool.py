@@ -88,6 +88,7 @@ class DevicePool:
 
         async_ids = []
         for device in self._devices:
+            self._logger.warning(f"device = {device}")
             asyncid = device.command_inout_asynch(command_name, arg)
             async_ids.append(asyncid)
 
@@ -134,13 +135,13 @@ class DevicePool:
                 f"Calling {command_name} on device.name() with json={json_string}"
             )
             async_id = device.command_inout_asynch(command_name, json_string)
-            (result_code, msg_uid) = device.command_inout_reply(async_id, timeout=0)
+            (result_code, message_uid) = device.command_inout_reply(async_id, timeout=0)
             if result_code == ResultCode.FAILED:
                 return False
 
             if result_code == ResultCode.QUEUED:
-                self._logger.warning(f"Added response {msg_uid[0]}")
-                self._responses[msg_uid[0]] = False
+                self._logger.warning(f"Added response {message_uid[0]}")
+                self._responses[message_uid[0]] = False
 
         return True
 
@@ -160,12 +161,12 @@ class DevicePool:
         :return: Whether all of the messages were completed, return_code and message
         """
 
-        # check that each received message is on _msg_obj and mark off as recevied
+        # check that each received message is on message_object and mark off as recevied
         kwargs = json.loads(argin)
-        msg_obj = kwargs.get("msg_obj")
+        message_object = kwargs.get("message_object")
         result_code = kwargs.get("result_code")
         self._results.append(result_code)
-        key = msg_obj.get("msg_uid")
+        key = message_object.get("message_uid")
         self._logger.warning(f"Got reply key {key}")
         if key in self._responses:
             self._responses[key] = True
@@ -363,6 +364,18 @@ class DevicePoolSequence:
         return self.invoke_command("Disable", reverse=reverse)
 
     def reset(self, reverse=False):
+        """
+        Call Reset() on all devices in this device pool.
+
+        :param reverse: whether to call pools in reverse sequence. (You
+            might turn everything on in a certain order, but need to
+            turn them off again in reverse order.) Optional, defaults to
+            False
+
+        :type reverse: bool
+        :return: Whether the command succeeded or not
+        :rtype: bool
+        """
         return self.invoke_command("Reset", reverse=reverse)
 
     def standby(self, reverse=False):
@@ -422,10 +435,10 @@ class DevicePoolSequence:
         :return: The pool stats
         :rtype: str
         """
-        msg = ""
+        status = ""
         for pool in self._pools:
-            msg += f"{str(pool.pool_stats())} "
-        return msg
+            status += f"{str(pool.pool_stats())} "
+        return status
 
     # TODO: This could be made generic
     def on_callback(self, argin):

@@ -20,8 +20,8 @@ __all__ = [
 
 import threading
 
-from tango import DevFailed, DevState, EnsureOmniThread, SerialModel, Util
-from tango.server import attribute, device_property, AttrWriteType
+from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
+from tango.server import attribute, device_property, AttrWriteType, command
 
 from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
@@ -35,7 +35,7 @@ from ska_low_mccs.hardware import (
 )
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import tango_raise
-from ska_low_mccs.msg_queue import MessageQueue
+from ska_low_mccs.message_queue import MessageQueue
 
 
 def create_return(success, action):
@@ -378,6 +378,7 @@ class MccsAntenna(SKABaseDevice):
             ("Disable", self.DisableCommand),
             ("Standby", self.StandbyCommand),
             ("Off", self.OffCommand),
+            ("On", self.OnCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -424,7 +425,7 @@ class MccsAntenna(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
-            self._msg_queue = None
+            self._message_queue = None
             self._qdebuglock = threading.Lock()
 
         def do(self):
@@ -493,10 +494,10 @@ class MccsAntenna(SKABaseDevice):
                 device.set_archive_event(name, True, True)
 
             # Start the Message queue for this device
-            device._msg_queue = MessageQueue(
+            device._message_queue = MessageQueue(
                 target=device, lock=self._qdebuglock, logger=self.logger
             )
-            device._msg_queue.start()
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -1063,6 +1064,47 @@ class MccsAntenna(SKABaseDevice):
             apiu_proxy = self.target
             success = apiu_proxy.on()
             return create_return(success, "standby")
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def On(self, json_args):
+        """
+        Turn antenna "On".
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self.logger.warning("RCL: Antenna On")
+        command = self.get_command_object("On")
+        (result_code, message) = command(json_args)
+        return [[result_code], [message]]
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On() command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsAntenna` device.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            (result_code, message) = super().do()
+            # MCCS-specific Reset functionality goes here
+            return (result_code, message)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """

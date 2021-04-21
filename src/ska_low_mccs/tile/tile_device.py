@@ -33,7 +33,7 @@ from ska_low_mccs.events import EventManager, EventSubscriptionHandler
 from ska_low_mccs.hardware import ConnectionStatus, PowerMode
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.tile import TileHardwareManager
-from ska_low_mccs.msg_queue import MessageQueue
+from ska_low_mccs.message_queue import MessageQueue
 
 
 class TilePowerManager:
@@ -293,7 +293,7 @@ class MccsTile(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
-            self._msg_queue = None
+            self._message_queue = None
             self._qdebuglock = threading.Lock()
 
         def do(self):
@@ -336,10 +336,10 @@ class MccsTile(SKABaseDevice):
             )
 
             # Start the Message queue for this device
-            device._msg_queue = MessageQueue(
+            device._message_queue = MessageQueue(
                 target=device, lock=self._qdebuglock, logger=self.logger
             )
-            device._msg_queue.start()
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -526,17 +526,17 @@ class MccsTile(SKABaseDevice):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self.logger.warning("RCL: Tile On")
-        #return [[ResultCode.OK], ["RCL: Tile is good!"]]
+        # return [[ResultCode.OK], ["RCL: Tile is good!"]]
 
         self._command_sequence = ["Off", "OnLow", "Initialise", "OnCallback"]
-        #if self.state_model.op_state == DevState.STANDBY or self.state_model.op_state == DevState.DISABLE:
+        # if self.state_model.op_state == DevState.STANDBY or self.state_model.op_state == DevState.DISABLE:
         #    self._command_sequence.insert(0, "Off")
 
-        #self.logger.warning(f"RCL: seq = {self._command_sequence}")
+        # self.logger.warning(f"RCL: seq = {self._command_sequence}")
         # kwargs = json.loads(json_args)
         # self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
         # self._on_callback = kwargs.get("callback")
-        (result_code, message, _) = self._msg_queue.send_message(command="On")
+        (result_code, message, _) = self._message_queue.send_message(command="On")
         return [[result_code], [message]]
 
     class OnCommand(SKABaseDevice.OnCommand):
@@ -563,7 +563,7 @@ class MccsTile(SKABaseDevice):
 
             device = self.target
             # Execute the following commands to:
-            device.logger.warning(f"RCL: Tile OnCommand")
+            device.logger.warning("RCL: Tile OnCommand")
             # 1. Off - Transition out of Standby state (if required)
             # 2. On - Turn the power on to the Tile
             # 3. Initialise - Download TPM firmware and initialise
@@ -587,8 +587,9 @@ class MccsTile(SKABaseDevice):
         def do(self):
             """
             Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.OnCallback`
-            command for this :py:class:`.MccsTile` device.
+            (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.OnCallback` command
+            for this :py:class:`.MccsTile` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -601,12 +602,16 @@ class MccsTile(SKABaseDevice):
             try:
                 response_device = tango.DeviceProxy(device._on_respond_to_fqdn)
             except DevFailed:
-                device._qdebug(f"Response device {device._on_respond_to_fqdn} not found")
+                device._qdebug(
+                    f"Response device {device._on_respond_to_fqdn} not found"
+                )
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             # Call the specified command asynchronously
             async_id = response_device.command_inout_asynch(device._on_callback)
-            (result_code, message) = response_device.command_inout_reply(async_id, timeout=0)
+            (result_code, message) = response_device.command_inout_reply(
+                async_id, timeout=0
+            )
             return (result_code, message)
 
     class OnLowCommand(SKABaseDevice.OnCommand):
@@ -1376,7 +1381,6 @@ class MccsTile(SKABaseDevice):
                 command_name,
                 command_object(self, self.state_model, self.logger),
             )
-
 
     class InitialiseCommand(ResponseCommand):
         """

@@ -700,10 +700,9 @@ class MccsStation(SKAObsDevice):
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # rcltodo: just return straight away for now!
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
+            # return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             device_pool = self.target
-
+            device_pool.reset()
             if device_pool.off():
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:

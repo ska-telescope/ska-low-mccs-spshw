@@ -1102,17 +1102,6 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            device = self.target
-            # TODO: What does the garbage collector do if we assign the msg_queue to
-            # another object? Will is detroy the object (and thread)?
-            # We _could_ send a msg_queue terminate, but if it has crashed, it
-            # won't reply. Maybe we could try first by seeing if the heart-beat
-            # is still operating? For now, just assign to a new object
-            device._msg_queue = MessageQueue(
-                target=device, lock=device._qdebuglock, logger=device.logger
-            )
-            device._msg_queue.start()
-
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)

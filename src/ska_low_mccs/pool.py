@@ -362,6 +362,9 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Disable", reverse=reverse)
 
+    def reset(self, reverse=False):
+        return self.invoke_command("Reset", reverse=reverse)
+
     def standby(self, reverse=False):
         """
         Call Standby() on all the devices in this device pool.

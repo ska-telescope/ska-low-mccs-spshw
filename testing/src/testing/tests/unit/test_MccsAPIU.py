@@ -631,7 +631,7 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        device_under_test.On()
+        device_under_test.On("")
         assert device_under_test.temperature == APIUSimulator.TEMPERATURE
         assert device_under_test.humidity == APIUSimulator.HUMIDITY
         assert device_under_test.voltage == APIUSimulator.VOLTAGE
@@ -658,7 +658,7 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        device_under_test.On()
+        device_under_test.On("")
 
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
@@ -678,7 +678,7 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        device_under_test.On()
+        device_under_test.On("")
 
         [[result_code], [message]] = device_under_test.PowerDown()
         assert result_code == ResultCode.OK
@@ -700,7 +700,7 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        _ = device_under_test.On()
+        _ = device_under_test.On("")
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
@@ -734,7 +734,7 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        _ = device_under_test.On()
+        _ = device_under_test.On("")
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

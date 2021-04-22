@@ -55,7 +55,7 @@ class TestApiuAntennaIntegration:
     Integration test cases for MCCS subsystem's power management.
     """
 
-    def test_antenna_on(self, tango_harness: TangoHarness):
+    def test_antenna_on(self, tango_harness: TangoHarness, dummy_json_args: str):
         """
         Test that:
 
@@ -65,6 +65,7 @@ class TestApiuAntennaIntegration:
           TPM
 
         :param tango_harness: a test harness for tango devices
+        :param dummy_json_args: dummy json encoded arguments
         """
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")
@@ -74,7 +75,7 @@ class TestApiuAntennaIntegration:
 
         apiu.Off()
         assert apiu.state() == DevState.OFF
-        apiu.On()
+        apiu.On(dummy_json_args)
         assert apiu.state() == DevState.ON
 
         assert not apiu.isAntennaOn(1)
@@ -92,19 +93,20 @@ class TestApiuAntennaIntegration:
         assert antenna.state() == DevState.DISABLE
         assert not apiu.IsAntennaOn(1)
 
-    def test_apiu_antenna_on(self, tango_harness: TangoHarness):
+    def test_apiu_antenna_on(self, tango_harness: TangoHarness, dummy_json_args: str):
         """
         Test that wnen we tell the APIU drive to turn a given antenna
         on, the antenna device recognises that its hardware has been
         powered, and changes state.
 
         :param tango_harness: a test harness for tango devices
+        :param dummy_json_args: dummy json encoded arguments
         """
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")
 
         apiu.Off()
-        apiu.On()
+        apiu.On(dummy_json_args)
 
         assert antenna.state() == DevState.DISABLE
         assert not apiu.IsAntennaOn(1)

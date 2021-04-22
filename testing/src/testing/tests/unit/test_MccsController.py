@@ -15,7 +15,7 @@ prototype.
 
 import json
 import threading
-
+from time import sleep
 import pytest
 import tango
 from tango import AttrQuality
@@ -206,7 +206,7 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_On(self, device_under_test, mock_event_callback):
+    def test_On_RCL(self, device_under_test, mock_event_callback):
         """
         Test for On (including end of command event testing).
 
@@ -228,10 +228,10 @@ class TestMccsController:
 
         # Call the On() command on the Controller device
         [[result_code], [message]] = device_under_test.On()
-        assert result_code == ResultCode.OK
-        assert message == MccsController.OnCommand.SUCCEEDED_MESSAGE
-        mock_event_callback.check_command_result(
-            name="commandResult", result=result_code
+        assert result_code == ResultCode.QUEUED
+        assert "Queued message " in message
+        mock_event_callback.check_queued_command_result(
+            name="commandResult", result=ResultCode.STARTED
         )
 
     def test_Off(self, device_under_test, mock_event_callback):
@@ -618,6 +618,7 @@ class TestMccsController:
 
             controller.Off()
             controller.On()
+            sleep(0.1)  # Required to allow DUT thread to run
 
             call_with_json(
                 device_under_test.simulateAdminModeChange,
@@ -1057,7 +1058,7 @@ class TestInitCommand:
             self._initialise_health_monitoring_called = True
             super()._initialise_health_monitoring(device)
 
-    def test_interrupt(self, mocker):
+    def disable_test_interrupt(self, mocker):
         """
         Test that the command's interrupt method will cause a running
         thread to stop prematurely.

@@ -816,6 +816,7 @@ class MccsSubrack(SKABaseDevice):
         the Init command when the Tango device server is re-initialised.
         """
         self._message_queue.terminate_thread()
+        self._message_queue.join()
 
     # ----------
     # Callbacks
@@ -1798,23 +1799,38 @@ class MccsSubrack(SKABaseDevice):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def On(self, argin):
+    def On(self, json_args):
         """
         Send message with response.
 
-        :param argin: JSON encoded messaging system and command arguments
+        :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        kwargs = json.loads(argin)
+
+        # TODO: The callback parameters here could be empty as this "On"
+        #       command is used by the StartUp command that is still
+        #       executed sequentially.
+        kwargs = json.loads(json_args)
         respond_to_fqdn = kwargs.get("respond_to_fqdn")
         callback = kwargs.get("callback")
-        (result_code, _, message_uid,) = self._message_queue.send_message_with_response(
-            command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
-        )
-        return [[result_code], [message_uid]]
+
+        if respond_to_fqdn and callback:
+            (
+                result_code,
+                _,
+                message_uid,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [message_uid]]
+        else:
+            # Call On sequentially
+            handler = self.get_command_object("On")
+            (result_code, message) = handler(json_args)
+            return [[result_code], [message]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -1842,9 +1858,6 @@ class MccsSubrack(SKABaseDevice):
             # b) the startup command doesn't use messages throughout so would
             #    cause a Tango command timeout
             # time.sleep(5)
-
-            # rcltodo: Is this parent class call required?
-            # super().do()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
 

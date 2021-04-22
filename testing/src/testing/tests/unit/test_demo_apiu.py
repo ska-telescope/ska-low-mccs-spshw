@@ -49,7 +49,7 @@ class TestDemoAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test(self, device_under_test):
+    def test(self, device_under_test, dummy_json_args):
         """
         Test:
 
@@ -60,6 +60,8 @@ class TestDemoAPIU:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
 
         def assert_powered(expected):
@@ -75,7 +77,7 @@ class TestDemoAPIU:
             ] == expected
 
         device_under_test.Off()
-        device_under_test.On()
+        device_under_test.On(dummy_json_args)
 
         assert_powered([False, False, False, False])
 

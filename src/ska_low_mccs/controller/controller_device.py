@@ -408,6 +408,7 @@ class MccsController(SKAMaster):
         the Init command when the Tango device server is re-initialised.
         """
         self._message_queue.terminate_thread()
+        self._message_queue.join()
 
     # ----------
     # Attributes

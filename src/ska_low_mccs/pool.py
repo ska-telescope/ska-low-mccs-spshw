@@ -88,7 +88,6 @@ class DevicePool:
 
         async_ids = []
         for device in self._devices:
-            self._logger.warning(f"device = {device}")
             asyncid = device.command_inout_asynch(command_name, arg)
             async_ids.append(asyncid)
 

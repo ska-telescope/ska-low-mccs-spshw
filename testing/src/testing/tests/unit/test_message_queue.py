@@ -74,6 +74,7 @@ class TestMessageQueue:
         """
         mock = mocker.Mock()
         mock.queue_debug = ""
+        mock._heart_beat = 0
         return mock
 
     @pytest.fixture()

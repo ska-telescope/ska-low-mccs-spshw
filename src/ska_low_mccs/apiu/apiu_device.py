@@ -854,7 +854,7 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("RCL: APIU On")
+        self.logger.warning("APIU On")
         command = self.get_command_object("On")
         (result_code, message) = command(json_args)
         return [[result_code], [message]]

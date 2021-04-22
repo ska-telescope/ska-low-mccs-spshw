@@ -87,7 +87,7 @@ class TestMccsStation:
         """
         return tango_harness.get_device("low-mccs/station/001")
 
-    def test_InitDevice(self, device_under_test):
+    def test_InitDevice(self, device_under_test, dummy_json_args):
         """
         Test for Initial state. A freshly initialised station device has
         no assigned resources.
@@ -96,6 +96,8 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -117,10 +119,27 @@ class TestMccsStation:
 
         # check that initialisation leaves us in a state where turning
         # the device on doesn't put it into ALARM state
-        device_under_test.On()
-        assert device_under_test.state() == DevState.ON
+        device_under_test.On(dummy_json_args)
+
+        def check_device_state(device, state):
+            """
+            Helper to check that the device is in the expected state
+            with a timeout.
+
+            :param device: the devices to check
+            :type device: dict
+            :param state: the state the device is expected to be in
+            :type state: list(:py:class:`tango.DevState`)
+            """
+            count = 0.0
+            while device.State() != state and count < 3.0:
+                count += 0.1
+                time.sleep(0.1)
+            assert device.State() == state
+
+        check_device_state(device_under_test, DevState.ON)
         time.sleep(0.2)
-        assert device_under_test.state() == DevState.ON
+        check_device_state(device_under_test, DevState.ON)
 
     def test_healthState(self, device_under_test, mock_callback):
         """

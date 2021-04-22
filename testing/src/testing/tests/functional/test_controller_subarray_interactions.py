@@ -290,7 +290,9 @@ def tmc_tells_mccs_controller_to_start_up(controller):
     :param controller: a proxy to the controller device
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
-    assert_command(device=controller, command="Startup")
+    assert_command(
+        device=controller, command="Startup", expected_result=ResultCode.QUEUED
+    )
 
     # TODO: Workaround for bug MCCS-409
     #

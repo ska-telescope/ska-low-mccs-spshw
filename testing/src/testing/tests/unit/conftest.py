@@ -141,4 +141,41 @@ def mock_event_callback(mocker):
                 assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
             self.reset_mock()
 
+        def check_queued_command_result(self, name, result):
+            """
+            Special callback check routine for commandResult. There
+            should always be three entries for commandResult; the first
+            should reset commandResult to ResultCode.UNKNOWN, the second
+            should be the QUEUED result, and the third should match the
+            expected result passed into this routine.
+
+            :param name: name of the registered event
+            :type name: str
+            :param result: return code from the completed command
+                If set to None, value and quaility checks are bypassed
+            :type result: :py:class:`~ska_tango_base.commands.ResultCode`
+            """
+            # push_change_event isn't synchronous, because it has to go
+            # through the 0MQ event system. So we have to sleep long enough
+            # for the event to arrive
+            time.sleep(0.2)
+
+            self.assert_called()
+            assert len(self.mock_calls) == 3  # exactly two calls
+
+            first_event_data = self.mock_calls[0][1][0].attr_value
+            second_event_data = self.mock_calls[1][1][0].attr_value
+            third_event_data = self.mock_calls[2][1][0].attr_value
+            assert first_event_data.name.casefold() == name.casefold()
+            assert second_event_data.name.casefold() == name.casefold()
+            assert third_event_data.name.casefold() == name.casefold()
+            assert first_event_data.value == ResultCode.UNKNOWN
+            assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
+            assert second_event_data.value == ResultCode.QUEUED
+            assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
+            if result is not None:
+                assert third_event_data.value == result
+                assert third_event_data.quality == tango.AttrQuality.ATTR_VALID
+            self.reset_mock()
+
     return _MockEventCallback()

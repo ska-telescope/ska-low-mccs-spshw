@@ -18,7 +18,6 @@ import json
 import numpy as np
 import threading
 import os.path
-import tango
 
 from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command
@@ -525,19 +524,44 @@ class MccsTile(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("RCL: Tile On")
-        # return [[ResultCode.OK], ["RCL: Tile is good!"]]
+        self.logger.warning("Tile On")
 
-        self._command_sequence = ["Off", "OnLow", "Initialise", "OnCallback"]
-        # if self.state_model.op_state == DevState.STANDBY or self.state_model.op_state == DevState.DISABLE:
-        #    self._command_sequence.insert(0, "Off")
+        # TODO: This sequence will all need to be messages so as not to cause
+        #       a 3 second timeout with Tango commands. This is especially true
+        #       for programming the FPGA as part of the initialise step.
+        self._command_sequence = [
+            "Off",
+            "OnLow",
+            "Initialise",
+        ]  # TODO: RCL: remove Explicit "Off"
+        if (
+            self.state_model.op_state == DevState.STANDBY
+            or self.state_model.op_state
+            == DevState.DISABLE  # TODO: RCL: Check that this is still required
+        ):
+            self._command_sequence.insert(0, "Off")
 
-        # self.logger.warning(f"RCL: seq = {self._command_sequence}")
-        # kwargs = json.loads(json_args)
-        # self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        # self._on_callback = kwargs.get("callback")
-        (result_code, message, _) = self._message_queue.send_message(command="On")
-        return [[result_code], [message]]
+        # TODO: The callback parameters here could be empty as this "On"
+        #       command is used by the StartUp command that is still
+        #       executed sequentially.
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+
+        if respond_to_fqdn and callback:
+            (
+                result_code,
+                _,
+                message_uid,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [message_uid]]
+        else:
+            # Call On sequentially
+            handler = self.get_command_object("On")
+            (result_code, message) = handler(json_args)
+            return [[result_code], [message]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -556,63 +580,29 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            self.logger.warning("RCL: Tile OnCommand EXE")
-            (result_code, _) = super().do()
-            # TRYRCL RCLTRY: Early return to check mechanism is working OK
-            return (result_code, "RCL: Tile on command is good!")
-
+            self.logger.warning("Tile OnCommand EXE")
             device = self.target
+            # (result_code, message) = super().do()
+            # return (result_code, message)
+
+            # TRYRCL RCLTRY: Try re-enabling this sequence and callback...
             # Execute the following commands to:
-            device.logger.warning("RCL: Tile OnCommand")
             # 1. Off - Transition out of Standby state (if required)
             # 2. On - Turn the power on to the Tile
             # 3. Initialise - Download TPM firmware and initialise
             # 4. Callback - Call the requestor
             return_code = ResultCode.UNKNOWN
-            message = ""
             for step in device._command_sequence:
                 command = device.get_command_object(step)
                 (return_code, message) = command()
                 if return_code == ResultCode.FAILED:
+                    self.logger.warning(
+                        f"RCL: Tile OnCommand EXE FAILED command={command}, "
+                        "rc={return_code}, status={message}"
+                    )
                     return (return_code, message)
+            self.logger.warning("RCL: Tile OnCommand EXE - All OK!")
             return (return_code, "On command sequence completed OK")
-
-    class OnCallbackCommand(ResponseCommand):
-        """
-        Class for handling the callback for the On() (sequence) command.
-        """
-
-        FAILED_MESSAGE = "On callback command failed"
-
-        def do(self):
-            """
-            Stateless hook implementing the functionality of the
-            (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.OnCallback` command
-            for this :py:class:`.MccsTile` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device = self.target
-            # Post response back to requestor
-            try:
-                response_device = tango.DeviceProxy(device._on_respond_to_fqdn)
-            except DevFailed:
-                device._qdebug(
-                    f"Response device {device._on_respond_to_fqdn} not found"
-                )
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
-            # Call the specified command asynchronously
-            async_id = response_device.command_inout_asynch(device._on_callback)
-            (result_code, message) = response_device.command_inout_reply(
-                async_id, timeout=0
-            )
-            return (result_code, message)
 
     class OnLowCommand(SKABaseDevice.OnCommand):
         """
@@ -637,6 +627,7 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            self.logger.warning("RCL: Tile OnLowCommand EXE")
             (result_code, _) = super().do()
 
             if result_code == ResultCode.OK:
@@ -664,6 +655,8 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            self.logger.warning("RCL: Tile OffCommand EXE")
+
             # TODO: We maybe shouldn't be allowing transition straight
             # from Disable to Off, without going through Standby.
             device = self.target
@@ -676,9 +669,11 @@ class MccsTile(SKABaseDevice):
                 # But for now, let's pretend to flash some firmware.
                 if not device.hardware_manager.is_programmed:
                     device.hardware_manager.download_firmware("firmware1")
+                self.logger.warning("RCL: Tile OffCommand EXE completed OK! Branch 1")
                 return (ResultCode.OK, self.SUCCEEDED_FROM_ON_MESSAGE)
 
             if not result:
+                self.logger.warning("RCL: Tile OffCommand EXE completed FAILED!")
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             device.hardware_manager.set_connectible(True)
@@ -695,6 +690,7 @@ class MccsTile(SKABaseDevice):
             # the events system. Otherwise we run the risk of transitioning as a result
             # of command success, only to receive an old event telling us of an earlier
             # change in TPM power mode, making us transition again.
+            self.logger.warning("RCL: Tile OffCommand EXE completed OK! Branch 2")
             return (ResultCode.OK, self.SUCCEEDED_FROM_DISABLE_MESSAGE)
 
     def always_executed_hook(self):
@@ -1375,7 +1371,6 @@ class MccsTile(SKABaseDevice):
             ("Off", self.OffCommand),
             ("On", self.OnCommand),
             ("OnLow", self.OnLowCommand),
-            ("OnCallback", self.OnCallbackCommand),
         ]:
             self.register_command_object(
                 command_name,

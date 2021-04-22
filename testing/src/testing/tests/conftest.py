@@ -4,6 +4,7 @@ ska_low_mccs tests: unit, integration and functional (BDD).
 """
 import logging
 import typing
+import json
 
 import pytest
 import tango
@@ -213,3 +214,14 @@ def logger():
     :rtype logger: :py:class:`logging.Logger`
     """
     return logging.getLogger()
+
+
+@pytest.fixture()
+def dummy_json_args():
+    """
+    A fixture to return dummy json arguments.
+
+    :return: dummy json encoded arguments
+    """
+    args = {"respond_to_fqdn": "resp", "callback": "call"}
+    return json.dumps(args)

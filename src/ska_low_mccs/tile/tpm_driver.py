@@ -565,12 +565,11 @@ class TpmDriver(HardwareDriver):
         :type dst_port: int, optional
         :param lmc_mac: LMC MAC address, defaults to None
         :type lmc_mac: str, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_lmc_download")
-        raise NotImplementedError
+        self.tile.set_lmc_download(
+            mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
+        )
 
     def set_channeliser_truncation(self, array):
         """
@@ -870,13 +869,10 @@ class TpmDriver(HardwareDriver):
 
     def stop_data_transmission(self):
         """
-        Stop data transmission.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        Stop data transmission for send_channelised_data_continuous.
         """
         self.logger.debug("TpmDriver: stop_data_transmission")
-        raise NotImplementedError
+        self.tile.stop_data_transmission()
 
     def start_acquisition(self, start_time=None, delay=2):
         """
@@ -1112,7 +1108,7 @@ class TpmDriver(HardwareDriver):
         """
         self._test_generator_active = active
 
-    def set_test_generator(
+    def configure_test_generator(
         self,
         frequency0,
         amplitude0,

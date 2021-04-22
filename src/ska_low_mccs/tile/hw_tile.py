@@ -1286,6 +1286,71 @@ class HwTile(object):
 
     # ------------------------ Wrapper for spigot generators ----------------------
     @connected
+    def set_lmc_download(
+        self,
+        mode,
+        payload_length=1024,
+        dst_ip=None,
+        src_port=0xF0D0,
+        dst_port=4660,
+        lmc_mac=None,
+    ):
+        """
+        Configure link and size of control data.
+
+        :param mode: 1g or 10g
+        :param payload_length: SPEAD payload length in bytes
+        :param dst_ip: Destination IP
+        :param src_port: Source port for integrated data streams
+        :param dst_port: Destination port for integrated data streams
+        :param lmc_mac: LMC Mac address is required for 10G lane configuration
+        """
+        # Using 10G lane
+        if mode.upper() == "10G":
+            if payload_length >= 8193:
+                logging.warning("Packet length too large for 10G")
+                return
+
+            if lmc_mac is None:
+                logging.warning("LMC MAC must be specified for 10G lane configuration")
+                return
+
+            # If dst_ip is None, use local lmc_ip
+            if dst_ip is None:
+                dst_ip = self._lmc_ip
+
+            self.configure_10g_core(
+                2, dst_mac=lmc_mac, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+            )
+
+            self.configure_10g_core(
+                6, dst_mac=lmc_mac, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+            )
+
+            self["fpga1.lmc_gen.payload_length"] = payload_length
+            self["fpga2.lmc_gen.payload_length"] = payload_length
+
+            self["fpga1.lmc_gen.tx_demux"] = 2
+            self["fpga2.lmc_gen.tx_demux"] = 2
+
+        # Using dedicated 1G link
+        elif mode.upper() == "1G":
+            self["fpga1.lmc_gen.tx_demux"] = 1
+            self["fpga2.lmc_gen.tx_demux"] = 1
+            if dst_ip is not None:
+                self.tpm.set_lmc_ip(dst_ip, dst_port)
+        else:
+            logging.warning("Supported modes are 1g, 10g")
+            return
+
+    def stop_data_transmission(self):
+        """
+        Stop sending channelised data.
+        """
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].stop_channelised_data_continuous()
+
+    @connected
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
         send raw data from the TPM.

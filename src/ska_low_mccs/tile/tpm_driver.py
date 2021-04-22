@@ -819,12 +819,15 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data")
-        raise NotImplementedError
+        self.tile.send_channelised_data(
+            number_of_samples,
+            first_channel,
+            last_channel,
+            timestamp,
+            seconds,
+        )
 
     def send_channelised_data_continuous(
         self,
@@ -847,12 +850,11 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
-        raise NotImplementedError
+        self.tile.send_channelised_data_continuous(
+            channel_id, number_of_samples, wait_seconds, timestamp, seconds
+        )
 
     def send_beam_data(self, timestamp=None, seconds=0.2):
         """
@@ -862,12 +864,9 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_beam_data")
-        raise NotImplementedError
+        self.tile.send_beam_data(timestamp, seconds)
 
     def stop_data_transmission(self):
         """
@@ -963,12 +962,9 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_raw_data_synchronised")
-        raise NotImplementedError
+        self.tile.send_raw_data(timestamp, seconds, sync=True)
 
     @property
     def current_tile_beamformer_frame(self):
@@ -1030,12 +1026,11 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        raise NotImplementedError
+        self.tile.send_channelised_data_narrowband(
+            frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds
+        )
 
     #
     # The synchronisation routine for the current TPM requires that

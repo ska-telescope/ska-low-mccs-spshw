@@ -185,7 +185,7 @@ class HwTile(object):
                         logger=self.logger,
                     )
             else:
-                self.logger.warn("TPM is not programmed! No plugins loaded")
+                self.logger.warning("TPM is not programmed! No plugins loaded")
 
     def is_programmed(self):
         """
@@ -211,7 +211,7 @@ class HwTile(object):
         """
         # Before initialing, check if TPM is programmed
         if self.tpm is None or not self.tpm.is_programmed():
-            self.logger.waring("Cannot initialise; board is not programmed")
+            self.logger.warning("Cannot initialise; board is not programmed")
             return
 
         # Connect to board
@@ -640,7 +640,7 @@ class HwTile(object):
         # if trunc is a single value, apply to all channels
         if type(trunc) == int:
             if 0 > trunc or trunc > 7:
-                self.logger.warn(
+                self.logger.warning(
                     "Could not set channeliser truncation to "
                     + str(trunc)
                     + ", setting to 0"
@@ -673,7 +673,7 @@ class HwTile(object):
                 self["fpga2.channelizer.block_sel"] = 2 * i + 1
                 self["fpga2.channelizer.rescale_data"] = trunc_vec2
             else:
-                self.logger.warn("Signal " + str(i) + " is outside range (0:31)")
+                self.logger.warning("Signal " + str(i) + " is outside range (0:31)")
 
     @connected
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
@@ -1291,17 +1291,134 @@ class HwTile(object):
         send raw data from the TPM.
 
         :param timestamp: When to start. Default now.
+        :type timestamp: int, optional
         :param seconds: delay with respect to timestamp, in seconds
-        :param sync: Get synchronised packets
+        :type seconds: float, optional
+        :param sync: Get synchronised
+        :type sync: bool, optional
         """
         # Data transmission should be synchronised across FPGAs
-        self.synchronised_data_operation(seconds, timestamp)
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
         # Send data from all FPGAs
         for i in range(len(self.tpm.tpm_test_firmware)):
             if sync:
                 self.tpm.tpm_test_firmware[i].send_raw_data_synchronised()
             else:
                 self.tpm.tpm_test_firmware[i].send_raw_data()
+
+    @connected
+    def send_channelised_data(
+        self,
+        number_of_samples=1024,
+        first_channel=0,
+        last_channel=511,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        send channelised data from the TPM.
+
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param first_channel: first channel to send
+        :type first_channel: int, optional
+        :param last_channel: last channel to send
+        :type last_channel: int, optional
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data(
+                number_of_samples, first_channel, last_channel
+            )
+
+    @connected
+    def send_beam_data(self, timestamp=None, seconds=0.2):
+        """
+        Transmit a snapshot containing beamformed data.
+
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_beam_data()
+
+    @connected
+    def send_channelised_data_continuous(
+        self,
+        channel_id,
+        number_of_samples=128,
+        wait_seconds=0,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        Transmit data from a channel continuously.
+
+        :param channel_id: index of channel to send
+        :type channel_id: int
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: float
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        time.sleep(wait_seconds)
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data_continuous(
+                channel_id, number_of_samples
+            )
+
+    @connected
+    def send_channelised_data_narrowband(
+        self,
+        frequency,
+        round_bits,
+        number_of_samples=128,
+        wait_seconds=0,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        Send channelised data from a single channel.
+
+        :param frequency: sky frequency to transmit
+        :type frequency: int
+        :param round_bits: which bits to round
+        :type round_bits: int
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: int, optional
+        :param timestamp: when to start
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        time.sleep(wait_seconds)
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data_narrowband(
+                frequency, round_bits, number_of_samples
+            )
 
     # ------------------------ Wrapper for index and attribute methods ---------------
     @connected

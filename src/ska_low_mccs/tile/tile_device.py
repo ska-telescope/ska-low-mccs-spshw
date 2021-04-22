@@ -25,7 +25,7 @@ from tango.server import attribute, command
 from tango.server import device_property
 
 from ska_tango_base import SKABaseDevice
-from ska_tango_base.control_model import HealthState, SimulationMode
+from ska_tango_base.control_model import HealthState, SimulationMode, AdminMode
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
@@ -196,7 +196,8 @@ class TilePowerManager:
 
         if subrack_state == DevState.DISABLE:
             return PowerMode.OFF
-        elif subrack_state not in [DevState.OFF, DevState.ON]:
+        # Subrack power state is on, can provide power state
+        elif subrack_state not in [DevState.OFF, DevState.ON, DevState.STANDBY]:
             return PowerMode.UNKNOWN
 
         try:
@@ -689,6 +690,23 @@ class MccsTile(SKABaseDevice):
             self.hardware_manager.set_connectible(True)
             self.state_model.perform_action("off_succeeded")
 
+    def _update_admin_mode(self, admin_mode):
+        """
+        Helper method for changing admin_mode; passed to the state model
+        as a callback Deselect test generator if mode is not
+        MAINTENANCE.
+
+        :param admin_mode: the new admin_mode value
+        :type admin_mode: :py:class:`~ska_tango_base.control_model.AdminMode`
+        """
+        if not (admin_mode == AdminMode.MAINTENANCE) and self.TestGeneratorActive:
+            self.TestGeneratorActive = False
+            if self.hardware_manager is not None:
+                self.hardware_manager.test_generator_input_select(0)
+                self.hardware_manager.test_generator_active = False
+
+        super()._update_admin_mode(admin_mode)
+
     # ----------
     # Attributes
     # ----------
@@ -1176,6 +1194,16 @@ class MccsTile(SKABaseDevice):
         self.logger.info("Switching test mode to " + str(value))
         self.hardware_manager.test_mode = value
 
+    @attribute(dtype="DevBoolean")
+    def TestGeneratorActive(self):
+        """
+        Reports if the test generator is used for some channels.
+
+        :return: test generator status
+        :rtype: bool
+        """
+        return self.hardware_manager.test_generator_active
+
     # # --------
     # # Commands
     # # --------
@@ -1238,6 +1266,7 @@ class MccsTile(SKABaseDevice):
             ("PostSynchronisation", self.PostSynchronisationCommand),
             ("SyncFpgas", self.SyncFpgasCommand),
             ("CalculateDelay", self.CalculateDelayCommand),
+            ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -3074,13 +3103,11 @@ class MccsTile(SKABaseDevice):
             """
             params = json.loads(argin)
             sync = params.get("Sync", False)
-            period = params.get("Period", 0)
-            timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
             hardware_manager = self.target
-            hardware_manager.send_raw_data(sync, period, timeout, timestamp, seconds)
+            hardware_manager.send_raw_data(sync, timestamp, seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
@@ -3095,8 +3122,6 @@ class MccsTile(SKABaseDevice):
         :param argin: json dictionary with optional keywords:
 
         * Sync - (bool) synchronised flag
-        * Period - (int) in seconds to send data
-        * Timeout - (int) When to stop
         * Timestamp - (int??) When to start
         * Seconds - (float) When to synchronise
 
@@ -3108,7 +3133,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Sync":True, "Period": 200, "Seconds": 0.5}
+        >>> dict = {"Sync":True, "Seconds": 0.2}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendRawData", jstr)
         """
@@ -3142,8 +3167,6 @@ class MccsTile(SKABaseDevice):
             number_of_samples = params.get("NSamples", 1024)
             first_channel = params.get("FirstChannel", 0)
             last_channel = params.get("LastChannel", 511)
-            period = params.get("Period", 0)
-            timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
@@ -3152,8 +3175,6 @@ class MccsTile(SKABaseDevice):
                 number_of_samples,
                 first_channel,
                 last_channel,
-                period,
-                timeout,
                 timestamp,
                 seconds,
             )
@@ -3174,8 +3195,6 @@ class MccsTile(SKABaseDevice):
         * NSamples - (int) number of spectra to send
         * FirstChannel - (int) first channel to send
         * LastChannel - (int) last channel to send
-        * Period - (int) in seconds to send data
-        * Timeout - (int) When to stop
         * Timestamp - (int??) When to start
         * Seconds - (float) When to synchronise
 
@@ -3230,13 +3249,12 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("ChannelID is a mandatory parameter")
             number_of_samples = params.get("NSamples", 128)
             wait_seconds = params.get("WaitSeconds", 0)
-            timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
             hardware_manager = self.target
             hardware_manager.send_channelised_data_continuous(
-                channel_id, number_of_samples, wait_seconds, timeout, timestamp, seconds
+                channel_id, number_of_samples, wait_seconds, timestamp, seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3254,7 +3272,6 @@ class MccsTile(SKABaseDevice):
         * ChannelID - (int) channel_id (Mandatory)
         * NSamples -  (int) number of spectra to send
         * WaitSeconds - (int) Wait time before sending data
-        * Timeout - (int) When to stop
         * Timestamp - (int??) When to start
         * Seconds - (float) When to synchronise
 
@@ -3268,7 +3285,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"ChannelID":2, "NSamples":256, "Period": 10, "Seconds": 0.5}
+        >>> dict = {"ChannelID":2, "NSamples":256, "Seconds": 0.5}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendChannelisedDataContinuous", jstr)
         """
@@ -3299,13 +3316,11 @@ class MccsTile(SKABaseDevice):
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
-            period = params.get("Period", 0)
-            timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
 
             hardware_manager = self.target
-            hardware_manager.send_beam_data(period, timeout, timestamp, seconds)
+            hardware_manager.send_beam_data(timestamp, seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
@@ -3319,8 +3334,6 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * Period - (int) in seconds to send data
-        * Timeout - (int) When to stop
         * Timestamp - (string??) When to send
         * Seconds - (float) When to synchronise
 
@@ -3334,7 +3347,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Period": 10, "Timeout":4, "Seconds": 0.5}
+        >>> dict = {"Seconds": 0.5}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendBeamData", jstr)
         """
@@ -3718,14 +3731,12 @@ class MccsTile(SKABaseDevice):
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             params = json.loads(argin)
-            period = params.get("Period", 0)
-            timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
-            seconds = params.get("Seconds", 0.2)
+            seconds = params.get("Seconds", 0.1)
 
             hardware_manager = self.target
-            hardware_manager.send_raw_data_synchronised(
-                period, timeout, timestamp, seconds
+            hardware_manager.send_raw_data(
+                sync=True, timestamp=timestamp, seconds=seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3739,8 +3750,6 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * Period - (int) in seconds to send data
-        * Timeout - (int) When to stop
         * Timestamp - (string??) When to send
         * Seconds - (float) When to synchronise
 
@@ -3754,7 +3763,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"Period": 10, "Timeout":4, "Seconds": 0.5}
+        >>> dict = {"Seconds": 0.5}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendRawDataSynchronised", jstr)
         """
@@ -3801,7 +3810,6 @@ class MccsTile(SKABaseDevice):
                 raise ValueError("RoundBits is a mandatory parameter")
             number_of_samples = params.get("NSamples", 128)
             wait_seconds = params.get("WaitSeconds", 0)
-            timeout = params.get("Timeout", 0)
             timestamp = params.get("Timestamp", None)
             seconds = params.get("Seconds", 0.2)
             hardware_manager = self.target
@@ -3810,7 +3818,6 @@ class MccsTile(SKABaseDevice):
                 round_bits,
                 number_of_samples,
                 wait_seconds,
-                timeout,
                 timestamp,
                 seconds,
             )
@@ -4075,6 +4082,156 @@ class MccsTile(SKABaseDevice):
         >>> dp.command_inout("CalculateDelay", jstr)
         """
         handler = self.get_command_object("CalculateDelay")
+        (return_code, message) = handler(argin)
+        return [[return_code], [message]]
+
+    class ConfigureTestGeneratorCommand(BaseCommand):
+        """
+        Class for handling the ConfigureTestGenerator(argin) command.
+        """
+
+        SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
+
+        def do(self, argin):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.ConfigureTestGenerator` command
+            functionality.
+
+            :param argin: a JSON-encoded dictionary of arguments
+            :type argin: str
+            :raises ValueError: if the JSON input has invalid parameters
+
+            :todo: Mandatory JSON parameters should be handled by validation
+                   against a schema
+            :return: A tuple containing a return code and a string
+                   message indicating status. The message is for
+                   information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+
+            params = json.loads(argin)
+            active = False
+            set_time = params.get("SetTime", 0)
+            if "ToneFrequency" in params:
+                frequency0 = params["ToneFrequency"]
+                amplitude0 = params.get("ToneAmplitude", 1.0)
+                active = True
+            else:
+                frequency0 = 0.0
+                amplitude0 = 0.0
+
+            if "Tone2Frequency" in params:
+                frequency1 = params["Tone2Frequency"]
+                amplitude1 = params.get("Tone2Amplitude", 1.0)
+                active = True
+            else:
+                frequency1 = 0.0
+                amplitude1 = 0.0
+
+            if "NoiseAmplitude" in params:
+                amplitude_noise = params.get("NoiseAmplitude", 1.0)
+                active = True
+            else:
+                amplitude_noise = 0.0
+
+            if "PulseFrequency" in params:
+                pulse_code = params["PulseFrequency"]
+                if (pulse_code < 0) or (pulse_code > 7):
+                    raise ValueError("PulseFrequency must be between 0 and 7")
+                amplitude_pulse = params.get("PulseAmplitude", 1.0)
+                active = True
+            else:
+                pulse_code = 7
+                amplitude_pulse = 0.0
+
+            hardware_manager.configure_test_generator(
+                frequency0,
+                amplitude0,
+                frequency1,
+                amplitude1,
+                amplitude_noise,
+                pulse_code,
+                amplitude_pulse,
+                set_time,
+            )
+
+            chans = params.get("AdcChannels")
+            inputs = 0
+            if chans is None:
+                if active:
+                    inputs = 0xFFFFFFFF
+            else:
+                for channel in chans:
+                    inputs = inputs | (1 << channel)
+            hardware_manager.test_generator_input_select(inputs)
+            hardware_manager.test_generator_active = active
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+        def check_allowed(self):
+            """
+            command is allowed only in maintenance mode.
+
+            :returns: whether the command is allowed
+            :rtype: bool
+            """
+            return self.state_model.admin_mode == AdminMode.MAINTENANCE
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def ConfigureTestGenerator(self, argin):
+        """
+        Set the test signal generator.
+
+        :param argin: json dictionary with keywords:
+
+        * ToneFrequency: first tone frequency, in Hz. The frequency
+            is rounded to the resolution of the generator. If this
+            is not specified, the tone generator is disabled.
+        * ToneAmplitude: peak tone amplitude, normalized to 31.875 ADC
+            units. The amplitude is rounded to 1/8 ADC unit. Default
+            is 1.0. A value of -1.0 keeps the previously set value.
+        * Tone2Frequency: frequency for the second tone. Same
+            as ToneFrequency.
+        * Tone2Amplitude: peak tone amplitude for the second tone.
+            Same as ToneAmplitude.
+        * NoiseAmplitude: RMS amplitude of the pseudorandom Gaussian
+            white noise, normalized to 26.03 ADC units.
+        * PulseFrequency: frequency of the periodic pulse. A code
+            in the range 0 to 7, corresponding to (16, 12, 8, 6, 4, 3, 2)
+            times the ADC frame frequency.
+        * PulseAmplitude: peak amplitude of the periodic pulse, normalized
+            to 127 ADC units. Default is 1.0. A value of -1.0 keeps the
+            previously set value.
+        * SetTime: time at which the generator is set, for synchronization
+            among different TPMs.
+        * AdcChannels: list of adc channels which will be substituted with
+            the test signal. Channels are numbered from 0 to 31, with each
+            even-odd pair (2N, 2N+1) corresponding to X and Y polarizations
+            of channel N. Default to all signals if at least one generator
+            is specified, or none if no generator is specified (empty
+            json string).
+
+        :type argin: str
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"ToneFrequency": 150e6, "ToneAmplitude": 0.1,
+                "NoiseAmplitude": 0.9, "PulseFrequency": 7, "LoadTime":0}
+        >>> jstr = json.dumps(dict)
+        >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
+        """
+        handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 

@@ -125,6 +125,11 @@ test_health
 .. automodule:: ska_low_mccs.tests.unit.test_health
    :members:
 
+test_message_queue
+==================
+.. automodule:: ska_low_mccs.tests.unit.test_message_queue
+   :members:
+   
 test_package
 ============
 .. automodule:: ska_low_mccs.tests.unit.test_package

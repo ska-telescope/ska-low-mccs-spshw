@@ -665,18 +665,16 @@ class TestMccsTileCommands:
             ("SetPointingDelay", [3] * 5),  # 2 * antennas_per_tile + 1
             ("ConfigureIntegratedChannelData", 6.284),
             ("ConfigureIntegratedBeamData", 3.142),
-            ("SendRawData", json.dumps({"Sync": True, "Period": 5, "Seconds": 6.7})),
+            ("SendRawData", json.dumps({"Sync": True, "Seconds": 6.7})),
             (
                 "SendChannelisedData",
-                json.dumps(
-                    {"NSamples": 4, "FirstChannel": 7, "LastChannel": 234, "Period": 5}
-                ),
+                json.dumps({"NSamples": 4, "FirstChannel": 7, "LastChannel": 234}),
             ),
             (
                 "SendChannelisedDataContinuous",
                 json.dumps({"ChannelID": 2, "NSamples": 4, "WaitSeconds": 3.5}),
             ),
-            ("SendBeamData", json.dumps({"Period": 10, "Timeout": 4, "Seconds": 0.5})),
+            ("SendBeamData", json.dumps({"Seconds": 0.5})),
             ("StartAcquisition", json.dumps({"StartTime": 5})),
             ("CheckPendingDataRequests", None),
             ("SetTimeDelays", tuple(float(i) for i in range(32))),
@@ -693,7 +691,7 @@ class TestMccsTileCommands:
             ),
             (
                 "SendRawDataSynchronised",
-                json.dumps({"Period": 10, "Timeout": 4, "Seconds": 0.5}),
+                json.dumps({"Seconds": 0.5}),
             ),
             (
                 "SendChannelisedDataNarrowband",
@@ -711,6 +709,18 @@ class TestMccsTileCommands:
                 "CalculateDelay",
                 json.dumps(
                     {"CurrentDelay": 5.0, "CurrentTC": 2, "RefLo": 3.0, "RefHi": 78.0}
+                ),
+            ),
+            (
+                "ConfigureTestGenerator",
+                json.dumps(
+                    {
+                        "ToneFrequency": 150e6,
+                        "ToneAmplitude": 0.1,
+                        "NoiseAmplitude": 0.9,
+                        "PulseFrequency": 7,
+                        "SetTime": 0,
+                    }
                 ),
             ),
         ),

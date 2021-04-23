@@ -89,6 +89,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._address_map = {}
         self._forty_gb_core_list = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
+        self._test_generator_active = False
         super().__init__(is_connectible=False, fail_connect=fail_connect)
 
     @property
@@ -727,18 +728,12 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: configure_integrated_beam_data")
         raise NotImplementedError
 
-    def send_raw_data(
-        self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
-    ):
+    def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
-        :param period: duration to send data, in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -755,8 +750,6 @@ class BaseTpmSimulator(HardwareSimulator):
         number_of_samples=1024,
         first_channel=0,
         last_channel=511,
-        period=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -770,10 +763,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel to send, defaults to 511
         :type last_channel: int, optional
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -790,7 +779,6 @@ class BaseTpmSimulator(HardwareSimulator):
         channel_id,
         number_of_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -803,8 +791,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data
         :type wait_seconds: float
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -816,14 +802,10 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: send_channelised_data_continuous")
         raise NotImplementedError
 
-    def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+    def send_beam_data(self, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing beamformed data.
 
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -924,16 +906,10 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: set_lmc_integrated_download")
         raise NotImplementedError
 
-    def send_raw_data_synchronised(
-        self, period=0, timeout=0, timestamp=None, seconds=0.2
-    ):
+    def send_raw_data_synchronised(self, timestamp=None, seconds=0.2):
         """
         Send synchronised raw data.
 
-        :param period: period of time in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -983,7 +959,6 @@ class BaseTpmSimulator(HardwareSimulator):
         round_bits,
         number_of_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -1000,8 +975,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data, defaults to 0
         :type wait_seconds: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start, defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -1070,6 +1043,115 @@ class BaseTpmSimulator(HardwareSimulator):
         """
         self.logger.debug("TpmSimulator: sync_fpgas")
         raise NotImplementedError
+
+    def configure_test_generator(
+        self,
+        frequency0,
+        amplitude0,
+        frequency1,
+        amplitude1,
+        amplitude_noise,
+        pulse_code,
+        amplitude_pulse,
+        load_time=0,
+    ):
+        """
+        test generator configuration.
+
+        :param frequency0: Tone frequency in Hz of DDC 0
+        :type frequency0: float
+        :param amplitude0: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude0: float
+        :param frequency1: Tone frequency in Hz of DDC 1
+        :type frequency1: float
+        :param amplitude1: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude1: float
+        :param amplitude_noise: Amplitude of pseudorandom noise
+            normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude_noise: float
+        :param pulse_code: Code for pulse frequency.
+            Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :type pulse_code: int
+        :param amplitude_pulse: pulse peak amplitude, normalized
+            to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude_pulse: float
+        :param load_time: Time to start the tone.
+        :type load_time: int
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        amplitude_adu = round(amplitude0 * 255) / 8.0
+        self.logger.debug(
+            "TpmSimulator: set_test_generator tone(0):"
+            + str(frequency0)
+            + "Hz, "
+            + str(amplitude_adu)
+            + " ADUs @"
+            + str(load_time)
+        )
+        amplitude_adu = round(amplitude1 * 255) / 8.0
+        self.logger.debug(
+            "TpmSimulator: test_generator set_tone(1):"
+            + str(frequency1)
+            + "Hz, "
+            + str(amplitude_adu)
+            + " ADUs @"
+            + str(load_time)
+        )
+        amplitude_adu = round(amplitude_noise * 255) * 0.102
+        self.logger.debug(
+            "TpmSimulator: set_test_generator noise: "
+            + str(amplitude_adu)
+            + " ADUs @"
+            + str(load_time)
+        )
+        freqs = [16, 12, 8, 6, 4, 3, 2, 1]
+        frequency = 0.925925 * freqs[pulse_code]
+        amplitude_adu = round(amplitude_pulse * 255) * 0.25
+        self.logger.debug(
+            "TpmSimulator: set_test_generator pulse: "
+            + str(frequency)
+            + "Hz, "
+            + str(amplitude_adu)
+            + " ADUs"
+        )
+        raise NotImplementedError
+
+    def test_generator_input_select(self, inputs):
+        """
+        Specify ADC inputs which are substitute to test signal.
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param inputs: Bit mask of inputs using test signal
+        :type inputs: int
+        """
+        self.logger.debug(
+            "TpmSimulator: test_generator_input_select: " + str(hex(inputs))
+        )
+        # raise NotImplementedError
+
+    @property
+    def test_generator_active(self):
+        """
+        check if the test generator is active.
+
+        :return: whether the test generator is active
+        :rtype: bool
+        """
+        return self._test_generator_active
+
+    @test_generator_active.setter
+    def test_generator_active(self, active):
+        """
+        set the test generator active flag.
+
+        :param active: True if the generator has been activated
+        :type active: bool
+        """
+        self._test_generator_active = active
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):

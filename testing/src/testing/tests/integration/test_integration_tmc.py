@@ -221,7 +221,7 @@ class TestMccsIntegrationTmc:
         )
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["subarray_01"].State() == DevState.OFF
-        assert devices["subarray_01"].stationFQDNs is None
+        assert list(devices["subarray_01"].stationFQDNs) == []
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
@@ -307,7 +307,7 @@ class TestMccsIntegrationTmc:
         )
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["subarray_01"].State() == DevState.OFF
-        assert devices["subarray_01"].stationFQDNs is None
+        assert list(devices["subarray_01"].stationFQDNs) == []
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 

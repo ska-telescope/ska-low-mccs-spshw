@@ -980,7 +980,6 @@ class MccsController(SKAMaster):
                 for station_fqdn in stations_to_release:
                     station = controllerdevice._station_dict[station_fqdn]
                     station.subarrayId = 0
-                    subarray_device.stationFQDNs.remove(station_fqdn)
 
                 # Inform manager that we made the releases
                 controllerdevice._stations_manager.release(stations_to_release)
@@ -1012,10 +1011,6 @@ class MccsController(SKAMaster):
                 for fqdn in stations_to_assign:
                     station = controllerdevice._station_dict[fqdn]
                     station.subarrayId = subarray_id
-                    currently_assigned_stations = subarray_device.stationFQDNs or []
-                    subarray_device.stationFQDNs = sorted(
-                        list(currently_assigned_stations) + [fqdn]
-                    )
 
                 # Inform manager that we made the assignments
                 controllerdevice._stations_manager.assign(
@@ -1222,7 +1217,6 @@ class MccsController(SKAMaster):
                     ResultCode.FAILED,
                     f"Subarray failed to release resources: {message}",
                 )
-            subarray_device.stationFQDNs = []
 
             (result_code, message) = subarray_device.Off()
             if result_code == ResultCode.FAILED:

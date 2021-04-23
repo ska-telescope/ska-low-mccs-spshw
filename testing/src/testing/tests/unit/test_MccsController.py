@@ -382,8 +382,6 @@ class TestMccsController:
             mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
-            mock_subarray_1.configure_mock(stationFQDNs=[])
-            mock_subarray_2.configure_mock(stationFQDNs=[])
 
             controller.Off()
             controller.On()
@@ -443,8 +441,6 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 0
-            assert mock_subarray_1.stationFQDNs == ["low-mccs/station/001"]
-            assert mock_subarray_2.stationFQDNs == []
 
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
@@ -508,11 +504,6 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 1
-            assert mock_subarray_1.stationFQDNs == [
-                "low-mccs/station/001",
-                "low-mccs/station/002",
-            ]
-            assert mock_subarray_2.stationFQDNs == []
 
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
@@ -542,8 +533,6 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_not_called()
             assert mock_station_1.subarrayId == 0
             assert mock_station_2.subarrayId == 1
-            assert mock_subarray_1.stationFQDNs == ["low-mccs/station/002"]
-            assert mock_subarray_2.stationFQDNs == []
 
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
@@ -626,8 +615,6 @@ class TestMccsController:
             mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
-            mock_subarray_1.configure_mock(stationFQDNs=[])
-            mock_subarray_2.configure_mock(stationFQDNs=[])
 
             controller.Off()
             controller.On()

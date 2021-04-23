@@ -8,3 +8,4 @@ fire
 future
 pyfabil == 1.0.0+ska
 uritools
+astropy

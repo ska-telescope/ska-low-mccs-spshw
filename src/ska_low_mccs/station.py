@@ -574,7 +574,7 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("Send message to Station On")
+        self.logger.debug("Send message to Station On")
 
         # TODO: The callback parameters here could be empty as this "On"
         #       command is used by the StartUp command that is still
@@ -630,13 +630,18 @@ class MccsStation(SKAObsDevice):
             device_pool = device.device_pool
 
             if device._on_respond_to_fqdn and device._on_callback:
-                # rcltodo: Why doesn't .dev_name() work?
-                self.logger.warning(
-                    f"Pool invoke_command_with_callback('On', fqdn={device._station_id:03}, 'OnCallback')"
+                # TODO: Why doesn't either .dev_name() or .name() work here on
+                # the real Tango device?
+                #
+                #self.logger.warning(f"RCL: device.dev_name()={device.dev_name()}")
+                #self.logger.warning(f"RCL: device.name()={device.name()}")
+                fqdn = f"low-mccs/station/{device._station_id:03}"
+                self.logger.debug(
+                    f"Pool invoke_command_with_callback('On', fqdn={fqdn}, 'OnCallback')"
                 )
                 if device_pool.invoke_command_with_callback(
                     command_name="On",
-                    fqdn=f"low-mccs/station/{device._station_id:03}",
+                    fqdn=fqdn,
                     callback="OnCallback",
                 ):
                     return (ResultCode.OK, self.QUEUED_MESSAGE)
@@ -644,7 +649,7 @@ class MccsStation(SKAObsDevice):
                     self.logger.error('Station device pool "On" command not queued')
                     return (ResultCode.FAILED, self.FAILED_MESSAGE)
             else:
-                self.logger.warning("Calling device_pool.on()...")
+                self.logger.debug("Calling device_pool.on()...")
                 if device_pool.on():
                     return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
                 else:
@@ -663,8 +668,7 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        details = f"Station OnCallback json_args={json_args}"
-        self.logger.warning(details)
+        self.logger.info(f"Station OnCallback json_args={json_args}")
         (result_code, message, _) = self._message_queue.send_message(
             command="OnCallback", json_args=json_args
         )
@@ -690,9 +694,13 @@ class MccsStation(SKAObsDevice):
             device = self.target
             device_pool = device.device_pool
 
-            device.logger.warning("Station OnCallbackCommand class do()")
+            device.logger.info("Station OnCallbackCommand class do()")
             # Defer callback to our pool device
-            (command_complete, result_code, status) = device_pool.on_callback(argin)
+            (command_complete, result_code, _) = device_pool.on_callback(argin)
+
+            # Cache the original status message from the caller
+            kwargs = json.loads(argin)
+            status = kwargs.get("status")
 
             if command_complete:
                 # Programming error if these aren't set
@@ -707,9 +715,6 @@ class MccsStation(SKAObsDevice):
                         f"Response device {device._on_respond_to_fqdn} not found"
                     )
                 else:
-                    # Call the specified command asynchronously
-                    # RCLTRY TRYRCL: This could just be response_device.command_inout()
-
                     # As this response is to the original requestor, we need to reply
                     # with the message ID that was given to the requester
                     message = MessageQueue.Message(
@@ -726,24 +731,22 @@ class MccsStation(SKAObsDevice):
                         "status": status,
                     }
                     json_string = json.dumps(response, default=lambda obj: obj.__dict__)
-                    async_id = response_device.command_inout_asynch(
+                    # Call the specified command asynchronously
+                    (rc, stat) = response_device.command_inout(
                         device._on_callback, json_string
                     )
-                    (rc, stat) = response_device.command_inout_reply(
-                        async_id, timeout=0
-                    )
-                    device.logger.warning(
+                    device.logger.debug(
                         f"Station OnCallbackCommand posted message to {response_device},rc={rc},status={stat}"
                     )
 
-                device.logger.warning(
+                device.logger.debug(
                     f"Station OnCallbackCommand class do(),rc={result_code},status={status}"
                 )
                 device._on_respond_to_fqdn = None
                 device._on_callback = None
                 return (result_code, status)
             else:
-                device.logger.warning(
+                device.logger.debug(
                     f"Station OnCallbackCommand class do() STARTED, status={status}"
                 )
                 return (ResultCode.STARTED, status)

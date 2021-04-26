@@ -122,28 +122,28 @@ class DevicePool:
 
         # Send a message to all of the registered devices in the pool
         for device in self._devices:
-            self._logger.warning(f"cmd={command_name}, rtnfqdn={fqdn}, cb={callback}")
+            self._logger.debug(f"cmd={command_name}, rtnfqdn={fqdn}, cb={callback}")
 
-            # rcltodo: Need to expand this to include arguments passed to commands...
+            # TODO: Need to expand this to include arguments passed to commands...
             args = {
                 "respond_to_fqdn": fqdn,
                 "callback": callback,
             }
             json_string = json.dumps(args)
-            self._logger.warning(f"Calling {device}:{command_name}({json_string})")
+            self._logger.debug(f"Calling {device}:{command_name}({json_string})")
             (result_code, message_uid) = device.command_inout(command_name, json_string)
 
-            self._logger.warning(f"RCL: Pool({result_code},{message_uid})")
+            self._logger.debug(f"Pool({result_code},{message_uid})")
 
             if result_code == ResultCode.FAILED:
-                self._logger.warning(f"RCL: Early exit! uid={message_uid}")
+                self._logger.debug(f"Early exit! uid={message_uid}")
                 return False
 
             if result_code == ResultCode.QUEUED:
-                self._logger.warning(f"Added response {message_uid[0]}")
+                self._logger.debug(f"Added response {message_uid[0]}")
                 self._responses[message_uid[0]] = False
             else:
-                self._logger.warning(f"RCL: Response NO ADDED! rc={result_code}")
+                self._logger.debug(f"Response NOT ADDED! rc={result_code}")
 
         return True
 
@@ -169,7 +169,7 @@ class DevicePool:
         result_code = kwargs.get("result_code")
         self._results.append(result_code)
         key = message_object.get("message_uid")
-        self._logger.warning(f"Got reply key {key}")
+        self._logger.debug(f"Got reply key {key}")
         if key in self._responses:
             self._responses[key] = True
         # else OK, this reply was not for this pool - exit as normal below

@@ -130,7 +130,7 @@ class MessageQueue(threading.Thread):
                     self._notify_listener(message.command, ResultCode.UNKNOWN)
                     return
 
-            self._logger.warning(f"_execute_message {message.message_uid}")
+            self._logger.debug(f"_execute_message {message.message_uid}")
             self._qdebug(f"Exe({message.message_uid})")
             command = self._target.get_command_object(message.command)
             if command:
@@ -157,12 +157,12 @@ class MessageQueue(threading.Thread):
                     f'Calling "{command}" returning to fqdn={message.respond_to_fqdn} '
                     + f"and callback={message.callback}"
                 )
-                self._logger.warning(payload)
+                self._logger.debug(payload)
                 self._qdebug(payload)
                 self._qdebug(f"Message kwargs({kwargs})")
                 (result_code, status) = command(json_string)
                 payload = f"Result({message.message_uid},rc={result_code.name})"
-                self._logger.warning(payload)
+                self._logger.debug(payload)
                 self._qdebug(payload)
             else:
                 raise KeyError
@@ -249,7 +249,7 @@ class MessageQueue(threading.Thread):
         self._message_queue.put(message)
         self._qdebug(f"\nQ({message.message_uid})")
         status = f"Queued message {message.message_uid}"
-        self._logger.warning(status)
+        self._logger.info(status)
         return (ResultCode.QUEUED, status, message.message_uid)
 
     def send_message_with_response(

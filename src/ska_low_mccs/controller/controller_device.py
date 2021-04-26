@@ -617,16 +617,9 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        # RCLTRY TRYRCL
-        self.logger.warning(f"RCL:1 Ctl BTestCb({json_args})")
-        self.logger.warning(
-            f"RCL:3 Ctl BTestCb() self._message_queue={self._message_queue}"
-        )
         (result_code, message, _) = self._message_queue.send_message(
             command="BTestCallback", json_args=json_args
         )
-        self.logger.warning(f"RCL:2 Ctl BTestCb rc={result_code}, msg={message}")
-        # return [[ResultCode.OK], [message]]
         return [[result_code], [message]]
 
     class BTestCallbackCommand(ResponseCommand):
@@ -669,7 +662,7 @@ class MccsController(SKAMaster):
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
-        self.logger.warning("send_message(Startup)")
+        self.logger.debug("send_message(Startup)")
         (result_code, message, _) = self._message_queue.send_message(
             command="Startup", notifications=True
         )
@@ -739,7 +732,7 @@ class MccsController(SKAMaster):
         """
         self._command_result = ResultCode.UNKNOWN
         self.push_change_event("commandResult", self._command_result)
-        self.logger.warning("send_message(On)")
+        self.logger.debug("send_message(On)")
         (result_code, message, _) = self._message_queue.send_message(
             command="On", notifications=True
         )
@@ -823,12 +816,12 @@ class MccsController(SKAMaster):
             """
             device = self.target
             device_pool = device.device_pool
-            device.logger.warning("Controller Callback called")
+            device.logger.debug("Controller Callback called")
 
             # Defer callback to our pool device
             (command_complete, result_code, message) = device_pool.on_callback(argin)
             if command_complete:
-                device.logger.warning(f"OnCallback({result_code}, {message})")
+                device.logger.debug(f"OnCallback({result_code}, {message})")
                 device._command_result = result_code
                 device.push_change_event("commandResult", device._command_result)
                 return (result_code, message)

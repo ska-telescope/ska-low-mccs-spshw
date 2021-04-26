@@ -525,21 +525,23 @@ class MccsTile(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("Tile On")
+        self.logger.debug("Tile On")
 
         # TODO: This sequence will all need to be messages so as not to cause
         #       a 3 second timeout with Tango commands. This is especially true
-        #       for programming the FPGA as part of the initialise step.
+        #       when real hardware is connected to MCCS as programming the FPGA
+        #       will take several seconds as part of the initialise step.
         self._command_sequence = [
-            "Off",
             "OnLow",
             "Initialise",
-        ]  # TODO: RCL: remove Explicit "Off"
+        ]
         if (
             self.state_model.op_state == DevState.STANDBY
-            or self.state_model.op_state
-            == DevState.DISABLE  # TODO: RCL: Check that this is still required
+            or self.state_model.op_state == DevState.DISABLE
         ):
+            self.logger.warning(
+                f"Off state add: due 2 disabled? {self.state_model.op_state == DevState.DISABLE}"
+            )
             self._command_sequence.insert(0, "Off")
 
         # TODO: The callback parameters here could be empty as this "On"
@@ -569,6 +571,8 @@ class MccsTile(SKABaseDevice):
         Class for handling the On command sequence.
         """
 
+        SUCCEEDED_MESSAGE = "Tile On command sequence completed OK"
+
         def do(self, argin):
             """
             Stateless do hook for implementing the functionality of the
@@ -581,30 +585,26 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            self.logger.warning("Tile OnCommand EXE")
+            self.logger.debug("Tile OnCommand EXE")
             device = self.target
-            (result_code, message) = super().do()
-            # TRYRCL RCLTRY: Try re-enabling this sequence and callback...
-            return (result_code, message)
+            super().do()
 
-            # TRYRCL RCLTRY: Try re-enabling this sequence and callback...
             # Execute the following commands to:
             # 1. Off - Transition out of Standby state (if required)
             # 2. On - Turn the power on to the Tile
             # 3. Initialise - Download TPM firmware and initialise
-            # 4. Callback - Call the requestor
             return_code = ResultCode.UNKNOWN
             for step in device._command_sequence:
                 command = device.get_command_object(step)
                 (return_code, message) = command()
                 if return_code == ResultCode.FAILED:
                     self.logger.warning(
-                        f"RCL: Tile OnCommand EXE FAILED command={command}, "
+                        f"Tile OnCommand EXE FAILED command={command}, "
                         "rc={return_code}, status={message}"
                     )
                     return (return_code, message)
-            self.logger.warning("RCL: Tile OnCommand EXE - All OK!")
-            return (return_code, "On command sequence completed OK")
+            self.logger.debug(self.SUCCEEDED_MESSAGE)
+            return (return_code, self.SUCCEEDED_MESSAGE)
 
     class OnLowCommand(SKABaseDevice.OnCommand):
         """
@@ -629,7 +629,7 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            self.logger.warning("RCL: Tile OnLowCommand EXE")
+            self.logger.debug("Tile OnLowCommand EXE")
             (result_code, _) = super().do()
 
             if result_code == ResultCode.OK:
@@ -657,7 +657,7 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            self.logger.warning("RCL: Tile OffCommand EXE")
+            self.logger.debug("Tile OffCommand EXE")
 
             # TODO: We maybe shouldn't be allowing transition straight
             # from Disable to Off, without going through Standby.
@@ -671,11 +671,11 @@ class MccsTile(SKABaseDevice):
                 # But for now, let's pretend to flash some firmware.
                 if not device.hardware_manager.is_programmed:
                     device.hardware_manager.download_firmware("firmware1")
-                self.logger.warning("RCL: Tile OffCommand EXE completed OK! Branch 1")
+                self.logger.debug("Tile OffCommand EXE completed OK! Branch 1")
                 return (ResultCode.OK, self.SUCCEEDED_FROM_ON_MESSAGE)
 
             if not result:
-                self.logger.warning("RCL: Tile OffCommand EXE completed FAILED!")
+                self.logger.warning("Tile OffCommand EXE completed FAILED!")
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             device.hardware_manager.set_connectible(True)
@@ -692,7 +692,7 @@ class MccsTile(SKABaseDevice):
             # the events system. Otherwise we run the risk of transitioning as a result
             # of command success, only to receive an old event telling us of an earlier
             # change in TPM power mode, making us transition again.
-            self.logger.warning("RCL: Tile OffCommand EXE completed OK! Branch 2")
+            self.logger.debug("Tile OffCommand EXE completed OK! Branch 2")
             return (ResultCode.OK, self.SUCCEEDED_FROM_DISABLE_MESSAGE)
 
     def always_executed_hook(self):

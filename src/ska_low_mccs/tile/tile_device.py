@@ -583,8 +583,9 @@ class MccsTile(SKABaseDevice):
             """
             self.logger.warning("Tile OnCommand EXE")
             device = self.target
-            # (result_code, message) = super().do()
-            # return (result_code, message)
+            (result_code, message) = super().do()
+            # TRYRCL RCLTRY: Try re-enabling this sequence and callback...
+            return (result_code, message)
 
             # TRYRCL RCLTRY: Try re-enabling this sequence and callback...
             # Execute the following commands to:

@@ -629,7 +629,7 @@ class MccsSubrack(SKABaseDevice):
                 command_name,
                 command_object(self.hardware_manager, self.state_model, self.logger),
             )
-            self.logger.info("Adding command " + command_name)
+            self.logger.warning("Adding command " + command_name)
 
         for (command_name, command_object) in [
             ("On", self.OnCommand),
@@ -903,7 +903,7 @@ class MccsSubrack(SKABaseDevice):
         :param value: The simulation mode, as a SimulationMode value
         """
         super().write_simulationMode(value)
-        self.logger.info("Switching simulation mode to " + str(value))
+        self.logger.warning("Switching simulation mode to " + str(value))
         self.hardware_manager.simulation_mode = value
 
     @attribute(

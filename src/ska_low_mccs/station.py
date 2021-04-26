@@ -593,6 +593,10 @@ class MccsStation(SKAObsDevice):
                 _,
                 message_uid,
             ) = self._message_queue.send_message(command="On")
+            # Because the responses back to the requester will be from a callback
+            # command, we cache the message uid and return this when the pools are
+            # complete.
+            self._on_message_uid = message_uid
             return [[result_code], [message_uid]]
         else:
             # Call On sequentially
@@ -659,7 +663,8 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("Station OnCallback")
+        details = f"Station OnCallback json_args={json_args}"
+        self.logger.warning(details)
         (result_code, message, _) = self._message_queue.send_message(
             command="OnCallback", json_args=json_args
         )
@@ -701,17 +706,38 @@ class MccsStation(SKAObsDevice):
                     device._qdebug(
                         f"Response device {device._on_respond_to_fqdn} not found"
                     )
+                else:
+                    # Call the specified command asynchronously
+                    # RCLTRY TRYRCL: This could just be response_device.command_inout()
 
-                # Call the specified command asynchronously
-                async_id = response_device.command_inout_asynch(
-                    device._on_callback, argin
-                )
-                (result_code, status) = response_device.command_inout_reply(
-                    async_id, timeout=0
-                )
+                    # As this response is to the original requestor, we need to reply
+                    # with the message ID that was given to the requester
+                    message = MessageQueue.Message(
+                        command="On",
+                        json_args="",
+                        message_uid=f"{device._on_message_uid}",
+                        notifications=False,
+                        respond_to_fqdn="",
+                        callback="",
+                    )
+                    response = {
+                        "message_object": message,
+                        "result_code": result_code,
+                        "status": status,
+                    }
+                    json_string = json.dumps(response, default=lambda obj: obj.__dict__)
+                    async_id = response_device.command_inout_asynch(
+                        device._on_callback, json_string
+                    )
+                    (rc, stat) = response_device.command_inout_reply(
+                        async_id, timeout=0
+                    )
+                    device.logger.warning(
+                        f"Station OnCallbackCommand posted message to {response_device},rc={rc},status={stat}"
+                    )
 
                 device.logger.warning(
-                    f"Station OnCallbackCommand class do() res={result_code}, status={status}"
+                    f"Station OnCallbackCommand class do(),rc={result_code},status={status}"
                 )
                 device._on_respond_to_fqdn = None
                 device._on_callback = None

@@ -130,17 +130,20 @@ class DevicePool:
                 "callback": callback,
             }
             json_string = json.dumps(args)
-            self._logger.warning(
-                f"Calling {command_name} on device.name() with json={json_string}"
-            )
-            async_id = device.command_inout_asynch(command_name, json_string)
-            (result_code, message_uid) = device.command_inout_reply(async_id, timeout=0)
+            self._logger.warning(f"Calling {device}:{command_name}({json_string})")
+            (result_code, message_uid) = device.command_inout(command_name, json_string)
+
+            self._logger.warning(f"RCL: Pool({result_code},{message_uid})")
+
             if result_code == ResultCode.FAILED:
+                self._logger.warning(f"RCL: Early exit! uid={message_uid}")
                 return False
 
             if result_code == ResultCode.QUEUED:
                 self._logger.warning(f"Added response {message_uid[0]}")
                 self._responses[message_uid[0]] = False
+            else:
+                self._logger.warning(f"RCL: Response NO ADDED! rc={result_code}")
 
         return True
 

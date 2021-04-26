@@ -119,9 +119,9 @@ class MessageQueue(threading.Thread):
 
         :param message: The message to execute
         """
+        response_device = None
         try:
             # Check we have a device to respond to before executing a command
-            response_device = None
             if message.respond_to_fqdn:
                 try:
                     response_device = tango.DeviceProxy(message.respond_to_fqdn)
@@ -130,7 +130,7 @@ class MessageQueue(threading.Thread):
                     self._notify_listener(message.command, ResultCode.UNKNOWN)
                     return
 
-            self._logger.info(f"_execute_message{message.message_uid}")
+            self._logger.warning(f"_execute_message {message.message_uid}")
             self._qdebug(f"Exe({message.message_uid})")
             command = self._target.get_command_object(message.command)
             if command:
@@ -153,13 +153,17 @@ class MessageQueue(threading.Thread):
                 kwargs["respond_to_fqdn"] = message.respond_to_fqdn
                 kwargs["callback"] = message.callback
                 json_string = json.dumps(kwargs)
-                self._logger.info(
-                    f"Calling {command} returning to fqdn={message.respond_to_fqdn} "
+                payload = (
+                    f'Calling "{command}" returning to fqdn={message.respond_to_fqdn} '
                     + f"and callback={message.callback}"
                 )
+                self._logger.warning(payload)
+                self._qdebug(payload)
                 self._qdebug(f"Message kwargs({kwargs})")
                 (result_code, status) = command(json_string)
-                self._qdebug(f"Result({message.message_uid},rc={result_code.name})")
+                payload = f"Result({message.message_uid},rc={result_code.name})"
+                self._logger.warning(payload)
+                self._qdebug(payload)
             else:
                 raise KeyError
         except KeyError:
@@ -180,9 +184,10 @@ class MessageQueue(threading.Thread):
             self._qdebug(
                 f'Reply to {response_device}.command_inout("{message.callback}")'
             )
+            self._qdebug(f"json_string={json_string}")
             # Post response message
-            response_device.command_inout(message.callback, json_string)
-            self._qdebug("Reply message sent")
+            (rc, stat) = response_device.command_inout(message.callback, json_string)
+            self._qdebug(f"Reply message sent rc={rc},status={stat}")
         else:
             self._qdebug("No reply required")
         self._qdebug(f"EndOfMessage({message.message_uid})")
@@ -244,7 +249,7 @@ class MessageQueue(threading.Thread):
         self._message_queue.put(message)
         self._qdebug(f"\nQ({message.message_uid})")
         status = f"Queued message {message.message_uid}"
-        self._logger.info(status)
+        self._logger.warning(status)
         return (ResultCode.QUEUED, status, message.message_uid)
 
     def send_message_with_response(

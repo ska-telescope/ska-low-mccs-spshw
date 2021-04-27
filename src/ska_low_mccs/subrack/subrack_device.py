@@ -1853,11 +1853,6 @@ class MccsSubrack(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            # :rcltodo We can't add simulated time here because
-            # a) it should be simulated in a simulator (ideally)
-            # b) the startup command doesn't use messages throughout so would
-            #    cause a Tango command timeout
-            # time.sleep(5)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
 

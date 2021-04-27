@@ -508,7 +508,6 @@ class MccsStation(SKAObsDevice):
         args = (self, self.state_model, self.logger)
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
-        self.register_command_object("BTest", self.BTestCommand(*args))
         self.register_command_object("On", self.OnCommand(*args))
         self.register_command_object("OnCallback", self.OnCallbackCommand(*args))
 
@@ -516,48 +515,6 @@ class MccsStation(SKAObsDevice):
         self.register_command_object("Disable", self.DisableCommand(*pool_args))
         self.register_command_object("Standby", self.StandbyCommand(*pool_args))
         self.register_command_object("Off", self.OffCommand(*pool_args))
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def BTest(self, argin):
-        """
-        A test command.
-
-        :param argin: Messaging system and command arguments
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        kwargs = json.loads(argin)
-        fqdn = kwargs.get("respond_to_fqdn")
-        cb = kwargs.get("callback")
-        (result_code, message, _) = self._message_queue.send_message_with_response(
-            command="BTest", respond_to_fqdn=fqdn, callback=cb
-        )
-        return [[result_code], [message]]
-
-    class BTestCommand(ResponseCommand):
-        """
-        Class for handling the a test command.
-        """
-
-        SUCCEEDED_MESSAGE = "BTest command completed OK"
-
-        def do(self, argin):
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsStation.BTest` command.
-
-            :param argin: Messaging system and command arguments
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            sleep(10)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -630,12 +587,7 @@ class MccsStation(SKAObsDevice):
             device_pool = device.device_pool
 
             if device._on_respond_to_fqdn and device._on_callback:
-                # TODO: Why doesn't either .dev_name() or .name() work here on
-                # the real Tango device?
-                #
-                #self.logger.warning(f"RCL: device.dev_name()={device.dev_name()}")
-                #self.logger.warning(f"RCL: device.name()={device.name()}")
-                fqdn = f"low-mccs/station/{device._station_id:03}"
+                fqdn = device.get_name()
                 self.logger.debug(
                     f"Pool invoke_command_with_callback('On', fqdn={fqdn}, 'OnCallback')"
                 )

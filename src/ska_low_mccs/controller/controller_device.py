@@ -105,11 +105,19 @@ class MccsControllerQueue(MessageQueue):
         :param progress: The notification to send to any subscribed listeners
         """
         device = self._target
-        device._command_result = progress
-        # :rcltodo Be clever here with the name of the command result
-        #       could even try moving this to the message queue implementation!
-        # Or, use a dispatcher to map command to push notification variable
-        device.push_change_event("commandResult", device._command_result)
+        dispatcher = {
+            "On": ("_on_command_result", "onCommandResult"),
+            # TODO: Add all commands and result attributes here
+        }
+        command_result = dispatcher.get(command)
+        if command_result:
+            setattr(device, command_result[0], progress)
+            device.push_change_event(
+                command_result[1],
+                getattr(device, command_result[0])
+            )
+        else:
+            assert False, "Command not found in dispatch table"
 
 
 class MccsController(SKAMaster):
@@ -185,9 +193,6 @@ class MccsController(SKAMaster):
 
         for (command_name, command_object) in [
             ("Startup", self.StartupCommand),
-            ("ATest", self.ATestCommand),
-            ("BTest", self.BTestCommand),
-            ("BTestCallback", self.BTestCallbackCommand),
             ("On", self.OnCommand),
             ("OnCallback", self.OnCallbackCommand),
             ("Off", self.OffCommand),
@@ -501,153 +506,6 @@ class MccsController(SKAMaster):
     # --------
     # Commands
     # --------
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def ATest(self: MccsController) -> Tuple[ResultCode, str]:
-        """
-        A test command.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
-        (result_code, message, _) = self._message_queue.send_message(
-            command="ATest", notifications=True
-        )
-        self._command_result = ResultCode.QUEUED
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
-
-    class ATestCommand(ResponseCommand):
-        """
-        Class for handling the a test command.
-        """
-
-        SUCCEEDED_MESSAGE = "ATest command completed OK"
-
-        def do(self: MccsController.ATestCommand, argin: str) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.ATest` command.
-
-            :param argin: Messaging system and command arguments
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device = self.target
-            device._progress = 0
-            device.push_change_event("commandProgress", device._progress)
-            for _ in range(10):
-                sleep(1)
-                device._progress += 10
-                device.push_change_event("commandProgress", device._progress)
-
-            device._command_result = ResultCode.OK
-            device.push_change_event("commandResult", device._command_result)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def BTest(self: MccsController) -> Tuple[ResultCode, str]:
-        """
-        B test command.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
-        (result_code, message, _) = self._message_queue.send_message(
-            command="BTest", notifications=True
-        )
-        self._command_result = ResultCode.QUEUED
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
-
-    class BTestCommand(ResponseCommand):
-        """
-        Class for handling the b test command.
-        """
-
-        STARTED_MESSAGE = "BTest command started OK"
-
-        def do(self: MccsController.BTestCommand, argin: str) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.BTest` command.
-
-            :param argin: Messaging system and command arguments
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device = DeviceProxy("low-mccs/station/001")
-            kwargs = {
-                # rcltodo: FQDN lookup
-                "respond_to_fqdn": "low-mccs/control/control",
-                "callback": "BTestCallback",
-            }
-            json_string = json.dumps(kwargs)
-            device.command_inout("BTest", json_string)
-            return (ResultCode.STARTED, self.STARTED_MESSAGE)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def BTestCallback(self: MccsController, json_args: str) -> Tuple[ResultCode, str]:
-        """
-        B test callback command.
-
-        :param json_args: Argument containing command message and result
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        (result_code, message, _) = self._message_queue.send_message(
-            command="BTestCallback", json_args=json_args
-        )
-        return [[result_code], [message]]
-
-    class BTestCallbackCommand(ResponseCommand):
-        """
-        Class for handling the b test callback command.
-        """
-
-        SUCCEEDED_MESSAGE = "BTest callback command completed OK"
-
-        def do(
-            self: MccsController.BTestCallbackCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.BTestCallback` command.
-
-            :param argin: Argument containing command message and result
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device = self.target
-            device._command_result = ResultCode.OK
-            device.push_change_event("commandResult", device._command_result)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Startup(self: MccsController) -> Tuple[ResultCode, str]:
@@ -763,10 +621,9 @@ class MccsController(SKAMaster):
             device = self.target
             device_pool = device.device_pool
 
-            # rcltodo: Why doesn't .dev_name() work?
             if device_pool.invoke_command_with_callback(
                 command_name="On",
-                fqdn="low-mccs/control/control",
+                fqdn=device.get_name(),
                 callback="OnCallback",
             ):
                 return (ResultCode.OK, self.QUEUED_MESSAGE)

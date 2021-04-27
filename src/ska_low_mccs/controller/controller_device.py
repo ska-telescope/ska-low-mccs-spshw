@@ -20,7 +20,7 @@ from typing import List, Tuple
 
 
 # PyTango imports
-from tango import DebugIt, DevState, EnsureOmniThread
+from tango import DebugIt, DevState, EnsureOmniThread, Group
 from tango.server import attribute, command, device_property
 
 # Additional import
@@ -247,9 +247,15 @@ class MccsController(SKAMaster):
 
             device._subarray_fqdns = list(device.MccsSubarrays)
             device._subarray_enabled = [False] * len(device.MccsSubarrays)
+            device._subarray_group = Group("SubarrayGroup")
+            for subarray_fqdn in device._subarray_fqdns:
+                device._subarray_group.add(subarray_fqdn)
 
             device._subrack_fqdns = list(device.MccsSubracks)
             device._station_fqdns = list(device.MccsStations)
+            device._station_group = Group("StationGroup")
+            for station_fqdn in device._station_fqdns:
+                device._station_group.add(station_fqdn)
 
             subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
             station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
@@ -339,14 +345,14 @@ class MccsController(SKAMaster):
                 is managed by this device
             """
             health_monitor = device.health_model._health_monitor
-            device._subarray_dict = {
-                fqdn: MccsDeviceProxy(fqdn, self.logger)
-                for fqdn in device._subarray_fqdns
-            }
-            device._station_dict = {
-                fqdn: MccsDeviceProxy(fqdn, self.logger)
-                for fqdn in device._station_fqdns
-            }
+            # device._subarray_dict = {
+            #     fqdn: MccsDeviceProxy(fqdn, self.logger)
+            #     for fqdn in device._subarray_fqdns
+            # }
+            # device._station_dict = {
+            #     fqdn: MccsDeviceProxy(fqdn, self.logger)
+            #     for fqdn in device._station_fqdns
+            # }
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = StationsResourceManager(
@@ -964,7 +970,9 @@ class MccsController(SKAMaster):
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
                 )
 
-            subarray_device = controllerdevice._subarray_dict[subarray_fqdn]
+            # subarray_device = controllerdevice._subarray_dict[subarray_fqdn]
+            assert controllerdevice._subarray_group.contains(subarray_fqdn)
+            subarray_device = controllerdevice._subarray_group.get_device(subarray_fqdn)
 
             # Manager gave this list of stations to release (no longer required)
             if stations_to_release is not None:
@@ -978,7 +986,8 @@ class MccsController(SKAMaster):
                         f"{message}",
                     )
                 for station_fqdn in stations_to_release:
-                    station = controllerdevice._station_dict[station_fqdn]
+                    station = controllerdevice._station_group.get_device(station_fqdn)
+                    # station = controllerdevice._station_dict[station_fqdn]
                     station.subarrayId = 0
 
                 # Inform manager that we made the releases
@@ -1008,8 +1017,9 @@ class MccsController(SKAMaster):
                         f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
                         f"{message}",
                     )
-                for fqdn in stations_to_assign:
-                    station = controllerdevice._station_dict[fqdn]
+                for station_fqdn in stations_to_assign:
+                    station = controllerdevice._station_group.get_device(station_fqdn)
+                    # station = controllerdevice._station_dict[fqdn]
                     station.subarrayId = subarray_id
 
                 # Inform manager that we made the assignments
@@ -1162,9 +1172,10 @@ class MccsController(SKAMaster):
                 # Query stations resouce manager for stations assigned to subarray
                 fqdns = self.target._stations_manager.get_assigned_fqdns(subarray_id)
                 # and clear the subarrayId in each
-                for fqdn in fqdns:
-                    station = MccsDeviceProxy(fqdn, self.logger)
-                    station.subarrayId = 0
+                for station_fqdn in fqdns:
+                    station_device = device._station_group.get_device(station_fqdn)
+                    # station = MccsDeviceProxy(fqdn, self.logger)
+                    station_device.subarrayId = 0
                 # Finally release them from assignment in the manager
                 self.target._stations_manager.release(fqdns)
 
@@ -1210,7 +1221,8 @@ class MccsController(SKAMaster):
             subarray_id = argin
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
-            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
+            subarray_device = device._subarray_group.get_device(subarray_fqdn)
+            # subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
             (result_code, message) = subarray_device.ReleaseAllResources()
             if result_code == ResultCode.FAILED:
                 return (

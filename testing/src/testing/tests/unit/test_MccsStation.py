@@ -116,6 +116,7 @@ class TestMccsStation:
         assert device_under_test.beamFQDNs is None
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
+        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
 
         # check that initialisation leaves us in a state where turning
         # the device on doesn't put it into ALARM state

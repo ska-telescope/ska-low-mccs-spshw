@@ -501,9 +501,7 @@ class MccsController(SKAMaster):
         Thin wrapper around the message queue's notify listener method.
 
         :param status: result code for this message uid
-        :type status: ResultCode
         :param message_uid: unique id for the message being executed
-        :type message_uid: str
         """
         self._message_queue._notify_listener(status, message_uid)
 
@@ -696,7 +694,7 @@ class MccsController(SKAMaster):
             device.logger.debug("Controller Callback called")
 
             # Defer callback to our pool device
-            (command_complete, result_code, message) = device_pool.on_callback(argin)
+            (command_complete, result_code, message) = device_pool.callback(argin)
             if command_complete:
                 device.logger.debug(f"OnCallback({result_code}, {message})")
                 device.notify_listener(result_code, message)

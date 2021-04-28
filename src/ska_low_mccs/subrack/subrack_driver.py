@@ -142,7 +142,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         response = self._client.connect()
         if not response:
             self.logger.error("status:ERROR")
-            self.logger.warning("info: Not connected")
+            self.logger.info("info: Not connected")
         return response
 
     def off(self):

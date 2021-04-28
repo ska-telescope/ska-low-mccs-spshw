@@ -514,7 +514,7 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def On(self, json_args):
         """
-        Turn device on and program TPM firmware.
+        Send a message to turn Tile on and program TPM firmware.
 
         This command will transition a Tile from Off/Standby to
         On and program the TPM firmware.

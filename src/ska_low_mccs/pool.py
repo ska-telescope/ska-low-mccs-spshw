@@ -70,7 +70,7 @@ class DevicePool:
                 MccsDeviceProxy(fqdn, self._logger) for fqdn in self._fqdns
             ]
 
-    # Deprecate this call (once converted to messaging system)
+    # TODO: Deprecate this call (once converted to messaging system)
     def invoke_command(self, command_name, arg=None):
         """
         A generic method for invoking a command on all devices in the
@@ -155,7 +155,7 @@ class DevicePool:
         """
         return len(self._responses)
 
-    def on_callback(self, argin):
+    def callback(self, argin):
         """
         A generic method to send a message to the pool of devices.
 
@@ -365,21 +365,6 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Disable", reverse=reverse)
 
-    def reset(self, reverse=False):
-        """
-        Call Reset() on all devices in this device pool.
-
-        :param reverse: whether to call pools in reverse sequence. (You
-            might turn everything on in a certain order, but need to
-            turn them off again in reverse order.) Optional, defaults to
-            False
-
-        :type reverse: bool
-        :return: Whether the command succeeded or not
-        :rtype: bool
-        """
-        return self.invoke_command("Reset", reverse=reverse)
-
     def standby(self, reverse=False):
         """
         Call Standby() on all the devices in this device pool.
@@ -442,8 +427,7 @@ class DevicePoolSequence:
             status += f"{str(pool.pool_stats())} "
         return status
 
-    # TODO: This could be made generic
-    def on_callback(self, argin):
+    def callback(self, argin):
         """
         We need to check all pools have received their callbacks
         whenever we get a callback message.
@@ -459,7 +443,7 @@ class DevicePoolSequence:
         pools_complete = 0
         results = []
         for pool in self._pools:
-            (pool_done, result_code) = pool.on_callback(argin=argin)
+            (pool_done, result_code) = pool.callback(argin=argin)
             if pool_done:
                 pools_complete += 1
             results.append(result_code)

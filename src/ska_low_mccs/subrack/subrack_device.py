@@ -629,15 +629,12 @@ class MccsSubrack(SKABaseDevice):
                 command_name,
                 command_object(self.hardware_manager, self.state_model, self.logger),
             )
-            self.logger.warning("Adding command " + command_name)
+            self.logger.debug("Adding command " + command_name)
 
-        for (command_name, command_object) in [
-            ("On", self.OnCommand),
-        ]:
-            self.register_command_object(
-                command_name,
-                command_object(self, self.state_model, self.logger),
-            )
+        self.register_command_object(
+            "On",
+            self.OnCommand(self, self.state_model, self.logger),
+        )
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
@@ -903,7 +900,7 @@ class MccsSubrack(SKABaseDevice):
         :param value: The simulation mode, as a SimulationMode value
         """
         super().write_simulationMode(value)
-        self.logger.warning("Switching simulation mode to " + str(value))
+        self.logger.info("Switching simulation mode to " + str(value))
         self.hardware_manager.simulation_mode = value
 
     @attribute(
@@ -1801,7 +1798,7 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def On(self, json_args):
         """
-        Send message with response.
+        Send a message to turn the subrack on.
 
         :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string

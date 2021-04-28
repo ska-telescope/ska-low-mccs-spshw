@@ -131,6 +131,8 @@ class MccsStation(SKAObsDevice):
             device.queue_debug = ""
             device._heart_beat = 0
             device._progress = 0
+            device._on_respond_to_fqdn = None
+            device._on_callback = None
             device._subarray_id = 0
             device._apiu_fqdn = device.APIUFQDN
             device._tile_fqdns = list(device.TileFQDNs)
@@ -568,6 +570,7 @@ class MccsStation(SKAObsDevice):
         QUEUED_MESSAGE = "Station On command queued"
         SUCCEEDED_MESSAGE = "Station On command complete"
         FAILED_MESSAGE = "Station On command failed"
+        QUEUE_FAIL_MESSAGE = "Station device pool On command not queued"
 
         def do(self, argin):
             """
@@ -597,8 +600,8 @@ class MccsStation(SKAObsDevice):
                 ):
                     return (ResultCode.OK, self.QUEUED_MESSAGE)
                 else:
-                    self.logger.error('Station device pool "On" command not queued')
-                    return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                    self.logger.error(self.QUEUE_FAIL_MESSAGE)
+                    return (ResultCode.FAILED, self.QUEUE_FAIL_MESSAGE)
             else:
                 self.logger.debug("Calling device_pool.on()...")
                 if device_pool.on():
@@ -619,7 +622,7 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.info(f"Station OnCallback json_args={json_args}")
+        self.logger.debug(f"Station OnCallback json_args={json_args}")
         (result_code, message, _) = self._message_queue.send_message(
             command="OnCallback", json_args=json_args
         )
@@ -645,9 +648,9 @@ class MccsStation(SKAObsDevice):
             device = self.target
             device_pool = device.device_pool
 
-            device.logger.info("Station OnCallbackCommand class do()")
+            device.logger.debug("Station OnCallbackCommand class do()")
             # Defer callback to our pool device
-            (command_complete, result_code, _) = device_pool.on_callback(argin)
+            (command_complete, result_code, _) = device_pool.callback(argin)
 
             # Cache the original status message from the caller
             kwargs = json.loads(argin)

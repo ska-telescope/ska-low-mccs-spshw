@@ -1072,7 +1072,7 @@ class MccsAntenna(SKABaseDevice):
     @DebugIt()
     def On(self, json_args):
         """
-        Turn antenna "On".
+        Send a message to turn Antenna on.
 
         :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string

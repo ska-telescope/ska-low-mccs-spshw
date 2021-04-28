@@ -277,7 +277,8 @@ class TestMessageQueue:
         target_mock.get_command_object.assert_called_once_with(test_command)
         message_args = {"respond_to_fqdn": "", "callback": ""}
         json_string = json.dumps(message_args)
-        assert specialised_message_queue.notify == (ResultCode.STARTED, test_command)
+        assert specialised_message_queue.notify[0] == ResultCode.STARTED
+        assert test_command in specialised_message_queue.notify[1]
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
 
@@ -385,7 +386,5 @@ class TestMessageQueue:
         time.sleep(0.1)  # Required to allow DUT thread to run
         mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
         assert f"Response device {invalid_fqdn} not found" in target_mock.queue_debug
-        assert specialised_message_queue.notify == (
-            ResultCode.UNKNOWN,
-            test_command
-        )
+        assert specialised_message_queue.notify[0] == ResultCode.UNKNOWN
+        assert test_command in specialised_message_queue.notify[1]

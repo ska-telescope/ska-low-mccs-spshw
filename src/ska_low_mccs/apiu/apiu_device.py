@@ -12,6 +12,7 @@ This module contains an implementation of the MCCS APIU device and
 related classes.
 """
 import threading
+import json
 
 from tango import DebugIt, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
@@ -29,7 +30,7 @@ from ska_low_mccs.hardware import (
 )
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.apiu.apiu_simulator import APIUSimulator
-
+from ska_low_mccs.message_queue import MessageQueue
 
 __all__ = [
     "APIUHardwareFactory",
@@ -434,6 +435,8 @@ class MccsAPIU(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._message_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -447,6 +450,8 @@ class MccsAPIU(SKABaseDevice):
             """
             super().do()
             device = self.target
+            device._heart_beat = 0
+            device.queue_debug = ""
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
@@ -470,6 +475,12 @@ class MccsAPIU(SKABaseDevice):
                 len(device._antenna_fqdns),
                 device.are_antennas_on_changed,
             )
+
+            # Start the Message queue for this device
+            device._message_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -613,6 +624,33 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
 
     @attribute(
         dtype="DevLong",
@@ -846,7 +884,7 @@ class MccsAPIU(SKABaseDevice):
     @DebugIt()
     def On(self, json_args):
         """
-        Turn APIU "On".
+        Send a message to turn APIU on.
 
         :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string
@@ -854,10 +892,26 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.info("APIU On")
-        command = self.get_command_object("On")
-        (result_code, message) = command(json_args)
-        return [[result_code], [message]]
+        self.logger.warning("APIU On")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            self.logger.warning("APIU On message call")
+            (
+                result_code,
+                _,
+                message_uid,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [message_uid]]
+        else:
+            # Call On sequentially
+            command = self.get_command_object("On")
+            (result_code, message) = command(json_args)
+            return [[result_code], [message]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """

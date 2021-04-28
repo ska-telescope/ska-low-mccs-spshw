@@ -12,6 +12,7 @@
 This module contains the tests for MccsAPIU.
 """
 import random
+from time import sleep
 
 import pytest
 from tango import DevState, AttrQuality, EventType
@@ -621,7 +622,7 @@ class TestMccsAPIU(object):
         assert event_data.value == HealthState.OK
         assert event_data.quality == AttrQuality.ATTR_VALID
 
-    def test_attributes(self, device_under_test):
+    def test_attributes(self, device_under_test, dummy_json_args):
         """
         Test of attributes.
 
@@ -631,7 +632,8 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        device_under_test.On("")
+        device_under_test.On(dummy_json_args)
+        sleep(0.1)  # Required to allow DUT thread to run
         assert device_under_test.temperature == APIUSimulator.TEMPERATURE
         assert device_under_test.humidity == APIUSimulator.HUMIDITY
         assert device_under_test.voltage == APIUSimulator.VOLTAGE
@@ -648,7 +650,7 @@ class TestMccsAPIU(object):
         device_under_test.humidityThreshold = 60.0
         assert device_under_test.humidityThreshold == 60.0
 
-    def test_PowerUp(self, device_under_test):
+    def test_PowerUp(self, device_under_test, dummy_json_args):
         """
         Test for PowerUp.
 
@@ -658,7 +660,8 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        device_under_test.On("")
+        device_under_test.On(dummy_json_args)
+        sleep(0.1)  # Required to allow DUT thread to run
 
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
@@ -668,7 +671,7 @@ class TestMccsAPIU(object):
         assert result_code == ResultCode.OK
         assert message == "APIU power-up is redundant"
 
-    def test_PowerDown(self, device_under_test):
+    def test_PowerDown(self, device_under_test, dummy_json_args):
         """
         Test for PowerDown.
 
@@ -678,7 +681,8 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        device_under_test.On("")
+        device_under_test.On(dummy_json_args)
+        sleep(0.1)  # Required to allow DUT thread to run
 
         [[result_code], [message]] = device_under_test.PowerDown()
         assert result_code == ResultCode.OK
@@ -690,7 +694,7 @@ class TestMccsAPIU(object):
         assert result_code == ResultCode.OK
         assert message == "APIU power-down successful"
 
-    def test_PowerUpAntenna(self, device_under_test):
+    def test_PowerUpAntenna(self, device_under_test, dummy_json_args):
         """
         Test for PowerUpAntenna.
 
@@ -700,7 +704,8 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        _ = device_under_test.On("")
+        _ = device_under_test.On(dummy_json_args)
+        sleep(0.1)  # Required to allow DUT thread to run
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
@@ -724,7 +729,7 @@ class TestMccsAPIU(object):
         assert not any(are_antennas_on[1:])
         assert len(are_antennas_on) == device_under_test.antennaCount
 
-    def test_PowerDownAntenna(self, device_under_test):
+    def test_PowerDownAntenna(self, device_under_test, dummy_json_args):
         """
         Test for PowerDownAntenna.
 
@@ -734,7 +739,8 @@ class TestMccsAPIU(object):
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         device_under_test.Off()
-        _ = device_under_test.On("")
+        _ = device_under_test.On(dummy_json_args)
+        sleep(0.1)  # Required to allow DUT thread to run
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

@@ -19,6 +19,7 @@ __all__ = [
 ]
 
 import threading
+import json
 
 from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, device_property, AttrWriteType, command
@@ -378,12 +379,14 @@ class MccsAntenna(SKABaseDevice):
             ("Disable", self.DisableCommand),
             ("Standby", self.StandbyCommand),
             ("Off", self.OffCommand),
-            ("On", self.OnCommand),
         ]:
             self.register_command_object(
                 command_name,
                 command_object(self._apiu_proxy, self.state_model, self.logger),
             )
+        self.register_command_object(
+            "On", self.OnCommand(self, self.state_model, self.logger)
+        )
 
     # ---------------
     # General methods
@@ -1081,9 +1084,26 @@ class MccsAntenna(SKABaseDevice):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self.logger.warning("Antenna On")
-        command = self.get_command_object("On")
-        (result_code, message) = command(json_args)
-        return [[result_code], [message]]
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            self.logger.warning("Antenna On message call")
+            (
+                result_code,
+                _,
+                message_uid,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [message_uid]]
+        else:
+            # Call On sequentially
+            self.logger.warning("Antenna On direct call")
+            command = self.get_command_object("On")
+            (result_code, message) = command(json_args)
+            return [[result_code], [message]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """

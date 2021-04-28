@@ -463,6 +463,15 @@ class MccsStation(SKAObsDevice):
         return self._calibration_coefficients
 
     @attribute(dtype="DevString")
+    def aPoolStats(self):
+        """
+        Return the aPoolStats attribute.
+
+        :return: aPoolStats attribute
+        """
+        return self.device_pool.pool_stats()
+
+    @attribute(dtype="DevString")
     def aQueueDebug(self):
         """
         Return the queueDebug attribute.

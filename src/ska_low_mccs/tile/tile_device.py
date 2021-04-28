@@ -3008,7 +3008,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevDouble",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
@@ -3122,7 +3122,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevDouble",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()

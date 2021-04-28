@@ -17,7 +17,6 @@ __all__ = ["MccsStation", "main"]
 
 import json
 import threading
-from time import sleep
 import tango
 
 # PyTango imports

@@ -206,7 +206,7 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_On_RCL(self, device_under_test, mock_event_callback):
+    def test_On(self, device_under_test, mock_event_callback):
         """
         Test for On (including end of command event testing).
 
@@ -226,10 +226,12 @@ class TestMccsController:
         )
         mock_event_callback.check_event_data(name="commandResult", result=None)
 
+        device_under_test._command_result = [ResultCode.UNKNOWN, ""]
+        sleep(0.1)
         # Call the On() command on the Controller device
         [[result_code], [message]] = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert "Queued message " in message
+        assert ":On" in message
         mock_event_callback.check_queued_command_result(
             name="commandResult", result=ResultCode.STARTED
         )

@@ -5,6 +5,7 @@ ska_low_mccs unit tests.
 import pytest
 import time
 import tango
+import json
 
 from ska_tango_base.commands import ResultCode
 
@@ -134,10 +135,12 @@ def mock_event_callback(mocker):
             second_event_data = self.mock_calls[1][1][0].attr_value
             assert first_event_data.name.casefold() == name.casefold()
             assert second_event_data.name.casefold() == name.casefold()
-            assert first_event_data.value == ResultCode.UNKNOWN
+            values = json.loads(first_event_data.value)
+            assert values.get("status") == ResultCode.UNKNOWN
             assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
             if result is not None:
-                assert second_event_data.value == result
+                values = json.loads(second_event_data.value)
+                assert values.get("status") == result
                 assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
             self.reset_mock()
 
@@ -169,12 +172,15 @@ def mock_event_callback(mocker):
             assert first_event_data.name.casefold() == name.casefold()
             assert second_event_data.name.casefold() == name.casefold()
             assert third_event_data.name.casefold() == name.casefold()
-            assert first_event_data.value == ResultCode.UNKNOWN
+            values = json.loads(first_event_data.value)
+            assert values.get("status") == ResultCode.UNKNOWN
             assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
-            assert second_event_data.value == ResultCode.QUEUED
+            values = json.loads(second_event_data.value)
+            assert values.get("status") == ResultCode.QUEUED
             assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
             if result is not None:
-                assert third_event_data.value == result
+                values = json.loads(third_event_data.value)
+                assert values.get("status") == result
                 assert third_event_data.quality == tango.AttrQuality.ATTR_VALID
             self.reset_mock()
 

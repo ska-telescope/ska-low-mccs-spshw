@@ -146,15 +146,17 @@ class TestMessageQueue:
             notify listener.
             """
 
-            def _notify_listener(self, command, progress):
+            def _notify_listener(self, status, message_uid):
                 """
                 Concrete test implementation of abstract base class to
                 notify listeners.
 
-                :param command: The command that needs a push notification
-                :param progress: The notification to send to any subscribed listeners
+                :param status: result code for this message uid
+                :type status: :py:class:`~ska_tango_base.commands.ResultCode`
+                :param message_uid: unique id for the message being executed
+                :type message_uid: str
                 """
-                self.notify = (command, progress)
+                self.notify = (status, message_uid)
 
         lock = threading.Lock()
         message_queue = SpecialisedMessageQueue(
@@ -275,7 +277,7 @@ class TestMessageQueue:
         target_mock.get_command_object.assert_called_once_with(test_command)
         message_args = {"respond_to_fqdn": "", "callback": ""}
         json_string = json.dumps(message_args)
-        assert specialised_message_queue.notify == (test_command, ResultCode.STARTED)
+        assert specialised_message_queue.notify == (ResultCode.STARTED, test_command)
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
 
@@ -384,6 +386,6 @@ class TestMessageQueue:
         mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
         assert f"Response device {invalid_fqdn} not found" in target_mock.queue_debug
         assert specialised_message_queue.notify == (
-            test_command,
             ResultCode.UNKNOWN,
+            test_command
         )

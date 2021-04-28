@@ -17,10 +17,9 @@ import json
 import logging
 import threading
 from typing import List, Tuple
-from time import sleep
 
 # PyTango imports
-from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util, DeviceProxy
+from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
 
 # Additional import
@@ -96,28 +95,19 @@ class MccsControllerQueue(MessageQueue):
     """
 
     def _notify_listener(
-        self: MccsControllerQueue, command: str, progress: ResultCode
+        self: MccsControllerQueue, status: ResultCode, message_uid: str
     ) -> None:
         """
         Concrete implementation that can notify specific listeners.
 
-        :param command: The command that needs a push notification
-        :param progress: The notification to send to any subscribed listeners
+        :param status: The notification to send to any subscribed listeners
+        :param message_uid: The message uid that needs a push notification
         """
         device = self._target
-        dispatcher = {
-            "On": ("_on_command_result", "onCommandResult"),
-            # TODO: Add all commands and result attributes here
-        }
-        command_result = dispatcher.get(command)
-        if command_result:
-            setattr(device, command_result[0], progress)
-            device.push_change_event(
-                command_result[1],
-                getattr(device, command_result[0])
-            )
-        else:
-            assert False, "Command not found in dispatch table"
+        device._command_result["status"] = status
+        device._command_result["message_uid"] = message_uid
+        json_results = json.dumps(device._command_result)
+        device.push_change_event("commandResult", json_results)
 
 
 class MccsController(SKAMaster):
@@ -257,7 +247,7 @@ class MccsController(SKAMaster):
 
             device = self.target
             device._heart_beat = 0
-            device._command_result = None
+            device._command_result = {"status": ResultCode.UNKNOWN, "message_uid": ""}
             device._progress = 0
             device.queue_debug = ""
             device._build_state = release.get_release_info()
@@ -431,14 +421,15 @@ class MccsController(SKAMaster):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i")
+    @attribute(dtype="DevString")
     def commandResult(self: MccsController) -> ResultCode:
         """
-        Return the commandResult attribute.
+        Return the _command_result attributes.
 
-        :return: commandResult attribute
+        :return: JSON encoded _command_results attributes map
         """
-        return self._command_result
+        json_results = json.dumps(self._command_result)
+        return json_results
 
     @attribute(dtype="DevString")
     def aPoolStats(self: MccsController) -> str:
@@ -503,6 +494,19 @@ class MccsController(SKAMaster):
         """
         return 0
 
+    def notify_listener(
+        self: MccsController, status: ResultCode, message_uid: str
+    ) -> None:
+        """
+        Thin wrapper around the message queue's notify listener method.
+
+        :param status: result code for this message uid
+        :type status: ResultCode
+        :param message_uid: unique id for the message being executed
+        :type message_uid: str
+        """
+        self._message_queue._notify_listener(status, message_uid)
+
     # --------
     # Commands
     # --------
@@ -518,15 +522,22 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
-        self.logger.debug("send_message(Startup)")
-        (result_code, message, _) = self._message_queue.send_message(
-            command="Startup", notifications=True
-        )
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
+        if self._command_result.get("status") in [
+            ResultCode.STARTED,
+            ResultCode.QUEUED,
+        ]:
+            return [
+                [ResultCode.FAILED],
+                ["A controller command is already in progress"],
+            ]
+        else:
+            self.notify_listener(ResultCode.UNKNOWN, "")
+            self.logger.debug("send_message(Startup)")
+            (result_code, _, message_uid) = self._message_queue.send_message(
+                command="Startup", notifications=True
+            )
+            self.notify_listener(result_code, message_uid)
+            return [[result_code], [message_uid]]
 
     class StartupCommand(ResponseCommand):
         """
@@ -565,13 +576,16 @@ class MccsController(SKAMaster):
                 self.state_model.perform_action("off_succeeded")
             else:
                 self.state_model.perform_action("off_failed")
+                device.notify_listener(ResultCode.FAILED, self.FAILED_MESSAGE)
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             if device_pool.on():
                 self.state_model.perform_action("on_succeeded")
+                device.notify_listener(ResultCode.OK, self.SUCCEEDED_MESSAGE)
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
                 self.state_model.perform_action("on_failed")
+                device.notify_listener(ResultCode.FAILED, self.FAILED_MESSAGE)
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
@@ -588,15 +602,22 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
-        self.logger.debug("send_message(On)")
-        (result_code, message, _) = self._message_queue.send_message(
-            command="On", notifications=True
-        )
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
+        if self._command_result.get("status") in [
+            ResultCode.STARTED,
+            ResultCode.QUEUED,
+        ]:
+            return [
+                [ResultCode.FAILED],
+                ["A controller command is already in progress"],
+            ]
+        else:
+            self.notify_listener(ResultCode.UNKNOWN, "")
+            self.logger.debug("send_message(On)")
+            (result_code, _, message_uid) = self._message_queue.send_message(
+                command="On", notifications=True
+            )
+            self.notify_listener(result_code, message_uid)
+            return [[result_code], [message_uid]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -628,9 +649,8 @@ class MccsController(SKAMaster):
             ):
                 return (ResultCode.OK, self.QUEUED_MESSAGE)
             else:
-                self.logger.error('Controller device pool "On" command not queued')
-                device._command_result = ResultCode.FAILED
-                device.push_change_event("commandResult", device._command_result)
+                self.logger.error(self.FAILED_MESSAGE)
+                device.notify_listener(ResultCode.FAILED, self.FAILED_MESSAGE)
                 # This needs to be successful or it drives the state machine into FAULT
                 return (ResultCode.OK, self.FAILED_MESSAGE)
 
@@ -679,8 +699,7 @@ class MccsController(SKAMaster):
             (command_complete, result_code, message) = device_pool.on_callback(argin)
             if command_complete:
                 device.logger.debug(f"OnCallback({result_code}, {message})")
-                device._command_result = result_code
-                device.push_change_event("commandResult", device._command_result)
+                device.notify_listener(result_code, message)
                 return (result_code, message)
             else:
                 return (ResultCode.STARTED, message)
@@ -697,12 +716,10 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(ResultCode.UNKNOWN, "")
         command = self.get_command_object("Disable")
         (result_code, message) = command()
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(result_code, message)
         return [[result_code], [message]]
 
     class DisableCommand(SKABaseDevice.DisableCommand):
@@ -743,12 +760,10 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(ResultCode.UNKNOWN, "")
         command = self.get_command_object("Off")
         (result_code, message) = command()
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(result_code, message)
         return [[result_code], [message]]
 
     class OffCommand(SKABaseDevice.OffCommand):
@@ -994,12 +1009,10 @@ class MccsController(SKAMaster):
                 )
             )
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(ResultCode.UNKNOWN, "")
         handler = self.get_command_object("Allocate")
         (result_code, message) = handler(argin)
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(result_code, message)
         return [[result_code], [message]]
 
     class AllocateCommand(ResponseCommand):
@@ -1227,12 +1240,10 @@ class MccsController(SKAMaster):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(ResultCode.UNKNOWN, "")
         handler = self.get_command_object("Release")
         (result_code, message) = handler(argin)
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(result_code, message)
         return [[result_code], [message]]
 
     class ReleaseCommand(ResponseCommand):

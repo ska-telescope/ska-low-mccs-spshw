@@ -535,7 +535,7 @@ class MccsTile(SKABaseDevice):
             "TileOn",
             "Initialise",
         ]
-        if (self.state_model.op_state == DevState.STANDBY):
+        if self.state_model.op_state == DevState.STANDBY:
             self._command_sequence.insert(0, "Off")
 
         kwargs = json.loads(json_args)

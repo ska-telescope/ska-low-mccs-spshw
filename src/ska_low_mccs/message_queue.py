@@ -98,17 +98,17 @@ class MessageQueue(threading.Thread):
                 self._target._heart_beat += 1
                 self._check_message_queue()
 
-    def _notify_listener(self, command, progress):
+    def _notify_listener(self, status, message_uid):
         """
         Abstract method that requires implementation by derived concrete
         class for specific notifications.
 
-        :param command: The command that needs a push notification
-        :param progress: The notification to send to any subscribed listeners
+        :param status: The notification to send to any subscribed listeners
+        :param message_uid: The message uid that needs a push notification
         """
-        self._qdebug("Error(_notify_listener) Thread Terminated")
+        self._qdebug("Error(_notify_listener) Terminate thread")
         self._logger.error(
-            "Derived class should implement _notify_listener(). Thread terminated"
+            "Derived class should implement _notify_listener(). Terminate thread"
         )
         # Terminate the thread execution loop
         self._terminate = True
@@ -127,7 +127,7 @@ class MessageQueue(threading.Thread):
                     response_device = tango.DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
                     self._qdebug(f"Response device {message.respond_to_fqdn} not found")
-                    self._notify_listener(message.command, ResultCode.UNKNOWN)
+                    self._notify_listener(ResultCode.UNKNOWN, message.message_uid)
                     return
 
             self._logger.debug(f"_execute_message {message.message_uid}")
@@ -136,7 +136,7 @@ class MessageQueue(threading.Thread):
             if command:
                 if message.notifications:
                     self._qdebug(f"^({message.message_uid})")
-                    self._notify_listener(message.command, ResultCode.STARTED)
+                    self._notify_listener(ResultCode.STARTED, message.message_uid)
 
                 # Incorporate FQDN and callback into command args dictionary
                 # Add to kwargs and deal with the case if it's not a JSON encoded string
@@ -243,8 +243,8 @@ class MessageQueue(threading.Thread):
             respond_to_fqdn=respond_to_fqdn,
             callback=callback,
         )
-        # rcltodo: protect with a try except for "Full" exception
-        # rcltodo: Also limit the number of messages in a queue?
+        # TODO: protect with a try except for "Full" exception
+        # TODO: Also limit the number of messages in a queue?
         #          Could be dangerous if many callbacks though - think!
         self._message_queue.put(message)
         self._qdebug(f"\nQ({message.message_uid})")

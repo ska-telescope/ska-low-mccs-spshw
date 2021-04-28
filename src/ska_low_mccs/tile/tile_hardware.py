@@ -143,7 +143,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def firmware_available(self):
         """
-        Return specifications of the firmware stored on the hardware and
+        Return specifications of the firmware loaded on the hardware and
         available for use.
 
         :return: specifications of the firmware stored on the hardware
@@ -162,11 +162,21 @@ class TileHardwareManager(SimulableHardwareManager):
         return self._factory.hardware.firmware_name
 
     @property
+    def hardware_version(self):
+        """
+        Returns the version of the hardware running on the hardware.
+
+        :return: the version of the hardware (e.g. 120 for 1.2)
+        :rtype: int
+        """
+        return self._factory.hardware.hardware_version
+
+    @property
     def firmware_version(self):
         """
-        Returns the name of the firmware running on the hardware.
+        Returns the version of the firmware running on the hardware.
 
-        :return: the name of the firmware
+        :return: the version of the firmware
         :rtype: str
         """
         return self._factory.hardware.firmware_version

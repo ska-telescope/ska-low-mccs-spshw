@@ -57,6 +57,7 @@ setuptools.setup(
         "jsonschema >= 3.2.0",
         "fire",
         "uritools",
+        "requests",
     ],
     zip_safe=False,
 )

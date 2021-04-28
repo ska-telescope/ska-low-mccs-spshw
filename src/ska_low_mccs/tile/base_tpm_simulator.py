@@ -40,6 +40,8 @@ class BaseTpmSimulator(HardwareSimulator):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
+    # Hardware version: major*100 + minor
+    TPM_VERSION = 120
 
     def _arp(self, ip):
         """
@@ -115,6 +117,16 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: firmware_name")
         return self._firmware_name
 
+    @firmware_name.setter
+    def firmware_name(self, value):
+        """
+        Set firmware name.
+
+        :param value: assigned default firmware name. Can be overriden by parameter of download_firmware
+        :type value: str
+        """
+        self._tile_id = value
+
     @property
     def firmware_version(self):
         """
@@ -139,6 +151,16 @@ class BaseTpmSimulator(HardwareSimulator):
         """
         self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
         return self._is_programmed
+
+    @property
+    def hardware_version(self):
+        """
+        Return whether this TPM is 1.2 or 1.6.
+
+        :return: TPM hardware version. 120 or 160
+        :rtype: int
+        """
+        return self.TPM_VERSION
 
     def download_firmware(self, bitfile):
         """
@@ -173,7 +195,7 @@ class BaseTpmSimulator(HardwareSimulator):
         The simulator will emulate programming the firmware.
         """
         self.logger.debug("TpmSimulator: initialise")
-        self.download_firmware("firmware1")
+        self.download_firmware(self._firmware_name)
 
     @property
     def tile_id(self):

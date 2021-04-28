@@ -1350,6 +1350,27 @@ class HwTile(object):
         for i in range(len(self.tpm.tpm_test_firmware)):
             self.tpm.tpm_test_firmware[i].stop_channelised_data_continuous()
 
+    def stop_integrated_beam_data(self):
+        """
+        Stop transmission of integrated beam data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_beam_data()
+
+    def stop_integrated_channel_data(self):
+        """
+        Stop transmission of integrated beam data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_channel_data()
+
+    def stop_integrated_data(self):
+        """
+        Stop transmission of integrated data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_data()
+
     @connected
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
@@ -1370,6 +1391,72 @@ class HwTile(object):
                 self.tpm.tpm_test_firmware[i].send_raw_data_synchronised()
             else:
                 self.tpm.tpm_test_firmware[i].send_raw_data()
+
+    @connected
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=512,
+        time_mux_factor=2,
+        carousel_enable=0x1,
+    ):
+        """
+        Configure continuous integrated channel data.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: TODO
+        :type time_mux_factor: int, optional
+        :param carousel_enable: TODO
+        :type carousel_enable: optional
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure(
+                "channel",
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor,
+                carousel_enable,
+            )
+
+    @connected
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=192,
+        time_mux_factor=1,
+        carousel_enable=0x0,
+    ):
+        """
+        Configure continuous integrated beam data.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: TODO
+        :type time_mux_factor: int, optional
+        :param carousel_enable: TODO
+        :type carousel_enable: optional
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure(
+                "beamf",
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor,
+                carousel_enable,
+            )
 
     @connected
     def send_channelised_data(

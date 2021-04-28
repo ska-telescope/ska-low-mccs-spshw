@@ -700,13 +700,28 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: Stop beamformer")
         self._is_beamformer_running = False
 
-    def configure_integrated_channel_data(self, integration_time=0.5):
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=512,
+        time_mux_factor=2,
+        carousel_enable=1,
+    ):
         """
         Configure the transmission of integrated channel data with the
         provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: TODO
+        :type time_mux_factor: int, optional
+        :param carousel_enable: TODO
+        :type carousel_enable: optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -714,13 +729,28 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: configure_integrated_channel_data")
         raise NotImplementedError
 
-    def configure_integrated_beam_data(self, integration_time=0.5):
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=192,
+        time_mux_factor=1,
+        carousel_enable=0,
+    ):
         """
         Configure the transmission of integrated beam data with the
         provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: TODO
+        :type time_mux_factor: int, optional
+        :param carousel_enable: TODO
+        :type carousel_enable: optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

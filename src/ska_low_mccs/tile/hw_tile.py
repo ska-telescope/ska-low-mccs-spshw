@@ -1286,6 +1286,77 @@ class HwTile(object):
 
     # ------------------------ Wrapper for spigot generators ----------------------
     @connected
+    def set_lmc_integrated_download(
+        self,
+        mode,
+        channel_payload_length,
+        beam_payload_length,
+        dst_ip=None,
+        src_port=0xF0D0,
+        dst_port=4660,
+        lmc_mac=None,
+    ):
+        """
+        Configure link and size of control data.
+
+        :param mode: 1g or 10g
+        :param channel_payload_length: SPEAD payload length for integrated channel data
+        :param beam_payload_length: SPEAD payload length for integrated beam data
+        :param dst_ip: Destination IP
+        :param src_port: Source port for integrated data streams
+        :param dst_port: Destination port for integrated data streams
+        :param lmc_mac: LMC Mac address is required for 10G lane configuration
+        """
+
+        # Using 10G lane
+        if mode.upper() == "10G":
+            if lmc_mac is None:
+                logging.error("LMC MAC must be specified for 10G lane configuration")
+                return
+
+            # If dst_ip is None, use local lmc_ip
+            if dst_ip is None:
+                dst_ip = self._lmc_ip
+
+            if self.tpm.tpm_test_firmware[0].xg_40g_eth:
+                self.configure_40g_core(
+                    1, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+                )
+
+                self.configure_40g_core(
+                    0, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+                )
+            else:
+                self.configure_10g_core(
+                    2,
+                    dst_mac=lmc_mac,
+                    dst_ip=dst_ip,
+                    src_port=src_port,
+                    dst_port=dst_port,
+                )
+
+                self.configure_10g_core(
+                    6,
+                    dst_mac=lmc_mac,
+                    dst_ip=dst_ip,
+                    src_port=src_port,
+                    dst_port=dst_port,
+                )
+
+        # Using dedicated 1G link
+        elif mode.upper() == "1G":
+            pass
+        else:
+            logging.error("Supported mode are 1g, 10g")
+            return
+
+        # Setting payload lengths
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure_download(
+                mode, channel_payload_length, beam_payload_length
+            )
+
+    @connected
     def set_lmc_download(
         self,
         mode,
@@ -1410,10 +1481,10 @@ class HwTile(object):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].configure(
@@ -1443,10 +1514,10 @@ class HwTile(object):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].configure(

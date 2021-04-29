@@ -772,10 +772,10 @@ class TpmDriver(HardwareDriver):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
         self.tile.configure_integrated_channel_data(
@@ -811,10 +811,10 @@ class TpmDriver(HardwareDriver):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
         self.tile.configure_integrated_beam_data(
@@ -1000,12 +1000,17 @@ class TpmDriver(HardwareDriver):
         :type dst_port: int, optional
         :param lmc_mac: MAC address of destination, defaults to None
         :type lmc_mac: str, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
-        raise NotImplementedError
+        self.tile.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip,
+            src_port,
+            dst_port,
+            lmc_mac,
+        )
 
     def send_raw_data_synchronised(self, timestamp=None, seconds=0.2):
         """

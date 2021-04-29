@@ -710,8 +710,8 @@ class TileHardwareManager(SimulableHardwareManager):
         integration_time=None,
         first_channel=None,
         last_channel=None,
-        time_mux_factor=None,
-        carousel_enable=None,
+        time_mux_factor=2,
+        carousel_enable=1,
     ):
         """
         Configure the transmission of integrated channel data with the
@@ -723,10 +723,10 @@ class TileHardwareManager(SimulableHardwareManager):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self._factory.hardware.configure_integrated_channel_data(
             integration_time=integration_time,
@@ -747,8 +747,8 @@ class TileHardwareManager(SimulableHardwareManager):
         integration_time=None,
         first_channel=None,
         last_channel=None,
-        time_mux_factor=None,
-        carousel_enable=None,
+        time_mux_factor=1,
+        carousel_enable=0,
     ):
         """
         Configure the transmission of integrated beam data with the
@@ -760,10 +760,10 @@ class TileHardwareManager(SimulableHardwareManager):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self._factory.hardware.configure_integrated_beam_data(
             integration_time=integration_time,

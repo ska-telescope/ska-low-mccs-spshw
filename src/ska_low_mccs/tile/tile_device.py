@@ -2980,8 +2980,7 @@ class MccsTile(SKABaseDevice):
             command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-                "integration time", "first_channel", "last_channel", "time_mux_factor",
-                and "carousel_enable"
+                "integration time", "first_channel", "last_channel"
             :type argin: str
 
             :return: A tuple containing a return code and a string
@@ -2994,16 +2993,14 @@ class MccsTile(SKABaseDevice):
             integration_time = params.get("IntegrationTime", 0.5)
             first_channel = params.get("FirstChannel", 0)
             last_channel = params.get("LastChannel", 512)
-            time_mux_factor = params.get("TimeMuxFactor", 2)
-            carousel_enable = params.get("CarouselEnable", 1)
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_channel_data(
                 integration_time,
                 first_channel,
                 last_channel,
-                time_mux_factor,
-                carousel_enable,
+                time_mux_factor=2,
+                carousel_enable=1,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3022,8 +3019,6 @@ class MccsTile(SKABaseDevice):
         * integration time - (float) in seconds (default = 0.5)
         * first_channel - (int) default 0
         * last_channel - (int) default 512
-        * time_mux_factor - (int) default 2
-        * carousel_enable - default 0x1
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3033,7 +3028,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 512, 2, 0x1)
+        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 512)
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
@@ -3094,8 +3089,7 @@ class MccsTile(SKABaseDevice):
             command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
-                "integration time", "first_channel", "last_channel", "time_mux_factor",
-                and "carousel_enable"
+                "integration time", "first_channel", "last_channel"
             :type argin: str
 
             :return: A tuple containing a return code and a string
@@ -3108,16 +3102,14 @@ class MccsTile(SKABaseDevice):
             integration_time = params.get("IntegrationTime", 0.5)
             first_channel = params.get("FirstChannel", 0)
             last_channel = params.get("LastChannel", 192)
-            time_mux_factor = params.get("TimeMuxFactor", 1)
-            carousel_enable = params.get("CarouselEnable", 0)
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_beam_data(
                 integration_time,
                 first_channel,
                 last_channel,
-                time_mux_factor,
-                carousel_enable,
+                time_mux_factor=1,
+                carousel_enable=0,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -3136,8 +3128,6 @@ class MccsTile(SKABaseDevice):
         * integration time - (float) in seconds (default = 0.5)
         * first_channel - (int) default 0
         * last_channel - (int) default 192
-        * time_mux_factor - (int) default 1
-        * carousel_enable - default 0x0
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3147,7 +3137,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142)
+        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142, 0, 192)
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)

@@ -718,10 +718,10 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -747,10 +747,10 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: TODO
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
         :type time_mux_factor: int, optional
-        :param carousel_enable: TODO
-        :type carousel_enable: optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

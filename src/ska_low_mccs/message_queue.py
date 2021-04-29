@@ -101,17 +101,19 @@ class MessageQueue(threading.Thread):
             f"Device={self._target.get_name()} message queue terminated"
         )
 
-    def _notify_listener(self, status, message_uid):
+    def _notify_listener(self, result_code, message_uid, status):
         """
         Abstract method that requires implementation by derived concrete
         class for specific notifications.
 
-        :param status: The notification to send to any subscribed listeners
+        :param result_code: Result code of the command being executed
         :param message_uid: The message uid that needs a push notification
+        :param status: Status message
         """
         self._qdebug("Error(_notify_listener) Terminate thread")
         self._logger.error(
-            f"{status}:{message_uid} Derived class should implement _notify_listener(). Terminate thread"
+            f"{result_code}:{message_uid}:{status} "
+            "Derived class should implement _notify_listener(). Terminate thread"
         )
         # Terminate the thread execution loop
         self._terminate = True
@@ -129,11 +131,13 @@ class MessageQueue(threading.Thread):
                 try:
                     response_device = tango.DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
-                    status = f"Response device {message.respond_to_fqdn} not found"
-                    self._qdebug(status)
-                    self._logger.error(status)
+                    err_status = f"Response device {message.respond_to_fqdn} not found"
+                    self._qdebug(err_status)
+                    self._logger.error(err_status)
                     if message.notifications:
-                        self._notify_listener(ResultCode.FAILED, message.message_uid)
+                        self._notify_listener(
+                            ResultCode.FAILED, message.message_uid, err_status
+                        )
                     return
 
             self._logger.debug(f"_execute_message {message.message_uid}")
@@ -142,7 +146,10 @@ class MessageQueue(threading.Thread):
             if command:
                 if message.notifications:
                     self._qdebug(f"^({message.message_uid})")
-                    self._notify_listener(ResultCode.STARTED, message.message_uid)
+                    notify_status = f"{message.command} has started executing"
+                    self._notify_listener(
+                        ResultCode.STARTED, message.message_uid, notify_status
+                    )
 
                 # Incorporate FQDN and callback into command args dictionary
                 # Add to kwargs and deal with the case if it's not a JSON encoded string

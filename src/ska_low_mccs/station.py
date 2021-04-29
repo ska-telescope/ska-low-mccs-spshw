@@ -558,14 +558,14 @@ class MccsStation(SKAObsDevice):
             # Cache "On" command callback arguments
             (
                 result_code,
-                _,
+                status,
                 message_uid,
             ) = self._message_queue.send_message(command="On")
             # Because the responses back to the requester will be from a callback
             # command, we cache the message uid and return this when the pools are
             # complete.
             self._on_message_uid = message_uid
-            return [[result_code], [message_uid]]
+            return [[result_code], [message_uid + "," + status]]
         else:
             # Call On sequentially
             handler = self.get_command_object("On")

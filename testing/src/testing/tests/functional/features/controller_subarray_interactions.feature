@@ -4,7 +4,7 @@ Background:
     Given we have mvplow running an instance of tmc
     And we have mvplow running an instance of mccs
 
-@XTP-1170 @skip
+@XTP-1170
 Scenario: MCCS Start up low telescope
     Given tmc is ready to issue a startup command
     And mccs is ready to receive a startup command
@@ -37,7 +37,7 @@ Scenario: MCCS Perform a scan on subarray
     When tmc starts a scan on subarray
     Then the subarray obsstate is scanning
 
-@XTP-1473
+@XTP-1473 @skip
 Scenario: MCCS Perform an abort on a scanning subarray
     Given we have a successfully scanning subarray
     When tmc issues an abort on subarray

@@ -354,6 +354,22 @@ class TestMccsStation:
         assert message == MccsStation.ConfigureCommand.SUCCEEDED_MESSAGE
         assert device_under_test.isConfigured is True
 
+    def test_applyPointing(self, device_under_test):
+        """
+        Test for ApplyPointing command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        beam_index = 1.0
+        delay_array = [1.0] * 512
+        argin = [beam_index] + delay_array
+        [[result_code], [message]] = device_under_test.ApplyPointing(argin)
+        assert result_code == ResultCode.OK
+        assert message == MccsStation.ApplyPointingCommand.SUCCEEDED_MESSAGE
+
 
 class TestInitCommand:
     """

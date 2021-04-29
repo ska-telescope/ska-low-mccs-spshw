@@ -402,8 +402,9 @@ class MccsController(SKAMaster):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        self._message_queue.terminate_thread()
-        self._message_queue.join()
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
 
     # ----------
     # Attributes
@@ -534,6 +535,7 @@ class MccsController(SKAMaster):
             (result_code, _, message_uid) = self._message_queue.send_message(
                 command="Startup", notifications=True
             )
+            self._message_uid = message_uid
             self.notify_listener(result_code, message_uid)
             return [[result_code], [message_uid]]
 
@@ -574,17 +576,17 @@ class MccsController(SKAMaster):
                 self.state_model.perform_action("off_succeeded")
             else:
                 self.state_model.perform_action("off_failed")
-                device.notify_listener(ResultCode.FAILED, self.FAILED_MESSAGE)
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                device.notify_listener(ResultCode.FAILED, self._message_uid)
+                return (ResultCode.FAILED, self._message_uid)
 
             if device_pool.on():
                 self.state_model.perform_action("on_succeeded")
-                device.notify_listener(ResultCode.OK, self.SUCCEEDED_MESSAGE)
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+                device.notify_listener(ResultCode.OK, self._message_uid)
+                return (ResultCode.OK, self._message_uid)
             else:
                 self.state_model.perform_action("on_failed")
-                device.notify_listener(ResultCode.FAILED, self.FAILED_MESSAGE)
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                device.notify_listener(ResultCode.FAILED, self._message_uid)
+                return (ResultCode.FAILED, self._message_uid)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -614,6 +616,8 @@ class MccsController(SKAMaster):
             (result_code, _, message_uid) = self._message_queue.send_message(
                 command="On", notifications=True
             )
+            # Store the message uid to inform the requester on command completion
+            self._message_uid = message_uid
             self.notify_listener(result_code, message_uid)
             return [[result_code], [message_uid]]
 
@@ -697,8 +701,8 @@ class MccsController(SKAMaster):
             (command_complete, result_code, message) = device_pool.callback(argin)
             if command_complete:
                 device.logger.debug(f"OnCallback({result_code}, {message})")
-                device.notify_listener(result_code, message)
-                return (result_code, message)
+                device.notify_listener(result_code, self._message_uid)
+                return (result_code, self._message_uid)
             else:
                 return (ResultCode.STARTED, message)
 

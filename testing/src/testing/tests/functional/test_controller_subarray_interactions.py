@@ -59,7 +59,8 @@ def controller(tango_harness: TangoHarness):
     :return: the controller device
     :rtype: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
-    return tango_harness.get_device("low-mccs/control/control")
+    controller = tango_harness.get_device("low-mccs/control/control")
+    return controller
 
 
 @pytest.fixture()
@@ -88,10 +89,11 @@ def stations(tango_harness: TangoHarness):
     :return: stations by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    return {
+    stations = {
         1: tango_harness.get_device("low-mccs/station/001"),
         2: tango_harness.get_device("low-mccs/station/002"),
     }
+    return stations
 
 
 @pytest.fixture()
@@ -104,9 +106,10 @@ def subracks(tango_harness: TangoHarness):
     :return: subracks by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    return {
+    subracks = {
         1: tango_harness.get_device("low-mccs/subrack/01"),
     }
+    return subracks
 
 
 @pytest.fixture()
@@ -119,12 +122,13 @@ def tiles(tango_harness: TangoHarness):
     :return: tiles by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    return {
+    tiles = {
         1: tango_harness.get_device("low-mccs/tile/0001"),
         2: tango_harness.get_device("low-mccs/tile/0002"),
         3: tango_harness.get_device("low-mccs/tile/0003"),
         4: tango_harness.get_device("low-mccs/tile/0004"),
     }
+    return tiles
 
 
 @pytest.fixture()
@@ -198,8 +202,9 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     if expected_result is None:
         assert result is None
     else:
-        ((result_code,), (_,)) = result
-        assert result_code == expected_result
+        ((result_code,), (message,)) = result
+        if not result_code == expected_result:
+            assert message == "Check what this says"
 
 
 @scenario(
@@ -345,8 +350,11 @@ def check_mccs_controller_state(controller, device_state):
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-
-    assert controller.state() in state_map[device_state]
+    count = 0.0
+    while not controller.State() in state_map[device_state] and count < 3.0:
+        count += 0.1
+        time.sleep(0.1)
+    assert controller.State() in state_map[device_state]
 
 
 @then(parsers.parse("all mccs station states are {state}"))

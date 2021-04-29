@@ -588,7 +588,9 @@ class MccsAPIU(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
 
     # ----------
     # Callbacks

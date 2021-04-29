@@ -97,6 +97,9 @@ class MessageQueue(threading.Thread):
             while not self._terminate:
                 self._target._heart_beat += 1
                 self._check_message_queue()
+        self._logger.warning(
+            f"Device={self._target.get_name()} message queue terminated"
+        )
 
     def _notify_listener(self, status, message_uid):
         """
@@ -211,6 +214,9 @@ class MessageQueue(threading.Thread):
         """
         External call to gracefully terminate this thread.
         """
+        self._logger.warning(
+            f"Device={self._target.get_name()} terminate message queue"
+        )
         self._terminate = True
 
     def send_message(

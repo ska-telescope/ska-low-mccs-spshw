@@ -172,6 +172,8 @@ class TestMccsIntegrationTmc:
         dev_states["station_002"] = DevState.ON
         self.check_states(devices, dev_states)
 
+        sleep(0.2) # Give the event sub-system some time to settle
+
         # Startup turns everything on, so a call to On should have no side-effects
         self.assert_command(
             device=devices["controller"],

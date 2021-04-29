@@ -630,6 +630,8 @@ class TestMccsAPIU(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
         device_under_test.On(dummy_json_args)
@@ -658,6 +660,8 @@ class TestMccsAPIU(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
         device_under_test.On(dummy_json_args)
@@ -679,6 +683,8 @@ class TestMccsAPIU(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
         device_under_test.On(dummy_json_args)
@@ -702,6 +708,8 @@ class TestMccsAPIU(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
         _ = device_under_test.On(dummy_json_args)
@@ -737,6 +745,8 @@ class TestMccsAPIU(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
         _ = device_under_test.On(dummy_json_args)

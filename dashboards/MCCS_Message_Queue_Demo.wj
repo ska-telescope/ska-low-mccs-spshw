@@ -1,10 +1,10 @@
 {
-  "id": "608982a6b3de4b0019e56459",
-  "name": "Ross",
+  "id": "608a6b96b801ee001880d4f8",
+  "name": "MCCS Message Queue Demo",
   "version": "1.0.8",
   "user": "user1",
-  "insertTime": "2021-04-28T15:43:34.699Z",
-  "updateTime": "2021-04-28T15:44:57.698Z",
+  "insertTime": "2021-04-29T08:17:26.594Z",
+  "updateTime": "2021-04-29T08:17:26.235Z",
   "group": null,
   "groupWriteAccess": false,
   "lastUpdatedBy": "user1",
@@ -1070,6 +1070,58 @@
         "font": "Helvetica"
       },
       "order": 40
+    },
+    {
+      "id": "42",
+      "x": 66,
+      "y": 70,
+      "canvas": "0",
+      "width": 16,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/apiu/001",
+          "attribute": "aheartbeat",
+          "label": "aHeartBeat"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 41
+    },
+    {
+      "id": "43",
+      "x": 66,
+      "y": 74,
+      "canvas": "0",
+      "width": 16,
+      "height": 4,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/apiu/002",
+          "attribute": "aheartbeat",
+          "label": "aHeartBeat"
+        },
+        "precision": 0,
+        "showDevice": false,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": false,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Helvetica"
+      },
+      "order": 42
     }
   ]
 }

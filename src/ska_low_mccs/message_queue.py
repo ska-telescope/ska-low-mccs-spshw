@@ -108,7 +108,7 @@ class MessageQueue(threading.Thread):
         """
         self._qdebug("Error(_notify_listener) Terminate thread")
         self._logger.error(
-            "Derived class should implement _notify_listener(). Terminate thread"
+            f"{status}:{message_uid} Derived class should implement _notify_listener(). Terminate thread"
         )
         # Terminate the thread execution loop
         self._terminate = True
@@ -126,8 +126,11 @@ class MessageQueue(threading.Thread):
                 try:
                     response_device = tango.DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
-                    self._qdebug(f"Response device {message.respond_to_fqdn} not found")
-                    self._notify_listener(ResultCode.UNKNOWN, message.message_uid)
+                    status = f"Response device {message.respond_to_fqdn} not found"
+                    self._qdebug(status)
+                    self._logger.error(status)
+                    if message.notifications:
+                        self._notify_listener(ResultCode.FAILED, message.message_uid)
                     return
 
             self._logger.debug(f"_execute_message {message.message_uid}")

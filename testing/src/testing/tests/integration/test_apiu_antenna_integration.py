@@ -65,7 +65,6 @@ class TestApiuAntennaIntegration:
           TPM
 
         :param tango_harness: a test harness for tango devices
-        :param dummy_json_args: dummy json encoded arguments
         """
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")
@@ -102,7 +101,6 @@ class TestApiuAntennaIntegration:
         powered, and changes state.
 
         :param tango_harness: a test harness for tango devices
-        :param dummy_json_args: dummy json encoded arguments
         """
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")

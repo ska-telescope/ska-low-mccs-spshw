@@ -225,3 +225,13 @@ def dummy_json_args():
     """
     args = {"respond_to_fqdn": "resp", "callback": "call"}
     return json.dumps(args)
+
+
+@pytest.fixture()
+def test_string():
+    """
+    A simply test string fixture.
+
+    :return: a simply test string
+    """
+    return "This is a simply text string"

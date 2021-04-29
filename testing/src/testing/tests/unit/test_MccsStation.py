@@ -116,7 +116,6 @@ class TestMccsStation:
         assert device_under_test.beamFQDNs is None
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
-        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
 
         # check that initialisation leaves us in a state where turning
         # the device on doesn't put it into ALARM state
@@ -141,6 +140,21 @@ class TestMccsStation:
         check_device_state(device_under_test, DevState.ON)
         time.sleep(0.2)
         check_device_state(device_under_test, DevState.ON)
+
+    def test_queue_debug(self, device_under_test, test_string):
+        """
+        Test that the queue debug attribute works correctly.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param test_string: a simply test string fixture
+        :type test_string: str
+        """
+        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
+        device_under_test.aQueueDebug = test_string
+        assert device_under_test.aQueueDebug == test_string
 
     def test_healthState(self, device_under_test, mock_callback):
         """

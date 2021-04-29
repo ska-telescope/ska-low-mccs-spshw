@@ -5,7 +5,10 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """This module implements a base device proxy for MCCS devices."""
+
 from __future__ import annotations  # allow forward references in type hints
+
+__all__ = ["MccsDeviceProxy"]
 
 import logging
 from typing import Any, Callable, Optional, Type
@@ -19,9 +22,6 @@ from tango import DevFailed, DevState, AttrQuality
 # type for the "details" dictionary that backoff calls its callbacks with
 BackoffDetailsType = TypedDict("BackoffDetailsType", {"args": list, "elapsed": float})
 ConnectionFactory = Callable[[str], tango.DeviceProxy]
-
-
-__all__ = ["MccsDeviceProxy"]
 
 
 class MccsDeviceProxy:
@@ -102,7 +102,11 @@ class MccsDeviceProxy:
         if connect:
             self.connect()
 
+<<<<<<< HEAD
     def connect(self: MccsDeviceProxy, max_time: float = 120.0) -> None:
+=======
+    def connect(self, max_time: float = 30.0) -> None:
+>>>>>>> convert code to use Groups
         """
         Establish a connection to the device that we want to proxy.
 
@@ -169,7 +173,11 @@ class MccsDeviceProxy:
         else:
             self._device = _connect(self._connection_factory, self._fqdn)
 
+<<<<<<< HEAD
     def check_initialised(self: MccsDeviceProxy, max_time: float = 120.0) -> bool:
+=======
+    def check_initialised(self, max_time: float = 30.0) -> bool:
+>>>>>>> convert code to use Groups
         """
         Check that the device has completed initialisation.
 

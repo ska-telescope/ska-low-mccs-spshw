@@ -19,6 +19,8 @@ from typing import Any, List, Optional, Tuple, Dict
 # PyTango imports
 from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
+from tango.device_proxy import __init_device_proxy_internals as init_device_proxy
+from tango import DeviceProxy
 
 # Additional import
 from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
@@ -155,6 +157,7 @@ class StationBeamsResourceManager(ResourceManager):
         self: StationBeamsResourceManager,
         health_monitor: HealthMonitor,
         station_beam_fqdns: list[str],
+        stationbeam_group,
         stations_manager: ControllerResourceManager,
         logger: logging.Logger,
     ) -> None:
@@ -169,16 +172,18 @@ class StationBeamsResourceManager(ResourceManager):
         :param logger: the logger to be used by the object under test
         """
         self._stations_manager = stations_manager
+        self._stationbeam_group = stationbeam_group
         station_beams = {}
         for station_beam_fqdn in station_beam_fqdns:
             station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
             station_beams[station_beam_id] = station_beam_fqdn
+
         super().__init__(
             health_monitor,
             "Station Beams Resource Manager",
             station_beams,
             logger,
-            [HealthState.OK],
+            device_group=stationbeam_group,
         )
 
     def assign(
@@ -198,31 +203,33 @@ class StationBeamsResourceManager(ResourceManager):
             stations[station_id] = station_fqdn
 
         station_beams = {}
-
         for station_beam_fqdn in station_beam_fqdns:
             station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
             station_beams[station_beam_id] = station_beam_fqdn
-        #
-        #             # TODO: Establishment of connections should happen at initialization
-        #             station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
-        #             station_beam.stationIds = sorted(stations.keys())
-        #             # TODO While SubarrayBeam device is not yet fully implemented, we're still
-        #             # passing an array of Station ids to StationBeams. This list will end up
-        #             # going to SubarrayBeam while StationBeam gets a single Station device.
-        #             # As the Station FQDN is used by StationBeam to report health to
-        #             # SubarrayBeam, it makes sense to only keep this as a single string rather
-        #             # than a list, as it will be implemented when the StationBeam health
-        #             # gets implemented in SubarrayBeam - hence we pass a single value here:
-        #             station_beam.stationFqdn = station_fqdns[0]
+
+            # TODO: Establishment of connections should happen at initialization
+            #             station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+            #             station_beam.stationIds = sorted(stations.keys())
+            stationbeam_deviceproxy = self._stationbeam_group.get_device(
+                station_beam_fqdn
+            )
+            stationbeam_deviceproxy.stationIds = sorted(stations.keys())
+            # TODO While SubarrayBeam device is not yet fully implemented, we're still
+            # passing an array of Station ids to StationBeams. This list will end up
+            # going to SubarrayBeam while StationBeam gets a single Station device.
+            # As the Station FQDN is used by StationBeam to report health to
+            # SubarrayBeam, it makes sense to only keep this as a single string rather
+            # than a list, as it will be implemented when the StationBeam health
+            # gets implemented in SubarrayBeam - hence we pass a single value here:
+            stationbeam_deviceproxy.stationFqdn = station_fqdns[0]
         #
         self._add_to_managed(station_beams)
-        #         for station_beam_fqdn in station_beam_fqdns:
-        #
-        #             # TODO: Establishment of connections should happen at initialization
-        #             station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
-        #             station_beam.isBeamLocked = True
-        #             self.update_resource_health(station_beam_fqdn, station_beam.healthState)
-        #
+        for station_beam_fqdn in station_beam_fqdns:
+            #            stationbeam_deviceproxy = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+            stationbeam_deviceproxy = self._stationbeam_group.get(station_beam_fqdn)
+            stationbeam_deviceproxy.isBeamLocked = True
+        #            self.update_resource_health(station_beam_fqdn, station_beam.healthState)
+
         super().assign(station_beams, list(stations.keys()))
 
     def release(
@@ -426,11 +433,30 @@ class MccsController(SKAMaster):
             device._subrack_fqdns = list(device.MccsSubracks)
             device._station_fqdns = list(device.MccsStations)
             device._stationbeam_fqdns = list(device.MccsStationBeams)
+            device.allgroups = Group("AllGroups")
+            device._stationbeam_group = Group("StationBeamGroup")
+            for stationbeam_fqdn in device._stationbeam_fqdns:
+                device._stationbeam_group.add(stationbeam_fqdn)
+                proxy = device._stationbeam_group.get_device(0)
+            device.allgroups.add(device._stationbeam_group)
 
-            subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
-            station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
-            device.stationbeams_pool = DevicePool(
-                device._stationbeam_fqdns, self.logger, connect=False
+            device._station_group = Group("StationGroup")
+            for station_fqdn in device._station_fqdns:
+                device._station_group.add(station_fqdn)
+                proxy = device._station_group.get_device(station_fqdn)
+            device.allgroups.add(device._station_group)
+
+            device._subrack_group = Group("SubrackGroup")
+            for subrack_fqdn in device._subrack_fqdns:
+                device._subrack_group.add(subrack_fqdn)
+                proxy = device._subrack_group.get_device(subrack_fqdn)
+            device.allgroups.add(device._subrack_group)
+
+            station_pool = DevicePool(
+                device._station_group, device._station_fqdns, self.logger, connect=False
+            )
+            subrack_pool = DevicePool(
+                device._subrack_group, device._subrack_fqdns, self.logger, connect=False
             )
 
             device.device_pool = DevicePoolSequence(
@@ -474,7 +500,7 @@ class MccsController(SKAMaster):
                     self._thread = None
                     self._interrupt = False
                     return
-                self._initialise_resource_management(device, device._station_fqdns)
+                self._initialise_resource_management(device)
                 if self._interrupt:
                     self._thread = None
                     self._interrupt = False
@@ -491,7 +517,8 @@ class MccsController(SKAMaster):
             :param device: the device for which power management is
                 being initialised
             """
-            device.device_pool.connect()
+
+        #             device.device_pool.connect()
 
         def _initialise_health_monitoring(
             self: MccsController.InitCommand, device: SKABaseDevice, fqdns: list[str]
@@ -504,6 +531,7 @@ class MccsController(SKAMaster):
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
             """
+            ##device.event_manager = EventManager(self.logger, device._groups, fqdns)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
@@ -511,15 +539,13 @@ class MccsController(SKAMaster):
             )
 
         def _initialise_resource_management(
-            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: list[str]
+            self: MccsController.InitCommand, device: SKABaseDevice
         ) -> None:
             """
             Initialise resource management for this device.
 
             :param device: the device for which resource management is
                 being initialised
-            :param fqdns: the fqdns of subservient devices allocation of which
-                is managed by this device
             """
             health_monitor = device.health_model._health_monitor
 
@@ -527,12 +553,6 @@ class MccsController(SKAMaster):
             device._stations_manager = StationsResourceManager(
                 health_monitor, fqdns, self.logger
             )
-            #             device._stationbeams_manager = StationBeamsResourceManager(
-            #                 device.health_model._health_monitor,
-            #                 device._station_beam_fqdns,
-            #                 device._stations_manager,
-            #                 self.logger,
-            #             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
                 "Allocate", device.AllocateCommand(*resource_args)

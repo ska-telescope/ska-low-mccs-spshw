@@ -27,6 +27,7 @@ from ska_tango_base.control_model import (
     SimulationMode,
     TestMode,
 )
+
 from ska_low_mccs import MccsController, MccsDeviceProxy, MccsSubarray, release
 from ska_low_mccs.controller import StationsResourceManager
 from ska_low_mccs.health import HealthModel
@@ -96,7 +97,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "controller",
-        "proxy": MccsDeviceProxy,
+        "proxy": tango.DeviceProxy,
         "patch": ControllerWithFailableDevices,
     }
 
@@ -442,11 +443,17 @@ class TestMccsController(HelperClass):
             mock_station_factory = MockDeviceBuilder(mock_factory)
             mock_station_factory.add_attribute("subarrayId", 0)
 
+            mock_stationbeam_factory = MockDeviceBuilder(mock_factory)
+
             return {
                 "low-mccs/subarray/01": mock_subarray_factory(),
                 "low-mccs/subarray/02": mock_subarray_factory(),
                 "low-mccs/station/001": mock_station_factory(),
                 "low-mccs/station/002": mock_station_factory(),
+                "low-mccs/beam/001": mock_stationbeam_factory(),
+                "low-mccs/beam/002": mock_stationbeam_factory(),
+                "low-mccs/beam/003": mock_stationbeam_factory(),
+                "low-mccs/beam/004": mock_stationbeam_factory(),
             }
 
         def setup_allocate_test(

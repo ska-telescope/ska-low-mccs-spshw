@@ -24,6 +24,8 @@ import json
 import logging
 from typing import Any, Callable, Optional
 
+from tango.group import Group
+
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
@@ -49,7 +51,11 @@ class DevicePool:
     """
 
     def __init__(
-        self: DevicePool, fqdns: list[str], logger: logging.Logger, connect: bool = True
+        self: DevicePool,
+        subgroup: Group,
+        fqdns: list[str],
+        logger: logging.Logger,
+        connect: bool = True,
     ) -> None:
         """
         Initialise a new DevicePool object.

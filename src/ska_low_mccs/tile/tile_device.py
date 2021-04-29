@@ -545,11 +545,11 @@ class MccsTile(SKABaseDevice):
             (
                 result_code,
                 message_uid,
-                status,
+                _,
             ) = self._message_queue.send_message_with_response(
                 command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
             )
-            return [[result_code], [message_uid + "," + status]]
+            return [[result_code], [message_uid]]
         else:
             # Call On sequentially
             handler = self.get_command_object("On")

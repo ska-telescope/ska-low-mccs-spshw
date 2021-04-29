@@ -1,18 +1,18 @@
 {
-  "id": "608a6b96b801ee001880d4f8",
+  "id": "608aca8f03bf3f001751a8e1",
   "name": "MCCS Message Queue Demo",
   "version": "1.0.8",
   "user": "user1",
-  "insertTime": "2021-04-29T08:17:26.594Z",
-  "updateTime": "2021-04-29T08:17:26.235Z",
+  "insertTime": "2021-04-29T15:02:39.996Z",
+  "updateTime": "2021-04-29T15:04:57.400Z",
   "group": null,
   "groupWriteAccess": false,
   "lastUpdatedBy": "user1",
   "widget": [
     {
       "id": "1",
-      "x": 16,
-      "y": 6,
+      "x": 4,
+      "y": 2,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -37,8 +37,8 @@
     },
     {
       "id": "2",
-      "x": 16,
-      "y": 10,
+      "x": 4,
+      "y": 6,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -63,8 +63,8 @@
     },
     {
       "id": "3",
-      "x": 16,
-      "y": 14,
+      "x": 4,
+      "y": 10,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -89,8 +89,8 @@
     },
     {
       "id": "4",
-      "x": 16,
-      "y": 18,
+      "x": 4,
+      "y": 14,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -115,8 +115,8 @@
     },
     {
       "id": "5",
-      "x": 16,
-      "y": 22,
+      "x": 4,
+      "y": 18,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -141,8 +141,8 @@
     },
     {
       "id": "6",
-      "x": 16,
-      "y": 26,
+      "x": 4,
+      "y": 22,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -167,8 +167,8 @@
     },
     {
       "id": "7",
-      "x": 16,
-      "y": 30,
+      "x": 4,
+      "y": 26,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -193,8 +193,8 @@
     },
     {
       "id": "8",
-      "x": 16,
-      "y": 38,
+      "x": 4,
+      "y": 34,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -219,8 +219,8 @@
     },
     {
       "id": "9",
-      "x": 16,
-      "y": 42,
+      "x": 4,
+      "y": 38,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -245,8 +245,8 @@
     },
     {
       "id": "10",
-      "x": 16,
-      "y": 46,
+      "x": 4,
+      "y": 42,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -271,8 +271,8 @@
     },
     {
       "id": "11",
-      "x": 66,
-      "y": 6,
+      "x": 54,
+      "y": 2,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -297,8 +297,8 @@
     },
     {
       "id": "12",
-      "x": 66,
-      "y": 10,
+      "x": 54,
+      "y": 6,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -323,8 +323,8 @@
     },
     {
       "id": "13",
-      "x": 66,
-      "y": 14,
+      "x": 54,
+      "y": 10,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -349,8 +349,8 @@
     },
     {
       "id": "14",
-      "x": 66,
-      "y": 18,
+      "x": 54,
+      "y": 14,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -375,8 +375,8 @@
     },
     {
       "id": "15",
-      "x": 66,
-      "y": 22,
+      "x": 54,
+      "y": 18,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -401,8 +401,8 @@
     },
     {
       "id": "16",
-      "x": 16,
-      "y": 34,
+      "x": 4,
+      "y": 30,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -427,8 +427,8 @@
     },
     {
       "id": "17",
-      "x": 66,
-      "y": 38,
+      "x": 54,
+      "y": 34,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -453,8 +453,8 @@
     },
     {
       "id": "18",
-      "x": 16,
-      "y": 50,
+      "x": 4,
+      "y": 46,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -479,11 +479,11 @@
     },
     {
       "id": "19",
-      "x": 86,
+      "x": 74,
       "y": 24,
       "canvas": "0",
-      "width": 72,
-      "height": 4,
+      "width": 84,
+      "height": 6,
       "type": "COMMAND_EXECUTOR",
       "inputs": {
         "command": {
@@ -504,11 +504,11 @@
     },
     {
       "id": "20",
-      "x": 86,
-      "y": 32,
+      "x": 74,
+      "y": 40,
       "canvas": "0",
-      "width": 72,
-      "height": 4,
+      "width": 84,
+      "height": 6,
       "type": "COMMAND_EXECUTOR",
       "inputs": {
         "command": {
@@ -529,11 +529,11 @@
     },
     {
       "id": "21",
-      "x": 86,
-      "y": 28,
+      "x": 74,
+      "y": 32,
       "canvas": "0",
-      "width": 72,
-      "height": 4,
+      "width": 84,
+      "height": 6,
       "type": "COMMAND_EXECUTOR",
       "inputs": {
         "command": {
@@ -554,11 +554,11 @@
     },
     {
       "id": "22",
-      "x": 86,
-      "y": 20,
+      "x": 74,
+      "y": 16,
       "canvas": "0",
-      "width": 72,
-      "height": 4,
+      "width": 84,
+      "height": 6,
       "type": "COMMAND_EXECUTOR",
       "inputs": {
         "command": {
@@ -579,8 +579,8 @@
     },
     {
       "id": "23",
-      "x": 16,
-      "y": 54,
+      "x": 4,
+      "y": 50,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -605,8 +605,8 @@
     },
     {
       "id": "24",
-      "x": 66,
-      "y": 26,
+      "x": 54,
+      "y": 22,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -631,8 +631,8 @@
     },
     {
       "id": "25",
-      "x": 66,
-      "y": 30,
+      "x": 54,
+      "y": 26,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -657,8 +657,8 @@
     },
     {
       "id": "26",
-      "x": 66,
-      "y": 34,
+      "x": 54,
+      "y": 30,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -683,8 +683,8 @@
     },
     {
       "id": "27",
-      "x": 66,
-      "y": 42,
+      "x": 54,
+      "y": 38,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -709,8 +709,8 @@
     },
     {
       "id": "28",
-      "x": 66,
-      "y": 46,
+      "x": 54,
+      "y": 42,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -735,8 +735,8 @@
     },
     {
       "id": "29",
-      "x": 66,
-      "y": 50,
+      "x": 54,
+      "y": 46,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -761,8 +761,8 @@
     },
     {
       "id": "30",
-      "x": 66,
-      "y": 54,
+      "x": 54,
+      "y": 50,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -787,8 +787,8 @@
     },
     {
       "id": "31",
-      "x": 16,
-      "y": 58,
+      "x": 4,
+      "y": 54,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -813,8 +813,8 @@
     },
     {
       "id": "32",
-      "x": 66,
-      "y": 58,
+      "x": 54,
+      "y": 54,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -839,8 +839,8 @@
     },
     {
       "id": "33",
-      "x": 16,
-      "y": 62,
+      "x": 4,
+      "y": 58,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -865,8 +865,8 @@
     },
     {
       "id": "34",
-      "x": 66,
-      "y": 62,
+      "x": 54,
+      "y": 58,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -891,8 +891,8 @@
     },
     {
       "id": "35",
-      "x": 16,
-      "y": 66,
+      "x": 4,
+      "y": 62,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -917,8 +917,8 @@
     },
     {
       "id": "36",
-      "x": 66,
-      "y": 66,
+      "x": 54,
+      "y": 62,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -943,8 +943,8 @@
     },
     {
       "id": "37",
-      "x": 84,
-      "y": 6,
+      "x": 72,
+      "y": 2,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -969,8 +969,8 @@
     },
     {
       "id": "38",
-      "x": 16,
-      "y": 70,
+      "x": 4,
+      "y": 66,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -995,8 +995,8 @@
     },
     {
       "id": "39",
-      "x": 16,
-      "y": 74,
+      "x": 4,
+      "y": 70,
       "canvas": "0",
       "width": 50,
       "height": 4,
@@ -1021,8 +1021,8 @@
     },
     {
       "id": "40",
-      "x": 84,
-      "y": 10,
+      "x": 72,
+      "y": 6,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -1047,8 +1047,8 @@
     },
     {
       "id": "41",
-      "x": 84,
-      "y": 14,
+      "x": 72,
+      "y": 10,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -1073,8 +1073,8 @@
     },
     {
       "id": "42",
-      "x": 66,
-      "y": 70,
+      "x": 54,
+      "y": 66,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -1099,8 +1099,8 @@
     },
     {
       "id": "43",
-      "x": 66,
-      "y": 74,
+      "x": 54,
+      "y": 70,
       "canvas": "0",
       "width": 16,
       "height": 4,
@@ -1122,6 +1122,32 @@
         "font": "Helvetica"
       },
       "order": 42
+    },
+    {
+      "id": "44",
+      "x": 74,
+      "y": 48,
+      "canvas": "0",
+      "width": 84,
+      "height": 26,
+      "type": "ATTRIBUTE_DISPLAY",
+      "inputs": {
+        "attribute": {
+          "device": "low-mccs/control/control",
+          "attribute": "commandresult",
+          "label": "commandResult"
+        },
+        "precision": 0,
+        "showDevice": true,
+        "showAttribute": "Label",
+        "scientificNotation": false,
+        "showEnumLabels": true,
+        "textColor": "#000000",
+        "backgroundColor": "#ffffff",
+        "size": 1,
+        "font": "Courier new"
+      },
+      "order": 43
     }
   ]
 }

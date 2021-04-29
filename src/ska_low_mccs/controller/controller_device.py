@@ -696,10 +696,10 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        (result_code, _, status) = self._message_queue.send_message(
+        (result_code, message_uid, status) = self._message_queue.send_message(
             command="OnCallback", json_args=argin
         )
-        return [[result_code], [status]]
+        return [[result_code], [message_uid]]
 
     class OnCallbackCommand(ResponseCommand):
         """
@@ -736,9 +736,9 @@ class MccsController(SKAMaster):
                 device.notify_listener(
                     result_code, message_uid, self.SUCCESSFUL_MESSAGE
                 )
-                return (result_code, message_uid)
+                return (result_code, message_uid + "," + self.SUCCESSFUL_MESSAGE)
             else:
-                return (ResultCode.STARTED, message_uid + ",", status)
+                return (ResultCode.STARTED, message_uid + "," + status)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()

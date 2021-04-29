@@ -558,14 +558,14 @@ class MccsStation(SKAObsDevice):
             # Cache "On" command callback arguments
             (
                 result_code,
-                _,
                 message_uid,
+                status,
             ) = self._message_queue.send_message(command="On")
             # Because the responses back to the requester will be from a callback
             # command, we cache the message uid and return this when the pools are
             # complete.
             self._on_message_uid = message_uid
-            return [[result_code], [message_uid]]
+            return [[result_code], [message_uid + "," + status]]
         else:
             # Call On sequentially
             handler = self.get_command_object("On")
@@ -633,10 +633,10 @@ class MccsStation(SKAObsDevice):
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self.logger.debug(f"Station OnCallback json_args={json_args}")
-        (result_code, message, _) = self._message_queue.send_message(
+        (result_code, _, status) = self._message_queue.send_message(
             command="OnCallback", json_args=json_args
         )
-        return [[result_code], [message]]
+        return [[result_code], [status]]
 
     class OnCallbackCommand(ResponseCommand):
         """

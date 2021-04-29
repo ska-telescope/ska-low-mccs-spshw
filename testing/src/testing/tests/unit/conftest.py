@@ -136,11 +136,11 @@ def mock_event_callback(mocker):
             assert first_event_data.name.casefold() == name.casefold()
             assert second_event_data.name.casefold() == name.casefold()
             values = json.loads(first_event_data.value)
-            assert values.get("status") == ResultCode.UNKNOWN
+            assert values.get("result_code") == ResultCode.UNKNOWN
             assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
             if result is not None:
                 values = json.loads(second_event_data.value)
-                assert values.get("status") == result
+                assert values.get("result_code") == result
                 assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
             self.reset_mock()
 
@@ -173,14 +173,14 @@ def mock_event_callback(mocker):
             assert second_event_data.name.casefold() == name.casefold()
             assert third_event_data.name.casefold() == name.casefold()
             values = json.loads(first_event_data.value)
-            assert values.get("status") == ResultCode.UNKNOWN
+            assert values.get("result_code") == ResultCode.UNKNOWN
             assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
             values = json.loads(second_event_data.value)
-            assert values.get("status") == ResultCode.QUEUED
+            assert values.get("result_code") == ResultCode.QUEUED
             assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
             if result is not None:
                 values = json.loads(third_event_data.value)
-                assert values.get("status") == result
+                assert values.get("result_code") == result
                 assert third_event_data.quality == tango.AttrQuality.ATTR_VALID
             self.reset_mock()
 

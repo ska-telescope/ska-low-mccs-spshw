@@ -146,17 +146,19 @@ class TestMessageQueue:
             notify listener.
             """
 
-            def _notify_listener(self, status, message_uid):
+            def _notify_listener(self, result_code, message_uid, status):
                 """
                 Concrete test implementation of abstract base class to
                 notify listeners.
 
-                :param status: result code for this message uid
-                :type status: :py:class:`~ska_tango_base.commands.ResultCode`
-                :param message_uid: unique id for the message being executed
+                :param result_code: Result code of the command being executed
+                :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
+                :param message_uid: The message uid that needs a push notification
                 :type message_uid: str
+                :param status: Status message
+                :type status: str
                 """
-                self.notify = (status, message_uid)
+                self.notify = (result_code, message_uid, status)
 
         lock = threading.Lock()
         message_queue = SpecialisedMessageQueue(
@@ -181,7 +183,7 @@ class TestMessageQueue:
         :param test_command: a test command to send to the message queue
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
-        (_, _, message_uid) = message_queue.send_message(command=test_command)
+        (_, message_uid, _) = message_queue.send_message(command=test_command)
         time.sleep(0.1)  # Required to allow DUT thread to run
         target_mock.get_command_object.assert_called_once_with(test_command)
         message_args = {"respond_to_fqdn": "", "callback": ""}
@@ -221,7 +223,7 @@ class TestMessageQueue:
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
         argin = {"Myarg1": 42, "Myarg2": "42"}
         json_string = json.dumps(argin)
-        (_, _, message_uid) = message_queue.send_message(
+        (_, message_uid, _) = message_queue.send_message(
             command=test_command, json_args=json_string
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
@@ -270,7 +272,7 @@ class TestMessageQueue:
         :param test_command: a test command to send to the message queue
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
-        (_, _, message_uid) = specialised_message_queue.send_message(
+        (_, message_uid, _) = specialised_message_queue.send_message(
             command=test_command, notifications=True
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
@@ -329,7 +331,7 @@ class TestMessageQueue:
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
         callback = "callback_command"
-        (_, _, message_uid) = message_queue.send_message_with_response(
+        (_, message_uid, _) = message_queue.send_message_with_response(
             command=test_command,
             respond_to_fqdn=valid_fqdn,
             callback=callback,
@@ -382,9 +384,10 @@ class TestMessageQueue:
             command=test_command,
             respond_to_fqdn=invalid_fqdn,
             callback=callback,
+            notifications=True,
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
         mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
         assert f"Response device {invalid_fqdn} not found" in target_mock.queue_debug
-        assert specialised_message_queue.notify[0] == ResultCode.UNKNOWN
+        assert specialised_message_queue.notify[0] == ResultCode.FAILED
         assert test_command in specialised_message_queue.notify[1]

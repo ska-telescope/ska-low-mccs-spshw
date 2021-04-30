@@ -245,7 +245,7 @@ class MccsTile(SKABaseDevice):
 
     # TODO: These properties are not currently being used in any way.
     # Can they be removed, or do they need to be handled somehow?
-    # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
+    # LmcIP = device_property(dtype=str, default_value="0.0.0.0")
     # DstPort = device_property(dtype=int, default_value=30000)
 
     # ---------------
@@ -3011,8 +3011,10 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def ConfigureIntegratedChannelData(self, argin):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, the first channel and the
+        last channel. The data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -3121,7 +3123,9 @@ class MccsTile(SKABaseDevice):
     def ConfigureIntegratedBeamData(self, argin):
         """
         Configure the transmission of integrated beam data with the
-        provided integration time.
+        provided integration time, the first channel and the last
+        channel. The data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
         :param argin: json dictionary with optional keywords:
 

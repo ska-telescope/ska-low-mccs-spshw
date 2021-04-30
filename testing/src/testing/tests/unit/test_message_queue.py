@@ -330,6 +330,7 @@ class TestMessageQueue:
         :param device: fixture that mocks a device
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
+        device.command_inout.return_value = (ResultCode.OK, "response status")
         callback = "callback_command"
         (_, message_uid, _) = message_queue.send_message_with_response(
             command=test_command,

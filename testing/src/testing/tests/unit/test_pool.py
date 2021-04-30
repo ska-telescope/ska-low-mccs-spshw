@@ -139,11 +139,16 @@ class TestDevicePool:
         :type logger: :py:class:`logging.Logger`
         """
         for fqdn in fqdns:
-            MccsDeviceProxy(fqdn, logger).command_inout.return_value = (ResultCode.QUEUED, ["message queued"])
+            MccsDeviceProxy(fqdn, logger).command_inout.return_value = (
+                ResultCode.QUEUED,
+                ["message queued"],
+            )
 
         requestor_fqdn = "test"
         requester_callback = "callback"
-        assert device_pool.invoke_command_with_callback("Foo", requestor_fqdn, requester_callback) == True
+        assert device_pool.invoke_command_with_callback(
+            "Foo", requestor_fqdn, requester_callback
+        )
 
         args = {"respond_to_fqdn": requestor_fqdn, "callback": requester_callback}
         json_string = json.dumps(args)

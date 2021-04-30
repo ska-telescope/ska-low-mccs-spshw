@@ -158,6 +158,30 @@ class TestMccsController:
         device_under_test.aQueueDebug = test_string
         assert device_under_test.aQueueDebug == test_string
 
+    def test_PoolStats(self, device_under_test):
+        """
+        Test that the pool stats return the expected values.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.aPoolStats == "0 0 "
+
+    def test_HeartBeat(self, device_under_test):
+        """
+        Test that the heart beat is opertional.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        heartbeat = device_under_test.aHeartBeat
+        sleep(1.0)
+        assert device_under_test.aHeartBeat != heartbeat
+
     def test_State(self, device_under_test):
         """
         Test for State.
@@ -280,6 +304,21 @@ class TestMccsController:
         mock_event_callback.check_command_result(
             name="commandResult", result=result_code
         )
+
+    def test_OnCallback(self, device_under_test, dummy_json_args):
+        """
+        Test for OnCallback.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
+        """
+        [[result_code], [message_uid]] = device_under_test.OnCallback(dummy_json_args)
+        assert result_code == ResultCode.QUEUED
+        assert ":OnCallback" in message_uid
 
     def test_StandbyLow(self, device_under_test):
         """

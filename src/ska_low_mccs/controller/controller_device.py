@@ -696,7 +696,7 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        (result_code, message_uid, status) = self._message_queue.send_message(
+        (result_code, message_uid, _) = self._message_queue.send_message(
             command="OnCallback", json_args=argin
         )
         return [[result_code], [message_uid]]

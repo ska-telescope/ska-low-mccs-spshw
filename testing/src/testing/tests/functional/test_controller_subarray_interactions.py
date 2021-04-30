@@ -59,8 +59,7 @@ def controller(tango_harness: TangoHarness):
     :return: the controller device
     :rtype: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
-    controller = tango_harness.get_device("low-mccs/control/control")
-    return controller
+    return tango_harness.get_device("low-mccs/control/control")
 
 
 @pytest.fixture()
@@ -89,11 +88,10 @@ def stations(tango_harness: TangoHarness):
     :return: stations by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    stations = {
+    return {
         1: tango_harness.get_device("low-mccs/station/001"),
         2: tango_harness.get_device("low-mccs/station/002"),
     }
-    return stations
 
 
 @pytest.fixture()
@@ -106,10 +104,9 @@ def subracks(tango_harness: TangoHarness):
     :return: subracks by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    subracks = {
+    return {
         1: tango_harness.get_device("low-mccs/subrack/01"),
     }
-    return subracks
 
 
 @pytest.fixture()
@@ -122,13 +119,12 @@ def tiles(tango_harness: TangoHarness):
     :return: tiles by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    tiles = {
+    return {
         1: tango_harness.get_device("low-mccs/tile/0001"),
         2: tango_harness.get_device("low-mccs/tile/0002"),
         3: tango_harness.get_device("low-mccs/tile/0003"),
         4: tango_harness.get_device("low-mccs/tile/0004"),
     }
-    return tiles
 
 
 @pytest.fixture()

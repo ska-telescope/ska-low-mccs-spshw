@@ -123,8 +123,8 @@ class TileHardwareManager(SimulableHardwareManager):
         test_mode,
         logger,
         tpm_ip,
-        tpm_cpld_port = 10000,
-        tpm_version = 'tpm_v1_6',
+        tpm_cpld_port=10000,
+        tpm_version="tpm_v1_6",
         _factory=None,
     ):
         """

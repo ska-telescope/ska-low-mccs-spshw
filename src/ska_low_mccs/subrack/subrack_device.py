@@ -198,7 +198,9 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
         super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
 
-        self._are_tpms_on = None
+        self._tpm_count = tpm_count
+        self._are_tpms_on = [False] * tpm_count
+        self._last_update_time = 0
         self._are_tpms_on_change_callback = are_tpms_on_change_callback
 
     def connect(self):
@@ -522,7 +524,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         """
         are_tpms_on = self._factory.hardware.are_tpms_on()
         if are_tpms_on is None:
-            are_tpms_on = [False] * self.tpm_count
+            are_tpms_on = [False] * self._tpm_count
 
         if self._are_tpms_on != are_tpms_on:
             self._are_tpms_on = list(are_tpms_on)
@@ -531,9 +533,14 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     def poll(self):
         """
         Poll the hardware.
+        Perform poll only if at least one second has lapsed from 
+        previous poll. 
         """
         super().poll()
-        # self._update_are_tpms_on()
+        current_time = time.time()
+        if (current_time - self._last_update_time) > 1.0:
+            self._last_update_time = current_time
+            self._update_are_tpms_on()
 
     def set_subrack_fan_speed(self, fan_id, speed_percent):
         """

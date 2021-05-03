@@ -198,8 +198,11 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
         super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
 
-        self._tpm_count = tpm_count
-        self._are_tpms_on = [False] * tpm_count
+        if tpm_count is None:
+            self._tpm_count = 8
+        else:
+            self._tpm_count = tpm_count
+        self._are_tpms_on = [False] * self._tpm_count
         self._last_update_time = 0
         self._are_tpms_on_change_callback = are_tpms_on_change_callback
 

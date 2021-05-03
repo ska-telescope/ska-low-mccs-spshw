@@ -1473,7 +1473,7 @@ class HwTile(object):
         carousel_enable=0x1,
     ):
         """
-        Configure continuous integrated channel data.
+        Configure and start continuous integrated channel data.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -1506,7 +1506,7 @@ class HwTile(object):
         carousel_enable=0x0,
     ):
         """
-        Configure continuous integrated beam data.
+        Configure and start continuous integrated beam data.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional

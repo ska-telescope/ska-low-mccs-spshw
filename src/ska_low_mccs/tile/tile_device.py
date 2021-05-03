@@ -3012,8 +3012,8 @@ class MccsTile(SKABaseDevice):
     def ConfigureIntegratedChannelData(self, argin):
         """
         Configure and start the transmission of integrated channel data
-        with the provided integration time, the first channel and the
-        last channel. The data are sent continuously until the
+        with the provided integration time, first channel and
+        last channel. Data are sent continuously until the
         StopIntegratedChannelData command is run.
 
         :param argin: json dictionary with optional keywords:

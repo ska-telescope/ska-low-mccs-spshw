@@ -714,8 +714,10 @@ class TileHardwareManager(SimulableHardwareManager):
         carousel_enable=1,
     ):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and
+        last channel. Data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -751,8 +753,10 @@ class TileHardwareManager(SimulableHardwareManager):
         carousel_enable=0,
     ):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and
+        last channel. Data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional

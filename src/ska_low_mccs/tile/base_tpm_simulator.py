@@ -20,11 +20,11 @@ class BaseTpmSimulator(HardwareSimulator):
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "firmware1"
+    FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_AVAILABLE = {
-        "firmware1": {"design": "model1", "major": 2, "minor": 3},
-        "firmware2": {"design": "model2", "major": 3, "minor": 7},
-        "firmware3": {"design": "model3", "major": 2, "minor": 6},
+        "itpm_v1_6.bit": {"design": "model1", "major": 2, "minor": 3},
+        "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
+        "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
     REGISTER_MAP = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
@@ -40,7 +40,7 @@ class BaseTpmSimulator(HardwareSimulator):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
-    # Hardware version: major*100 + minor
+    # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120
 
     def _arp(self, ip):

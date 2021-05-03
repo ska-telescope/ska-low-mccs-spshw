@@ -292,10 +292,13 @@
                                 "3"
                             ],
                             "TpmIp": [
-                                "10.0.10.101"
+                                "10.0.10.201"
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -332,6 +335,9 @@
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -368,6 +374,9 @@
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -400,11 +409,15 @@
                                 "3"
                             ],
                             "TileIp": [
-                                "10.0.10.5"
+                                "10.0.10.214"
                             ],
                             "TpmCpldPort": [
                                 "10000"
-                            ]
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_2"
+			    ]
+
                         },
                         "attribute_properties": {
                             "simulationMode": {

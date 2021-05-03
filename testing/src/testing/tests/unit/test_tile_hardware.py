@@ -298,7 +298,7 @@ class TestCommon:
         assert not hardware_under_test.is_programmed
         hardware_under_test.initialise()
         assert hardware_under_test.is_programmed
-        assert hardware_under_test.firmware_name == "firmware1"
+        assert hardware_under_test.firmware_name == "itpm_v1_6.bit"
 
     def test_download_firmware(self, hardware_under_test, mocker):
         """

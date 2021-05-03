@@ -48,7 +48,13 @@ class TileHardwareFactory(SimulableHardwareFactory):
     """
 
     def __init__(
-        self, simulation_mode, test_mode, logger, tpm_ip="0.0.0.0", tpm_cpld_port=0
+        self,
+        simulation_mode,
+        test_mode,
+        logger,
+        tpm_ip="0.0.0.0",
+        tpm_cpld_port=0,
+        tpm_version="tpm_v1_6",
     ):
         """
         Create a new factory instance.
@@ -65,10 +71,13 @@ class TileHardwareFactory(SimulableHardwareFactory):
         :type tpm_ip: str
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :type tpm_cpld_port: int
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         """
         self._logger = logger
         self._tpm_ip = tpm_ip
         self._tpm_cpld_port = tpm_cpld_port
+        self._tpm_version = tpm_version
         super().__init__(simulation_mode, test_mode=test_mode)
 
     def _create_driver(self):
@@ -78,7 +87,9 @@ class TileHardwareFactory(SimulableHardwareFactory):
         :return: a hardware driver for the tile
         :rtype: :py:class:`ska_low_mccs.tile.tpm_driver.TpmDriver`
         """
-        return TpmDriver(self._logger, self._tpm_ip, self._tpm_cpld_port)
+        return TpmDriver(
+            self._logger, self._tpm_ip, self._tpm_cpld_port, self._tpm_version
+        )
 
     def _create_dynamic_simulator(self):
         """
@@ -107,7 +118,14 @@ class TileHardwareManager(SimulableHardwareManager):
     """
 
     def __init__(
-        self, simulation_mode, test_mode, logger, tpm_ip, tpm_cpld_port, _factory=None
+        self,
+        simulation_mode,
+        test_mode,
+        logger,
+        tpm_ip,
+        tpm_cpld_port = 10000,
+        tpm_version = 'tpm_v1_6',
+        _factory=None,
     ):
         """
         Initialise a new TileHardwareManager instance.
@@ -126,6 +144,8 @@ class TileHardwareManager(SimulableHardwareManager):
         :type tpm_ip: str
         :param tpm_cpld_port: port address of TPM board control port
         :type tpm_cpld_port: int
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
@@ -137,7 +157,12 @@ class TileHardwareManager(SimulableHardwareManager):
             logger,
             tpm_ip,
             tpm_cpld_port,
+            tpm_version,
         )
+        if tpm_version == "tpm_v1_2":
+            self._default_firmware = "itpm_v1_2.bit"
+        else:
+            self._default_firmware = "itpm_v1_6.bit"
         super().__init__(hardware_factory, TileHardwareHealthEvaluator())
 
     @property
@@ -188,6 +213,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :param bitfile: the bitfile to be downloaded
         :type bitfile: str
         """
+        self._default_firmware = bitfile
         self._factory.hardware.download_firmware(bitfile)
 
     def cpld_flash_write(self, bitfile):

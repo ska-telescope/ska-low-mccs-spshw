@@ -174,12 +174,15 @@ class TilePowerManager:
             PowerMode.ON if event_value[self._subrack_bay - 1] else PowerMode.OFF
         )
         according_to_command = self._read_power_mode()
-        if according_to_event != according_to_command:
+        if according_to_command == PowerMode.UNKNOWN:
+            self._update_power_mode(according_to_event)
+        elif according_to_event != according_to_command:
             self._logger.warning(
                 f"Received a TPM power change event for {according_to_event.name} but "
                 f"a manual read says {according_to_command.name}; discarding."
             )
-        self._update_power_mode(according_to_command)
+        else:
+            self._update_power_mode(according_to_command)
 
     def _read_power_mode(self):
         """
@@ -192,17 +195,22 @@ class TilePowerManager:
         try:
             subrack_state = self._subrack.state()
         except DevFailed:
+            self._logger.warning("Reading subrack state failed")
             return PowerMode.UNKNOWN
 
         if subrack_state == DevState.DISABLE:
             return PowerMode.OFF
         # Subrack power state is on, can provide power state
         elif subrack_state not in [DevState.OFF, DevState.ON, DevState.STANDBY]:
+            self._logger.warning(
+                f"Cannot determine TPM power as subrack is in {subrack_state} state"
+            )
             return PowerMode.UNKNOWN
 
         try:
             is_tpm_on = self._subrack.IsTpmOn(self._subrack_bay)
         except DevFailed:
+            self._logger.warning("IsTpmOn command failed for subrack")
             return PowerMode.UNKNOWN
 
         return PowerMode.ON if is_tpm_on else PowerMode.OFF
@@ -242,11 +250,7 @@ class MccsTile(SKABaseDevice):
     TileId = device_property(dtype=int, default_value=0)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
-
-    # TODO: These properties are not currently being used in any way.
-    # Can they be removed, or do they need to be handled somehow?
-    # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
-    # DstPort = device_property(dtype=int, default_value=30000)
+    TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
     # ---------------
     # General methods
@@ -326,6 +330,7 @@ class MccsTile(SKABaseDevice):
                 device.logger,
                 device.TpmIp,
                 device.TpmCpldPort,
+                device.TpmVersion,
             )
 
             device.power_manager = TilePowerManager(
@@ -480,12 +485,13 @@ class MccsTile(SKABaseDevice):
             device = self.target
             result = device.power_manager.on()
             if result is None:
-                # TODO: The TPM was already powered, so it might already be programmed!
-                # What does it mean to put it into standby?
+                # TODO: The TPM was already powered, so it might
+                # already be programmed!
+                # Putting in Standby could mean deprogram it, in order
+                # to reduce power usage
                 # This needs attention from an expert.
-                # But for now, let's reinitialise.
                 if device.hardware_manager.is_programmed:
-                    # device.hardware_manager.initialise()  # raises NotImplementedError
+                    # deprogram FPGAs
                     pass
 
                 return (
@@ -564,6 +570,10 @@ class MccsTile(SKABaseDevice):
     class OffCommand(SKABaseDevice.OffCommand):
         """
         Class for handling the Off() command.
+
+        This command will transition a Tile from Standby to Off and
+        program the TPM firmware. Off status means that the TPM is
+        powered and programmed
         """
 
         SUCCEEDED_FROM_ON_MESSAGE = "TPM is on and programmed; device is now off."
@@ -586,13 +596,13 @@ class MccsTile(SKABaseDevice):
             device = self.target
             result = device.power_manager.on()
             if result is None:
-                # TODO: The TPM was already powered, but it might not have been
+                # What does it mean to put it into "off" mode?
+                # FOr now, program it using the current default firmware
                 # programmed yet. i.e. it might still be in standby mode
-                # What does it mean to put it into "on" mode?
-                # This needs attention from an expert.
-                # But for now, let's pretend to flash some firmware.
                 if not device.hardware_manager.is_programmed:
-                    device.hardware_manager.download_firmware("firmware1")
+                    device.hardware_manager.download_firmware(
+                        device.hardware_manager._default_firmware
+                    )
                 return (ResultCode.OK, self.SUCCEEDED_FROM_ON_MESSAGE)
 
             if not result:
@@ -604,9 +614,9 @@ class MccsTile(SKABaseDevice):
             # get it fully operational.
             # This needs attention from an expert.
             # But for now, let's initialise it and pretend to flash some firmware.
-
-            # device.hardware_manager.initialise()  # raises NotImplementedError
-            device.hardware_manager.download_firmware("firmware1")
+            device.hardware_manager.download_firmware(
+                device.hardware_manager._default_firmware
+            )
 
             # TODO: This is a sad state of affairs. We need to wait a sec here to drain
             # the events system. Otherwise we run the risk of transitioning as a result

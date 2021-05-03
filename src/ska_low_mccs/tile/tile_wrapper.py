@@ -19,8 +19,8 @@ import socket
 from pyfabil.base.definitions import LibraryError
 from pyfabil.boards.tpm_generic import TPMGeneric
 
-from pyaavs.tile_1_2 import Tile as Tile12
-from pyaavs.tile_1_6 import Tile16
+from ska_low_mccs.tile.tile_1_2 import Tile12
+from ska_low_mccs.tile.tile_1_6 import Tile16
 
 
 class HwTile(object):
@@ -37,6 +37,7 @@ class HwTile(object):
         lmc_port=4660,
         sampling_rate=800e6,
         logger=None,
+        tpm_version=None,
     ):
         """
         HwTile creation.
@@ -54,20 +55,27 @@ class HwTile(object):
         :type lmc_port: int
         :param sampling_rate: ADC sampling rate
         :type sampling_rate: float
-
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         :return: Tile object for the correct board type
         :raises LibraryError: Invalid board type
         """
-        _tpm = TPMGeneric()
-        _tpm_version = _tpm.get_tpm_version(socket.gethostbyname(ip), port)
-        del _tpm
+        if tpm_version is None:
+            _tpm = TPMGeneric()
+            _tpm_version = _tpm.get_tpm_version(socket.gethostbyname(ip), port)
+            del _tpm
+        else:
+            _tpm_version = tpm_version
+        # tpm_v1_5 and tpm_v1_6 are synonimous
+        if _tpm_version == "tpm_v1_5":
+            _tpm_version = "tpm_v1_6"
 
         if _tpm_version == "tpm_v1_2":
             return Tile12(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
-        elif _tpm_version == "tpm_v1_5":
+        elif _tpm_version == "tpm_v1_6":
             return Tile16(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
         else:
-            raise LibraryError("TPM version not supported" + _tpm_version)
+            raise LibraryError("TPM version not supported: " + _tpm_version)
 
     def __init__(
         self,

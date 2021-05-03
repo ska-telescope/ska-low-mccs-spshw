@@ -533,7 +533,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         Poll the hardware.
         """
         super().poll()
-        self._update_are_tpms_on()
+        # self._update_are_tpms_on()
 
     def set_subrack_fan_speed(self, fan_id, speed_percent):
         """

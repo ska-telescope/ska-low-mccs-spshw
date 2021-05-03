@@ -15,11 +15,13 @@ pyfabil low level software and specific hardware module plugins.
 import functools
 import socket
 import os
+import logging
+import struct
 
 import numpy as np
 import time
 
-from pyfabil.base.definitions import Device, LibraryError, BoardError
+from pyfabil.base.definitions import Device, LibraryError, BoardError, Status
 from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm import TPM
 
@@ -66,7 +68,7 @@ def connected(f):
     return wrapper
 
 
-class Tile(object):
+class Tile12(object):
     """
     Tile hardware interface library.
 
@@ -144,6 +146,13 @@ class Tile(object):
         }
 
     # ---------------------------- Main functions ------------------------------------
+    def tpm_version(self):
+        """
+        Determine whether this is a TPM V1.2 or TPM V1.6
+        :return: TPM hardware version
+        :rtype: string
+        """
+        return "tpm_v1_2"
 
     def connect(self, initialise=False, load_plugin=True, enable_ada=False):
         """
@@ -160,7 +169,9 @@ class Tile(object):
         self.tpm = TPM()
 
         # Add plugin directory (load module locally)
-        tf = __import__("pyaavs.plugins.tpm.tpm_test_firmware", fromlist=[None])
+        tf = __import__(
+            "ska_low_mccs.tile.plugins.tpm.tpm_test_firmware", fromlist=[None]
+        )
         self.tpm.add_plugin_directory(os.path.dirname(tf.__file__))
         # Connect using tpm object.
         # simulator parameter is used not to load the TPM specific plugins,
@@ -322,9 +333,11 @@ class Tile(object):
         :param bitfile: Bitfile to load
         :type bitfile: str
         """
-        self.connect(simulation=True)
+        self.connect(load_plugin=False)
         if self.tpm is not None:
             self.logger.info("Downloading bitfile " + bitfile + " to board")
+            # Uses own version of download bitfile, which uses less memory
+            # than Pyfabil one
             self.tpm.download_firmware(Device.FPGA_1, bitfile)
         else:
             self.logger.warning(
@@ -395,7 +408,9 @@ class Tile(object):
         :return: board supply current
         :rtype: float
         """
-        return self.tpm.current()
+        # not implemented
+        # return self.tpm.current()
+        return 0.0
 
     @connected
     def get_adc_rms(self):
@@ -1679,7 +1694,7 @@ class Tile(object):
                 if new_delay >= ref_low:
                     return new_tc
             elif current_delay >= ref_hi:
-                new_delay = current_delay - int((n * 40 / 5)
+                new_delay = current_delay - int((n * 40) / 5)
                 new_tc = current_tc - n
                 if new_tc < 0:
                     new_tc += 5
@@ -1968,3 +1983,162 @@ class Tile(object):
             if show_result:
                 self.logger.info("Lane " + str(lane) + " error count " + str(reg))
         return errors
+
+    def download_firmware(self, device, bitfile):
+        """
+        Download bitfile to FPGA.
+
+        :param device: FPGA to download bitfile
+        :param bitfile: Bitfile to download
+
+        :raises LibraryError: if the TPM is not connected
+        """
+        # Check if connected
+        if self.tpm.status[Device.Board] != Status.OK:
+            raise LibraryError("TPM needs to be connected in order to program FPGAs")
+
+        required_cpld_version = 0x17041801
+        cpld_version = self[0x30000000]
+        if cpld_version < required_cpld_version or cpld_version & 0xF0 == 0xB0:
+            self.logger.error(
+                "CPLD firmware version is too old. Required version is "
+                + hex(required_cpld_version)
+            )
+            raise LibraryError(
+                "CPLD firmware version is too old. Required version is "
+                + hex(required_cpld_version)
+            )
+
+        # Disable C2C stream
+        self[0x30000018] = 0x0
+
+        # Select FPGAs to program
+        self.tpm.smap_deselect_fpga([0, 1])
+        self[self.tpm._global_register] = 0x3
+
+        # Erase FPGAs SRAM
+        self.tpm.erase_fpga(force=True)
+
+        # Read bitstream
+        with open(bitfile, "rb") as fp:
+            data = fp.read()
+
+        self.tpm.smap_select_fpga([0, 1])
+        self[self.tpm._global_register] = 0x2
+
+        # Read bitfile and cast as a list of unsigned integers
+        # Cast in pieces to save memory
+        # formatted_data = list(struct.unpack_from('I' * (len(data) // 4), data))
+        bitfile_length = len(data)
+
+        # Check if ucp_smap_write is supported
+        start = time.time()
+        if self[0x30000000] >= 0x18050200:
+            self.logger.info("FPGA programming using fast SelectMap write")
+            packet_size = 65536
+            num = int(np.floor(bitfile_length / float(packet_size)))
+            for i in range(num):
+                formatted_data = list(
+                    struct.unpack_from(
+                        "I" * (packet_size // 4),
+                        data[i * packet_size : (i + 1) * packet_size],
+                    )
+                )
+                self.tpm._protocol.select_map_program(formatted_data)
+            remaining = bitfile_length - packet_size * num
+            formatted_data = list(
+                struct.unpack_from("I" * (remaining // 4), data[num * packet_size :])
+            )
+            self.tpm._protocol.select_map_program(formatted_data)
+        else:
+            # Write bitfile to FPGA
+            self.logger.info("FPGA programming using UCP write")
+
+            packet_size = 1024
+            num = int(np.floor(bitfile_length / float(packet_size)))
+
+            fifo_register = 0x50001000
+            for i in range(num):
+                formatted_data = list(
+                    struct.unpack_from(
+                        "I" * (packet_size // 4),
+                        data[i * packet_size : (i + 1) * packet_size],
+                    )
+                )
+                self[fifo_register] = formatted_data
+            remaining = bitfile_length - packet_size * num
+            formatted_data = list(
+                struct.unpack_from("I" * (remaining // 4), data[num * packet_size :])
+            )
+            self[fifo_register] = formatted_data
+
+        end = time.time()
+        self.logger.info("FPGA programming time: " + str(end - start) + "s")
+
+        # Wait for operation to complete
+        status_read = 0
+        for xil_register in self.tpm._xil_registers:
+            while self[xil_register] & 0x2 != 0x2:  # DONE high
+                time.sleep(0.01)
+                status_read += 1
+                if status_read == 100:
+                    self.logger.error(
+                        "Not possible to program the FPGAs. Power cycle the board!"
+                    )
+                    break
+
+        end = time.time()
+        self.logger.info("FPGA programming time: " + str(end - start) + "s")
+
+        self.tpm.smap_deselect_fpga([0, 1])
+        self[self._global_register] = 0x3
+
+        # Brute force check to make sure we can communicate with programmed TPM
+        for n in range(4):
+            try:
+                self.tpm.calibrate_fpga_to_cpld()
+                magic0 = self[0x4]
+                magic1 = self[0x10000004]
+                if magic0 == magic1 == 0xA1CE55AD:
+                    return
+                else:
+                    self.logger.info(
+                        "FPGA magic numbers are not correct %s, %s"
+                        % (hex(magic0), hex(magic1))
+                    )
+            except Exception as e:  # noqa: F841
+                pass
+
+            self.logger.info(
+                "Not possible to communicate with the FPGAs. Resetting CPLD..."
+            )
+            self.tpm.write_address(0x30000008, 0x8000, retry=False)  # Global Reset CPLD
+            time.sleep(0.2)
+            self.tpm.write_address(0x30000008, 0x8000, retry=False)  # Global Reset CPLD
+            time.sleep(0.2)
+
+    def get_firmware_list(self):
+        """
+        Get information for loaded firmware
+        :return: Firmware information dictionary for each loaded firmware
+        :rtype: list(dict)
+        """
+        # Got through all firmware information plugins and extract information
+        firmware = []
+        for plugin in self.tpm.tpm_firmware_information:
+            # Update information
+            plugin.update_information()
+            # Check if design is valid:
+            if plugin.get_design() is not None:
+                firmware.append(
+                    {
+                        "design": plugin.get_design(),
+                        "major": plugin.get_major_version(),
+                        "minor": plugin.get_minor_version(),
+                        "build": plugin.get_build(),
+                        "time": plugin.get_time(),
+                        "author": plugin.get_user(),
+                        "board": plugin.get_board(),
+                    }
+                )
+        return firmware

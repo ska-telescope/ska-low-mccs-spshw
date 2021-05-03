@@ -19,9 +19,7 @@ import os
 from pyfabil.base.definitions import Device, LibraryError, BoardError
 from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm_1_6 import TPM_1_6
-from pyaavs.tile import Tile
-
-# from pyaavs.plugins import *
+from ska_low_mccs.tile import Tile12
 
 
 # Helper to disallow certain function calls on unconnected tiles
@@ -65,7 +63,7 @@ def connected(f):
     return wrapper
 
 
-class Tile16(Tile):
+class Tile16(Tile12):
     """
     Tile hardware interface library. Methods specific for TPM 1.6.
 
@@ -100,7 +98,14 @@ class Tile16(Tile):
         """
         super(Tile16, self).__init__(ip, port, lmc_ip, lmc_port, sampling_rate, logger)
 
-    # ---------------------------- Main functions ------------------------------------
+    # Main functions ------------------------------------
+    def tpm_version(self):
+        """
+        Determine whether this is a TPM V1.2 or TPM V1.6
+        :return: TPM hardware version
+        :rtype: string
+        """
+        return "tpm_v1_6"
 
     def connect(
         self,
@@ -128,7 +133,9 @@ class Tile16(Tile):
         self.tpm = TPM_1_6()
 
         # Add plugin directory (load module locally)
-        tf = __import__("pyaavs.plugins.tpm_1_6.tpm_test_firmware", fromlist=[None])
+        tf = __import__(
+            "ska_low_mccs.tile.plugins.tpm_1_6.tpm_test_firmware", fromlist=[None]
+        )
         self.tpm.add_plugin_directory(os.path.dirname(tf.__file__))
 
         try:
@@ -148,13 +155,13 @@ class Tile16(Tile):
         # Load tpm test firmware for both FPGAs (no need to load in simulation)
         if load_plugin and self.tpm.is_programmed():
             self.tpm.load_plugin(
-                "Tpm_1_6_TestFirmware",
+                "Tpm16TestFirmware",
                 device=Device.FPGA_1,
                 fsample=self._sampling_rate,
                 dsp_core=dsp_core,
             )
             self.tpm.load_plugin(
-                "Tpm_1_6_TestFirmware",
+                "Tpm16TestFirmware",
                 device=Device.FPGA_2,
                 fsample=self._sampling_rate,
                 dsp_core=dsp_core,
@@ -250,6 +257,13 @@ class Tile16(Tile):
 
         for firmware in self.tpm.tpm_test_firmware:
             firmware.check_ddr_initialisation()
+
+        # Set channeliser truncation
+        self.logger.info("Configuring channeliser and beamformer")
+        self.set_channeliser_truncation(self._channeliser_truncation)
+
+        self.logger.info("Setting data acquisition")
+        self.start_acquisition()
 
     def f2f_aurora_test_start(self):
         """

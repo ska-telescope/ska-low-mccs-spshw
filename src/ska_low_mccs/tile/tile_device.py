@@ -1856,17 +1856,11 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("SrcMac is a mandatory parameter")
                 raise ValueError("SrcMac is a mandatory parameter")
             src_ip = params.get("SrcIP", None)
-            if src_ip is None:
-                self.logger.error("SrcIP is a mandatory parameter")
-                raise ValueError("SrcIP is a mandatory parameter")
             src_port = params.get("SrcPort", None)
             if src_port is None:
                 self.logger.error("SrcPort is a mandatory parameter")
                 raise ValueError("SrcPort is a mandatory parameter")
             dst_mac = params.get("DstMac", None)
-            if dst_mac is None:
-                self.logger.error("DstMac is a mandatory parameter")
-                raise ValueError("DstMac is a mandatory parameter")
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
                 self.logger.error("DstIP is a mandatory parameter")
@@ -1895,9 +1889,9 @@ class MccsTile(SKABaseDevice):
 
         * CoreID - (int) core id
         * SrcMac - (string) mac address dot notation
-        * SrcIP - (string) IP dot notation
-        * SrcPort - (int) src port
-        * DstMac - (string) mac address dot notation
+        * SrcIP - (string) IP dot notation. Default taken from main IP address
+        * SrcPort - (int) src port.
+        * DstMac - (string) mac address dot notation. Not used if ARP present
         * DstIP - (string) IP dot notation
         * DstPort - (int) dest port
 
@@ -2030,9 +2024,9 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * Mode - (string) '1g' or '10g' (Mandatory)
-        * PayloadLength - (int) SPEAD payload length for integrated channel data
-        * DstIP - (string) Destination IP
+        * Mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+        * PayloadLength - (int) SPEAD payload length for channel data
+        * DstIP - (string) Destination IP.
         * SrcPort - (int) Source port for integrated data streams
         * DstPort - (int) Destination port for integrated data streams
         * LmcMac: - (int) LMC Mac address is required for 10G lane configuration

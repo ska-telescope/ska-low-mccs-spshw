@@ -536,8 +536,9 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
     def poll(self):
         """
         Poll the hardware.
-        Perform poll only if at least one second has lapsed from 
-        previous poll. 
+
+        Perform poll only if at least one second has lapsed from
+        previous poll.
         """
         super().poll()
         current_time = time.time()

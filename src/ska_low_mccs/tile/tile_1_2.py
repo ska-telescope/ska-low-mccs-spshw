@@ -1815,12 +1815,6 @@ class Tile12(object):
         self.tpm.test_generator[1].set_tone(
             generator, frequency, amplitude, phase, load_time
         )
-        t1 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
-        if t1 >= t0 + delay or t1 <= t0:
-            self.logger.info("Set tone test pattern generators synchronisation failed.")
-            self.logger.info("Start Time   = " + str(t0))
-            self.logger.info("Finish time  = " + str(t1))
-            self.logger.info("Maximum time = " + str(t0 + delay))
 
     @connected
     def set_test_generator_noise(self, amplitude=0.0, load_time=0):
@@ -2124,21 +2118,36 @@ class Tile12(object):
         :rtype: list(dict)
         """
         # Got through all firmware information plugins and extract information
+        # If firmware is not yet loaded, fill in some dummy information
         firmware = []
-        for plugin in self.tpm.tpm_firmware_information:
-            # Update information
-            plugin.update_information()
-            # Check if design is valid:
-            if plugin.get_design() is not None:
+        if not hasattr(self.tpm, "tpm_firmware_information"):
+            for i in range(3):
                 firmware.append(
                     {
-                        "design": plugin.get_design(),
-                        "major": plugin.get_major_version(),
-                        "minor": plugin.get_minor_version(),
-                        "build": plugin.get_build(),
-                        "time": plugin.get_time(),
-                        "author": plugin.get_user(),
-                        "board": plugin.get_board(),
+                        "design": "unknown",
+                        "major": 0,
+                        "minor": 0,
+                        "build": 0,
+                        "time": "",
+                        "author": "",
+                        "board": "",
                     }
                 )
+        else:
+            for plugin in self.tpm.tpm_firmware_information:
+                # Update information
+                plugin.update_information()
+                # Check if design is valid:
+                if plugin.get_design() is not None:
+                    firmware.append(
+                        {
+                            "design": plugin.get_design(),
+                            "major": plugin.get_major_version(),
+                            "minor": plugin.get_minor_version(),
+                            "build": plugin.get_build(),
+                            "time": plugin.get_time(),
+                            "author": plugin.get_user(),
+                            "board": plugin.get_board(),
+                        }
+                    )
         return firmware

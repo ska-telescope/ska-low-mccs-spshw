@@ -35,9 +35,9 @@ class TpmDriver(HardwareDriver):
     PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_LIST = {
-        "cpld": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "date": ""},
-        "fpga1": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "date": ""},
-        "fpga2": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "date": ""},
+        "cpld": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        "fpga1": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        "fpga2": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     }
     REGISTER_MAP = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
@@ -122,8 +122,8 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: firmware_available")
         firmware_list = self.tile.get_firmware_list()
         self._firmware_list["cpld"] = firmware_list[0]
-        self._firmware_list["fpga1"] = self.tpm.get_firmware_list[1]
-        self._firmware_list["fpga2"] = self.tpm.get_firmware_list[2]
+        self._firmware_list["fpga1"] = firmware_list[1]
+        self._firmware_list["fpga2"] = firmware_list[2]
         return copy.deepcopy(self._firmware_list)
 
     @property
@@ -148,7 +148,7 @@ class TpmDriver(HardwareDriver):
         :rtype: str
         """
         self.logger.debug("TpmDriver: firmware_version")
-        self.firmware_available()
+        self.firmware_available
         firmware = self._firmware_list["fpga1"]
         return (
             "Ver."
@@ -156,7 +156,7 @@ class TpmDriver(HardwareDriver):
             + "."
             + str(firmware["minor"])
             + " build "
-            + firmware["build"]
+            + str(firmware["build"])
             + ":"
             + firmware["time"]
         )
@@ -912,12 +912,9 @@ class TpmDriver(HardwareDriver):
         :type start_time: int, optional
         :param delay: delay start, defaults to 2
         :type delay: int, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver:Start acquisition")
-        raise NotImplementedError
+        self.tile.start_acquisition(start_time, delay)
 
     def set_time_delays(self, delays):
         """
@@ -1105,21 +1102,19 @@ class TpmDriver(HardwareDriver):
         """
         Perform post tile configuration synchronization.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        TODO Private method or must be available externally?
         """
         self.logger.debug("TpmDriver: post_synchronisation")
-        raise NotImplementedError
+        self.tile.post_synchronisation()
 
     def sync_fpgas(self):
         """
         Synchronise the FPGAs.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        TODO Method appears to be mostly internal (private).
         """
         self.logger.debug("TpmDriver: sync_fpgas")
-        raise NotImplementedError
+        self.tile.sync_fpgas()
 
     @property
     def test_generator_active(self):

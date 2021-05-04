@@ -395,3 +395,13 @@ class TestMccsStationBeam:
             27.0,
             1.0,
         ]
+
+    def test_ApplyPointing(self, device_under_test, logger):
+        station_beam = device_under_test  # to make test easier to read
+        mock_station = MccsDeviceProxy("low-mccs/station/001", logger)
+        delay_array = [1.0] * 512
+        station_beam.logicalBeamId = 1
+        station_beam.stationFqdn = "low-mccs/station/001"
+        [[result_code], [message]] = station_beam.ApplyPointing(delay_array)
+        assert result_code == ResultCode.OK
+        assert message == MccsStationBeam.ApplyPointingCommand.SUCCEEDED_MESSAGE

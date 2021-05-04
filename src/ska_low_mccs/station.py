@@ -706,9 +706,9 @@ class MccsStation(SKAObsDevice):
     )
     def ApplyPointing(self, argin):
         """
+        Set the pointing delay parameters of this Station's Tiles.
 
-
-        :param argin: an array containing a beam index and antenna delays
+        :param argin: an array containing a beam index followed by antenna delays
         :type argin: list(float)
 
         :return: A tuple containing a return code and a string

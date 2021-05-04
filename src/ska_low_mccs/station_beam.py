@@ -35,6 +35,7 @@ from ska_low_mccs.hardware import (
     HardwareManager,
 )
 from ska_low_mccs.health import MutableHealthModel
+from ska_low_mccs import MccsDeviceProxy
 
 
 class StationBeamHealthEvaluator(HardwareHealthEvaluator):
@@ -379,6 +380,7 @@ class MccsStationBeam(SKAObsDevice):
 
         args = (self, self.state_model, self.logger)
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
 
     def always_executed_hook(self):
         """
@@ -693,6 +695,56 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
+        (result_code, message) = handler(argin)
+        return [[result_code], [message]]
+
+    class ApplyPointingCommand(ResponseCommand):
+        """
+        Class for handling the ApplyPointing(argin) command.
+        """
+
+        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
+        FAILED_MESSAGE = "ApplyPointing command failed"
+
+        def do(self, argin):
+            """
+            Stateless do-hook for the
+            :py:meth:`.MccsStationBeam.ApplyPointing` command
+
+            :param argin: an array containing antenna delays
+            :type argin: list(float)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            station_pointing_args = [device._logical_beam_id] + list(argin)
+            station_proxy = MccsDeviceProxy(device._station_fqdn, self.logger)
+            (result_code, message) = station_proxy.ApplyPointing(station_pointing_args)
+            if result_code == ResultCode.FAILED:
+                return (result_code, self.FAILED_MESSAGE)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+    )
+    def ApplyPointing(self, argin):
+        """
+        Apply provided delays to antennas associated with the
+        station_beam.
+
+        :param argin: List of pointing delay parameters
+        :type argin: list(float)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("ApplyPointing")
         (result_code, message) = handler(argin)
         return [[result_code], [message]]
 

@@ -894,13 +894,13 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("APIU On")
+        self.logger.info("APIU On")
 
         kwargs = json.loads(json_args)
         respond_to_fqdn = kwargs.get("respond_to_fqdn")
         callback = kwargs.get("callback")
         if respond_to_fqdn and callback:
-            self.logger.warning("APIU On message call")
+            self.logger.debug("APIU On message call")
             (
                 result_code,
                 message_uid,

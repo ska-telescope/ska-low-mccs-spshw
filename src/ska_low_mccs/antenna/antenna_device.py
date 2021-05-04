@@ -1085,13 +1085,13 @@ class MccsAntenna(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.warning("Antenna On")
+        self.logger.info("Antenna On")
 
         kwargs = json.loads(json_args)
         respond_to_fqdn = kwargs.get("respond_to_fqdn")
         callback = kwargs.get("callback")
         if respond_to_fqdn and callback:
-            self.logger.warning("Antenna On message call")
+            self.logger.debug("Antenna On message call")
             (
                 result_code,
                 message_uid,
@@ -1102,7 +1102,7 @@ class MccsAntenna(SKABaseDevice):
             return [[result_code], [message_uid]]
         else:
             # Call On sequentially
-            self.logger.warning("Antenna On direct call")
+            self.logger.debug("Antenna On direct call")
             command = self.get_command_object("On")
             (result_code, message) = command(json_args)
             return [[result_code], [message]]

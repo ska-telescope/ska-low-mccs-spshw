@@ -511,13 +511,16 @@ class TpmDriver(HardwareDriver):
             current_address = current_address + 4
 
     def configure_40g_core(
-        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_mac, dst_ip,
+            dst_port
     ):
         """
         Configure the 40G code.
 
         :param core_id: id of the core
         :type core_id: int
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
         :param src_mac: MAC address of the source
         :type src_mac: str
         :param src_ip: IP address of the source
@@ -533,6 +536,7 @@ class TpmDriver(HardwareDriver):
         """
         core_dict = {
             "CoreID": core_id,
+            "ArpTableEntry": arp_table_entry,
             "SrcMac": src_mac,
             "SrcIP": src_ip,
             "SrcPort": src_port,
@@ -543,7 +547,7 @@ class TpmDriver(HardwareDriver):
         self.logger.warning("TpmDriver: configure_40g_core is simulated")
         self._forty_gb_core_list.append(core_dict)
 
-    def get_40g_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
         Return a 40G configuration.
 
@@ -551,6 +555,8 @@ class TpmDriver(HardwareDriver):
             be return. Defaults to -1, in which case all cores
             configurations are returned, defaults to -1
         :type core_id: int, optional
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int, optional
 
         :return: core configuration or list of core configurations
         :rtype: dict or list(dict)

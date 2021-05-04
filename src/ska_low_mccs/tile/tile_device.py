@@ -1851,6 +1851,10 @@ class MccsTile(SKABaseDevice):
             if core_id is None:
                 self.logger.error("CoreID is a mandatory parameter")
                 raise ValueError("CoreID is a mandatory parameter")
+            arp_table_entry = params.get("ArpTableEntry", 0)
+            if arp_table_entry is None:
+                self.logger.error("ArpTableEntry is a mandatory parameter")
+                raise ValueError("ArpTableEntry is a mandatory parameter")
             src_mac = params.get("SrcMac", None)
             if src_mac is None:
                 self.logger.error("SrcMac is a mandatory parameter")
@@ -1878,7 +1882,8 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_40g_core(
-                core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_mac, dst_ip,
+                dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1894,6 +1899,7 @@ class MccsTile(SKABaseDevice):
         :param argin: json dictionary with optional keywords:
 
         * CoreID - (int) core id
+        * ArpTableEntry - (int) ARP table entry ID
         * SrcMac - (string) mac address dot notation
         * SrcIP - (string) IP dot notation
         * SrcPort - (int) src port
@@ -1911,7 +1917,8 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"CoreID":2, "SrcMac":"10:fe:ed:08:0a:58", "SrcIP":"10.0.99.3",
+        >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":"10:fe:ed:08:0a:58",
+        "SrcIP":"10.0.99.3",
                     "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58", "DstIP":"10.0.99.3",
                     "DstPort":5000}
         >>> jstr = json.dumps(dict)
@@ -1932,23 +1939,26 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.Get40GCoreConfiguration`
             command functionality.
 
-            :param argin: the core id
-            :type argin: int
+            :param argin: a JSON-encoded dictionary of arguments
+            :type argin: str
 
             :return: json string with configuration
             :rtype: str
 
             :raises ValueError: if the argin is an invalid code id
             """
-            core_id = argin
+            params = json.loads(argin)
+            core_id = params.get("CoreID", None)
+            arp_table_entry = params.get("ArpTableEntry", 0)
+
             hardware_manager = self.target
-            item = hardware_manager.get_40g_configuration(core_id)
+            item = hardware_manager.get_40g_configuration(core_id, arp_table_entry)
             if item is not None:
                 return json.dumps(item.pop("CoreID"))
-            raise ValueError("Invalid core id specified")
+            raise ValueError("Invalid core id or arp table entry specified")
 
     @command(
-        dtype_in="DevLong",
+        dtype_in="DevString",
         dtype_out="DevString",
     )
     @DebugIt()
@@ -1957,8 +1967,10 @@ class MccsTile(SKABaseDevice):
         Get 40g core configuration for core_id. This is required to
         chain up TPMs to form a station.
 
-        :param argin: the core id
-        :type argin: int
+        :param argin: json dictionary with optional keywords:
+
+        * CoreID - (int) core id
+        * ArpTableEntry - (int) ARP table entry ID to use
 
         :return: the configuration is a json string comprising:
                  src_mac, src_ip, src_port, dest_mac, dest_ip, dest_port
@@ -1968,7 +1980,8 @@ class MccsTile(SKABaseDevice):
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> core_id = 2
-        >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id)
+        >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id,
+        arp_table_entry)
         >>> params = json.loads(argout)
         """
         handler = self.get_command_object("Get40GCoreConfiguration")

@@ -706,13 +706,10 @@ class MccsStationBeam(SKAObsDevice):
         SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
         FAILED_MESSAGE = "ApplyPointing command failed"
 
-        def do(self, argin):
+        def do(self):
             """
             Stateless do-hook for the
             :py:meth:`.MccsStationBeam.ApplyPointing` command
-
-            :param argin: an array containing antenna delays
-            :type argin: list(float)
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -720,7 +717,7 @@ class MccsStationBeam(SKAObsDevice):
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
-            station_pointing_args = [device._logical_beam_id] + list(argin)
+            station_pointing_args = [device._logical_beam_id] + list(device._pointing_delay)
             station_proxy = MccsDeviceProxy(device._station_fqdn, self.logger)
             (result_code, message) = station_proxy.ApplyPointing(station_pointing_args)
             if result_code == ResultCode.FAILED:
@@ -728,16 +725,12 @@ class MccsStationBeam(SKAObsDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevVarDoubleArray",
         dtype_out="DevVarLongStringArray",
     )
-    def ApplyPointing(self, argin):
+    def ApplyPointing(self):
         """
-        Apply provided delays to antennas associated with the
+        Apply pointing delays to antennas associated with the
         station_beam.
-
-        :param argin: List of pointing delay parameters
-        :type argin: list(float)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -745,7 +738,7 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("ApplyPointing")
-        (result_code, message) = handler(argin)
+        (result_code, message) = handler()
         return [[result_code], [message]]
 
 

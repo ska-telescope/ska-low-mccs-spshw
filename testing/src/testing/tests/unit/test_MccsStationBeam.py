@@ -397,11 +397,23 @@ class TestMccsStationBeam:
         ]
 
     def test_ApplyPointing(self, device_under_test, logger):
+        """
+        Test for ApplyPointing.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
+        """
         station_beam = device_under_test  # to make test easier to read
         mock_station = MccsDeviceProxy("low-mccs/station/001", logger)
+        mock_station.ApplyPointing.return_value = (ResultCode.OK, "")
         delay_array = [1.0] * 512
         station_beam.logicalBeamId = 1
+        station_beam._pointing_delay = delay_array
         station_beam.stationFqdn = "low-mccs/station/001"
-        [[result_code], [message]] = station_beam.ApplyPointing(delay_array)
+        [[result_code], [message]] = station_beam.ApplyPointing()
         assert result_code == ResultCode.OK
         assert message == MccsStationBeam.ApplyPointingCommand.SUCCEEDED_MESSAGE

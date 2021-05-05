@@ -198,9 +198,11 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     if expected_result is None:
         assert result is None
     else:
-        ((result_code,), (message,)) = result
-        if not result_code == expected_result:
-            assert message == "Check what this says"
+        if command in ["On", "Startup"]:
+            ((result_code,), (_, _)) = result
+        else:
+            ((result_code,), (_,)) = result
+        assert result_code == expected_result
 
 
 @scenario(

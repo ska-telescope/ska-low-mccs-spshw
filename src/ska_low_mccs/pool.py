@@ -131,19 +131,20 @@ class DevicePool:
             }
             json_string = json.dumps(args)
             self._logger.debug(f"Calling {device}:{command_name}({json_string})")
-            (result_code, message_uid) = device.command_inout(command_name, json_string)
-
-            self._logger.debug(f"Pool({result_code},{message_uid})")
+            [result_code], [message, message_uid] = device.command_inout(
+                command_name, json_string
+            )
+            self._logger.debug(f"Pool({result_code.name}:{message_uid}:{message})")
 
             if result_code == ResultCode.FAILED:
                 self._logger.debug(f"Early exit! uid={message_uid}")
                 return False
 
             if result_code == ResultCode.QUEUED:
-                self._logger.debug(f"Added response {message_uid[0]}")
-                self._responses[message_uid[0]] = False
+                self._logger.debug(f"Added response {message_uid}")
+                self._responses[message_uid] = False
             else:
-                self._logger.debug(f"Response NOT ADDED! rc={result_code}")
+                self._logger.debug(f"Response NOT ADDED! rc={result_code.name}")
 
         return True
 

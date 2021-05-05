@@ -121,7 +121,7 @@ def mock_factory(mocker):
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
     builder.add_result_command("Off", ResultCode.OK)
-    builder.add_result_command("On", ResultCode.OK)
+    builder.add_result_command("On", ResultCode.OK, message_uid="1234")
     builder.add_result_command("Standby", ResultCode.OK)
     return builder
 
@@ -267,9 +267,9 @@ class TestMccsController:
 
         device_under_test._command_result = [ResultCode.UNKNOWN, "", ""]
         # Call the On() command on the Controller device
-        [[result_code], [message]] = device_under_test.On()
+        [result_code], [_, message_uid] = device_under_test.On()
         assert result_code == ResultCode.QUEUED
-        assert ":On" in message
+        assert ":On" in message_uid
         mock_event_callback.check_queued_command_result(
             name="commandResult", result=ResultCode.STARTED
         )
@@ -290,6 +290,7 @@ class TestMccsController:
         # Need to turn it on before we can turn it off
         controller.Off()
         controller.On()
+        sleep(0.1)  # Required to allow DUT thread to run
 
         # Test that subscription yields an event as expected
         _ = controller.subscribe_event(
@@ -316,7 +317,9 @@ class TestMccsController:
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        [[result_code], [message_uid]] = device_under_test.OnCallback(dummy_json_args)
+        [[result_code], [_, message_uid]] = device_under_test.OnCallback(
+            dummy_json_args
+        )
         assert result_code == ResultCode.QUEUED
         assert ":OnCallback" in message_uid
 
@@ -440,6 +443,7 @@ class TestMccsController:
 
             controller.Off()
             controller.On()
+            sleep(0.1)  # Required to allow DUT thread to run
 
             call_with_json(
                 device_under_test.simulateAdminModeChange,

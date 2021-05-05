@@ -67,7 +67,7 @@ def mock_factory(mocker):
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
-    builder.add_result_command("On", ResultCode.OK)
+    builder.add_result_command("On", ResultCode.OK, message_uid="12345678")
     return builder
 
 

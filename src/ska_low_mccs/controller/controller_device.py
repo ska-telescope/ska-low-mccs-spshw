@@ -524,7 +524,7 @@ class MccsController(SKAMaster):
     # --------
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Startup(self: MccsController) -> Tuple[ResultCode, str]:
+    def Startup(self: MccsController) -> Tuple[ResultCode, [str, str]]:
         """
         Start up the MCCS subsystem.
 
@@ -540,7 +540,7 @@ class MccsController(SKAMaster):
         ]:
             return [
                 [ResultCode.FAILED],
-                ["A controller command is already in progress"],
+                ["A controller command is already in progress", None],
             ]
         else:
             self.notify_listener(ResultCode.UNKNOWN, "", "")
@@ -548,7 +548,7 @@ class MccsController(SKAMaster):
             (result_code, message_uid, status) = self._message_queue.send_message(
                 command="Startup", notifications=True
             )
-            return [[result_code], [message_uid + "," + status]]
+            return [[result_code], [status, message_uid]]
 
     class StartupCommand(ResponseCommand):
         """
@@ -617,7 +617,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def On(self: MccsController) -> Tuple[ResultCode, str]:
+    def On(self: MccsController) -> Tuple[ResultCode, [str, str]]:
         """
         Send a message to turn the controller on.
 
@@ -635,7 +635,7 @@ class MccsController(SKAMaster):
         ]:
             return [
                 [ResultCode.FAILED],
-                ["A controller command is already in progress"],
+                ["A controller command is already in progress", None],
             ]
         else:
             self.notify_listener(ResultCode.UNKNOWN, "", "")
@@ -643,7 +643,7 @@ class MccsController(SKAMaster):
             (result_code, message_uid, status) = self._message_queue.send_message(
                 command="On", notifications=True
             )
-            return [[result_code], [message_uid + "," + status]]
+            return [[result_code], [status, message_uid]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -685,7 +685,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def OnCallback(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def OnCallback(self: MccsController, argin: str) -> Tuple[ResultCode, [str, str]]:
         """
         On callback method.
 
@@ -696,10 +696,10 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        (result_code, message_uid, _) = self._message_queue.send_message(
+        (result_code, message_uid, status) = self._message_queue.send_message(
             command="OnCallback", json_args=argin
         )
-        return [[result_code], [message_uid]]
+        return [[result_code], [status, message_uid]]
 
     class OnCallbackCommand(ResponseCommand):
         """
@@ -731,7 +731,7 @@ class MccsController(SKAMaster):
             (command_complete, result_code, status) = device_pool.callback(argin)
             if command_complete:
                 device.logger.debug(
-                    f"OnCallback({result_code}:{message_uid}:{self.SUCCESSFUL_MESSAGE})"
+                    f"OnCallback({result_code.name}:{message_uid}:{self.SUCCESSFUL_MESSAGE})"
                 )
                 device.notify_listener(
                     result_code, message_uid, self.SUCCESSFUL_MESSAGE
@@ -874,8 +874,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyLow")
-        (result_code, message) = handler()
-        return [[result_code], [message]]
+        (result_code, status) = handler()
+        return [[result_code], [status]]
 
     class StandbyFullCommand(ResponseCommand):
         """
@@ -923,8 +923,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyFull")
-        (result_code, message) = handler()
-        return [[result_code], [message]]
+        (result_code, status) = handler()
+        return [[result_code], [status]]
 
     class OperateCommand(ResponseCommand):
         """
@@ -975,8 +975,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Operate")
-        (result_code, message) = handler()
-        return [[result_code], [message]]
+        (result_code, status) = handler()
+        return [[result_code], [status]]
 
     def is_Operate_allowed(self: MccsController) -> bool:
         """
@@ -1447,8 +1447,8 @@ class MccsController(SKAMaster):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Maintenance")
-        (result_code, message) = handler()
-        return [[result_code], [message]]
+        (result_code, status) = handler()
+        return [[result_code], [status]]
 
 
 # ----------

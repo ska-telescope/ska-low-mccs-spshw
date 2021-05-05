@@ -855,7 +855,7 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
-    def test_On(self, device_under_test, dummy_json_args):
+    def test_On_RCL(self, device_under_test, dummy_json_args):
         """
         Test for On.
 
@@ -870,9 +870,9 @@ class TestMccsTileCommands:
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
         device_under_test.Off()
-        [[result_code], [message]] = device_under_test.On(dummy_json_args)
+        [result_code], [_, message_uid] = device_under_test.On(dummy_json_args)
         assert result_code == ResultCode.QUEUED
-        assert ":On" in message
+        assert ":On" in message_uid
 
     def test_GetFirmwareAvailable(self, device_under_test, dummy_json_args):
         """

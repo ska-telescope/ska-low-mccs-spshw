@@ -559,18 +559,18 @@ class MccsStation(SKAObsDevice):
             (
                 result_code,
                 message_uid,
-                _,
+                status,
             ) = self._message_queue.send_message(command="On")
             # Because the responses back to the requester will be from a callback
             # command, we cache the message uid and return this when the pools are
             # complete.
             self._on_message_uid = message_uid
-            return [[result_code], [message_uid]]
+            return [[result_code], [status, message_uid]]
         else:
             # Call On sequentially
             handler = self.get_command_object("On")
-            (result_code, message) = handler(json_args)
-            return [[result_code], [message]]
+            (result_code, status) = handler(json_args)
+            return [[result_code], [status]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -636,7 +636,7 @@ class MccsStation(SKAObsDevice):
         (result_code, message_uid, status) = self._message_queue.send_message(
             command="OnCallback", json_args=json_args
         )
-        return [[result_code], [message_uid + "," + status]]
+        return [[result_code], [status, message_uid]]
 
     class OnCallbackCommand(ResponseCommand):
         """
@@ -704,7 +704,7 @@ class MccsStation(SKAObsDevice):
                     )
 
                 device.logger.debug(
-                    f"Station OnCallbackCommand class do(),rc={result_code},status={status}"
+                    f"Station OnCallbackCommand class do(),rc={result_code.name},status={status}"
                 )
                 device._on_respond_to_fqdn = None
                 device._on_callback = None

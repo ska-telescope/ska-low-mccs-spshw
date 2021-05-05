@@ -112,7 +112,7 @@ class MessageQueue(threading.Thread):
         """
         self._qdebug("Error(_notify_listener) Terminate thread")
         self._logger.error(
-            f"{result_code}:{message_uid}:{status} "
+            f"{result_code.name}:{message_uid}:{status} "
             "Derived class should implement _notify_listener(). Terminate thread"
         )
         # Terminate the thread execution loop

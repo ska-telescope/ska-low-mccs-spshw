@@ -166,7 +166,7 @@ class AntennaApiuProxy:
             return False
         else:
             raise NotImplementedError(
-                f"APIU.PowerUpAntenna returned unexpected ResultCode {result_code}."
+                f"APIU.PowerUpAntenna returned unexpected ResultCode {result_code.name}."
             )
 
     def off(self):
@@ -192,7 +192,7 @@ class AntennaApiuProxy:
             return False
         else:
             raise NotImplementedError(
-                f"APIU.PowerDownAntenna returned unexpected ResultCode {result_code}."
+                f"APIU.PowerDownAntenna returned unexpected ResultCode {result_code.name}."
             )
 
     @property
@@ -1095,11 +1095,11 @@ class MccsAntenna(SKABaseDevice):
             (
                 result_code,
                 message_uid,
-                _,
+                status,
             ) = self._message_queue.send_message_with_response(
                 command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
             )
-            return [[result_code], [message_uid]]
+            return [[result_code], [status, message_uid]]
         else:
             # Call On sequentially
             self.logger.debug("Antenna On direct call")

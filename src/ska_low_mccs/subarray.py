@@ -1167,8 +1167,8 @@ class MccsSubarray(SKASubarray):
         :rtype: str
         """
         handler = self.get_command_object("SendTransientBuffer")
-        (result_code, message) = handler(argin)
-        return [[result_code], [message]]
+        (result_code, status) = handler(argin)
+        return [[result_code], [status]]
 
 
 # ----------

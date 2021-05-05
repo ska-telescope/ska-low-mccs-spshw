@@ -1819,16 +1819,16 @@ class MccsSubrack(SKABaseDevice):
             (
                 result_code,
                 message_uid,
-                _,
+                status,
             ) = self._message_queue.send_message_with_response(
                 command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
             )
-            return [[result_code], [message_uid]]
+            return [[result_code], [status, message_uid]]
         else:
             # Call On sequentially
             handler = self.get_command_object("On")
-            (result_code, message) = handler(json_args)
-            return [[result_code], [message]]
+            (result_code, status) = handler(json_args)
+            return [[result_code], [status]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """

@@ -49,7 +49,7 @@ def device_to_load():
 
 
 @pytest.fixture()
-def mock_factory(mocker):
+def mock_factory(mocker, test_string):
     """
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
@@ -59,6 +59,8 @@ def mock_factory(mocker):
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
     :type mocker: :py:class:`pytest_mock.mocker`
+    :param test_string: a test string that we'll use as a UID
+    :type test_string: str
 
     :return: a factory for device proxy mocks
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
@@ -67,7 +69,7 @@ def mock_factory(mocker):
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
-    builder.add_result_command("On", ResultCode.OK, message_uid="12345678")
+    builder.add_result_command("On", ResultCode.OK, message_uid=test_string)
     return builder
 
 

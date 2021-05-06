@@ -131,10 +131,10 @@ class DevicePool:
             }
             json_string = json.dumps(args)
             self._logger.debug(f"Calling {device}:{command_name}({json_string})")
-            [result_code], [message, message_uid] = device.command_inout(
+            [result_code], [status, message_uid] = device.command_inout(
                 command_name, json_string
             )
-            self._logger.debug(f"Pool({result_code.name}:{message_uid}:{message})")
+            self._logger.debug(f"Pool({result_code.name}:{message_uid}:{status})")
 
             if result_code == ResultCode.FAILED:
                 self._logger.debug(f"Early exit! uid={message_uid}")

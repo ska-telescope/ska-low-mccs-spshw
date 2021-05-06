@@ -855,7 +855,7 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
-    def test_On_RCL(self, device_under_test, dummy_json_args):
+    def test_On(self, device_under_test, dummy_json_args):
         """
         Test for On.
 

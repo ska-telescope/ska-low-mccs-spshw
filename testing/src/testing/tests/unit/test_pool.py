@@ -52,16 +52,7 @@ class TestDevicePool:
     """
 
     @pytest.fixture()
-    def test_uid(self):
-        """
-        A UID for testing
-        :return: a test UID
-        :rtype: str
-        """
-        return "1234-5678-9012"
-
-    @pytest.fixture()
-    def mock_factory(self, mocker, test_uid):
+    def mock_factory(self, mocker, test_string):
         """
         Fixture that provides a mock factory for device proxy mocks.
         This factory ensures that calls to a mock's command_inout method
@@ -69,14 +60,14 @@ class TestDevicePool:
 
         :param mocker: a wrapper around the :py:mod:`unittest.mock` package
         :type mocker: :py:class:`pytest_mock.mocker`
-        :param test_uid: a test UID
-        :type test_uid: str
+        :param test_string: a test string that we'll use as a UID
+        :type test_string: str
 
         :return: a factory for device proxy mocks
         :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
         """
         builder = MockDeviceBuilder()
-        builder.add_result_command("Foo", ResultCode.QUEUED, message_uid=test_uid)
+        builder.add_result_command("Foo", ResultCode.QUEUED, message_uid=test_string)
         builder.add_result_command("Disable", ResultCode.OK)
         builder.add_result_command("Off", ResultCode.OK)
         builder.add_result_command("Standby", ResultCode.OK)
@@ -136,7 +127,7 @@ class TestDevicePool:
             )
             MccsDeviceProxy(fqdn, logger).command_inout_reply.assert_called_once()
 
-    def test_invoke_command_with_callback(self, fqdns, device_pool, logger, test_uid):
+    def test_invoke_command_with_callback(self, fqdns, device_pool, logger, test_string):
         """
         Test of the
         :py:meth:`ska_low_mccs.pool.DevicePool.invoke_command_with_callback`
@@ -148,15 +139,15 @@ class TestDevicePool:
         :type device_pool: :py:class:`ska_low_mccs.pool.DevicePool`
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
-        :param test_uid: a test UID
-        :type test_uid: str
+        :param test_string: a test string that we'll use as a UID
+        :type test_string: str
         """
         requestor_fqdn = "test"
         requester_callback = "callback"
         assert device_pool.invoke_command_with_callback(
             "Foo", requestor_fqdn, requester_callback
         )
-        assert device_pool._responses.get(test_uid) is False
+        assert device_pool._responses.get(test_string) is False
         args = {"respond_to_fqdn": requestor_fqdn, "callback": requester_callback}
         json_string = json.dumps(args)
         for fqdn in fqdns:

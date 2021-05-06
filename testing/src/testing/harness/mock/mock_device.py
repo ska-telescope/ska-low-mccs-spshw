@@ -68,7 +68,7 @@ class MockDeviceBuilder:
         name: str,
         result_code: ResultCode,
         message_uid: str = None,
-        message: str = "Mock information-only message",
+        status: str = "Mock information-only message",
     ) -> None:
         """
         Tell this builder to build mocks with a specified command that
@@ -80,13 +80,13 @@ class MockDeviceBuilder:
             :py:class:`ska_tango_base.commands.ResultCode` that the\
             command should return
         :param message_uid: unique ID for this command's response
-        :param message: an information-only message for the command to
+        :param status: an information-only message for the command to
             return
         """
         if message_uid:
-            self.add_command(name, [[result_code], [message, message_uid]])
+            self.add_command(name, [[result_code], [status, message_uid]])
         else:
-            self.add_command(name, [[result_code], [message]])
+            self.add_command(name, [[result_code], [status]])
 
     def set_state(self: MockDeviceBuilder, state: tango.DevState) -> None:
         """

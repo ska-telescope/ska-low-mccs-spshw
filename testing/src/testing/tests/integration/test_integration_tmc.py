@@ -120,10 +120,7 @@ class TestMccsIntegrationTmc:
             if expected_result is None:
                 assert result is None
             else:
-                if command in ["On", "Startup"]:
-                    ((result_code,), (_, _)) = result
-                else:
-                    ((result_code,), (_,)) = result
+                ((result_code,), _) = result
                 assert result_code == expected_result
         except AsynReplyNotArrived as err:
             assert False, f"AsyncReplyNotArrived: {err}"

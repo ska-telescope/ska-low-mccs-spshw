@@ -758,14 +758,14 @@ class TpmDriver(HardwareDriver):
         self,
         integration_time=0.5,
         first_channel=0,
-        last_channel=512,
+        last_channel=511,
         time_mux_factor=2,
         carousel_enable=0x1,
     ):
         """
         Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and
-        last channel. Data are sent continuously until the
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
         StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
@@ -799,14 +799,14 @@ class TpmDriver(HardwareDriver):
         self,
         integration_time=0.5,
         first_channel=0,
-        last_channel=192,
+        last_channel=191,
         time_mux_factor=1,
         carousel_enable=0x0,
     ):
         """
         Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and
-        last channel. Data are sent continuously until the
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
         StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5

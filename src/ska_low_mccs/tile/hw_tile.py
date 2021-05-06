@@ -1115,7 +1115,7 @@ class HwTile(object):
             self.logger.debug("C2C burst is not supported by CPLD.")
 
     @connected
-    def synchronised_data_operation(self, seconds=0.2, timestamp=None):
+    def synchronised_data_operation(self, timestamp=None, seconds=0.2):
         """
         Synchronise data operations between FPGAs.
 
@@ -1412,7 +1412,6 @@ class HwTile(object):
                 self.tpm.set_lmc_ip(dst_ip, dst_port)
         else:
             logging.warning("Supported modes are 1g, 10g")
-            return
 
     def stop_data_transmission(self):
         """
@@ -1468,7 +1467,7 @@ class HwTile(object):
         self,
         integration_time=0.5,
         first_channel=0,
-        last_channel=512,
+        last_channel=511,
         time_mux_factor=2,
         carousel_enable=0x1,
     ):
@@ -1487,7 +1486,7 @@ class HwTile(object):
         :type carousel_enable: int, optional
         """
         for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].configure(
+            self.tpm.tpm_integrator[i].configure_parameters(
                 "channel",
                 integration_time,
                 first_channel,
@@ -1501,7 +1500,7 @@ class HwTile(object):
         self,
         integration_time=0.5,
         first_channel=0,
-        last_channel=192,
+        last_channel=191,
         time_mux_factor=1,
         carousel_enable=0x0,
     ):
@@ -1520,7 +1519,7 @@ class HwTile(object):
         :type carousel_enable: int, optional
         """
         for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].configure(
+            self.tpm.tpm_integrator[i].configure_parameters(
                 "beamf",
                 integration_time,
                 first_channel,

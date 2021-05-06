@@ -2992,7 +2992,7 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             integration_time = params.get("IntegrationTime", 0.5)
             first_channel = params.get("FirstChannel", 0)
-            last_channel = params.get("LastChannel", 512)
+            last_channel = params.get("LastChannel", 511)
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_channel_data(
@@ -3012,15 +3012,15 @@ class MccsTile(SKABaseDevice):
     def ConfigureIntegratedChannelData(self, argin):
         """
         Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and
-        last channel. Data are sent continuously until the
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
         StopIntegratedChannelData command is run.
 
         :param argin: json dictionary with optional keywords:
 
         * integration time - (float) in seconds (default = 0.5)
         * first_channel - (int) default 0
-        * last_channel - (int) default 512
+        * last_channel - (int) default 511
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3030,7 +3030,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 512)
+        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 511)
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
@@ -3103,7 +3103,7 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             integration_time = params.get("IntegrationTime", 0.5)
             first_channel = params.get("FirstChannel", 0)
-            last_channel = params.get("LastChannel", 192)
+            last_channel = params.get("LastChannel", 191)
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_beam_data(
@@ -3131,7 +3131,7 @@ class MccsTile(SKABaseDevice):
 
         * integration time - (float) in seconds (default = 0.5)
         * first_channel - (int) default 0
-        * last_channel - (int) default 192
+        * last_channel - (int) default 191
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3141,7 +3141,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142, 0, 192)
+        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142, 0, 191)
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)

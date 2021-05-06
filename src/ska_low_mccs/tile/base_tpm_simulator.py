@@ -704,7 +704,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self,
         integration_time=0.5,
         first_channel=0,
-        last_channel=512,
+        last_channel=511,
         time_mux_factor=2,
         carousel_enable=1,
     ):
@@ -729,11 +729,21 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: configure_integrated_channel_data")
         raise NotImplementedError
 
+    def stop_integrated_channel_data(self):
+        """
+        Stop the integrated channel data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated channel data")
+        raise NotImplementedError
+
     def configure_integrated_beam_data(
         self,
         integration_time=0.5,
         first_channel=0,
-        last_channel=192,
+        last_channel=191,
         time_mux_factor=1,
         carousel_enable=0,
     ):
@@ -756,6 +766,26 @@ class BaseTpmSimulator(HardwareSimulator):
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator: configure_integrated_beam_data")
+        raise NotImplementedError
+
+    def stop_integrated_beam_data(self):
+        """
+        Stop the integrated beam data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated beam data")
+        raise NotImplementedError
+
+    def stop_integrated_data(self):
+        """
+        Stop the integrated data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated data")
         raise NotImplementedError
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):

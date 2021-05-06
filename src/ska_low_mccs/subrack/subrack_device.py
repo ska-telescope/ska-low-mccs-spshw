@@ -180,8 +180,8 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         :type subrack_ip: str
         :param subrack_port: port address of subrack control port
         :type subrack_port: int
-        :param tpm_count: Optional number of TPMs that are attached to
-            the subrack. If omitted, the subrack uses its own default
+        :param tpm_count: Optional number of TPM slots that are available 
+            in the the subrack. If omitted, the subrack uses its own default
             value.
         :type tpm_count: int
         :param _factory: allows for substitution of a hardware factory.
@@ -198,10 +198,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
         super().__init__(hardware_factory, SubrackHardwareHealthEvaluator())
 
-        if tpm_count is None:
-            self._tpm_count = 8
-        else:
-            self._tpm_count = tpm_count
+        self._tpm_count = tpm_count or 8 
         self._are_tpms_on = [False] * self._tpm_count
         self._last_update_time = 0
         self._are_tpms_on_change_callback = are_tpms_on_change_callback

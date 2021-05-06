@@ -408,7 +408,7 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-                            "TileIp": [
+                            "TpmIp": [
                                 "10.0.10.214"
                             ],
                             "TpmCpldPort": [
@@ -416,8 +416,7 @@
                             ],
 			    "TpmVersion": [
 				"tpm_v1_6"
-			    ]
-
+                            ]
                         },
                         "attribute_properties": {
                             "simulationMode": {

@@ -55,11 +55,11 @@ class TpmTestFirmware(FirmwareBlock):
         super(TpmTestFirmware, self).__init__(board)
 
         # Device must be specified in kwargs
-        if kwargs.get("device", None) is None:
+        if 'device' not in kwargs:
             raise PluginError("TpmTestFirmware requires device argument")
         self._device = kwargs["device"]
 
-        if kwargs.get("fsample", None) is None:
+        if 'fsample' not in kwargs:
             logging.info("TpmTestFirmware: Setting default sampling frequency 800 MHz.")
             self._fsample = 800e6
         else:
@@ -135,14 +135,14 @@ class TpmTestFirmware(FirmwareBlock):
 
         if self._device_name == "fpga1":
 
-            fpga0_phase = self.board["fpga1.pps_manager.sync_status.cnt_hf_pps"]
+            fpga1_phase = self.board["fpga1.pps_manager.sync_status.cnt_hf_pps"]
 
             # restore previous counters status using PPS phase
             self.board["fpga1.pps_manager.sync_tc.cnt_1_pulse"] = 0
             time.sleep(1.1)
             for n in range(5):
-                fpga0_cnt_hf_pps = self.board["fpga1.pps_manager.sync_phase.cnt_hf_pps"]
-                if abs(fpga0_cnt_hf_pps - fpga0_phase) <= 3:
+                fpga1_cnt_hf_pps = self.board["fpga1.pps_manager.sync_phase.cnt_hf_pps"]
+                if abs(fpga1_cnt_hf_pps - fpga1_phase) <= 3:
                     logging.debug("FPGA1 clock synced to PPS phase!")
                     break
                 else:
@@ -153,13 +153,13 @@ class TpmTestFirmware(FirmwareBlock):
         if self._device_name == "fpga2":
 
             # Synchronize FPGA2 to FPGA1 using sysref phase
-            fpga0_phase = self.board["fpga1.pps_manager.sync_phase.cnt_1_sysref"]
+            fpga1_phase = self.board["fpga1.pps_manager.sync_phase.cnt_1_sysref"]
 
             self.board["fpga2.pps_manager.sync_tc.cnt_1_pulse"] = 0x0
             sleep(0.1)
             for n in range(5):
-                fpga1_phase = self.board["fpga2.pps_manager.sync_phase.cnt_1_sysref"]
-                if fpga0_phase == fpga1_phase:
+                fpga2_phase = self.board["fpga2.pps_manager.sync_phase.cnt_1_sysref"]
+                if fpga1_phase == fpga2_phase:
                     logging.debug("FPGA2 clock synced to SYSREF phase!")
                     break
                 else:

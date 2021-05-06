@@ -72,7 +72,7 @@ class Tile16(Tile12):
 
     def __init__(
         self,
-        ip="10.0.10.2",
+        ip="0.0.0.0",
         port=10000,
         lmc_ip="10.0.10.1",
         lmc_port=4660,

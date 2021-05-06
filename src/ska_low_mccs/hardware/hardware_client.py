@@ -58,6 +58,7 @@ class HardwareClient:
         Create a new instance.
 
         :param ip_address: IP address of server
+        :type ip_address: str
         :param port: Port of server
         :type port: int
         """
@@ -151,7 +152,7 @@ class WebHardwareClient(HardwareClient):
         try:
             self._conn = requests.request(
                 "GET",
-                url="http://" + self._ip + ":" + str(self._port),
+                url=f"http://{self._ip}:{self._port}",
                 timeout=2,
             )
         except requests.exceptions.RequestException:
@@ -169,7 +170,7 @@ class WebHardwareClient(HardwareClient):
             try:
                 self._conn = requests.request(
                     "GET",
-                    url="http://" + self._ip + ":" + str(self._port),
+                    url=f"http://{self._ip}:{self._port}",
                     timeout=10,
                 )
             except requests.exceptions.RequestException:
@@ -196,9 +197,9 @@ class WebHardwareClient(HardwareClient):
                     "retvalue": "",
                 }
 
-        path = "http://" + self._ip + ":" + str(self._port)
+        path = f"http://{self._ip}:{self._port}"
         query = {"type": "command", "param": command, "value": parameters}
-        res = requests.get(url=path + "/get/json.htm", params=query)
+        res = requests.get(url=f"{path}/get/json.htm", params=query)
 
         if res.status_code != requests.codes.ok:
             return {
@@ -237,10 +238,10 @@ class WebHardwareClient(HardwareClient):
                     "attribute": attribute,
                     "value": None,
                 }
-        path = "http://" + self._ip + ":" + str(self._port)
+        path = f"http://{self._ip}:{self._port}"
 
         query = {"type": "getattribute", "param": attribute}
-        res = requests.get(url=path + "/get/json.htm", params=query)
+        res = requests.get(url=f"{path}/get/json.htm", params=query)
 
         if res.status_code != requests.codes.ok:
             return {
@@ -273,9 +274,9 @@ class WebHardwareClient(HardwareClient):
                     "value": None,
                 }
 
-        path = "http://" + self._ip + ":" + str(self._port)
+        path = f"http://{self._ip}:{self._port}"
         query = {"type": "set_attribute", "param": attribute, "value": value}
-        res = requests.get(url=path + "/get/json.htm", params=query)
+        res = requests.get(url=f"{path}/get/json.htm", params=query)
 
         if res.status_code != requests.codes.ok:
             return {

@@ -5,5 +5,4 @@ plantweb
 Sphinx == 3.0.1
 sphinx-rtd-theme >= 0.4.3
 sphinx-autodoc-typehints
-uritools
 requests

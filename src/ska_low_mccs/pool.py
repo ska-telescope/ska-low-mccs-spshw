@@ -134,7 +134,7 @@ class DevicePool:
             [result_code], [status, message_uid] = device.command_inout(
                 command_name, json_string
             )
-            self._logger.debug(f"Pool({result_code.name}:{message_uid}:{status})")
+            self._logger.debug(f"Pool({result_code}:{message_uid}:{status})")
 
             if result_code == ResultCode.FAILED:
                 self._logger.debug(f"Early exit! uid={message_uid}")
@@ -144,7 +144,7 @@ class DevicePool:
                 self._logger.debug(f"Added response {message_uid}")
                 self._responses[message_uid] = False
             else:
-                self._logger.debug(f"Response NOT ADDED! rc={result_code.name}")
+                self._logger.debug(f"Response NOT ADDED! rc={result_code}")
 
         return True
 

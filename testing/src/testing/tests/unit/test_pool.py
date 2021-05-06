@@ -127,7 +127,9 @@ class TestDevicePool:
             )
             MccsDeviceProxy(fqdn, logger).command_inout_reply.assert_called_once()
 
-    def test_invoke_command_with_callback(self, fqdns, device_pool, logger, test_string):
+    def test_invoke_command_with_callback(
+        self, fqdns, device_pool, logger, test_string
+    ):
         """
         Test of the
         :py:meth:`ska_low_mccs.pool.DevicePool.invoke_command_with_callback`

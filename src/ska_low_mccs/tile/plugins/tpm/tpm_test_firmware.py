@@ -55,11 +55,11 @@ class TpmTestFirmware(FirmwareBlock):
         super(TpmTestFirmware, self).__init__(board)
 
         # Device must be specified in kwargs
-        if 'device' not in kwargs:
+        if "device" not in kwargs:
             raise PluginError("TpmTestFirmware requires device argument")
         self._device = kwargs["device"]
 
-        if 'fsample' not in kwargs:
+        if "fsample" not in kwargs:
             logging.info("TpmTestFirmware: Setting default sampling frequency 800 MHz.")
             self._fsample = 800e6
         else:

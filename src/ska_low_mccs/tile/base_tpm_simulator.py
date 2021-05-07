@@ -727,8 +727,6 @@ class BaseTpmSimulator(HardwareSimulator):
         integration_time=0.5,
         first_channel=0,
         last_channel=511,
-        time_mux_factor=2,
-        carousel_enable=1,
     ):
         """
         Configure the transmission of integrated channel data with the
@@ -740,10 +738,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -766,8 +760,6 @@ class BaseTpmSimulator(HardwareSimulator):
         integration_time=0.5,
         first_channel=0,
         last_channel=191,
-        time_mux_factor=1,
-        carousel_enable=0,
     ):
         """
         Configure the transmission of integrated beam data with the
@@ -779,10 +771,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

@@ -119,12 +119,6 @@ class Tile12(object):
 
         self._sampling_rate = sampling_rate
 
-        # Threads for continuously sending data
-        self._RUNNING = 2
-        self._ONCE = 1
-        self._STOP = 0
-        self._daq_threads = {}
-
         # Mapping between preadu and TPM inputs
         self.fibre_preadu_mapping = {
             0: 1,
@@ -326,7 +320,6 @@ class Tile12(object):
         for firmware in self.tpm.tpm_test_firmware:
             firmware.check_ddr_initialisation()
 
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
         # Initialise beamformer using a standard configuration,
         # only not to leave it in an unprogrammed state
         # single beam, 300 MHz bandwidth, 50-350 MHz
@@ -345,8 +338,6 @@ class Tile12(object):
         # Perform synchronisation
         self.post_synchronisation()
 
-=======
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
     def program_fpgas(self, bitfile):
         """
         Program both FPGAs with specified firmware.
@@ -374,14 +365,10 @@ class Tile12(object):
 
     def program_cpld(self, bitfile):
         """
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
         Program CPLD with specified bitfile. Use with VERY GREAT care,
         this might leave the FPGA in an unreachable state. TODO Wiser to
         leave the method out altogether and use a dedicated utility
         instead?
-=======
-        Program CPLD with specified bitfile.
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
         :param bitfile: Bitfile to flash to CPLD
 
@@ -1140,10 +1127,7 @@ class Tile12(object):
         return True
 
     # ---------------------------- Pointing and calibration routines ---------------------------
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
     @connected
-=======
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
         Initialise tile and station beamformers for a simple single beam
@@ -1174,6 +1158,7 @@ class Tile12(object):
         self.tpm.station_beamf[0].defineChannelTable([[start_channel, nof_channels, 0]])
         self.tpm.station_beamf[1].defineChannelTable([[start_channel, nof_channels, 0]])
 
+    @connected
     def set_beamformer_regions(self, region_array):
         """
         Set frequency regions.
@@ -1198,6 +1183,7 @@ class Tile12(object):
         self.tpm.station_beamf[0].defineChannelTable(region_array)
         self.tpm.station_beamf[1].defineChannelTable(region_array)
 
+    @connected
     def set_pointing_delay(self, delay_array, beam_index):
         """
         The method specifies the delay in seconds and the delay rate in
@@ -1214,6 +1200,7 @@ class Tile12(object):
         self.tpm.beamf_fd[0].set_delay(delay_array[0:8], beam_index)
         self.tpm.beamf_fd[1].set_delay(delay_array[8:], beam_index)
 
+    @connected
     def load_pointing_delay(self, load_time=0):
         """
         Delay is updated inside the delay engine at the time specified
@@ -1227,11 +1214,12 @@ class Tile12(object):
         self.tpm.beamf_fd[0].load_delay(load_time)
         self.tpm.beamf_fd[1].load_delay(load_time)
 
-    def load_calibration_coefficients(self, antenna, calibration_coefs):
+    @connected
+    def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
         Loads calibration coefficients.
-        calibration_coefs is a bi-dimensional complex array of the form
-        calibration_coefs[channel, polarization], with each element representing
+        calibration_coefficients is a bi-dimensional complex array of the form
+        calibration_coefficients[channel, polarization], with each element representing
         a normalized coefficient, with (1.0, 0.0) the normal, expected response for
         an ideal antenna.
         Channel is the index specifying the channels at the beamformer output,
@@ -1246,19 +1234,15 @@ class Tile12(object):
 
         :param antenna: Antenna number (0-15)
         :type antenna: int
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
         :param calibration_coefficients: Calibration coefficient array
         :type calibration_coefficients: list(float)
-=======
-        :param calibration_coefs: Calibration coefficient array
-        :type calibration_coefs: list(float)
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
         """
         if antenna < 8:
-            self.tpm.beamf_fd[0].load_calibration(antenna, calibration_coefs)
+            self.tpm.beamf_fd[0].load_calibration(antenna, calibration_coefficients)
         else:
-            self.tpm.beamf_fd[1].load_calibration(antenna - 8, calibration_coefs)
+            self.tpm.beamf_fd[1].load_calibration(antenna - 8, calibration_coefficients)
 
+    @connected
     def load_antenna_tapering(self, beam, tapering_coefficients):
         """
         tapering_coefficients is a vector of 16 values, one per antenna.
@@ -1275,6 +1259,7 @@ class Tile12(object):
         self.tpm.beamf_fd[0].load_antenna_tapering(tapering_coefficients[0:8])
         self.tpm.beamf_fd[1].load_antenna_tapering(tapering_coefficients[8:])
 
+    @connected
     def load_beam_angle(self, angle_coefficients):
         """
         Angle_coefficients is an array of one element per beam,
@@ -1418,24 +1403,17 @@ class Tile12(object):
         :return: False for error (e.g. beamformer already running)
         :rtype bool:
         """
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
         mask = 0xFFFFF8  # Impose a time multiple of 8 frames
-=======
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
         if self.beamformer_is_running():
             return False
 
         if start_time == 0:
             start_time = self.current_station_beamformer_frame() + 40
 
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
         start_time &= mask  # Impose a start time multiple of 8 frames
-=======
-        start_time &= 0xFFFFFFF8  # Impose a start time multiple of 8 frames
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
         if duration != -1:
-            duration = duration & 0xFFFFFFF8
+            duration = duration & mask
 
         ret1 = self.tpm.station_beamf[0].start(start_time, duration)
         ret2 = self.tpm.station_beamf[1].start(start_time, duration)
@@ -1444,12 +1422,7 @@ class Tile12(object):
             return True
         else:
             self.abort()
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
             return False
-=======
-
-        return False
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
     def stop_beamformer(self):
         """
@@ -1755,7 +1728,6 @@ class Tile12(object):
     # --------------- Wrapper for data acquisition: ------------------------------------
 
     @connected
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
     def configure_integrated_channel_data(
         self,
         integration_time=0.5,
@@ -1831,68 +1803,6 @@ class Tile12(object):
         Stop transmission of integrated data.
         """
         for i in range(len(self.tpm.tpm_integrator)):
-=======
-    def configure_integrated_channel_data(self, integration_time=0.5):
-        """
-        Configure continuous integrated channel data lmc integrator
-        module will generate an integrated channel spectrum at end of
-        each integration, until stop_integrated_channel_data() is
-        issued.
-
-        :param integration_time: integration time in seconds
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].configure(
-                "channel",
-                integration_time,
-                first_channel=0,
-                last_channel=512,
-                time_mux_factor=2,
-                carousel_enable=0x1,
-            )
-
-    @connected
-    def configure_integrated_beam_data(self, integration_time=0.5):
-        """
-        Configure continuous integrated beam data lmc integrator module
-        will generate an integrated channel spectrum at end of each
-        integration, until stop_integrated_beam_data() is issued.
-
-        :param integration_time: integration time in seconds
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].configure(
-                "beamf",
-                integration_time,
-                first_channel=0,
-                last_channel=192,
-                time_mux_factor=1,
-                carousel_enable=0x0,
-            )
-
-    @connected
-    def stop_integrated_beam_data(self):
-        """
-        Stop transmission of integrated beam data.
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].stop_integrated_beam_data()
-
-    @connected
-    def stop_integrated_channel_data(self):
-        """
-        Stop transmission of integrated beam data.
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].stop_integrated_channel_data()
-
-    @connected
-    def stop_integrated_data(self):
-        """
-        Stop transmission of integrated data.
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
             self.tpm.tpm_integrator[i].stop_integrated_data()
 
     @connected
@@ -1901,7 +1811,6 @@ class Tile12(object):
         send raw data from the TPM.
 
         :param timestamp: When to start. Default now.
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
         :type timestamp: int, optional
         :param seconds: delay with respect to timestamp, in seconds
         :type seconds: float, optional
@@ -1910,20 +1819,12 @@ class Tile12(object):
         """
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(secondsi=seconds, timestamp=timestamp)
-=======
-        :param seconds: delay with respect to timestamp, in seconds
-        :param sync: Get synchronised packets
-        """
-        # Data transmission should be synchronised across FPGAs
-        self.synchronised_data_operation(seconds, timestamp)
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
         # Send data from all FPGAs
         for i in range(len(self.tpm.tpm_test_firmware)):
             if sync:
                 self.tpm.tpm_test_firmware[i].send_raw_data_synchronised()
             else:
                 self.tpm.tpm_test_firmware[i].send_raw_data()
-<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
 
     @connected
     def send_channelised_data(
@@ -2038,8 +1939,6 @@ class Tile12(object):
             self.tpm.tpm_test_firmware[i].send_channelised_data_narrowband(
                 frequency, round_bits, number_of_samples
             )
-=======
->>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
     # ---------------------------- Wrapper for test generator ----------------------------
     @connected

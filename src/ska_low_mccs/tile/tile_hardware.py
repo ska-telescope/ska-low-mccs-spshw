@@ -705,29 +705,89 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         self._factory.hardware.load_pointing_delay(load_time)
 
-    def configure_integrated_channel_data(self, integration_time=None):
+    def configure_integrated_channel_data(
+        self,
+        integration_time=None,
+        first_channel=None,
+        last_channel=None,
+        time_mux_factor=2,
+        carousel_enable=1,
+    ):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self._factory.hardware.configure_integrated_channel_data(
-            integration_time=integration_time
+            integration_time=integration_time,
+            first_channel=first_channel,
+            last_channel=last_channel,
+            time_mux_factor=time_mux_factor,
+            carousel_enable=carousel_enable,
         )
 
-    def configure_integrated_beam_data(self, integration_time=None):
+    def stop_integrated_channel_data(self):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time.
+        Stop integrated channel data.
+        """
+        self._factory.hardware.stop_integrated_channel_data()
+
+    def configure_integrated_beam_data(
+        self,
+        integration_time=None,
+        first_channel=None,
+        last_channel=None,
+        time_mux_factor=1,
+        carousel_enable=0,
+    ):
+        """
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self._factory.hardware.configure_integrated_beam_data(
-            integration_time=integration_time
+            integration_time=integration_time,
+            first_channel=first_channel,
+            last_channel=last_channel,
+            time_mux_factor=time_mux_factor,
+            carousel_enable=carousel_enable,
         )
+
+    def stop_integrated_beam_data(self):
+        """
+        Stop integrated beam data.
+        """
+        self._factory.hardware.stop_integrated_beam_data()
+
+    def stop_integrated_data(self):
+        """
+        Stop integrated data.
+        """
+        self._factory.hardware.stop_integrated_data()
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=None):
         """

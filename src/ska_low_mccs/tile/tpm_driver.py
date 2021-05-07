@@ -565,12 +565,11 @@ class TpmDriver(HardwareDriver):
         :type dst_port: int, optional
         :param lmc_mac: LMC MAC address, defaults to None
         :type lmc_mac: str, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_lmc_download")
-        raise NotImplementedError
+        self.tile.set_lmc_download(
+            mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
+        )
 
     def set_channeliser_truncation(self, array):
         """
@@ -755,33 +754,94 @@ class TpmDriver(HardwareDriver):
         self.tile.stop_beamformer()
         self._is_beamformer_running = False
 
-    def configure_integrated_channel_data(self, integration_time=0.5):
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=511,
+        time_mux_factor=2,
+        carousel_enable=0x1,
+    ):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
-        raise NotImplementedError
+        self.tile.configure_integrated_channel_data(
+            integration_time,
+            first_channel,
+            last_channel,
+            time_mux_factor,
+            carousel_enable,
+        )
 
-    def configure_integrated_beam_data(self, integration_time=0.5):
+    def stop_integrated_channel_data(self):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time.
+        Stop the integrated channel data.
+        """
+        self.logger.debug("TpmDriver: Stop integrated channel data")
+        self.tile.stop_integrated_channel_data()
+
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=191,
+        time_mux_factor=1,
+        carousel_enable=0x0,
+    ):
+        """
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
-        raise NotImplementedError
+        self.tile.configure_integrated_beam_data(
+            integration_time,
+            first_channel,
+            last_channel,
+            time_mux_factor,
+            carousel_enable,
+        )
+
+    def stop_integrated_beam_data(self):
+        """
+        Stop the integrated beam data.
+        """
+        self.logger.debug("TpmDriver: Stop integrated beam data")
+        self.tile.stop_integrated_beam_data()
+
+    def stop_integrated_data(self):
+        """
+        Stop the integrated data.
+        """
+        self.logger.debug("TpmDriver: Stop integrated data")
+        self.tile.stop_integrated_data()
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
@@ -819,12 +879,15 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data")
-        raise NotImplementedError
+        self.tile.send_channelised_data(
+            number_of_samples,
+            first_channel,
+            last_channel,
+            timestamp,
+            seconds,
+        )
 
     def send_channelised_data_continuous(
         self,
@@ -847,12 +910,11 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
-        raise NotImplementedError
+        self.tile.send_channelised_data_continuous(
+            channel_id, number_of_samples, wait_seconds, timestamp, seconds
+        )
 
     def send_beam_data(self, timestamp=None, seconds=0.2):
         """
@@ -862,22 +924,16 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_beam_data")
-        raise NotImplementedError
+        self.tile.send_beam_data(timestamp, seconds)
 
     def stop_data_transmission(self):
         """
-        Stop data transmission.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        Stop data transmission for send_channelised_data_continuous.
         """
         self.logger.debug("TpmDriver: stop_data_transmission")
-        raise NotImplementedError
+        self.tile.stop_data_transmission()
 
     def start_acquisition(self, start_time=None, delay=2):
         """
@@ -948,12 +1004,17 @@ class TpmDriver(HardwareDriver):
         :type dst_port: int, optional
         :param lmc_mac: MAC address of destination, defaults to None
         :type lmc_mac: str, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
-        raise NotImplementedError
+        self.tile.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip,
+            src_port,
+            dst_port,
+            lmc_mac,
+        )
 
     def send_raw_data_synchronised(self, timestamp=None, seconds=0.2):
         """
@@ -963,12 +1024,9 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_raw_data_synchronised")
-        raise NotImplementedError
+        self.tile.send_raw_data(timestamp, seconds, sync=True)
 
     @property
     def current_tile_beamformer_frame(self):
@@ -1030,12 +1088,11 @@ class TpmDriver(HardwareDriver):
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        raise NotImplementedError
+        self.tile.send_channelised_data_narrowband(
+            frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds
+        )
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -1117,7 +1174,7 @@ class TpmDriver(HardwareDriver):
         """
         self._test_generator_active = active
 
-    def set_test_generator(
+    def configure_test_generator(
         self,
         frequency0,
         amplitude0,

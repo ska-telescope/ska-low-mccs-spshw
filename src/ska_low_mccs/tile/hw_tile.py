@@ -185,7 +185,7 @@ class HwTile(object):
                         logger=self.logger,
                     )
             else:
-                self.logger.warn("TPM is not programmed! No plugins loaded")
+                self.logger.warning("TPM is not programmed! No plugins loaded")
 
     def is_programmed(self):
         """
@@ -211,7 +211,7 @@ class HwTile(object):
         """
         # Before initialing, check if TPM is programmed
         if self.tpm is None or not self.tpm.is_programmed():
-            self.logger.waring("Cannot initialise; board is not programmed")
+            self.logger.warning("Cannot initialise; board is not programmed")
             return
 
         # Connect to board
@@ -640,7 +640,7 @@ class HwTile(object):
         # if trunc is a single value, apply to all channels
         if type(trunc) == int:
             if 0 > trunc or trunc > 7:
-                self.logger.warn(
+                self.logger.warning(
                     "Could not set channeliser truncation to "
                     + str(trunc)
                     + ", setting to 0"
@@ -673,7 +673,7 @@ class HwTile(object):
                 self["fpga2.channelizer.block_sel"] = 2 * i + 1
                 self["fpga2.channelizer.rescale_data"] = trunc_vec2
             else:
-                self.logger.warn("Signal " + str(i) + " is outside range (0:31)")
+                self.logger.warning("Signal " + str(i) + " is outside range (0:31)")
 
     @connected
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
@@ -1115,7 +1115,7 @@ class HwTile(object):
             self.logger.debug("C2C burst is not supported by CPLD.")
 
     @connected
-    def synchronised_data_operation(self, seconds=0.2, timestamp=None):
+    def synchronised_data_operation(self, timestamp=None, seconds=0.2):
         """
         Synchronise data operations between FPGAs.
 
@@ -1286,22 +1286,361 @@ class HwTile(object):
 
     # ------------------------ Wrapper for spigot generators ----------------------
     @connected
+    def set_lmc_integrated_download(
+        self,
+        mode,
+        channel_payload_length,
+        beam_payload_length,
+        dst_ip=None,
+        src_port=0xF0D0,
+        dst_port=4660,
+        lmc_mac=None,
+    ):
+        """
+        Configure link and size of control data.
+
+        :param mode: 1g or 10g
+        :param channel_payload_length: SPEAD payload length for integrated channel data
+        :param beam_payload_length: SPEAD payload length for integrated beam data
+        :param dst_ip: Destination IP
+        :param src_port: Source port for integrated data streams
+        :param dst_port: Destination port for integrated data streams
+        :param lmc_mac: LMC Mac address is required for 10G lane configuration
+        """
+
+        # Using 10G lane
+        if mode.upper() == "10G":
+            if lmc_mac is None:
+                logging.error("LMC MAC must be specified for 10G lane configuration")
+                return
+
+            # If dst_ip is None, use local lmc_ip
+            if dst_ip is None:
+                dst_ip = self._lmc_ip
+
+            if self.tpm.tpm_test_firmware[0].xg_40g_eth:
+                self.configure_40g_core(
+                    1, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+                )
+
+                self.configure_40g_core(
+                    0, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+                )
+            else:
+                self.configure_10g_core(
+                    2,
+                    dst_mac=lmc_mac,
+                    dst_ip=dst_ip,
+                    src_port=src_port,
+                    dst_port=dst_port,
+                )
+
+                self.configure_10g_core(
+                    6,
+                    dst_mac=lmc_mac,
+                    dst_ip=dst_ip,
+                    src_port=src_port,
+                    dst_port=dst_port,
+                )
+
+        # Using dedicated 1G link
+        elif mode.upper() == "1G":
+            pass
+        else:
+            logging.error("Supported mode are 1g, 10g")
+            return
+
+        # Setting payload lengths
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure_download(
+                mode, channel_payload_length, beam_payload_length
+            )
+
+    @connected
+    def set_lmc_download(
+        self,
+        mode,
+        payload_length=1024,
+        dst_ip=None,
+        src_port=0xF0D0,
+        dst_port=4660,
+        lmc_mac=None,
+    ):
+        """
+        Configure link and size of control data.
+
+        :param mode: 1g or 10g
+        :param payload_length: SPEAD payload length in bytes
+        :param dst_ip: Destination IP
+        :param src_port: Source port for integrated data streams
+        :param dst_port: Destination port for integrated data streams
+        :param lmc_mac: LMC Mac address is required for 10G lane configuration
+        """
+        # Using 10G lane
+        if mode.upper() == "10G":
+            if payload_length >= 8193:
+                logging.warning("Packet length too large for 10G")
+                return
+
+            if lmc_mac is None:
+                logging.warning("LMC MAC must be specified for 10G lane configuration")
+                return
+
+            # If dst_ip is None, use local lmc_ip
+            if dst_ip is None:
+                dst_ip = self._lmc_ip
+
+            self.configure_10g_core(
+                2, dst_mac=lmc_mac, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+            )
+
+            self.configure_10g_core(
+                6, dst_mac=lmc_mac, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
+            )
+
+            self["fpga1.lmc_gen.payload_length"] = payload_length
+            self["fpga2.lmc_gen.payload_length"] = payload_length
+
+            self["fpga1.lmc_gen.tx_demux"] = 2
+            self["fpga2.lmc_gen.tx_demux"] = 2
+
+        # Using dedicated 1G link
+        elif mode.upper() == "1G":
+            self["fpga1.lmc_gen.tx_demux"] = 1
+            self["fpga2.lmc_gen.tx_demux"] = 1
+            if dst_ip is not None:
+                self.tpm.set_lmc_ip(dst_ip, dst_port)
+        else:
+            logging.warning("Supported modes are 1g, 10g")
+
+    def stop_data_transmission(self):
+        """
+        Stop sending channelised data.
+        """
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].stop_channelised_data_continuous()
+
+    def stop_integrated_beam_data(self):
+        """
+        Stop transmission of integrated beam data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_beam_data()
+
+    def stop_integrated_channel_data(self):
+        """
+        Stop transmission of integrated beam data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_channel_data()
+
+    def stop_integrated_data(self):
+        """
+        Stop transmission of integrated data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_data()
+
+    @connected
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
         send raw data from the TPM.
 
         :param timestamp: When to start. Default now.
+        :type timestamp: int, optional
         :param seconds: delay with respect to timestamp, in seconds
-        :param sync: Get synchronised packets
+        :type seconds: float, optional
+        :param sync: Get synchronised
+        :type sync: bool, optional
         """
         # Data transmission should be synchronised across FPGAs
-        self.synchronised_data_operation(seconds, timestamp)
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
         # Send data from all FPGAs
         for i in range(len(self.tpm.tpm_test_firmware)):
             if sync:
                 self.tpm.tpm_test_firmware[i].send_raw_data_synchronised()
             else:
                 self.tpm.tpm_test_firmware[i].send_raw_data()
+
+    @connected
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=511,
+        time_mux_factor=2,
+        carousel_enable=0x1,
+    ):
+        """
+        Configure and start continuous integrated channel data.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure_parameters(
+                "channel",
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor,
+                carousel_enable,
+            )
+
+    @connected
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=191,
+        time_mux_factor=1,
+        carousel_enable=0x0,
+    ):
+        """
+        Configure and start continuous integrated beam data.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure_parameters(
+                "beamf",
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor,
+                carousel_enable,
+            )
+
+    @connected
+    def send_channelised_data(
+        self,
+        number_of_samples=1024,
+        first_channel=0,
+        last_channel=511,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        send channelised data from the TPM.
+
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param first_channel: first channel to send
+        :type first_channel: int, optional
+        :param last_channel: last channel to send
+        :type last_channel: int, optional
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data(
+                number_of_samples, first_channel, last_channel
+            )
+
+    @connected
+    def send_beam_data(self, timestamp=None, seconds=0.2):
+        """
+        Transmit a snapshot containing beamformed data.
+
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_beam_data()
+
+    @connected
+    def send_channelised_data_continuous(
+        self,
+        channel_id,
+        number_of_samples=128,
+        wait_seconds=0,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        Transmit data from a channel continuously.
+
+        :param channel_id: index of channel to send
+        :type channel_id: int
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: float
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        time.sleep(wait_seconds)
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data_continuous(
+                channel_id, number_of_samples
+            )
+
+    @connected
+    def send_channelised_data_narrowband(
+        self,
+        frequency,
+        round_bits,
+        number_of_samples=128,
+        wait_seconds=0,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        Send channelised data from a single channel.
+
+        :param frequency: sky frequency to transmit
+        :type frequency: int
+        :param round_bits: which bits to round
+        :type round_bits: int
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: int, optional
+        :param timestamp: when to start
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        time.sleep(wait_seconds)
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data_narrowband(
+                frequency, round_bits, number_of_samples
+            )
 
     # ------------------------ Wrapper for index and attribute methods ---------------
     @connected

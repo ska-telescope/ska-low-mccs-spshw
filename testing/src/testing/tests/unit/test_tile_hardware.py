@@ -471,29 +471,29 @@ class TestCommon:
         :type hardware_under_test: object
         """
 
-        assert hardware_under_test.get_40g_configuration(-1) == []
+        assert hardware_under_test.get_40g_configuration(-1,0) == []
         assert hardware_under_test.get_40g_configuration("mock_core_id") is None
 
         hardware_under_test.configure_40g_core(
             "mock_core_id",
+            "mock_arp_table_entry",
             "mock_src_mac",
             "mock_src_ip",
             "mock_src_port",
-            "mock_dst_mac",
             "mock_dst_ip",
             "mock_dst_port",
         )
 
         expected = {
             "CoreID": "mock_core_id",
+            "ArpTableEntry": "mock_arp_table_entry",
             "SrcMac": "mock_src_mac",
             "SrcIP": "mock_src_ip",
             "SrcPort": "mock_src_port",
-            "DstMac": "ff:ff:ff:ff:ff:ff",
             "DstIP": "mock_dst_ip",
             "DstPort": "mock_dst_port",
         }
 
-        assert hardware_under_test.get_40g_configuration(-1) == [expected]
+        assert hardware_under_test.get_40g_configuration(-1,0) == [expected]
         assert hardware_under_test.get_40g_configuration("mock_core_id") == expected
         assert hardware_under_test.get_40g_configuration("another_core_id") is None

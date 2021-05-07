@@ -511,9 +511,7 @@ class TpmDriver(HardwareDriver):
             current_address = current_address + 4
 
     def configure_40g_core(
-        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_mac, dst_ip,
-            dst_port
-    ):
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port):
         """
         Configure the 40G code.
 
@@ -527,25 +525,15 @@ class TpmDriver(HardwareDriver):
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
         :type dst_port: int
         """
-        core_dict = {
-            "CoreID": core_id,
-            "ArpTableEntry": arp_table_entry,
-            "SrcMac": src_mac,
-            "SrcIP": src_ip,
-            "SrcPort": src_port,
-            "DstMac": dst_mac,
-            "DstIP": dst_ip,
-            "DstPort": dst_port,
-        }
-        self.logger.warning("TpmDriver: configure_40g_core is simulated")
-        self._forty_gb_core_list.append(core_dict)
+
+        self.logger.debug("TpmDriver: configure_40g_core")
+        self.tile.configure_40g_core(core_id, arp_table_entry, src_mac, src_ip,
+                                     dst_ip, src_port, dst_port)
 
     def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
@@ -556,18 +544,20 @@ class TpmDriver(HardwareDriver):
             configurations are returned, defaults to -1
         :type core_id: int, optional
         :param arp_table_entry: ARP table entry to use
-        :type arp_table_entry: int, optional
+        :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
         :rtype: dict or list(dict)
         """
-        self.logger.warning("TpmDriver: get_40g_configuration is simulated")
+        self.logger.debug("TpmDriver: get_40g_configuration")
         if core_id == -1:
-            return self._forty_gb_core_list
-        for item in self._forty_gb_core_list:
-            if item.get("CoreID") == core_id:
-                return item
-        return
+            for core in range(0,8):
+                self._forty_gb_core_list.append(self._tile.get_40g_configuration(
+                    core, arp_table_entry))
+        else:
+            self._forty_gb_core_list = self._tile.get_40g_configuration(core_id,
+                                                                        arp_table_entry)
+        return self._forty_gb_core_list
 
     def set_lmc_download(
         self,

@@ -1051,22 +1051,6 @@ class MccsTile(SKABaseDevice):
         )
 
     @attribute(
-        dtype=("DevString",),
-        max_dim_x=256,
-    )
-    def fortyGbDestinationMacs(self):
-        """
-        Return the destination MAC addresses for all 40Gb ports on the
-        tile.
-
-        :return: MAC addresses
-        :rtype: list(str)
-        """
-        return tuple(
-            item["DstMac"] for item in self.hardware_manager.get_40g_configuration()
-        )
-
-    @attribute(
         dtype=("DevLong",),
         max_dim_x=256,
     )
@@ -1867,10 +1851,6 @@ class MccsTile(SKABaseDevice):
             if src_port is None:
                 self.logger.error("SrcPort is a mandatory parameter")
                 raise ValueError("SrcPort is a mandatory parameter")
-            dst_mac = params.get("DstMac", None)
-            if dst_mac is None:
-                self.logger.error("DstMac is a mandatory parameter")
-                raise ValueError("DstMac is a mandatory parameter")
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
                 self.logger.error("DstIP is a mandatory parameter")
@@ -1882,7 +1862,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_mac, dst_ip,
+                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
                 dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1903,7 +1883,6 @@ class MccsTile(SKABaseDevice):
         * SrcMac - (string) mac address dot notation
         * SrcIP - (string) IP dot notation
         * SrcPort - (int) src port
-        * DstMac - (string) mac address dot notation
         * DstIP - (string) IP dot notation
         * DstPort - (int) dest port
 
@@ -1973,13 +1952,14 @@ class MccsTile(SKABaseDevice):
         * ArpTableEntry - (int) ARP table entry ID to use
 
         :return: the configuration is a json string comprising:
-                 src_mac, src_ip, src_port, dest_mac, dest_ip, dest_port
+                 src_mac, src_ip, src_port, dest_ip, dest_port
         :rtype: str
 
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> core_id = 2
+        >>> arp_table_entry = 0
         >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id,
         arp_table_entry)
         >>> params = json.loads(argout)
@@ -2000,8 +1980,6 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.SetLmcDownload` command
             functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

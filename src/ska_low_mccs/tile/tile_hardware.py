@@ -521,7 +521,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.write_address(address, values)
 
     def configure_40g_core(
-        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_mac, dst_ip,
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
             dst_port
     ):
         """
@@ -537,15 +537,13 @@ class TileHardwareManager(SimulableHardwareManager):
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
         :type dst_port: int
         """
         self._factory.hardware.configure_40g_core(
-            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_mac, dst_ip,
+            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
             dst_port
         )
 
@@ -558,7 +556,7 @@ class TileHardwareManager(SimulableHardwareManager):
             configurations are returned, defaults to -1
         :type core_id: int, optional
         :param arp_table_entry: ARP table entry to use
-        :type arp_table_entry: int, optional
+        :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
         :rtype: dict or list(dict)

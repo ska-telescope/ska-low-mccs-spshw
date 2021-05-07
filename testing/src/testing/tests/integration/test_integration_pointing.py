@@ -5,10 +5,7 @@ particularly tango devices.
 
 import pytest
 
-from ska_tango_base.commands import ResultCode
-
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.utils import call_with_json
 
 from testing.harness.tango_harness import TangoHarness
 
@@ -24,7 +21,7 @@ def devices_to_load():
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
+        "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -52,40 +49,46 @@ class TestMccsIntegration:
 
     def test_stationbeam_apply_pointing(self, tango_harness: TangoHarness):
         """
-        Test that an MccsController device can allocate resources to an
-        MccsSubarray device.
+        Test that a MccsStationBeam device can apply delays to
+        associated MccsTile devices.
 
         :param tango_harness: a test harness for tango devices
         """
-
-        station_1 = tango_harness.get_device("low-mccs/station/001")
-        station_2 = tango_harness.get_device("low-mccs/station/002")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
         stationbeam_1 = tango_harness.get_device("low-mccs/beam/001")
         stationbeam_2 = tango_harness.get_device("low-mccs/beam/002")
         stationbeam_3 = tango_harness.get_device("low-mccs/beam/003")
         stationbeam_4 = tango_harness.get_device("low-mccs/beam/004")
 
-        stationbeam_1._pointing_delay = [1.0] * 512
-        stationbeam_2._pointing_delay = [2.0] * 512
-        stationbeam_3._pointing_delay = [3.0] * 512
-        stationbeam_4._pointing_delay = [4.0] * 512
+        stationbeam_1.pointingDelay = [1.0] * 2
+        stationbeam_2.pointingDelay = [2.0] * 2
+        stationbeam_3.pointingDelay = [3.0] * 2
+        stationbeam_4.pointingDelay = [4.0] * 2
+        stationbeam_1.pointingDelayRate = [0.1] * 2
+        stationbeam_2.pointingDelayRate = [0.2] * 2
+        stationbeam_3.pointingDelayRate = [0.3] * 2
+        stationbeam_4.pointingDelayRate = [0.4] * 2
 
         # allocate does not currently include station_beams, so assigning manually
-        stationbeam_1._station_fqdn = "low-mccs/station/001"
+        stationbeam_1.stationFqdn = "low-mccs/station/001"
         stationbeam_1.logicalBeamId = 1
-        stationbeam_2._station_fqdn = "low-mccs/station/001"
+        stationbeam_2.stationFqdn = "low-mccs/station/001"
         stationbeam_2.logicalBeamId = 2
-        stationbeam_3._station_fqdn = "low-mccs/station/002"
+        stationbeam_3.stationFqdn = "low-mccs/station/002"
         stationbeam_3.logicalBeamId = 3
-        stationbeam_4._station_fqdn = "low-mccs/station/002"
+        stationbeam_4.stationFqdn = "low-mccs/station/002"
         stationbeam_4.logicalBeamId = 4
 
-        stationbeam_1.ApplyPointing()
-        tile_1.assert_called_with([1] + [1.0] * 512)
-        tile_2.assert_called_with([2] + [2.0] * 512)
-        tile_3.assert_called_with([3] + [3.0] * 512)
-        tile_4.assert_called_with([4] + [4.0] * 512)
+        # set_pointing_delay not currently implemented in base_tpm_simulator
+        # so check the error is returned on stationbeam.ApplyPointing()
+        with pytest.raises(Exception) as notimplementederror:
+            assert stationbeam_1.ApplyPointing()
+        assert "NotImplementedError" in str(notimplementederror.value)
+        with pytest.raises(Exception) as notimplementederror:
+            assert stationbeam_2.ApplyPointing()
+        assert "NotImplementedError" in str(notimplementederror.value)
+        with pytest.raises(Exception) as notimplementederror:
+            assert stationbeam_3.ApplyPointing()
+        assert "NotImplementedError" in str(notimplementederror.value)
+        with pytest.raises(Exception) as notimplementederror:
+            assert stationbeam_4.ApplyPointing()
+        assert "NotImplementedError" in str(notimplementederror.value)

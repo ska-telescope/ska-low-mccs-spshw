@@ -108,8 +108,8 @@ class TestMccsStationBeam:
         assert device_under_test.stationFqdn == ""
         assert device_under_test.channels is None
         assert list(device_under_test.desiredPointing) == []
-        assert device_under_test.pointingDelay is None
-        assert device_under_test.pointingDelayRate is None
+        assert list(device_under_test.pointingDelay) == []
+        assert list(device_under_test.pointingDelayRate) == []
         assert device_under_test.updateRate == 0.0
         assert list(device_under_test.antennaWeights) == []
         assert not device_under_test.isBeamLocked
@@ -300,7 +300,7 @@ class TestMccsStationBeam:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.pointingDelay is None
+        assert list(device_under_test.pointingDelay) == []
 
     def test_pointingDelayRate(self, device_under_test):
         """
@@ -311,7 +311,7 @@ class TestMccsStationBeam:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        assert device_under_test.pointingDelayRate is None
+        assert list(device_under_test.pointingDelayRate) == []
 
     def test_antennaWeights(self, device_under_test):
         """
@@ -410,10 +410,16 @@ class TestMccsStationBeam:
         station_beam = device_under_test  # to make test easier to read
         mock_station = MccsDeviceProxy("low-mccs/station/001", logger)
         mock_station.ApplyPointing.return_value = (ResultCode.OK, "")
-        delay_array = [1.0] * 512
+        delay_array = [1.0] * 256
+        rate_array = [0.5] * 256
         station_beam.logicalBeamId = 1
-        station_beam._pointing_delay = delay_array
+        station_beam.pointingDelay = delay_array
+        station_beam.pointingDelayRate = rate_array
+        assert list(station_beam.pointingDelay) == delay_array
+        assert list(station_beam.pointingDelayRate) == rate_array
         station_beam.stationFqdn = "low-mccs/station/001"
         [[result_code], [message]] = station_beam.ApplyPointing()
+        expected_pointing = [1] + [1.0, 0.5] * 256
+        mock_station.ApplyPointing.assert_called_once_with(expected_pointing)
         assert result_code == ResultCode.OK
         assert message == MccsStationBeam.ApplyPointingCommand.SUCCEEDED_MESSAGE

@@ -603,6 +603,16 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self._pointing_delay
 
+    @pointingDelay.write
+    def pointingDelay(self, values):
+        """
+        Set the pointing delay per antenna.
+
+        :param values: the desired pointing delay per antenna
+        :type values: list(float)
+        """
+        self._pointing_delay = values
+
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=256,
@@ -615,6 +625,16 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: list(float)
         """
         return self._pointing_delay_rate
+
+    @pointingDelayRate.write
+    def pointingDelayRate(self, values):
+        """
+        Set the pointing delay rate for each antenna.
+
+        :param values: the desired pointing delay rate per antenna
+        :type values: list(float)
+        """
+        self._pointing_delay_rate = values
 
     @attribute(
         dtype=("DevDouble",),
@@ -717,7 +737,15 @@ class MccsStationBeam(SKAObsDevice):
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
-            station_pointing_args = [device._logical_beam_id] + list(device._pointing_delay)
+            # zip delays and rates for SetPointingDelay
+            zipped_delays_and_rates = [
+                item
+                for pair in zip(
+                    device._pointing_delay, device._pointing_delay_rate + [0]
+                )
+                for item in pair
+            ]
+            station_pointing_args = [device._logical_beam_id] + zipped_delays_and_rates
             station_proxy = MccsDeviceProxy(device._station_fqdn, self.logger)
             (result_code, message) = station_proxy.ApplyPointing(station_pointing_args)
             if result_code == ResultCode.FAILED:

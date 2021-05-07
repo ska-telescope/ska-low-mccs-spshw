@@ -326,6 +326,27 @@ class Tile12(object):
         for firmware in self.tpm.tpm_test_firmware:
             firmware.check_ddr_initialisation()
 
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+        # Initialise beamformer using a standard configuration,
+        # only not to leave it in an unprogrammed state
+        # single beam, 300 MHz bandwidth, 50-350 MHz
+        # All IDs in spead header are set to 0, 16 antennas, no time info
+        self.logger.info("Initialising beamformer")
+        self.initialise_beamformer(
+            start_channel=64,  # 50 MHz
+            nof_channels=384,  # 300 MHz bandwidth
+            is_first=False,  # usually a tile is not the first
+            is_last=False,  # or the last in the station chain
+        )
+        self.define_spead_header(
+            station_id=0, subarray_id=0, nof_antennas=16, ref_epoch=-1, start_time=0
+        )
+
+        # Perform synchronisation
+        self.post_synchronisation()
+
+=======
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
     def program_fpgas(self, bitfile):
         """
         Program both FPGAs with specified firmware.
@@ -353,7 +374,14 @@ class Tile12(object):
 
     def program_cpld(self, bitfile):
         """
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+        Program CPLD with specified bitfile. Use with VERY GREAT care,
+        this might leave the FPGA in an unreachable state. TODO Wiser to
+        leave the method out altogether and use a dedicated utility
+        instead?
+=======
         Program CPLD with specified bitfile.
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
         :param bitfile: Bitfile to flash to CPLD
 
@@ -1112,6 +1140,10 @@ class Tile12(object):
         return True
 
     # ---------------------------- Pointing and calibration routines ---------------------------
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+    @connected
+=======
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
         Initialise tile and station beamformers for a simple single beam
@@ -1214,8 +1246,13 @@ class Tile12(object):
 
         :param antenna: Antenna number (0-15)
         :type antenna: int
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+        :param calibration_coefficients: Calibration coefficient array
+        :type calibration_coefficients: list(float)
+=======
         :param calibration_coefs: Calibration coefficient array
         :type calibration_coefs: list(float)
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
         """
         if antenna < 8:
             self.tpm.beamf_fd[0].load_calibration(antenna, calibration_coefs)
@@ -1381,13 +1418,21 @@ class Tile12(object):
         :return: False for error (e.g. beamformer already running)
         :rtype bool:
         """
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+        mask = 0xFFFFF8  # Impose a time multiple of 8 frames
+=======
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
         if self.beamformer_is_running():
             return False
 
         if start_time == 0:
             start_time = self.current_station_beamformer_frame() + 40
 
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+        start_time &= mask  # Impose a start time multiple of 8 frames
+=======
         start_time &= 0xFFFFFFF8  # Impose a start time multiple of 8 frames
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
         if duration != -1:
             duration = duration & 0xFFFFFFF8
@@ -1399,8 +1444,12 @@ class Tile12(object):
             return True
         else:
             self.abort()
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+            return False
+=======
 
         return False
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
     def stop_beamformer(self):
         """
@@ -1706,6 +1755,83 @@ class Tile12(object):
     # --------------- Wrapper for data acquisition: ------------------------------------
 
     @connected
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=511,
+    ):
+        """
+        Configure and start continuous integrated channel data.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure_parameters(
+                "channel",
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor=2,
+                carousel_enable=1,
+            )
+
+    @connected
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=191,
+    ):
+        """
+        Configure and start continuous integrated beam data.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].configure(
+                "beamf",
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor=1,
+                carousel_enable=0,
+            )
+
+    @connected
+    def stop_integrated_beam_data(self):
+        """
+        Stop transmission of integrated beam data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_beam_data()
+
+    @connected
+    def stop_integrated_channel_data(self):
+        """
+        Stop transmission of integrated beam data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+            self.tpm.tpm_integrator[i].stop_integrated_channel_data()
+
+    @connected
+    def stop_integrated_data(self):
+        """
+        Stop transmission of integrated data.
+        """
+        for i in range(len(self.tpm.tpm_integrator)):
+=======
     def configure_integrated_channel_data(self, integration_time=0.5):
         """
         Configure continuous integrated channel data lmc integrator
@@ -1766,6 +1892,7 @@ class Tile12(object):
         Stop transmission of integrated data.
         """
         for i in range(len(self.tpm.tpm_integrator)):
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
             self.tpm.tpm_integrator[i].stop_integrated_data()
 
     @connected
@@ -1774,17 +1901,145 @@ class Tile12(object):
         send raw data from the TPM.
 
         :param timestamp: When to start. Default now.
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+        :type timestamp: int, optional
+        :param seconds: delay with respect to timestamp, in seconds
+        :type seconds: float, optional
+        :param sync: Get synchronised
+        :type sync: bool, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(secondsi=seconds, timestamp=timestamp)
+=======
         :param seconds: delay with respect to timestamp, in seconds
         :param sync: Get synchronised packets
         """
         # Data transmission should be synchronised across FPGAs
         self.synchronised_data_operation(seconds, timestamp)
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
         # Send data from all FPGAs
         for i in range(len(self.tpm.tpm_test_firmware)):
             if sync:
                 self.tpm.tpm_test_firmware[i].send_raw_data_synchronised()
             else:
                 self.tpm.tpm_test_firmware[i].send_raw_data()
+<<<<<<< HEAD:src/ska_low_mccs/tile/tile_1_2.py
+
+    @connected
+    def send_channelised_data(
+        self,
+        number_of_samples=1024,
+        first_channel=0,
+        last_channel=511,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        send channelised data from the TPM.
+
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param first_channel: first channel to send
+        :type first_channel: int, optional
+        :param last_channel: last channel to send
+        :type last_channel: int, optional
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data(
+                number_of_samples, first_channel, last_channel
+            )
+
+    @connected
+    def send_beam_data(self, timestamp=None, seconds=0.2):
+        """
+        Transmit a snapshot containing beamformed data.
+
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_beam_data()
+
+    @connected
+    def send_channelised_data_continuous(
+        self,
+        channel_id,
+        number_of_samples=128,
+        wait_seconds=0,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        Transmit data from a channel continuously.
+
+        :param channel_id: index of channel to send
+        :type channel_id: int
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: float
+        :param timestamp: when to start(?)
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        time.sleep(wait_seconds)
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data_continuous(
+                channel_id, number_of_samples
+            )
+
+    @connected
+    def send_channelised_data_narrowband(
+        self,
+        frequency,
+        round_bits,
+        number_of_samples=128,
+        wait_seconds=0,
+        timestamp=None,
+        seconds=0.2,
+    ):
+        """
+        Send channelised data from a single channel.
+
+        :param frequency: sky frequency to transmit
+        :type frequency: int
+        :param round_bits: which bits to round
+        :type round_bits: int
+        :param number_of_samples: number of spectra to send
+        :type number_of_samples: int, optional
+        :param wait_seconds: wait time before sending data
+        :type wait_seconds: int, optional
+        :param timestamp: when to start
+        :type timestamp: int, optional
+        :param seconds: when to synchronise
+        :type seconds: float, optional
+        """
+        time.sleep(wait_seconds)
+        # Data transmission should be synchronised across FPGAs
+        self.synchronised_data_operation(timestamp=timestamp, seconds=seconds)
+        # Send data from all FPGAs
+        for i in range(len(self.tpm.tpm_test_firmware)):
+            self.tpm.tpm_test_firmware[i].send_channelised_data_narrowband(
+                frequency, round_bits, number_of_samples
+            )
+=======
+>>>>>>> f9e104a553397f78ce380de9245951ec78dd0ee0:src/ska_low_mccs/tile/hw_tile.py
 
     # ---------------------------- Wrapper for test generator ----------------------------
     @connected

@@ -1,115 +1,127 @@
 @startuml
-class TilePowerManager
-TilePowerManager : +__init__()
-TilePowerManager : +connect()
-TilePowerManager : +off()
-TilePowerManager : +on()
-TilePowerManager : +power_mode()
-TilePowerManager : -_subrack_power_changed()
-TilePowerManager : -_read_power_mode()
-TilePowerManager : -_update_power_mode()
-class MccsTile
-MccsTile : +init_device()
-MccsTile : +__init__()
-MccsTile : +do()
-MccsTile : -_initialise_connections()
-MccsTile : -_initialise_health_monitoring()
-MccsTile : -_initialise_power_management()
-MccsTile : +interrupt()
-MccsTile : +succeeded()
-MccsTile : +On()
-MccsTile : +always_executed_hook()
-MccsTile : +delete_device()
-MccsTile : +health_changed()
-MccsTile : +power_changed()
-MccsTile : +logicalTileId()
-MccsTile : +subarrayId()
-MccsTile : +stationId()
-MccsTile : +cspDestinationIp()
-MccsTile : +cspDestinationMac()
-MccsTile : +cspDestinationPort()
-MccsTile : +firmwareName()
-MccsTile : +firmwareVersion()
-MccsTile : +voltage()
-MccsTile : +current()
-MccsTile : +isProgrammed()
-MccsTile : +board_temperature()
-MccsTile : +fpga1_temperature()
-MccsTile : +fpga2_temperature()
-MccsTile : +fpga1_time()
-MccsTile : +fpga2_time()
-MccsTile : +antennaIds()
-MccsTile : +fortyGbDestinationIps()
-MccsTile : +fortyGbDestinationMacs()
-MccsTile : +fortyGbDestinationPorts()
-MccsTile : +adcPower()
-MccsTile : +currentTileBeamformerFrame()
-MccsTile : +checkPendingDataRequests()
-MccsTile : +isBeamformerRunning()
-MccsTile : +phaseTerminalCount()
-MccsTile : +ppsDelay()
-MccsTile : +simulationMode()
-MccsTile : +testMode()
-MccsTile : +init_command_objects()
-MccsTile : +Initialise()
-MccsTile : +GetFirmwareAvailable()
-MccsTile : +DownloadFirmware()
-MccsTile : +ProgramCPLD()
-MccsTile : +GetRegisterList()
-MccsTile : +ReadRegister()
-MccsTile : +WriteRegister()
-MccsTile : +ReadAddress()
-MccsTile : +WriteAddress()
-MccsTile : +Configure40GCore()
-MccsTile : +Get40GCoreConfiguration()
-MccsTile : +SetLmcDownload()
-MccsTile : +SetChanneliserTruncation()
-MccsTile : +SetBeamFormerRegions()
-MccsTile : +ConfigureStationBeamformer()
-MccsTile : +LoadCalibrationCoefficients()
-MccsTile : +LoadCalibrationCurve()
-MccsTile : +LoadBeamAngle()
-MccsTile : +LoadAntennaTapering()
-MccsTile : +SwitchCalibrationBank()
-MccsTile : +SetPointingDelay()
-MccsTile : +LoadPointingDelay()
-MccsTile : +StartBeamformer()
-MccsTile : +StopBeamformer()
-MccsTile : +ConfigureIntegratedChannelData()
-MccsTile : +ConfigureIntegratedBeamData()
-MccsTile : +SendRawData()
-MccsTile : +SendChannelisedData()
-MccsTile : +SendChannelisedDataContinuous()
-MccsTile : +SendBeamData()
-MccsTile : +StopDataTransmission()
-MccsTile : +ComputeCalibrationCoefficients()
-MccsTile : +StartAcquisition()
-MccsTile : +SetTimeDelays()
-MccsTile : +SetCspRounding()
-MccsTile : +SetLmcIntegratedDownload()
-MccsTile : +SendRawDataSynchronised()
-MccsTile : +SendChannelisedDataNarrowband()
-MccsTile : +TweakTransceivers()
-MccsTile : +PostSynchronisation()
-MccsTile : +SyncFpgas()
-MccsTile : +CalculateDelay()
-TilePowerManager : -_subrack_fqdn
-TilePowerManager : -_subrack
-TilePowerManager : -_subrack_bay
-TilePowerManager : -_logger
-TilePowerManager : -_callback
-TilePowerManager : -_power_mode
-TilePowerManager : +subrack_event_handler
-MccsTile : -_thread
-MccsTile : -_lock
-MccsTile : -_interrupt
-MccsTile : -_health_state
-MccsTile : -_subarray_id
-MccsTile : -_csp_destination_ip
-MccsTile : -_csp_destination_mac
-MccsTile : -_csp_destination_port
-MccsTile : -_antenna_ids
-MccsTile : -_antennas_per_tile
 
-SKABaseDevice <|-- MccsTile
+class TilePowerManager {
+  -_callback
+  -_logger
+  -_power_mode
+  -_subrack
+  -_subrack_bay
+  -_subrack_fqdn  
+  +subrack_event_handler
+  +__init__()
+  +connect()
+  +power_mode()
+  +off()
+  +on()
+  -_read_power_mode()
+  -_subrack_power_changed()
+  -_update_power_mode()
+}
+
+class MccsTile {
+  
+  -_antenna_ids
+  -_csp_destination_ip
+  -_csp_destination_mac
+  -_csp_destination_port
+  -_health_state
+  -_subarray_id
+  +hardware_manager
+  +AntennasPerTile
+  +SubrackBay
+  +SubrackFQDN
+  +TestGeneratorActive
+  +TileId
+  +TpmCpldPort
+  +TpmIp
+  +CalculateDelay()
+  +ComputeCalibrationCoefficients()
+  +Configure40GCore()
+  +ConfigureIntegratedBeamData()
+  +ConfigureIntegratedChannelData()
+  +ConfigureStationBeamformer()
+  +ConfigureTestGenerator()
+  +DownloadFirmware()
+  +Get40GCoreConfiguration()
+  +GetFirmwareAvailable()
+  +GetRegisterList()
+  +Initialise()
+  +LoadAntennaTapering()
+  +LoadBeamAngle()
+  +LoadCalibrationCoefficients()
+  +LoadCalibrationCurve()
+  +LoadPointingDelay()
+  +On()
+  +PostSynchronisation()
+  +ProgramCPLD()
+  +ReadAddress()
+  +ReadRegister()
+  +SendBeamData()
+  +SendChannelisedData()
+  +SendChannelisedDataContinuous()
+  +SendChannelisedDataNarrowband()
+  +SendRawData()
+  +SendRawDataSynchronised()
+  +SetBeamFormerRegions()
+  +SetChanneliserTruncation()
+  +SetCspRounding()
+  +SetLmcDownload()
+  +SetLmcIntegratedDownload()
+  +SetPointingDelay()
+  +SetTimeDelays()
+  +StartAcquisition()
+  +StartBeamformer()
+  +StopBeamformer()
+  +StopDataTransmission()
+  +StopIntegratedBeamData()
+  +StopIntegratedChannelData()
+  +StopIntegratedData()
+  +SwitchCalibrationBank()
+  +SyncFpgas()
+  +TestGeneratorActive()
+  +TweakTransceivers()
+  +WriteAddress()
+  +WriteRegister()
+  -_update_admin_mode()
+  +adcPower()
+  +always_executed_hook()
+  +antennaIds()
+  +board_temperature()
+  +checkPendingDataRequests()
+  +cspDestinationIp()
+  +cspDestinationMac()
+  +cspDestinationPort()
+  +current()
+  +currentTileBeamformerFrame()
+  +delete_device()
+  +firmwareName()
+  +firmwareVersion()
+  +fortyGbDestinationIps()
+  +fortyGbDestinationMacs()
+  +fortyGbDestinationPorts()
+  +fpga1_temperature()
+  +fpga1_time()
+  +fpga2_temperature()
+  +fpga2_time()
+  +health_changed()
+  +init_command_objects()
+  +init_device()
+  +isBeamformerRunning()
+  +isProgrammed()
+  +logicalTileId()
+  +phaseTerminalCount()
+  +power_changed()
+  +ppsDelay()
+  +simulationMode()
+  +stationId()
+  +subarrayId()
+  +testMode()
+  +voltage()
+}
+
+class SKABaseDevice {
+}
+
+ SKABaseDevice <|-- MccsTile
+
 @enduml

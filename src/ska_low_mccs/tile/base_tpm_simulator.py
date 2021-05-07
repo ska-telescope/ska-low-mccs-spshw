@@ -722,13 +722,28 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: Stop beamformer")
         self._is_beamformer_running = False
 
-    def configure_integrated_channel_data(self, integration_time=0.5):
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=511,
+        time_mux_factor=2,
+        carousel_enable=1,
+    ):
         """
         Configure the transmission of integrated channel data with the
         provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -736,18 +751,63 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: configure_integrated_channel_data")
         raise NotImplementedError
 
-    def configure_integrated_beam_data(self, integration_time=0.5):
+    def stop_integrated_channel_data(self):
+        """
+        Stop the integrated channel data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated channel data")
+        raise NotImplementedError
+
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=191,
+        time_mux_factor=1,
+        carousel_enable=0,
+    ):
         """
         Configure the transmission of integrated beam data with the
         provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
+        :param time_mux_factor: number of samples processed in parallel during a clock cycle
+        :type time_mux_factor: int, optional
+        :param carousel_enable: it allows to cycle on the input signal
+        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator: configure_integrated_beam_data")
+        raise NotImplementedError
+
+    def stop_integrated_beam_data(self):
+        """
+        Stop the integrated beam data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated beam data")
+        raise NotImplementedError
+
+    def stop_integrated_data(self):
+        """
+        Stop the integrated data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated data")
         raise NotImplementedError
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):

@@ -151,7 +151,7 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param test_string: a simply test string fixture
+        :param test_string: a simple test string fixture
         :type test_string: str
         """
         assert device_under_test.aQueueDebug == "MessageQueueRunning\n"

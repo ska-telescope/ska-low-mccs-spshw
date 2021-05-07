@@ -230,8 +230,8 @@ def dummy_json_args():
 @pytest.fixture()
 def test_string():
     """
-    A simply test string fixture.
+    A simple test string fixture.
 
-    :return: a simply test string
+    :return: a simple test string
     """
-    return "This is a simply text string"
+    return "This is a simple text string"

@@ -215,6 +215,17 @@ other versions / Linux variants.
 Great! You are ready to run a SKA Docker container.
 
 
+Build the docs
+^^^^^^^^^^^^^^
+Since the docs ultimately need to build successful on ReadTheDocs, we
+we test our docs build by building them in a ReadTheDocs build
+container. This is managed through the project makefile:
+
+.. code-block:: shell-session
+
+  me@local:~$ make docs
+
+
 Developing in a SKA Docker container the manual way
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 From here, you can either manually set up a SKA Docker development
@@ -278,8 +289,6 @@ understanding of what your IDE is doing for you.
 Tox commands you may find useful:
 
 * ``tox -e py37`` - run the tests
-
-* ``tox -e docs`` - build the docs
 
 * ``tox -e lint`` - lint the code (with flake8)
 

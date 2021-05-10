@@ -1403,7 +1403,7 @@ class Tile12(object):
         :return: False for error (e.g. beamformer already running)
         :rtype bool:
         """
-        mask = 0xFFFFF8  # Impose a time multiple of 8 frames
+        mask = 0xFFFFFFF8  # Impose a time multiple of 8 frames
         if self.beamformer_is_running():
             return False
 

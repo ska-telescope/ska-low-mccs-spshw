@@ -48,7 +48,13 @@ class TileHardwareFactory(SimulableHardwareFactory):
     """
 
     def __init__(
-        self, simulation_mode, test_mode, logger, tpm_ip="0.0.0.0", tpm_cpld_port=0
+        self,
+        simulation_mode,
+        test_mode,
+        logger,
+        tpm_ip="0.0.0.0",
+        tpm_cpld_port=0,
+        tpm_version="tpm_v1_6",
     ):
         """
         Create a new factory instance.
@@ -65,10 +71,13 @@ class TileHardwareFactory(SimulableHardwareFactory):
         :type tpm_ip: str
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :type tpm_cpld_port: int
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         """
         self._logger = logger
         self._tpm_ip = tpm_ip
         self._tpm_cpld_port = tpm_cpld_port
+        self._tpm_version = tpm_version
         super().__init__(simulation_mode, test_mode=test_mode)
 
     def _create_driver(self):
@@ -78,7 +87,9 @@ class TileHardwareFactory(SimulableHardwareFactory):
         :return: a hardware driver for the tile
         :rtype: :py:class:`ska_low_mccs.tile.tpm_driver.TpmDriver`
         """
-        return TpmDriver(self._logger, self._tpm_ip, self._tpm_cpld_port)
+        return TpmDriver(
+            self._logger, self._tpm_ip, self._tpm_cpld_port, self._tpm_version
+        )
 
     def _create_dynamic_simulator(self):
         """
@@ -107,7 +118,14 @@ class TileHardwareManager(SimulableHardwareManager):
     """
 
     def __init__(
-        self, simulation_mode, test_mode, logger, tpm_ip, tpm_cpld_port, _factory=None
+        self,
+        simulation_mode,
+        test_mode,
+        logger,
+        tpm_ip,
+        tpm_cpld_port=10000,
+        tpm_version="tpm_v1_6",
+        _factory=None,
     ):
         """
         Initialise a new TileHardwareManager instance.
@@ -126,6 +144,8 @@ class TileHardwareManager(SimulableHardwareManager):
         :type tpm_ip: str
         :param tpm_cpld_port: port address of TPM board control port
         :type tpm_cpld_port: int
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
@@ -137,13 +157,18 @@ class TileHardwareManager(SimulableHardwareManager):
             logger,
             tpm_ip,
             tpm_cpld_port,
+            tpm_version,
         )
+        if tpm_version == "tpm_v1_2":
+            self._default_firmware = "itpm_v1_2.bit"
+        else:
+            self._default_firmware = "itpm_v1_6.bit"
         super().__init__(hardware_factory, TileHardwareHealthEvaluator())
 
     @property
     def firmware_available(self):
         """
-        Return specifications of the firmware stored on the hardware and
+        Return specifications of the firmware loaded on the hardware and
         available for use.
 
         :return: specifications of the firmware stored on the hardware
@@ -162,11 +187,21 @@ class TileHardwareManager(SimulableHardwareManager):
         return self._factory.hardware.firmware_name
 
     @property
+    def hardware_version(self):
+        """
+        Returns the version of the hardware running on the hardware.
+
+        :return: the version of the hardware (e.g. 120 for 1.2)
+        :rtype: int
+        """
+        return self._factory.hardware.hardware_version
+
+    @property
     def firmware_version(self):
         """
-        Returns the name of the firmware running on the hardware.
+        Returns the version of the firmware running on the hardware.
 
-        :return: the name of the firmware
+        :return: the version of the firmware
         :rtype: str
         """
         return self._factory.hardware.firmware_version
@@ -178,6 +213,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :param bitfile: the bitfile to be downloaded
         :type bitfile: str
         """
+        self._default_firmware = bitfile
         self._factory.hardware.download_firmware(bitfile)
 
     def cpld_flash_write(self, bitfile):
@@ -710,8 +746,6 @@ class TileHardwareManager(SimulableHardwareManager):
         integration_time=None,
         first_channel=None,
         last_channel=None,
-        time_mux_factor=2,
-        carousel_enable=1,
     ):
         """
         Configure and start the transmission of integrated channel data
@@ -725,17 +759,11 @@ class TileHardwareManager(SimulableHardwareManager):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
         """
         self._factory.hardware.configure_integrated_channel_data(
             integration_time=integration_time,
             first_channel=first_channel,
             last_channel=last_channel,
-            time_mux_factor=time_mux_factor,
-            carousel_enable=carousel_enable,
         )
 
     def stop_integrated_channel_data(self):
@@ -749,8 +777,6 @@ class TileHardwareManager(SimulableHardwareManager):
         integration_time=None,
         first_channel=None,
         last_channel=None,
-        time_mux_factor=1,
-        carousel_enable=0,
     ):
         """
         Configure and start the transmission of integrated channel data
@@ -764,17 +790,11 @@ class TileHardwareManager(SimulableHardwareManager):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
         """
         self._factory.hardware.configure_integrated_beam_data(
             integration_time=integration_time,
             first_channel=first_channel,
             last_channel=last_channel,
-            time_mux_factor=time_mux_factor,
-            carousel_enable=carousel_enable,
         )
 
     def stop_integrated_beam_data(self):

@@ -43,10 +43,8 @@ Response dictionary for attributes:
 Commands "list_commands" and "list_attributes" are always implemented, and
 return a list of the available command/attribute names.
 """
-import http
-import http.client
+import requests
 import json
-from uritools import uricompose
 
 
 class HardwareClient:
@@ -60,6 +58,7 @@ class HardwareClient:
         Create a new instance.
 
         :param ip_address: IP address of server
+        :type ip_address: str
         :param port: Port of server
         :type port: int
         """
@@ -151,12 +150,12 @@ class WebHardwareClient(HardwareClient):
 
         super().__init__(ip_address, port)
         try:
-            self._conn = http.client.HTTPConnection(
-                self._ip,
-                self._port,
+            self._conn = requests.request(
+                "GET",
+                url=f"http://{self._ip}:{self._port}",
                 timeout=2,
             )
-        except http.client.HTTPException:
+        except requests.exceptions.RequestException:
             self._conn = None
 
     def connect(self):
@@ -169,12 +168,12 @@ class WebHardwareClient(HardwareClient):
         """
         if self._conn is None:
             try:
-                self._conn = http.client.HTTPConnection(
-                    self._ip,
-                    self._port,
+                self._conn = requests.request(
+                    "GET",
+                    url=f"http://{self._ip}:{self._port}",
                     timeout=10,
                 )
-            except http.client.HTTPException:
+            except requests.exceptions.RequestException:
                 self._conn = None
         return not (self._conn is None)
 
@@ -190,7 +189,7 @@ class WebHardwareClient(HardwareClient):
         :rtype: dict
         """
         if self._conn is None:
-            if not self.Connect():
+            if not self.connect():
                 return {
                     "status": "ERROR",
                     "info": "Not connected",
@@ -198,23 +197,21 @@ class WebHardwareClient(HardwareClient):
                     "retvalue": "",
                 }
 
-        request_url = uricompose(
-            path="/json.htm",
-            query={"type": "command", "param": command, "value": parameters},
-        )
-        self._conn.request("GET", request_url)
-        res = self._conn.getresponse()
-        if res.status != 200:
+        path = f"http://{self._ip}:{self._port}"
+        query = {"type": "command", "param": command, "value": parameters}
+        res = requests.get(url=f"{path}/get/json.htm", params=query)
+
+        if res.status_code != requests.codes.ok:
             return {
                 "status": "ERROR",
-                "info": "HTML status: " + str(res.status),
+                "info": "HTML status: " + str(res.raise_for_status()),
                 "command": command,
                 "retvalue": "",
             }
         try:
-            json_string = res.read()
-            result = json.loads(json_string)
-        except http.client.HTTPException:
+            result = res.json()
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            # adding status code check?
             result = {
                 "status": "ERROR",
                 "info": "HTML status: " + "timeout",
@@ -241,23 +238,19 @@ class WebHardwareClient(HardwareClient):
                     "attribute": attribute,
                     "value": None,
                 }
-        request_url = uricompose(
-            path="/json.htm",
-            query={
-                "type": "getattribute",
-                "param": attribute,
-            },
-        )
-        self._conn.request("GET", request_url)
-        res = self._conn.getresponse()
-        if res.status != 200:
+        path = f"http://{self._ip}:{self._port}"
+
+        query = {"type": "getattribute", "param": attribute}
+        res = requests.get(url=f"{path}/get/json.htm", params=query)
+
+        if res.status_code != requests.codes.ok:
             return {
                 "status": "ERROR",
-                "info": "HTML status " + str(res.status),
+                "info": "HTML status " + str(res.raise_for_status()),
                 "attribute": attribute,
                 "value": None,
             }
-        result = json.load(res)
+        result = res.json()
         return result
 
     def set_attribute(self, attribute, value):
@@ -280,22 +273,17 @@ class WebHardwareClient(HardwareClient):
                     "attribute": attribute,
                     "value": None,
                 }
-        request_url = uricompose(
-            path="/json.htm",
-            query={
-                "type": "setattribute",
-                "param": attribute,
-                "value": value,
-            },
-        )
-        self._conn.request("GET", request_url)
-        res = self._conn.getresponse()
-        if res.status != 200:
+
+        path = f"http://{self._ip}:{self._port}"
+        query = {"type": "set_attribute", "param": attribute, "value": value}
+        res = requests.get(url=f"{path}/get/json.htm", params=query)
+
+        if res.status_code != requests.codes.ok:
             return {
                 "status": "ERROR",
-                "info": "HTML status " + str(res.status),
+                "info": "HTML status " + str(res.raise_for_status()),
                 "attribute": attribute,
                 "value": None,
             }
-        result = json.load(res)
+        result = res.json()
         return result

@@ -243,9 +243,9 @@ class TestCommon:
             ("load_antenna_tapering", 2),
             ("load_pointing_delay", 1),
             ("set_pointing_delay", 2),
-            ("configure_integrated_channel_data", 5),
+            ("configure_integrated_channel_data", 3),
             ("stop_integrated_channel_data", 0),
-            ("configure_integrated_beam_data", 5),
+            ("configure_integrated_beam_data", 3),
             ("stop_integrated_beam_data", 0),
             ("stop_integrated_data", 0),
             ("send_raw_data", 0),
@@ -301,7 +301,7 @@ class TestCommon:
         assert not hardware_under_test.is_programmed
         hardware_under_test.initialise()
         assert hardware_under_test.is_programmed
-        assert hardware_under_test.firmware_name == "firmware1"
+        assert hardware_under_test.firmware_name == "itpm_v1_6.bit"
 
     def test_download_firmware(self, hardware_under_test, mocker):
         """

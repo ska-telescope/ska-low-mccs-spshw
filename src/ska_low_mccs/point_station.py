@@ -10,6 +10,8 @@ from builtins import range
 from datetime import datetime
 import functools
 
+from multiprocessing import Queue, Process
+
 import fire
 
 import numpy as np
@@ -578,24 +580,75 @@ class PointingDriver(object):
         :return: self - ready for another command
         :rtype: pointing_driver
         """
-        # print (f"Generate 1 pointing frame")
-        # for k,v in self.point_kwargs.items():
-        #     print (f"{k} -> {v}")
-        # print(self.point_kwargs)
-        # tic = time.perf_counter()
-        # self.calc(**self.point_kwargs)
-        # toc = time.perf_counter()
-        # print(f"Execution time {toc - tic:0.4f} seconds")
-        # # print(self.pointing._delays)
-        # print(self.pointing._delays.shape)
-        # result = {
-        #     'frame_t': self.point_kwargs['pointing_time'].value,
-        #     'delays': self.pointing._delays
-        # }
-        # self._results.append(result)
-        # return self
-
         return self.sequence(1, 0)
+
+    def pointing_job (self, jobs, results):
+
+        while True:
+            t = jobs.get()
+
+            print (f"pointing_job({str(t)})")
+
+            if t:
+                self.point_kwargs["pointing_time"] = t
+                self.calc(**self.point_kwargs)
+                result = {
+                    "frame_t": str(self.point_kwargs["pointing_time"]),
+                    "az": self.pointing._az,
+                    "el": self.pointing._el,
+                    "delays": self.pointing._delays,
+                }
+                results.put(result)
+            else:
+                print("End of jobs")
+                return
+
+    def msequence (self, count, interval, nproc):
+
+        job_queue = Queue()
+        results_queue = Queue()
+
+        processes = [Process(
+            target=self.pointing_job,
+            args=(job_queue,results_queue),
+            daemon=True
+            ) for x in range(nproc)]
+
+        print(f"Generate {count} delay sets every {interval} seconds - multiprocessing")
+        tic = time.perf_counter()
+
+        if "pointing_time" not in self.point_kwargs:
+            self.point_kwargs["pointing_time"] = Time(datetime.utcnow(), scale="utc")
+
+        t0 = self.point_kwargs["pointing_time"]
+
+        for i in range(count):
+            job_queue.put(t0 + i * interval / 86400)
+
+        job_queue.put(None)
+
+        print ("job_queue loaded")
+
+        for p in processes:
+            print (f"Start process {str(p)}")
+            p.start()
+
+        print ("Processes running")
+
+        for p in processes:
+            print (f"Join process {str(p)}")
+            p.join()
+
+        print ("Processes joined")
+
+        toc = time.perf_counter()
+        print(f"Execution time {toc - tic:0.4f} seconds")
+
+        while not results_queue.empty():
+            self._results.append(results_queue.get())
+
+        print(len(self._results), "frames written")
+        return self
 
     def write(self, filename):
         """

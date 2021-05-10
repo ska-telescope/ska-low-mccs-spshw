@@ -19,9 +19,10 @@ __all__ = [
 ]
 
 import threading
+import json
 
-from tango import DevFailed, DevState, EnsureOmniThread
-from tango.server import attribute, device_property, AttrWriteType
+from tango import DebugIt, DevFailed, DevState, EnsureOmniThread, SerialModel, Util
+from tango.server import attribute, device_property, AttrWriteType, command
 
 from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import ResultCode
@@ -35,6 +36,7 @@ from ska_low_mccs.hardware import (
 )
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import tango_raise
+from ska_low_mccs.message_queue import MessageQueue
 
 
 def create_return(success, action):
@@ -164,7 +166,7 @@ class AntennaApiuProxy:
             return False
         else:
             raise NotImplementedError(
-                f"APIU.PowerUpAntenna returned unexpected ResultCode {result_code}."
+                f"APIU.PowerUpAntenna returned unexpected ResultCode {result_code.name}."
             )
 
     def off(self):
@@ -190,7 +192,7 @@ class AntennaApiuProxy:
             return False
         else:
             raise NotImplementedError(
-                f"APIU.PowerDownAntenna returned unexpected ResultCode {result_code}."
+                f"APIU.PowerDownAntenna returned unexpected ResultCode {result_code.name}."
             )
 
     @property
@@ -382,10 +384,22 @@ class MccsAntenna(SKABaseDevice):
                 command_name,
                 command_object(self._apiu_proxy, self.state_model, self.logger),
             )
+        self.register_command_object(
+            "On", self.OnCommand(self, self.state_model, self.logger)
+        )
 
     # ---------------
     # General methods
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device; overridden here to change the Tango
+        serialisation model.
+        """
+        util = Util.instance()
+        util.set_serial_model(SerialModel.NO_SYNC)
+        super().init_device()
+
     class InitCommand(SKABaseDevice.InitCommand):
         """
         Initialises the command handlers for commands supported by this
@@ -414,6 +428,8 @@ class MccsAntenna(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._message_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -429,6 +445,8 @@ class MccsAntenna(SKABaseDevice):
             super().do()
 
             device = self.target
+            device._heart_beat = 0
+            device.queue_debug = ""
             device._apiu_fqdn = f"low-mccs/apiu/{device.ApiuId:03}"
             device._tile_fqdn = f"low-mccs/tile/{device.TileId:04}"
 
@@ -477,6 +495,12 @@ class MccsAntenna(SKABaseDevice):
             for name in event_names:
                 device.set_change_event(name, True, True)
                 device.set_archive_event(name, True, True)
+
+            # Start the Message queue for this device
+            device._message_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -589,7 +613,9 @@ class MccsAntenna(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
 
     # ----------
     # Callbacks
@@ -648,6 +674,34 @@ class MccsAntenna(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
+
     @attribute(
         dtype=SimulationMode,
         access=AttrWriteType.READ_WRITE,
@@ -1015,6 +1069,64 @@ class MccsAntenna(SKABaseDevice):
             apiu_proxy = self.target
             success = apiu_proxy.on()
             return create_return(success, "standby")
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def On(self, json_args):
+        """
+        Send a message to turn Antenna on.
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self.logger.info("Antenna On")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            self.logger.debug("Antenna On message call")
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call On sequentially
+            self.logger.debug("Antenna On direct call")
+            command = self.get_command_object("On")
+            (result_code, message) = command(json_args)
+            return [[result_code], [message]]
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On() command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsAntenna` device.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            (result_code, message) = super().do()
+            # MCCS-specific Reset functionality goes here
+            return (result_code, message)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """

@@ -693,8 +693,8 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
-        (result_code, message) = handler(argin)
-        return [[result_code], [message]]
+        (result_code, status) = handler(argin)
+        return [[result_code], [status]]
 
 
 # ----------

@@ -14,7 +14,7 @@ management functionality of the SKA Low MCCS system between the subrack
 and the TPM.
 """
 import time
-
+import json
 import pytest
 from tango import DevState
 
@@ -74,7 +74,9 @@ class TestApiuAntennaIntegration:
 
         apiu.Off()
         assert apiu.state() == DevState.OFF
-        apiu.On()
+        args = {"dummy": "args"}
+        dummy_json_args = json.dumps(args)
+        apiu.On(dummy_json_args)
         assert apiu.state() == DevState.ON
 
         assert not apiu.isAntennaOn(1)
@@ -104,7 +106,9 @@ class TestApiuAntennaIntegration:
         apiu = tango_harness.get_device("low-mccs/apiu/001")
 
         apiu.Off()
-        apiu.On()
+        args = {"dummy": "args"}
+        dummy_json_args = json.dumps(args)
+        apiu.On(dummy_json_args)
 
         assert antenna.state() == DevState.DISABLE
         assert not apiu.IsAntennaOn(1)

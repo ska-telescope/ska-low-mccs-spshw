@@ -12,6 +12,7 @@ This module contains an implementation of the MCCS APIU device and
 related classes.
 """
 import threading
+import json
 
 from tango import DebugIt, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
@@ -29,7 +30,7 @@ from ska_low_mccs.hardware import (
 )
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.apiu.apiu_simulator import APIUSimulator
-
+from ska_low_mccs.message_queue import MessageQueue
 
 __all__ = [
     "APIUHardwareFactory",
@@ -434,6 +435,8 @@ class MccsAPIU(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._message_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -447,6 +450,8 @@ class MccsAPIU(SKABaseDevice):
             """
             super().do()
             device = self.target
+            device._heart_beat = 0
+            device.queue_debug = ""
 
             # TODO: the default value for simulationMode should be
             # FALSE, but we don't have real hardware to test yet, so we
@@ -470,6 +475,12 @@ class MccsAPIU(SKABaseDevice):
                 len(device._antenna_fqdns),
                 device.are_antennas_on_changed,
             )
+
+            # Start the Message queue for this device
+            device._message_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -577,7 +588,9 @@ class MccsAPIU(SKABaseDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
 
     # ----------
     # Callbacks
@@ -613,6 +626,33 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
 
     @attribute(
         dtype="DevLong",
@@ -838,6 +878,63 @@ class MccsAPIU(SKABaseDevice):
             hardware_manager = self.target
             success = hardware_manager.on()
             return create_return(success, "standby")
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def On(self, json_args):
+        """
+        Send a message to turn APIU on.
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self.logger.info("APIU On")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            self.logger.debug("APIU On message call")
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call On sequentially
+            command = self.get_command_object("On")
+            (result_code, message) = command(json_args)
+            return [[result_code], [message]]
+
+    class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On() command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless hook implementing the functionality of the
+            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
+            command for this :py:class:`.MccsAPIU` device.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            (result_code, message) = super().do()
+            # MCCS-specific Reset functionality goes here
+            return (result_code, message)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """

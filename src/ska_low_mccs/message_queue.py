@@ -95,19 +95,25 @@ class MessageQueue(threading.Thread):
         with EnsureOmniThread():
             self._qdebug("MessageQueueRunning")
             while not self._terminate:
+                self._target._heart_beat += 1
                 self._check_message_queue()
+        self._logger.warning(
+            f"Device={self._target.get_name()} message queue terminated"
+        )
 
-    def _notify_listener(self, command, progress):
+    def _notify_listener(self, result_code, message_uid, status):
         """
         Abstract method that requires implementation by derived concrete
         class for specific notifications.
 
-        :param command: The command that needs a push notification
-        :param progress: The notification to send to any subscribed listeners
+        :param result_code: Result code of the command being executed
+        :param message_uid: The message uid that needs a push notification
+        :param status: Status message
         """
-        self._qdebug("Error(_notify_listener) Thread Terminated")
+        self._qdebug("Error(_notify_listener) Terminate thread")
         self._logger.error(
-            "Derived class should implement _notify_listener(). Thread terminated"
+            f"{result_code.name}:{message_uid}:{status} "
+            "Derived class should implement _notify_listener(). Terminate thread"
         )
         # Terminate the thread execution loop
         self._terminate = True
@@ -118,24 +124,32 @@ class MessageQueue(threading.Thread):
 
         :param message: The message to execute
         """
+        response_device = None
         try:
             # Check we have a device to respond to before executing a command
-            response_device = None
             if message.respond_to_fqdn:
                 try:
                     response_device = tango.DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
-                    self._qdebug(f"Response device {message.respond_to_fqdn} not found")
-                    self._notify_listener(message.command, ResultCode.UNKNOWN)
+                    err_status = f"Response device {message.respond_to_fqdn} not found"
+                    self._qdebug(err_status)
+                    self._logger.error(err_status)
+                    if message.notifications:
+                        self._notify_listener(
+                            ResultCode.FAILED, message.message_uid, err_status
+                        )
                     return
 
-            self._logger.info(f"_execute_message{message.message_uid}")
+            self._logger.debug(f"_execute_message {message.message_uid}")
             self._qdebug(f"Exe({message.message_uid})")
             command = self._target.get_command_object(message.command)
             if command:
                 if message.notifications:
                     self._qdebug(f"^({message.message_uid})")
-                    self._notify_listener(message.command, ResultCode.STARTED)
+                    notify_status = f"{message.command} has started executing"
+                    self._notify_listener(
+                        ResultCode.STARTED, message.message_uid, notify_status
+                    )
 
                 # Incorporate FQDN and callback into command args dictionary
                 # Add to kwargs and deal with the case if it's not a JSON encoded string
@@ -152,13 +166,17 @@ class MessageQueue(threading.Thread):
                 kwargs["respond_to_fqdn"] = message.respond_to_fqdn
                 kwargs["callback"] = message.callback
                 json_string = json.dumps(kwargs)
-                self._logger.info(
-                    f"Calling {command} returning to fqdn={message.respond_to_fqdn} "
+                payload = (
+                    f'Calling "{command}" returning to fqdn={message.respond_to_fqdn} '
                     + f"and callback={message.callback}"
                 )
+                self._logger.debug(payload)
+                self._qdebug(payload)
                 self._qdebug(f"Message kwargs({kwargs})")
                 (result_code, status) = command(json_string)
-                self._qdebug(f"Result({message.message_uid},rc={result_code.name})")
+                payload = f"Result({message.message_uid},rc={result_code.name})"
+                self._logger.debug(payload)
+                self._qdebug(payload)
             else:
                 raise KeyError
         except KeyError:
@@ -179,9 +197,10 @@ class MessageQueue(threading.Thread):
             self._qdebug(
                 f'Reply to {response_device}.command_inout("{message.callback}")'
             )
+            self._qdebug(f"json_string={json_string}")
             # Post response message
-            response_device.command_inout(message.callback, json_string)
-            self._qdebug("Reply message sent")
+            (rc, stat) = response_device.command_inout(message.callback, json_string)
+            self._qdebug(f"Reply message sent rc={rc},status={stat}")
         else:
             self._qdebug("No reply required")
         self._qdebug(f"EndOfMessage({message.message_uid})")
@@ -202,6 +221,9 @@ class MessageQueue(threading.Thread):
         """
         External call to gracefully terminate this thread.
         """
+        self._logger.warning(
+            f"Device={self._target.get_name()} terminate message queue"
+        )
         self._terminate = True
 
     def send_message(
@@ -225,8 +247,8 @@ class MessageQueue(threading.Thread):
         :param callback: Callback command to call call
         :type callback: str
         :return: A tuple containing a result code (QUEUED, ERROR),
-            a message string indicating status and a message object
-        :rtype: (ResultCode, str, Message)
+            a message UID, and a message string indicating status
+        :rtype: (ResultCode, str, str)
         """
         message_uid = f"{str(uuid4())}:{command}"
         message = self.Message(
@@ -237,14 +259,21 @@ class MessageQueue(threading.Thread):
             respond_to_fqdn=respond_to_fqdn,
             callback=callback,
         )
-        # rcltodo: protect with a try except for "Full" exception
-        # rcltodo: Also limit the number of messages in a queue?
+        result_code = ResultCode.QUEUED
+        status = f"Queued message for command {message.command}"
+        self._qdebug(f"\nQ({message.message_uid})")
+        self._logger.info(message.message_uid + "," + status)
+        if notifications:
+            # Notify listener before we actually post the message to ensure
+            # there is no race condition where STARTED could be posted
+            # before QUEUED. The message queue operates using two threads!
+            self._notify_listener(result_code, message.message_uid, status)
+
+        # TODO: protect with a try except for "Full" exception
+        # TODO: Also limit the number of messages in a queue?
         #          Could be dangerous if many callbacks though - think!
         self._message_queue.put(message)
-        self._qdebug(f"\nQ({message.message_uid})")
-        status = f"Queued message {message.message_uid}"
-        self._logger.info(status)
-        return (ResultCode.QUEUED, status, message.message_uid)
+        return (result_code, message.message_uid, status)
 
     def send_message_with_response(
         self,
@@ -266,8 +295,8 @@ class MessageQueue(threading.Thread):
         :param notifications: Client requirement for push notifications for
             command's result attribute
         :return: A tuple containing a result code (QUEUED, ERROR),
-            a message object and a message string indicating status.
-        :rtype: (ResultCode, Message, str)
+            a message UID, and a message string indicating status
+        :rtype: (ResultCode, str, str)
         """
         return self.send_message(
             command=command,

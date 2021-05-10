@@ -56,7 +56,7 @@ setuptools.setup(
         "pytango >= 9.3.3",
         "jsonschema >= 3.2.0",
         "fire",
-        "uritools",
+        "requests",
     ],
     zip_safe=False,
 )

@@ -33,18 +33,18 @@ class TpmDriver(HardwareDriver):
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "tpm_test"
-    FIRMWARE_AVAILABLE = {
-        "tpm_test": {"design": "tpm_test", "major": 2, "minor": 3},
-        "firmware2": {"design": "model2", "major": 3, "minor": 7},
-        "firmware3": {"design": "model3", "major": 2, "minor": 6},
+    FIRMWARE_NAME = "itpm_v1_6.bit"
+    FIRMWARE_LIST = {
+        "cpld": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        "fpga1": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        "fpga2": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     }
     REGISTER_MAP = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
 
-    def __init__(self, logger, ip, port):
+    def __init__(self, logger, ip, port, tpm_version):
         """
         Initialise a new TPM driver instance.
 
@@ -57,6 +57,8 @@ class TpmDriver(HardwareDriver):
         :type ip: str
         :param port: IP address for hardware tile control
         :type port: int
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         """
         self.logger = logger
         self._is_programmed = False
@@ -74,7 +76,7 @@ class TpmDriver(HardwareDriver):
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
-        self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
+        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._test_generator_active = False
 
         self._fpga1_time = self.FPGA1_TIME
@@ -85,7 +87,17 @@ class TpmDriver(HardwareDriver):
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._ip = ip
         self._port = port
-        self.tile = HwTile(ip=self._ip, port=self._port, logger=self.logger)
+        if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
+            self.logger.warning(
+                "TPM version "
+                + tpm_version
+                + " not valid. Trying to read version from board, which must be on"
+            )
+            tpm_version = None
+
+        self.tile = HwTile(
+            ip=self._ip, port=self._port, logger=self.logger, tpm_version=tpm_version
+        )
 
         super().__init__(False)
 
@@ -102,14 +114,17 @@ class TpmDriver(HardwareDriver):
     @property
     def firmware_available(self):
         """
-        Return the firmware list for this TPM simulator.
+        Return the list of the firmware loaded in the system.
 
         :return: the firmware list
         :rtype: dict
         """
         self.logger.debug("TpmDriver: firmware_available")
-        self.logger.info("TpmDriver: FirmwareAvailable method partially implemented")
-        return copy.deepcopy(self._firmware_available)
+        firmware_list = self.tile.get_firmware_list()
+        self._firmware_list["cpld"] = firmware_list[0]
+        self._firmware_list["fpga1"] = firmware_list[1]
+        self._firmware_list["fpga2"] = firmware_list[2]
+        return copy.deepcopy(self._firmware_list)
 
     @property
     def firmware_name(self):
@@ -133,9 +148,18 @@ class TpmDriver(HardwareDriver):
         :rtype: str
         """
         self.logger.debug("TpmDriver: firmware_version")
-        self.logger.info("TpmDriver: FirmwareVersion method partially implemented")
-        firmware = self._firmware_available[self._firmware_name]
-        return "{major}.{minor}".format(**firmware)  # noqa: FS002
+        self.firmware_available
+        firmware = self._firmware_list["fpga1"]
+        return (
+            "Ver."
+            + str(firmware["major"])
+            + "."
+            + str(firmware["minor"])
+            + " build "
+            + str(firmware["build"])
+            + ":"
+            + firmware["time"]
+        )
 
     @property
     def is_programmed(self):
@@ -759,8 +783,6 @@ class TpmDriver(HardwareDriver):
         integration_time=0.5,
         first_channel=0,
         last_channel=511,
-        time_mux_factor=2,
-        carousel_enable=0x1,
     ):
         """
         Configure and start the transmission of integrated channel data
@@ -774,18 +796,12 @@ class TpmDriver(HardwareDriver):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
         self.tile.configure_integrated_channel_data(
             integration_time,
             first_channel,
             last_channel,
-            time_mux_factor,
-            carousel_enable,
         )
 
     def stop_integrated_channel_data(self):
@@ -800,8 +816,6 @@ class TpmDriver(HardwareDriver):
         integration_time=0.5,
         first_channel=0,
         last_channel=191,
-        time_mux_factor=1,
-        carousel_enable=0x0,
     ):
         """
         Configure and start the transmission of integrated channel data
@@ -815,18 +829,12 @@ class TpmDriver(HardwareDriver):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
         self.tile.configure_integrated_beam_data(
             integration_time,
             first_channel,
             last_channel,
-            time_mux_factor,
-            carousel_enable,
         )
 
     def stop_integrated_beam_data(self):
@@ -944,12 +952,9 @@ class TpmDriver(HardwareDriver):
         :type start_time: int, optional
         :param delay: delay start, defaults to 2
         :type delay: int, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver:Start acquisition")
-        raise NotImplementedError
+        self.tile.start_acquisition(start_time, delay)
 
     def set_time_delays(self, delays):
         """
@@ -1138,21 +1143,19 @@ class TpmDriver(HardwareDriver):
         """
         Perform post tile configuration synchronization.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        TODO Private method or must be available externally?
         """
         self.logger.debug("TpmDriver: post_synchronisation")
-        raise NotImplementedError
+        self.tile.post_synchronisation()
 
     def sync_fpgas(self):
         """
         Synchronise the FPGAs.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        TODO Method appears to be mostly internal (private).
         """
         self.logger.debug("TpmDriver: sync_fpgas")
-        raise NotImplementedError
+        self.tile.sync_fpgas()
 
     @property
     def test_generator_active(self):

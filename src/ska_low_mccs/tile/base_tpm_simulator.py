@@ -20,11 +20,11 @@ class BaseTpmSimulator(HardwareSimulator):
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "firmware1"
+    FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_AVAILABLE = {
-        "firmware1": {"design": "model1", "major": 2, "minor": 3},
-        "firmware2": {"design": "model2", "major": 3, "minor": 7},
-        "firmware3": {"design": "model3", "major": 2, "minor": 6},
+        "itpm_v1_6.bit": {"design": "model1", "major": 2, "minor": 3},
+        "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
+        "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
     REGISTER_MAP = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
@@ -40,6 +40,8 @@ class BaseTpmSimulator(HardwareSimulator):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
+    # TPM version: "tpm_v1_2" or "tpm_v1_6"
+    TPM_VERSION = 120
 
     def _arp(self, ip):
         """
@@ -115,6 +117,16 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: firmware_name")
         return self._firmware_name
 
+    @firmware_name.setter
+    def firmware_name(self, value):
+        """
+        Set firmware name.
+
+        :param value: assigned default firmware name. Can be overriden by parameter of download_firmware
+        :type value: str
+        """
+        self._tile_id = value
+
     @property
     def firmware_version(self):
         """
@@ -139,6 +151,16 @@ class BaseTpmSimulator(HardwareSimulator):
         """
         self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
         return self._is_programmed
+
+    @property
+    def hardware_version(self):
+        """
+        Return whether this TPM is 1.2 or 1.6.
+
+        :return: TPM hardware version. 120 or 160
+        :rtype: int
+        """
+        return self.TPM_VERSION
 
     def download_firmware(self, bitfile):
         """
@@ -173,7 +195,7 @@ class BaseTpmSimulator(HardwareSimulator):
         The simulator will emulate programming the firmware.
         """
         self.logger.debug("TpmSimulator: initialise")
-        self.download_firmware("firmware1")
+        self.download_firmware(self._firmware_name)
 
     @property
     def tile_id(self):
@@ -705,8 +727,6 @@ class BaseTpmSimulator(HardwareSimulator):
         integration_time=0.5,
         first_channel=0,
         last_channel=511,
-        time_mux_factor=2,
-        carousel_enable=1,
     ):
         """
         Configure the transmission of integrated channel data with the
@@ -718,10 +738,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -744,8 +760,6 @@ class BaseTpmSimulator(HardwareSimulator):
         integration_time=0.5,
         first_channel=0,
         last_channel=191,
-        time_mux_factor=1,
-        carousel_enable=0,
     ):
         """
         Configure the transmission of integrated beam data with the
@@ -757,10 +771,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type first_channel: int, optional
         :param last_channel: last channel
         :type last_channel: int, optional
-        :param time_mux_factor: number of samples processed in parallel during a clock cycle
-        :type time_mux_factor: int, optional
-        :param carousel_enable: it allows to cycle on the input signal
-        :type carousel_enable: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

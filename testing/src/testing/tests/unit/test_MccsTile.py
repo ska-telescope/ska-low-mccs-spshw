@@ -1105,7 +1105,7 @@ class TestMccsTileCommands:
         )
         assert tuple(device_under_test.fortyGbDestinationPorts) == (5000, 5001)
 
-        result_str = device_under_test.Get40GCoreConfiguration(1,0)
+        result_str = device_under_test.Get40GCoreConfiguration(1, 0)
         result = json.loads(result_str)
         assert result == config_1.pop("CoreID")
 

@@ -511,7 +511,8 @@ class TpmDriver(HardwareDriver):
             current_address = current_address + 4
 
     def configure_40g_core(
-        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port):
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+    ):
         """
         Configure the 40G code.
 
@@ -532,8 +533,9 @@ class TpmDriver(HardwareDriver):
         """
 
         self.logger.debug("TpmDriver: configure_40g_core")
-        self.tile.configure_40g_core(core_id, arp_table_entry, src_mac, src_ip,
-                                     dst_ip, src_port, dst_port)
+        self.tile.configure_40g_core(
+            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+        )
 
     def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
@@ -551,12 +553,14 @@ class TpmDriver(HardwareDriver):
         """
         self.logger.debug("TpmDriver: get_40g_configuration")
         if core_id == -1:
-            for core in range(0,8):
-                self._forty_gb_core_list.append(self._tile.get_40g_configuration(
-                    core, arp_table_entry))
+            for core in range(0, 8):
+                self._forty_gb_core_list.append(
+                    self._tile.get_40g_configuration(core, arp_table_entry)
+                )
         else:
-            self._forty_gb_core_list = self._tile.get_40g_configuration(core_id,
-                                                                        arp_table_entry)
+            self._forty_gb_core_list = self._tile.get_40g_configuration(
+                core_id, arp_table_entry
+            )
         return self._forty_gb_core_list
 
     def set_lmc_download(

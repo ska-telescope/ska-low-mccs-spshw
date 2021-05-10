@@ -482,7 +482,7 @@ class Tile12(object):
         dst_port=None,
     ):
         """
-        Configure a 10G core TODO Legacy method. Checrki if it is to be
+        Configure a 10G core TODO Legacy method. Check if it is to be
         deleted.
 
         :param core_id: 10G core ID
@@ -534,8 +534,6 @@ class Tile12(object):
             self.tpm.tpm_10g_core[core_id].set_src_mac(src_mac)
         if src_ip is not None:
             self.tpm.tpm_10g_core[core_id].set_src_ip(src_ip)
-        # if dst_mac is not None:
-        #     self.tpm.tpm_10g_core[core_id].set_dst_mac(dst_mac)
         if dst_ip is not None:
             self.tpm.tpm_10g_core[core_id].set_dst_ip(dst_ip, arp_table_entry)
         if src_port is not None:
@@ -547,14 +545,15 @@ class Tile12(object):
     @connected
     def get_10g_core_configuration(self, core_id):
         """
-        Get the configuration for a 10g core TODO CHeck whether to be
-        deleted.
+        Get the configuration for a 10g core.
 
         :param core_id: Core ID (0-7)
         :type core_id: int
 
         :return: core configuration
         :rtype: dict
+
+        :TODO: Check whether to bedeleted.
         """
         return {
             "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
@@ -580,6 +579,7 @@ class Tile12(object):
         """
         return {
             "core_id": core_id,
+            "arp_table_entry": arp_table_entry,
             "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
             "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
             "dst_ip": int(self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)),

@@ -1862,8 +1862,7 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
-                dst_port
+                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1899,9 +1898,8 @@ class MccsTile(SKABaseDevice):
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":"10:fe:ed:08:0a:58",
-        "SrcIP":"10.0.99.3",
-                    "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58", "DstIP":"10.0.99.3",
-                    "DstPort":5000}
+        "SrcIP":"10.0.99.3", "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58",
+        "DstIP":"10.0.99.3", "DstPort":5000}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("Configure40GCore", jstr)
         """
@@ -1936,7 +1934,7 @@ class MccsTile(SKABaseDevice):
             item = hardware_manager.get_40g_configuration(core_id, arp_table_entry)
             if item is not None:
                 return json.dumps(item.pop("CoreID"))
-            raise ValueError("Invalid core id or arp table entry specified")
+            raise ValueError("Invalid core id specified")
 
     @command(
         dtype_in="DevString",
@@ -1982,6 +1980,8 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.SetLmcDownload` command
             functionality.
 
+            :param argin: a JSON-encoded dictionary of arguments
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

@@ -521,8 +521,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.write_address(address, values)
 
     def configure_40g_core(
-        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
-            dst_port
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
     ):
         """
         Configure the 40G code.
@@ -543,8 +542,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :type dst_port: int
         """
         self._factory.hardware.configure_40g_core(
-            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
-            dst_port
+            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
         )
 
     def get_40g_configuration(self, core_id=-1, arp_table_entry=0):

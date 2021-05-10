@@ -520,9 +520,8 @@ class MccsStation(SKAObsDevice):
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
         self.register_command_object("On", self.OnCommand(*args))
-        self.register_command_object("OnCallback", self.OnCallbackCommand(*args))
         self.register_command_object("Off", self.OffCommand(*args))
-        self.register_command_object("OffCallback", self.OffCallbackCommand(*args))
+        self.register_command_object("Callback", self.CallbackCommand(*args))
 
         pool_args = (self.device_pool, self.state_model, self.logger)
         self.register_command_object("Disable", self.DisableCommand(*pool_args))
@@ -619,12 +618,12 @@ class MccsStation(SKAObsDevice):
             if device._cmd_respond_to_fqdn and device._cmd_callback:
                 fqdn = device.get_name()
                 self.logger.debug(
-                    f"Pool invoke_command_with_callback('On', fqdn={fqdn}, 'OnCallback')"
+                    f"Pool invoke_command_with_callback('On', fqdn={fqdn}, 'Callback')"
                 )
                 if device_pool.invoke_command_with_callback(
                     command_name="On",
                     fqdn=fqdn,
-                    callback="OnCallback",
+                    callback="Callback",
                 ):
                     return (ResultCode.OK, self.QUEUED_MESSAGE)
                 else:
@@ -639,9 +638,9 @@ class MccsStation(SKAObsDevice):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def OnCallback(self, json_args):
+    def Callback(self, json_args):
         """
-        On callback method.
+        Callback method.
 
         :param json_args: Argument containing JSON encoded command message and result
         :return: A tuple containing a return code and a string
@@ -650,21 +649,21 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.debug(f"Station OnCallback json_args={json_args}")
+        self.logger.debug(f"Station Callback json_args={json_args}")
         (result_code, message_uid, status) = self._message_queue.send_message(
-            command="OnCallback", json_args=json_args
+            command="Callback", json_args=json_args
         )
         return [[result_code], [status, message_uid]]
 
-    class OnCallbackCommand(ResponseCommand):
+    class CallbackCommand(ResponseCommand):
         """
-        Class for handling the On Callback command.
+        Class for handling the Callback command.
         """
 
         def do(self, argin):
             """
             Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsStation.OnCallback` command.
+            :py:meth:`.MccsStation.Callback` command.
 
             :param argin: Argument containing JSON encoded command message and result
             :return: A tuple containing a return code and a string
@@ -676,7 +675,7 @@ class MccsStation(SKAObsDevice):
             device = self.target
             device_pool = device.device_pool
 
-            device.logger.debug("Station OnCallbackCommand class do()")
+            device.logger.debug("Station CallbackCommand class do()")
             # Defer callback to our pool device
             (command_complete, result_code, _) = device_pool.callback(argin)
 
@@ -699,8 +698,9 @@ class MccsStation(SKAObsDevice):
                 else:
                     # As this response is to the original requestor, we need to reply
                     # with the message ID that was given to the requester
+                    command = device._cmd_message_uid.split(":")[1]
                     message = MessageQueue.Message(
-                        command="On",
+                        command=f"{command}",
                         json_args="",
                         message_uid=f"{device._cmd_message_uid}",
                         notifications=False,
@@ -718,116 +718,18 @@ class MccsStation(SKAObsDevice):
                         device._cmd_callback, json_string
                     )
                     device.logger.debug(
-                        f"Station OnCallbackCommand posted message to {response_device},rc={rc},status={stat}"
+                        f"Station CallbackCommand posted message to {response_device},rc={rc},status={stat}"
                     )
 
                 device.logger.debug(
-                    f"Station OnCallbackCommand class do(),rc={result_code.name},status={status}"
+                    f"Station CallbackCommand class do(),rc={result_code.name},status={status}"
                 )
                 device._cmd_respond_to_fqdn = None
                 device._cmd_callback = None
                 return (result_code, status)
             else:
                 device.logger.debug(
-                    f"Station OnCallbackCommand class do() STARTED, status={status}"
-                )
-                return (ResultCode.STARTED, status)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def OffCallback(self, json_args):
-        """
-        Off callback method.
-
-        :param json_args: Argument containing JSON encoded command message and result
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        self.logger.debug(f"Station OffCallback json_args={json_args}")
-        (result_code, message_uid, status) = self._message_queue.send_message(
-            command="OffCallback", json_args=json_args
-        )
-        return [[result_code], [status, message_uid]]
-
-    class OffCallbackCommand(ResponseCommand):
-        """
-        Class for handling the Off Callback command.
-        """
-
-        def do(self, argin):
-            """
-            Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsStation.OffCallback` command.
-
-            :param argin: Argument containing JSON encoded command message and result
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device = self.target
-            device_pool = device.device_pool
-
-            device.logger.debug("Station OffCallbackCommand class do()")
-            # Defer callback to our pool device
-            (command_complete, result_code, _) = device_pool.callback(argin)
-
-            # Cache the original status message from the caller
-            kwargs = json.loads(argin)
-            status = kwargs.get("status")
-
-            if command_complete:
-                # Programming error if these aren't set
-                assert device._cmd_respond_to_fqdn
-                assert device._cmd_callback
-
-                # Post response back to requestor
-                try:
-                    response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
-                except DevFailed:
-                    device._qdebug(
-                        f"Response device {device._cmd_respond_to_fqdn} not found"
-                    )
-                else:
-                    # As this response is to the original requestor, we need to reply
-                    # with the message ID that was given to the requester
-                    message = MessageQueue.Message(
-                        command="Off",
-                        json_args="",
-                        message_uid=f"{device._cmd_message_uid}",
-                        notifications=False,
-                        respond_to_fqdn="",
-                        callback="",
-                    )
-                    response = {
-                        "message_object": message,
-                        "result_code": result_code,
-                        "status": status,
-                    }
-                    json_string = json.dumps(response, default=lambda obj: obj.__dict__)
-                    # Call the specified command asynchronously
-                    (rc, stat) = response_device.command_inout(
-                        device._cmd_callback, json_string
-                    )
-                    device.logger.debug(
-                        f"Station OffCallbackCommand posted message to {response_device},"
-                        f"rc={rc},status={stat}"
-                    )
-
-                device.logger.debug(
-                    f"Station OffCallbackCommand class do(),rc={result_code.name},"
-                    f"status={status}"
-                )
-                device._cmd_respond_to_fqdn = None
-                device._cmd_callback = None
-                return (result_code, status)
-            else:
-                device.logger.debug(
-                    f"Station OffCallbackCommand class do() STARTED, status={status}"
+                    f"Station CallbackCommand class do() STARTED, status={status}"
                 )
                 return (ResultCode.STARTED, status)
 
@@ -877,12 +779,12 @@ class MccsStation(SKAObsDevice):
             if device._cmd_respond_to_fqdn and device._cmd_callback:
                 fqdn = device.get_name()
                 self.logger.debug(
-                    f"Pool invoke_command_with_callback('Off', fqdn={fqdn}, 'OffCallback')"
+                    f"Pool invoke_command_with_callback('Off', fqdn={fqdn}, 'Callback')"
                 )
                 if device_pool.invoke_command_with_callback(
                     command_name="Off",
                     fqdn=fqdn,
-                    callback="OffCallback",
+                    callback="Callback",
                 ):
                     return (ResultCode.OK, self.QUEUED_MESSAGE)
                 else:

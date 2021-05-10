@@ -123,7 +123,7 @@ def mock_factory(mocker, test_string):
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
     builder.add_result_command("Off", ResultCode.QUEUED, message_uid=test_string)
-    builder.add_result_command("On", ResultCode.OK, message_uid=test_string)
+    builder.add_result_command("On", ResultCode.QUEUED, message_uid=test_string)
     builder.add_result_command("Standby", ResultCode.OK)
     return builder
 
@@ -247,7 +247,7 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_On(
+    def test_On_RCL(
         self, device_under_test, mock_event_callback, command_helper, test_string
     ):
         """
@@ -262,7 +262,7 @@ class TestMccsController:
         :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         :param command_helper: A command helper fixture.
         :type command_helper: CommandHelper
-        :param test_string: a simply test string fixture
+        :param test_string: a simple test string fixture
         :type test_string: str
         """
         controller = device_under_test
@@ -303,7 +303,7 @@ class TestMccsController:
         :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         :param command_helper: A command helper fixture.
         :type command_helper: CommandHelper
-        :param test_string: a simply test string fixture
+        :param test_string: a simple test string fixture
         :type test_string: str
         """
         controller = device_under_test  # for readability
@@ -372,7 +372,7 @@ class TestMccsController:
         assert result_code == ResultCode.OK
         assert message == MccsController.StandbyFullCommand.SUCCEEDED_MESSAGE
 
-    def test_Operate(self, device_under_test, command_helper, test_string):
+    def test_Operate(self, device_under_test, command_helper, empty_json_dict):
         """
         Test for Operate.
 
@@ -382,10 +382,10 @@ class TestMccsController:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param command_helper: A command helper fixture.
         :type command_helper: CommandHelper
-        :param test_string: a test string that we'll use as a UID
-        :type test_string: str
+        :param empty_json_dict: an empty json encoded dictionary
+        :type empty_json_dict: str
         """
-        command_helper.device_command(device_under_test, "Off", test_string)
+        command_helper.device_command(device_under_test, "Off", empty_json_dict)
         command_helper.check_device_state(device_under_test, DevState.OFF)
 
         # assert device_under_test.Operate() == 0
@@ -471,7 +471,7 @@ class TestMccsController:
             :type logger: :py:class:`logging.Logger`
             :param command_helper: A command helper fixture.
             :type command_helper: CommandHelper
-            :param test_string: a test string that we'll use as a UID
+            :param test_string: a simple test string fixture
             :type test_string: str
             """
             controller = device_under_test  # for readability
@@ -717,7 +717,7 @@ class TestMccsController:
             :type logger: :py:class:`logging.Logger`
             :param command_helper: A command helper fixture.
             :type command_helper: CommandHelper
-            :param test_string: a simply test string fixture
+            :param test_string: a simple test string fixture
             :type test_string: str
             """
             controller = device_under_test  # for readability

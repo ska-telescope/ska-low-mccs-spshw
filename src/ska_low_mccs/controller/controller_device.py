@@ -535,21 +535,9 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
-        if self._command_result.get("result_code") in [
-            ResultCode.STARTED,
-            ResultCode.QUEUED,
-        ]:
-            return [
-                [ResultCode.FAILED],
-                ["A controller command is already in progress", None],
-            ]
-        else:
-            self.notify_listener(ResultCode.UNKNOWN, "", "")
-            self.logger.debug("send_message(Startup)")
-            (result_code, message_uid, status) = self._message_queue.send_message(
-                command="Startup", notifications=True
-            )
-            return [[result_code], [status, message_uid]]
+        return self._check_and_send_message(
+            "Startup", check_is_allowed=True, notifications=True
+        )
 
     class StartupCommand(ResponseCommand):
         """
@@ -643,13 +631,14 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
-        self._logger.info(f"_check_and_send_message({command})")
+        self._logger.debug(f"_check_and_send_message({command})")
         if check_is_allowed:
-            if self._command_result.get("result_code") in [
+            command_progress = self._command_result.get("result_code")
+            if command_progress in [
                 ResultCode.STARTED,
                 ResultCode.QUEUED,
             ]:
-                self._logger.error("_check_and_send_message() FAILED")
+                self._logger.error(f"_check_and_send_message() FAILED: {command_progress.name}")
                 return [
                     [ResultCode.FAILED],
                     ["A controller command is already in progress", None],
@@ -658,7 +647,7 @@ class MccsController(SKAMaster):
         if notifications:
             self.notify_listener(ResultCode.UNKNOWN, "", "")
 
-        self.logger.debug(f"send_message({command})")
+        self._logger.debug(f"send_message({command})")
         (result_code, message_uid, status) = self._message_queue.send_message(
             command=command, notifications=notifications, json_args=json_args
         )
@@ -714,7 +703,7 @@ class MccsController(SKAMaster):
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
-                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
+                self._logger.error(message_uid + "," + self.FAILED_MESSAGE)
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )
@@ -723,18 +712,18 @@ class MccsController(SKAMaster):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Callback(self: MccsController, argin: str) -> Tuple[ResultCode, [str, str]]:
+    def Callback(self: MccsController, json_args: str) -> Tuple[ResultCode, [str, str]]:
         """
         Callback method for pool device command completion.
 
-        :param argin: Argument containing JSON encoded command message and result
+        :param json_args: Argument containing JSON encoded command message and result
         :return: A tuple containing a return code, a string message indicating status and
             message UID. The string message is for information purposes only, but the
             message UID is for message management use.
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
-        return self._check_and_send_message("Callback", json_args=argin)
+        return self._check_and_send_message("Callback", json_args=json_args)
 
     class CallbackCommand(ResponseCommand):
         """
@@ -757,6 +746,7 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            self.logger.debug(f"Class CallbackCommand argin = {argin}")
             device = self.target
             device_pool = device.device_pool
             device.logger.debug("Controller Callback called")
@@ -764,6 +754,9 @@ class MccsController(SKAMaster):
             message_uid = device._command_result.get("message_uid")
             # Defer callback to our pool device
             (command_complete, result_code, status) = device_pool.callback(argin)
+            self.logger.debug(
+                f"{command_complete}, {result_code}, {status} = device_pool.callback({argin})"
+            )
             if command_complete:
                 device.logger.debug(
                     f"Callback({result_code.name}:{message_uid}:{self.SUCCESSFUL_MESSAGE})"
@@ -858,7 +851,6 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            self.logger.info("class OffCommand()")
             device = self.target
             device_pool = device.device_pool
 
@@ -870,7 +862,7 @@ class MccsController(SKAMaster):
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
-                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
+                self._logger.error(message_uid + "," + self.FAILED_MESSAGE)
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )

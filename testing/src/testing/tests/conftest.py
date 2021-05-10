@@ -254,12 +254,12 @@ class CommandHelper:
     """
 
     @staticmethod
-    def device_command(device_under_test, command, test_string):
+    def device_command(device_under_test, command, mock_message_uid):
         """
         Help method to transition the device under test into the desired
         state.
 
-        As commands us the message queue, a callback is required to complete
+        As commands use the message queue, a callback is required to complete
         the commands. This method simply sends the desired command and then
         offers a reply in the form of a callback to the requestor. Only one
         callback is required because the message_uid is mocked to be the same
@@ -271,8 +271,8 @@ class CommandHelper:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         :param command: command to send to the DUT
         :type command: str
-        :param test_string: a simply test string fixture
-        :type test_string: str
+        :param mock_message_uid: a mock message uid for testing
+        :type mock_message_uid: str
 
         :return: A tuple containing a return code and a string containing the
             message unique ID.
@@ -289,7 +289,7 @@ class CommandHelper:
             "message_object": {
                 "command": command,
                 "json_args": "",
-                "message_uid": test_string,
+                "message_uid": mock_message_uid,
                 "notifications": False,
                 "respond_to_fqdn": "",
                 "callback": "",

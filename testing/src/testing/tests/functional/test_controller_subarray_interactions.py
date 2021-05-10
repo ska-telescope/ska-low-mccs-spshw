@@ -194,7 +194,10 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
     """
     # Call the specified command synchronously
-    result = device.command_inout(command, argin)
+    if argin:
+        result = device.command_inout(command, argin)
+    else:
+        result = device.command_inout(command)
     if expected_result is None:
         assert result is None
     else:
@@ -226,6 +229,7 @@ def test_start_up_low_telescope(
     command_helper.check_device_state(controller, DevState.OFF)
     check_mccs_controller_state(controller, "off")
     check_reset_state(controller, subarrays, stations)
+    assert False
 
 
 @given(parsers.parse("we have mvplow running an instance of {component_name}"))
@@ -814,7 +818,9 @@ def abort_post_operations(controller, subarrays, stations, command_helper, test_
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a scanning subarray",
 )
-def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_a_scanning_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -824,15 +830,21 @@ def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    abort_post_operations(controller, subarrays, stations)
+    abort_post_operations(controller, subarrays, stations, command_helper, test_string)
 
 
 @scenario(
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on an idle subarray",
 )
-def test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_an_idle_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -842,15 +854,21 @@ def test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    abort_post_operations(controller, subarrays, stations)
+    abort_post_operations(controller, subarrays, stations, command_helper, test_string)
 
 
 @scenario(
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a configured subarray",
 )
-def test_perform_an_abort_on_a_configured_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_a_configured_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -860,8 +878,12 @@ def test_perform_an_abort_on_a_configured_subarray(controller, subarrays, statio
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    abort_post_operations(controller, subarrays, stations)
+    abort_post_operations(controller, subarrays, stations, command_helper, test_string)
 
 
 @when(parsers.parse("tmc issues an abort on subarray"))

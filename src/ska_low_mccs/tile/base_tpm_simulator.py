@@ -433,10 +433,11 @@ class BaseTpmSimulator(HardwareSimulator):
             self._address_map.update({key: value})
 
     def configure_40g_core(
-        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+            self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip,
+            dst_port
     ):
         """
-        Configure the 40G code. The dst_mac parmeter is ignored in true
+        Configure the 40G code. The dst_mac parameter is ignored in true
         40G core (ARP resolution used instead)
 
         :param core_id: id of the core
@@ -447,8 +448,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
@@ -460,13 +459,12 @@ class BaseTpmSimulator(HardwareSimulator):
             "SrcMac": src_mac,
             "SrcIP": src_ip,
             "SrcPort": src_port,
-            "DstMac": self._arp(dst_ip),
             "DstIP": dst_ip,
             "DstPort": dst_port,
         }
         self._forty_gb_core_list.append(core_dict)
 
-    def get_40g_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
         Return a 40G configuration.
 

@@ -514,8 +514,8 @@ class Tile12(object):
         arp_table_entry=0,
         src_mac=None,
         src_ip=None,
-        dst_ip=None,
         src_port=None,
+        dst_ip=None,
         dst_port=None,
     ):
         """
@@ -579,6 +579,7 @@ class Tile12(object):
         :rtype: dict
         """
         return {
+            "core_id": core_id,
             "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
             "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
             "dst_ip": int(self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)),

@@ -35,7 +35,7 @@ from ska_low_mccs.health import (
 from ska_low_mccs import point_station
 
 locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
-stat_lat, stat_lon, stat_height = (-26.82472208,116.7644482,346.59)
+stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 
 # @pytest.fixture()
 # def mock_factory(mocker):
@@ -61,16 +61,16 @@ stat_lat, stat_lon, stat_height = (-26.82472208,116.7644482,346.59)
 
 class TestPointStation:
     """
-    ASDF
+    ASDF.
     """
 
     def test_create_pointing(self):
         station = point_station.StationInformation()
         station.loaddisplacements(locationsfile)
         station.setlocation(stat_lat, stat_lon, stat_height)
-        assert(station.latitude == stat_lat)
-        assert(station.longitude == stat_lon)
-        assert(station.ellipsoidalheight == stat_height)
+        assert station.latitude == stat_lat
+        assert station.longitude == stat_lon
+        assert station.ellipsoidalheight == stat_height
         pointing = point_station.Pointing(station)
         print(pointing)
 

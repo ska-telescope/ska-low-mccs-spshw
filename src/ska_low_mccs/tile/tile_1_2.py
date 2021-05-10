@@ -1772,7 +1772,7 @@ class Tile12(object):
         :type last_channel: int, optional
         """
         for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].configure(
+            self.tpm.tpm_integrator[i].configure_parameters(
                 "beamf",
                 integration_time,
                 first_channel,

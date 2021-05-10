@@ -5,12 +5,12 @@ ska_low_mccs tests: unit, integration and functional (BDD).
 import logging
 import typing
 import json
-
+from time import sleep
 import pytest
 import tango
 
+from ska_tango_base.commands import ResultCode
 from testing.harness.mock import MockDeviceBuilder
-
 from testing.harness.tango_harness import (
     ClientProxyTangoHarness,
     MccsDeviceInfo,
@@ -228,6 +228,17 @@ def dummy_json_args():
 
 
 @pytest.fixture()
+def empty_json_dict():
+    """
+    A fixture to return an empty json dictionary.
+
+    :return: an empty json encoded dictionary
+    """
+    empty_dict = {"": ""}
+    return json.dumps(empty_dict)
+
+
+@pytest.fixture()
 def test_string():
     """
     A simple test string fixture.
@@ -235,3 +246,86 @@ def test_string():
     :return: a simple test string
     """
     return "This is a simple text string"
+
+
+class CommandHelper:
+    """
+    Class providing helper methods for testing.
+    """
+
+    @staticmethod
+    def device_command(device_under_test, command, test_string):
+        """
+        Help method to transition the device under test into the desired
+        state.
+
+        As commands us the message queue, a callback is required to complete
+        the commands. This method simply sends the desired command and then
+        offers a reply in the form of a callback to the requestor. Only one
+        callback is required because the message_uid is mocked to be the same
+        value for all of the subservient device requests that are made.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param command: command to send to the DUT
+        :type command: str
+        :param test_string: a simply test string fixture
+        :type test_string: str
+
+        :return: A tuple containing a return code and a string containing the
+            message unique ID.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        dispatcher = {
+            "On": device_under_test.On,
+            "Off": device_under_test.Off,
+        }
+        [result_code], [_, message_uid] = dispatcher[command]()
+        assert result_code == ResultCode.QUEUED
+        args = {
+            "message_object": {
+                "command": command,
+                "json_args": "",
+                "message_uid": test_string,
+                "notifications": False,
+                "respond_to_fqdn": "",
+                "callback": "",
+            },
+            "result_code": 0,
+            "status": "",
+        }
+        json_string = json.dumps(args)
+        [rc], _ = device_under_test.Callback(json_string)
+        assert rc == ResultCode.QUEUED
+        sleep(0.1)  # Required to allow DUT thread to run
+        return (result_code, message_uid)
+
+    @staticmethod
+    def check_device_state(device, state):
+        """
+        Helper to check that the device is in the expected state with a
+        timeout.
+
+        :param device: the devices to check
+        :type device: dict
+        :param state: the state the device is expected to be in
+        :type state: list(:py:class:`tango.DevState`)
+        """
+        count = 0.0
+        while device.State() != state and count < 3.0:
+            count += 0.1
+            sleep(0.1)
+        assert device.State() == state
+
+
+@pytest.fixture()
+def command_helper():
+    """
+    A command helper fixture.
+
+    :return: the command helper class
+    """
+    return CommandHelper

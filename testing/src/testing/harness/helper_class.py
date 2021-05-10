@@ -1,0 +1,51 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+
+"""
+This module implements an MCCS test helper class.
+"""
+
+import pytest
+from tango import DevState
+
+__all__ = ["HelperClass"]
+
+
+class HelperClass:
+    """
+    Common fixtures used in derived test classes.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _autouse_these_fixtures(self, command_helper, empty_json_dict):
+        """
+        Autouse these fixtures for all tests. Store as part of the test
+        object.
+
+        :param command_helper: A command helper fixture
+        :type command_helper: CommandHelper
+        :param empty_json_dict: an empty json encoded dictionary
+        :type empty_json_dict: str
+        """
+        self._command_helper = command_helper
+        self._empty_json_dict = empty_json_dict
+
+    def start_up_device(self, device_under_test):
+        """
+        Helper method to get the device into ON state.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        device_under_test.Off(self._empty_json_dict)
+        self._command_helper.check_device_state(device_under_test, DevState.OFF)
+        device_under_test.On(self._empty_json_dict)
+        self._command_helper.check_device_state(device_under_test, DevState.ON)

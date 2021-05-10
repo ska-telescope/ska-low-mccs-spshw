@@ -544,23 +544,7 @@ class MccsTile(SKABaseDevice):
         if self.state_model.op_state == DevState.STANDBY:
             self._command_sequence.insert(0, "Off")
 
-        kwargs = json.loads(json_args)
-        respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        callback = kwargs.get("callback")
-        if respond_to_fqdn and callback:
-            (
-                result_code,
-                message_uid,
-                status,
-            ) = self._message_queue.send_message_with_response(
-                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
-            )
-            return [[result_code], [status, message_uid]]
-        else:
-            # Call On sequentially
-            handler = self.get_command_object("On")
-            (result_code, status) = handler(json_args)
-            return [[result_code], [status]]
+        return self._send_message("On", json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -633,6 +617,61 @@ class MccsTile(SKABaseDevice):
             else:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
+    def _send_message(self, command, json_args):
+        """
+        Helper method to send a message to execute the specified
+        command.
+
+        :param command: the command to send a message for
+        :type command: str
+        :param json_args: arguments to pass with the command
+        :type json_args: str
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
+        """
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call command sequentially
+            handler = self.get_command_object(command)
+            (result_code, status) = handler(json_args)
+            return [[result_code], [status]]
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def Off(self, json_args):
+        """
+        Send a message to turn Tile off.
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
+        """
+        self.logger.debug("Tile Off")
+        return self._send_message("Off", json_args)
+
     class OffCommand(SKABaseDevice.OffCommand):
         """
         Class for handling the Off() command.
@@ -646,12 +685,13 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_FROM_DISABLE_MESSAGE = "TPM has been turned on"
         FAILED_MESSAGE = "Failed to go to OFF: could not turn TPM on"
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
             command for this :py:class:`.MccsTile` device.
 
+            :param argin: Argument containing JSON encoded command message and result
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

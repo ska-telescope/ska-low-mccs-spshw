@@ -879,6 +879,44 @@ class MccsAPIU(SKABaseDevice):
             success = hardware_manager.on()
             return create_return(success, "standby")
 
+    def _send_message(self, command, json_args):
+        """
+        Helper method to send a message to execute the specified
+        command.
+
+        :param command: the command to send a message for
+        :type command: str
+        :param json_args: arguments to pass with the command
+        :type json_args: str
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
+        """
+        self.logger.info(f"APIU {command}")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            self.logger.debug(f"APIU {command} message call")
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call command sequentially
+            command = self.get_command_object(command)
+            (result_code, message) = command(json_args)
+            return [[result_code], [message]]
+
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
@@ -894,26 +932,7 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.info("APIU On")
-
-        kwargs = json.loads(json_args)
-        respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        callback = kwargs.get("callback")
-        if respond_to_fqdn and callback:
-            self.logger.debug("APIU On message call")
-            (
-                result_code,
-                message_uid,
-                status,
-            ) = self._message_queue.send_message_with_response(
-                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
-            )
-            return [[result_code], [status, message_uid]]
-        else:
-            # Call On sequentially
-            command = self.get_command_object("On")
-            (result_code, message) = command(json_args)
-            return [[result_code], [message]]
+        return self._send_message("On", json_args=json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
@@ -936,6 +955,23 @@ class MccsAPIU(SKABaseDevice):
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def Off(self, json_args):
+        """
+        Send a message to turn APIU off.
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        return self._send_message("Off", json_args=json_args)
+
     class OffCommand(SKABaseDevice.OffCommand):
         """
         Class for handling the Off() command.
@@ -948,12 +984,13 @@ class MccsAPIU(SKABaseDevice):
             device that manages the upstream hardware.
         """
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
             command for this :py:class:`.MccsAPIU` device.
 
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

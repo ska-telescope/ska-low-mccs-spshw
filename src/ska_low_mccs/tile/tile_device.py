@@ -245,7 +245,7 @@ class MccsTile(SKABaseDevice):
 
     # TODO: These properties are not currently being used in any way.
     # Can they be removed, or do they need to be handled somehow?
-    # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
+    # LmcIP = device_property(dtype=str, default_value="0.0.0.0")
     # DstPort = device_property(dtype=int, default_value=30000)
 
     # ---------------
@@ -1341,7 +1341,10 @@ class MccsTile(SKABaseDevice):
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
             ),
+            ("StopIntegratedChannelData", self.StopIntegratedChannelDataCommand),
             ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
+            ("StopIntegratedBeamData", self.StopIntegratedBeamDataCommand),
+            ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
             (
@@ -3084,9 +3087,9 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.ConfigureIntegratedChannelData`
             command functionality.
 
-            :param argin: integration time. Default to 0.5 for values
-                less than 0
-            :type argin: float
+            :param argin: a JSON-encoded dictionary of arguments
+                "integration time", "first_channel", "last_channel"
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -3094,26 +3097,38 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            integration_time = argin
-            if integration_time <= 0:
-                integration_time = 0.5
+            params = json.loads(argin)
+            integration_time = params.get("IntegrationTime", 0.5)
+            first_channel = params.get("FirstChannel", 0)
+            last_channel = params.get("LastChannel", 511)
 
             hardware_manager = self.target
-            hardware_manager.configure_integrated_channel_data(integration_time)
+            hardware_manager.configure_integrated_channel_data(
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor=2,
+                carousel_enable=1,
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevDouble",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
     def ConfigureIntegratedChannelData(self, argin):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
-        :param argin: integration_time in seconds (default = 0.5)
-        :type argin: float
+        :param argin: json dictionary with optional keywords:
+
+        * integration time - (float) in seconds (default = 0.5)
+        * first_channel - (int) default 0
+        * last_channel - (int) default 511
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3123,10 +3138,50 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284)
+        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 511)
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
+        return [[return_code], [message]]
+
+    class StopIntegratedChannelDataCommand(ResponseCommand):
+        """
+        Class for handling the StopIntegratedChannelData command.
+        """
+
+        SUCCEEDED_MESSAGE = "StopIntegratedChannelData command completed OK"
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.StopIntegratedChannelData`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            hardware_manager.stop_integrated_channel_data()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def StopIntegratedChannelData(self):
+        """
+        Stop the integrated channel data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("StopIntegratedChannelData")
+        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
@@ -3143,8 +3198,9 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.ConfigureIntegratedBeamData`
             command functionality.
 
-            :param argin: integration time
-            :type argin: float
+            :param argin: a JSON-encoded dictionary of arguments
+                "integration time", "first_channel", "last_channel"
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -3152,26 +3208,38 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            integration_time = argin
-            if integration_time <= 0:
-                integration_time = 0.5
+            params = json.loads(argin)
+            integration_time = params.get("IntegrationTime", 0.5)
+            first_channel = params.get("FirstChannel", 0)
+            last_channel = params.get("LastChannel", 191)
 
             hardware_manager = self.target
-            hardware_manager.configure_integrated_beam_data(integration_time)
+            hardware_manager.configure_integrated_beam_data(
+                integration_time,
+                first_channel,
+                last_channel,
+                time_mux_factor=1,
+                carousel_enable=0,
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevDouble",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
     def ConfigureIntegratedBeamData(self, argin):
         """
         Configure the transmission of integrated beam data with the
-        provided integration time.
+        provided integration time, the first channel and the last
+        channel. The data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
-        :param argin: integration time in seconds (default = 0.5)
-        :type argin: float
+        :param argin: json dictionary with optional keywords:
+
+        * integration time - (float) in seconds (default = 0.5)
+        * first_channel - (int) default 0
+        * last_channel - (int) default 191
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3181,10 +3249,90 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142)
+        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142, 0, 191)
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)
+        return [[return_code], [message]]
+
+    class StopIntegratedBeamDataCommand(ResponseCommand):
+        """
+        Class for handling the StopIntegratedBeamData command.
+        """
+
+        SUCCEEDED_MESSAGE = "StopIntegratedBeamData command completed OK"
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.StopIntegratedBeamData`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            hardware_manager.stop_integrated_beam_data()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def StopIntegratedBeamData(self):
+        """
+        Stop the integrated beam data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("StopIntegratedBeamData")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class StopIntegratedDataCommand(ResponseCommand):
+        """
+        Class for handling the StopIntegratedData command.
+        """
+
+        SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.StopIntegratedData`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            hardware_manager.stop_integrated_data()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def StopIntegratedData(self):
+        """
+        Stop the integrated  data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("StopIntegratedData")
+        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class SendRawDataCommand(ResponseCommand):

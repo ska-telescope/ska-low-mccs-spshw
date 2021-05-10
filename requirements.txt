@@ -6,5 +6,5 @@ jsonschema >= 3.2.0
 ska-tango-base >= 0.9.1
 fire
 future
-pyfabil == 1.0.0+ska
+pyfabil-1.0-py3-none-any.whl
 uritools

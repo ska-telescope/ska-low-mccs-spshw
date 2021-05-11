@@ -1,7 +1,9 @@
 #! /usr/bin/python
 
 import logging
+import multiprocessing
 import os
+from queue import Empty
 import time
 from typing import Sequence
 import warnings
@@ -11,6 +13,7 @@ from datetime import datetime
 import functools
 
 from multiprocessing import Queue, Process
+from multiprocessing.queues import Empty
 
 import fire
 
@@ -561,7 +564,7 @@ class PointingDriver(object):
             # print(f'Type {type(self.point_kwargs["pointing_time"])}')
             self.calc(**self.point_kwargs)
             result = {
-                "frame_t": str(self.point_kwargs["pointing_time"]),
+                "frame_t": self.point_kwargs["pointing_time"],
                 "az": self.pointing._az,
                 "el": self.pointing._el,
                 "delays": self.pointing._delays,
@@ -584,24 +587,33 @@ class PointingDriver(object):
 
     def pointing_job (self, jobs, results):
 
-        while True:
-            t = jobs.get()
+        name = multiprocessing.current_process().name
 
-            print (f"pointing_job({str(t)})")
+        while not jobs.empty():
+            try:
+                t = jobs.get(timeout=0.01)
 
-            if t:
+
+                # if t:
+                # print (f"pointing_job {name} {str(t)} - incoming job")
                 self.point_kwargs["pointing_time"] = t
                 self.calc(**self.point_kwargs)
                 result = {
-                    "frame_t": str(self.point_kwargs["pointing_time"]),
+                    # "frame_t": str(self.point_kwargs["pointing_time"]),
+                    "frame_t": self.point_kwargs["pointing_time"],
                     "az": self.pointing._az,
                     "el": self.pointing._el,
                     "delays": self.pointing._delays,
                 }
                 results.put(result)
-            else:
-                print("End of jobs")
-                return
+                # else:
+                #     print (f"pointing_job {name} {str(t)} - None job)")
+                #     return
+            except Empty:
+                print (f"Empty exception - {name}")
+
+        print (f"pointing_job {name} - No more jobs in queue")
+        results.put(None)
 
     def msequence (self, count, interval, nproc):
 
@@ -611,7 +623,7 @@ class PointingDriver(object):
         processes = [Process(
             target=self.pointing_job,
             args=(job_queue,results_queue),
-            daemon=True
+            # daemon=True
             ) for x in range(nproc)]
 
         print(f"Generate {count} delay sets every {interval} seconds - multiprocessing")
@@ -625,15 +637,31 @@ class PointingDriver(object):
         for i in range(count):
             job_queue.put(t0 + i * interval / 86400)
 
-        job_queue.put(None)
+        # job_queue.put(None)
 
-        print ("job_queue loaded")
+        print (f"job_queue loaded with {job_queue.qsize()} jobs")
 
         for p in processes:
             print (f"Start process {str(p)}")
             p.start()
 
         print ("Processes running")
+
+        collected = {}
+
+        ended = 0
+        nresult = 0
+
+        while ended < nproc:
+            # print (f"Waiting for {nproc-ended} processes, {job_queue.qsize()} jobs queued")
+            result = results_queue.get()
+            if result is None:
+                # print ("Got a None result")
+                ended += 1
+            else:
+                nresult += 1
+                # print (f"Now have {nresult} results")
+                collected[result['frame_t']] = result
 
         for p in processes:
             print (f"Join process {str(p)}")
@@ -644,8 +672,12 @@ class PointingDriver(object):
         toc = time.perf_counter()
         print(f"Execution time {toc - tic:0.4f} seconds")
 
-        while not results_queue.empty():
-            self._results.append(results_queue.get())
+        # while not results_queue.empty():
+        #     self._results.append(results_queue.get())
+
+        self._results = [
+            collected[key] for key in sorted(collected.keys())
+        ]
 
         print(len(self._results), "frames written")
         return self
@@ -664,7 +696,7 @@ class PointingDriver(object):
                 outfile.write(f',"Antenna {i+1:03}"')
             outfile.write("\n")
             for result in self._results:
-                outfile.write(result["frame_t"])
+                outfile.write(str(result["frame_t"]))
                 outfile.write(",")
                 outfile.write(str(result["az"]))
                 outfile.write(",")

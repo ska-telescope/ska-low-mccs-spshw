@@ -241,7 +241,7 @@ class TestMccsIntegrationTmc:
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
-            "station_ids": [1, 2],
+            "station_ids": [[1, 2]],
             "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
             "subarray_beam_ids": [1],
         }
@@ -302,7 +302,7 @@ class TestMccsIntegrationTmc:
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
-            "station_ids": [1, 2],
+            "station_ids": [[1, 2]],
             "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
             "subarray_beam_ids": [1],
         }
@@ -326,6 +326,8 @@ class TestMccsIntegrationTmc:
                     "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     "update_rate": 0.0,
                     "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                    "antenna_weights": [1.0, 1.0, 1.0],
+                    "phase_centre": [0.0, 0.0],
                 }
             ],
         }

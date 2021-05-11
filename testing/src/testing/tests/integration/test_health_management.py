@@ -267,10 +267,10 @@ def test_subarray_health_rollup(tango_harness):
     assert subarray_2.healthState == HealthState.OK
 
     _ = call_with_json(
-        controller.Allocate, subarray_id=1, station_ids=[1], station_beams=[1]
+        controller.Allocate, subarray_id=1, station_ids=[[1]], station_beams=[1]
     )
     _ = call_with_json(
-        controller.Allocate, subarray_id=2, station_ids=[2], station_beams=[2]
+        controller.Allocate, subarray_id=2, station_ids=[[2]], station_beams=[2]
     )
 
     sleep()

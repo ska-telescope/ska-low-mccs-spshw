@@ -291,22 +291,29 @@ class TestMccsSubarrayBeam:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         config_dict = {
-            "subarray_id": 1,
             "subarray_beam_id": 1,
             "station_ids": [1, 2],
-            "channels": [1, 2, 3, 4, 5, 6, 7, 8],
+            "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
             "update_rate": 3.14,
             "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
+            "antenna_weights": [1.0, 1.0, 1.0],
+            "phase_centre": [0.0, 0.0],
         }
         json_str = json.dumps(config_dict)
         [[result_code], [message]] = device_under_test.Configure(json_str)
         assert result_code == ResultCode.OK
         assert message == MccsSubarrayBeam.ConfigureCommand.SUCCEEDED_MESSAGE
-        assert device_under_test.subarrayId == 1
         assert device_under_test.subarrayBeamId == 1
         assert device_under_test.updateRate == 3.14
         assert list(device_under_test.stationIds) == [1, 2]
-        assert list(device_under_test.channels) == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert len(list(device_under_test.channels)) == len(
+            [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]]
+        )
+        for a, b in zip(
+            list(device_under_test.channels),
+            [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+        ):
+            assert list(a) == list(b)
         assert list(device_under_test.desiredPointing) == [
             1585619550.0,
             192.0,
@@ -314,3 +321,5 @@ class TestMccsSubarrayBeam:
             27.0,
             1.0,
         ]
+        assert len(list(device_under_test.antenna_weights)) == len([1.0, 1.0, 1.0])
+        assert list(device_under_test.antenna_weights) == [1.0, 1.0, 1.0]

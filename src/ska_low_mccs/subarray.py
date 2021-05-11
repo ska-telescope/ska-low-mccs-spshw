@@ -9,17 +9,22 @@
 This module provides MccsSubarray, the Tango device class for the MCCS
 Subarray prototype.
 """
+
+from __future__ import annotations  # allow forward references in type hints
+
 __all__ = [
     "MccsSubarray",
     "StationsResourceManager",
-    "StationBeamsResourceManager",
+    "SubarrayBeamsResourceManager",
     "main",
 ]
 
 # imports
 import json
-import threading
 import time
+import logging
+import threading
+from typing import List, Tuple
 
 # PyTango imports
 from tango import DebugIt, EnsureOmniThread
@@ -32,7 +37,7 @@ from ska_tango_base.control_model import HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.events import EventManager
-from ska_low_mccs.health import MutableHealthModel
+from ska_low_mccs.health import MutableHealthModel, HealthMonitor
 import ska_low_mccs.release as release
 from ska_low_mccs.resource import ResourceManager
 
@@ -45,17 +50,19 @@ class StationsResourceManager(ResourceManager):
     Inherits from ResourceManager.
     """
 
-    def __init__(self, health_monitor, station_fqdns, logger):
+    def __init__(
+        self: StationsResourceManager,
+        health_monitor: HealthMonitor,
+        station_fqdns: List[str],
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new StationsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: :py:class:`ska_low_mccs.health.HealthModel` object
         :param station_fqdns: the FQDNs of the stations that this
             subarray manages
-        :type station_fqdns: list(str)
         :param logger: the logger to be used by the object under test
-        :type logger: :py:class:`logging.Logger`
         """
         self._devices = dict()
         stations = {}
@@ -64,7 +71,7 @@ class StationsResourceManager(ResourceManager):
             stations[station_id] = station_fqdn
         super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
 
-    def items(self):
+    def items(self: StationsResourceManager):
         """
         Return the stations managed by this device.
 
@@ -120,123 +127,129 @@ class StationsResourceManager(ResourceManager):
         return sorted(self._resources.keys())
 
 
-class StationBeamsResourceManager(ResourceManager):
+class SubarrayBeamsResourceManager(ResourceManager):
     """
-    A simple manager for the pool of station beams that are assigned to
+    A simple manager for the pool of subarray beams that are assigned to
     a subarray.
 
     Inherits from ResourceManager.
     """
 
-    def __init__(self, health_monitor, station_beam_fqdns, stations_manager, logger):
+    def __init__(
+        self: SubarrayBeamsResourceManager,
+        health_monitor: HealthMonitor,
+        subarray_beam_fqdns: List[str],
+        stations_manager: StationsResourceManager,
+        logger: logging.Logger,
+    ) -> None:
         """
-        Initialise a new StationBeamsResourceManager.
+        Initialise a new SubarrayBeamsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :type health_monitor: :py:class:`ska_low_mccs.health.HealthMonitor`
-        :param station_beam_fqdns: the FQDNs of the station beams that this
+        :param subarray_beam_fqdns: the FQDNs of the station beams that this
             subarray manages
-        :type station_beam_fqdns: list(str)
         :param stations_manager: the StationResourceManager holding the station
             devices belonging to the parent Subarray
-        :type stations_manager:
-            :py:class:`ska_low_mccs.subarray.StationsResourceManager` object
         :param logger: the logger to be used by the object under test
-        :type logger: :py:class:`logging.Logger`
         """
         self._stations = stations_manager
-        station_beams = {}
-        for station_beam_fqdn in station_beam_fqdns:
-            station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
-            station_beams[station_beam_id] = station_beam_fqdn
+        subarray_beams = {}
+        for subarray_beam_fqdn in subarray_beam_fqdns:
+            subarray_beam_id = int(subarray_beam_fqdn.split("/")[-1:][0])
+            subarray_beams[subarray_beam_id] = subarray_beam_fqdn
         super().__init__(
             health_monitor,
-            "Station Beams Resource Manager",
-            station_beams,
+            "Subarray Beams Resource Manager",
+            subarray_beams,
             logger,
             [HealthState.OK],
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Return the number of stations assigned to this subarray resource
         manager.
 
-        :return: the number of stations assigned to this subarray resource
-            manager
-        :rtype: int
+        :return: the number of stations assigned to this subarray resource manager
         """
         return len(self.get_all_fqdns())
 
-    def assign(self, station_beam_fqdns, station_fqdns):
+    def assign(
+        self: SubarrayBeamsResourceManager,
+        subarray_beam_fqdns: List[str],
+        station_fqdns: list[List[str]],
+    ) -> None:
         """
         Assign devices to this subarray resource manager.
 
-        :param station_beam_fqdns: list of FQDNs of station beams to be assigned
-        :type station_beam_fqdns: list(str)
+        :param subarray_beam_fqdns: list of FQDNs of station beams to be assigned
         :param station_fqdns: list of FQDNs of stations to be assigned
-        :type station_fqdns: list(str)
         """
 
         stations = {}
-        for station_fqdn in station_fqdns:
-            station_id = int(station_fqdn.split("/")[-1:][0])
-            stations[station_id] = station_fqdn
-            if station_fqdn not in self._stations.station_fqdns:
-                self._stations.add_to_managed({station_id: station_fqdn})
-
-        station_beams = {}
-        for station_beam_fqdn in station_beam_fqdns:
-            station_beam_id = int(station_beam_fqdn.split("/")[-1:][0])
-            station_beams[station_beam_id] = station_beam_fqdn
+        station_ids_per_beam = []
+        for station_sub_fqdns in station_fqdns:
+            station_id_sublist = []
+            for station_fqdn in station_sub_fqdns:
+                station_id = int(station_fqdn.split("/")[-1:][0])
+                stations[station_id] = station_fqdn
+                station_id_sublist.append(station_id)
+                if station_fqdn not in self._stations.station_fqdns:
+                    self._stations.add_to_managed({station_id: station_fqdn})
+            station_ids_per_beam.append(station_id_sublist)
+        subarray_beams = {}
+        for index, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
+            subarray_beam_id = int(subarray_beam_fqdn.split("/")[-1:][0])
+            subarray_beams[subarray_beam_id] = subarray_beam_fqdn
 
             # TODO: Establishment of connections should happen at initialization
-            station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
 
-            station_beam.stationIds = sorted(stations.keys())
+            subarray_beam.stationIds = sorted(station_ids_per_beam[index])
             # TODO While SubarrayBeam device is not yet fully implemented, we're still
-            # passing an array of Station ids to StationBeams. This list will end up
+            # passing an array of Station ids to SubarrayBeams. This list will end up
             # going to SubarrayBeam while StationBeam gets a single Station device.
             # As the Station FQDN is used by StationBeam to report health to
             # SubarrayBeam, it makes sense to only keep this as a single sting rather
             # than a list, as it will be implemented when the StationBeam health
             # gets implemented in SubarrayBeam - hence we pass a single value here:
-            station_beam.stationFqdn = station_fqdns[0]
+            # subarray_beam.stationFqdn = station_fqdns[0]
 
-        self._add_to_managed(station_beams)
-        for station_beam_fqdn in station_beam_fqdns:
+        self._add_to_managed(subarray_beams)
+        for subarray_beam_fqdn in subarray_beam_fqdns:
             # TODO: Establishment of connections should happen at initialization
-            station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
 
-            station_beam.isBeamLocked = True
-            self.update_resource_health(station_beam_fqdn, station_beam.healthState)
+            subarray_beam.isBeamLocked = True
+            self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
 
-        super().assign(station_beams, list(stations.keys()))
+        super().assign(subarray_beams, list(stations.keys()))
 
-    def configure(self, logger, argin):
+    def configure(
+        self: SubarrayBeamsResourceManager, logger: logging.Logger, argin: str
+    ) -> Tuple[ResultCode, str]:
         """
         Configure devices from this subarray resource manager.
 
         :param logger: the logger to be used.
-        :type logger: :py:class:`logging.Logger`
         :param argin: JSON configuration specification
-                    {
-                    "stations":[{"station_id": 1},{"station_id": 2}],
-                    "subarray_beams":[{
-                    "subarray_id":1,
-                    "subarray_beam_id":1,
-                    "station_ids":[1,2],
-                    "channels":  [[0, 8, 1, 1], [8, 8, 2, 1]],
-                    "update_rate": 0.0,
-                    "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
-                    }
-        :type argin: str
+            {
+            "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
+            "stations":[{"station_id": 1},{"station_id": 2}],
+            "subarray_beams":[{
+            "subarray_beam_id":1,
+            "station_ids":[1,2],
+            "update_rate": 0.0,
+            "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+            "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+            "antenna_weights": [1.0, 1.0, 1.0],
+            "phase_centre": [0.0, 0.0],
+            }]
+            }
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         kwargs = json.loads(argin)
         stations = kwargs.get("stations", list())
@@ -260,20 +273,19 @@ class StationBeamsResourceManager(ResourceManager):
         message = MccsSubarray.ConfigureCommand.SUCCEEDED_MESSAGE
         return (result_code, message)
 
-    def scan(self, logger, argin):
+    def scan(
+        self: SubarrayBeamsResourceManager, logger: logging.Logger, argin: str
+    ) -> Tuple[ResultCode, str]:
         """
         Start a scan on the configured subarray resources.
 
         :param logger: the logger to be used.
-        :type logger: :py:class:`logging.Logger`
         :param argin: JSON scan specification
-        :type argin: str
+
         :return: A tuple containing a result code and a string
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        # TODO: station_beam_fqdns actually store subarray_bean_fqdns (for now)
         subarray_beam_device_proxies = []
-        for subarray_beam_fqdn in self.station_beam_fqdns:
+        for subarray_beam_fqdn in self.subarray_beam_fqdns:
             # TODO: Establishment of connections should be happening at initialization
             device_proxy = MccsDeviceProxy(subarray_beam_fqdn, logger=logger)
             subarray_beam_device_proxies.append(device_proxy)
@@ -289,36 +301,38 @@ class StationBeamsResourceManager(ResourceManager):
 
         return (result_failure, error_message)
 
-    def release(self, station_beam_fqdns, station_fqdns):
+    def release(
+        self: SubarrayBeamsResourceManager,
+        subarray_beam_fqdns: List[str],
+        station_fqdns: List[str],
+    ) -> None:
         """
         Release devices from this subarray resource manager.
 
-        :param station_beam_fqdns: list of  FQDNs of station beams to be released
-        :type station_beam_fqdns: list(str)
+        :param subarray_beam_fqdns: list of  FQDNs of station beams to be released
         :param station_fqdns: list of  FQDNs of the stations which if assigned to,
             station beams should be released
-        :type station_fqdns: list(str)
         """
         station_ids_to_release = []
         # release station beams assigned to station_fqdns
         for station_id, station_fqdn in self._stations.items().items():
             if station_fqdn in station_fqdns:
                 station_ids_to_release.append(station_id)
-        for station_beam in self._resources.values():
-            if station_beam._assigned_to in station_ids_to_release:
-                if station_beam.fqdn not in station_beam_fqdns:
-                    station_beam_fqdns.append(station_beam.fqdn)
+        for subarray_beam in self._resources.values():
+            if subarray_beam._assigned_to in station_ids_to_release:
+                if subarray_beam.fqdn not in subarray_beam_fqdns:
+                    subarray_beam_fqdns.append(subarray_beam.fqdn)
 
         # release station beams by given fqdns
-        for station_beam_fqdn in station_beam_fqdns:
+        for subarray_beam_fqdn in subarray_beam_fqdns:
             # TODO: Establishment of connections should happen at initialization
-            station_beam = MccsDeviceProxy(station_beam_fqdn, logger=self._logger)
+            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
 
-            station_beam.stationIds = []
-            station_beam.stationFqdn = None
-        super().release(station_beam_fqdns)
+            subarray_beam.stationIds = []
+            subarray_beam.stationFqdn = None
+        super().release(subarray_beam_fqdns)
 
-    def release_all(self):
+    def release_all(self: SubarrayBeamsResourceManager) -> None:
         """
         Release all devices from this subarray resource manager.
         """
@@ -327,22 +341,20 @@ class StationBeamsResourceManager(ResourceManager):
         self._stations.release_all()
 
     @property
-    def station_beam_fqdns(self):
+    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> List[str]:
         """
         Returns the FQDNs of currently assigned station beams.
 
         :return: FQDNs of currently assigned station beams
-        :rtype: list(str)
         """
         return sorted(self.get_all_fqdns())
 
     @property
-    def station_fqdns(self):
+    def station_fqdns(self) -> List[str]:
         """
         Returns the FQDNs of currently assigned stations.
 
         :return: FQDNs of currently assigned stations
-        :rtype: list(str)
         """
         return sorted(self._stations.values())
 
@@ -435,7 +447,7 @@ class MccsSubarray(SKASubarray):
             device._transient_buffer_manager = TransientBufferManager()
 
             device._station_fqdns = list()
-            device._station_beam_fqdns = list()
+            device._subarray_beam_fqdns = list()
 
             device.set_change_event("stationFQDNs", True, True)
             device.set_archive_event("stationFQDNs", True, True)
@@ -500,14 +512,14 @@ class MccsSubarray(SKASubarray):
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns, self.logger
             )
-            device._station_beam_pool_manager = StationBeamsResourceManager(
+            device._subarray_beam_resource_manager = SubarrayBeamsResourceManager(
                 device.health_model._health_monitor,
-                device._station_beam_fqdns,
+                device._subarray_beam_fqdns,
                 device._station_pool_manager,
                 self.logger,
             )
             resourcing_args = (
-                device._station_beam_pool_manager,
+                device._subarray_beam_resource_manager,
                 device.state_model,
                 device.logger,
             )
@@ -544,8 +556,7 @@ class MccsSubarray(SKASubarray):
             ("GetVersionInfo", self.GetVersionInfoCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(self, self.state_model, self.logger),
+                command_name, command_object(self, self.state_model, self.logger)
             )
 
         self.register_command_object(
@@ -698,8 +709,9 @@ class MccsSubarray(SKASubarray):
         """
 
         SUCCEEDED_MESSAGE = "AssignResources command completed OK"
+        FAILED_MESSAGE = "AssignResources command failed"
 
-        def do(self, argin):
+        def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             (inherited)
@@ -707,24 +719,31 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: json string with the resources to be assigned
-            :type argin: str
+                {
+                "subarray_beams": ["low-mccs/subarraybeam/01"],
+                "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                "channel_blocks": [3]
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # deliberately not calling super() -- we're passing a different
             # target object
             kwargs = json.loads(argin)
-            stations = kwargs.get("stations", [])
-            subarray_beams = kwargs.get("subarray_beams", [])
+            station_fqdns = kwargs.get("stations", [])
+            subarray_beam_fqdns = kwargs.get("subarray_beams", [])
             # TODO: Are channels required in subarray during allocation or are they
             # only required in MCCSController? Remove noqa upon decision
-            channels = kwargs.get("channels", [])  # noqa: F841
-            station_beam_pool_manager = self.target
-            station_beam_pool_manager.assign(subarray_beams, stations)
+            channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841
+            subarray_beam_resource_manager = self.target
+            if len(subarray_beam_fqdns) == len(station_fqdns):
+                subarray_beam_resource_manager.assign(
+                    subarray_beam_fqdns, station_fqdns
+                )
+            else:
+                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             # TODO: Should we always return success?
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -768,8 +787,8 @@ class MccsSubarray(SKASubarray):
             kwargs = json.loads(argin)
             stations = kwargs.get("station_fqdns", [])
             subarray_beams = kwargs.get("subarray_beam_fqdns", [])
-            station_beam_pool_manager = self.target
-            station_beam_pool_manager.release(subarray_beams, stations)
+            subarray_beam_resource_manager = self.target
+            subarray_beam_resource_manager.release(subarray_beams, stations)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
@@ -833,7 +852,7 @@ class MccsSubarray(SKASubarray):
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
-        def do(self, argin):
+        def do(self, argin: str):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKASubarray.Configure`
@@ -841,16 +860,17 @@ class MccsSubarray(SKASubarray):
 
             :param argin: JSON configuration specification
                         {
+                        "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
                         "stations":[{"station_id": 1},{"station_id": 2}],
                         "subarray_beams":[{
-                        "subarray_id":1,
                         "subarray_beam_id":1,
                         "station_ids":[1,2],
-                        "channels":  [[0, 8, 1, 1], [8, 8, 2, 1]],
                         "update_rate": 0.0,
-                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]}]
+                        "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                    `   "antenna_weights": [1.0, 1.0, 1.0],
+                        "phase_centre": [0.0, 0.0]}]
                         }
-            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -858,8 +878,8 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            station_beam_pool_manager = self.target._station_beam_pool_manager
-            return station_beam_pool_manager.configure(self.logger, argin)
+            subarray_beam_resource_manager = self.target._subarray_beam_resource_manager
+            return subarray_beam_resource_manager.configure(self.logger, argin)
 
         def check_allowed(self):
             """
@@ -877,14 +897,18 @@ class MccsSubarray(SKASubarray):
         Class for handling the Scan(argin) command.
         """
 
-        def do(self, argin):
+        def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKASubarray.Scan`
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON scan specification
-            :type argin: str
+                        {
+                        "interface": "https://schema.skatelescope.org/ska-low-mccs-scan/1.0",
+                        "scan_id":1,
+                        "start_time": 0.0
+                        }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -896,17 +920,18 @@ class MccsSubarray(SKASubarray):
 
             device = self.target
             kwargs = json.loads(argin)
-            device._scan_id = kwargs.get("id")
-            device._scan_time = kwargs.get("scan_time")
+            device._scan_id = kwargs.get("scan_id")
+            device._scan_time = kwargs.get("start_time")
 
-            station_beam_pool_manager = device._station_beam_pool_manager
-            (pool_failure_code, pool_message) = station_beam_pool_manager.scan(
-                self.logger, argin
-            )
-            if not pool_failure_code:
+            subarray_beam_resource_manager = device._subarray_beam_resource_manager
+            (
+                resource_failure_code,
+                resource_message,
+            ) = subarray_beam_resource_manager.scan(self.logger, argin)
+            if not resource_failure_code:
                 return (result_code, message)
             else:
-                return (pool_failure_code, pool_message)
+                return (resource_failure_code, resource_message)
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """

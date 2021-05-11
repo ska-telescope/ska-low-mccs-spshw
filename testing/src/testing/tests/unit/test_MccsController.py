@@ -475,10 +475,11 @@ class TestMccsController:
             # Make the call to allocate
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
-                station_ids=[1],
                 subarray_beam_ids=[1],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[1]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             mock_event_callback.check_command_result(name="commandResult", result=None)
@@ -489,9 +490,9 @@ class TestMccsController:
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "stations": ["low-mccs/station/001"],
+                        "stations": [["low-mccs/station/001"]],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
-                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                        "channel_blocks": [2],
                     }
                 )
             )
@@ -508,10 +509,11 @@ class TestMccsController:
             # allocated to subarray 1
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
-                station_ids=[1],
                 subarray_beam_ids=[1],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[1]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.FAILED
             mock_event_callback.check_command_result(name="commandResult", result=None)
@@ -538,10 +540,11 @@ class TestMccsController:
 
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
-                station_ids=[1, 2],
                 subarray_beam_ids=[1],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[1, 2]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             mock_event_callback.check_command_result(name="commandResult", result=None)
@@ -552,9 +555,9 @@ class TestMccsController:
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "stations": ["low-mccs/station/002"],
+                        "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
-                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                        "channel_blocks": [2],
                     }
                 )
             )
@@ -571,10 +574,11 @@ class TestMccsController:
             # it only requires resource release
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
-                station_ids=[2],
                 subarray_beam_ids=[1],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[2]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             mock_event_callback.check_command_result(
@@ -625,10 +629,11 @@ class TestMccsController:
 
             ((result_code,), (_,)) = call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
-                station_ids=[1, 2],
                 subarray_beam_ids=[1],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[1, 2]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             mock_event_callback.check_command_result(
@@ -644,9 +649,9 @@ class TestMccsController:
             mock_subarray_2.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "stations": ["low-mccs/station/001", "low-mccs/station/002"],
+                        "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
-                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+                        "channel_blocks": [2],
                     }
                 )
             )
@@ -702,10 +707,11 @@ class TestMccsController:
 
             call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
-                station_ids=[1],
                 subarray_beam_ids=[1],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[1]],
+                channel_blocks=[2],
             )
             mock_subarray_1.On.assert_called_once_with()
             # check state
@@ -714,10 +720,11 @@ class TestMccsController:
             # allocate station 2 to subarray 2
             call_with_json(
                 controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
-                station_ids=[2],
                 subarray_beam_ids=[2],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                station_ids=[[2]],
+                channel_blocks=[2],
             )
             mock_subarray_2.On.assert_called_once_with()
             # check state

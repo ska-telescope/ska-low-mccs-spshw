@@ -338,7 +338,7 @@ class TestMccsIntegrationTmc:
         assert devices["subarray_01"].obsState == ObsState.READY
 
         # Perform a scan on the subarray
-        scan_config = {"id": 1, "scan_time": 4}
+        scan_config = {"scan_id": 1, "scan_time": 4}
         json_string = json.dumps(scan_config)
         self.assert_command(
             device=devices["subarray_01"],

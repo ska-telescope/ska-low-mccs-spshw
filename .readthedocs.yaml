@@ -10,7 +10,7 @@ sphinx:
    configuration: docs/conf.py
 
 build:
-   6.0
+   image: 6.0
 
 # Optionally set the version of Python and requirements required to build your docs
 python:

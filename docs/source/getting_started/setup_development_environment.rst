@@ -217,13 +217,19 @@ Great! You are ready to run a SKA Docker container.
 
 Build the docs
 ^^^^^^^^^^^^^^
-Since the docs ultimately need to build successful on ReadTheDocs, we
-we test our docs build by building them in a ReadTheDocs build
-container. This is managed through the project makefile:
+Since the docs ultimately need to build successfully on ReadTheDocs, we
+test our docs build by building them in a ReadTheDocs build container.
+This is managed through the project makefile:
 
 .. code-block:: shell-session
 
   me@local:~$ make docs
+
+Documentation can also be built for the test suite:
+
+.. code-block:: shell-session
+
+  me@local:~$ make testdocs
 
 
 Developing in a SKA Docker container the manual way

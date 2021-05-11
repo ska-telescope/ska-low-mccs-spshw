@@ -161,7 +161,7 @@ docs:
     - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
     - python3 -m pip install anybadge
   script:
-    - python3 -m sphinx -T -E -b html -W --keep-going docs/source docs/build/html
+    - python3 -m sphinx -T -E -b html -n -W --keep-going docs/source docs/build/html
     - echo "pass" > .docs_status
   after_script:
     - mkdir -p build/badges
@@ -183,7 +183,7 @@ testdocs:
   before_script:
     - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
   script:
-    - python3 -m sphinx -T -E -b html -W --keep-going testing/docs/source testing/docs/build/html
+    - python3 -m sphinx -T -E -b html -n -W --keep-going testing/docs/source testing/docs/build/html
   artifacts:
     paths:
       - ./testing/docs/build/html

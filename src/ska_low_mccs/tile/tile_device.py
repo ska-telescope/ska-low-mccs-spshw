@@ -1952,7 +1952,7 @@ class MccsTile(SKABaseDevice):
         * ArpTableEntry - (int) ARP table entry ID to use
 
         :return: the configuration is a json string comprising:
-                 src_mac, src_ip, src_port, dest_ip, dest_port
+                 core_id, arp_table_entry, src_mac, src_ip, src_port, dest_ip, dest_port
         :rtype: str
 
         :example:

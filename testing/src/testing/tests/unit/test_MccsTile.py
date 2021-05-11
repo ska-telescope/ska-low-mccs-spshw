@@ -1062,9 +1062,8 @@ class TestMccsTileCommands:
         Test for.
 
         * Configure40GCore command
-        * fortyGDestinationIps attribute
-        * fortyGDestinationMacs attribute
-        * fortyGDestinationPorts attribute
+        * fortyGBDestinationIps attribute
+        * fortyGBDestinationPorts attribute
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -1105,12 +1104,22 @@ class TestMccsTileCommands:
         )
         assert tuple(device_under_test.fortyGbDestinationPorts) == (5000, 5001)
 
-        result_str = device_under_test.Get40GCoreConfiguration(1, 0)
+        arg = {
+            "CoreID": 1,
+            "ArpTableEntry": 0,
+        }
+        json_arg = json.dumps(arg)
+        result_str = device_under_test.Get40GCoreConfiguration(json_arg)
         result = json.loads(result_str)
         assert result == config_1.pop("CoreID")
 
+        arg = {
+            "CoreID": 3,
+            "ArpTableEntry": 0,
+        }
+        json_arg = json.dumps(arg)
         with pytest.raises(DevFailed, match="Invalid core id specified"):
-            _ = device_under_test.Get40GCoreConfiguration(3)
+            _ = device_under_test.Get40GCoreConfiguration(json_arg)
 
     @pytest.mark.parametrize("channels", (2, 3))
     @pytest.mark.parametrize("frequencies", (1, 2, 3))

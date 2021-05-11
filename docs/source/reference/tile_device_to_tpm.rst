@@ -20,11 +20,11 @@ a Tile16 object, depending on the Tango property *TpmVersion*.
 
 TPM Simulator Construction
 ==========================
-.. image:: tile_construction.svg
+.. uml:: tile_construction.uml
 
 TPM Driver Construction
 =======================
-.. image:: tile_construction_driver.svg
+.. uml:: tile_construction_driver.uml
 
 ***************************************
  Connection to TPM & Firmware Download
@@ -40,11 +40,11 @@ Tile16 hardware driver, and to "itpm_v1_2.bit" for Tile12 hardware driver.
 
 Ursula's Sequence Diagram
 =========================
-.. image:: spo_943_sequence_1.svg
+.. uml:: spo_943_sequence_1.uml
 
 Gianni's Code (Modified to hook into Ursula's sequence)
 =======================================================
-.. image:: spo_943_sequence_2.svg
+.. uml:: spo_943_sequence_2.uml
 
 Notes
 -----

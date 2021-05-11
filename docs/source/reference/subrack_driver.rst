@@ -28,13 +28,13 @@ or asynchronous. Asynchronous commands block the hardware until completion, i.e.
 Attribute query example
 =======================
 
-.. image:: subrack_attribute.svg 
+.. uml:: subrack_attribute.uml
 
 An attribute read operation translates to a specific method in the SubrackDriver object, which queries the WebHardwareClient object. It sends a html query to the subrack management board, which replies with a json formatted dictionary. The dictionary contains the returned value (scalar or list) which is translated to the required attribute value by the Tango device. 
 
 Power on a TPM
 ==============
-.. image:: subrack_command.svg
+.. uml:: subrack_command.uml
 
 A command to power on a TPM is more complex. The command is not completed instantaneously, so the driver polls every second whether the command has completed. When this happens, the Tango device queries the TPM On status, and if a change is
 detected, generates an event. The Tile devices subscribe to this event, in order to change their status accordingly. 

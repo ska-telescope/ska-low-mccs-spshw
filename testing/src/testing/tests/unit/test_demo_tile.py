@@ -109,6 +109,21 @@ class TestDemoTile:
         """
         return tango_harness.get_device("low-mccs/tile/0001")
 
+    def test_queue_debug(self, device_under_test, test_string):
+        """
+        Test that the queue debug attribute works correctly.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param test_string: a simple test string fixture
+        :type test_string: str
+        """
+        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
+        device_under_test.aQueueDebug = test_string
+        assert device_under_test.aQueueDebug == test_string
+
     def test_health(self, device_under_test):
         """
         Test that device health changes to failed when we simulate

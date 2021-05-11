@@ -123,7 +123,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
             self._tpm_present = self.DEFAULT_TPM_PRESENT
         else:
             self._tpm_present = tpm_present
-        self._tpm_power_modes = self.DEFAULT_TPM_POWER_MODES
+        self._are_tpms_on = self.DEFAULT_TPM_POWER_MODES
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 
@@ -195,7 +195,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane temperature")
         response = self._client.get_attribute("backplane_temperatures")
-        self._backplane_temperatures = response["value"]
+        if response["status"] == "OK":
+            self._backplane_temperatures = response["value"]
         return self._backplane_temperatures
 
     @property
@@ -209,7 +210,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading board temperature")
         response = self._client.get_attribute("board_temperatures")
-        self._board_temperatures = response["value"]
+        if response["status"] == "OK":
+            self._board_temperatures = response["value"]
         return self._board_temperatures
 
     @property
@@ -223,7 +225,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading board current")
         response = self._client.get_attribute("board_current")
-        self._board_current = response["value"]
+        if response["status"] == "OK":
+            self._board_current = response["value"]
         return self._board_current
 
     @property
@@ -237,7 +240,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane fan speed")
         response = self._client.get_attribute("subrack_fan_speeds")
-        self._subrack_fan_speeds = response["value"]
+        if response["status"] == "OK":
+            self._subrack_fan_speeds = response["value"]
         return self._subrack_fan_speeds
 
     @property
@@ -251,7 +255,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane fan speed percent")
         response = self._client.get_attribute("subrack_fan_speeds_percent")
-        self._subrack_fan_speeds_percent = response["value"]
+        if response["status"] == "OK":
+            self._subrack_fan_speeds_percent = response["value"]
         return self._subrack_fan_speeds_percent
 
     @property
@@ -265,7 +270,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane fan mode")
         response = self._client.get_attribute("subrack_fan_mode")
-        self._subrack_fan_mode = response["value"]
+        if response["status"] == "OK":
+            self._subrack_fan_mode = response["value"]
         return self._subrack_fan_mode
 
     @property
@@ -281,7 +287,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         if self.power_mode == PowerMode.ON:
             self.logger.debug("Reading number of TPMs")
             response = self._client.get_attribute("tpm_present")
-            self._tpm_count = sum(response["value"])
+            if response["status"] == "OK":
+                self._tpm_count = sum(response["value"])
         return self._tpm_count
 
     @property
@@ -336,7 +343,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_currents")
-        self._tpm_currents = response["value"]
+        if response["status"] == "OK":
+            self._tpm_currents = response["value"]
         return self._tpm_currents
 
     @property
@@ -349,7 +357,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_powers")
-        self._tpm_powers = response["value"]
+        if response["status"] == "OK":
+            self._tpm_powers = response["value"]
         return self._tpm_powers
 
     @property
@@ -362,7 +371,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_voltages")
-        self._tpm_voltages = response["value"]
+        if response["status"] == "OK":
+            self._tpm_voltages = response["value"]
         return self._tpm_voltages
 
     @property
@@ -375,7 +385,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_fan_speeds")
-        self._power_supply_fan_speeds = response["value"]
+        if response["status"] == "OK":
+            self._power_supply_fan_speeds = response["value"]
         return self._power_supply_fan_speeds
 
     @property
@@ -388,7 +399,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_currents")
-        self._power_supply_currents = response["value"]
+        if response["status"] == "OK":
+            self._power_supply_currents = response["value"]
         return self._power_supply_currents
 
     @property
@@ -401,7 +413,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_powers")
-        self._power_supply_powers = response["value"]
+        if response["status"] == "OK":
+            self._power_supply_powers = response["value"]
         return self._power_supply_powers
 
     @property
@@ -414,7 +427,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_voltages")
-        self._power_supply_voltages = response["value"]
+        if response["status"] == "OK":
+            self._power_supply_voltages = response["value"]
         return self._power_supply_voltages
 
     @property
@@ -427,7 +441,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_present")
-        self._tpm_present = response["value"]
+        if response["status"] == "OK":
+            self._tpm_present = response["value"]
         return self._tpm_present
 
     @property
@@ -440,7 +455,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         """
         self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_supply_fault")
-        self._tpm_supply_fault = response["value"]
+        if response["status"] == "OK":
+            self._tpm_supply_fault = response["value"]
         return self._tpm_supply_fault
 
     def are_tpms_on(self):
@@ -454,7 +470,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         if self.power_mode != PowerMode.ON:
             return None
         response = self._client.get_attribute("tpm_on_off")
-        self._are_tpms_on = response["value"]
+        if response["status"] == "OK":
+            self._are_tpms_on = response["value"]
         return self._are_tpms_on
 
     def is_tpm_on(self, logical_tpm_id):

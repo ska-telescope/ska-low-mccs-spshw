@@ -1,8 +1,9 @@
-backoff
-jsonschema >= 3.2.0
-numpy == 1.17.2
-plantweb
+# This file should only contain requirements used for building the docs.
+# If the build complains that it can't find a package that is used by
+# the code, add it instead to autodoc_mock_imports in
+# docs/source/conf.py.
+docutils < 0.17
 Sphinx == 3.0.1
 sphinx-rtd-theme >= 0.4.3
 sphinx-autodoc-typehints
-uritools
+sphinxcontrib-plantuml

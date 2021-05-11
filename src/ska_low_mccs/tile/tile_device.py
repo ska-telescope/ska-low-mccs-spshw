@@ -14,7 +14,6 @@ The Tile Device represents the TANGO interface to a Tile (TPM) unit
 """
 __all__ = ["MccsTile", "TilePowerManager", "main"]
 
-
 import json
 import numpy as np
 import threading
@@ -33,6 +32,7 @@ from ska_low_mccs.events import EventManager, EventSubscriptionHandler
 from ska_low_mccs.hardware import ConnectionStatus, PowerMode
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.tile import TileHardwareManager
+from ska_low_mccs.message_queue import MessageQueue
 
 
 class TilePowerManager:
@@ -109,7 +109,7 @@ class TilePowerManager:
             return False
         else:
             raise NotImplementedError(
-                f"Subrack.PowerOffTpm returned unexpected ResultCode {result_code}."
+                f"Subrack.PowerOffTpm returned unexpected ResultCode {result_code.name}."
             )
 
     def on(self):
@@ -134,7 +134,7 @@ class TilePowerManager:
             return False
         else:
             raise NotImplementedError(
-                f"Subrack.PowerOnTpm returned unexpected ResultCode {result_code}."
+                f"Subrack.PowerOnTpm returned unexpected ResultCode {result_code.name}."
             )
 
     @property
@@ -174,12 +174,15 @@ class TilePowerManager:
             PowerMode.ON if event_value[self._subrack_bay - 1] else PowerMode.OFF
         )
         according_to_command = self._read_power_mode()
-        if according_to_event != according_to_command:
+        if according_to_command == PowerMode.UNKNOWN:
+            self._update_power_mode(according_to_event)
+        elif according_to_event != according_to_command:
             self._logger.warning(
                 f"Received a TPM power change event for {according_to_event.name} but "
                 f"a manual read says {according_to_command.name}; discarding."
             )
-        self._update_power_mode(according_to_command)
+        else:
+            self._update_power_mode(according_to_command)
 
     def _read_power_mode(self):
         """
@@ -192,17 +195,22 @@ class TilePowerManager:
         try:
             subrack_state = self._subrack.state()
         except DevFailed:
+            self._logger.warning("Reading subrack state failed")
             return PowerMode.UNKNOWN
 
         if subrack_state == DevState.DISABLE:
             return PowerMode.OFF
         # Subrack power state is on, can provide power state
         elif subrack_state not in [DevState.OFF, DevState.ON, DevState.STANDBY]:
+            self._logger.warning(
+                f"Cannot determine TPM power as subrack is in {subrack_state} state"
+            )
             return PowerMode.UNKNOWN
 
         try:
             is_tpm_on = self._subrack.IsTpmOn(self._subrack_bay)
         except DevFailed:
+            self._logger.warning("IsTpmOn command failed for subrack")
             return PowerMode.UNKNOWN
 
         return PowerMode.ON if is_tpm_on else PowerMode.OFF
@@ -242,11 +250,7 @@ class MccsTile(SKABaseDevice):
     TileId = device_property(dtype=int, default_value=0)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
-
-    # TODO: These properties are not currently being used in any way.
-    # Can they be removed, or do they need to be handled somehow?
-    # LmcIp = device_property(dtype=str, default_value="0.0.0.0")
-    # DstPort = device_property(dtype=int, default_value=30000)
+    TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
     # ---------------
     # General methods
@@ -293,6 +297,8 @@ class MccsTile(SKABaseDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._message_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -307,7 +313,8 @@ class MccsTile(SKABaseDevice):
             """
             (result_code, message) = super().do()
             device = self.target
-
+            device._heart_beat = 0
+            device.queue_debug = ""
             device._simulation_mode = SimulationMode.FALSE
 
             device._logical_tile_id = 0
@@ -326,11 +333,18 @@ class MccsTile(SKABaseDevice):
                 device.logger,
                 device.TpmIp,
                 device.TpmCpldPort,
+                device.TpmVersion,
             )
 
             device.power_manager = TilePowerManager(
                 device.SubrackFQDN, device.SubrackBay, self.logger, device.power_changed
             )
+
+            # Start the Message queue for this device
+            device._message_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -480,12 +494,13 @@ class MccsTile(SKABaseDevice):
             device = self.target
             result = device.power_manager.on()
             if result is None:
-                # TODO: The TPM was already powered, so it might already be programmed!
-                # What does it mean to put it into standby?
+                # TODO: The TPM was already powered, so it might
+                # already be programmed!
+                # Putting in Standby could mean deprogram it, in order
+                # to reduce power usage
                 # This needs attention from an expert.
-                # But for now, let's reinitialise.
                 if device.hardware_manager.is_programmed:
-                    # device.hardware_manager.initialise()  # raises NotImplementedError
+                    # deprogram FPGAs
                     pass
 
                 return (
@@ -499,45 +514,101 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_FROM_OFF_MESSAGE)
 
     @command(
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
-    def On(self):
+    def On(self, json_args):
         """
-        Turn device on and program TPM firmware.
+        Send a message to turn Tile on and program TPM firmware.
 
         This command will transition a Tile from Off/Standby to
         On and program the TPM firmware.
 
+        :param json_args: JSON encoded messaging system and command arguments
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        command_sequence = ["On", "Initialise"]
-        if self.state_model.op_state == DevState.STANDBY:
-            command_sequence.insert(0, "Off")
+        self.logger.debug("Tile On")
 
-        # Execute the following commands to:
-        # 1. Off - Transition out of Standby state (if required)
-        # 2. On - Turn the power on to the Tile
-        # 3. Initialise - Download TPM firmware and initialise
-        return_code = ResultCode.UNKNOWN
-        message = ""
-        for step in command_sequence:
-            command = self.get_command_object(step)
-            (return_code, message) = command()
-            if return_code == ResultCode.FAILED:
-                return [[return_code], [message]]
-        return [[return_code], ["On command completed OK"]]
+        # TODO: This sequence will all need to be messages so as not to cause
+        #       a 3 second timeout with Tango commands. This is especially true
+        #       when real hardware is connected to MCCS as programming the FPGA
+        #       will take several seconds as part of the initialise step.
+        self._command_sequence = [
+            "TileOn",
+            "Initialise",
+        ]
+        if self.state_model.op_state == DevState.STANDBY:
+            self._command_sequence.insert(0, "Off")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call On sequentially
+            handler = self.get_command_object("On")
+            (result_code, status) = handler(json_args)
+            return [[result_code], [status]]
 
     class OnCommand(SKABaseDevice.OnCommand):
+        """
+        Class for handling the On command sequence.
+        """
+
+        SUCCEEDED_MESSAGE = "Tile On command sequence completed OK"
+
+        def do(self, argin):
+            """
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsTile.On` command.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            self.logger.debug("Tile OnCommand EXE")
+            device = self.target
+            super().do()
+
+            # Execute the following commands to:
+            # 1. Off - Transition out of Standby state (if required)
+            # 2. On - Turn the power on to the Tile
+            # 3. Initialise - Download TPM firmware and initialise
+            return_code = ResultCode.UNKNOWN
+            for step in device._command_sequence:
+                command = device.get_command_object(step)
+                (return_code, message) = command()
+                if return_code == ResultCode.FAILED:
+                    self.logger.warning(
+                        f"Tile OnCommand EXE FAILED command={command}, "
+                        "rc={return_code}, status={message}"
+                    )
+                    return (return_code, message)
+            self.logger.debug(self.SUCCEEDED_MESSAGE)
+            return (return_code, self.SUCCEEDED_MESSAGE)
+
+    class TileOnCommand(SKABaseDevice.OnCommand):
         """
         Class for handling the On() command.
         """
 
-        SUCCEEDED_MESSAGE = "On command completed OK"
-        FAILED_MESSAGE = "On command failed"
+        SUCCEEDED_MESSAGE = "Tile On command completed OK"
+        FAILED_MESSAGE = "Tile On command failed"
 
         def do(self):
             """
@@ -554,7 +625,8 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            self.logger.debug("Tile TileOnCommand EXE")
+            (result_code, _) = super().do()
 
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -564,6 +636,10 @@ class MccsTile(SKABaseDevice):
     class OffCommand(SKABaseDevice.OffCommand):
         """
         Class for handling the Off() command.
+
+        This command will transition a Tile from Standby to Off and
+        program the TPM firmware. Off status means that the TPM is
+        powered and programmed
         """
 
         SUCCEEDED_FROM_ON_MESSAGE = "TPM is on and programmed; device is now off."
@@ -581,21 +657,25 @@ class MccsTile(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            self.logger.debug("Tile OffCommand EXE")
+
             # TODO: We maybe shouldn't be allowing transition straight
             # from Disable to Off, without going through Standby.
             device = self.target
             result = device.power_manager.on()
             if result is None:
-                # TODO: The TPM was already powered, but it might not have been
+                # What does it mean to put it into "off" mode?
+                # FOr now, program it using the current default firmware
                 # programmed yet. i.e. it might still be in standby mode
-                # What does it mean to put it into "on" mode?
-                # This needs attention from an expert.
-                # But for now, let's pretend to flash some firmware.
                 if not device.hardware_manager.is_programmed:
-                    device.hardware_manager.download_firmware("firmware1")
+                    device.hardware_manager.download_firmware(
+                        device.hardware_manager._default_firmware
+                    )
+                    self.logger.debug("Tile OffCommand EXE completed OK! Branch 1")
                 return (ResultCode.OK, self.SUCCEEDED_FROM_ON_MESSAGE)
 
             if not result:
+                self.logger.warning("Tile OffCommand EXE completed FAILED!")
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             device.hardware_manager.set_connectible(True)
@@ -604,14 +684,15 @@ class MccsTile(SKABaseDevice):
             # get it fully operational.
             # This needs attention from an expert.
             # But for now, let's initialise it and pretend to flash some firmware.
-
-            # device.hardware_manager.initialise()  # raises NotImplementedError
-            device.hardware_manager.download_firmware("firmware1")
+            device.hardware_manager.download_firmware(
+                device.hardware_manager._default_firmware
+            )
 
             # TODO: This is a sad state of affairs. We need to wait a sec here to drain
             # the events system. Otherwise we run the risk of transitioning as a result
             # of command success, only to receive an old event telling us of an earlier
             # change in TPM power mode, making us transition again.
+            self.logger.debug("Tile OffCommand EXE completed OK! Branch 2")
             return (ResultCode.OK, self.SUCCEEDED_FROM_DISABLE_MESSAGE)
 
     def always_executed_hook(self):
@@ -633,11 +714,22 @@ class MccsTile(SKABaseDevice):
         method is called by the device destructor, and by the Init
         command when the Tango device server is re-initialised.
         """
-        pass
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
 
     # ----------
     # Callbacks
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state
@@ -710,6 +802,25 @@ class MccsTile(SKABaseDevice):
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
+
     @attribute(dtype="DevLong")
     def logicalTileId(self):
         """
@@ -1240,7 +1351,10 @@ class MccsTile(SKABaseDevice):
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
             ),
+            ("StopIntegratedChannelData", self.StopIntegratedChannelDataCommand),
             ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
+            ("StopIntegratedBeamData", self.StopIntegratedBeamDataCommand),
+            ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
             (
@@ -1286,10 +1400,17 @@ class MccsTile(SKABaseDevice):
             "SetPointingDelay", self.SetPointingDelayCommand(*antenna_args)
         )
 
-        power_args = (self, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*power_args))
-        self.register_command_object("Standby", self.StandbyCommand(*power_args))
-        self.register_command_object("Off", self.OffCommand(*power_args))
+        for (command_name, command_object) in [
+            ("Disable", self.DisableCommand),
+            ("Standby", self.StandbyCommand),
+            ("Off", self.OffCommand),
+            ("On", self.OnCommand),
+            ("TileOn", self.TileOnCommand),
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self, self.state_model, self.logger),
+            )
 
     class InitialiseCommand(ResponseCommand):
         """
@@ -1846,17 +1967,11 @@ class MccsTile(SKABaseDevice):
                 self.logger.error("SrcMac is a mandatory parameter")
                 raise ValueError("SrcMac is a mandatory parameter")
             src_ip = params.get("SrcIP", None)
-            if src_ip is None:
-                self.logger.error("SrcIP is a mandatory parameter")
-                raise ValueError("SrcIP is a mandatory parameter")
             src_port = params.get("SrcPort", None)
             if src_port is None:
                 self.logger.error("SrcPort is a mandatory parameter")
                 raise ValueError("SrcPort is a mandatory parameter")
             dst_mac = params.get("DstMac", None)
-            if dst_mac is None:
-                self.logger.error("DstMac is a mandatory parameter")
-                raise ValueError("DstMac is a mandatory parameter")
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
                 self.logger.error("DstIP is a mandatory parameter")
@@ -1885,9 +2000,9 @@ class MccsTile(SKABaseDevice):
 
         * CoreID - (int) core id
         * SrcMac - (string) mac address dot notation
-        * SrcIP - (string) IP dot notation
-        * SrcPort - (int) src port
-        * DstMac - (string) mac address dot notation
+        * SrcIP - (string) IP dot notation. Default taken from main IP address
+        * SrcPort - (int) src port.
+        * DstMac - (string) mac address dot notation. Not used if ARP present
         * DstIP - (string) IP dot notation
         * DstPort - (int) dest port
 
@@ -2020,9 +2135,9 @@ class MccsTile(SKABaseDevice):
 
         :param argin: json dictionary with optional keywords:
 
-        * Mode - (string) '1g' or '10g' (Mandatory)
-        * PayloadLength - (int) SPEAD payload length for integrated channel data
-        * DstIP - (string) Destination IP
+        * Mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+        * PayloadLength - (int) SPEAD payload length for channel data
+        * DstIP - (string) Destination IP.
         * SrcPort - (int) Source port for integrated data streams
         * DstPort - (int) Destination port for integrated data streams
         * LmcMac: - (int) LMC Mac address is required for 10G lane configuration
@@ -2976,9 +3091,9 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.ConfigureIntegratedChannelData`
             command functionality.
 
-            :param argin: integration time. Default to 0.5 for values
-                less than 0
-            :type argin: float
+            :param argin: a JSON-encoded dictionary of arguments
+                "integration time", "first_channel", "last_channel"
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2986,26 +3101,36 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            integration_time = argin
-            if integration_time <= 0:
-                integration_time = 0.5
+            params = json.loads(argin)
+            integration_time = params.get("IntegrationTime", 0.5)
+            first_channel = params.get("FirstChannel", 0)
+            last_channel = params.get("LastChannel", 511)
 
             hardware_manager = self.target
-            hardware_manager.configure_integrated_channel_data(integration_time)
+            hardware_manager.configure_integrated_channel_data(
+                integration_time,
+                first_channel,
+                last_channel,
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevDouble",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
     def ConfigureIntegratedChannelData(self, argin):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
-        :param argin: integration_time in seconds (default = 0.5)
-        :type argin: float
+        :param argin: json dictionary with optional keywords:
+
+        * integration time - (float) in seconds (default = 0.5)
+        * first_channel - (int) default 0
+        * last_channel - (int) default 511
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3015,10 +3140,50 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284)
+        >>> dp.command_inout("ConfigureIntegratedChannelData", 6.284, 0, 511)
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
+        return [[return_code], [message]]
+
+    class StopIntegratedChannelDataCommand(ResponseCommand):
+        """
+        Class for handling the StopIntegratedChannelData command.
+        """
+
+        SUCCEEDED_MESSAGE = "StopIntegratedChannelData command completed OK"
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.StopIntegratedChannelData`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            hardware_manager.stop_integrated_channel_data()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def StopIntegratedChannelData(self):
+        """
+        Stop the integrated channel data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("StopIntegratedChannelData")
+        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
@@ -3035,8 +3200,9 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.ConfigureIntegratedBeamData`
             command functionality.
 
-            :param argin: integration time
-            :type argin: float
+            :param argin: a JSON-encoded dictionary of arguments
+                "integration time", "first_channel", "last_channel"
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -3044,26 +3210,36 @@ class MccsTile(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            integration_time = argin
-            if integration_time <= 0:
-                integration_time = 0.5
+            params = json.loads(argin)
+            integration_time = params.get("IntegrationTime", 0.5)
+            first_channel = params.get("FirstChannel", 0)
+            last_channel = params.get("LastChannel", 191)
 
             hardware_manager = self.target
-            hardware_manager.configure_integrated_beam_data(integration_time)
+            hardware_manager.configure_integrated_beam_data(
+                integration_time,
+                first_channel,
+                last_channel,
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(
-        dtype_in="DevDouble",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     @DebugIt()
     def ConfigureIntegratedBeamData(self, argin):
         """
         Configure the transmission of integrated beam data with the
-        provided integration time.
+        provided integration time, the first channel and the last
+        channel. The data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
-        :param argin: integration time in seconds (default = 0.5)
-        :type argin: float
+        :param argin: json dictionary with optional keywords:
+
+        * integration time - (float) in seconds (default = 0.5)
+        * first_channel - (int) default 0
+        * last_channel - (int) default 191
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3073,10 +3249,90 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142)
+        >>> dp.command_inout("ConfigureIntegratedBeamData", 3.142, 0, 191)
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)
+        return [[return_code], [message]]
+
+    class StopIntegratedBeamDataCommand(ResponseCommand):
+        """
+        Class for handling the StopIntegratedBeamData command.
+        """
+
+        SUCCEEDED_MESSAGE = "StopIntegratedBeamData command completed OK"
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.StopIntegratedBeamData`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            hardware_manager.stop_integrated_beam_data()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def StopIntegratedBeamData(self):
+        """
+        Stop the integrated beam data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("StopIntegratedBeamData")
+        (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class StopIntegratedDataCommand(ResponseCommand):
+        """
+        Class for handling the StopIntegratedData command.
+        """
+
+        SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.StopIntegratedData`
+            command functionality.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            hardware_manager = self.target
+            hardware_manager.stop_integrated_data()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def StopIntegratedData(self):
+        """
+        Stop the integrated  data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("StopIntegratedData")
+        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class SendRawDataCommand(ResponseCommand):

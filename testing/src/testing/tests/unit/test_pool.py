@@ -10,7 +10,7 @@
 This module contains the tests for the ska_low_mccs.pool module.
 """
 import pytest
-
+import json
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
@@ -52,7 +52,7 @@ class TestDevicePool:
     """
 
     @pytest.fixture()
-    def mock_factory(self, mocker):
+    def mock_factory(self, mocker, test_string):
         """
         Fixture that provides a mock factory for device proxy mocks.
         This factory ensures that calls to a mock's command_inout method
@@ -60,12 +60,14 @@ class TestDevicePool:
 
         :param mocker: a wrapper around the :py:mod:`unittest.mock` package
         :type mocker: :py:class:`pytest_mock.mocker`
+        :param test_string: a test string that we'll use as a UID
+        :type test_string: str
 
         :return: a factory for device proxy mocks
         :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
         """
         builder = MockDeviceBuilder()
-        builder.add_result_command("Foo", ResultCode.OK)
+        builder.add_result_command("Foo", ResultCode.QUEUED, message_uid=test_string)
         builder.add_result_command("Disable", ResultCode.OK)
         builder.add_result_command("Off", ResultCode.OK)
         builder.add_result_command("Standby", ResultCode.OK)
@@ -124,6 +126,36 @@ class TestDevicePool:
                 "Foo", arg
             )
             MccsDeviceProxy(fqdn, logger).command_inout_reply.assert_called_once()
+
+    def test_invoke_command_with_callback(
+        self, fqdns, device_pool, logger, test_string
+    ):
+        """
+        Test of the
+        :py:meth:`ska_low_mccs.pool.DevicePool.invoke_command_with_callback`
+        method.
+
+        :param fqdns: FQDNs of the devices in the pool
+        :type fqdns: list(str)
+        :param device_pool: the device_pool under test
+        :type device_pool: :py:class:`ska_low_mccs.pool.DevicePool`
+        :param logger: the logger to be used by the object under test
+        :type logger: :py:class:`logging.Logger`
+        :param test_string: a test string that we'll use as a UID
+        :type test_string: str
+        """
+        requestor_fqdn = "test"
+        requester_callback = "callback"
+        assert device_pool.invoke_command_with_callback(
+            "Foo", requestor_fqdn, requester_callback
+        )
+        assert device_pool._responses.get(test_string) is False
+        args = {"respond_to_fqdn": requestor_fqdn, "callback": requester_callback}
+        json_string = json.dumps(args)
+        for fqdn in fqdns:
+            MccsDeviceProxy(fqdn, logger).command_inout.assert_called_once_with(
+                "Foo", json_string
+            )
 
     @pytest.mark.parametrize(
         ("method", "command"),

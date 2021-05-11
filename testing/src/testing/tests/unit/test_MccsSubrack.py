@@ -865,6 +865,21 @@ class TestMccsSubrack(object):
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.testMode == TestMode.TEST
 
+    def test_queue_debug(self, device_under_test, test_string):
+        """
+        Test that the queue debug attribute works correctly.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param test_string: a simple test string fixture
+        :type test_string: str
+        """
+        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
+        device_under_test.aQueueDebug = test_string
+        assert device_under_test.aQueueDebug == test_string
+
     def test_healthState(self, device_under_test, mock_callback):
         """
         Test for healthState.
@@ -888,7 +903,7 @@ class TestMccsSubrack(object):
         assert event_data.value == HealthState.OK
         assert event_data.quality == AttrQuality.ATTR_VALID
 
-    def test_attributes(self, device_under_test):
+    def test_attributes(self, device_under_test, dummy_json_args):
         """
         Test of attributes.
 
@@ -896,9 +911,11 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
-        device_under_test.On()
+        device_under_test.On(dummy_json_args)
         assert (
             list(device_under_test.backplaneTemperatures)
             == SubrackBoardSimulator.DEFAULT_BACKPLANE_TEMPERATURE
@@ -938,7 +955,7 @@ class TestMccsSubrack(object):
         assert list(device_under_test.tpmPowers) == [0.0, 0.0, 0.0, 0.0]
         assert list(device_under_test.tpmVoltages) == [0.0, 0.0, 0.0, 0.0]
 
-    def test_PowerOnTpm(self, device_under_test):
+    def test_PowerOnTpm(self, device_under_test, dummy_json_args):
         """
         Test for PowerOnTpm.
 
@@ -946,9 +963,11 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
-        _ = device_under_test.On()
+        _ = device_under_test.On(dummy_json_args)
 
         [[result_code], [message]] = device_under_test.PowerOnTpm(1)
         assert result_code == ResultCode.OK
@@ -958,7 +977,7 @@ class TestMccsSubrack(object):
         assert result_code == ResultCode.OK
         assert message == "Subrack TPM 1 power-on is redundant"
 
-    def test_PowerOffTpm(self, device_under_test):
+    def test_PowerOffTpm(self, device_under_test, dummy_json_args):
         """
         Test for PowerOffTpm.
 
@@ -966,9 +985,11 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         device_under_test.Off()
-        _ = device_under_test.On()
+        _ = device_under_test.On(dummy_json_args)
 
         [[result_code], [message]] = device_under_test.PowerOffTpm(1)
         assert result_code == ResultCode.OK

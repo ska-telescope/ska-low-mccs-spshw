@@ -8,16 +8,16 @@ cabinet
 management
 board;
 split
-(/);
+:/;
 :1 Gb switch;
 detach
 split again
-(/);
+:/;
 -> 1..2;
 :100 Gb switch;
 detach
 split again
-(/);
+:/;
 -> 1..17-18;
 :MCCS node;
 detach
@@ -30,7 +30,7 @@ cabinet
 management
 board;
 split
-(/);
+:/;
 note right
 MccsCabinet.TurnSwitchOn()
 end note
@@ -38,7 +38,7 @@ end note
 :switch;
 detach
 split again
-(/);
+:/;
 note right
 MccsCabinet.TurnSubrackOn()
 end note
@@ -47,7 +47,7 @@ end note
 subrack
 management
 board;
-(/);
+:/;
 note right
 MccsSubrack.TurnTPMOn()
 end note
@@ -58,13 +58,13 @@ detach
 split again
 |Field equipment|
 -> 1..256;
-(/);
+:/;
 note right
 MccsAPIU.On()
 end note
 -> 1;
 :APIU;
-(/);
+:/;
 note right
 MccsAPIU.TurnAntennaOn(n)
 end note

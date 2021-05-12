@@ -56,12 +56,13 @@ class TestPowerManagement:
             ],
         }
 
-    def test_power_on_off(self, tango_harness: TangoHarness):
+    def test_power_on_off(self, tango_harness: TangoHarness, empty_json_dict: str):
         """
         Test that a MccsController device can enable an MccsSubarray
         device.
 
         :param tango_harness: a test harness for tango devices
+        :param empty_json_dict: an empty json encoded dictionary
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subrack = tango_harness.get_device("low-mccs/subrack/01")
@@ -133,6 +134,7 @@ class TestPowerManagement:
         assert antenna_4.State() == DevState.ON
 
         controller.Off()
+        sleep(0.5)  # Required to allow DUT thread to run
 
         assert controller.State() == DevState.OFF
         assert subrack.State() == DevState.OFF
@@ -141,6 +143,7 @@ class TestPowerManagement:
         assert tile_2.State() == DevState.OFF
         assert tile_3.State() == DevState.OFF
         assert tile_4.State() == DevState.OFF
+
         assert controller.State() == DevState.OFF
         assert station.State() == DevState.OFF
         assert apiu.State() == DevState.OFF

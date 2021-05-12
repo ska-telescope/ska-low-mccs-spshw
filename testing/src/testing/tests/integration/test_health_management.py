@@ -61,7 +61,7 @@ def sleep(seconds=0.2):
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.
 
-    :param seconds: number of seconds to sleep; optional, defaults to 0.1
+    :param seconds: number of seconds to sleep; optional, defaults to 0.2
     :type seconds: float
     """
     time.sleep(seconds)
@@ -83,7 +83,7 @@ def check_states(dev_states):
         assert device.State() == state
 
 
-def test_controller_health_rollup(tango_harness):
+def test_controller_health_rollup(tango_harness, empty_json_dict):
     """
     Test that health rolls up to the controller.
 
@@ -93,6 +93,8 @@ def test_controller_health_rollup(tango_harness):
         ``get_device(fqdn)`` method that returns a
         :py:class:`tango.DeviceProxy`.
     :type tango_harness: :py:class:`contextmanager`
+    :param empty_json_dict: an empty json encoded dictionary
+    :type empty_json_dict: str
     """
     controller = tango_harness.get_device("low-mccs/control/control")
     station_1 = tango_harness.get_device("low-mccs/station/001")
@@ -176,7 +178,7 @@ def test_controller_health_rollup(tango_harness):
     # but station will not take it into account when calculating its own
     # health.
 
-    tile_1.Off()
+    tile_1.Off(empty_json_dict)
     tile_1.Disable()
     tile_1.adminMode = AdminMode.OFFLINE
 
@@ -198,12 +200,10 @@ def test_controller_health_rollup(tango_harness):
     tile_1.adminMode = AdminMode.ONLINE
 
     assert not subrack.isTpmOn(1)
-    tile_1.Off()
+    tile_1.Off(empty_json_dict)
     assert subrack.isTpmOn(1)
 
-    args = {"dummy": "args"}
-    dummy_json_args = json.dumps(args)
-    tile_1.On(dummy_json_args)
+    tile_1.On(empty_json_dict)
     dev_states = {tile_1: DevState.ON}
     check_states(dev_states)
     assert tile_1.healthState == HealthState.OK
@@ -217,7 +217,7 @@ def test_controller_health_rollup(tango_harness):
     assert controller.healthState == HealthState.OK
 
 
-def test_subarray_health_rollup(tango_harness):
+def test_subarray_health_rollup(tango_harness, empty_json_dict):
     """
     Test that health rolls up to the subarray.
 
@@ -227,6 +227,8 @@ def test_subarray_health_rollup(tango_harness):
         ``get_device(fqdn)`` method that returns a
         :py:class:`tango.DeviceProxy`.
     :type tango_harness: :py:class:`contextmanager`
+    :param empty_json_dict: an empty json encoded dictionary
+    :type empty_json_dict: str
     """
     controller = tango_harness.get_device("low-mccs/control/control")
     subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
@@ -300,7 +302,7 @@ def test_subarray_health_rollup(tango_harness):
     # but station will not take it into account when calculating its own
     # health.
 
-    tile_1.Off()
+    tile_1.Off(empty_json_dict)
     tile_1.Disable()
     tile_1.adminMode = AdminMode.OFFLINE
 
@@ -322,10 +324,8 @@ def test_subarray_health_rollup(tango_harness):
     tile_1.SimulateConnectionFailure(False)
 
     tile_1.adminMode = AdminMode.ONLINE
-    tile_1.Off()
-    args = {"dummy": "args"}
-    dummy_json_args = json.dumps(args)
-    tile_1.On(dummy_json_args)
+    tile_1.Off(empty_json_dict)
+    tile_1.On(empty_json_dict)
     dev_states = {tile_1: DevState.ON}
     check_states(dev_states)
     assert tile_1.healthState == HealthState.OK

@@ -631,14 +631,14 @@ class MccsController(SKAMaster):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
-        self._logger.debug(f"_check_and_send_message({command})")
+        self.logger.debug(f"_check_and_send_message({command})")
         if check_is_allowed:
             command_progress = self._command_result.get("result_code")
             if command_progress in [
                 ResultCode.STARTED,
                 ResultCode.QUEUED,
             ]:
-                self._logger.error(f"_check_and_send_message() FAILED: {command_progress.name}")
+                self.logger.error(f"_check_and_send_message() FAILED: {command_progress.name}")
                 return [
                     [ResultCode.FAILED],
                     ["A controller command is already in progress", None],
@@ -647,7 +647,7 @@ class MccsController(SKAMaster):
         if notifications:
             self.notify_listener(ResultCode.UNKNOWN, "", "")
 
-        self._logger.debug(f"send_message({command})")
+        self.logger.debug(f"send_message({command})")
         (result_code, message_uid, status) = self._message_queue.send_message(
             command=command, notifications=notifications, json_args=json_args
         )
@@ -703,7 +703,7 @@ class MccsController(SKAMaster):
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
-                self._logger.error(message_uid + "," + self.FAILED_MESSAGE)
+                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )
@@ -862,7 +862,7 @@ class MccsController(SKAMaster):
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
-                self._logger.error(message_uid + "," + self.FAILED_MESSAGE)
+                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )

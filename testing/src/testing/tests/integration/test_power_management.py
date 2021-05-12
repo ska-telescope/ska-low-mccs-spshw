@@ -93,6 +93,7 @@ class TestPowerManagement:
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
         controller.Startup()
+        sleep(0.5)  # Required to allow DUT thread to run
 
         assert controller.State() == DevState.ON
         assert subrack.State() == DevState.ON

@@ -13,7 +13,8 @@ This test module contains integration tests that exercise the health
 management functionality of the SKA Low MCCS system.
 """
 import time
-
+from tango import DevState
+import json
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
@@ -66,6 +67,22 @@ def sleep(seconds=0.2):
     time.sleep(seconds)
 
 
+def check_states(dev_states):
+    """
+    Helper to check that each device is in the expected state with a
+    timeout.
+
+    :param dev_states: the devices and expected states of them
+    :type dev_states: dict
+    """
+    for device, state in dev_states.items():
+        count = 0.0
+        while device.State() != state and count < 3.0:
+            count += 0.1
+            sleep(0.1)
+        assert device.State() == state
+
+
 def test_controller_health_rollup(tango_harness):
     """
     Test that health rolls up to the controller.
@@ -103,16 +120,25 @@ def test_controller_health_rollup(tango_harness):
     # hardware is turned on) before we can put them into ON state.
     # This is a counterintuitive mess that will be fixed in SP-1501.
     _ = controller.Startup()
+    dev_states = {
+        controller: DevState.ON,
+        station_1: DevState.ON,
+        station_2: DevState.ON,
+        subrack: DevState.ON,
+        tile_1: DevState.ON,
+        tile_2: DevState.ON,
+        tile_3: DevState.ON,
+        tile_4: DevState.ON,
+    }
+    check_states(dev_states)
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
     assert tile_3.healthState == HealthState.OK
     assert tile_4.healthState == HealthState.OK
-    sleep()
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK
-    sleep()
     assert controller.healthState == HealthState.OK
 
     # Now let's make tile 1 fail. We should see that failure
@@ -175,8 +201,11 @@ def test_controller_health_rollup(tango_harness):
     tile_1.Off()
     assert subrack.isTpmOn(1)
 
-    tile_1.On()
-    sleep()
+    args = {"dummy": "args"}
+    dummy_json_args = json.dumps(args)
+    tile_1.On(dummy_json_args)
+    dev_states = {tile_1: DevState.ON}
+    check_states(dev_states)
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
     assert tile_3.healthState == HealthState.OK
@@ -221,6 +250,7 @@ def test_subarray_health_rollup(tango_harness):
     # beam_4 = tango_harness.get_device("low-mccs/beam/004")
 
     _ = controller.Startup()
+    sleep()
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -293,9 +323,11 @@ def test_subarray_health_rollup(tango_harness):
 
     tile_1.adminMode = AdminMode.ONLINE
     tile_1.Off()
-    tile_1.On()
-
-    sleep()
+    args = {"dummy": "args"}
+    dummy_json_args = json.dumps(args)
+    tile_1.On(dummy_json_args)
+    dev_states = {tile_1: DevState.ON}
+    check_states(dev_states)
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
     assert tile_3.healthState == HealthState.OK

@@ -23,6 +23,7 @@ prototype for the `Square Kilometre Array`_.
 
    reference/power
    reference/tile_device_to_tpm
+   reference/tile_test_generator.rst
    reference/class_diagrams.rst
    reference/subrack_driver.rst
 

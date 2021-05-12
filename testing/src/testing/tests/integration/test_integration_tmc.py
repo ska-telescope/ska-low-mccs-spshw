@@ -3,6 +3,7 @@ This module contains tests of interactions between the TMC and
 ska_low_mccs classes.
 """
 import json
+from time import sleep
 
 import pytest
 from tango import (
@@ -119,12 +120,29 @@ class TestMccsIntegrationTmc:
             if expected_result is None:
                 assert result is None
             else:
-                ((result_code,), (_,)) = result
+                ((result_code,), _) = result
                 assert result_code == expected_result
         except AsynReplyNotArrived as err:
             assert False, f"AsyncReplyNotArrived: {err}"
         except (AsynCall, CommunicationFailed, DevFailed) as err:
             assert False, f"Exception raised: {err}"
+
+    def check_states(self, devices, dev_states):
+        """
+        Helper to check that each device is in the expected state with a
+        timeout.
+
+        :param devices: fixture that provides access to devices by their name
+        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+        :param dev_states: the devices and expected states of them
+        :type dev_states: dict
+        """
+        for device, state in dev_states.items():
+            count = 0.0
+            while devices[device].State() != state and count < 3.0:
+                count += 0.1
+                sleep(0.1)
+            assert devices[device].State() == state
 
     def test_controller_on(self, devices):
         """
@@ -134,27 +152,33 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        assert devices["controller"].State() == DevState.DISABLE
-        assert devices["subarray_01"].State() == DevState.OFF
-        assert devices["subarray_02"].State() == DevState.OFF
-        assert devices["station_001"].State() == DevState.OFF
-        assert devices["station_002"].State() == DevState.OFF
+        dev_states = {
+            "controller": DevState.DISABLE,
+            "subarray_01": DevState.OFF,
+            "subarray_02": DevState.OFF,
+            "station_001": DevState.OFF,
+            "station_002": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)
 
         # Call MccsController->Startup() command
-        self.assert_command(device=devices["controller"], command="Startup")
-        assert devices["controller"].State() == DevState.ON
-        assert devices["subarray_01"].State() == DevState.OFF
-        assert devices["subarray_02"].State() == DevState.OFF
-        assert devices["station_001"].State() == DevState.ON
-        assert devices["station_002"].State() == DevState.ON
+        self.assert_command(
+            device=devices["controller"],
+            command="Startup",
+            expected_result=ResultCode.QUEUED,
+        )
+        dev_states["controller"] = DevState.ON
+        dev_states["station_001"] = DevState.ON
+        dev_states["station_002"] = DevState.ON
+        self.check_states(devices, dev_states)
 
         # Startup turns everything on, so a call to On should have no side-effects
-        self.assert_command(device=devices["controller"], command="On")
-        assert devices["controller"].State() == DevState.ON
-        assert devices["subarray_01"].State() == DevState.OFF
-        assert devices["subarray_02"].State() == DevState.OFF
-        assert devices["station_001"].State() == DevState.ON
-        assert devices["station_002"].State() == DevState.ON
+        self.assert_command(
+            device=devices["controller"],
+            command="On",
+            expected_result=ResultCode.QUEUED,
+        )
+        self.check_states(devices, dev_states)
 
     def test_controller_off(self, devices):
         """
@@ -164,17 +188,30 @@ class TestMccsIntegrationTmc:
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
-        assert devices["controller"].State() == DevState.DISABLE
-        assert devices["station_001"].State() == DevState.OFF
-        assert devices["station_002"].State() == DevState.OFF
-        self.assert_command(device=devices["controller"], command="Startup")
-        assert devices["controller"].State() == DevState.ON
-        assert devices["station_001"].State() == DevState.ON
-        assert devices["station_002"].State() == DevState.ON
+        dev_states = {
+            "controller": DevState.DISABLE,
+            "station_001": DevState.OFF,
+            "station_002": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)
+        self.assert_command(
+            device=devices["controller"],
+            command="Startup",
+            expected_result=ResultCode.QUEUED,
+        )
+        dev_states = {
+            "controller": DevState.ON,
+            "station_001": DevState.ON,
+            "station_002": DevState.ON,
+        }
+        self.check_states(devices, dev_states)
         self.assert_command(device=devices["controller"], command="Off")
-        assert devices["controller"].State() == DevState.OFF
-        assert devices["station_001"].State() == DevState.OFF
-        assert devices["station_002"].State() == DevState.OFF
+        dev_states = {
+            "controller": DevState.OFF,
+            "station_001": DevState.OFF,
+            "station_002": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)
 
     def test_setup_only(self, devices):
         """
@@ -185,8 +222,18 @@ class TestMccsIntegrationTmc:
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         # Turn on controller and stations
-        self.assert_command(device=devices["controller"], command="Startup")
-        assert devices["subarray_01"].State() == DevState.OFF
+        self.assert_command(
+            device=devices["controller"],
+            command="Startup",
+            expected_result=ResultCode.QUEUED,
+        )
+        dev_states = {
+            "controller": DevState.ON,
+            "subarray_01": DevState.OFF,
+            "station_001": DevState.ON,
+            "station_002": DevState.ON,
+        }
+        self.check_states(devices, dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
@@ -240,8 +287,18 @@ class TestMccsIntegrationTmc:
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         # Turn on controller and stations
-        self.assert_command(device=devices["controller"], command="Startup")
-        assert devices["subarray_01"].State() == DevState.OFF
+        self.assert_command(
+            device=devices["controller"],
+            command="Startup",
+            expected_result=ResultCode.QUEUED,
+        )
+        dev_states = {
+            "controller": DevState.ON,
+            "subarray_01": DevState.OFF,
+            "station_001": DevState.ON,
+            "station_002": DevState.ON,
+        }
+        self.check_states(devices, dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0

@@ -567,8 +567,8 @@ class MccsSubarray(SKASubarray):
         Class for handling the On() command.
         """
 
-        SUCCEEDED_MESSAGE = "On command completed OK"
-        FAILED_MESSAGE = "On command failed"
+        SUCCEEDED_MESSAGE = "Subarray On command completed OK"
+        FAILED_MESSAGE = "Subarray On command failed"
 
         def do(self):
             """
@@ -1096,8 +1096,8 @@ class MccsSubarray(SKASubarray):
         :rtype: str
         """
         handler = self.get_command_object("SendTransientBuffer")
-        (result_code, message) = handler(argin)
-        return [[result_code], [message]]
+        (result_code, status) = handler(argin)
+        return [[result_code], [status]]
 
 
 # ----------

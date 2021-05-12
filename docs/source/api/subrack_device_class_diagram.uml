@@ -1,93 +1,122 @@
 @startuml
-class SubrackHardwareHealthEvaluator
-class SubrackHardwareFactory
-SubrackHardwareFactory : +__init__()
-SubrackHardwareFactory : -_create_static_simulator()
-SubrackHardwareFactory : +connect()
-SubrackHardwareFactory : +backplane_temperatures()
-SubrackHardwareFactory : +board_temperatures()
-SubrackHardwareFactory : +board_current()
-SubrackHardwareFactory : +subrack_fan_speeds()
-SubrackHardwareFactory : +subrack_fan_speeds_percent()
-SubrackHardwareFactory : +subrack_fan_mode()
-SubrackHardwareFactory : +tpm_count()
-SubrackHardwareFactory : +tpm_temperatures()
-SubrackHardwareFactory : +tpm_powers()
-SubrackHardwareFactory : +tpm_voltages()
-SubrackHardwareFactory : +power_supply_fan_speeds()
-SubrackHardwareFactory : +power_supply_currents()
-SubrackHardwareFactory : +power_supply_powers()
-SubrackHardwareFactory : +power_supply_voltages()
-SubrackHardwareFactory : +tpm_present()
-SubrackHardwareFactory : +tpm_supply_fault()
-SubrackHardwareFactory : +tpm_currents()
-SubrackHardwareFactory : +is_tpm_on()
-SubrackHardwareFactory : +are_tpms_on()
-SubrackHardwareFactory : +turn_on_tpm()
-SubrackHardwareFactory : +turn_off_tpm()
-SubrackHardwareFactory : +turn_on_tpms()
-SubrackHardwareFactory : +turn_off_tpms()
-SubrackHardwareFactory : -_update_are_tpms_on()
-SubrackHardwareFactory : +poll()
-SubrackHardwareFactory : +set_subrack_fan_speed()
-SubrackHardwareFactory : +set_subrack_fan_mode()
-SubrackHardwareFactory : +set_power_supply_fan_speed()
-class MccsSubrack
-MccsSubrack : +init_device()
-MccsSubrack : +init_command_objects()
-MccsSubrack : +__init__()
-MccsSubrack : +do()
-MccsSubrack : -_initialise_connections()
-MccsSubrack : -_initialise_hardware_management()
-MccsSubrack : -_initialise_health_monitoring()
-MccsSubrack : +interrupt()
-MccsSubrack : +succeeded()
-MccsSubrack : +always_executed_hook()
-MccsSubrack : +delete_device()
-MccsSubrack : +are_tpms_on_changed()
-MccsSubrack : +health_changed()
-MccsSubrack : +simulationMode()
-MccsSubrack : +backplaneTemperatures()
-MccsSubrack : +boardTemperatures()
-MccsSubrack : +boardCurrent()
-MccsSubrack : +subrackFanSpeeds()
-MccsSubrack : +subrackFanSpeedsPercent()
-MccsSubrack : +subrackFanMode()
-MccsSubrack : +tpmOnOff()
-MccsSubrack : +tpmPresent()
-MccsSubrack : +tpmSupplyFault()
-MccsSubrack : +tpmTemperatures()
-MccsSubrack : +tpmPowers()
-MccsSubrack : +tpmVoltages()
-MccsSubrack : +tpmCurrents()
-MccsSubrack : +tpmCount()
-MccsSubrack : +areTpmsOn()
-MccsSubrack : +powerSupplyFanSpeeds()
-MccsSubrack : +powerSupplyCurrents()
-MccsSubrack : +powerSupplyPowers()
-MccsSubrack : +powerSupplyVoltages()
-MccsSubrack : +is_allowed()
-MccsSubrack : +is_IsTpmOn_allowed()
-MccsSubrack : +IsTpmOn()
-MccsSubrack : +is_PowerOnTpm_allowed()
-MccsSubrack : +PowerOnTpm()
-MccsSubrack : +is_PowerOffTpm_allowed()
-MccsSubrack : +PowerOffTpm()
-MccsSubrack : +SetSubrackFanSpeed()
-MccsSubrack : +SetSubrackFanMode()
-MccsSubrack : +SetPowerSupplyFanSpeed()
-MccsSubrack : -_update_health_state()
-SubrackHardwareFactory : -_tpm_count
-SubrackHardwareFactory : -_are_tpms_on
-SubrackHardwareFactory : -_are_tpms_on_change_callback
-MccsSubrack : -_thread
-MccsSubrack : -_lock
-MccsSubrack : -_interrupt
-MccsSubrack : -_are_tpms_on
-MccsSubrack : -_health_state
 
-HardwareHealthEvaluator <|-- SubrackHardwareHealthEvaluator
-SimulableHardwareFactory <|-- SubrackHardwareFactory
+class MccsSubrack {
+  +SubrackIp
+  +SubrackPort
+  +TileFQDNs
+  -_are_tpms_on
+  -_health_state
+  +hardware_manager
+  +IsTpmOn()
+  +PowerDownTpms()
+  +PowerOffTpm()
+  +PowerOnTpm()
+  +PowerUpTpms()
+  +SetPowerSupplyFanSpeed()
+  +SetSubrackFanMode()
+  +SetSubrackFanSpeed()
+  -_update_health_state()
+  +always_executed_hook()
+  +areTpmsOn()
+  +are_tpms_on_changed()
+  +backplaneTemperatures()
+  +boardCurrent()
+  +boardTemperatures()
+  +delete_device()
+  +health_changed()
+  +init_command_objects()
+  +init_device()
+  +is_IsTpmOn_allowed()
+  +is_PowerDownTpms_allowed()
+  +is_PowerOffTpm_allowed()
+  +is_PowerOnTpm_allowed()
+  +is_PowerUpTpms_allowed()
+  +powerSupplyCurrents()
+  +powerSupplyFanSpeeds()
+  +powerSupplyPowers()
+  +powerSupplyVoltages()
+  +simulationMode()
+  +subrackFanMode()
+  +subrackFanSpeeds()
+  +subrackFanSpeedsPercent()
+  +tpmCount()
+  +tpmCurrents()
+  +tpmPowers()
+  +tpmPresent()
+  +tpmSupplyFault()
+  +tpmTemperatures()
+  +tpmVoltages()
+}
+
+class SKABaseDevice {
+
+
+}
+
+class SubrackHardwareManager {
+  -_are_tpms_on
+  -_are_tpms_on_change_callback
+  +backplane_temperatures
+  +bay_count
+  +board_current
+  +board_temperatures
+  +power_supply_currents
+  +power_supply_fan_speeds
+  +power_supply_powers
+  +power_supply_voltages
+  +subrack_fan_mode
+  +subrack_fan_speeds
+  +subrack_fan_speeds_percent
+  +tpm_count
+  +tpm_currents
+  +tpm_powers
+  +tpm_present
+  +tpm_supply_fault
+  +tpm_temperatures
+  +tpm_voltages
+  +__init__()
+  -_connect()
+  -_update_are_tpms_on()
+  +are_tpms_on()
+  +connect()
+  +is_tpm_on()
+  +poll()
+  +set_power_supply_fan_speed()
+  +set_subrack_fan_mode()
+  +set_subrack_fan_speed()
+  +turn_off_tpm()
+  +turn_off_tpms()
+  +turn_on_tpm()
+  +turn_on_tpms()
+}
+
+class SimulableHardwareManager {
+
+
+}
+
+class OnOffHardwareManager {
+
+
+}
+
+class SubrackHardwareFactory {
+  -_logger
+  -_subrack_ip
+  -_subrack_port
+  -_tpm_count
+  +__init__()
+  -_create_driver()
+  -_create_static_simulator()
+}
+
+class SimulableHardwareFactory {
+
+
+}
 SKABaseDevice <|-- MccsSubrack
-SubrackHardwareFactory -- SubrackHardwareHealthEvaluator
+SimulableHardwareManager <|-- SubrackHardwareManager
+OnOffHardwareManager <|-- SubrackHardwareManager
+SimulableHardwareFactory <|-- SubrackHardwareFactory
+
 @enduml

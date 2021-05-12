@@ -179,14 +179,10 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.logginglevel.name
 
     @command_result_as_string
-    def SendBeamData(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+    def SendBeamData(self, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing beamformed data.
 
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -197,8 +193,6 @@ class MccsTileCli(metaclass=CliMeta):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         args = {
-            "Period": period,
-            "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
@@ -211,7 +205,6 @@ class MccsTileCli(metaclass=CliMeta):
         channel_id=None,
         num_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -222,8 +215,6 @@ class MccsTileCli(metaclass=CliMeta):
         :type num_samples: int, optional
         :param wait_seconds: wait time before sending data
         :type wait_seconds: float
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -239,7 +230,6 @@ class MccsTileCli(metaclass=CliMeta):
                 "ChannelID": channel_id,
                 "NSamples": num_samples,
                 "WaitSeconds": wait_seconds,
-                "Timeout": timeout,
                 "Timestamp": timestamp,
                 "Seconds": seconds,
             }
@@ -254,8 +244,6 @@ class MccsTileCli(metaclass=CliMeta):
         num_samples=128,
         first_channel=0,
         last_channel=511,
-        period=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -269,10 +257,6 @@ class MccsTileCli(metaclass=CliMeta):
         :type first_channel: int, optional
         :param last_channel: last channel to send, defaults to 511
         :type last_channel: int, optional
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -287,8 +271,6 @@ class MccsTileCli(metaclass=CliMeta):
             "NSamples": num_samples,
             "FirstChannel": first_channel,
             "LastChannel": last_channel,
-            "Period": period,
-            "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }
@@ -296,16 +278,12 @@ class MccsTileCli(metaclass=CliMeta):
         return self._dp.command_inout("SendChannelisedData", jstr)
 
     @command_result_as_string
-    def SendRawData(self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2):
+    def SendRawData(self, sync=False, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
-        :param period: duration to send data, in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
@@ -318,8 +296,6 @@ class MccsTileCli(metaclass=CliMeta):
         """
         args = {
             "Sync": sync,
-            "Period": period,
-            "Timeout": timeout,
             "Timestamp": timestamp,
             "Seconds": seconds,
         }

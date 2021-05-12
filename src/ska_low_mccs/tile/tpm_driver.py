@@ -33,18 +33,18 @@ class TpmDriver(HardwareDriver):
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "tpm_test"
-    FIRMWARE_AVAILABLE = {
-        "tpm_test": {"design": "tpm_test", "major": 2, "minor": 3},
-        "firmware2": {"design": "model2", "major": 3, "minor": 7},
-        "firmware3": {"design": "model3", "major": 2, "minor": 6},
+    FIRMWARE_NAME = "itpm_v1_6.bit"
+    FIRMWARE_LIST = {
+        "cpld": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        "fpga1": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
+        "fpga2": {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     }
     REGISTER_MAP = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
 
-    def __init__(self, logger, ip, port):
+    def __init__(self, logger, ip, port, tpm_version):
         """
         Initialise a new TPM driver instance.
 
@@ -57,6 +57,8 @@ class TpmDriver(HardwareDriver):
         :type ip: str
         :param port: IP address for hardware tile control
         :type port: int
+        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :type tpm_version: str
         """
         self.logger = logger
         self._is_programmed = False
@@ -74,7 +76,8 @@ class TpmDriver(HardwareDriver):
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
-        self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
+        self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
+        self._test_generator_active = False
 
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
@@ -84,7 +87,17 @@ class TpmDriver(HardwareDriver):
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._ip = ip
         self._port = port
-        self.tile = HwTile(ip=self._ip, port=self._port, logger=self.logger)
+        if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
+            self.logger.warning(
+                "TPM version "
+                + tpm_version
+                + " not valid. Trying to read version from board, which must be on"
+            )
+            tpm_version = None
+
+        self.tile = HwTile(
+            ip=self._ip, port=self._port, logger=self.logger, tpm_version=tpm_version
+        )
 
         super().__init__(False)
 
@@ -101,14 +114,17 @@ class TpmDriver(HardwareDriver):
     @property
     def firmware_available(self):
         """
-        Return the firmware list for this TPM simulator.
+        Return the list of the firmware loaded in the system.
 
         :return: the firmware list
         :rtype: dict
         """
         self.logger.debug("TpmDriver: firmware_available")
-        self.logger.info("TpmDriver: FirmwareAvailable method partially implemented")
-        return copy.deepcopy(self._firmware_available)
+        firmware_list = self.tile.get_firmware_list()
+        self._firmware_list["cpld"] = firmware_list[0]
+        self._firmware_list["fpga1"] = firmware_list[1]
+        self._firmware_list["fpga2"] = firmware_list[2]
+        return copy.deepcopy(self._firmware_list)
 
     @property
     def firmware_name(self):
@@ -132,9 +148,18 @@ class TpmDriver(HardwareDriver):
         :rtype: str
         """
         self.logger.debug("TpmDriver: firmware_version")
-        self.logger.info("TpmDriver: FirmwareVersion method partially implemented")
-        firmware = self._firmware_available[self._firmware_name]
-        return "{major}.{minor}".format(**firmware)  # noqa: FS002
+        self.firmware_available
+        firmware = self._firmware_list["fpga1"]
+        return (
+            "Ver."
+            + str(firmware["major"])
+            + "."
+            + str(firmware["minor"])
+            + " build "
+            + str(firmware["build"])
+            + ":"
+            + firmware["time"]
+        )
 
     @property
     def is_programmed(self):
@@ -145,8 +170,8 @@ class TpmDriver(HardwareDriver):
         :return: whether this TPM is programmed
         :rtype: bool
         """
-        self.logger.debug(f"TpmDriver: is_programmed {self._is_programmed}")
-        self._is_programmed = self.tile.tpm.is_programmed()
+        self._is_programmed = self.tile.is_programmed()
+        self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
     @property
@@ -157,12 +182,13 @@ class TpmDriver(HardwareDriver):
         :return: the status of the driver-hardware connection.
         :rtype: py:class:`ska_low_mccs.hardware.base_hardware.ConnectionStatus`
         """
-        self.logger.debug("TpmDriver: connection_status")
-        return (
+        status = (
             ConnectionStatus.NOT_CONNECTED
             if self.tile.tpm is None
             else ConnectionStatus.CONNECTED
         )
+        self.logger.debug("TpmDriver: connection_status " + str(status))
+        return status
 
     @connection_status.setter
     def connection_status(self, status):
@@ -181,7 +207,7 @@ class TpmDriver(HardwareDriver):
         :type bitfile: bytes
         """
         self.logger.debug("TpmDriver: download_firmware")
-        self.tile.program_fpgas(bitfile + ".bit")
+        self.tile.program_fpgas(bitfile)
         self._firmware_name = bitfile
         self._is_programmed = True
 
@@ -206,7 +232,7 @@ class TpmDriver(HardwareDriver):
         """
         self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
-            self.tile.program_fpgas(self._firmware_name + ".bit")
+            self.tile.program_fpgas(self._firmware_name)
         if self.tile.tpm.is_programmed():
             self._is_programmed = True
             self.tile.initialise()
@@ -563,12 +589,11 @@ class TpmDriver(HardwareDriver):
         :type dst_port: int, optional
         :param lmc_mac: LMC MAC address, defaults to None
         :type lmc_mac: str, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_lmc_download")
-        raise NotImplementedError
+        self.tile.set_lmc_download(
+            mode, payload_length, dst_ip, src_port, dst_port, lmc_mac
+        )
 
     def set_channeliser_truncation(self, array):
         """
@@ -753,64 +778,98 @@ class TpmDriver(HardwareDriver):
         self.tile.stop_beamformer()
         self._is_beamformer_running = False
 
-    def configure_integrated_channel_data(self, integration_time=0.5):
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=511,
+    ):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
-        raise NotImplementedError
+        self.tile.configure_integrated_channel_data(
+            integration_time,
+            first_channel,
+            last_channel,
+        )
 
-    def configure_integrated_beam_data(self, integration_time=0.5):
+    def stop_integrated_channel_data(self):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time.
+        Stop the integrated channel data.
+        """
+        self.logger.debug("TpmDriver: Stop integrated channel data")
+        self.tile.stop_integrated_channel_data()
+
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=191,
+    ):
+        """
+        Configure and start the transmission of integrated channel data
+        with the provided integration time, first channel and last
+        channel. Data are sent continuously until the
+        StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
         """
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
-        raise NotImplementedError
+        self.tile.configure_integrated_beam_data(
+            integration_time,
+            first_channel,
+            last_channel,
+        )
 
-    def send_raw_data(
-        self, sync=False, period=0, timeout=0, timestamp=None, seconds=0.2
-    ):
+    def stop_integrated_beam_data(self):
+        """
+        Stop the integrated beam data.
+        """
+        self.logger.debug("TpmDriver: Stop integrated beam data")
+        self.tile.stop_integrated_beam_data()
+
+    def stop_integrated_data(self):
+        """
+        Stop the integrated data.
+        """
+        self.logger.debug("TpmDriver: Stop integrated data")
+        self.tile.stop_integrated_data()
+
+    def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing raw antenna data.
 
         :param sync: whether synchronised, defaults to False
         :type sync: bool, optional
-        :param period: duration to send data, in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
-        :param timestamp: when to start(?), defaults to None
+        :param timestamp: when to start, defaults to now
         :type timestamp: int, optional
-        :param seconds: when to synchronise, defaults to 0.2
+        :param seconds: delay with respect to timestamp, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_raw_data")
-        raise NotImplementedError
+        self.tile.send_raw_data(sync, timestamp, seconds)
 
     def send_channelised_data(
         self,
         number_of_samples=1024,
         first_channel=0,
         last_channel=511,
-        period=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -824,27 +883,25 @@ class TpmDriver(HardwareDriver):
         :type first_channel: int, optional
         :param last_channel: last channel to send, defaults to 511
         :type last_channel: int, optional
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data")
-        raise NotImplementedError
+        self.tile.send_channelised_data(
+            number_of_samples,
+            first_channel,
+            last_channel,
+            timestamp,
+            seconds,
+        )
 
     def send_channelised_data_continuous(
         self,
         channel_id,
         number_of_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -857,47 +914,34 @@ class TpmDriver(HardwareDriver):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data
         :type wait_seconds: float
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
-        raise NotImplementedError
+        self.tile.send_channelised_data_continuous(
+            channel_id, number_of_samples, wait_seconds, timestamp, seconds
+        )
 
-    def send_beam_data(self, period=0, timeout=0, timestamp=None, seconds=0.2):
+    def send_beam_data(self, timestamp=None, seconds=0.2):
         """
         Transmit a snapshot containing beamformed data.
 
-        :param period: period of time, in seconds, to send data, defaults to 0
-        :type period: int, optional
-        :param timeout: wqhen to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_beam_data")
-        raise NotImplementedError
+        self.tile.send_beam_data(timestamp, seconds)
 
     def stop_data_transmission(self):
         """
-        Stop data transmission.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        Stop data transmission for send_channelised_data_continuous.
         """
         self.logger.debug("TpmDriver: stop_data_transmission")
-        raise NotImplementedError
+        self.tile.stop_data_transmission()
 
     def start_acquisition(self, start_time=None, delay=2):
         """
@@ -908,12 +952,9 @@ class TpmDriver(HardwareDriver):
         :type start_time: int, optional
         :param delay: delay start, defaults to 2
         :type delay: int, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver:Start acquisition")
-        raise NotImplementedError
+        self.tile.start_acquisition(start_time, delay)
 
     def set_time_delays(self, delays):
         """
@@ -968,33 +1009,29 @@ class TpmDriver(HardwareDriver):
         :type dst_port: int, optional
         :param lmc_mac: MAC address of destination, defaults to None
         :type lmc_mac: str, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
-        raise NotImplementedError
+        self.tile.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip,
+            src_port,
+            dst_port,
+            lmc_mac,
+        )
 
-    def send_raw_data_synchronised(
-        self, period=0, timeout=0, timestamp=None, seconds=0.2
-    ):
+    def send_raw_data_synchronised(self, timestamp=None, seconds=0.2):
         """
         Send synchronised raw data.
 
-        :param period: period of time in seconds, defaults to 0
-        :type period: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start(?), defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_raw_data_synchronised")
-        raise NotImplementedError
+        self.tile.send_raw_data(timestamp, seconds, sync=True)
 
     @property
     def current_tile_beamformer_frame(self):
@@ -1036,7 +1073,6 @@ class TpmDriver(HardwareDriver):
         round_bits,
         number_of_samples=128,
         wait_seconds=0,
-        timeout=0,
         timestamp=None,
         seconds=0.2,
     ):
@@ -1053,18 +1089,15 @@ class TpmDriver(HardwareDriver):
         :type number_of_samples: int, optional
         :param wait_seconds: wait time before sending data, defaults to 0
         :type wait_seconds: int, optional
-        :param timeout: when to stop, defaults to 0
-        :type timeout: int, optional
         :param timestamp: when to start, defaults to None
         :type timestamp: int, optional
         :param seconds: when to synchronise, defaults to 0.2
         :type seconds: float, optional
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        raise NotImplementedError
+        self.tile.send_channelised_data_narrowband(
+            frequency, round_bits, number_of_samples, wait_seconds, timestamp, seconds
+        )
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -1110,21 +1143,111 @@ class TpmDriver(HardwareDriver):
         """
         Perform post tile configuration synchronization.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        TODO Private method or must be available externally?
         """
         self.logger.debug("TpmDriver: post_synchronisation")
-        raise NotImplementedError
+        self.tile.post_synchronisation()
 
     def sync_fpgas(self):
         """
         Synchronise the FPGAs.
 
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
+        TODO Method appears to be mostly internal (private).
         """
         self.logger.debug("TpmDriver: sync_fpgas")
-        raise NotImplementedError
+        self.tile.sync_fpgas()
+
+    @property
+    def test_generator_active(self):
+        """
+        check if the test generator is active.
+
+        :return: whether the test generator is active
+        :rtype: bool
+        """
+        return self._test_generator_active
+
+    @test_generator_active.setter
+    def test_generator_active(self, active):
+        """
+        set the test generator active flag.
+
+        :param active: True if the generator has been activated
+        :type active: bool
+        """
+        self._test_generator_active = active
+
+    def configure_test_generator(
+        self,
+        frequency0,
+        amplitude0,
+        frequency1,
+        amplitude1,
+        amplitude_noise,
+        pulse_code,
+        amplitude_pulse,
+        load_time=0,
+    ):
+        """
+        test generator setting.
+
+        :param frequency0: Tone frequency in Hz of DDC 0
+        :type frequency0: float
+        :param amplitude0: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude0: float
+        :param frequency1: Tone frequency in Hz of DDC 1
+        :type frequency1: float
+        :param amplitude1: Tone peak amplitude, normalized to 31.875 ADC units,
+            resolution 0.125 ADU
+        :type amplitude1: float
+        :param amplitude_noise: Amplitude of pseudorandom noise
+            normalized to 26.03 ADC units, resolution 0.102 ADU
+        :type amplitude_noise: float
+        :param pulse_code: Code for pulse frequency.
+            Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :type pulse_code: int
+        :param amplitude_pulse: pulse peak amplitude, normalized
+            to 127.5 ADC units, resolution 0.5 ADU
+        :type amplitude_pulse: float
+        :param load_time: Time to start the generator.
+        :type load_time: int
+        """
+        self.logger.debug(
+            "Test generator: set tone 0: "
+            + str(frequency0)
+            + " Hz"
+            + ", tone 1: "
+            + str(frequency1)
+            + " Hz"
+        )
+        # If load time not specified, is "now" + 30 ms
+        if load_time == 0:
+            load_time = self.tile.get_fpga_timestamp() + 108
+        # Set everything at same time
+        self.tile.set_test_generator_tone(0, frequency0, amplitude0, 0.0, load_time)
+        self.tile.set_test_generator_tone(1, frequency1, amplitude1, 0.0, load_time)
+        self.tile.set_test_generator_noise(amplitude_noise, load_time)
+        self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
+        end_time = self.tile.get_fpga_timestamp()
+        if end_time < load_time:
+            self.logger.warning(
+                "Test generator: load time="
+                + str(load_time)
+                + " after current time "
+                + str(end_time)
+            )
+
+    def test_generator_input_select(self, inputs=0):
+        """
+        Specify ADC inputs which are substitute to test signal.
+        Specified using a 32 bit mask, with LSB for ADC input 0.
+
+        :param inputs: Bit mask of inputs using test signal
+        :type inputs: int
+        """
+        self.logger.debug("Test generator: set inputs " + hex(inputs))
+        self.tile.test_generator_input_select(inputs)
 
     @staticmethod
     def calculate_delay(current_delay, current_tc, ref_lo, ref_hi):

@@ -198,7 +198,7 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     if expected_result is None:
         assert result is None
     else:
-        ((result_code,), (_,)) = result
+        ((result_code,), _) = result
         assert result_code == expected_result
 
 
@@ -290,7 +290,9 @@ def tmc_tells_mccs_controller_to_start_up(controller):
     :param controller: a proxy to the controller device
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
-    assert_command(device=controller, command="Startup")
+    assert_command(
+        device=controller, command="Startup", expected_result=ResultCode.QUEUED
+    )
 
     # TODO: Workaround for bug MCCS-409
     #
@@ -343,8 +345,11 @@ def check_mccs_controller_state(controller, device_state):
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-
-    assert controller.state() in state_map[device_state]
+    count = 0.0
+    while not controller.State() in state_map[device_state] and count < 3.0:
+        count += 0.1
+        time.sleep(0.1)
+    assert controller.State() in state_map[device_state]
 
 
 @then(parsers.parse("all mccs station states are {state}"))

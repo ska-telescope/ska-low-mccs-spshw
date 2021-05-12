@@ -242,7 +242,7 @@ class TestMccsIntegrationTmc:
         parameters = {
             "subarray_id": 1,
             "station_ids": [[1, 2]],
-            "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+            "channel_blocks": [2],
             "subarray_beam_ids": [1],
         }
         devices["subarraybeam_01"].isBeamLocked = True
@@ -303,7 +303,7 @@ class TestMccsIntegrationTmc:
         parameters = {
             "subarray_id": 1,
             "station_ids": [[1, 2]],
-            "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+            "channel_blocks": [2],
             "subarray_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
@@ -320,7 +320,6 @@ class TestMccsIntegrationTmc:
             "stations": [{"station_id": 1}, {"station_id": 2}],
             "subarray_beams": [
                 {
-                    "subarray_id": 1,
                     "subarray_beam_id": 1,
                     "station_ids": [1, 2],
                     "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],

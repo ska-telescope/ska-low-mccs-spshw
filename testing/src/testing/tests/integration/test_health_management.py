@@ -251,7 +251,17 @@ def test_subarray_health_rollup(tango_harness):
     # beam_4 = tango_harness.get_device("low-mccs/beam/004")
 
     _ = controller.Startup()
-    sleep()
+    dev_states = {
+        controller: DevState.ON,
+        station_1: DevState.ON,
+        station_2: DevState.ON,
+        subrack: DevState.ON,
+        tile_1: DevState.ON,
+        tile_2: DevState.ON,
+        tile_3: DevState.ON,
+        tile_4: DevState.ON,
+    }
+    check_states(dev_states)
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
@@ -268,10 +278,18 @@ def test_subarray_health_rollup(tango_harness):
     assert subarray_2.healthState == HealthState.OK
 
     _ = call_with_json(
-        controller.Allocate, subarray_id=1, station_ids=[[1]], station_beams=[1]
+        controller.Allocate,
+        subarray_id=1,
+        station_ids=[[1]],
+        station_beams=[1],
+        channel_blocks=[2],
     )
     _ = call_with_json(
-        controller.Allocate, subarray_id=2, station_ids=[[2]], station_beams=[2]
+        controller.Allocate,
+        subarray_id=2,
+        station_ids=[[2]],
+        station_beams=[2],
+        channel_blocks=[2],
     )
 
     sleep()

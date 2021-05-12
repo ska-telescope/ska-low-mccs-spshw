@@ -46,12 +46,12 @@ def devices_to_load():
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "tile_0002", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "beam_001", "proxy": MccsDeviceProxy},
-            {"name": "beam_002", "proxy": MccsDeviceProxy},
-            {"name": "beam_003", "proxy": MccsDeviceProxy},
-            {"name": "beam_004", "proxy": MccsDeviceProxy},
+            #             {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            #             {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            #             {"name": "beam_001", "proxy": MccsDeviceProxy},
+            #             {"name": "beam_002", "proxy": MccsDeviceProxy},
+            #             {"name": "beam_003", "proxy": MccsDeviceProxy},
+            #             {"name": "beam_004", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -100,8 +100,8 @@ def test_controller_health_rollup(tango_harness):
     subrack = tango_harness.get_device("low-mccs/subrack/01")
     tile_1 = tango_harness.get_device("low-mccs/tile/0001")
     tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-    tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-    tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+    #     tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+    #     tile_4 = tango_harness.get_device("low-mccs/tile/0004")
     # workaround for https://github.com/tango-controls/cppTango/issues/816
     # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
 
@@ -127,16 +127,16 @@ def test_controller_health_rollup(tango_harness):
         subrack: DevState.ON,
         tile_1: DevState.ON,
         tile_2: DevState.ON,
-        tile_3: DevState.ON,
-        tile_4: DevState.ON,
+        #         tile_3: DevState.ON,
+        #         tile_4: DevState.ON,
     }
     check_states(dev_states)
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK
     assert controller.healthState == HealthState.OK
@@ -147,8 +147,8 @@ def test_controller_health_rollup(tango_harness):
 
     assert tile_1.healthState == HealthState.FAILED
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.DEGRADED
     assert station_2.healthState == HealthState.OK
@@ -184,8 +184,8 @@ def test_controller_health_rollup(tango_harness):
     assert tile_1.healthState == HealthState.UNKNOWN  # see above
 
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK
@@ -208,8 +208,8 @@ def test_controller_health_rollup(tango_harness):
     check_states(dev_states)
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK
@@ -236,8 +236,8 @@ def test_subarray_health_rollup(tango_harness):
     subrack = tango_harness.get_device("low-mccs/subrack/01")
     tile_1 = tango_harness.get_device("low-mccs/tile/0001")
     tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-    tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-    tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+    #     tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+    #     tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
     # workaround for https://github.com/tango-controls/cppTango/issues/816
     # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
@@ -258,16 +258,16 @@ def test_subarray_health_rollup(tango_harness):
         subrack: DevState.ON,
         tile_1: DevState.ON,
         tile_2: DevState.ON,
-        tile_3: DevState.ON,
-        tile_4: DevState.ON,
+        #         tile_3: DevState.ON,
+        #         tile_4: DevState.ON,
     }
     check_states(dev_states)
 
     # Check that all devices are OK
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK
@@ -303,8 +303,8 @@ def test_subarray_health_rollup(tango_harness):
 
     assert tile_1.healthState == HealthState.FAILED
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.DEGRADED
     assert station_2.healthState == HealthState.OK
@@ -326,8 +326,8 @@ def test_subarray_health_rollup(tango_harness):
     # assert tile_1.healthState == HealthState.FAILED
     assert tile_1.healthState == HealthState.UNKNOWN  # see above
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK
@@ -349,8 +349,8 @@ def test_subarray_health_rollup(tango_harness):
     check_states(dev_states)
     assert tile_1.healthState == HealthState.OK
     assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
+    #     assert tile_3.healthState == HealthState.OK
+    #     assert tile_4.healthState == HealthState.OK
     sleep()
     assert station_1.healthState == HealthState.OK
     assert station_2.healthState == HealthState.OK

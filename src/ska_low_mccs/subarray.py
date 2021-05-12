@@ -500,8 +500,6 @@ class MccsSubarray(SKASubarray):
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns, self.logger
             )
-            # RCL: Hack to see if this works
-            device.resource_manager = device._station_pool_manager
 
             device._station_beam_pool_manager = StationBeamsResourceManager(
                 device.health_model._health_monitor,
@@ -524,6 +522,9 @@ class MccsSubarray(SKASubarray):
                 "ReleaseAllResources",
                 device.ReleaseAllResourcesCommand(*resourcing_args),
             )
+            # RCL: Hack to see if this works
+            # device.resource_manager = device._station_pool_manager
+            device.resource_manager = device._station_beam_pool_manager
 
     def init_command_objects(self):
         """
@@ -1097,9 +1098,28 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            # RCL: Hack to see if this works
+            #      When the base class do() method is called for "Restart", it
+            #      calls deconfigure() and resource_manager.release_all().
+            #
+            #      TEST 1:
+            #      We "wire" resource manager to _station_pool_manager, but we
+            #      need to call _station_beam_pool_manager.release_all()
+            #      explicitly from the restart implementation after the call to
+            #      the parent class.
+            #      RESULT: It worked, but left the subarray in IDLE and an
+            #              subsequent Allocate command was ignored
+            #
+            #      TEST 2:
+            #      Wire the resource managers the other way around
+            #      RESULT: ...
+            #
             device = self.target
-            device._station_beam_pool_manager.release_all()
+            device.logger.info("RCL: class RestartCommand version 1")
+            (result_code, message) = super().do()
+
+            # device._station_beam_pool_manager.release_all()
+            device._station_pool_manager.release_all()
 
             # TODO: Remove this delay. It simply emulates the time to achieve the restart for testing.
             time.sleep(0.3)

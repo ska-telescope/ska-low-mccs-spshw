@@ -7,5 +7,5 @@ ska-tango-base >= 0.9.1
 fire
 future
 requests
-pyfabil-1.0-py3-none-any.
+pyfabil-1.0-py3-none-any.whl
 astropy

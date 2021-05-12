@@ -99,5 +99,7 @@ TEST_RUNNER = test-runner-$(HELM_CHART)-$(HELM_RELEASE)
 include .make/release.mk
 include .make/docker.mk
 include .make/k8s.mk
+include .make/docs.mk
 
-.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete-namespace kubeconfig rlint
+.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete-namespace kubeconfig rlint docs testdocs
+

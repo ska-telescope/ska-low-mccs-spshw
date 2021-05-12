@@ -1,5 +1,17 @@
-#! /usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
 
+"""
+MCCS pointing calculation prototype.
+
+This is originally from the AAVS code.
+"""
 import logging
 import time
 

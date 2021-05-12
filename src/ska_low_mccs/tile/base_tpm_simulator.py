@@ -20,11 +20,11 @@ class BaseTpmSimulator(HardwareSimulator):
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "firmware1"
+    FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_AVAILABLE = {
-        "firmware1": {"design": "model1", "major": 2, "minor": 3},
-        "firmware2": {"design": "model2", "major": 3, "minor": 7},
-        "firmware3": {"design": "model3", "major": 2, "minor": 6},
+        "itpm_v1_6.bit": {"design": "model1", "major": 2, "minor": 3},
+        "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
+        "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
     REGISTER_MAP = {
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
@@ -40,6 +40,8 @@ class BaseTpmSimulator(HardwareSimulator):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
+    # TPM version: "tpm_v1_2" or "tpm_v1_6"
+    TPM_VERSION = 120
 
     def _arp(self, ip):
         """
@@ -115,6 +117,16 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: firmware_name")
         return self._firmware_name
 
+    @firmware_name.setter
+    def firmware_name(self, value):
+        """
+        Set firmware name.
+
+        :param value: assigned default firmware name. Can be overriden by parameter of download_firmware
+        :type value: str
+        """
+        self._tile_id = value
+
     @property
     def firmware_version(self):
         """
@@ -139,6 +151,16 @@ class BaseTpmSimulator(HardwareSimulator):
         """
         self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
         return self._is_programmed
+
+    @property
+    def hardware_version(self):
+        """
+        Return whether this TPM is 1.2 or 1.6.
+
+        :return: TPM hardware version. 120 or 160
+        :rtype: int
+        """
+        return self.TPM_VERSION
 
     def download_firmware(self, bitfile):
         """
@@ -173,7 +195,7 @@ class BaseTpmSimulator(HardwareSimulator):
         The simulator will emulate programming the firmware.
         """
         self.logger.debug("TpmSimulator: initialise")
-        self.download_firmware("firmware1")
+        self.download_firmware(self._firmware_name)
 
     @property
     def tile_id(self):
@@ -700,13 +722,22 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: Stop beamformer")
         self._is_beamformer_running = False
 
-    def configure_integrated_channel_data(self, integration_time=0.5):
+    def configure_integrated_channel_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=511,
+    ):
         """
         Configure the transmission of integrated channel data with the
         provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -714,18 +745,57 @@ class BaseTpmSimulator(HardwareSimulator):
         self.logger.debug("TpmSimulator: configure_integrated_channel_data")
         raise NotImplementedError
 
-    def configure_integrated_beam_data(self, integration_time=0.5):
+    def stop_integrated_channel_data(self):
+        """
+        Stop the integrated channel data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated channel data")
+        raise NotImplementedError
+
+    def configure_integrated_beam_data(
+        self,
+        integration_time=0.5,
+        first_channel=0,
+        last_channel=191,
+    ):
         """
         Configure the transmission of integrated beam data with the
         provided integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
+        :param first_channel: first channel
+        :type first_channel: int, optional
+        :param last_channel: last channel
+        :type last_channel: int, optional
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
         self.logger.debug("TpmSimulator: configure_integrated_beam_data")
+        raise NotImplementedError
+
+    def stop_integrated_beam_data(self):
+        """
+        Stop the integrated beam data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated beam data")
+        raise NotImplementedError
+
+    def stop_integrated_data(self):
+        """
+        Stop the integrated data.
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
+        """
+        self.logger.debug("TpmDriver: Stop integrated data")
         raise NotImplementedError
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):

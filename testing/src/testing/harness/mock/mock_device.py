@@ -67,20 +67,26 @@ class MockDeviceBuilder:
         self: MockDeviceBuilder,
         name: str,
         result_code: ResultCode,
-        message: str = "Mock information-only message",
+        message_uid: str = None,
+        status: str = "Mock information-only message",
     ) -> None:
         """
         Tell this builder to build mocks with a specified command that
-        returns a (ResultCode, message) tuples as specified.
+        returns (ResultCode, [message, message_uid]) or (ResultCode,
+        message) tuples as required.
 
         :param name: the name of the command
         :param result_code: the
             :py:class:`ska_tango_base.commands.ResultCode` that the\
             command should return
-        :param message: an information-only message for the command to
+        :param message_uid: unique ID for this command's response
+        :param status: an information-only message for the command to
             return
         """
-        self.add_command(name, [[result_code], [message]])
+        if message_uid:
+            self.add_command(name, [[result_code], [status, message_uid]])
+        else:
+            self.add_command(name, [[result_code], [status]])
 
     def set_state(self: MockDeviceBuilder, state: tango.DevState) -> None:
         """

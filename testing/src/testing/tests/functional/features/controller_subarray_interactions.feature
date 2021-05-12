@@ -12,7 +12,7 @@ Scenario: MCCS Start up low telescope
     Then mccs controller state is on
     And all mccs station states are on
 
-@XTP-1257
+@XTP-1257 @skip
 Scenario: MCCS Allocate subarray
     Given tmc is ready to allocate a subarray
     And mccs is ready to allocate a subarray

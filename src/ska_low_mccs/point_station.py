@@ -1,16 +1,12 @@
 #! /usr/bin/python
 
 import logging
-import multiprocessing
-import os
-from queue import Empty
 import time
-from typing import Sequence
+
 import warnings
 from builtins import object
 from builtins import range
 from datetime import datetime
-import functools
 
 from multiprocessing import Queue, Process
 from multiprocessing.queues import Empty
@@ -23,14 +19,6 @@ from astropy.coordinates import Angle, AltAz, SkyCoord, EarthLocation, get_sun
 from astropy.time import TimeDelta
 from astropy.time.core import Time
 from astropy.utils.exceptions import AstropyWarning
-
-# from pyaavs import station
-# import pyaavs.logger
-
-# try:
-#     import aavs_calibration.common as calib_utils
-# except ImportError:
-#     logging.debug("Could not load calibration database. Pointing cannot be performed")
 
 warnings.simplefilter("ignore", category=AstropyWarning)
 
@@ -45,6 +33,10 @@ class AntennaInformation(object):
     """
 
     def __init__(self):
+        """
+        Initialize AntennaInformation object with default 256 elements
+        but no displacements, &c.
+        """
         self.nof_elements = 256
         self.xyz = None
         self.elementid = None
@@ -81,6 +73,11 @@ class StationInformation(object):
     """
 
     def __init__(self):
+        """
+        Initialize StationInformation object with no location data and
+        default AntennaInformation object (which will have no element
+        diplacement data)
+        """
         self.latitude = None
         self.longitude = None
         self.ellipsoidalheight = None
@@ -90,12 +87,22 @@ class StationInformation(object):
         """
         Proxy to the method in the associated AntennaInformation object.
 
-        :param txtfile: displacements file
-        :type txtfile: String
+        :param antennafile: displacements file
+        :type antennafile: String
         """
         self.antennas.loaddisplacements(antennafile)
 
     def setlocation(self, latitude, longitude, ellipsoidalheight):
+        """
+        Set the location data for this station.
+
+        :param latitude: the latitude of the station (WGS84)
+        :type latitude: float
+        :param longitude: the longitude of the station (WGS84)
+        :type longitude: float
+        :param ellipsoidalheight: the ellipsoidal height of the station
+        :type ellipsoidalheight: float
+        """
         assert latitude <= 90.0 and latitude >= -90.0
         self.latitude = latitude
         assert longitude <= 180.0 and longitude >= -180.0
@@ -137,7 +144,6 @@ class Pointing(object):
         # Initial az/el pointing
         self._az = 0.0
         self._el = 0.0
-
 
         self._antennas = self.station.antennas
         self._nof_antennas = self._antennas.nof_elements
@@ -196,7 +202,7 @@ class Pointing(object):
 
         :param altitude: altitude coordinates of a sky object as astropy angle
         :param azimuth: azimuth coordinates of a sky object as astropy angles
-        :return: The (delay,delay rate) tuple for each antenna
+        :param pointing_time: the time at which the pointing will be active
         """
 
         _ = pointing_time
@@ -223,8 +229,8 @@ class Pointing(object):
     ):
         """Calculate the phase shift between two antennas which is given by the phase constant (2 * pi / wavelength)
         multiplied by the projection of the baseline vector onto the plane wave arrival vector
-        :param right_ascension: Right ascension of source (astropy angle, or string that can be converted to angle)
-        :param declination: Declination of source (astropy angle, or string that can be converted to angle)
+        :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
+        :param declination: Declination of source - astropy Angle / string convertable to Angle
         :param pointing_time: Time of observation (in format astropy time)
         :param delta_time: Delta timing for calculating delay rate
         :return: The (delay,delay rate) tuple for each antenna
@@ -312,42 +318,6 @@ class Pointing(object):
         # All done, return coefficients
         return coefficients
 
-    # def download_delays(self):
-    #     """ Download generated delays to station """
-    #     if self._delays is None:
-    #         logging.error("Delays have not been computed yet")
-    #         return
-
-    #     if self.station is None:
-    #         logging.error("Station configuration required to download delays")
-    #         return
-
-    #     # Connect to tiles in station
-    #     try:
-    #         # TODO: out to tiles
-    #         pass
-    #         # station.load_configuration_file(self._station_config)
-    #         # aavs_station = station.Station(station.configuration)
-    #         # aavs_station.connect()
-
-    #         # # Form TPM-compatible delays
-    #         # tpm_delays = np.zeros((self._nof_antennas, 2))
-    #         # tpm_delays[:, 0] = self._delays
-    #         # tpm_delays[:, 1] = self._delay_rate
-
-    #         # # Download to tiles
-    #         # t0 = time.time()
-    #         # for i, tile in enumerate(aavs_station.tiles):
-    #         #     tile.set_pointing_delay(tpm_delays[i * antennas_per_tile: (i + 1) * antennas_per_tile], 0)
-    #         # t1 = time.time()
-    #         # logging.info("Downloaded delays to tiles in {0:.2}s".format(t1 - t0))
-
-    #         # # Load downloaded delays
-    #         # aavs_station.load_pointing_delay(2048)
-
-    #     except Exception as e:
-    #         logging.error("Could not configure or connect to station, not loading delays ({})".format(e))
-
     def _delays_from_altitude_azimuth(self, altitude, azimuth):
         """
         Calculate the delay using a target altitude Azimuth.
@@ -379,8 +349,8 @@ class Pointing(object):
         Calculate the altitude and azimuth coordinates of a sky object
         from right ascension and declination and time.
 
-        :param right_ascension: Right ascension of source (in astropy Angle on string which can be converted to Angle)
-        :param declination: Declination of source (in astropy Angle on string which can be converted to Angle)
+        :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
+        :param declination: Declination of source - astropy Angle / string convertable to Angle
         :param time: Time of observation (as astropy Time")
         :param location: astropy EarthLocation
         :return: Array containing altitude and azimuth of source as astropy angle
@@ -427,7 +397,13 @@ class Pointing(object):
         return alt > 0.0
 
 
-class PointingDriver(object):
+class PointingDriver:
+    """
+    The class provides the Fire CLI interface to the Pointing class.
+
+    The methods of the class provide the commands for the CLI.
+    """
+
     def __init__(self):
         """
         Initialize point_driver object with a default StationInformation
@@ -472,6 +448,7 @@ class PointingDriver(object):
         :rtype: pointing_driver
         """
         self.pointing.station.loaddisplacements(file)
+        print(f"xyz array shape: {self.pointing.station.antennas.xyz.shape}")
         return self
 
     def azel(self, az, el):
@@ -560,8 +537,6 @@ class PointingDriver(object):
 
         for i in range(count):
             self.point_kwargs["pointing_time"] = t0 + i * interval / 86400
-            # print (f'calc frame at {self.point_kwargs["pointing_time"].value}')
-            # print(f'Type {type(self.point_kwargs["pointing_time"])}')
             self.calc(**self.point_kwargs)
             result = {
                 "frame_t": self.point_kwargs["pointing_time"],
@@ -572,7 +547,7 @@ class PointingDriver(object):
             self._results.append(result)
         toc = time.perf_counter()
         print(f"Execution time {toc - tic:0.4f} seconds")
-        # print(self.pointing._delays)
+
         print(len(self._results), "frames written")
         return self
 
@@ -585,46 +560,73 @@ class PointingDriver(object):
         """
         return self.sequence(1, 0)
 
-    def pointing_job (self, jobs, results):
+    def pointing_job(self, jobs, results):
+        """
+        Worker method for pointing job processes. Keep get times from
+        the jobs queue, processing delays for each time and output
+        results to results queue.
 
-        name = multiprocessing.current_process().name
+        :param jobs: queue of jobs
+        :type jobs: multiprocessing.queue
+        :param results: queue for results
+        :type results: multiprocessing.queue
+        """
 
         while not jobs.empty():
             try:
+                # Time limit on queue get in case another process got there first
                 t = jobs.get(timeout=0.01)
-
-
-                # if t:
-                # print (f"pointing_job {name} {str(t)} - incoming job")
                 self.point_kwargs["pointing_time"] = t
                 self.calc(**self.point_kwargs)
                 result = {
-                    # "frame_t": str(self.point_kwargs["pointing_time"]),
                     "frame_t": self.point_kwargs["pointing_time"],
                     "az": self.pointing._az,
                     "el": self.pointing._el,
                     "delays": self.pointing._delays,
                 }
                 results.put(result)
-                # else:
-                #     print (f"pointing_job {name} {str(t)} - None job)")
-                #     return
             except Empty:
-                print (f"Empty exception - {name}")
+                # Another process grabbed the job
+                # This process will exit on the next loop.
+                pass
 
-        print (f"pointing_job {name} - No more jobs in queue")
+        # An empty jobs queue means we can signal completion with None
         results.put(None)
 
-    def msequence (self, count, interval, nproc):
+    def msequence(self, count, interval, nproc):
+        """
+        Multiprocessing version of the sequence CLI command, adding a
+        parameter to set the number of processes.
+
+        :param count: The number of frames to process
+        :type count: int
+        :param interval: The time interval between frames
+        :type interval: double
+        :param nproc: The number of processes to start
+        :type nproc: int
+        :return: self for next command
+        :rtype: PointingDriver
+        """
+
+        if not isinstance(nproc, int):
+            print("nproc must be an integer")
+            return
+
+        if nproc < 1:
+            print("nproc must be >= 1")
+            return
 
         job_queue = Queue()
         results_queue = Queue()
 
-        processes = [Process(
-            target=self.pointing_job,
-            args=(job_queue,results_queue),
-            # daemon=True
-            ) for x in range(nproc)]
+        processes = [
+            Process(
+                target=self.pointing_job,
+                args=(job_queue, results_queue),
+                # daemon=True
+            )
+            for x in range(nproc)
+        ]
 
         print(f"Generate {count} delay sets every {interval} seconds - multiprocessing")
         tic = time.perf_counter()
@@ -637,47 +639,36 @@ class PointingDriver(object):
         for i in range(count):
             job_queue.put(t0 + i * interval / 86400)
 
-        # job_queue.put(None)
-
-        print (f"job_queue loaded with {job_queue.qsize()} jobs")
-
         for p in processes:
-            print (f"Start process {str(p)}")
             p.start()
 
-        print ("Processes running")
+        print("Processes running")
 
         collected = {}
 
         ended = 0
-        nresult = 0
 
+        # Until all processes have ended keep popping the results
         while ended < nproc:
-            # print (f"Waiting for {nproc-ended} processes, {job_queue.qsize()} jobs queued")
             result = results_queue.get()
             if result is None:
-                # print ("Got a None result")
+                # This is the token that signals a process ended
                 ended += 1
             else:
-                nresult += 1
-                # print (f"Now have {nresult} results")
-                collected[result['frame_t']] = result
+                # Otherwise we have a real result to collect
+                collected[result["frame_t"]] = result
 
         for p in processes:
-            print (f"Join process {str(p)}")
+            print(f"Join process {str(p)}")
             p.join()
 
-        print ("Processes joined")
+        print("Processes joined")
 
         toc = time.perf_counter()
         print(f"Execution time {toc - tic:0.4f} seconds")
 
-        # while not results_queue.empty():
-        #     self._results.append(results_queue.get())
-
-        self._results = [
-            collected[key] for key in sorted(collected.keys())
-        ]
+        # Results could be out of order so sort them
+        self._results = [collected[key] for key in sorted(collected.keys())]
 
         print(len(self._results), "frames written")
         return self
@@ -717,64 +708,3 @@ class PointingDriver(object):
 
 if __name__ == "__main__":
     fire.Fire(PointingDriver)
-
-# if __name__ == "__main__":
-#     from optparse import OptionParser
-#     from sys import argv, stdout
-
-#     parser = OptionParser(usage="usage: %point_station [options]")
-#     parser.add_option("--station", action="store", dest="station", default="AAVS1",
-#                       help="Station identifier (default: AAVS1)")
-#     parser.add_option("--config", action="store", dest="config",
-#                       default=None, help="Station configuration file to use")
-#     parser.add_option("--ra", action="store", dest="ra", type=str,
-#                       default="0", help="RA [default: 0]")
-#     parser.add_option("--dec", action="store", dest="dec", type=str,
-#                       default="0", help="DEC [default: 0]")
-#     parser.add_option("--static", action="store_true", dest="static", default=False,
-#                       help="Generate static beams based on theta and phi arguments [default: False]")
-#     parser.add_option("--altitude", action="store", dest="alt", type=str,
-#                       default="0", help="Altitude [default: 0]")
-#     parser.add_option("--azimuth", action="store", dest="az", type=str,
-#                       default="0", help="Azimuth [default: 0]")
-#     parser.add_option("--sun", action="store_true", dest="sun",
-#                       default=False, help="Point to sun [default: False]")
-#     parser.add_option("--time", action="store", dest="time", default="now",
-#                       help="Time at which to generate pointing delays.
-#                       Format: dd/mm/yyyy_hh:mm [default: now]")
-
-#     (opts, args) = parser.parse_args(argv[1:])
-
-#     # Check if a configuration file was defined
-#     if opts.config is None or not os.path.exists(opts.config):
-#         # TODO: Output to logger
-#         # log.error("A station configuration file is required, exiting")
-#         exit()
-
-#     # Parse time
-#     pointing_time = datetime.utcnow()
-#     if opts.time != "now":
-#         try:
-#             pointing_time = datetime.strptime(opts.starttime, "%d/%m/%Y_%H:%M")
-#         except:
-#             logging.info("Could not parse pointing time. Format should be dd/mm/yyyy_hh:mm")
-#             exit()
-
-#     # Generate pointing object
-#     pointing = Pointing(opts.station, opts.config)
-
-#     # Generate delay and delay rates
-#     if opts.sun:
-#         logging.info("Pointing to the sun")
-#         pointing.point_to_sun(pointing_time)
-#     elif opts.static:
-#         opts.alt, opts.az = Angle(opts.alt), Angle(opts.az)
-#         logging.info("Pointing to ALT {}, AZ {}".format(opts.alt, opts.az))
-#         pointing.point_array_static(opts.alt, opts.az)
-#     else:
-#         opts.ra, opts.dec = Angle(opts.ra), Angle(opts.dec)
-#         logging.info("Pointing to RA {}, DEC {}".format(opts.ra, opts.dec))
-#         pointing.point_array(opts.ra, opts.dec,  pointing_time=pointing_time, delta_time=0)
-
-#     # Download coefficients to station
-#     pointing.download_delays()

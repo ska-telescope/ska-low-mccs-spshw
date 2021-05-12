@@ -1,4 +1,4 @@
-FROM readthedocs/build:6.0
+FROM readthedocs/build:latest
 ARG dir=docs
 ENV dir=${dir}
 

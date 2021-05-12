@@ -259,7 +259,13 @@
                             ],
                             "LoggingLevelDefault": [
                                 "3"
-                            ]
+                            ],
+			    "SubrackIp": [
+				"10.0.10.64"
+			    ],
+			    "SubrackPort": [
+				"8081"
+			    ]
                         }
                     }
                 }
@@ -286,10 +292,13 @@
                                 "3"
                             ],
                             "TpmIp": [
-                                "10.0.10.2"
+                                "10.0.10.201"
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -326,6 +335,9 @@
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -358,10 +370,13 @@
                                 "3"
                             ],
                             "TpmIp": [
-                                "10.0.10.4"
+                                "10.0.10.2"
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_2"
                             ]
                         },
                         "attribute_properties": {
@@ -393,11 +408,14 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-                            "TileIp": [
-                                "10.0.10.5"
+                            "TpmIp": [
+                                "10.0.10.214"
                             ],
                             "TpmCpldPort": [
                                 "10000"
+                            ],
+			    "TpmVersion": [
+				"tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {

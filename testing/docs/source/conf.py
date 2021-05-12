@@ -44,7 +44,7 @@ _MockObject.__truediv__ = lambda self, other: _MockObject()
 
 # -- Project information -----------------------------------------------------
 release_filename = os.path.join(
-    "..", "..", "..", "src", "ska", "low", "mccs", "release.py"
+    "..", "..", "..", "src", "ska_low_mccs", "release.py"
 )
 version = None
 author = None
@@ -76,7 +76,7 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-autodoc_mock_imports = ["pytest_bdd", "scipy", "ska", "ska_tango_base", "tango"]
+autodoc_mock_imports = ["pytest_bdd", "scipy", "ska_low_mccs", "ska_tango_base", "tango"]
 
 autodoc_default_options = {"special-members": "__init__"}
 
@@ -101,11 +101,18 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 
+mccs_inventory_path = os.path.join("..", "..", "..", "docs", "build", "html", "objects.inv")
+mccs_inventory = mccs_inventory_path if os.path.exists(mccs_inventory_path) else None
+print(f"MCCS inventory path is {mccs_inventory_path}.")
+
 intersphinx_mapping = {
     "https://docs.python.org/3/": None,
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
     "pytest": ("https://docs.pytest.org/en/stable/", None),
-    "ska_low_mccs": ("https://developer.skatelescope.org/projects/ska-low-mccs/en/master/", None),
+    "ska_low_mccs": (
+        "https://developer.skatelescope.org/projects/ska-low-mccs/en/master/",
+         mccs_inventory_path
+    ),
     "ska-tango-base": (
         "https://developer.skatelescope.org/projects/ska-tango-base/en/latest/",
         None,

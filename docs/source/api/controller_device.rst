@@ -1,12 +1,12 @@
 ====================================================================
-Controller Device module (ska.low.mccs.controller.controller_device)
+Controller Device module (ska_low_mccs.controller.controller_device)
 ====================================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. image:: controller_device_class_diagram.svg
+.. uml:: controller_device_class_diagram.uml
 
-.. automodule:: ska.low.mccs.controller.controller_device
+.. automodule:: ska_low_mccs.controller.controller_device
    :members:
 

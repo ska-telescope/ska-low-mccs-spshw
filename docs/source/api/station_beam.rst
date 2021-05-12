@@ -1,11 +1,11 @@
 ===============================================
-Station Beam module (ska.low.mccs.station_beam)
+Station Beam module (ska_low_mccs.station_beam)
 ===============================================
 
 .. toctree::
    :maxdepth: 2
 
-.. image:: station_beam_class_diagram.svg
+.. uml:: station_beam_class_diagram.uml
 
-.. automodule:: ska.low.mccs.station_beam
+.. automodule:: ska_low_mccs.station_beam
    :members:

@@ -1,11 +1,11 @@
 ==================================================
-Tile Device module (ska.low.mccs.tile.tile_device)
+Tile Device module (ska_low_mccs.tile.tile_device)
 ==================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. image:: tile_device_class_diagram.svg
+.. uml:: tile_device_class_diagram.uml
 
-.. automodule:: ska.low.mccs.tile.tile_device
+.. automodule:: ska_low_mccs.tile.tile_device
    :members:

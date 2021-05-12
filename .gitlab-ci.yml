@@ -26,6 +26,7 @@ stages:
   - upload_results
   - teardown
   - docs
+  - testdocs
   - pages
   - publish
   - release
@@ -100,6 +101,10 @@ functional_test:
     paths:
       - ./testing/results
     when: always
+  environment:
+    name: test
+    kubernetes:
+      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
 
 # Wait for report and send to Jira
 xray_report:
@@ -129,6 +134,10 @@ functional_test_tear_down:
     - export KUBE_NAMESPACE="ci-$CI_COMMIT_SHORT_SHA"
     - make uninstall-chart
     - make delete-namespace
+  environment:
+    name: test
+    kubernetes:
+      namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
   when: always
 
 linting:
@@ -143,15 +152,16 @@ linting:
       - ./build
 
 docs:
+  stage: docs
   tags:
     - k8srunner
-  stage: docs
+  image: readthedocs/build:latest
   before_script:
     - echo "error" > .docs_status
-    - python3 -m pip install -r requirements-dev.txt
+    - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
     - python3 -m pip install anybadge
   script:
-    - tox -e docs
+    - python3 -m sphinx -T -E -b html -n -W --keep-going docs/source docs/build/html
     - echo "pass" > .docs_status
   after_script:
     - mkdir -p build/badges
@@ -160,6 +170,23 @@ docs:
     paths:
       - ./build
       - ./docs/build/html
+    when: always
+    expire_in: 7 days
+
+testdocs:
+  stage: testdocs
+  dependencies:
+    - docs
+  tags:
+    - k8srunner
+  image: readthedocs/build:latest
+  before_script:
+    - python3 -m pip install --exists-action=w --no-cache-dir --disable-pip-version-check -r docs/requirements.txt
+  script:
+    - python3 -m sphinx -T -E -b html -n -W --keep-going testing/docs/source testing/docs/build/html
+  artifacts:
+    paths:
+      - ./testing/docs/build/html
     when: always
     expire_in: 7 days
 

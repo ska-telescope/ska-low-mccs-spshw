@@ -1,10 +1,10 @@
 =======================================================
-Transient Buffer module (ska.low.mccs.transient_buffer)
+Transient Buffer module (ska_low_mccs.transient_buffer)
 =======================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: ska.low.mccs.transient_buffer
+.. automodule:: ska_low_mccs.transient_buffer
    :members:
 

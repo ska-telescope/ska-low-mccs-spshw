@@ -17,6 +17,53 @@ a completely different machine.
 These instructions assume a Linux environment; it should be possible to
 deploy in other environments.
 
+Machine requirements
+--------------------
+
+Memory requirements
+^^^^^^^^^^^^^^^^^^^
+As described below, MCCS uses the SKA `deploy-minikube` project to
+manage cluster deployment. By default, `deploy-minikube` requests 8Gb of
+memory for minikube. This implies that, assuming you want to be able to
+do other things with your computer while minikube is running, you will
+need upwards of 12Gb of memory.
+
+Actually, the MCCS chart currently requires only about 3Gb of memory, so
+if you need to deploy on a memory-constrained machine, it should be okay
+to overrule the `deploy-minikube` default with a setting of 4Gb or even
+slightly less.
+
+Team members have managed to deploy on hardware with even less memory,
+but they were restricted to deploying minimal charts, and experienced
+difficulties running other applications at the same time.
+
+(Note that, operationally, the number of devices deployed by MCCS will
+increase over time by several orders of magnitude, eventually
+outstripping the capacity of any development machine. MCCS will maintain
+smaller "development" charts, that deploy a small number of
+representative devices, for development, demonstration and testing
+purposes. These charts are not expected to grow very much larger than
+they are at present, so it is probably safe to assume that an MCCS
+development chart will not require more than 4Gb of memory.)
+
+
+CPU requirements
+^^^^^^^^^^^^^^^^
+CPU requirements are much more forgiving; if you have less CPU
+available, MCCS will mostly just run more slowly.
+
+However, Tango commands timeout after three seconds (by default), and
+some MCCS commands currently take not much less than that to run. So if
+you deploy MCCS on a machine with slow or busy CPU, you may find that
+these commands exceed the three second limit, resulting in timeout
+issues. (These slow commands should not exist. MCCS plans improvements
+in this area. So in future, these timeouts will not be an issue.)
+
+By default, `deploy-minikube` tells minikube to use two CPUs. As a rough
+rule of thumb: you probably won't see timeouts if minikube can get the
+two CPUs that it asks for; but if there is contention for those CPUs,
+you may see timeouts.
+
 
 Overview of setup / teardown
 ----------------------------
@@ -27,7 +74,7 @@ deployment of our project charts to the cluster.
 The following state chart summarises the steps to deploying MCCS.
 Detailed instructions follow.
 
-.. image:: setup_overview.uml
+.. uml:: setup_overview.uml
 
 
 Prerequisites and initial setup
@@ -78,11 +125,33 @@ Start the cluster manager
    (Obviously there is no need to do this if you have only just cloned
    the project.)
 
-#. Used ``deploy-minikube`` to install and configure the cluster:
+#. Use ``deploy-minikube`` to install and configure the cluster:
 
    .. code-block:: bash
 
       make all
+
+   If deploying to a memory-constrained machine, the memory provided to
+   minikube can be reduced from the 8Gb default:
+
+    .. code-block:: bash
+
+       make MEM=4096mb all
+
+   The number of CPUs that minikube is allowed to use can also be
+   changed from the default of 2:
+
+   .. code-block:: bash
+
+      make CPUS=4 all
+
+   Note that to change these resource values on a cluster that has
+   already been deployed, it must first be deleted:
+
+   .. code-block:: bash
+
+      make delete
+      make MEM=16384mb CPUS=8 all
 
 #. **IMPORTANT** Because we are using docker as our driver, the
    environment must be set in your terminal. This command must be run in
@@ -118,16 +187,18 @@ The basic steps to deploying MCCS are:
 
    This too may take a very long time the first time it is run.
 
-   MCCS also has a "mccs-demo" chart configuration for deploying a separate
-   configuration for demo and testing purposes. To deploy this instead, use:
+   MCCS also has a "demo" chart configuration for deploying a separate
+   configuration for demo and testing purposes. To deploy this instead,
+   use:
 
    .. code-block:: bash
 
       make VALUES_FILE=values-demo.yaml install-chart
 
-   Similarly, if you want to deploy on the PSI cluster this can be controlled
-   using the `VALUES_FILE=values-psi.yaml` environment variable.
-   For PSI which is on a shared cluster it is also recommended to set:
+   Similarly, if you want to deploy on the PSI cluster this can be
+   controlled using the `VALUES_FILE=values-psi.yaml` environment
+   variable. For PSI which is on a shared cluster it is also recommended
+   to set the `RELEASE_NAME`:
 
    .. code-block:: bash
 
@@ -146,20 +217,44 @@ The basic steps to deploying MCCS are:
      the device containers be created, and then the devices initialise.
      At first some devices may error; this is normal, and they will be
      automatically restarted. After several minutes, the cluster should
-     stabilise and you will see that all devices are `Running`.
+     stabilise and you will see that all devices are `Running` (except
+     for the configuration pod, which will be `Completed`).
 
    * To block until the cluster is ready:
 
      .. code-block:: bash
    
         make wait
-        
+   
+     This command blocks for up to 180 seconds, waiting for the cluster
+     to be ready. If running on a CPU-constrained machine, 180 seconds
+     may not be enough; in that case the wait time can be changed with
+     the `MAX_WAIT` variable:
+
+     .. code-block:: bash
+   
+        make MAX_WAIT=300s wait
+
      Because this option blocks until the cluster is ready, it can be
-     useful for queueing up commands:
+     useful for queueing up commands. For example, to deploy MCCS, wait
+     for the cluster to be ready, and then run the tests:
    
      .. code-block:: shell-session
 
         $ make install-chart; make wait; make functional-test
+
+     Note that on slower machines, `make wait` may time out. This need
+     not mean that there is a problem with the cluster; it is just
+     taking a long time. If `make wait` is timing out for you, you won't
+     be able to use it. You will need to monitor the cluster for
+     readiness yourself:
+   
+     .. code-block:: shell-session
+
+        $ make install-chart
+        $ make watch  # watch the cluster yourself and exit when it is ready
+        $ make functional-test
+
 
 Using the MCCS Deployment
 -------------------------
@@ -174,10 +269,6 @@ Once you have finished with the deployment, you can tear it down:
 .. code-block:: bash
 
    make uninstall-chart
-   make watch
-
-This may take a minute or so; use `make watch` to monitor
-deletion.
 
 Note that this does not teardown the minikube deployment, it simply
 unloads the MCCS charts.

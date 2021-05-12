@@ -41,7 +41,16 @@ sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
-autodoc_mock_imports = ["scipy", "tango", "PyTango", "PyTango.server", "ska_tango_base", "pyfabil"]
+autodoc_mock_imports = [
+    "backoff",
+    "jsonschema",
+    "numpy",
+    "pyfabil",
+    "scipy",
+    "ska_tango_base",
+    "tango",
+    "uritools",
+]
 
 
 autodoc_default_options = {"special-members": "__init__"}
@@ -56,7 +65,7 @@ def setup(app):
 
 
 # -- Project information -----------------------------------------------------
-release_filename = os.path.join("..", "..", "src", "ska", "low", "mccs", "release.py")
+release_filename = os.path.join("..", "..", "src", "ska_low_mccs", "release.py")
 version = None
 author = None
 for line in open(release_filename).readlines():
@@ -94,8 +103,11 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
-    "plantweb.directive",
+    "sphinxcontrib.plantuml",
 ]
+autoclass_content = "class"
+plantuml_syntax_error_image = True
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

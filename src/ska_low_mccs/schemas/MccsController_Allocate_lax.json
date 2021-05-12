@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "ska_low_mccs.MccsController.Allocate.json",
+    "type": "object",
+    "properties": {
+        "subarray_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+        },
+        "stations": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 512
+        }
+    },
+    "required": ["subarray_id", "stations"],
+    "additionalProperties": false
+}

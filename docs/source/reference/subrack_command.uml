@@ -1,0 +1,27 @@
+participant "Tile" as Tile
+participant "Initiator" as Initiator
+participant "Subrack\nDevice" as Subrack_dv
+participant "Subrack\nDriver" as Subrack_drv
+participant "Hardware\nServer" as Hw_server
+participant "Subrack\nServer" as Subrack
+
+Tile -> Subrack_dv: subscribe_event()
+Initiator -> Subrack_dv: command_inout("TurnOnTpm",1)
+Subrack_dv -> Subrack_drv: turn_on_tpm(1)
+Subrack_drv -> Hw_server: execute_command("turn_on_tpm",1)
+Hw_server -> Subrack: '...?type=command&param=turn_on_tpm&value=1'
+Subrack -> Hw_server: '{...command:"turn_on_tpm",status=STARTED}'
+Hw_server -> Subrack_drv: {...command:"turn_on_tpm",status=STARTED]}
+Subrack_drv -> Hw_server: execute_command("command_completed")
+Hw_server -> Subrack: '...?type=command&param=command_completed'
+Subrack -> Hw_server: '{...command:"command_completed",retvalue=true}'
+Hw_server -> Subrack_drv: {...command:"command_completed",retvalue=True}
+Subrack_drv -> Subrack_dv: True
+Subrack_dv -> Subrack_drv: are_tpms_on()
+Subrack_drv -> Hw_server: read_attribute("are_tpms_on")
+Hw_server -> Subrack: '...?type=getattribute&param=are_tpms_on'
+Subrack -> Hw_server: '{...attribute:"are_tpms_on",value=[true, ...]}'
+Hw_server -> Subrack_drv: {...attribute:"tpm_currents",value=[True, ...]}
+Subrack_drv -> Subrack_dv: [True, ...]
+Subrack_drv -> Tile: _subrack_power_changed()
+Subrack_dv -> Initiator: True

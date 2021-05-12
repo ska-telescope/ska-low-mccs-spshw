@@ -1,11 +1,11 @@
 ===================================================================================
-Cluster Manager Device module (ska.low.mccs.cluster_manager.cluster_manager_device)
+Cluster Manager Device module (ska_low_mccs.cluster_manager.cluster_manager_device)
 ===================================================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. image:: cluster_manager_device_class_diagram.svg
+.. uml:: cluster_manager_device_class_diagram.uml
 
-.. automodule:: ska.low.mccs.cluster_manager.cluster_manager_device
+.. automodule:: ska_low_mccs.cluster_manager.cluster_manager_device
    :members:

@@ -1,12 +1,12 @@
 ===========================================================
-Subrack Device module (ska.low.mccs.subrack.subrack_device)
+Subrack Device module (ska_low_mccs.subrack.subrack_device)
 ===========================================================
 
 .. toctree::
    :maxdepth: 2
 
-.. image:: subrack_device_class_diagram.svg
+.. uml:: subrack_device_class_diagram.uml
 
-.. automodule:: ska.low.mccs.subrack.subrack_device
+.. automodule:: ska_low_mccs.subrack.subrack_device
    :members:
 

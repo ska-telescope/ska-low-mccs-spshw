@@ -59,14 +59,14 @@ class TestMccsIntegration:
         stationbeam_3 = tango_harness.get_device("low-mccs/beam/003")
         stationbeam_4 = tango_harness.get_device("low-mccs/beam/004")
 
-        stationbeam_1.pointingDelay = [1.0] * 2
-        stationbeam_2.pointingDelay = [2.0] * 2
-        stationbeam_3.pointingDelay = [3.0] * 2
-        stationbeam_4.pointingDelay = [4.0] * 2
-        stationbeam_1.pointingDelayRate = [0.1] * 2
-        stationbeam_2.pointingDelayRate = [0.2] * 2
-        stationbeam_3.pointingDelayRate = [0.3] * 2
-        stationbeam_4.pointingDelayRate = [0.4] * 2
+        stationbeam_1.pointingDelay = [1.0e-9] * 2
+        stationbeam_2.pointingDelay = [2.0e-9] * 2
+        stationbeam_3.pointingDelay = [3.0e-9] * 2
+        stationbeam_4.pointingDelay = [4.0e-9] * 2
+        stationbeam_1.pointingDelayRate = [0.1e-11] * 2
+        stationbeam_2.pointingDelayRate = [0.2e-11] * 2
+        stationbeam_3.pointingDelayRate = [0.3e-11] * 2
+        stationbeam_4.pointingDelayRate = [0.4e-11] * 2
 
         # allocate does not currently include station_beams, so assigning manually
         stationbeam_1.stationFqdn = "low-mccs/station/001"

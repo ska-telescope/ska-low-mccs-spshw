@@ -410,8 +410,8 @@ class TestMccsStationBeam:
         station_beam = device_under_test  # to make test easier to read
         mock_station = MccsDeviceProxy("low-mccs/station/001", logger)
         mock_station.ApplyPointing.return_value = (ResultCode.OK, "")
-        delay_array = [1.0] * 256
-        rate_array = [0.5] * 256
+        delay_array = [1.0e-9] * 256
+        rate_array = [1.0e-11] * 256
         station_beam.logicalBeamId = 1
         station_beam.pointingDelay = delay_array
         station_beam.pointingDelayRate = rate_array
@@ -419,7 +419,7 @@ class TestMccsStationBeam:
         assert list(station_beam.pointingDelayRate) == rate_array
         station_beam.stationFqdn = "low-mccs/station/001"
         [[result_code], [message]] = station_beam.ApplyPointing()
-        expected_pointing = [1] + [1.0, 0.5] * 256
+        expected_pointing = [1] + [1.0e-9, 1.0e-11] * 256
         mock_station.ApplyPointing.assert_called_once_with(expected_pointing)
         assert result_code == ResultCode.OK
         assert message == MccsStationBeam.ApplyPointingCommand.SUCCEEDED_MESSAGE

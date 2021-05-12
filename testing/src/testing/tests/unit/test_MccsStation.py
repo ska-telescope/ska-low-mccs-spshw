@@ -400,7 +400,7 @@ class TestMccsStation:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         beam_index = 1.0
-        delay_array = [1.0] * 512
+        delay_array = [1.0e-9] * 512
         argin = [beam_index] + delay_array
         [[result_code], [message]] = device_under_test.ApplyPointing(argin)
         assert result_code == ResultCode.OK

@@ -229,11 +229,11 @@ def test_subarray_health_rollup(tango_harness):
     :type tango_harness: :py:class:`contextmanager`
     """
     controller = tango_harness.get_device("low-mccs/control/control")
+    subrack = tango_harness.get_device("low-mccs/subrack/01")
     subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
     subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
     station_1 = tango_harness.get_device("low-mccs/station/001")
     station_2 = tango_harness.get_device("low-mccs/station/002")
-    subrack = tango_harness.get_device("low-mccs/subrack/01")
     tile_1 = tango_harness.get_device("low-mccs/tile/0001")
     tile_2 = tango_harness.get_device("low-mccs/tile/0002")
     #     tile_3 = tango_harness.get_device("low-mccs/tile/0003")

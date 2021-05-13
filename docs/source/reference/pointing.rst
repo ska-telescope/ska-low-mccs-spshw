@@ -2,11 +2,33 @@
  MCCS Prototype Pointing Control
 ################################
 
+*******
+Purpose
+*******
+
+MCCS must act on received pointing commands to steer each station to the
+required sky coordinates. Since SKA-Low is an aperture array telescope
+pointing is achieved by setting appropriate delays on the signals received
+from each receptor such that signals from the required direction add coherently.
+
+The required calculation involves a projection from the pointing direction
+onto the receptor positions. This is readily achieved with `numpy`.
+
+The code used has been demonstrated to work with AAVS. Here we start adapting
+it to MCCS and provide a CLI for evaluation purposes. Delays (and delay rates,
+produced for progressive delay adjustment to track a source across the sky)
+are saved a file, for subsequent checks.
+
+As a guide to the required resources we also time the calculation. This is
+done both with a direct call to the calculation function and also assigning
+it as a worker for one or more multiprocessing processes, to see if this
+achieves in a speed-up.
+
 ****
 Code
 ****
 
-The code in point_station.py is take from AAVS.
+The code in point_station.py is taken from AAVS.
 Minimal adapatations have been made.
 
 ***
@@ -69,4 +91,4 @@ Here is an example command:
 * Pointing is towards the Sun.
 * A start time of 2021-05-09 23:00:00 UTC is set (join the time to the date with the `T` character).
 * Multiprocessing with 4 processes is used to generate 720 pointing frames in 10-second intervals.
-* The results are written to a file.
+* The results are written to a file (ensure that the directory exists).

@@ -54,7 +54,7 @@ class AntennaInformation(object):
         self.elementid = None
         self.tpmid = None
 
-    def loaddisplacements(self, txtfile):
+    def load_displacements(self, txtfile):
         """
         Load antenna displacements from a text file.
 
@@ -95,16 +95,16 @@ class StationInformation(object):
         self.ellipsoidalheight = None
         self.antennas = AntennaInformation()
 
-    def loaddisplacements(self, antennafile):
+    def load_displacements(self, antennafile):
         """
         Proxy to the method in the associated AntennaInformation object.
 
         :param antennafile: displacements file
         :type antennafile: String
         """
-        self.antennas.loaddisplacements(antennafile)
+        self.antennas.load_displacements(antennafile)
 
-    def setlocation(self, latitude, longitude, ellipsoidalheight):
+    def set_location(self, latitude, longitude, ellipsoidalheight):
         """
         Set the location data for this station.
 
@@ -129,12 +129,7 @@ class Pointing(object):
     Helper class for generating beamforming coefficients.
     """
 
-    # def __init__(self, station_identifier, station_config=None):
     def __init__(self, station_info):
-        # """ Pointing class, generates delay and delay rates to be downloaded to TPMs
-        # :param station_identifier: Calibration database station identifier
-        # :param station_config: Path to station configuration file
-        # """
         """
         Pointing class, generates delay and delay rates to be downloaded
         to TPMs.
@@ -143,12 +138,9 @@ class Pointing(object):
         """
 
         # Store arguments
-        # self._station_id = station_identifier
-        # self._station_config = station_config
         self.station = station_info
 
         # Get station location
-        # info = calib_utils.get_station_information(self._station_id)
         self._longitude = self.station.longitude
         self._latitude = self.station.latitude
         self._height = self.station.ellipsoidalheight
@@ -159,15 +151,6 @@ class Pointing(object):
 
         self._antennas = self.station.antennas
         self._nof_antennas = self._antennas.nof_elements
-
-        # Grab antenna locations and create displacement vectors
-        # _, x, y = calib_utils.get_antenna_positions(self._station_id)
-
-        # self._displacements = np.full([self._nof_antennas, 3], np.nan)
-        # for i in range(self._nof_antennas):
-        #     self._displacements[i, :] = x[i], y[i], 0
-
-        # self._displacements = self._antennas.xyz
 
         # Get reference antenna location
         self._reference_antenna_loc = EarthLocation.from_geodetic(
@@ -190,10 +173,6 @@ class Pointing(object):
         # If no time is specified, get current time
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
-        # else:
-        #     pointing_time = Time(pointing_time, scale='utc')
-
-        # print(f"Pointing time is {pointing_time.value}")
 
         # Get sun position in RA, DEC and convert to Alz, Az in telescope reference frame
         sun_position = get_sun(pointing_time)
@@ -251,8 +230,6 @@ class Pointing(object):
         # If no time is specified, get current time
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
-        # else:
-        #     pointing_time = Time(pointing_time, scale='utc')
 
         # Type conversions if required
         right_ascension = self.convert_to_astropy_angle(right_ascension)
@@ -266,7 +243,6 @@ class Pointing(object):
             self._reference_antenna_loc,
         )
 
-        # print(f"Will point to az={az}, el={alt}  ")
         # If required source is not above horizon, generate zeros
         if alt < 0.0:
             self._delays = np.zeros(self._nof_antennas)
@@ -288,7 +264,6 @@ class Pointing(object):
                 Time(pointing_time),
                 self._reference_antenna_loc,
             )
-            # self._delay_rate = self.point_array_static(alt, az) - self._delays
             self._delay_rate = (
                 self._delays_from_altitude_azimuth(alt.rad, az.rad) - self._delays
             )
@@ -349,7 +324,6 @@ class Pointing(object):
         )
 
         # Apply to antenna displacements
-        # path_length = np.dot(scale, self._displacements.T)
         path_length = np.dot(scale, self._antennas.xyz.T)
 
         # Return frequency-independent geometric delays
@@ -423,13 +397,11 @@ class PointingDriver:
 
         Otherwise leave everything at None.
         """
-        # def __init__(self, dispfile=None, outfile=None, statpos=None):
         self.dispfile = None
-        # self.starttime = None
         self.calc = None
         self.point_kwargs = {}
         station = StationInformation()
-        station.setlocation(-26.82472208, 116.7644482, 346.36)
+        station.set_location(-26.82472208, 116.7644482, 346.36)
         self.pointing = Pointing(station)
         self._results = []
 
@@ -446,8 +418,7 @@ class PointingDriver:
         :return: self - ready for another command
         :rtype: pointing_driver
         """
-        self.pointing.station.setlocation(lat, lon, height)
-        # self.pointing = Pointing(self.station)
+        self.pointing.station.set_location(lat, lon, height)
         return self
 
     def displacements(self, file):
@@ -459,7 +430,7 @@ class PointingDriver:
         :return: self - ready for another command
         :rtype: pointing_driver
         """
-        self.pointing.station.loaddisplacements(file)
+        self.pointing.station.load_displacements(file)
         print(f"xyz array shape: {self.pointing.station.antennas.xyz.shape}")
         return self
 
@@ -635,7 +606,6 @@ class PointingDriver:
             Process(
                 target=self.pointing_job,
                 args=(job_queue, results_queue),
-                # daemon=True
             )
             for x in range(nproc)
         ]
@@ -705,7 +675,6 @@ class PointingDriver:
                 outfile.write(",")
                 outfile.write(str(result["el"]))
                 outfile.write(",")
-                # print(result["frame_t"])
                 delays = result["delays"].reshape(
                     (1, self.pointing.station.antennas.nof_elements)
                 )

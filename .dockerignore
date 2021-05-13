@@ -1,4 +1,5 @@
 .devcontainer/
 .tox/
+.tox.make/
 **/*.pyc
 **/__pycache__/

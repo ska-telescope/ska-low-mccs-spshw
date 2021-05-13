@@ -13,30 +13,8 @@ module.
 
 import pytest
 
-# # from tango import DevState
-# from tango import AttrQuality
-
-# from ska_tango_base.control_model import AdminMode, HealthState
-# from ska_low_mccs import MccsDeviceProxy
-# from ska_low_mccs.events import EventManager
-# from ska_low_mccs.health import (
-#     DeviceHealthPolicy,
-#     DeviceHealthRollupPolicy,
-#     DeviceHealthMonitor,
-#     HealthMonitor,
-#     HealthModel,
-#     MutableHealthMonitor,
-#     MutableHealthModel,
-# )
-
-
-# from testing.harness.mock import MockDeviceBuilder
-# from testing.harness.tango_harness import TangoHarness
-
 import numpy as np
-
 from astropy.time.core import Time
-
 
 from ska_low_mccs import point_station
 
@@ -44,31 +22,10 @@ locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
 outputfile = "testing/results/pointingtest.txt"
 stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 
-# @pytest.fixture()
-# def mock_factory(mocker):
-#     """
-#     Fixture that provides a mock factory for device proxy mocks. This
-#     default factory provides vanilla mocks, but this fixture can be
-#     overridden by test modules/classes to provide mocks with specified
-#     behaviours.
-
-#     :param mocker: the pytest `mocker` fixture is a wrapper around the
-#         `unittest.mock` package
-#     :type mocker: :py:class:`pytest_mock.mocker`
-
-#     :return: a factory for device proxy mocks
-#     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
-#         instance)
-#     """
-#     builder = MockDeviceBuilder()
-#     builder.add_attribute("healthState", HealthState.UNKNOWN)
-#     builder.add_attribute("adminMode", AdminMode.ONLINE)
-#     return builder
-
 
 class TestPointStation:
     """
-    ASDF.
+    Tests of point_station.py.
     """
 
     def test_create_pointing(self):
@@ -78,17 +35,17 @@ class TestPointStation:
         """
         station = point_station.StationInformation()
         # Load standard AAVS displacements
-        station.loaddisplacements(locationsfile)
+        station.load_displacements(locationsfile)
         # Exercise bounds checks
         with pytest.raises(AssertionError):
-            station.setlocation(-111.11, stat_lon, stat_height)
-            station.setlocation(111.11, stat_lon, stat_height)
-            station.setlocation(stat_lat, -999.99, stat_height)
-            station.setlocation(stat_lat, 999.99, stat_height)
-            station.setlocation(stat_lat, stat_lon, -1234)
-            station.setlocation(stat_lat, stat_lon, 99999.99)
+            station.set_location(-111.11, stat_lon, stat_height)
+            station.set_location(111.11, stat_lon, stat_height)
+            station.set_location(stat_lat, -999.99, stat_height)
+            station.set_location(stat_lat, 999.99, stat_height)
+            station.set_location(stat_lat, stat_lon, -1234)
+            station.set_location(stat_lat, stat_lon, 99999.99)
         # Set station reference position to array centre
-        station.setlocation(stat_lat, stat_lon, stat_height)
+        station.set_location(stat_lat, stat_lon, stat_height)
         # We have 256 elements and therefore expect a 256 x 3 array
         assert station.antennas.xyz.shape == (256, 3)
         # Check location data

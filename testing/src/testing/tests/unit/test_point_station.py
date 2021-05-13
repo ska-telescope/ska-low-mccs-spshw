@@ -22,9 +22,10 @@ locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
 outputfile = "testing/results/pointingtest.txt"
 stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 
+
 class TestPointStation:
     """
-    Tests of point_station.py
+    Tests of point_station.py.
     """
 
     def test_create_pointing(self):

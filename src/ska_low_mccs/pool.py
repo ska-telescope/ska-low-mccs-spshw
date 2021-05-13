@@ -93,6 +93,7 @@ class DevicePool:
 
         for (async_id, device) in zip(async_ids, self._devices):
             result = device.command_inout_reply(async_id, timeout=0)
+            # added this to prevent TypeError: cannot unpack non-iterable Mock object
             if isinstance(result, list):
                 (result_code, _) = result
                 if result_code == ResultCode.FAILED:

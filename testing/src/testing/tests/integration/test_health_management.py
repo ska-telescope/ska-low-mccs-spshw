@@ -48,10 +48,10 @@ def devices_to_load():
             {"name": "tile_0002", "proxy": MccsDeviceProxy, "patch": DemoTile},
             #             {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
             #             {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            #             {"name": "beam_001", "proxy": MccsDeviceProxy},
-            #             {"name": "beam_002", "proxy": MccsDeviceProxy},
-            #             {"name": "beam_003", "proxy": MccsDeviceProxy},
-            #             {"name": "beam_004", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
+            #             {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            #             {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -110,10 +110,10 @@ def test_controller_health_rollup(tango_harness):
     # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
     # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
 
-    # beam_1 = tango_harness.get_device("low-mccs/beam/001")
-    # beam_2 = tango_harness.get_device("low-mccs/beam/002")
-    # beam_3 = tango_harness.get_device("low-mccs/beam/003")
-    # beam_4 = tango_harness.get_device("low-mccs/beam/004")
+    # subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
+    # subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
+    # subarraybeam_3 = tango_harness.get_device("low-mccs/subarraybeam/03")
+    # subarraybeam_4 = tango_harness.get_device("low-mccs/subarraybeam/04")
 
     # TODO: For now, we need to get our devices to OFF state (the highest state of
     # device readiness for a device that isn't actual on -- and a state in which the
@@ -245,10 +245,10 @@ def test_subarray_health_rollup(tango_harness):
     # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
     # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
     # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-    # beam_1 = tango_harness.get_device("low-mccs/beam/001")
-    # beam_2 = tango_harness.get_device("low-mccs/beam/002")
-    # beam_3 = tango_harness.get_device("low-mccs/beam/003")
-    # beam_4 = tango_harness.get_device("low-mccs/beam/004")
+    subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
+    subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
+    # subarraybeam_3 = tango_harness.get_device("low-mccs/subarraybeam/03")
+    # subarraybeam_4 = tango_harness.get_device("low-mccs/subarraybeam/04")
 
     _ = controller.Startup()
     dev_states = {
@@ -260,6 +260,8 @@ def test_subarray_health_rollup(tango_harness):
         tile_2: DevState.ON,
         #         tile_3: DevState.ON,
         #         tile_4: DevState.ON,
+        subarraybeam_1: DevState.OFF,
+        subarraybeam_2: DevState.OFF,
     }
     check_states(dev_states)
 

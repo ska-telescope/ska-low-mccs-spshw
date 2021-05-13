@@ -193,8 +193,7 @@ class MccsController(SKAMaster):
             ("Off", self.OffCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(self, self.state_model, self.logger),
+                command_name, command_object(self, self.state_model, self.logger)
             )
 
     class InitCommand(SKAMaster.InitCommand):
@@ -231,6 +230,7 @@ class MccsController(SKAMaster):
             self._interrupt = False
             self._message_queue = None
             self._qdebuglock = threading.Lock()
+            self._assigned_resources = None
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
@@ -502,6 +502,15 @@ class MccsController(SKAMaster):
         """
         return 0
 
+    @attribute(dtype="DevString")
+    def assigned_resources(self: MccsController) -> str:
+        """
+        Return the assigned resources attribute.
+
+        :return: assigned_resources attribute
+        """
+        return self._assigned_resources
+
     def notify_listener(
         self: MccsControllerQueue,
         result_code: ResultCode,
@@ -585,29 +594,20 @@ class MccsController(SKAMaster):
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_OFF_MESSAGE
                 )
-                return (
-                    ResultCode.FAILED,
-                    message_uid + "," + self.FAILED_OFF_MESSAGE,
-                )
+                return (ResultCode.FAILED, message_uid + "," + self.FAILED_OFF_MESSAGE)
 
             if device_pool.on():
                 self.state_model.perform_action("on_succeeded")
                 device.notify_listener(
                     ResultCode.OK, message_uid, self.SUCCEEDED_MESSAGE
                 )
-                return (
-                    ResultCode.OK,
-                    message_uid + "," + self.SUCCEEDED_MESSAGE,
-                )
+                return (ResultCode.OK, message_uid + "," + self.SUCCEEDED_MESSAGE)
             else:
                 self.state_model.perform_action("on_failed")
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_ON_MESSAGE
                 )
-                return (
-                    ResultCode.FAILED,
-                    message_uid + "," + self.FAILED_ON_MESSAGE,
-                )
+                return (ResultCode.FAILED, message_uid + "," + self.FAILED_ON_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
@@ -660,9 +660,7 @@ class MccsController(SKAMaster):
 
             message_uid = device._command_result.get("message_uid")
             if device_pool.invoke_command_with_callback(
-                command_name="On",
-                fqdn=device.get_name(),
-                callback="OnCallback",
+                command_name="On", fqdn=device.get_name(), callback="OnCallback"
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
@@ -1006,12 +1004,13 @@ class MccsController(SKAMaster):
         >>> proxy = tango.DeviceProxy("low-mccs/control/control")
         >>> proxy.Allocate(
                 json.dumps(
-                    {
-                        "subarray_id": 1,
-                        "subarray_beam_ids": [1],
-                        "station_ids": [[1,2]],
-                        "channel_blocks": [3],
-                    }
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                    "subarray_id": 1,
+                    "subarray_beam_ids": [1],
+                    "station_ids": [[1,2]],
+                    "channel_blocks": [3],
+                }
                 )
             )
         """
@@ -1052,6 +1051,7 @@ class MccsController(SKAMaster):
 
             :param argin: JSON-formatted string
                     {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                     "subarray_id": int,
                     "subarray_beam_ids": list[int],
                     "station_ids": list[list[int]],
@@ -1166,6 +1166,15 @@ class MccsController(SKAMaster):
                     stations_to_assign, subarray_id
                 )
 
+            # assume all is OK for now ie send back what we received.
+            controllerdevice._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": subarray_beam_ids,
+                    "station_ids": station_ids,
+                    "channel_blocks": channel_blocks,
+                }
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:

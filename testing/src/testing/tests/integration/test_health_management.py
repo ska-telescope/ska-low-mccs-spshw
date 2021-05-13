@@ -61,7 +61,7 @@ def sleep(seconds=0.2):
     Sleep for a short time. Used to allow time for events to be pushed
     through the events subsystem.
 
-    :param seconds: number of seconds to sleep; optional, defaults to 0.1
+    :param seconds: number of seconds to sleep; optional, defaults to 0.2
     :type seconds: float
     """
     time.sleep(seconds)
@@ -281,14 +281,14 @@ def test_subarray_health_rollup(tango_harness):
         controller.Allocate,
         subarray_id=1,
         station_ids=[[1]],
-        station_beams=[1],
+        subarray_beam_ids=[1],
         channel_blocks=[2],
     )
     _ = call_with_json(
         controller.Allocate,
         subarray_id=2,
         station_ids=[[2]],
-        station_beams=[2],
+        subarray_beam_ids=[2],
         channel_blocks=[2],
     )
 

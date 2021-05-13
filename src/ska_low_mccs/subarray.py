@@ -1107,28 +1107,6 @@ class MccsSubarray(SKASubarray):
             device._health_monitor.remove_all_devices()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(dtype_out="DevVarLongStringArray")
-    @DebugIt()
-    def Restart(self):
-        """
-        Restart the current observation process.
-
-        To modify behaviour for this command, modify the do() method of
-        the command class.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
-        command = self.get_command_object("Restart")
-        (result_code, message) = command()
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
-
     # ---------------------
     # MccsSubarray Commands
     # ---------------------

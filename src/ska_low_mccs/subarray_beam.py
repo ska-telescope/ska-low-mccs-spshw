@@ -50,8 +50,8 @@ from ska_low_mccs.health import HealthModel
 
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEval
-    uator` for a subarray beam.
+    A :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEvaluator`
+    for a subarray beam.
 
     A Subarray beam doesn't have hardware as such. Here we are
     pretending it does because we have to set health to DEGRADED if the

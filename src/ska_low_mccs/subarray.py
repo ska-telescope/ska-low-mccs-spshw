@@ -512,19 +512,16 @@ class MccsSubarray(SKASubarray):
                 device.state_model,
                 device.logger,
             )
-            device.register_command_object(
-                "AssignResources", device.AssignResourcesCommand(*resourcing_args)
-            )
-            device.register_command_object(
-                "ReleaseResources", device.ReleaseResourcesCommand(*resourcing_args)
-            )
-            device.register_command_object(
-                "ReleaseAllResources",
-                device.ReleaseAllResourcesCommand(*resourcing_args),
-            )
-            # RCL: Hack to see if this works
-            # device.resource_manager = device._station_pool_manager
-            device.resource_manager = device._station_beam_pool_manager
+            for (command_name, command_object) in [
+                ("AssignResources", device.AssignResourcesCommand),
+                ("ReleaseResources", device.ReleaseResourcesCommand),
+                ("ReleaseAllResources", device.ReleaseAllResourcesCommand),
+                ("Restart", device.RestartCommand),
+            ]:
+                device.register_command_object(
+                    command_name,
+                    command_object(*resourcing_args),
+                )
 
     def init_command_objects(self):
         """
@@ -544,7 +541,6 @@ class MccsSubarray(SKASubarray):
             ("End", self.EndCommand),
             ("Abort", self.AbortCommand),
             ("ObsReset", self.ObsResetCommand),
-            ("Restart", self.RestartCommand),
             ("GetVersionInfo", self.GetVersionInfoCommand),
         ]:
             self.register_command_object(
@@ -791,6 +787,7 @@ class MccsSubarray(SKASubarray):
         """
         Class for handling the ReleaseAllResources() command.
         """
+
         SUCCEEDED_MESSAGE = "ReleaseAllResources command completed OK"
         FAILED_MESSAGE_PREFIX = "ReleaseAllResources command failed"
 
@@ -1086,6 +1083,9 @@ class MccsSubarray(SKASubarray):
         Class for handling the Restart() command.
         """
 
+        SUCCEEDED_MESSAGE = "RestartCommand command completed OK"
+        FAILED_MESSAGE_PREFIX = "RestartCommand command failed"
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -1098,34 +1098,14 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            # RCL: Hack to see if this works
-            #      When the base class do() method is called for "Restart", it
-            #      calls deconfigure() and resource_manager.release_all().
-            #
-            #      TEST 1:
-            #      We "wire" resource manager to _station_pool_manager, but we
-            #      need to call _station_beam_pool_manager.release_all()
-            #      explicitly from the restart implementation after the call to
-            #      the parent class.
-            #      RESULT: It worked, but left the subarray in IDLE and an
-            #              subsequent Allocate command was ignored
-            #
-            #      TEST 2:
-            #      Wire the resource managers the other way around
-            #      RESULT: ...
-            #
             device = self.target
-            device.logger.info("RCL: class RestartCommand version 1")
-            (result_code, message) = super().do()
+            try:
+                device.release_all()
+            except ValueError as val:
+                return (ResultCode.FAILED, f"{self.FAILED_MESSAGE_PREFIX}: {val}")
 
-            # device._station_beam_pool_manager.release_all()
-            device._station_pool_manager.release_all()
-
-            # TODO: Remove this delay. It simply emulates the time to achieve the restart for testing.
-            time.sleep(0.3)
-
-            # MCCS-specific stuff goes here
-            return (result_code, message)
+            device._health_monitor.remove_all_devices()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()

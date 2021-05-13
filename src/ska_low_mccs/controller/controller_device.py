@@ -1094,7 +1094,6 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-
             controllerdevice = self.target
 
             kwargs = json.loads(argin)
@@ -1317,6 +1316,7 @@ class MccsController(SKAMaster):
             kwargs = json.loads(argin)
             subarray_id = kwargs.get("subarray_id")
             release_all = kwargs.get("release_all")
+            restart = kwargs.get("restart")
             if subarray_id is None or not (
                 1 <= subarray_id <= len(device._subarray_fqdns)
             ):
@@ -1342,7 +1342,7 @@ class MccsController(SKAMaster):
                 # Finally release them from assignment in the manager
                 self.target._stations_manager.release(fqdns)
 
-                result = self._disable_subarray(subarray_id)
+                result = self._disable_subarray(subarray_id, restart)
                 if result[0] is not ResultCode.OK:
                     return (
                         result[0],
@@ -1367,12 +1367,13 @@ class MccsController(SKAMaster):
             return self.state_model.op_state == DevState.ON
 
         def _disable_subarray(
-            self: MccsController.ReleaseCommand, argin: int
+            self: MccsController.ReleaseCommand, argin: int, restart: bool
         ) -> Tuple[ResultCode, str]:
             """
             Method to disable the specified subarray.
 
             :param argin: the subarray id
+            :param restart: flag indicating whether a subarray restart is required
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1385,10 +1386,14 @@ class MccsController(SKAMaster):
 
             subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-            # try:
-            (result_code, message) = subarray_device.ReleaseAllResources()
-            # except DevFailed:
-            # pass  # it probably has no resources to release
+
+            if restart:
+                (result_code, message) = subarray_device.Restart()
+            else:
+                # try:
+                (result_code, message) = subarray_device.ReleaseAllResources()
+                # except DevFailed:
+                # pass  # it probably has no resources to release
 
             (result_code, message) = subarray_device.Off()
             if result_code == ResultCode.FAILED:

@@ -108,6 +108,7 @@ class Tile12(object):
         self._lmc_port = lmc_port
         self._lmc_ip = socket.gethostbyname(lmc_ip)
         self._lmc_use_10g = False
+        self._check_arp_table = {}
         self._port = port
         self._ip = socket.gethostbyname(ip)
         self.tpm = None
@@ -746,17 +747,18 @@ class Tile12(object):
     @connected
     def check_arp_table(self):
         """
-        Check that ARP table has been populated in for all used cores
+        Check that ARP table has been populated in for all used cores.
         40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
-        beamformer, 1 for LMC 10G interfaces use cores 0,1 (fpga0) and
+        beamformer, 1 for LMC. 10G interfaces use cores 0,1 (fpga0) and
         4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
 
-        :return: if ARP table is populated
-        :rtype: bool
+        :return: list of core id and arp table populated
+        :rtype: dict(list)
         """
         # wait UDP link up
         if self["fpga1.regfile.feature.xg_eth_implemented"] == 1:
             self.logger.info("Checking ARP table...")
+
             if self.tpm.tpm_test_firmware[0].xg_40g_eth:
                 core_id = [0, 1]
                 if self._lmc_use_10g:
@@ -767,43 +769,34 @@ class Tile12(object):
                 if self._lmc_use_10g:
                     core_id = [0, 1, 2, 4, 5, 6]
                 else:
-                    core_id = [0, 1, 4, 5]
+                    core_id = {0, 1, 4, 5}
                 arp_table_id = [0]
-            times = 0
-            while True:
-                linkup = True
-                for c in core_id:
-                    for a in arp_table_id:
-                        core_status = self.tpm.tpm_10g_core[c].get_arp_table_status(
-                            a, silent_mode=True
-                        )
-                    if core_status & 0x4 == 0:
-                        linkup = False
-                if linkup is False:
-                    self.logger.info("10G Link established! ARP table populated!")
-                    break
+
+            linkup = False
+            self._check_arp_table = dict.fromkeys(core_id, [])
+            for c in core_id:
+                for a in arp_table_id:
+                    core_status = self.tpm.tpm_10g_core[c].get_arp_table_status(
+                        a, silent_mode=True
+                    )
+                if core_status & 0x4 == 0:
+                    message = f"CoreID {c} with ArpID {a} is not populated"
+                    self.logger.info(message)
                 else:
-                    times += 1
-                    time.sleep(0.1)
-                    if times % 10 == 0:
-                        self.logger.warning(
-                            "10G Links not established after %d seconds! Waiting... "
-                            % int(0.1 * times)
-                        )
-                    if times == 60:
-                        self.logger.warning(
-                            "10G Links not established after %d seconds! ARP table not populated!"
-                            % int(0.5 * times)
-                        )
-                        break
-        else:
-            # time.sleep(2)
-            self.logger.info("Sending dummy packets to populate switch ARP tables...")
-            self.mii_exec_test(100, False)
-            self["fpga1.regfile.eth10g_ctrl"] = 0x0
-            self["fpga2.regfile.eth10g_ctrl"] = 0x0
-            linkup = True
-        return linkup
+                    self._check_arp_table[c].append(a)
+                    linkup = True
+
+            if linkup is True:
+                self.logger.info("10G Link established! ARP table populated!")
+
+        # else:
+        #     # time.sleep(2)
+        #     self.logger.info("Sending dummy packets to populate switch ARP tables...")
+        #     self.mii_exec_test(100, False)
+        #     self["fpga1.regfile.eth10g_ctrl"] = 0x0
+        #     self["fpga2.regfile.eth10g_ctrl"] = 0x0
+        #     linkup = True
+        return self._check_arp_table
 
     @connected
     def set_station_id(self, station_id, tile_id):

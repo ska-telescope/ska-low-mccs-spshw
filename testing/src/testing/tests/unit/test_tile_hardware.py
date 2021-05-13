@@ -168,6 +168,7 @@ class TestCommon:
             ),
             ("pps_delay", StaticTpmSimulator.PPS_DELAY),
             ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
+            ("get_arp_table", StaticTpmSimulator.ARP_TABLE),
             ("register_list", list(StaticTpmSimulator.REGISTER_MAP[0].keys())),
         ),
     )

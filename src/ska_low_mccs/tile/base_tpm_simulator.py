@@ -40,6 +40,7 @@ class BaseTpmSimulator(HardwareSimulator):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
+    ARP_TABLE = {0: [0, 1], 1: [1]}
     # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120
 
@@ -84,7 +85,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
-
+        self._get_arp_table = copy.deepcopy(self.ARP_TABLE)
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
 
@@ -486,6 +487,20 @@ class BaseTpmSimulator(HardwareSimulator):
             if item.get("CoreID") == core_id:
                 return item
         return
+
+    @property
+    def get_arp_table(self):
+        """
+        Check that ARP table has been populated in for all used cores
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
+        beamformer, 1 for LMC 10G interfaces use cores 0,1 (fpga0) and
+        4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
+
+        :return: dictionary containing coreID and populated arpID
+        :rtype: dict
+        """
+        self.logger.debug("TpmDriver: get_arp_table")
+        return copy.deepcopy(self._get_arp_table)
 
     def set_lmc_download(
         self,

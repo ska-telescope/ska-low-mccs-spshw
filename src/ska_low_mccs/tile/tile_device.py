@@ -1220,6 +1220,7 @@ class MccsTile(SKABaseDevice):
             ("Configure40GCore", self.Configure40GCoreCommand),
             ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
+            ("CheckArpTable", self.CheckArpTableCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
@@ -2047,6 +2048,48 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("SetLmcDownload")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
+
+    class CheckArpTableCommand(BaseCommand):
+        """
+        Class for handling the CheckArpTable() command.
+        """
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.CheckArpTable` command functionality.
+
+            :return: a JSON-encoded dictionary of coreId and populated arpID table
+            :rtype: str
+            """
+            hardware_manager = self.target
+            return json.dumps(hardware_manager.get_arp_table)
+
+    @command(dtype_out="DevString")
+    @DebugIt()
+    def CheckArpTable(self):
+        """
+        Return a dictionary with populated ARP table  for all used
+        cores. 40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP
+        ID 0 for beamformer, 1 for LMC. 10G interfaces use cores 0,1
+        (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for LMC with
+        only one ARP.
+
+        :return: a JSON-encoded dictionary of coreId and populated arpID table
+        :rtype: str
+
+        :example:
+
+        >>> argout = dp.command_inout("CheckArpTable")
+        >>> dict = json.loads(argout)
+        >>>    {
+        >>>    "core_id0": [arpID0, arpID1],
+        >>>    "core_id1": [arpID0],
+        >>>    "core_id3": [],
+        >>>    }
+        """
+        handler = self.get_command_object("CheckArpTable")
+        return handler()
 
     class SetChanneliserTruncationCommand(ResponseCommand):
         """

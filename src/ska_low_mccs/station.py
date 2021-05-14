@@ -519,6 +519,7 @@ class MccsStation(SKAObsDevice):
         args = (self, self.state_model, self.logger)
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
         self.register_command_object("On", self.OnCommand(*args))
         self.register_command_object("Off", self.OffCommand(*args))
         self.register_command_object("Callback", self.CallbackCommand(*args))
@@ -960,6 +961,63 @@ class MccsStation(SKAObsDevice):
         """
         handler = self.get_command_object("InitialSetup")
         (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class ApplyPointingCommand(ResponseCommand):
+        """
+        Class for handling the ApplyPointing(argin) command.
+        """
+
+        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
+        FAILED_MESSAGE = "ApplyPointing command failed: ValueError in Tile"
+
+        def do(self, argin):
+            """
+            Implementation of :py:meth:`.MccsStation.ApplyPointing`
+            command functionality.
+
+            :param argin: an array containing a beam index and antenna
+                delays
+            :type argin: list(float)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            for tile_fqdn in device.TileFQDNs:
+                proxy = MccsDeviceProxy(tile_fqdn, self.logger)
+                try:
+                    proxy.SetPointingDelay(argin)
+                except ValueError:
+                    return (ResultCode.FAILED, self.FAILED_MESSAGE)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+    )
+    def ApplyPointing(self, argin):
+        """
+        Set the pointing delay parameters of this Station's Tiles.
+
+        :param argin: an array containing a beam index followed by antenna delays
+        :type argin: list(float)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dp.command_inout("ApplyPointing", delay_list)
+        """
+        handler = self.get_command_object("ApplyPointing")
+        (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
 

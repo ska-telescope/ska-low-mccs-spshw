@@ -24,9 +24,11 @@ lint:
 	ska_low_mccs_tester tox ${REBUILD_ARG} -e lint
 
 docs:
-	@docker build -t ska_low_mccs_docs_builder  . -f docs/Dockerfile
-	@docker run --rm -v $(PWD):/project --user ${UID}:${GID} ska_low_mccs_docs_builder
+	@docker build --build-arg UID=${UID} --build-arg GID=${GID} \
+	-t ska_low_mccs_docs_builder . -f docs/Dockerfile
+	@docker run --rm -v $(PWD):/project ska_low_mccs_docs_builder
 
 testdocs:
-	@docker build -t ska_low_mccs_testdocs_builder --build-arg dir=testing/docs . -f docs/Dockerfile 
-	@docker run --rm -v $(PWD):/project --user ${UID}:${GID} ska_low_mccs_testdocs_builder
+	@docker build --build-arg UID=${UID} --build-arg GID=${GID} --build-arg dir=testing/docs \
+	-t ska_low_mccs_testdocs_builder . -f docs/Dockerfile 
+	@docker run --rm -v $(PWD):/project ska_low_mccs_testdocs_builder

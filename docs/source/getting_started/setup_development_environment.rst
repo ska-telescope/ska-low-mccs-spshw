@@ -95,7 +95,11 @@ There are two options:
 
 SKA development with Docker
 ---------------------------
-The basic steps for this, regardless of operating system, are
+As stated above, the only essential pre-requisites for SKA development
+with Docker are ``git`` and ``Docker``. MCCS also uses ``Make`` to
+automate many common tasks for developers on Linux.
+
+The basic steps are
 
 1. Install and setup Git;
 
@@ -215,23 +219,6 @@ other versions / Linux variants.
 Great! You are ready to run a SKA Docker container.
 
 
-Build the docs
-^^^^^^^^^^^^^^
-Since the docs ultimately need to build successfully on ReadTheDocs, we
-test our docs build by building them in a ReadTheDocs build container.
-This is managed through the project makefile:
-
-.. code-block:: shell-session
-
-  me@local:~$ make docs
-
-Documentation can also be built for the test suite:
-
-.. code-block:: shell-session
-
-  me@local:~$ make testdocs
-
-
 Developing in a SKA Docker container the manual way
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 From here, you can either manually set up a SKA Docker development
@@ -321,3 +308,35 @@ container terminal session to run the tests.
 .. _Working with Git: https://developer.skatelescope.org/en/latest/tools/git.html
 .. _Gitlab repo: https://gitlab.com/ska-telescope/ska-low-mccs.git
 
+Build the docs
+^^^^^^^^^^^^^^
+Since the docs ultimately need to build successfully on ReadTheDocs, we
+test our docs build by building them in a ReadTheDocs build container.
+
+.. code-block:: shell-session
+
+  me@local:~$ docker build -t ska_low_mccs_docs_builder  . -f docs/Dockerfile
+  me@local:~$ docker run --rm -v `pwd`:/project --user ${UID}:${GID} ska_low_mccs_docs_builder
+
+Documentation can also be built for the test suite:
+
+.. code-block:: shell-session
+
+  me@local:~$ docker build --build-arg dir=testing/docs -t ska_low_mccs_docs_builder  . -f docs/Dockerfile
+  me@local:~$ docker run --rm -v `pwd`:/project --user ${UID}:${GID} ska_low_mccs_docs_builder
+  
+Shortcut Make targets
+^^^^^^^^^^^^^^^^^^^^^
+For developers on Linux, the following Make targets are available:
+
+* **make tests** - run the tests in a SKA docker container
+  
+* **make lint** - run linting in a SKA docker container
+  
+* **make develop** - launch a bash terminal in a SKA docker container
+  
+* **make docs** - build the project documentation in a ReadTheDocs
+  docker container
+  
+* **make testdocs** - build the test documentation in a ReadTheDocs
+  docker container

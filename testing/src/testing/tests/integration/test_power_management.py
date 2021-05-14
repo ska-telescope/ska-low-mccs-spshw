@@ -15,6 +15,7 @@ management functionality of the SKA Low MCCS system.
 from time import sleep
 
 import pytest
+import pytest_mock
 from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
@@ -56,13 +57,15 @@ class TestPowerManagement:
             ],
         }
 
-    def test_power_on_off(self, tango_harness: TangoHarness, empty_json_dict: str):
+    def test_power_on_off(
+        self, tango_harness: TangoHarness, mocker: pytest_mock.mocker
+    ):
         """
         Test that a MccsController device can enable an MccsSubarray
         device.
 
         :param tango_harness: a test harness for tango devices
-        :param empty_json_dict: an empty json encoded dictionary
+        :param mocker: fixture that wraps unittest.Mock
         """
         controller = tango_harness.get_device("low-mccs/control/control")
         subrack = tango_harness.get_device("low-mccs/subrack/01")
@@ -133,6 +136,10 @@ class TestPowerManagement:
         assert antenna_3.State() == DevState.ON
         assert antenna_4.State() == DevState.ON
 
+        # Need to patch tango.DeviceProxy for the message queue implementation
+        # as the devices are all behind MccsDeviceProxy...
+        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
+
         controller.Off()
         sleep(0.5)  # Required to allow DUT thread to run
 
@@ -143,9 +150,6 @@ class TestPowerManagement:
         assert tile_2.State() == DevState.OFF
         assert tile_3.State() == DevState.OFF
         assert tile_4.State() == DevState.OFF
-
-        assert controller.State() == DevState.OFF
-        assert station.State() == DevState.OFF
         assert apiu.State() == DevState.OFF
         assert antenna_1.State() == DevState.OFF
         assert antenna_2.State() == DevState.OFF

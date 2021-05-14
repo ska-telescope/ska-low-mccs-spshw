@@ -669,6 +669,7 @@ class MccsTile(SKABaseDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
+        print(f"RCL: Tile def Off received...{json_args}")
         self.logger.debug("Tile Off")
         return self._send_message("Off", json_args)
 

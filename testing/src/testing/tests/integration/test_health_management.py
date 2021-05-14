@@ -14,7 +14,6 @@ management functionality of the SKA Low MCCS system.
 """
 import time
 from tango import DevState
-import json
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
@@ -179,6 +178,8 @@ def test_controller_health_rollup(tango_harness, empty_json_dict):
     # health.
 
     tile_1.Off(empty_json_dict)
+    dev_states = {tile_1: DevState.OFF}
+    check_states(dev_states)
     tile_1.Disable()
     tile_1.adminMode = AdminMode.OFFLINE
 
@@ -201,6 +202,8 @@ def test_controller_health_rollup(tango_harness, empty_json_dict):
 
     assert not subrack.isTpmOn(1)
     tile_1.Off(empty_json_dict)
+    dev_states = {tile_1: DevState.OFF}
+    check_states(dev_states)
     assert subrack.isTpmOn(1)
 
     tile_1.On(empty_json_dict)
@@ -303,6 +306,8 @@ def test_subarray_health_rollup(tango_harness, empty_json_dict):
     # health.
 
     tile_1.Off(empty_json_dict)
+    dev_states = {tile_1: DevState.OFF}
+    check_states(dev_states)
     tile_1.Disable()
     tile_1.adminMode = AdminMode.OFFLINE
 
@@ -325,6 +330,8 @@ def test_subarray_health_rollup(tango_harness, empty_json_dict):
 
     tile_1.adminMode = AdminMode.ONLINE
     tile_1.Off(empty_json_dict)
+    dev_states = {tile_1: DevState.OFF}
+    check_states(dev_states)
     tile_1.On(empty_json_dict)
     dev_states = {tile_1: DevState.ON}
     check_states(dev_states)

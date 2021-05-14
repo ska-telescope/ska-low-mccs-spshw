@@ -638,7 +638,9 @@ class MccsController(SKAMaster):
                 ResultCode.STARTED,
                 ResultCode.QUEUED,
             ]:
-                self.logger.error(f"_check_and_send_message() FAILED: {command_progress.name}")
+                self.logger.error(
+                    f"_check_and_send_message() FAILED: {command_progress.name}"
+                )
                 return [
                     [ResultCode.FAILED],
                     ["A controller command is already in progress", None],

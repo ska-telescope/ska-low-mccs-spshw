@@ -650,6 +650,7 @@ class MccsStation(SKAObsDevice):
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
+        print(f"RCL: Station Callback json_args={json_args}")
         self.logger.debug(f"Station Callback json_args={json_args}")
         (result_code, message_uid, status) = self._message_queue.send_message(
             command="Callback", json_args=json_args

@@ -15,11 +15,9 @@
         "coverage-gutters.showLineCoverage": true,
         "files.exclude": {
             "**/.tox/**": true,
-            "**/.tox.make/**": true,
         },
         "files.watcherExclude": {
             "**/.tox/**": true,
-            "**/.tox.make/**": true,
         }
     },
     // Add the IDs of extensions you want installed when the container is created.

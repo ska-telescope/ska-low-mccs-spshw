@@ -1812,7 +1812,7 @@ class Tile12(object):
         :type sync: bool, optional
         """
         # Data transmission should be synchronised across FPGAs
-        self.synchronised_data_operation(secondsi=seconds, timestamp=timestamp)
+        self.synchronised_data_operation(seconds=seconds, timestamp=timestamp)
         # Send data from all FPGAs
         for i in range(len(self.tpm.tpm_test_firmware)):
             if sync:

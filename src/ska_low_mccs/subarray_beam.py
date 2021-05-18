@@ -50,7 +50,8 @@ from ska_low_mccs.health import HealthModel
 
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEvaluator`
+    A 
+    :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEvaluator`
     for a subarray beam.
 
     A Subarray beam doesn't have hardware as such. Here we are
@@ -526,7 +527,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         return self._channels
 
     @attribute(dtype=("DevFloat",), max_dim_x=384)
-    def antenna_weights(self: MccsSubarrayBeam) -> List[float]:
+    def antennaWeights(self: MccsSubarrayBeam) -> List[float]:
         """
         Return the antenna weights configured for this beam.
 
@@ -579,10 +580,10 @@ class MccsSubarrayBeam(SKAObsDevice):
             :param argin: Configuration specification dict as a json
                 string
                 {
-                "subarray_beam_id":1,
-                "station_ids":[1,2],
+                "subarray_beam_id": 1,
+                "station_ids": [1,2],
                 "update_rate": 0.0,
-                "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
                 "antenna_weights": [1.0, 1.0, 1.0],
                 "phase_centre": [0.0, 0.0],
@@ -612,15 +613,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         Configure the subarray_beam with all relevant parameters.
 
         :param argin: Configuration parameters encoded in a json string
-            {
-            "subarray_beam_id": 1,
-            "station_ids": [1, 2],
-            "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-            "update_rate": 0.0,
-            "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
-            "antenna_weights": [1.0, 1.0, 1.0],
-            "phase_centre": [0.0, 0.0],
-            }
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -643,6 +635,10 @@ class MccsSubarrayBeam(SKAObsDevice):
             """
             Stateless do-hook for the
             :py:meth:`.MccsSubarrayBeam.Scan` command
+                {
+                "sccan_id": 1,
+                "scan_time": 4
+                }
 
             :param argin: Scan parameters encoded in a json string
 
@@ -652,7 +648,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             """
             kwargs = json.loads(argin)
             device = self.target
-            device._scan_id = kwargs.get("id")
+            device._scan_id = kwargs.get("scan_id")
             device._scan_time = kwargs.get("scan_time")
 
             # TODO: Forward scan command and parameters to all the subservient Stations
@@ -664,10 +660,6 @@ class MccsSubarrayBeam(SKAObsDevice):
         Start a scan on the subarray_beam.
 
         :param argin: Scan parameters encoded in a json string
-            {
-            "id": 1,
-            "scan_time": 4
-            }
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

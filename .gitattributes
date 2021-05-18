@@ -1,6 +1,6 @@
 * text=auto eol=lf
 *.{cmd,[cC][mM][dD]} text eol=crlf
 *.{bat,[bB][aA][tT]} text eol=crlf
-*.svg binary eol=crlf
-*.bit binary eol=crlf
-*.whl binary eol=crlf
+*.{svg,[sS][vV][gG]} binary eol=crlf
+*.{bit,[bB][iI][tT]} binary eol=crlf
+*.{whl,[wW][hH][lL]} binary eol=crlf

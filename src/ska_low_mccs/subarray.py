@@ -146,7 +146,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         Initialise a new SubarrayBeamsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :param subarray_beam_fqdns: the FQDNs of the station beams that this
+        :param subarray_beam_fqdns: the FQDNs of the subarray_beams that this
             subarray manages
         :param stations_manager: the StationResourceManager holding the station
             devices belonging to the parent Subarray
@@ -204,16 +204,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
             # TODO: Establishment of connections should happen at initialization
             subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
-
             subarray_beam.stationIds = sorted(station_ids_per_beam[index])
-            # TODO While SubarrayBeam device is not yet fully implemented, we're still
-            # passing an array of Station ids to SubarrayBeams. This list will end up
-            # going to SubarrayBeam while StationBeam gets a single Station device.
-            # As the Station FQDN is used by StationBeam to report health to
-            # SubarrayBeam, it makes sense to only keep this as a single sting rather
-            # than a list, as it will be implemented when the StationBeam health
-            # gets implemented in SubarrayBeam - hence we pass a single value here:
-            # subarray_beam.stationFqdn = station_fqdns[0]
 
         self._add_to_managed(subarray_beams)
         for subarray_beam_fqdn in subarray_beam_fqdns:
@@ -309,7 +300,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         """
         Release devices from this subarray resource manager.
 
-        :param subarray_beam_fqdns: list of  FQDNs of station beams to be released
+        :param subarray_beam_fqdns: list of  FQDNs of subarray_beams to be released
         :param station_fqdns: list of  FQDNs of the stations which if assigned to,
             station beams should be released
         """
@@ -644,7 +635,6 @@ class MccsSubarray(SKASubarray):
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
-
     class OnCommand(SKASubarray.OnCommand):
         """
         Class for handling the On() command.

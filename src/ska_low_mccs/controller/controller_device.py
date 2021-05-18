@@ -231,6 +231,7 @@ class MccsController(SKAMaster):
             self._message_queue = None
             self._qdebuglock = threading.Lock()
             self._assigned_resources = None
+            set_change_event(self, assignedResources, True, False)
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
@@ -503,7 +504,7 @@ class MccsController(SKAMaster):
         return 0
 
     @attribute(dtype="DevString")
-    def assigned_resources(self: MccsController) -> str:
+    def assignedResources(self: MccsController) -> str:
         """
         Return the assigned resources attribute.
 
@@ -1050,13 +1051,13 @@ class MccsController(SKAMaster):
             terms of which stations should be allocated to the specified Sub-Array.
 
             :param argin: JSON-formatted string
-                    {
-                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
-                    "subarray_id": int,
-                    "subarray_beam_ids": list[int],
-                    "station_ids": list[list[int]],
-                    "channel_blocks": list[int],
-                    }
+                {
+                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                "subarray_id": int,
+                "subarray_beam_ids": list[int],
+                "station_ids": list[list[int]],
+                "channel_blocks": list[int],
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1073,7 +1074,6 @@ class MccsController(SKAMaster):
             controllerdevice = self.target
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
-            # Allocation request checks
             # Generate station FQDNs from IDs
             all_stations = {}
             stations_per_beam = []
@@ -1147,7 +1147,7 @@ class MccsController(SKAMaster):
             if stations_to_assign is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources,
-                    stations=stations_per_beam,
+                    stations_per_beam=stations_per_beam,
                     subarray_beams=subarray_beam_fqdns,
                     channel_blocks=channel_blocks,
                 )

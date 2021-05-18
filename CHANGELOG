@@ -1,7 +1,9 @@
 # Version History
 
 ## unreleased
-
+* MCCS-554 - Update deployment container base image from
+  ``ska-docker/ska-python-buildenv:latest`` to
+  ``ska-tango-images/pytango-builder:9.3.3.3``
 * MCCS-271 - Added ApplyPointing() command to MCCS StationBeam
 * MCCS-421 - Support for TPM test signal generator
 * MCCS-329 - Test harness refactor

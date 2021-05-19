@@ -531,7 +531,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :param arp_table_entry: ARP table entry ID
         :type arp_table_entry: int
         :param src_mac: MAC address of the source
-        :type src_mac: str
+        :type src_mac: int
         :param src_ip: IP address of the source
         :type src_ip: str
         :param src_port: port of the source
@@ -557,7 +557,7 @@ class TileHardwareManager(SimulableHardwareManager):
         :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list(dict)
+        :rtype: list(dict) or dict
         """
         return self._factory.hardware.get_40g_configuration(core_id, arp_table_entry)
 

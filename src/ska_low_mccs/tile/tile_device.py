@@ -1880,10 +1880,9 @@ class MccsTile(SKABaseDevice):
 
         * CoreID - (int) core id
         * ArpTableEntry - (int) ARP table entry ID
-        * SrcMac - (string) mac address dot notation
+        * SrcMac - (int) mac address
         * SrcIP - (string) IP dot notation. Default taken from main IP address
         * SrcPort - (int) src port.
-        * SrcIP - (string) IP dot notation
         * SrcPort - (int) src port
         * DstIP - (string) IP dot notation
         * DstPort - (int) dest port
@@ -1898,7 +1897,7 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":"10:fe:ed:08:0a:58",
+        >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":0x62000a0a01c9,
         "SrcIP":"10.0.99.3", "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58",
         "DstIP":"10.0.99.3", "DstPort":5000}
         >>> jstr = json.dumps(dict)
@@ -1934,8 +1933,8 @@ class MccsTile(SKABaseDevice):
             hardware_manager = self.target
             item = hardware_manager.get_40g_configuration(core_id, arp_table_entry)
             if item is not None:
-                return json.dumps(item.pop("CoreID"))
-            raise ValueError("Invalid core id specified")
+                return json.dumps(item)
+            raise ValueError("Invalid core id or arp table id specified")
 
     @command(
         dtype_in="DevString",

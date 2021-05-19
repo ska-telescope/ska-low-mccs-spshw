@@ -1111,14 +1111,16 @@ class TestMccsTileCommands:
         json_arg = json.dumps(arg)
         result_str = device_under_test.Get40GCoreConfiguration(json_arg)
         result = json.loads(result_str)
-        assert result == config_1.pop("CoreID")
+        assert result["CoreID"] == config_1.pop("CoreID")
 
         arg = {
             "CoreID": 3,
             "ArpTableEntry": 0,
         }
         json_arg = json.dumps(arg)
-        with pytest.raises(DevFailed, match="Invalid core id specified"):
+        with pytest.raises(
+            DevFailed, match="Invalid core id or arp table id " "specified"
+        ):
             _ = device_under_test.Get40GCoreConfiguration(json_arg)
 
     @pytest.mark.parametrize("channels", (2, 3))

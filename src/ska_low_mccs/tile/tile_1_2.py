@@ -109,6 +109,7 @@ class Tile12(object):
         self._lmc_ip = socket.gethostbyname(lmc_ip)
         self._lmc_use_10g = False
         self._check_arp_table = {}
+        self._get_40g_configuration = {}
         self._port = port
         self._ip = socket.gethostbyname(ip)
         self.tpm = None
@@ -194,7 +195,7 @@ class Tile12(object):
                     logger=self.logger,
                 )
         elif not self.tpm.is_programmed():
-            self.logger.warn("TPM is not programmed! No plugins loaded")
+            self.logger.warning("TPM is not programmed! No plugins loaded")
 
     def is_programmed(self):
         """
@@ -578,19 +579,26 @@ class Tile12(object):
         :return: core configuration
         :rtype: dict
         """
-        return {
-            "core_id": core_id,
-            "arp_table_entry": arp_table_entry,
-            "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
-            "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
-            "dst_ip": int(self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)),
-            "src_port": int(
-                self.tpm.tpm_10g_core[core_id].get_src_port(arp_table_entry)
-            ),
-            "dst_port": int(
-                self.tpm.tpm_10g_core[core_id].get_dst_port(arp_table_entry)
-            ),
-        }
+        try:
+            self._get_40g_configuration = {
+                "core_id": core_id,
+                "arp_table_entry": arp_table_entry,
+                "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
+                "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
+                "dst_ip": int(
+                    self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)
+                ),
+                "src_port": int(
+                    self.tpm.tpm_10g_core[core_id].get_src_port(arp_table_entry)
+                ),
+                "dst_port": int(
+                    self.tpm.tpm_10g_core[core_id].get_dst_port(arp_table_entry)
+                ),
+            }
+        except IndexError:
+            self._get_40g_configuration = None
+
+        return self._get_40g_configuration
 
     @connected
     def set_lmc_download(
@@ -618,12 +626,6 @@ class Tile12(object):
                 self.logger.warning("Packet length too large for 10G")
                 return
 
-            if lmc_mac is None:
-                self.logger.warning(
-                    "LMC MAC must be specified for 10G lane configuration"
-                )
-                return
-
             # If dst_ip is None, use local lmc_ip
             if dst_ip is None:
                 dst_ip = self._lmc_ip
@@ -637,6 +639,12 @@ class Tile12(object):
                     0, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
                 )
             else:
+                if lmc_mac is None:
+                    self.logger.warning(
+                        "LMC MAC must be specified for 10G lane configuration"
+                    )
+                    return
+
                 self.configure_10g_core(
                     2,
                     dst_mac=lmc_mac,
@@ -696,11 +704,6 @@ class Tile12(object):
         """
         # Using 10G lane
         if mode.upper() == "10G":
-            if lmc_mac is None:
-                self.logger.error(
-                    "LMC MAC must be specified for 10G lane configuration"
-                )
-                return
 
             # If dst_ip is None, use local lmc_ip
             if dst_ip is None:
@@ -715,6 +718,11 @@ class Tile12(object):
                     0, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
                 )
             else:
+                if lmc_mac is None:
+                    self.logger.error(
+                        "LMC MAC must be specified for 10G lane configuration"
+                    )
+                    return
                 self.configure_10g_core(
                     2,
                     dst_mac=lmc_mac,
@@ -769,22 +777,23 @@ class Tile12(object):
                 if self._lmc_use_10g:
                     core_id = [0, 1, 2, 4, 5, 6]
                 else:
-                    core_id = {0, 1, 4, 5}
+                    core_id = [0, 1, 4, 5]
                 arp_table_id = [0]
 
             linkup = False
-            self._check_arp_table = dict.fromkeys(core_id, [])
+            self._check_arp_table = dict([(i, []) for i in core_id])
+
             for c in core_id:
                 for a in arp_table_id:
                     core_status = self.tpm.tpm_10g_core[c].get_arp_table_status(
                         a, silent_mode=True
                     )
-                if core_status & 0x4 == 0:
-                    message = f"CoreID {c} with ArpID {a} is not populated"
-                    self.logger.info(message)
-                else:
-                    self._check_arp_table[c].append(a)
-                    linkup = True
+                    if core_status & 0x4 == 0:
+                        message = f"CoreID {c} with ArpID {a} is not populated"
+                        self.logger.info(message)
+                    else:
+                        self._check_arp_table[c].append(a)
+                        linkup = True
 
             if linkup is True:
                 self.logger.info("10G Link established! ARP table populated!")
@@ -1007,7 +1016,7 @@ class Tile12(object):
         # if trunc is a single value, apply to all channels
         if type(trunc) == int:
             if 0 > trunc or trunc > 7:
-                self.logger.warn(
+                self.logger.warning(
                     "Could not set channeliser truncation to "
                     + str(trunc)
                     + ", setting to 0"
@@ -1040,7 +1049,7 @@ class Tile12(object):
                 self["fpga2.channelizer.block_sel"] = 2 * i + 1
                 self["fpga2.channelizer.rescale_data"] = trunc_vec2
             else:
-                self.logger.warn("Signal " + str(i) + " is outside range (0:31)")
+                self.logger.warning("Signal " + str(i) + " is outside range (0:31)")
 
     @connected
     def set_time_delays(self, delays):

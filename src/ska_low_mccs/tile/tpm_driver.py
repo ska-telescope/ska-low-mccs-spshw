@@ -521,7 +521,7 @@ class TpmDriver(HardwareDriver):
         :param arp_table_entry: ARP table entry to use
         :type arp_table_entry: int
         :param src_mac: MAC address of the source
-        :type src_mac: str
+        :type src_mac: int
         :param src_ip: IP address of the source
         :type src_ip: str
         :param src_port: port of the source
@@ -549,16 +549,19 @@ class TpmDriver(HardwareDriver):
         :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list(dict)
+        :rtype: list(dict) or dict
         """
         self.logger.debug("TpmDriver: get_40g_configuration")
         if core_id == -1:
             for core in range(0, 8):
-                self._forty_gb_core_list.append(
-                    self._tile.get_40g_configuration(core, arp_table_entry)
+                dict_to_append = self.tile.get_40g_core_configuration(
+                    core, arp_table_entry
                 )
+                if dict_to_append is not None:
+                    self._forty_gb_core_list.append(dict_to_append)
+
         else:
-            self._forty_gb_core_list = self._tile.get_40g_configuration(
+            self._forty_gb_core_list = self.tile.get_40g_core_configuration(
                 core_id, arp_table_entry
             )
         return self._forty_gb_core_list

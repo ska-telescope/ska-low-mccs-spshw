@@ -202,7 +202,7 @@ class MessageQueue(threading.Thread):
             print(f'Reply to {response_device}.command_inout("{message.callback}")')
             print(f"json_string={json_string}")
             # Post response message
-            results = response_device(message.callback, json_string)
+            results = response_device.command_inout(message.callback, json_string)
             if len(results[1]) == 2:
                 rc, stat, _ = results
             else:

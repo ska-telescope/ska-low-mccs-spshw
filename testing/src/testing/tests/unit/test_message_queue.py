@@ -357,7 +357,7 @@ class TestMessageQueue:
             "status": "",
         }
         json_string = json.dumps(args)
-        device.assert_called_once_with(callback, json_string)
+        device.command_inout.assert_called_once_with(callback, json_string)
 
     def test_send_message_with_command_with_incorrect_response_fqdn(
         self,

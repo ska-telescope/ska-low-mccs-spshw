@@ -231,7 +231,6 @@ class MccsController(SKAMaster):
             self._message_queue = None
             self._qdebuglock = threading.Lock()
             self._assigned_resources = None
-            self.set_change_event("assignedResources", True, False)
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
@@ -262,6 +261,7 @@ class MccsController(SKAMaster):
             device._version_id = release.version
             device.set_change_event("commandResult", True, False)
             device.set_change_event("commandProgress", True, False)
+            device.set_change_event("assignedResources", True, False)
 
             device._subarray_fqdns = list(device.MccsSubarrays)
             device._subarray_enabled = [False] * len(device.MccsSubarrays)
@@ -508,7 +508,7 @@ class MccsController(SKAMaster):
         """
         Return the assigned resources attribute.
 
-        :return: assigned_resources attribute
+        :return: assignedResources attribute
         """
         return self._assigned_resources
 
@@ -1147,7 +1147,7 @@ class MccsController(SKAMaster):
             if stations_to_assign is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources,
-                    stations_per_beam=stations_per_beam,
+                    stations=stations_per_beam,
                     subarray_beams=subarray_beam_fqdns,
                     channel_blocks=channel_blocks,
                 )

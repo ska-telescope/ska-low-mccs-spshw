@@ -321,5 +321,5 @@ class TestMccsSubarrayBeam:
             27.0,
             1.0,
         ]
-        assert len(list(device_under_test.antenna_weights)) == len([1.0, 1.0, 1.0])
-        assert list(device_under_test.antenna_weights) == [1.0, 1.0, 1.0]
+        assert len(list(device_under_test.antennaWeights)) == len([1.0, 1.0, 1.0])
+        assert list(device_under_test.antennaWeights) == [1.0, 1.0, 1.0]

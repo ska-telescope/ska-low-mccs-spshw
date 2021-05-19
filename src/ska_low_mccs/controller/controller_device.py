@@ -465,7 +465,6 @@ class MccsController(SKAMaster):
         Update the queue debug attribute.
 
         :param debug_string: the new debug string for this attribute
-        :type debug_string: str
         """
         self.queue_debug = debug_string
 
@@ -616,13 +615,9 @@ class MccsController(SKAMaster):
         execute the specified command.
 
         :param command: the command to send a message for
-        :type command: str
         :param json_args: arguments to pass with the command
-        :type json_args: str
         :param check_is_allowed: check for any previous ongoing command
-        :type check_is_allowed: bool
         :param notifications: requestor notification required
-        :type notifications: bool
 
         :return: A tuple containing a return code, a string
             message indicating status and message UID.
@@ -709,6 +704,7 @@ class MccsController(SKAMaster):
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )
+                # TODO: Determine if this next statement is correct:
                 # This needs to be successful or it drives the state machine into FAULT
                 return (ResultCode.OK, message_uid + "," + self.FAILED_MESSAGE)
 
@@ -868,6 +864,7 @@ class MccsController(SKAMaster):
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )
+                # TODO: Determine if this next statement is correct:
                 # This needs to be successful or it drives the state machine into FAULT
                 return (ResultCode.OK, message_uid + "," + self.FAILED_MESSAGE)
 

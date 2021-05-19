@@ -13,13 +13,15 @@ This module implements an MCCS test helper class.
 
 import pytest
 from tango import DevState
+from ska_tango_base.commands import ResultCode
 
 __all__ = ["HelperClass"]
 
 
 class HelperClass:
     """
-    Common fixtures used in derived test classes.
+    Common fixtures used in derived test classes. Mix this class
+    in with the test class that requires these fixtures.
     """
 
     @pytest.fixture(autouse=True)
@@ -45,7 +47,9 @@ class HelperClass:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        device_under_test.Off(self._empty_json_dict)
+        [result_code], _ = device_under_test.Off(self._empty_json_dict)
+        assert result_code == ResultCode.OK
         self._command_helper.check_device_state(device_under_test, DevState.OFF)
-        device_under_test.On(self._empty_json_dict)
+        [result_code], _ = device_under_test.On(self._empty_json_dict)
+        assert result_code == ResultCode.OK
         self._command_helper.check_device_state(device_under_test, DevState.ON)

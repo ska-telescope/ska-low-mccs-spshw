@@ -229,7 +229,6 @@ def test_start_up_low_telescope(
     command_helper.check_device_state(controller, DevState.OFF)
     check_mccs_controller_state(controller, "off")
     check_reset_state(controller, subarrays, stations)
-    assert False
 
 
 @given(parsers.parse("we have mvplow running an instance of {component_name}"))

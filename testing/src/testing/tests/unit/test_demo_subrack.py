@@ -15,6 +15,8 @@ import pytest
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
 
+from testing.harness import HelperClass
+
 
 @pytest.fixture()
 def device_to_load():
@@ -33,7 +35,7 @@ def device_to_load():
     }
 
 
-class TestDemoSubrack:
+class TestDemoSubrack(HelperClass):
     """
     This class contains the tests for the DemoSubrack device class.
     """
@@ -76,8 +78,7 @@ class TestDemoSubrack:
                 for tpm_id in range(1, 5)
             ] == expected
 
-        device_under_test.Off(empty_json_dict)
-        device_under_test.On(empty_json_dict)
+        self.start_up_device(device_under_test)
 
         assert_powered([False, False, False, False])
 

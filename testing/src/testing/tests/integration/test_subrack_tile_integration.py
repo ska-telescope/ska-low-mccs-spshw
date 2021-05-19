@@ -21,6 +21,7 @@ from tango import DevState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -44,7 +45,7 @@ def devices_to_load():
     }
 
 
-class TestSubrackTileIntegration:
+class TestSubrackTileIntegration(HelperClass):
     """
     Integration test cases for MCCS subsystem's power management.
     """
@@ -67,11 +68,7 @@ class TestSubrackTileIntegration:
         assert subrack.state() == DevState.DISABLE
         assert tile.state() == DevState.DISABLE
 
-        subrack.Off(empty_json_dict)
-        assert subrack.state() == DevState.OFF
-        subrack.On(empty_json_dict)
-        time.sleep(0.1)  # Required to allow DUT thread to run
-        assert subrack.state() == DevState.ON
+        self.start_up_device(subrack)
 
         assert not subrack.isTpmOn(1)
         # TODO: For now we need to get this device to OFF (highest state
@@ -92,24 +89,18 @@ class TestSubrackTileIntegration:
         assert tile.state() == DevState.STANDBY
         assert subrack.IsTpmOn(1)
 
-    def test_tpm_on(
-        self, tango_harness: TangoHarness, dummy_json_args: str, empty_json_dict: str
-    ):
+    def test_tpm_on(self, tango_harness: TangoHarness):
         """
         Test that wnen we tell the subrack drive to turn a given TPM on,
         the tile device recognises that its TPM has been powered, and
         changes state.
 
         :param tango_harness: a test harness for tango devices
-        :param dummy_json_args: dummy json encoded arguments
-        :param empty_json_dict: an empty json encoded dictionary
         """
         tile = tango_harness.get_device("low-mccs/tile/0001")
         subrack = tango_harness.get_device("low-mccs/subrack/01")
 
-        subrack.Off(empty_json_dict)
-        subrack.On(dummy_json_args)
-        time.sleep(0.1)  # Required to allow DUT thread to run
+        self.start_up_device(subrack)
 
         assert tile.state() == DevState.DISABLE
         assert not subrack.IsTpmOn(1)

@@ -530,8 +530,13 @@ class MccsStation(SKAObsDevice):
 
     def _store_callback_send_message(self, command, json_args):
         """
-        Helper method to check initial status and send a message to
-        execute the specified command.
+        Helper method that stores callback specifics and then sends a
+        message with the specified command.
+
+        This is a special case where Station has pools of devices.
+        Only when all of the devices in all of the pools complete can we
+        return a message to the caller of Station.
+        For this reason, we cache the command callback arguments.
 
         :param command: the command to send a message for
         :type command: str
@@ -553,18 +558,14 @@ class MccsStation(SKAObsDevice):
         self._cmd_callback = kwargs.get("callback")
 
         if self._cmd_respond_to_fqdn and self._cmd_callback:
-            # We would usually send a message with a response here, but this is a special
-            # case because Station has pools of devices. Only when all of the devices in
-            # all of the pools complete can we return a message to the caller of Station.
-            # Cache command callback arguments
             (
                 result_code,
                 message_uid,
                 status,
             ) = self._message_queue.send_message(command=command)
             # Because the responses back to the requester will be from a callback
-            # command, we cache the message uid and return this when the pools are
-            # complete.
+            # command, we cache the message uid and return this UID with the
+            # response when the pool commands have been completed.
             self._cmd_message_uid = message_uid
             return [[result_code], [status, message_uid]]
         else:
@@ -607,6 +608,8 @@ class MccsStation(SKAObsDevice):
             command for this :py:class:`.MccsStation` device.
 
             :param argin: JSON encoded messaging system and command arguments
+            :type argin: str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -667,6 +670,8 @@ class MccsStation(SKAObsDevice):
             :py:meth:`.MccsStation.Callback` command.
 
             :param argin: Argument containing JSON encoded command message and result
+            :type argin: str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -743,6 +748,7 @@ class MccsStation(SKAObsDevice):
         Method returns as soon as the message has been enqueued.
 
         :param json_args: JSON encoded messaging system and command arguments
+        :type json_args: str
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -768,6 +774,8 @@ class MccsStation(SKAObsDevice):
             command for this :py:class:`.MccsStation` device.
 
             :param argin: JSON encoded messaging system and command arguments
+            :type argin: str
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

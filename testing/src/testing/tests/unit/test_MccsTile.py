@@ -827,9 +827,7 @@ class TestMccsTileCommands(HelperClass):
         assert result_code == ResultCode.OK
         assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
-    def test_On(
-        self, device_under_test, dummy_json_args, command_helper, empty_json_dict
-    ):
+    def test_On_RCL(self, device_under_test):
         """
         Test for On.
 
@@ -837,21 +835,14 @@ class TestMccsTileCommands(HelperClass):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
-        :param command_helper: A command helper fixture
-        :type command_helper: CommandHelper
-        :param empty_json_dict: an empty json encoded dictionary
-        :type empty_json_dict: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off(empty_json_dict)
-        command_helper.check_device_state(device_under_test, DevState.OFF)
-        [result_code], [_, message_uid] = device_under_test.On(dummy_json_args)
-        assert result_code == ResultCode.QUEUED
-        assert ":On" in message_uid
+        #
+        # Not testing the message queue implementation here as it's
+        # covered in integration tests.
+        self.start_up_device(device_under_test)
 
     def test_GetFirmwareAvailable(self, device_under_test):
         """

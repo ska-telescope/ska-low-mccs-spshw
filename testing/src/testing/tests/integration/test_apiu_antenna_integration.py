@@ -20,6 +20,7 @@ from tango import DevState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -65,12 +66,12 @@ def check_states(dev_states):
         assert device.State() == state
 
 
-class TestApiuAntennaIntegration:
+class TestApiuAntennaIntegration(HelperClass):
     """
     Integration test cases for MCCS subsystem's power management.
     """
 
-    def test_antenna_on(self, tango_harness: TangoHarness, empty_json_dict: str):
+    def test_antenna_on_RCL(self, tango_harness: TangoHarness, empty_json_dict: str):
         """
         Test that:
 
@@ -90,13 +91,8 @@ class TestApiuAntennaIntegration:
             antenna: DevState.DISABLE,
         }
         check_states(dev_states)
-        apiu.Off(empty_json_dict)
-        dev_states = {apiu: DevState.OFF}
-        check_states(dev_states)
 
-        apiu.On(empty_json_dict)
-        dev_states = {apiu: DevState.ON}
-        check_states(dev_states)
+        self.start_up_device(apiu)
 
         assert not apiu.isAntennaOn(1)
         # TODO: For now we need to get this device to OFF (highest state
@@ -115,24 +111,20 @@ class TestApiuAntennaIntegration:
         check_states(dev_states)
         assert not apiu.IsAntennaOn(1)
 
-    def test_apiu_antenna_on(self, tango_harness: TangoHarness, empty_json_dict: str):
+    def test_apiu_antenna_on(self, tango_harness: TangoHarness):
         """
         Test that wnen we tell the APIU drive to turn a given antenna
         on, the antenna device recognises that its hardware has been
         powered, and changes state.
 
         :param tango_harness: a test harness for tango devices
-        :param empty_json_dict: an empty json encoded dictionary
         """
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")
 
-        apiu.Off(empty_json_dict)
-        dev_states = {apiu: DevState.OFF}
-        check_states(dev_states)
+        self.start_up_device(apiu)
 
-        apiu.On(empty_json_dict)
-        dev_states = {apiu: DevState.ON, antenna: DevState.DISABLE}
+        dev_states = {antenna: DevState.DISABLE}
         check_states(dev_states)
 
         assert not apiu.IsAntennaOn(1)

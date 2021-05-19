@@ -198,15 +198,8 @@ class MessageQueue(threading.Thread):
                 f'Reply to {response_device}.command_inout("{message.callback}")'
             )
             self._qdebug(f"json_string={json_string}")
-
-            print(f'Reply to {response_device}.command_inout("{message.callback}")')
-            print(f"json_string={json_string}")
             # Post response message
-            results = response_device.command_inout(message.callback, json_string)
-            if len(results[1]) == 2:
-                rc, stat, _ = results
-            else:
-                rc, stat = results
+            (rc, stat) = response_device.command_inout(message.callback, json_string)
             self._qdebug(f"Reply message sent rc={rc},status={stat}")
         else:
             self._qdebug("No reply required")

@@ -1267,7 +1267,6 @@ class MccsSubrack(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        print(f"RCL: Subrack def Off args={json_args}")
         return self._send_message("Off", json_args=json_args)
 
     class OffCommand(SKABaseDevice.OffCommand):
@@ -1294,7 +1293,6 @@ class MccsSubrack(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            print(f"RCL: Subrack class OffCommand args={argin}")
             # TODO: For now, OFF represents the highest state of device
             # readiness for a device that is not actually on. i.e. state
             # OFF means the hardware is on. This is a

@@ -654,7 +654,7 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            (result_code, _) = super().do()
 
             # MCCS-specific stuff goes here
 
@@ -683,7 +683,7 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            (result_code, _) = super().do()
 
             # MCCS-specific stuff goes here
 
@@ -1041,15 +1041,12 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            (result_code, _) = super().do()
 
             # TODO: MCCS-specific stuff goes here
             # 1. All jobs should be terminated (via the Cluster manager)
             # 2. All elements should be deconfigured (as if they had just
             #    been allocated).
-
-            # TODO: Remove this delay. It simply emulates the time to achieve the above.
-            time.sleep(1)
 
             if result_code == ResultCode.OK:
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

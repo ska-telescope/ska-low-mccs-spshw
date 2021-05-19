@@ -247,7 +247,7 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_On_RCL(
+    def test_On(
         self, device_under_test, mock_event_callback, command_helper, test_string
     ):
         """

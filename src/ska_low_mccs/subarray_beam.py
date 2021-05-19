@@ -50,7 +50,7 @@ from ska_low_mccs.health import HealthModel
 
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A 
+    A
     :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEvaluator`
     for a subarray beam.
 
@@ -635,12 +635,12 @@ class MccsSubarrayBeam(SKAObsDevice):
             """
             Stateless do-hook for the
             :py:meth:`.MccsSubarrayBeam.Scan` command
-                {
-                "sccan_id": 1,
-                "scan_time": 4
-                }
 
             :param argin: Scan parameters encoded in a json string
+                {
+                "scan_id": 1,
+                "scan_time": 4
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

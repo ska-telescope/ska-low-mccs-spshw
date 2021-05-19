@@ -231,7 +231,7 @@ class MccsController(SKAMaster):
             self._message_queue = None
             self._qdebuglock = threading.Lock()
             self._assigned_resources = None
-            set_change_event(self, assignedResources, True, False)
+            self.set_change_event("assignedResources", True, False)
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """

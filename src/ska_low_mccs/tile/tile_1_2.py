@@ -798,13 +798,6 @@ class Tile12(object):
             if linkup is True:
                 self.logger.info("10G Link established! ARP table populated!")
 
-        # else:
-        #     # time.sleep(2)
-        #     self.logger.info("Sending dummy packets to populate switch ARP tables...")
-        #     self.mii_exec_test(100, False)
-        #     self["fpga1.regfile.eth10g_ctrl"] = 0x0
-        #     self["fpga2.regfile.eth10g_ctrl"] = 0x0
-        #     linkup = True
         return self._check_arp_table
 
     @connected

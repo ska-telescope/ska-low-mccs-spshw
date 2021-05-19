@@ -552,6 +552,7 @@ class TpmDriver(HardwareDriver):
         :rtype: list(dict) or dict
         """
         self.logger.debug("TpmDriver: get_40g_configuration")
+        self._forty_gb_core_list = []
         if core_id == -1:
             for core in range(0, 8):
                 dict_to_append = self.tile.get_40g_core_configuration(

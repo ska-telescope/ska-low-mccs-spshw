@@ -98,8 +98,8 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param command_helper:
-        :type command_helper:
+        :param command_helper: A command helper fixture.
+        :type command_helper: CommandHelper
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """

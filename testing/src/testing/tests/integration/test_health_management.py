@@ -83,6 +83,7 @@ def check_states(dev_states):
             sleep(0.1)
         assert device.State() == state
 
+
 class TestHealthManagement(HelperClass):
     """
     Test cases for the MCCS health management subsystem.
@@ -226,7 +227,6 @@ class TestHealthManagement(HelperClass):
         sleep()
         assert controller.healthState == HealthState.OK
 
-
     def test_subarray_health_rollup(self, tango_harness, empty_json_dict):
         """
         Test that health rolls up to the subarray.
@@ -339,12 +339,12 @@ class TestHealthManagement(HelperClass):
 
         self.start_up_device(tile_1)
 
-        #tile_1.Off(empty_json_dict)
-        #dev_states = {tile_1: DevState.OFF}
-        #check_states(dev_states)
-        #tile_1.On(empty_json_dict)
-        #dev_states = {tile_1: DevState.ON}
-        #check_states(dev_states)
+        # tile_1.Off(empty_json_dict)
+        # dev_states = {tile_1: DevState.OFF}
+        # check_states(dev_states)
+        # tile_1.On(empty_json_dict)
+        # dev_states = {tile_1: DevState.ON}
+        # check_states(dev_states)
 
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK

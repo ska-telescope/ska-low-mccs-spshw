@@ -20,8 +20,9 @@ __all__ = ["HelperClass"]
 
 class HelperClass:
     """
-    Common fixtures used in derived test classes. Mix this class
-    in with the test class that requires these fixtures.
+    Common fixtures used in derived test classes.
+
+    Mix this class in with the test class that requires these fixtures.
     """
 
     @pytest.fixture(autouse=True)

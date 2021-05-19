@@ -19,7 +19,6 @@ __all__ = [
 # imports
 import json
 import threading
-import time
 
 # PyTango imports
 from tango import DebugIt, EnsureOmniThread

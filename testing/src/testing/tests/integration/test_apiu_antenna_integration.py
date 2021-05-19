@@ -71,7 +71,7 @@ class TestApiuAntennaIntegration(HelperClass):
     Integration test cases for MCCS subsystem's power management.
     """
 
-    def test_antenna_on_RCL(self, tango_harness: TangoHarness, empty_json_dict: str):
+    def test_antenna_on(self, tango_harness: TangoHarness, empty_json_dict: str):
         """
         Test that:
 

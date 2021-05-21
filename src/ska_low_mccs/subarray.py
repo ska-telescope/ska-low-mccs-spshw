@@ -503,6 +503,7 @@ class MccsSubarray(SKASubarray):
             device._station_pool_manager = StationsResourceManager(
                 device.health_model._health_monitor, device._station_fqdns, self.logger
             )
+
             device._subarray_beam_resource_manager = SubarrayBeamsResourceManager(
                 device.health_model._health_monitor,
                 device._subarray_beam_fqdns,
@@ -514,16 +515,16 @@ class MccsSubarray(SKASubarray):
                 device.state_model,
                 device.logger,
             )
-            device.register_command_object(
-                "AssignResources", device.AssignResourcesCommand(*resourcing_args)
-            )
-            device.register_command_object(
-                "ReleaseResources", device.ReleaseResourcesCommand(*resourcing_args)
-            )
-            device.register_command_object(
-                "ReleaseAllResources",
-                device.ReleaseAllResourcesCommand(*resourcing_args),
-            )
+            for (command_name, command_object) in [
+                ("AssignResources", device.AssignResourcesCommand),
+                ("ReleaseResources", device.ReleaseResourcesCommand),
+                ("ReleaseAllResources", device.ReleaseAllResourcesCommand),
+                ("Restart", device.RestartCommand),
+            ]:
+                device.register_command_object(
+                    command_name,
+                    command_object(*resourcing_args),
+                )
 
     def init_command_objects(self):
         """
@@ -543,7 +544,6 @@ class MccsSubarray(SKASubarray):
             ("End", self.EndCommand),
             ("Abort", self.AbortCommand),
             ("ObsReset", self.ObsResetCommand),
-            ("Restart", self.RestartCommand),
             ("GetVersionInfo", self.GetVersionInfoCommand),
         ]:
             self.register_command_object(
@@ -1101,6 +1101,9 @@ class MccsSubarray(SKASubarray):
         Class for handling the Restart() command.
         """
 
+        SUCCEEDED_MESSAGE = "RestartCommand command completed OK"
+        FAILED_MESSAGE_PREFIX = "RestartCommand command failed"
+
         def do(self):
             """
             Stateless hook implementing the functionality of the
@@ -1113,10 +1116,14 @@ class MccsSubarray(SKASubarray):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            (result_code, message) = super().do()
+            device = self.target
+            try:
+                device.release_all()
+            except ValueError as val:
+                return (ResultCode.FAILED, f"{self.FAILED_MESSAGE_PREFIX}: {val}")
 
-            # MCCS-specific stuff goes here
-            return (result_code, message)
+            device._health_monitor.remove_all_devices()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     # ---------------------
     # MccsSubarray Commands

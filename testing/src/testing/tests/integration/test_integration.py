@@ -110,9 +110,9 @@ class TestMccsIntegration:
         ((result_code,), (message,)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
-            station_ids=[1],
+            station_ids=[[1]],
             subarray_beam_ids=[1],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.OK
 
@@ -131,9 +131,9 @@ class TestMccsIntegration:
         ((result_code,), (_,)) = call_with_json(
             controller.Allocate,
             subarray_id=2,
-            station_ids=[1],
+            station_ids=[[1]],
             subarray_beam_ids=[1],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.FAILED
 
@@ -155,9 +155,9 @@ class TestMccsIntegration:
         ((result_code,), (message,)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
-            station_ids=[1, 2],
+            station_ids=[[1, 2]],
             subarray_beam_ids=[2],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.OK
 
@@ -207,18 +207,18 @@ class TestMccsIntegration:
         call_with_json(
             controller.Allocate,
             subarray_id=1,
-            station_ids=[1],
+            station_ids=[[1]],
             subarray_beam_ids=[1],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
 
         # allocate station 2 to subarray 2
         call_with_json(
             controller.Allocate,
             subarray_id=2,
-            station_ids=[2],
+            station_ids=[[2]],
             subarray_beam_ids=[2],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
 
         # check initial state

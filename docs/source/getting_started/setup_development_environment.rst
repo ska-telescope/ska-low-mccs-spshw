@@ -103,7 +103,7 @@ The basic steps for this, regardless of operating system, are
 
 3. Install Docker;
 
-4. Start up a ``ska-python-buildenv`` docker container, with your code
+4. Start up a ``pytango-builder`` docker container, with your code
    repository mounted inside it, and with access to a bash terminal
    session.
 
@@ -252,7 +252,7 @@ understanding of what your IDE is doing for you.
    .. code-block:: shell-session
 
      me@local:~$ cd ska-low-mccs
-     me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest bash
+     me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-tango-images/pytango-builder:9.3.3.3 bash
      root@0852a572ffff:/app#
 
    (The first time you run this command, it may take a very long time.

@@ -92,9 +92,13 @@ class DevicePool:
             async_ids.append(asyncid)
 
         for (async_id, device) in zip(async_ids, self._devices):
-            (result_code, _) = device.command_inout_reply(async_id, timeout=0)
-            if result_code == ResultCode.FAILED:
-                return False
+            result = device.command_inout_reply(async_id, timeout=0)
+            # TODO: added this to prevent TypeError: cannot unpack non-iterable Mock object
+            # review when message queue implementation is complete
+            if isinstance(result, list):
+                (result_code, _) = result
+                if result_code == ResultCode.FAILED:
+                    return False
 
         return True
 
@@ -125,10 +129,7 @@ class DevicePool:
             self._logger.debug(f"cmd={command_name}, rtnfqdn={fqdn}, cb={callback}")
 
             # TODO: Need to expand this to include arguments passed to commands...
-            args = {
-                "respond_to_fqdn": fqdn,
-                "callback": callback,
-            }
+            args = {"respond_to_fqdn": fqdn, "callback": callback}
             json_string = json.dumps(args)
             self._logger.debug(f"Calling {device}:{command_name}({json_string})")
             [result_code], [status, message_uid] = device.command_inout(
@@ -281,12 +282,7 @@ class DevicePoolSequence:
         for pool in self._pools:
             pool.connect()
 
-    def invoke_command(
-        self,
-        command_name,
-        arg=None,
-        reverse=False,
-    ):
+    def invoke_command(self, command_name, arg=None, reverse=False):
         """
         A generic method for sequential invoking a command on a list of
         device pools.
@@ -315,13 +311,7 @@ class DevicePoolSequence:
         else:
             return None if did_nothing else True
 
-    def invoke_command_with_callback(
-        self,
-        command_name,
-        fqdn,
-        callback,
-        reverse=False,
-    ):
+    def invoke_command_with_callback(self, command_name, fqdn, callback, reverse=False):
         """
         A generic method for sequential invoking a command on a list of
         device pools.
@@ -409,10 +399,7 @@ class DevicePoolSequence:
         :return: Whether the command succeeded or not
         :rtype: bool
         """
-        args = {
-            "respond_to_fqdn": "",
-            "callback": "",
-        }
+        args = {"respond_to_fqdn": "", "callback": ""}
         json_string = json.dumps(args)
         return self.invoke_command(command_name="On", arg=json_string, reverse=reverse)
 

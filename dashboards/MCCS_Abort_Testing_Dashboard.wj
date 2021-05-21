@@ -1,10 +1,10 @@
 {
-  "id": "609d208474413000190f511b",
+  "id": "60a7a8dd57bfe50019eb37cd",
   "name": "MCCS_Abort_Testing_Dashboard_442",
   "version": "1.0.8",
   "user": "user1",
-  "insertTime": "2021-05-13T12:50:13.078Z",
-  "updateTime": "2021-05-13T12:51:01.082Z",
+  "insertTime": "2021-05-21T12:34:37.813Z",
+  "updateTime": "2021-05-21T12:40:46.013Z",
   "group": null,
   "groupWriteAccess": false,
   "lastUpdatedBy": "user1",
@@ -84,7 +84,7 @@
     {
       "id": "4",
       "x": 32,
-      "y": 28,
+      "y": 30,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -110,7 +110,7 @@
     {
       "id": "5",
       "x": 32,
-      "y": 50,
+      "y": 52,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -135,7 +135,7 @@
     {
       "id": "6",
       "x": 32,
-      "y": 66,
+      "y": 68,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -160,7 +160,7 @@
     {
       "id": "7",
       "x": 32,
-      "y": 38,
+      "y": 40,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -186,7 +186,7 @@
     {
       "id": "8",
       "x": 32,
-      "y": 46,
+      "y": 48,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -212,7 +212,7 @@
     {
       "id": "9",
       "x": 32,
-      "y": 54,
+      "y": 56,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -262,10 +262,10 @@
       "y": 24,
       "canvas": "0",
       "width": 108,
-      "height": 4,
+      "height": 6,
       "type": "LABEL",
       "inputs": {
-        "text": "{\"subarray_id\": 1,\"station_ids\": [1,2],\"channels\": [[0,8,1,1],[8,8,2,1],[24,16,2,1]],\"subarray_beam_ids\": [1]}",
+        "text": "{\"interface\":\"https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0\",\"subarray_id\":1,\"subarray_beam_ids\":[1],\"station_ids\":[[1,2]],\"channel_blocks\":[3]}",
         "textColor": "#000000",
         "backgroundColor": "#f697f7",
         "size": 1,
@@ -375,7 +375,7 @@
     {
       "id": "16",
       "x": 32,
-      "y": 32,
+      "y": 34,
       "canvas": "0",
       "width": 108,
       "height": 6,
@@ -396,7 +396,7 @@
     {
       "id": "17",
       "x": 32,
-      "y": 42,
+      "y": 44,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -417,7 +417,7 @@
     {
       "id": "18",
       "x": 32,
-      "y": 62,
+      "y": 64,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -443,7 +443,7 @@
     {
       "id": "19",
       "x": 32,
-      "y": 58,
+      "y": 60,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -605,7 +605,7 @@
     {
       "id": "26",
       "x": 32,
-      "y": 70,
+      "y": 72,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -630,7 +630,7 @@
     {
       "id": "27",
       "x": 32,
-      "y": 78,
+      "y": 80,
       "canvas": "0",
       "width": 108,
       "height": 4,
@@ -656,7 +656,7 @@
     {
       "id": "28",
       "x": 32,
-      "y": 74,
+      "y": 76,
       "canvas": "0",
       "width": 108,
       "height": 4,

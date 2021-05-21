@@ -1256,8 +1256,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
         subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
@@ -1293,8 +1291,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         kwargs = json.loads(argin)
         subarray_id = kwargs.get("subarray_id")
@@ -1406,7 +1402,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self.notify_listener(ResultCode.UNKNOWN, "", "")
         handler = self.get_command_object("Release")

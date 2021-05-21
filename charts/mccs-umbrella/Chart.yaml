@@ -10,7 +10,7 @@ dependencies:
   version: 0.2.18
   repository: https://nexus.engageska-portugal.pt/repository/helm-chart
 - name: ska-low-mccs
-  version: 0.7.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+  version: 0.8.0 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs
 - name: webjive
   version: 1.0.16

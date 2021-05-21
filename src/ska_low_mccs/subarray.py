@@ -302,10 +302,10 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
         :param subarray_beam_fqdns: list of  FQDNs of subarray_beams to be released
         :param station_fqdns: list of  FQDNs of the stations which if assigned to,
-            station beams should be released
+            subarray_beams should be released
         """
         station_ids_to_release = []
-        # release station beams assigned to station_fqdns
+        # release subarray_beams assigned to station_fqdns
         for station_id, station_fqdn in self._stations.items().items():
             if station_fqdn in station_fqdns:
                 station_ids_to_release.append(station_id)
@@ -314,7 +314,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
                 if subarray_beam.fqdn not in subarray_beam_fqdns:
                     subarray_beam_fqdns.append(subarray_beam.fqdn)
 
-        # release station beams by given fqdns
+        # release subarray_beams by given fqdns
         for subarray_beam_fqdn in subarray_beam_fqdns:
             # TODO: Establishment of connections should happen at initialization
             subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
@@ -334,9 +334,9 @@ class SubarrayBeamsResourceManager(ResourceManager):
     @property
     def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> List[str]:
         """
-        Returns the FQDNs of currently assigned station beams.
+        Returns the FQDNs of currently assigned subarray_beams.
 
-        :return: FQDNs of currently assigned station beams
+        :return: FQDNs of currently assigned subarray_beams
         """
         return sorted(self.get_all_fqdns())
 
@@ -733,6 +733,9 @@ class MccsSubarray(SKASubarray):
                     subarray_beam_fqdns, station_fqdns
                 )
             else:
+                self.logger.error(
+                    f"There is a mismatch between len({subarray_beam_fqdns}) and len({station_fqdns})"
+                )
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             # TODO: Should we always return success?
@@ -849,18 +852,18 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
-                        {
-                        "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
-                        "stations":[{"station_id": 1},{"station_id": 2}],
-                        "subarray_beams":[{
-                        "subarray_beam_id":1,
-                        "station_ids":[1,2],
-                        "update_rate": 0.0,
-                        "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                        "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
-                    `   "antenna_weights": [1.0, 1.0, 1.0],
-                        "phase_centre": [0.0, 0.0]}]
-                        }
+                {
+                "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
+                "stations":[{"station_id": 1},{"station_id": 2}],
+                "subarray_beams":[{
+                "subarray_beam_id":1,
+                "station_ids":[1,2],
+                "update_rate": 0.0,
+                "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0]}]
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -894,11 +897,11 @@ class MccsSubarray(SKASubarray):
             command for this :py:class:`.MccsSubarray` device.
 
             :param argin: JSON scan specification
-                        {
-                        "interface": "https://schema.skatelescope.org/ska-low-mccs-scan/1.0",
-                        "scan_id":1,
-                        "start_time": 0.0
-                        }
+                {
+                "interface": "https://schema.skatelescope.org/ska-low-mccs-scan/1.0",
+                "scan_id":1,
+                "start_time": 0.0,
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

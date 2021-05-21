@@ -794,6 +794,75 @@ class TestMccsController:
             assert mock_station_1.subarrayId == 0
             assert mock_station_2.subarrayId == 0
 
+        def test_assignedResources(
+            self, device_under_test, mock_event_callback, logger
+        ):
+            """
+            Test the assigned resources attribute.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test,
+                in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param mock_event_callback: fixture that provides a mock
+                instance with callback support methods
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
+            """
+            controller = device_under_test  # for readability
+            controller.Off()
+            controller.On()
+            sleep(0.1)  # Required to allow DUT thread to run
+
+            call_with_json(
+                device_under_test.simulateAdminModeChange,
+                fqdn="low-mccs/station/001",
+                admin_mode=AdminMode.ONLINE,
+            )
+            call_with_json(
+                device_under_test.simulateHealthStateChange,
+                fqdn="low-mccs/station/001",
+                health_state=HealthState.OK,
+            )
+            call_with_json(
+                device_under_test.simulateAdminModeChange,
+                fqdn="low-mccs/station/002",
+                admin_mode=AdminMode.ONLINE,
+            )
+            call_with_json(
+                device_under_test.simulateHealthStateChange,
+                fqdn="low-mccs/station/002",
+                health_state=HealthState.OK,
+            )
+
+            # Test that subscription yields an event as expected
+            _ = device_under_test.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
+            )
+            mock_event_callback.check_event_data(name="commandResult", result=None)
+            expected_result = {
+                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                "subarray_beam_ids": [1],
+                "station_ids": [[1, 2]],
+                "channel_blocks": [3],
+            }
+
+            # Make the call to allocate
+            ((result_code,), (_,)) = call_with_json(
+                controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                subarray_id=1,
+                subarray_beam_ids=[1],
+                station_ids=[[1, 2]],
+                channel_blocks=[3],
+            )
+            assert result_code == ResultCode.OK
+            result = device_under_test.assignedResources
+            assert json.loads(result) == expected_result
+
     def test_buildState(self, device_under_test):
         """
         Test for buildState.

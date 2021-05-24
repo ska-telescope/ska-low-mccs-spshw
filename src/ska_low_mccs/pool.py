@@ -16,6 +16,7 @@ of subservient devices.
     that send commands in a sequence that complies with a complex
     dependency graph.
 """
+<<<<<<< HEAD
 
 from __future__ import annotations  # allow forward references in type hints
 
@@ -26,12 +27,11 @@ from typing import Any, Callable, Optional
 
 from tango.group import Group
 
+=======
+>>>>>>> MCCS-404 move subarray_beamsresourcemanager
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
-
-
-__all__ = ["DevicePool", "DevicePoolSequence"]
 
 
 class DevicePool:
@@ -50,22 +50,19 @@ class DevicePool:
     not STARTED or QUEUED.
     """
 
-    def __init__(
-        self: DevicePool,
-        subgroup: Group,
-        fqdns: list[str],
-        logger: logging.Logger,
-        connect: bool = True,
-    ) -> None:
+    def __init__(self, fqdns, logger, connect=True):
         """
         Initialise a new DevicePool object.
 
         :param fqdns: the FQDNs of the devices in this pool
+        :type fqdns: list(str)
         :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         :param connect: whether to establish connections immediately.
             Defaults to True. If False, the connections may be
             established by calling the :py:meth:`.connect` method, or by
             calling one of the supported commands.
+        :type connect: bool
         """
         self._fqdns = fqdns or []
         self._logger = logger
@@ -90,9 +87,15 @@ class DevicePool:
         A generic method for invoking a command on all devices in the pool.
 
         :param command_name: the name of the command to be invoked
+        :type command_name: str
         :param arg: optional argument to the command
+<<<<<<< HEAD
 
+=======
+        :type arg: object
+>>>>>>> MCCS-404 move subarray_beamsresourcemanager
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         if not self._devices:
             self.connect()
@@ -206,30 +209,34 @@ class DevicePool:
         Call Disable() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         return self.invoke_command("Disable")
 
-    def standby(self: DevicePool) -> bool:
+    def standby(self):
         """
         Call Standby() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         return self.invoke_command("Standby")
 
-    def off(self: DevicePool) -> bool:
+    def off(self):
         """
         Call Off() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         return self.invoke_command("Off")
 
-    def on(self: DevicePool) -> bool:
+    def on(self):
         """
         Call On() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         return self.invoke_command("On")
 
@@ -281,21 +288,19 @@ class DevicePoolSequence:
     not STARTED or QUEUED.
     """
 
-    def __init__(
-        self: DevicePoolSequence,
-        pools: list[DevicePool],
-        logger: logging.Logger,
-        connect: bool = True,
-    ) -> None:
+    def __init__(self, pools, logger, connect=True):
         """
         Initialise a new DevicePoolSequence object.
 
         :param pools: a sequence of device pools
+        :type pools: list(:py:class:`.DevicePool`)
         :param logger: the logger to be used by this object.
+        :type logger: :py:class:`logging.Logger`
         :param connect: whether to establish connections immediately.
             Defaults to True. If False, the connections may be
             established by calling the :py:meth:`.connect` method, or by
             calling one of the supported commands.
+        :type connect: bool
         """
         self._logger = logger
         self._pools = pools
@@ -318,12 +323,16 @@ class DevicePoolSequence:
         A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
+        :type command_name: str
         :param arg: optional argument to the command
+        :type arg: object
         :param reverse: whether to call pools in reverse sequence. (You
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.)
+        :type reverse: bool
 
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         did_nothing = True
 
@@ -375,12 +384,18 @@ class DevicePoolSequence:
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.) Optional, defaults to
             False
+        :type reverse: bool
 
         :return: Whether the command succeeded or not
+        :rtype: bool
         """
         return self.invoke_command("Disable", reverse=reverse)
 
+<<<<<<< HEAD
     def standby(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
+=======
+    def standby(self, reverse=False):
+>>>>>>> MCCS-404 move subarray_beamsresourcemanager
         """
         Call Standby() on all the devices in this device pool.
 
@@ -393,7 +408,11 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Standby", reverse=reverse)
 
+<<<<<<< HEAD
     def off(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
+=======
+    def off(self, reverse=False):
+>>>>>>> MCCS-404 move subarray_beamsresourcemanager
         """
         Call Off() on all the devices in this device pool.
 
@@ -408,7 +427,11 @@ class DevicePoolSequence:
         json_string = json.dumps(args)
         return self.invoke_command(command_name="Off", arg=json_string, reverse=reverse)
 
+<<<<<<< HEAD
     def on(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
+=======
+    def on(self, reverse=False):
+>>>>>>> MCCS-404 move subarray_beamsresourcemanager
         """
         Call On() on all the devices in this device pool.
 

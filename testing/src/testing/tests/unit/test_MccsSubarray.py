@@ -111,7 +111,6 @@ class TestMccsSubarray:
         assert device_under_test.controlMode == ControlMode.REMOTE
         assert device_under_test.simulationMode == SimulationMode.FALSE
         assert device_under_test.testMode == TestMode.TEST
-        assert device_under_test.assignedResources is None
 
         # The following reads might not be allowed in this state once
         # properly implemented

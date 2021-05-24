@@ -303,7 +303,7 @@ class ResourceManager:
                 self.resource_availability_policy, fqdn, device_id
             )
             self._health_monitor.register_callback(
-                self._resources[fqdn]._health_changed, fqdn, device_group
+                self._resources[fqdn]._health_changed, fqdn
             )
 
     def _except_on_unmanaged(self: ResourceManager, fqdns: Iterable[str]) -> None:

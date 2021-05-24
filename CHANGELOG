@@ -2,6 +2,10 @@
 
 ## unreleased
 
+## 0.8.1
+
+* MCCS-561 - Fix location of assignedResources attribute init
+
 ## 0.8.0
 
 * MCCS-442 - Restart command implementation

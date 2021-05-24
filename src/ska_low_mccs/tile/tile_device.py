@@ -1888,7 +1888,7 @@ class MccsTile(SKABaseDevice):
         * CoreID - (int) core id
         * ArpTableEntry - (int) ARP table entry ID
         * SrcMac - (int) mac address
-        * SrcIP - (string) IP dot notation. Default taken from main IP address
+        * SrcIP - (string) IP dot notation.
         * SrcPort - (int) source port
         * SrcPort - (int) source port
         * DstIP - (string) IP dot notation

@@ -48,6 +48,8 @@ ci-metrics.json
 code-coverage.xml
 linting.xml
 unit-tests.xml
+*.whl
+*.bit
 
 # Miscellaneous
 .DS_Store
@@ -62,3 +64,6 @@ testing/results/*
 
 # sphinx
 docs/source/_build
+
+*.bit
+*.wh                                                                                                            

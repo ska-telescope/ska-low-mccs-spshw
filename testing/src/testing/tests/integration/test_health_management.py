@@ -270,7 +270,7 @@ class TestHealthManagement(HelperClass):
             subarraybeam_2: DevState.OFF,
         }
         check_states(dev_states)
-        
+
         # Check that all devices are OK
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK

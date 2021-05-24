@@ -1119,7 +1119,7 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
         with pytest.raises(
-            DevFailed, match="Invalid core id or arp table id " "specified"
+            DevFailed, match="Invalid core id or arp table id specified"
         ):
             _ = device_under_test.Get40GCoreConfiguration(json_arg)
 

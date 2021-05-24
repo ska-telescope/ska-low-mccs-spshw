@@ -1220,7 +1220,7 @@ class MccsTile(SKABaseDevice):
             ("Configure40GCore", self.Configure40GCoreCommand),
             ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
-            ("CheckArpTable", self.CheckArpTableCommand),
+            ("GetArpTable", self.GetArpTableCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
@@ -1841,7 +1841,7 @@ class MccsTile(SKABaseDevice):
                 message = "CoreID is a mandatory parameter."
                 self.logger.error(message)
                 raise ValueError(message)
-            arp_table_entry = params.get("ArpTableEntry", 0)
+            arp_table_entry = params.get("ArpTableEntry", None)
             if arp_table_entry is None:
                 message = "ArpTableEntry is a mandatory parameter."
                 self.logger.error(message)
@@ -2055,15 +2055,15 @@ class MccsTile(SKABaseDevice):
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
-    class CheckArpTableCommand(BaseCommand):
+    class GetArpTableCommand(BaseCommand):
         """
-        Class for handling the CheckArpTable() command.
+        Class for handling the GetArpTable() command.
         """
 
         def do(self):
             """
             Implementation of
-            :py:meth:`.MccsTile.CheckArpTable` command functionality.
+            :py:meth:`.MccsTile.GetArpTable` command functionality.
 
             :return: a JSON-encoded dictionary of coreId and populated arpID table
             :rtype: str
@@ -2073,7 +2073,7 @@ class MccsTile(SKABaseDevice):
 
     @command(dtype_out="DevString")
     @DebugIt()
-    def CheckArpTable(self):
+    def GetArpTable(self):
         """
         Return a dictionary with populated ARP table  for all used
         cores. 40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP
@@ -2086,7 +2086,7 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> argout = dp.command_inout("CheckArpTable")
+        >>> argout = dp.command_inout("GetArpTable")
         >>> dict = json.loads(argout)
         >>>    {
         >>>    "core_id0": [arpID0, arpID1],
@@ -2094,7 +2094,7 @@ class MccsTile(SKABaseDevice):
         >>>    "core_id3": [],
         >>>    }
         """
-        handler = self.get_command_object("CheckArpTable")
+        handler = self.get_command_object("GetArpTable")
         return handler()
 
     class SetChanneliserTruncationCommand(ResponseCommand):

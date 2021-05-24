@@ -78,7 +78,7 @@ class TpmDriver(HardwareDriver):
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._test_generator_active = False
-        self._get_arp_table = {}
+        self._arp_table = {}
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
 
@@ -568,7 +568,7 @@ class TpmDriver(HardwareDriver):
         return self._forty_gb_core_list
 
     @property
-    def get_arp_table(self):
+    def arp_table(self):
         """
         Check that ARP table has been populated in for all used cores
         40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
@@ -578,9 +578,9 @@ class TpmDriver(HardwareDriver):
         :return: list of core id and arp table populated
         :rtype: dict(list)
         """
-        self.logger.debug("TpmDriver: get_arp_table")
-        self._get_arp_table = self.tile.check_arp_table()
-        return self._get_arp_table
+        self.logger.debug("TpmDriver: arp_table")
+        self._arp_table = self.tile.get_arp_table()
+        return self._arp_table
 
     def set_lmc_download(
         self,

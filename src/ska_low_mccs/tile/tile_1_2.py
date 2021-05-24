@@ -556,7 +556,7 @@ class Tile12(object):
         :return: core configuration
         :rtype: dict
 
-        :TODO: Check whether to bedeleted.
+        :todo: Check whether to be deleted.
         """
         return {
             "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
@@ -754,7 +754,7 @@ class Tile12(object):
             )
 
     @connected
-    def check_arp_table(self):
+    def get_arp_table(self):
         """
         Check that ARP table has been populated in for all used cores.
         40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for

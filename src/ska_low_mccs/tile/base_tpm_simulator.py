@@ -85,7 +85,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
-        self._get_arp_table = copy.deepcopy(self.ARP_TABLE)
+        self._arp_table = copy.deepcopy(self.ARP_TABLE)
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
 
@@ -489,7 +489,7 @@ class BaseTpmSimulator(HardwareSimulator):
         return
 
     @property
-    def get_arp_table(self):
+    def arp_table(self):
         """
         Check that ARP table has been populated in for all used cores.
         40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
@@ -499,8 +499,8 @@ class BaseTpmSimulator(HardwareSimulator):
         :return: dictionary containing coreID and populated arpID
         :rtype: dict
         """
-        self.logger.debug("TpmDriver: get_arp_table")
-        return copy.deepcopy(self._get_arp_table)
+        self.logger.debug("TpmSimulator: arp_table")
+        return copy.deepcopy(self._arp_table)
 
     def set_lmc_download(
         self,
@@ -769,7 +769,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmDriver: Stop integrated channel data")
+        self.logger.debug("TpmSimulator: Stop integrated channel data")
         raise NotImplementedError
 
     def configure_integrated_beam_data(
@@ -802,7 +802,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmDriver: Stop integrated beam data")
+        self.logger.debug("TpmSimulator: Stop integrated beam data")
         raise NotImplementedError
 
     def stop_integrated_data(self):
@@ -812,7 +812,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmDriver: Stop integrated data")
+        self.logger.debug("TpmSimulator: Stop integrated data")
         raise NotImplementedError
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):

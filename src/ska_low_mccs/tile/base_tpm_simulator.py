@@ -491,9 +491,9 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def get_arp_table(self):
         """
-        Check that ARP table has been populated in for all used cores
+        Check that ARP table has been populated in for all used cores.
         40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
-        beamformer, 1 for LMC 10G interfaces use cores 0,1 (fpga0) and
+        beamformer, 1 for LMC. 10G interfaces use cores 0,1 (fpga0) and
         4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
 
         :return: dictionary containing coreID and populated arpID

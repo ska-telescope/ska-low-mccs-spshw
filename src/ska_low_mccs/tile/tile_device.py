@@ -1835,31 +1835,38 @@ class MccsTile(SKABaseDevice):
                 against a schema
             """
             params = json.loads(argin)
+
             core_id = params.get("CoreID", None)
             if core_id is None:
-                self.logger.error("CoreID is a mandatory parameter")
-                raise ValueError("CoreID is a mandatory parameter")
+                message = "CoreID is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             arp_table_entry = params.get("ArpTableEntry", 0)
             if arp_table_entry is None:
-                self.logger.error("ArpTableEntry is a mandatory parameter")
-                raise ValueError("ArpTableEntry is a mandatory parameter")
+                message = "ArpTableEntry is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             src_mac = params.get("SrcMac", None)
             if src_mac is None:
-                self.logger.error("SrcMac is a mandatory parameter")
-                raise ValueError("SrcMac is a mandatory parameter")
+                message = "SrcMac is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             src_ip = params.get("SrcIP", None)
             src_port = params.get("SrcPort", None)
             if src_port is None:
-                self.logger.error("SrcPort is a mandatory parameter")
-                raise ValueError("SrcPort is a mandatory parameter")
+                message = "SrcPort is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
-                self.logger.error("DstIP is a mandatory parameter")
-                raise ValueError("DstIP is a mandatory parameter")
+                message = "DstIP is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             dst_port = params.get("DstPort", None)
             if dst_port is None:
-                self.logger.error("DstPort is a mandatory parameter")
-                raise ValueError("DstPort is a mandatory parameter")
+                message = "DstPort is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
 
             hardware_manager = self.target
             hardware_manager.configure_40g_core(
@@ -1882,10 +1889,10 @@ class MccsTile(SKABaseDevice):
         * ArpTableEntry - (int) ARP table entry ID
         * SrcMac - (int) mac address
         * SrcIP - (string) IP dot notation. Default taken from main IP address
-        * SrcPort - (int) src port.
-        * SrcPort - (int) src port
+        * SrcPort - (int) source port
+        * SrcPort - (int) source port
         * DstIP - (string) IP dot notation
-        * DstPort - (int) dest port
+        * DstPort - (int) destination port
 
         :type argin: str
 
@@ -1898,8 +1905,8 @@ class MccsTile(SKABaseDevice):
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":0x62000a0a01c9,
-        "SrcIP":"10.0.99.3", "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58",
-        "DstIP":"10.0.99.3", "DstPort":5000}
+                    "SrcIP":"10.0.99.3", "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58",
+                    "DstIP":"10.0.99.3", "DstPort":5000}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("Configure40GCore", jstr)
         """
@@ -1961,7 +1968,7 @@ class MccsTile(SKABaseDevice):
         >>> core_id = 2
         >>> arp_table_entry = 0
         >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id,
-        arp_table_entry)
+                                        arp_table_entry)
         >>> params = json.loads(argout)
         """
         handler = self.get_command_object("Get40GCoreConfiguration")
@@ -2062,7 +2069,7 @@ class MccsTile(SKABaseDevice):
             :rtype: str
             """
             hardware_manager = self.target
-            return json.dumps(hardware_manager.get_arp_table)
+            return json.dumps(hardware_manager.arp_table)
 
     @command(dtype_out="DevString")
     @DebugIt()

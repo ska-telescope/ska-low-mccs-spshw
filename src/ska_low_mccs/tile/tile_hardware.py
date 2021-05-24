@@ -598,14 +598,14 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     @property
-    def get_arp_table(self):
+    def arp_table(self):
         """
         Check that ARP table has been populated in for all used cores.
 
         :return: list of core id and arp table populated
         :rtype: dict(list)
         """
-        return self._factory.hardware.get_arp_table
+        return self._factory.hardware.arp_table
 
     def set_channeliser_truncation(self, array):
         """

@@ -108,8 +108,8 @@ class Tile12(object):
         self._lmc_port = lmc_port
         self._lmc_ip = socket.gethostbyname(lmc_ip)
         self._lmc_use_10g = False
-        self._check_arp_table = {}
-        self._get_40g_configuration = {}
+        self._arp_table = {}
+        self._40g_configuration = {}
         self._port = port
         self._ip = socket.gethostbyname(ip)
         self.tpm = None
@@ -484,8 +484,9 @@ class Tile12(object):
         dst_port=None,
     ):
         """
-        Configure a 10G core TODO Legacy method. Check if it is to be
-        deleted.
+        Configure a 10G core.
+
+        :todo: Legacy method. Check whether to be deleted.
 
         :param core_id: 10G core ID
         :param src_mac: Source MAC address
@@ -580,7 +581,7 @@ class Tile12(object):
         :rtype: dict
         """
         try:
-            self._get_40g_configuration = {
+            self._40g_configuration = {
                 "core_id": core_id,
                 "arp_table_entry": arp_table_entry,
                 "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
@@ -596,9 +597,9 @@ class Tile12(object):
                 ),
             }
         except IndexError:
-            self._get_40g_configuration = None
+            self._40g_configuration = None
 
-        return self._get_40g_configuration
+        return self._40g_configuration
 
     @connected
     def set_lmc_download(
@@ -768,37 +769,41 @@ class Tile12(object):
             self.logger.info("Checking ARP table...")
 
             if self.tpm.tpm_test_firmware[0].xg_40g_eth:
-                core_id = [0, 1]
+                core_ids = [0, 1]
                 if self._lmc_use_10g:
-                    arp_table_id = [0, 1]
+                    arp_table_ids = [0, 1]
                 else:
-                    arp_table_id = [0]
+                    arp_table_ids = [0]
             else:
                 if self._lmc_use_10g:
-                    core_id = [0, 1, 2, 4, 5, 6]
+                    core_ids = [0, 1, 2, 4, 5, 6]
                 else:
-                    core_id = [0, 1, 4, 5]
-                arp_table_id = [0]
+                    core_ids = [0, 1, 4, 5]
+                arp_table_ids = [0]
 
             linkup = False
-            self._check_arp_table = dict([(i, []) for i in core_id])
+            self._arp_table = {i: [] for i in core_ids}
 
-            for c in core_id:
-                for a in arp_table_id:
-                    core_status = self.tpm.tpm_10g_core[c].get_arp_table_status(
-                        a, silent_mode=True
+            for core_id in core_ids:
+                for arp_table in arp_table_ids:
+                    core_status = self.tpm.tpm_10g_core[core_id].get_arp_table_status(
+                        arp_table, silent_mode=True
                     )
                     if core_status & 0x4 == 0:
-                        message = f"CoreID {c} with ArpID {a} is not populated"
+                        message = (
+                            f"CoreID {core_id} with ArpID {arp_table} is not "
+                            f"populated"
+                        )
+
                         self.logger.info(message)
                     else:
-                        self._check_arp_table[c].append(a)
+                        self._arp_table[core_id].append(arp_table)
                         linkup = True
 
-            if linkup is True:
+            if linkup:
                 self.logger.info("10G Link established! ARP table populated!")
 
-        return self._check_arp_table
+        return self._arp_table
 
     @connected
     def set_station_id(self, station_id, tile_id):
@@ -1010,9 +1015,7 @@ class Tile12(object):
         if type(trunc) == int:
             if 0 > trunc or trunc > 7:
                 self.logger.warning(
-                    "Could not set channeliser truncation to "
-                    + str(trunc)
-                    + ", setting to 0"
+                    f"Could not set channeliser truncation to " f"{trunc}, setting to 0"
                 )
                 trunc = 0
 

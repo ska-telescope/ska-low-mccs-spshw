@@ -847,7 +847,12 @@ class TestMccsController:
             assert mock_station_2.subarrayId == 0
 
         def test_assignedResources(
-            self, device_under_test, mock_event_callback, logger, command_helper, test_string
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
         ):
             """
             Test the assigned resources attribute.

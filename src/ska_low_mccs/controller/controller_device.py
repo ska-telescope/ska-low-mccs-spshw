@@ -230,7 +230,6 @@ class MccsController(SKAMaster):
             self._interrupt = False
             self._message_queue = None
             self._qdebuglock = threading.Lock()
-            self._assigned_resources = None
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
@@ -257,6 +256,7 @@ class MccsController(SKAMaster):
             }
             device._progress = 0
             device.queue_debug = ""
+            device._assigned_resources = ""
             device._build_state = release.get_release_info()
             device._version_id = release.version
             device.set_change_event("commandResult", True, False)

@@ -847,7 +847,7 @@ class TestMccsController:
             assert mock_station_2.subarrayId == 0
 
         def test_assignedResources(
-            self, device_under_test, mock_event_callback, logger
+            self, device_under_test, mock_event_callback, logger, command_helper, test_string
         ):
             """
             Test the assigned resources attribute.
@@ -863,11 +863,18 @@ class TestMccsController:
                 :py:class:`pytest_mock.mocker.Mock`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
             """
             controller = device_under_test  # for readability
-            controller.Off()
-            controller.On()
-            sleep(0.1)  # Required to allow DUT thread to run
+            # Need to turn it on before we can turn it off
+            command_helper.device_command(controller, "Off", test_string)
+            command_helper.check_device_state(controller, DevState.OFF)
+
+            command_helper.device_command(controller, "On", test_string)
+            command_helper.check_device_state(controller, DevState.ON)
 
             call_with_json(
                 device_under_test.simulateAdminModeChange,

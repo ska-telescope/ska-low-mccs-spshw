@@ -254,8 +254,8 @@ class TestMccsIntegrationTmc:
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
-            "station_ids": [1, 2],
-            "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+            "station_ids": [[1, 2]],
+            "channel_blocks": [2],
             "subarray_beam_ids": [1],
         }
         devices["subarraybeam_01"].isBeamLocked = True
@@ -337,8 +337,8 @@ class TestMccsIntegrationTmc:
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
-            "station_ids": [1, 2],
-            "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+            "station_ids": [[1, 2]],
+            "channel_blocks": [2],
             "subarray_beam_ids": [1],
         }
         json_string = json.dumps(parameters)
@@ -358,12 +358,13 @@ class TestMccsIntegrationTmc:
             "stations": [{"station_id": 1}, {"station_id": 2}],
             "subarray_beams": [
                 {
-                    "subarray_id": 1,
                     "subarray_beam_id": 1,
                     "station_ids": [1, 2],
                     "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     "update_rate": 0.0,
                     "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                    "antenna_weights": [1.0, 1.0, 1.0],
+                    "phase_centre": [0.0, 0.0],
                 }
             ],
         }
@@ -374,7 +375,7 @@ class TestMccsIntegrationTmc:
         assert devices["subarray_01"].obsState == ObsState.READY
 
         # Perform a scan on the subarray
-        scan_config = {"id": 1, "scan_time": 4}
+        scan_config = {"scan_id": 1, "scan_time": 4}
         json_string = json.dumps(scan_config)
         self.assert_command(
             device=devices["subarray_01"],

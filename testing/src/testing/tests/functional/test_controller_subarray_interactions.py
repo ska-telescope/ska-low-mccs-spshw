@@ -104,9 +104,7 @@ def subracks(tango_harness: TangoHarness):
     :return: subracks by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    return {
-        1: tango_harness.get_device("low-mccs/subrack/01"),
-    }
+    return {1: tango_harness.get_device("low-mccs/subrack/01")}
 
 
 @pytest.fixture()
@@ -494,8 +492,8 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
     """
     parameters = {
         "subarray_id": 1,
-        "station_ids": [1, 2],
-        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+        "station_ids": [[1, 2]],
+        "channel_blocks": [2],
         "subarray_beam_ids": [1],
     }
     expected_result = ResultCode.OK
@@ -691,12 +689,13 @@ def configure_subarray(subarrays):
         "stations": [{"station_id": 1}, {"station_id": 2}],
         "subarray_beams": [
             {
-                "subarray_id": 1,
                 "subarray_beam_id": 1,
                 "station_ids": [1, 2],
                 "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                 "update_rate": 0.0,
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0],
             }
         ],
     }

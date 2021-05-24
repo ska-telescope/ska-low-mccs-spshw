@@ -193,8 +193,7 @@ class MccsController(SKAMaster):
             ("Off", self.OffCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(self, self.state_model, self.logger),
+                command_name, command_object(self, self.state_model, self.logger)
             )
 
     class InitCommand(SKAMaster.InitCommand):
@@ -231,6 +230,7 @@ class MccsController(SKAMaster):
             self._interrupt = False
             self._message_queue = None
             self._qdebuglock = threading.Lock()
+            self._assigned_resources = None
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
@@ -245,8 +245,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
 
@@ -263,6 +261,7 @@ class MccsController(SKAMaster):
             device._version_id = release.version
             device.set_change_event("commandResult", True, False)
             device.set_change_event("commandProgress", True, False)
+            device.set_change_event("assignedResources", True, False)
 
             device._subarray_fqdns = list(device.MccsSubarrays)
             device._subarray_enabled = [False] * len(device.MccsSubarrays)
@@ -375,6 +374,9 @@ class MccsController(SKAMaster):
             )
             device.register_command_object(
                 "Release", device.ReleaseCommand(*resource_args)
+            )
+            device.register_command_object(
+                "Restart", device.RestartCommand(*resource_args)
             )
 
         def interrupt(self: MccsController.InitCommand) -> bool:
@@ -503,6 +505,15 @@ class MccsController(SKAMaster):
         """
         return 0
 
+    @attribute(dtype="DevString")
+    def assignedResources(self: MccsController) -> str:
+        """
+        Return the assigned resources attribute.
+
+        :return: assignedResources attribute
+        """
+        return self._assigned_resources
+
     def notify_listener(
         self: MccsControllerQueue,
         result_code: ResultCode,
@@ -531,8 +542,6 @@ class MccsController(SKAMaster):
             message indicating status and message UID.
             The string message is for information purposes only, but
             the message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
         return self._check_and_send_message(
             "Startup", check_is_allowed=True, notifications=True
@@ -558,8 +567,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             # TODO: For now, we need to get our devices to OFF state
             # (the highest state of device readiness for a device that
@@ -579,29 +586,20 @@ class MccsController(SKAMaster):
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_OFF_MESSAGE
                 )
-                return (
-                    ResultCode.FAILED,
-                    message_uid + "," + self.FAILED_OFF_MESSAGE,
-                )
+                return (ResultCode.FAILED, message_uid + "," + self.FAILED_OFF_MESSAGE)
 
             if device_pool.on():
                 self.state_model.perform_action("on_succeeded")
                 device.notify_listener(
                     ResultCode.OK, message_uid, self.SUCCEEDED_MESSAGE
                 )
-                return (
-                    ResultCode.OK,
-                    message_uid + "," + self.SUCCEEDED_MESSAGE,
-                )
+                return (ResultCode.OK, message_uid + "," + self.SUCCEEDED_MESSAGE)
             else:
                 self.state_model.perform_action("on_failed")
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_ON_MESSAGE
                 )
-                return (
-                    ResultCode.FAILED,
-                    message_uid + "," + self.FAILED_ON_MESSAGE,
-                )
+                return (ResultCode.FAILED, message_uid + "," + self.FAILED_ON_MESSAGE)
 
     def _check_and_send_message(
         self: MccsController,
@@ -662,8 +660,6 @@ class MccsController(SKAMaster):
             message indicating status and message UID.
             The string message is for information purposes only, but
             the message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
         return self._check_and_send_message(
             "On", check_is_allowed=True, notifications=True
@@ -686,17 +682,13 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             device_pool = device.device_pool
 
             message_uid = device._command_result.get("message_uid")
             if device_pool.invoke_command_with_callback(
-                command_name="On",
-                fqdn=device.get_name(),
-                callback="Callback",
+                command_name="On", fqdn=device.get_name(), callback="Callback"
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
@@ -775,8 +767,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self.notify_listener(ResultCode.UNKNOWN, "", "")
         command = self.get_command_object("Disable")
@@ -800,8 +790,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -822,8 +810,6 @@ class MccsController(SKAMaster):
             message indicating status and message UID.
             The string message is for information purposes only, but
             the message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
         return self._check_and_send_message(
             "Off", check_is_allowed=True, notifications=True
@@ -846,8 +832,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             device_pool = device.device_pool
@@ -890,8 +874,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -911,7 +893,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyLow")
         (result_code, status) = handler()
@@ -939,8 +920,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
 
@@ -960,7 +939,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("StandbyFull")
         (result_code, status) = handler()
@@ -985,8 +963,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1012,7 +988,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Operate")
         (result_code, status) = handler()
@@ -1048,8 +1023,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
@@ -1069,19 +1042,19 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
 
         :example:
 
         >>> proxy = tango.DeviceProxy("low-mccs/control/control")
         >>> proxy.Allocate(
                 json.dumps(
-                    {
-                        "subarray_id": 1,
-                        "station_ids": [1,2],
-                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                        "subarray_beam_ids": [1],
-                    }
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                    "subarray_id": 1,
+                    "subarray_beam_ids": [1],
+                    "station_ids": [[1,2]],
+                    "channel_blocks": [3],
+                }
                 )
             )
         """
@@ -1097,7 +1070,7 @@ class MccsController(SKAMaster):
 
         The JSON argument specifies the overall sub-array composition in
         terms of which stations should be allocated to the specified
-        Sub-Array.
+        subarray_beam.
         """
 
         FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX = (
@@ -1121,36 +1094,38 @@ class MccsController(SKAMaster):
             terms of which stations should be allocated to the specified Sub-Array.
 
             :param argin: JSON-formatted string
-                    {
-                    "subarray_id": int,
-                    "station_ids": list[int],
-                    "channels": list[list[int]],
-                    "subarray_beam_ids": list[int],
-                    }
+                {
+                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                "subarray_id": int,
+                "subarray_beam_ids": list[int],
+                "station_ids": list[list[int]],
+                "channel_blocks": list[int],
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-
             controllerdevice = self.target
 
             kwargs = json.loads(argin)
             subarray_id = kwargs.get("subarray_id")
-            station_ids = kwargs.get("station_ids", list())
-            channels = kwargs.get("channels", list())
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
+            station_ids = kwargs.get("station_ids", list())
+            channel_blocks = kwargs.get("channel_blocks", list())
             controllerdevice = self.target
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
-            # Allocation request checks
             # Generate station FQDNs from IDs
-            stations = {}
-            for station_id in station_ids:
-                stations[station_id] = f"low-mccs/station/{station_id:03}"
-            station_fqdns = stations.values()
+            all_stations = {}
+            stations_per_beam = []
+            for station_sub_ids in station_ids:
+                station_sublist = []
+                for station_id in station_sub_ids:
+                    all_stations[station_id] = f"low-mccs/station/{station_id:03}"
+                    station_sublist.append(f"low-mccs/station/{station_id:03}")
+                stations_per_beam.append(station_sublist)
+            station_fqdns = all_stations.values()
             subarray_beams = {}
             for subarray_beam_id in subarray_beam_ids:
                 subarray_beams[
@@ -1214,9 +1189,9 @@ class MccsController(SKAMaster):
             if stations_to_assign is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources,
-                    stations=stations_to_assign,
+                    stations=stations_per_beam,
                     subarray_beams=subarray_beam_fqdns,
-                    channels=channels,
+                    channel_blocks=channel_blocks,
                 )
                 if result_code == ResultCode.FAILED:
                     return (
@@ -1233,6 +1208,15 @@ class MccsController(SKAMaster):
                     stations_to_assign, subarray_id
                 )
 
+            # assume all is OK for now ie send back what we received.
+            controllerdevice._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": subarray_beam_ids,
+                    "station_ids": station_ids,
+                    "channel_blocks": channel_blocks,
+                }
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:
@@ -1256,8 +1240,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device = self.target
             subarray_id = argin
@@ -1303,18 +1285,164 @@ class MccsController(SKAMaster):
             tango_raise("Allocate() is not allowed in current state")
         return True
 
+    def _disable_subarray(
+        self: MccsController, subarray_id: int, restart: bool
+    ) -> Tuple[ResultCode, str]:
+        """
+        Method to disable the specified subarray.
+
+        :param subarray_id: the subarray id
+        :param restart: was this calls due to a restart command?
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
+        subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
+        if restart:
+            (result_code, message) = subarray_device.Restart()
+            if result_code == ResultCode.FAILED:
+                return (ResultCode.FAILED, f"Subarray restart failed: {message}")
+        else:
+            # try:
+            (result_code, message) = subarray_device.ReleaseAllResources()
+            # except DevFailed:
+            # pass  # it probably has no resources to release
+            if result_code == ResultCode.FAILED:
+                return (
+                    ResultCode.FAILED,
+                    f"Subarray release all resources failed: {message}",
+                )
+        (result_code, message) = subarray_device.Off()
+        if result_code == ResultCode.FAILED:
+            return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
+        self._subarray_enabled[subarray_id - 1] = False
+        return (ResultCode.OK, "_disable_subarray was successful")
+
+    def _release_resources(
+        self: MccsController, argin: str, restart: bool = False
+    ) -> Tuple[ResultCode, str]:
+        """
+        Method that releases subarray resources.
+
+        :param argin: JON encoded subarray ID
+        :param restart: release resources due to a restart command
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        kwargs = json.loads(argin)
+        subarray_id = kwargs.get("subarray_id")
+        if subarray_id is None or not (1 <= subarray_id <= len(self._subarray_fqdns)):
+            return (
+                ResultCode.FAILED,
+                f"Subarray index '{subarray_id}' is out of range",
+            )
+
+        subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
+        if not self._subarray_enabled[subarray_id - 1]:
+            return (
+                ResultCode.FAILED,
+                f"Cannot release resources from disabled subarray {subarray_fqdn}",
+            )
+
+        # Query stations resouce manager for stations assigned to subarray
+        fqdns = self._stations_manager.get_assigned_fqdns(subarray_id)
+        # and clear the subarrayId in each
+        for fqdn in fqdns:
+            station = MccsDeviceProxy(fqdn, self.logger)
+            station.subarrayId = 0
+        # Finally release them from assignment in the manager
+        self._stations_manager.release(fqdns)
+
+        result = self._disable_subarray(subarray_id, restart)
+        if result[0] is not ResultCode.OK:
+            return (
+                result[0],
+                "_disable_subarray() release all or disable subarray failed",
+            )
+        return (ResultCode.OK, "Release resources completed OK")
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def Restart(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+        """
+        Restart an MCCS Sub-Array.
+
+        :param argin: JSON-formatted string containing an integer subarray_id.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self.notify_listener(ResultCode.UNKNOWN, "", "")
+        handler = self.get_command_object("Restart")
+        (result_code, status) = handler(argin)
+        self.notify_listener(result_code, "", status)
+        return [[result_code], [status]]
+
+    class RestartCommand(ResponseCommand):
+        """
+        Restart a sub-array's Capabilities and resources (stations),
+        marking the resources and Capabilities as unassigned and idle.
+        """
+
+        def do(
+            self: MccsController.RestartCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
+            """
+            Stateless do hook for the
+            :py:meth:`.MccsController.Restart` command
+
+            :param argin: JSON-formatted string containing an integer subarray_id
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            controller = self.target
+            return controller._release_resources(argin, restart=True)
+
+        def check_allowed(self: MccsController.RestartCommand) -> bool:
+            """
+            Whether this command is allowed to be run in current device
+            state.
+
+            :return: True if this command is allowed to be run in
+                current device state
+            """
+            return self.state_model.op_state == DevState.ON
+
+    def is_Restart_allowed(self: MccsController) -> bool:
+        """
+        Whether this command is allowed to be run in current device
+        state.
+
+        :return: True if this command is allowed to be run in
+            current device state
+        """
+        handler = self.get_command_object("Restart")
+        if not handler.check_allowed():
+            tango_raise("Restart() is not allowed in current state")
+        return True
+
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Release(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
         """
         Release resources from an MCCS Sub-Array.
 
         :param argin: JSON-formatted string containing an integer
-            subarray_id, a release all flag and array resources (TBD).
+            subarray_id, a release all flag and array resources.
+            {
+            "interface": "https://schema.skatelescope.org/ska-low-tmc-releaseresources/1.0",
+            "subarray_id": 1,
+            "release_all": true
+            }
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         self.notify_listener(ResultCode.UNKNOWN, "", "")
         handler = self.get_command_object("Release")
@@ -1327,15 +1455,6 @@ class MccsController(SKAMaster):
         Release a sub-array's Capabilities and resources (stations),
         marking the resources and Capabilities as unassigned and idle.
         """
-
-        SUCCEEDED_MESSAGE = "Release command completed OK"
-        SUCCEEDED_DISABLE_SUBARRAY_MESSAGE = "_disable_subarray was successful"
-        FAILED_RELEASE_ALL_OR_DISABLED_MESSAGE = (
-            "_disable_subarray() release all or disable subarray failed"
-        )
-        FAILED_PARTIAL_RELEASE_UNSUPPORTED_MESSAGE = (
-            "Release command failed - partial release currently unsupported"
-        )
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
@@ -1350,51 +1469,9 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            device = self.target
-            kwargs = json.loads(argin)
-            subarray_id = kwargs.get("subarray_id")
-            release_all = kwargs.get("release_all")
-            if subarray_id is None or not (
-                1 <= subarray_id <= len(device._subarray_fqdns)
-            ):
-                return (
-                    ResultCode.FAILED,
-                    f"Subarray index '{subarray_id}' is out of range",
-                )
-
-            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
-            if not device._subarray_enabled[subarray_id - 1]:
-                return (
-                    ResultCode.FAILED,
-                    f"Cannot release resources from disabled subarray {subarray_fqdn}",
-                )
-
-            if release_all:
-                # Query stations resouce manager for stations assigned to subarray
-                fqdns = self.target._stations_manager.get_assigned_fqdns(subarray_id)
-                # and clear the subarrayId in each
-                for fqdn in fqdns:
-                    station = MccsDeviceProxy(fqdn, self.logger)
-                    station.subarrayId = 0
-                # Finally release them from assignment in the manager
-                self.target._stations_manager.release(fqdns)
-
-                result = self._disable_subarray(subarray_id)
-                if result[0] is not ResultCode.OK:
-                    return (
-                        result[0],
-                        self.FAILED_RELEASE_ALL_OR_DISABLED_MESSAGE,
-                    )
-            else:
-                return (
-                    ResultCode.FAILED,
-                    self.FAILED_PARTIAL_RELEASE_UNSUPPORTED_MESSAGE,
-                )
-
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            controller = self.target
+            return controller._release_resources(argin)
 
         def check_allowed(self: MccsController.ReleaseCommand) -> bool:
             """
@@ -1405,36 +1482,6 @@ class MccsController(SKAMaster):
                 current device state
             """
             return self.state_model.op_state == DevState.ON
-
-        def _disable_subarray(
-            self: MccsController.ReleaseCommand, argin: int
-        ) -> Tuple[ResultCode, str]:
-            """
-            Method to disable the specified subarray.
-
-            :param argin: the subarray id
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device = self.target
-            subarray_id = argin
-
-            subarray_fqdn = device._subarray_fqdns[subarray_id - 1]
-            subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
-            # try:
-            (result_code, message) = subarray_device.ReleaseAllResources()
-            # except DevFailed:
-            # pass  # it probably has no resources to release
-
-            (result_code, message) = subarray_device.Off()
-            if result_code == ResultCode.FAILED:
-                return (ResultCode.FAILED, f"Subarray failed to turn off: {message}")
-            device._subarray_enabled[subarray_id - 1] = False
-            return (ResultCode.OK, self.SUCCEEDED_DISABLE_SUBARRAY_MESSAGE)
 
     def is_Release_allowed(self: MccsController) -> bool:
         """
@@ -1468,8 +1515,6 @@ class MccsController(SKAMaster):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1484,7 +1529,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Maintenance")
         (result_code, status) = handler()

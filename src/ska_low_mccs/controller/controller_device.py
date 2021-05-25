@@ -1176,6 +1176,9 @@ class MccsController(SKAMaster):
                     "channel_blocks": channel_blocks,
                 }
             )
+            controllerdevice.push_change_event(
+                "assignedResources", controllerdevice._assigned_resources
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:
@@ -1438,6 +1441,9 @@ class MccsController(SKAMaster):
                     "station_ids": [],
                     "channel_blocks": [],
                 }
+            )
+            controller.push_change_event(
+                "assignedResources", controller._assigned_resources
             )
             return (result_code, status)
 

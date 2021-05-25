@@ -297,9 +297,9 @@ class TestMccsSubarray:
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
                 subarray_id=1,
-                stations=[station_fqdns[0]],
+                stations=[[station_fqdns[0]]],
                 subarray_beams=[subarray_beam_fqdn],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                channel_blocks=[2],
             )
 
             assert result_code == ResultCode.OK
@@ -317,9 +317,9 @@ class TestMccsSubarray:
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
                 subarray_id=1,
-                stations=station_fqdns,
+                stations=[station_fqdns],
                 subarray_beams=[subarray_beam_fqdn],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
@@ -354,8 +354,9 @@ class TestMccsSubarray:
             device_under_test.On()
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
-                stations=station_fqdns,
+                stations=[station_fqdns, station_fqdns],
                 subarray_beams=subarray_beam_fqdns,
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
@@ -380,10 +381,9 @@ class TestMccsSubarray:
             # reassign
             call_with_json(
                 device_under_test.AssignResources,
-                subarray_id=1,
-                stations=[station_fqdns[1]],
+                stations=[[station_fqdns[1]]],
                 subarray_beams=[subarray_beam_fqdns[0]],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                channel_blocks=[2],
             )
             assert mock_subarray_beam_1.stationIds == [2]
 
@@ -420,10 +420,9 @@ class TestMccsSubarray:
 
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
-                subarray_id=1,
-                stations=[station_fqdns[0]],
+                stations=[[station_fqdns[0]]],
                 subarray_beams=[subarray_beam_fqdn],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                channel_blocks=[2],
             )
 
             assert result_code == ResultCode.OK
@@ -441,10 +440,9 @@ class TestMccsSubarray:
             device_under_test.On()
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
-                subarray_id=1,
-                stations=station_fqdns,
+                stations=[station_fqdns],
                 subarray_beams=[subarray_beam_fqdn],
-                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+                channel_blocks=[2],
             )
             assert result_code == ResultCode.OK
             assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
@@ -455,12 +453,13 @@ class TestMccsSubarray:
                 "stations": [{"station_id": 1}, {"station_id": 2}],
                 "subarray_beams": [
                     {
-                        "subarray_id": 1,
                         "subarray_beam_id": 1,
                         "station_ids": [1, 2],
                         "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                         "update_rate": 3.14,
                         "sky_coordinates": [1585619550.0, 192.0, 2.0, 27.0, 1.0],
+                        "antenna_weights": [1.0, 1.0, 1.0],
+                        "phase_centre": [0.0, 0.0],
                     }
                 ],
             }
@@ -499,9 +498,9 @@ class TestMccsSubarrayCommandClasses:
             op_state=DevState.ON, admin_mode=AdminMode.ONLINE, obs_state=ObsState.READY
         )
         mock = mocker.Mock()
-        mock._station_beam_pool_manager.scan.return_value = (None, "")
+        mock._subarray_beam_resource_manager.scan.return_value = (None, "")
         scan_command = MccsSubarray.ScanCommand(mock, subarray_state_model)
-        scan_args = {"id": 1, "scan_time": 4}
+        scan_args = {"scan_id": 1, "scan_time": 4}
         json_str = json.dumps(scan_args)
         (result_code, message) = scan_command(json_str)
         assert result_code == ResultCode.STARTED
@@ -510,7 +509,7 @@ class TestMccsSubarrayCommandClasses:
         mock.reset_mock()
         failure_code = ResultCode.FAILED
         failure_message = "failure path unit test"
-        mock._station_beam_pool_manager.scan.return_value = (
+        mock._subarray_beam_resource_manager.scan.return_value = (
             failure_code,
             failure_message,
         )

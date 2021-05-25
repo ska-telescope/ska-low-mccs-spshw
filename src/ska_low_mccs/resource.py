@@ -188,7 +188,7 @@ class Resource:
         assert fqdn == self._fqdn
         if not isinstance(event_value, int):
             raise Exception(
-                f"invalid healthstate change: {self._health_state} -> {event_value}"
+                f"{fqdn}: invalid healthstate change: {self._health_state} -> {event_value}"
             )
         self._health_state = event_value
 

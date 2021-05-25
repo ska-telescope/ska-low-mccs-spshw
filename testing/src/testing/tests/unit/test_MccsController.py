@@ -97,7 +97,7 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "controller",
-        "proxy": tango.DeviceProxy,
+        "proxy": MccsDeviceProxy,
         "patch": ControllerWithFailableDevices,
     }
 
@@ -443,17 +443,11 @@ class TestMccsController(HelperClass):
             mock_station_factory = MockDeviceBuilder(mock_factory)
             mock_station_factory.add_attribute("subarrayId", 0)
 
-            mock_stationbeam_factory = MockDeviceBuilder(mock_factory)
-
             return {
                 "low-mccs/subarray/01": mock_subarray_factory(),
                 "low-mccs/subarray/02": mock_subarray_factory(),
                 "low-mccs/station/001": mock_station_factory(),
                 "low-mccs/station/002": mock_station_factory(),
-                "low-mccs/beam/001": mock_stationbeam_factory(),
-                "low-mccs/beam/002": mock_stationbeam_factory(),
-                "low-mccs/beam/003": mock_stationbeam_factory(),
-                "low-mccs/beam/004": mock_stationbeam_factory(),
             }
 
         def setup_allocate_test(
@@ -707,11 +701,10 @@ class TestMccsController(HelperClass):
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
+                station_ids=[1],
                 subarray_beam_ids=[1],
-                station_ids=[[1]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -736,11 +729,9 @@ class TestMccsController(HelperClass):
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "respond_to_fqdn": "low-mccs/control/control",
-                        "callback": "AssignResourcesCallback",
-                        "stations": [["low-mccs/station/001"]],
+                        "stations": ["low-mccs/station/001"],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
-                        "channel_blocks": [2],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     }
                 )
             )
@@ -759,9 +750,9 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
+                station_ids=[1],
                 subarray_beam_ids=[1],
-                station_ids=[[1]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -803,9 +794,9 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
+                station_ids=[1, 2],
                 subarray_beam_ids=[1],
-                station_ids=[[1, 2]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -831,11 +822,9 @@ class TestMccsController(HelperClass):
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "respond_to_fqdn": "low-mccs/control/control",
-                        "callback": "AssignResourcesCallback",
-                        "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                        "stations": ["low-mccs/station/002"],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
-                        "channel_blocks": [2],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     }
                 )
             )
@@ -857,9 +846,9 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
+                station_ids=[2],
                 subarray_beam_ids=[1],
-                station_ids=[[2]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -919,9 +908,9 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
+                station_ids=[1, 2],
                 subarray_beam_ids=[1],
-                station_ids=[[1, 2]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -950,11 +939,9 @@ class TestMccsController(HelperClass):
             mock_subarray_2.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "respond_to_fqdn": "low-mccs/control/control",
-                        "callback": "AssignResourcesCallback",
-                        "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                        "stations": ["low-mccs/station/001", "low-mccs/station/002"],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
-                        "channel_blocks": [2],
+                        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                     }
                 )
             )
@@ -1005,9 +992,9 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
+                station_ids=[1],
                 subarray_beam_ids=[1],
-                station_ids=[[1]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -1038,9 +1025,9 @@ class TestMccsController(HelperClass):
                 controller.Allocate,
                 interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
+                station_ids=[2],
                 subarray_beam_ids=[2],
-                station_ids=[[2]],
-                channel_blocks=[2],
+                channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
             )
             assert result_code == ResultCode.QUEUED
             assert message
@@ -1281,11 +1268,9 @@ class TestMccsController(HelperClass):
             health_state=HealthState.FAILED,
         )
         assert device_under_test.healthState == HealthState.FAILED
-
-    #        mock_event_callback.assert_not_called()
-    #         mock_event_callback.check_event_data(
-    #             name="healthState", result=device_under_test.healthState
-    #         )
+        mock_event_callback.check_event_data(
+            name="healthState", result=device_under_test.healthState
+        )
 
     def test_controlMode(self, device_under_test):
         """

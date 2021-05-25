@@ -19,8 +19,6 @@ from typing import Any, List, Optional, Tuple, Dict
 # PyTango imports
 from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
-from tango.device_proxy import __init_device_proxy_internals as init_device_proxy
-from tango import DeviceProxy
 
 # Additional import
 from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
@@ -159,7 +157,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
     def __init__(
         self: SubarrayBeamsResourceManager,
         health_monitor: HealthMonitor,
-        subarray_beam_fqdns: List[str],
+        subarray_beam_fqdns: list[str],
         stations_manager: StationsResourceManager,
         logger: logging.Logger,
     ) -> None:
@@ -186,7 +184,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
             [HealthState.OK],
         )
 
-    def __len__(self) -> int:
+    def __len__(self: SubarrayBeamsResourceManager) -> int:
         """
         Return the number of stations assigned to this subarray resource
         manager.
@@ -197,8 +195,8 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def assign(
         self: SubarrayBeamsResourceManager,
-        subarray_beam_fqdns: List[str],
-        station_fqdns: list[List[str]],
+        subarray_beam_fqdns: list[str],
+        station_fqdns: list[list[str]],
     ) -> None:
         """
         Assign devices to this subarray resource manager.
@@ -239,7 +237,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def configure(
         self: SubarrayBeamsResourceManager, logger: logging.Logger, argin: str
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Configure devices from this subarray resource manager.
 
@@ -282,12 +280,12 @@ class SubarrayBeamsResourceManager(ResourceManager):
                     dp.configure(json_str)
 
         result_code = ResultCode.OK
-        message = MccsSubarray.ConfigureCommand.SUCCEEDED_MESSAGE
+        message = "Configure command completed OK"
         return (result_code, message)
 
     def scan(
         self: SubarrayBeamsResourceManager, logger: logging.Logger, argin: str
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Start a scan on the configured subarray resources.
 
@@ -315,8 +313,8 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def release(
         self: SubarrayBeamsResourceManager,
-        subarray_beam_fqdns: List[str],
-        station_fqdns: List[str],
+        subarray_beam_fqdns: list[str],
+        station_fqdns: list[str],
     ) -> None:
         """
         Release devices from this subarray resource manager.
@@ -353,22 +351,13 @@ class SubarrayBeamsResourceManager(ResourceManager):
         self._stations.release_all()
 
     @property
-    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> List[str]:
+    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> list[str]:
         """
         Returns the FQDNs of currently assigned subarray_beams.
 
         :return: FQDNs of currently assigned subarray_beams
         """
         return sorted(self.get_all_fqdns())
-
-    @property
-    def station_fqdns(self) -> List[str]:
-        """
-        Returns the FQDNs of currently assigned stations.
-
-        :return: FQDNs of currently assigned stations
-        """
-        return sorted(self._stations.values())
 
 
 class MccsController(SKAMaster):
@@ -588,8 +577,7 @@ class MccsController(SKAMaster):
             :param device: the device for which power management is
                 being initialised
             """
-
-        #             device.device_pool.connect()
+            device.device_pool.connect()
 
         def _initialise_health_monitoring(
             self: MccsController.InitCommand, device: SKABaseDevice, fqdns: list[str]
@@ -816,7 +804,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.StartupCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Startup` command.
@@ -973,7 +961,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.CallbackCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Callback` command.
@@ -1813,7 +1801,7 @@ class MccsController(SKAMaster):
 
     def _disable_subarray(
         self: MccsController, subarray_id: int, restart: bool
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Method to disable the specified subarray.
 
@@ -1850,7 +1838,7 @@ class MccsController(SKAMaster):
 
     def _release_resources(
         self: MccsController, argin: str, restart: bool = False
-    ) -> Tuple[ResultCode, str]:
+    ) -> tuple[ResultCode, str]:
         """
         Method that releases subarray resources.
 
@@ -1915,7 +1903,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.RestartCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Restart` command.
 
@@ -1989,7 +1977,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
-        ) -> Tuple[ResultCode, str]:
+        ) -> tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Release` command.
 

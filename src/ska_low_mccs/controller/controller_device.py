@@ -1430,7 +1430,16 @@ class MccsController(SKAMaster):
                 information purpose only.
             """
             controller = self.target
-            return controller._release_resources(argin)
+            (result_code, status) = controller._release_resources(argin)
+            controller._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": [],
+                    "station_ids": [],
+                    "channel_blocks": [],
+                }
+            )
+            return (result_code, status)
 
         def check_allowed(self: MccsController.ReleaseCommand) -> bool:
             """

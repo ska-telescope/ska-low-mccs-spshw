@@ -49,9 +49,12 @@ class SubarrayBeamsResourceManager(ResourceManager):
     Inherits from ResourceManager.
     """
 
-    def __init__(self: SubarrayBeamsResourceManager, health_monitor: HealthMonitor,
-    subarray_beam_fqdns: List[str],
-    logger: logging.Logger, ) -> None:
+    def __init__(
+        self: SubarrayBeamsResourceManager,
+        health_monitor: HealthMonitor,
+        subarray_beam_fqdns: List[str],
+        logger: logging.Logger,
+    ) -> None:
         """
         Initialise a new SubarrayBeamsResourceManager.
 

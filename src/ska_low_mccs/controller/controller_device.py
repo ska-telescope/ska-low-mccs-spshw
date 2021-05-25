@@ -1416,7 +1416,6 @@ class MccsController(SKAMaster):
             controller = self.target
             return controller._release_resources(argin, restart=True)
 
-
     def is_Restart_allowed(self: MccsController) -> bool:
         """
         Whether this command is allowed to be run in current device

@@ -192,11 +192,14 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
     """
     # Call the specified command synchronously
+    print(f"RCL: command_inout({command}, {argin})")
     result = device.command_inout(command, argin)
+    print(f"RCL: result = {result}")
     if expected_result is None:
         assert result is None
     else:
         ((result_code,), _) = result
+        print(f"RCL: result = {result_code}, expected = {expected_result}")
         assert result_code == expected_result
 
 
@@ -273,7 +276,8 @@ def component_is_ready_to_receive_a_startup_command(
     :type direction: str
     """
     if component_name == "mccs":
-        assert controller.state() == DevState.DISABLE
+        allowed_states = [DevState.DISABLE, DevState.OFF, DevState.ON]
+        assert controller.state() in allowed_states
     elif component_name == "tmc":
         pass
     else:
@@ -342,11 +346,16 @@ def check_mccs_controller_state(controller, device_state):
         "on"
     :type device_state: str
     """
-    state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
+    state_map = {
+        "off": [DevState.OFF, DevState.FAULT],
+        "on": [DevState.ON, DevState.ALARM, DevState.FAULT],
+    }
     count = 0.0
     while not controller.State() in state_map[device_state] and count < 3.0:
         count += 0.1
         time.sleep(0.1)
+    state_map["off"] = [DevState.OFF]
+    state_map["on"] = [DevState.ON, DevState.ALARM]
     assert controller.State() in state_map[device_state]
 
 
@@ -385,8 +394,22 @@ def check_reset_state(controller, subarrays, stations):
     assert subarrays[2].stationFQDNs is None
     assert stations[1].State() == DevState.OFF
     assert stations[2].State() == DevState.OFF
+    #assert stations[1].subarrayId == 0
+    #assert stations[2].subarrayId == 0
+
+    timeout = 0.0
+    while not stations[1].subarrayId == 0 and timeout < 10.0:
+        timeout += 0.1
+        time.sleep(0.1)
     assert stations[1].subarrayId == 0
+    assert timeout < 10.0
+
+    timeout = 0.0
+    while not stations[2].subarrayId == 0 and timeout < 10.0:
+        timeout += 0.1
+        time.sleep(0.1)
     assert stations[2].subarrayId == 0
+    assert timeout < 10.0
 
 
 @scenario("features/controller_subarray_interactions.feature", "MCCS Allocate subarray")
@@ -428,13 +451,17 @@ def component_is_ready_to_action_a_subarray(
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     if component_name == "mccs":
+        print("RCL: Where does this come out?")
         tmc_tells_mccs_controller_to_start_up(controller)
+        print("RCL: 123")
         check_mccs_controller_state(controller, "on")
+        print("RCL: 234")
         assert subarrays[1].State() == DevState.OFF
         assert subarrays[2].State() == DevState.OFF
         assert stations[1].subarrayId == 0
         assert stations[2].subarrayId == 0
     elif component_name == "tmc":
+        print("RCL: 345")
         pass
     else:
         assert False
@@ -459,12 +486,14 @@ def subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate):
 
 
 @when(parsers.parse("tmc allocates a subarray with {validity} parameters"))
-def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
+def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, validity):
     """
     TMC allocates a subarray.
 
     :param controller: a proxy to the controller device
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
+    :param subarrays: TODO
+    :type subarrays: TODO
     :param validity: whether the allocate has valid|invalid parameters
     :type validity: str
     """
@@ -474,19 +503,29 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
         "channel_blocks": [2],
         "subarray_beam_ids": [1],
     }
-    expected_result = ResultCode.OK
+    expected_result = ResultCode.QUEUED
 
     if validity == "invalid":
         parameters["subarray_id"] = 3
         expected_result = ResultCode.FAILED
 
     json_string = json.dumps(parameters)
+    print("RCL: Pre allocate command")
     assert_command(
         device=controller,
         command="Allocate",
         argin=json_string,
         expected_result=expected_result,
     )
+    print("RCL: Post allocate command")
+
+    # We need to wait until the subarray is in IDLE state
+    timeout = 0.0
+    while not subarrays[1].obsstate == ObsState.IDLE and timeout < 10.0:
+        timeout += 0.1
+        time.sleep(0.1)
+    assert subarrays[1].obsstate == ObsState.IDLE
+    assert timeout < 10.0
 
 
 @then(parsers.parse("the stations have the correct subarray id"))
@@ -497,8 +536,23 @@ def the_stations_have_the_correct_subarray_id(stations):
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
+    # We need to wait until the subarray is in IDLE state
+    timeout = 0.0
+    while not stations[1].subarrayId == 1 and timeout < 10.0:
+        timeout += 0.1
+        time.sleep(0.1)
     assert stations[1].subarrayId == 1
+    assert timeout < 10.0
+
+    timeout = 0.0
+    while not stations[2].subarrayId == 1 and timeout < 10.0:
+        timeout += 0.1
+        time.sleep(0.1)
     assert stations[2].subarrayId == 1
+    assert timeout < 10.0
+
+    #assert stations[1].subarrayId == 1
+    #assert stations[2].subarrayId == 1
 
 
 @then(parsers.parse("subarray state is on"))
@@ -637,7 +691,8 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
         "mccs", "allocate", controller, subarrays, stations
     )
     subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate)
-    tmc_allocates_a_subarray_with_validity_parameters(controller, "valid")
+    tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, "valid")
+
     if desired_state == "configured" or desired_state == "scanning":
         configure_subarray(subarrays)
         the_subarray_obsstate_is(subarrays, "ready")

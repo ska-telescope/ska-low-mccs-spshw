@@ -4,6 +4,7 @@ particularly tango devices.
 """
 
 import pytest
+import json
 from time import sleep
 from tango import DevState
 
@@ -67,6 +68,31 @@ class TestMccsIntegration:
                 sleep(0.1)
             assert device.State() == state
 
+    # TODO: Move this into shared fixture
+    def wait_for_command_to_complete(
+        self, controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+    ):
+        """
+        Wait for the controller command to complete
+
+        :param controller: The controller device
+        :type controller: DeviceProxy
+        :param expected_result: The expected results
+        :type expected_result: ResultCode
+        :param timeout_limit: The maximum timeout allowed for a command to complete
+        :type timeout_limit: float
+        """
+        timeout = 0.0
+        busy = True
+        while busy:
+            result = json.loads(controller.commandResult)
+            timeout += 0.5
+            sleep(0.5)
+            if result.get("result_code") == expected_result or timeout > timeout_limit:
+                busy = False
+        assert result.get("result_code") == expected_result
+        assert timeout <= timeout_limit
+
     def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
         """
         Test that an MccsController device can allocate resources to an
@@ -106,15 +132,20 @@ class TestMccsIntegration:
         }
         self.check_states(dev_states)
 
+        print("RCL: About to call controller.Allocate...")
         # allocate station_1 to subarray_1
-        ((result_code,), (message,)) = call_with_json(
+        ((result_code,), (message, message_uid)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        assert result_code == ResultCode.OK
+        print("RCL: Do we get this far? 1")
+        assert result_code == ResultCode.QUEUED
+        assert message
+        self.wait_for_command_to_complete(controller)
+        print("RCL: Do we get this far? 2")
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
@@ -128,14 +159,17 @@ class TestMccsIntegration:
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
-        ((result_code,), (_,)) = call_with_json(
+        ((result_code,), (message, message_uid)) = call_with_json(
             controller.Allocate,
             subarray_id=2,
             station_ids=[[1]],
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        assert result_code == ResultCode.FAILED
+        assert result_code == ResultCode.QUEUED
+        assert message
+        assert ":Allocate" in message_uid
+        self.wait_for_command_to_complete(controller, expected_result=ResultCode.FAILED)
 
         # check no side-effects
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
@@ -152,14 +186,16 @@ class TestMccsIntegration:
         # subarray, BUT we must remember that the subarray cannot reallocate
         # the same subarray_beam.
         # ToDo This will change when subarray_beam is not a list.
-        ((result_code,), (message,)) = call_with_json(
+        ((result_code,), (message, message_uid)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1, 2]],
             subarray_beam_ids=[2],
             channel_blocks=[2],
         )
-        assert result_code == ResultCode.OK
+        assert result_code == ResultCode.QUEUED
+        assert ":Allocate" in message_uid
+        self.wait_for_command_to_complete(controller)
 
         # check
         assert list(subarray_1.stationFQDNs) == [
@@ -204,22 +240,28 @@ class TestMccsIntegration:
         self.check_states(dev_states)
 
         # allocate stations 1 to subarray 1
-        call_with_json(
+        ((result_code,), (message, message_uid)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
+        assert result_code == ResultCode.QUEUED
+        assert ":Allocate" in message_uid
+        self.wait_for_command_to_complete(controller)
 
         # allocate station 2 to subarray 2
-        call_with_json(
+        ((result_code,), (message, message_uid)) = call_with_json(
             controller.Allocate,
             subarray_id=2,
             station_ids=[[2]],
             subarray_beam_ids=[2],
             channel_blocks=[2],
         )
+        assert result_code == ResultCode.QUEUED
+        assert ":Allocate" in message_uid
+        self.wait_for_command_to_complete(controller)
 
         # check initial state
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]

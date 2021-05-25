@@ -988,12 +988,14 @@ class MccsController(SKAMaster):
             return (result_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Allocate(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def Allocate(self: MccsController, argin: str) -> Tuple[ResultCode, [str, str]]:
         """
         Allocate a set of unallocated MCCS resources to a sub-array. The
         JSON argument specifies the overall sub-array composition in
         terms of which stations should be allocated to the specified
         Sub-Array.
+
+        Method returns as soon as the message has been enqueued.
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
@@ -1017,11 +1019,21 @@ class MccsController(SKAMaster):
                 )
             )
         """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
-        handler = self.get_command_object("Allocate")
-        (result_code, status) = handler(argin)
-        self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        if self._command_result.get("result_code") in [
+            ResultCode.STARTED,
+            ResultCode.QUEUED,
+        ]:
+            return [
+                [ResultCode.FAILED],
+                ["A controller command is already in progress", None],
+            ]
+        else:
+            self.notify_listener(ResultCode.UNKNOWN, "", "")
+            self.logger.debug("send_message(Allocate)")
+            (result_code, message_uid, status) = self._message_queue.send_message(
+                command="Allocate", json_args=argin, notifications=True
+            )
+            return [[result_code], [status, message_uid]]
 
     class AllocateCommand(ResponseCommand):
         """
@@ -1074,6 +1086,7 @@ class MccsController(SKAMaster):
             channel_blocks = kwargs.get("channel_blocks", list())
             controllerdevice = self.target
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
+            print(f"RCL: Allocate args parsed OK - {subarray_id}, {station_ids}, {subarray_beam_ids}")
 
             # Generate station FQDNs from IDs
             all_stations = {}
@@ -1086,14 +1099,18 @@ class MccsController(SKAMaster):
                 stations_per_beam.append(station_sublist)
             station_fqdns = all_stations.values()
             subarray_beams = {}
+            print(f"RCL: station_fqdns = {station_fqdns}")
+
             for subarray_beam_id in subarray_beam_ids:
                 subarray_beams[
                     subarray_beam_id
                 ] = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
             subarray_beam_fqdns = sorted(subarray_beams.values())
+            print(f"RCL: subarray_beam_fqdns = {subarray_beam_fqdns}")
 
             # Generate subarray FQDN from ID
             subarray_fqdn = controllerdevice._subarray_fqdns[subarray_id - 1]
+            print(f"RCL: subarray_fqdn = {subarray_fqdn}")
 
             # Query stations resource manager
             # Are we allowed to make this allocation?
@@ -1105,23 +1122,39 @@ class MccsController(SKAMaster):
             ) = controllerdevice._stations_manager.query_allocation(
                 station_fqdns, subarray_id
             )
+            print(f"RCL: alloc_allowed = {alloc_allowed}")
+            message_uid = controllerdevice._command_result.get("message_uid")
+
             if not alloc_allowed:
                 # If manager returns False (not allowed) stations_to_release
                 # gives the list of FQDNs blocking the allocation.
                 aalist = ", ".join(stations_to_release)
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
+                )
                 return (
                     ResultCode.FAILED,
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
                 )
 
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
+            print(f"RCL: subarray_device = {subarray_device}")
 
             # Manager gave this list of stations to release (no longer required)
             if stations_to_release is not None:
+                print("RCL: stations_to_release")
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
                 )
                 if result_code == ResultCode.FAILED:
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED,
+                        message_uid,
+                        f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{message}",
+                    )
                     return (
                         ResultCode.FAILED,
                         f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
@@ -1136,9 +1169,16 @@ class MccsController(SKAMaster):
 
             # Enable the subarray specified by the caller (if required)
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                print(f"RCL: _enable_subarray({subarray_id})")
                 self._enable_subarray(subarray_id)
 
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                print("RCL: Subarray not enabled")
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
+                )
                 return (
                     ResultCode.FAILED,
                     f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
@@ -1146,27 +1186,40 @@ class MccsController(SKAMaster):
 
             # Manager gave this list of stations to assign
             if stations_to_assign is not None:
+                print("RCL: Calling subarray AssignResources...")
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources,
                     stations=stations_per_beam,
                     subarray_beams=subarray_beam_fqdns,
                     channel_blocks=channel_blocks,
                 )
+                print(f"RCL: result_code={result_code}, message={message}")
                 if result_code == ResultCode.FAILED:
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED,
+                        message_uid,
+                        f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{message}",
+                    )
                     return (
                         ResultCode.FAILED,
                         f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
                         f"{message}",
                     )
+                print(f"RCL: No error {stations_to_assign}")
                 for fqdn in stations_to_assign:
+                    print(f"RCL: fqdn={fqdn}")
                     device = MccsDeviceProxy(fqdn, self.logger)
+                    print(f"RCL: device={device}, subarray_id={subarray_id}")
                     device.subarrayId = subarray_id
 
+                print("RCL: Inform station manager!")
                 # Inform manager that we made the assignments
                 controllerdevice._stations_manager.assign(
                     stations_to_assign, subarray_id
                 )
 
+            print("RCL: set the _assigned_resources attribute!")
             # assume all is OK for now ie send back what we received.
             controllerdevice._assigned_resources = json.dumps(
                 {
@@ -1176,6 +1229,13 @@ class MccsController(SKAMaster):
                     "channel_blocks": channel_blocks,
                 }
             )
+            print(f"RCL: _assigned_resources = {controllerdevice._assigned_resources}")
+            controllerdevice.notify_listener(
+                ResultCode.OK,
+                message_uid,
+                self.SUCCEEDED_MESSAGE,
+            )
+            print("RCL: ResultCode.OK!")
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:

@@ -418,6 +418,31 @@ class TestMccsController:
                 "low-mccs/station/002": mock_station_factory(),
             }
 
+        # TODO: Move this into shared fixture
+        def wait_for_command_to_complete(
+            self, controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+        ):
+            """
+            Wait for the controller command to complete
+
+            :param controller: The controller device
+            :type controller: DeviceProxy
+            :param expected_result: The expected results
+            :type expected_result: ResultCode
+            :param timeout_limit: The maximum timeout allowed for a command to complete
+            :type timeout_limit: float
+            """
+            timeout = 0.0
+            busy = True
+            while busy:
+                result = json.loads(controller.commandResult)
+                timeout += 0.5
+                sleep(0.5)
+                if result.get("result_code") == expected_result or timeout > timeout_limit:
+                    busy = False
+            assert result.get("result_code") == expected_result
+            assert timeout <= timeout_limit
+
         def test_Allocate(self, device_under_test, mock_event_callback, logger):
             """
             Test the Allocate command (including end of command event
@@ -473,7 +498,7 @@ class TestMccsController:
             mock_event_callback.check_event_data(name="commandResult", result=None)
 
             # Make the call to allocate
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -481,8 +506,13 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(name="commandResult", result=None)
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.STARTED
+            )
+            self.wait_for_command_to_complete(controller)
 
             # check that the mock subarray_1 was told to assign that resource
             mock_subarray_1.On.assert_called_once_with()
@@ -507,7 +537,7 @@ class TestMccsController:
 
             # allocating station_1 to subarray 2 should fail, because it is already
             # allocated to subarray 1
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
@@ -515,8 +545,13 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.FAILED
-            mock_event_callback.check_command_result(name="commandResult", result=None)
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.STARTED
+            )
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.FAILED)
 
             # check no side-effects
             mock_subarray_1.On.assert_not_called()
@@ -538,7 +573,7 @@ class TestMccsController:
                 (ResultCode.OK, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
             )
 
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -546,8 +581,13 @@ class TestMccsController:
                 station_ids=[[1, 2]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(name="commandResult", result=None)
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.STARTED
+            )
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -572,7 +612,7 @@ class TestMccsController:
 
             # allocating station 2 to subarray 1 should succeed, because
             # it only requires resource release
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -580,10 +620,13 @@ class TestMccsController:
                 station_ids=[[2]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(
-                name="commandResult", result=result_code
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.STARTED
             )
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -627,7 +670,7 @@ class TestMccsController:
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
 
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
@@ -635,10 +678,13 @@ class TestMccsController:
                 station_ids=[[1, 2]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(
-                name="commandResult", result=result_code
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.STARTED
             )
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
 
             # check
             mock_subarray_1.On.assert_not_called()

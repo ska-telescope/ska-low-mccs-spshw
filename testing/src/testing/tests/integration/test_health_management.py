@@ -18,6 +18,7 @@ import json
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
+from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
@@ -273,13 +274,43 @@ def test_subarray_health_rollup(tango_harness):
     assert subarray_1.healthState == HealthState.OK
     assert subarray_2.healthState == HealthState.OK
 
-    _ = call_with_json(
+    [result_code], [status, message_uid] = call_with_json(
         controller.Allocate,
         subarray_id=1,
         station_ids=[[1]],
         subarray_beam_ids=[1],
         channel_blocks=[2],
     )
+    assert result_code == ResultCode.QUEUED
+    assert not status == ""
+    assert ":Allocate" in message_uid
+
+    # TODO: Move this into shared fixture
+    def wait_for_command_to_complete(
+        controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+    ):
+        """
+        Wait for the controller command to complete
+
+        :param controller: The controller device
+        :type controller: DeviceProxy
+        :param expected_result: The expected results
+        :type expected_result: ResultCode
+        :param timeout_limit: The maximum timeout allowed for a command to complete
+        :type timeout_limit: float
+        """
+        timeout = 0.0
+        busy = True
+        while busy:
+            result = json.loads(controller.commandResult)
+            timeout += 0.5
+            time.sleep(0.5)
+            if result.get("result_code") == expected_result or timeout > timeout_limit:
+                busy = False
+        assert result.get("result_code") == expected_result
+        assert timeout <= timeout_limit
+
+    wait_for_command_to_complete(controller)
     _ = call_with_json(
         controller.Allocate,
         subarray_id=2,
@@ -287,8 +318,7 @@ def test_subarray_health_rollup(tango_harness):
         subarray_beam_ids=[2],
         channel_blocks=[2],
     )
-
-    sleep()
+    wait_for_command_to_complete(controller)
 
     assert subarray_1.healthState == HealthState.OK
     assert subarray_2.healthState == HealthState.OK

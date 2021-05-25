@@ -144,6 +144,31 @@ class TestMccsIntegrationTmc:
                 sleep(0.1)
             assert devices[device].State() == state
 
+    # TODO: Move this into shared fixture
+    def wait_for_command_to_complete(
+        self, controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+    ):
+        """
+        Wait for the controller command to complete
+
+        :param controller: The controller device
+        :type controller: DeviceProxy
+        :param expected_result: The expected results
+        :type expected_result: ResultCode
+        :param timeout_limit: The maximum timeout allowed for a command to complete
+        :type timeout_limit: float
+        """
+        timeout = 0.0
+        busy = True
+        while busy:
+            result = json.loads(controller.commandResult)
+            timeout += 0.5
+            sleep(0.5)
+            if result.get("result_code") == expected_result or timeout > timeout_limit:
+                busy = False
+        assert result.get("result_code") == expected_result
+        assert timeout <= timeout_limit
+
     def test_controller_on(self, devices):
         """
         Test that an asynchronous call to controller:On() works
@@ -238,6 +263,8 @@ class TestMccsIntegrationTmc:
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
+        devices["subarraybeam_01"].isBeamLocked = True
+
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
@@ -245,11 +272,15 @@ class TestMccsIntegrationTmc:
             "channel_blocks": [2],
             "subarray_beam_ids": [1],
         }
-        devices["subarraybeam_01"].isBeamLocked = True
         json_string = json.dumps(parameters)
         self.assert_command(
-            device=devices["controller"], command="Allocate", argin=json_string
+            device=devices["controller"],
+            command="Allocate",
+            argin=json_string,
+            expected_result=ResultCode.QUEUED,
         )
+        self.wait_for_command_to_complete(devices["controller"])
+
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].State() == DevState.ON
@@ -308,8 +339,13 @@ class TestMccsIntegrationTmc:
         }
         json_string = json.dumps(parameters)
         self.assert_command(
-            device=devices["controller"], command="Allocate", argin=json_string
+            device=devices["controller"],
+            command="Allocate",
+            argin=json_string,
+            expected_result=ResultCode.QUEUED,
         )
+        self.wait_for_command_to_complete(devices["controller"])
+
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].State() == DevState.ON

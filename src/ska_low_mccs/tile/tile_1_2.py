@@ -21,7 +21,6 @@ import struct
 import numpy as np
 import time
 
-from future.utils import iteritems
 from pyfabil.base.definitions import Device, LibraryError, BoardError, Status
 from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm import TPM
@@ -1893,10 +1892,9 @@ class Tile12(object):
     @connected
     def stop_data_transmission(self):
         """
-        Stop data transmission for send_channelised_data_continuous.
+        Stop all data transmission from TPM.
         """
-        logging.info("Stopping all transmission")
-        for k, v in iteritems(self._daq_threads):
+        for k, v in self._daq_threads.items():
             if v == self._RUNNING:
                 self._daq_threads[k] = self._STOP
         self.stop_channelised_data_continuous()

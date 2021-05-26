@@ -1050,9 +1050,8 @@ class TestMccsTileCommands(HelperClass):
         Test for.
 
         * Configure40GCore command
-        * fortyGDestinationIps attribute
-        * fortyGDestinationMacs attribute
-        * fortyGDestinationPorts attribute
+        * fortyGBDestinationIps attribute
+        * fortyGBDestinationPorts attribute
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -1066,20 +1065,21 @@ class TestMccsTileCommands(HelperClass):
 
         config_1 = {
             "CoreID": 1,
+            "ArpTableEntry": 0,
             "SrcMac": "10:fe:ed:08:0a:58",
             "SrcIP": "10.0.99.3",
             "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:59",
             "DstIP": "10.0.98.3",
             "DstPort": 5000,
         }
         device_under_test.Configure40GCore(json.dumps(config_1))
+
         config_2 = {
             "CoreID": 2,
+            "ArpTableEntry": 1,
             "SrcMac": "10:fe:ed:08:0a:56",
             "SrcIP": "10.0.99.4",
             "SrcPort": 4001,
-            "DstMac": "10:fe:ed:08:0b:57",
             "DstIP": "10.0.98.4",
             "DstPort": 5001,
         }
@@ -1089,18 +1089,26 @@ class TestMccsTileCommands(HelperClass):
             "10.0.98.3",
             "10.0.98.4",
         )
-        assert tuple(device_under_test.fortyGbDestinationMacs) == (
-            "10:fe:ed:08:0b:59",
-            "10:fe:ed:08:0b:57",
-        )
         assert tuple(device_under_test.fortyGbDestinationPorts) == (5000, 5001)
 
-        result_str = device_under_test.Get40GCoreConfiguration(1)
+        arg = {
+            "CoreID": 1,
+            "ArpTableEntry": 0,
+        }
+        json_arg = json.dumps(arg)
+        result_str = device_under_test.Get40GCoreConfiguration(json_arg)
         result = json.loads(result_str)
-        assert result == config_1.pop("CoreID")
+        assert result["CoreID"] == config_1.pop("CoreID")
 
-        with pytest.raises(DevFailed, match="Invalid core id specified"):
-            _ = device_under_test.Get40GCoreConfiguration(3)
+        arg = {
+            "CoreID": 3,
+            "ArpTableEntry": 0,
+        }
+        json_arg = json.dumps(arg)
+        with pytest.raises(
+            DevFailed, match="Invalid core id or arp table id specified"
+        ):
+            _ = device_under_test.Get40GCoreConfiguration(json_arg)
 
     @pytest.mark.parametrize("channels", (2, 3))
     @pytest.mark.parametrize("frequencies", (1, 2, 3))

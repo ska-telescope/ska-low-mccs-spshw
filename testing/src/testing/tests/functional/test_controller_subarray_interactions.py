@@ -192,7 +192,10 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
     """
     # Call the specified command synchronously
-    result = device.command_inout(command, argin)
+    if argin:
+        result = device.command_inout(command, argin)
+    else:
+        result = device.command_inout(command)
     if expected_result is None:
         assert result is None
     else:
@@ -203,7 +206,9 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
 @scenario(
     "features/controller_subarray_interactions.feature", "MCCS Start up low telescope"
 )
-def test_start_up_low_telescope(controller, subarrays, stations):
+def test_start_up_low_telescope(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -213,8 +218,13 @@ def test_start_up_low_telescope(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    assert_command(device=controller, command="Off")
+    command_helper.device_command(controller, "Off", test_string)
+    command_helper.check_device_state(controller, DevState.OFF)
     check_mccs_controller_state(controller, "off")
     check_reset_state(controller, subarrays, stations)
 
@@ -307,7 +317,9 @@ def tmc_tells_mccs_controller_to_start_up(controller):
 
 
 @when(parsers.parse("tmc turns mccs controller {device_state}"))
-def tmc_turns_mccs_controller_onoff(controller, device_state):
+def tmc_turns_mccs_controller_onoff(
+    controller, device_state, command_helper, test_string
+):
     """
     Turn the mccs controller device off/on.
 
@@ -315,6 +327,10 @@ def tmc_turns_mccs_controller_onoff(controller, device_state):
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param device_state: the state to transition to (on/off)
     :type device_state: str
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
 
     :raises ValueError: if passed a device_state other than "off" or
         "on"
@@ -327,8 +343,7 @@ def tmc_turns_mccs_controller_onoff(controller, device_state):
         raise ValueError(
             "@when tmc_turns_mccs_controller_onoff only accepts 'on' or 'off'"
         )
-
-    assert_command(device=controller, command=command)
+    command_helper.device_command(controller, command, test_string)
 
 
 @then(parsers.parse("mccs controller state is {device_state}"))
@@ -390,7 +405,9 @@ def check_reset_state(controller, subarrays, stations):
 
 
 @scenario("features/controller_subarray_interactions.feature", "MCCS Allocate subarray")
-def test_allocate_subarray(controller, subarrays, stations):
+def test_allocate_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -400,11 +417,16 @@ def test_allocate_subarray(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
-    assert_command(device=controller, command="Off")
+    command_helper.device_command(controller, "Off", test_string)
+    command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
 
@@ -565,7 +587,9 @@ def subarray_obsstate_is_not_changed(subarrays, cached_obsstate):
 @scenario(
     "features/controller_subarray_interactions.feature", "MCCS Configure a subarray"
 )
-def test_configure_a_subarray(controller, subarrays, stations):
+def test_configure_a_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -575,12 +599,17 @@ def test_configure_a_subarray(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
     assert_command(device=subarrays[1], command="End")
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
-    assert_command(device=controller, command="Off")
+    command_helper.device_command(controller, "Off", test_string)
+    command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
 
@@ -732,7 +761,9 @@ def subarray_health_is_good(subarrays):
     "features/controller_subarray_interactions.feature",
     "MCCS Perform a scan on subarray",
 )
-def test_perform_a_scan_on_subarray(controller, subarrays, stations):
+def test_perform_a_scan_on_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -742,17 +773,22 @@ def test_perform_a_scan_on_subarray(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
     assert_command(device=subarrays[1], command="EndScan")
     assert_command(device=subarrays[1], command="End")
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
-    assert_command(device=controller, command="Off")
+    command_helper.device_command(controller, "Off", test_string)
+    command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
 
-def abort_post_operations(controller, subarrays, stations):
+def abort_post_operations(controller, subarrays, stations, command_helper, test_string):
     """
     Collection of operations to perform after an abort command.
 
@@ -762,12 +798,17 @@ def abort_post_operations(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
     assert_command(device=subarrays[1], command="ObsReset")
     release_config = {"subarray_id": 1, "release_all": True}
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
-    assert_command(device=controller, command="Off")
+    command_helper.device_command(controller, "Off", test_string)
+    command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
 
@@ -775,7 +816,9 @@ def abort_post_operations(controller, subarrays, stations):
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a scanning subarray",
 )
-def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_a_scanning_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -785,15 +828,21 @@ def test_perform_an_abort_on_a_scanning_subarray(controller, subarrays, stations
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    abort_post_operations(controller, subarrays, stations)
+    abort_post_operations(controller, subarrays, stations, command_helper, test_string)
 
 
 @scenario(
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on an idle subarray",
 )
-def test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_an_idle_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -803,15 +852,21 @@ def test_perform_an_abort_on_an_idle_subarray(controller, subarrays, stations):
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    abort_post_operations(controller, subarrays, stations)
+    abort_post_operations(controller, subarrays, stations, command_helper, test_string)
 
 
 @scenario(
     "features/controller_subarray_interactions.feature",
     "MCCS Perform an abort on a configured subarray",
 )
-def test_perform_an_abort_on_a_configured_subarray(controller, subarrays, stations):
+def test_perform_an_abort_on_a_configured_subarray(
+    controller, subarrays, stations, command_helper, test_string
+):
     """
     This is run at the end of the scenario. Turn MCCS Controller Off.
 
@@ -821,8 +876,12 @@ def test_perform_an_abort_on_a_configured_subarray(controller, subarrays, statio
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
+    :param command_helper: A command helper fixture
+    :type command_helper: CommandHelper
+    :param test_string: a simple test string fixture
+    :type test_string: str
     """
-    abort_post_operations(controller, subarrays, stations)
+    abort_post_operations(controller, subarrays, stations, command_helper, test_string)
 
 
 @when(parsers.parse("tmc issues an abort on subarray"))

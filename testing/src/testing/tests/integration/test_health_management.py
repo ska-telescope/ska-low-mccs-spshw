@@ -14,7 +14,6 @@ management functionality of the SKA Low MCCS system.
 """
 import time
 from tango import DevState
-import json
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
@@ -22,6 +21,8 @@ from ska_tango_base.control_model import AdminMode, HealthState
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
 from ska_low_mccs.utils import call_with_json
+
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -81,276 +82,292 @@ def check_states(dev_states):
         assert device.State() == state
 
 
-def test_controller_health_rollup(tango_harness):
+class TestHealthManagement(HelperClass):
     """
-    Test that health rolls up to the controller.
-
-    :param tango_harness: A tango context of some sort; possibly a
-        :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
-        the real thing. The only requirement is that it provide a
-        ``get_device(fqdn)`` method that returns a
-        :py:class:`tango.DeviceProxy`.
-    :type tango_harness: :py:class:`contextmanager`
+    Test cases for the MCCS health management subsystem.
     """
-    controller = tango_harness.get_device("low-mccs/control/control")
-    station_1 = tango_harness.get_device("low-mccs/station/001")
-    station_2 = tango_harness.get_device("low-mccs/station/002")
-    subrack = tango_harness.get_device("low-mccs/subrack/01")
-    tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-    tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-    tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-    tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-    # workaround for https://github.com/tango-controls/cppTango/issues/816
-    # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
 
-    # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
-    # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
-    # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
-    # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
+    def test_controller_health_rollup(self, tango_harness, empty_json_dict):
+        """
+        Test that health rolls up to the controller.
 
-    # subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
-    # subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        :param tango_harness: A tango context of some sort; possibly a
+            :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
+            the real thing. The only requirement is that it provide a
+            ``get_device(fqdn)`` method that returns a
+            :py:class:`tango.DeviceProxy`.
+        :type tango_harness: :py:class:`contextmanager`
+        :param empty_json_dict: an empty json encoded dictionary
+        :type empty_json_dict: str
+        """
+        controller = tango_harness.get_device("low-mccs/control/control")
+        station_1 = tango_harness.get_device("low-mccs/station/001")
+        station_2 = tango_harness.get_device("low-mccs/station/002")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        # workaround for https://github.com/tango-controls/cppTango/issues/816
+        # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
 
-    # TODO: For now, we need to get our devices to OFF state (the highest state of
-    # device readiness for a device that isn't actual on -- and a state in which the
-    # hardware is turned on) before we can put them into ON state.
-    # This is a counterintuitive mess that will be fixed in SP-1501.
-    _ = controller.Startup()
-    dev_states = {
-        controller: DevState.ON,
-        station_1: DevState.ON,
-        station_2: DevState.ON,
-        subrack: DevState.ON,
-        tile_1: DevState.ON,
-        tile_2: DevState.ON,
-        tile_3: DevState.ON,
-        tile_4: DevState.ON,
-    }
-    check_states(dev_states)
+        # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
+        # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
+        # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
+        # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
 
-    # Check that all devices are OK
-    assert tile_1.healthState == HealthState.OK
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    assert station_1.healthState == HealthState.OK
-    assert station_2.healthState == HealthState.OK
-    assert controller.healthState == HealthState.OK
+        # subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        # subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
-    # Now let's make tile 1 fail. We should see that failure
-    # propagate up to station and then to controller
-    tile_1.SimulateConnectionFailure(True)
+        # TODO: For now, we need to get our devices to OFF state (the highest state of
+        # device readiness for a device that isn't actual on -- and a state in which the
+        # hardware is turned on) before we can put them into ON state.
+        # This is a counterintuitive mess that will be fixed in SP-1501.
+        _ = controller.Startup()
+        dev_states = {
+            controller: DevState.ON,
+            station_1: DevState.ON,
+            station_2: DevState.ON,
+            subrack: DevState.ON,
+            tile_1: DevState.ON,
+            tile_2: DevState.ON,
+            tile_3: DevState.ON,
+            tile_4: DevState.ON,
+        }
+        check_states(dev_states)
 
-    assert tile_1.healthState == HealthState.FAILED
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.DEGRADED
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert controller.healthState == HealthState.DEGRADED
+        # Check that all devices are OK
+        assert tile_1.healthState == HealthState.OK
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        assert station_1.healthState == HealthState.OK
+        assert station_2.healthState == HealthState.OK
+        assert controller.healthState == HealthState.OK
 
-    # TODO: This bit of the test no longer functions as intended. The
-    # idea was to put the failing tile into OFFLINE mode, and we would
-    # see that it continues to report HealthState.FAILED, but the
-    # station to which it belongs would stop rolling its healthState up
-    # so its own health would return to HealthState.OK.
-    # But at present
-    # * we can't take the tile OFFLINE until we have DISABLEd it
-    # * DISABLing it means telling the subrack to deny power to the
-    #   TPM
-    # * and at that point the tile device no longer recognises the
-    #   connection failure as a failure state -- because of course it
-    #   can't connect to the TPM if it isn't even powered!
-    # Hopefully this will be fixed in SP-1501: we'll be able to put the
-    # device into OFFLINE mode without turning the TPM off.
+        # Now let's make tile 1 fail. We should see that failure
+        # propagate up to station and then to controller
+        tile_1.SimulateConnectionFailure(True)
 
-    # It might take some time to replace the failed tile 1, and
-    # meanwhile we don't want it alarming for weeks. Let's disable it,
-    # then take it offline. The tile will still report itself as FAILED,
-    # but station will not take it into account when calculating its own
-    # health.
+        assert tile_1.healthState == HealthState.FAILED
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.DEGRADED
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert controller.healthState == HealthState.DEGRADED
 
-    tile_1.Off()
-    tile_1.Disable()
-    tile_1.adminMode = AdminMode.OFFLINE
+        # TODO: This bit of the test no longer functions as intended. The
+        # idea was to put the failing tile into OFFLINE mode, and we would
+        # see that it continues to report HealthState.FAILED, but the
+        # station to which it belongs would stop rolling its healthState up
+        # so its own health would return to HealthState.OK.
+        # But at present
+        # * we can't take the tile OFFLINE until we have DISABLEd it
+        # * DISABLing it means telling the subrack to deny power to the
+        #   TPM
+        # * and at that point the tile device no longer recognises the
+        #   connection failure as a failure state -- because of course it
+        #   can't connect to the TPM if it isn't even powered!
+        # Hopefully this will be fixed in SP-1501: we'll be able to put the
+        # device into OFFLINE mode without turning the TPM off.
 
-    # assert tile_1.healthState == HealthState.FAILED
-    assert tile_1.healthState == HealthState.UNKNOWN  # see above
+        # It might take some time to replace the failed tile 1, and
+        # meanwhile we don't want it alarming for weeks. Let's disable it,
+        # then take it offline. The tile will still report itself as FAILED,
+        # but station will not take it into account when calculating its own
+        # health.
 
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.OK
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert controller.healthState == HealthState.OK
+        tile_1.Off(empty_json_dict)
+        dev_states = {tile_1: DevState.OFF}
+        check_states(dev_states)
+        tile_1.Disable()
+        tile_1.adminMode = AdminMode.OFFLINE
 
-    # Okay, we've finally fixed the tile. Let's make it work again, and
-    # put it back online
-    tile_1.SimulateConnectionFailure(False)
-    tile_1.adminMode = AdminMode.ONLINE
+        # assert tile_1.healthState == HealthState.FAILED
+        assert tile_1.healthState == HealthState.UNKNOWN  # see above
 
-    assert not subrack.isTpmOn(1)
-    tile_1.Off()
-    assert subrack.isTpmOn(1)
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.OK
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert controller.healthState == HealthState.OK
 
-    args = {"dummy": "args"}
-    dummy_json_args = json.dumps(args)
-    tile_1.On(dummy_json_args)
-    dev_states = {tile_1: DevState.ON}
-    check_states(dev_states)
-    assert tile_1.healthState == HealthState.OK
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.OK
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert controller.healthState == HealthState.OK
+        # Okay, we've finally fixed the tile. Let's make it work again, and
+        # put it back online
+        tile_1.SimulateConnectionFailure(False)
+        tile_1.adminMode = AdminMode.ONLINE
 
+        assert not subrack.isTpmOn(1)
+        tile_1.Off(empty_json_dict)
+        dev_states = {tile_1: DevState.OFF}
+        check_states(dev_states)
+        assert subrack.isTpmOn(1)
 
-def test_subarray_health_rollup(tango_harness):
-    """
-    Test that health rolls up to the subarray.
+        tile_1.On(empty_json_dict)
+        dev_states = {tile_1: DevState.ON}
+        check_states(dev_states)
 
-    :param tango_harness: A tango context of some sort; possibly a
-        :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
-        the real thing. The only requirement is that it provide a
-        ``get_device(fqdn)`` method that returns a
-        :py:class:`tango.DeviceProxy`.
-    :type tango_harness: :py:class:`contextmanager`
-    """
-    controller = tango_harness.get_device("low-mccs/control/control")
-    subrack = tango_harness.get_device("low-mccs/subrack/01")
-    subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
-    subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
-    station_1 = tango_harness.get_device("low-mccs/station/001")
-    station_2 = tango_harness.get_device("low-mccs/station/002")
-    tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-    tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-    tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-    tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        assert tile_1.healthState == HealthState.OK
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.OK
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert controller.healthState == HealthState.OK
 
-    # workaround for https://github.com/tango-controls/cppTango/issues/816
-    # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
-    # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
-    # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
-    # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
-    # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-    subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
-    subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
+    def test_subarray_health_rollup(self, tango_harness, empty_json_dict):
+        """
+        Test that health rolls up to the subarray.
 
-    _ = controller.Startup()
-    dev_states = {
-        controller: DevState.ON,
-        station_1: DevState.ON,
-        station_2: DevState.ON,
-        subrack: DevState.ON,
-        tile_1: DevState.ON,
-        tile_2: DevState.ON,
-        tile_3: DevState.ON,
-        tile_4: DevState.ON,
-        subarraybeam_1: DevState.OFF,
-        subarraybeam_2: DevState.OFF,
-    }
-    check_states(dev_states)
+        :param tango_harness: A tango context of some sort; possibly a
+            :py:class:`tango.test_context.MultiDeviceTestContext`, possibly
+            the real thing. The only requirement is that it provide a
+            ``get_device(fqdn)`` method that returns a
+            :py:class:`tango.DeviceProxy`.
+        :type tango_harness: :py:class:`contextmanager`
+        :param empty_json_dict: an empty json encoded dictionary
+        :type empty_json_dict: str
+        """
+        controller = tango_harness.get_device("low-mccs/control/control")
+        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
+        subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
+        station_1 = tango_harness.get_device("low-mccs/station/001")
+        station_2 = tango_harness.get_device("low-mccs/station/002")
+        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
+        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
+        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
+        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
-    # Check that all devices are OK
-    assert tile_1.healthState == HealthState.OK
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.OK
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert controller.healthState == HealthState.OK
+        # workaround for https://github.com/tango-controls/cppTango/issues/816
+        # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
+        # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
+        # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
+        # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
+        # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
+        subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
-    assert subarray_1.healthState == HealthState.OK
-    assert subarray_2.healthState == HealthState.OK
+        _ = controller.Startup()
+        dev_states = {
+            controller: DevState.ON,
+            station_1: DevState.ON,
+            station_2: DevState.ON,
+            subrack: DevState.ON,
+            tile_1: DevState.ON,
+            tile_2: DevState.ON,
+            tile_3: DevState.ON,
+            tile_4: DevState.ON,
+            subarraybeam_1: DevState.OFF,
+            subarraybeam_2: DevState.OFF,
+        }
+        check_states(dev_states)
 
-    _ = call_with_json(
-        controller.Allocate,
-        subarray_id=1,
-        station_ids=[[1]],
-        subarray_beam_ids=[1],
-        channel_blocks=[2],
-    )
-    _ = call_with_json(
-        controller.Allocate,
-        subarray_id=2,
-        station_ids=[[2]],
-        subarray_beam_ids=[2],
-        channel_blocks=[2],
-    )
+        # Check that all devices are OK
+        assert tile_1.healthState == HealthState.OK
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.OK
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert controller.healthState == HealthState.OK
 
-    sleep()
+        assert subarray_1.healthState == HealthState.OK
+        assert subarray_2.healthState == HealthState.OK
 
-    assert subarray_1.healthState == HealthState.OK
-    assert subarray_2.healthState == HealthState.OK
+        _ = call_with_json(
+            controller.Allocate,
+            subarray_id=1,
+            station_ids=[[1]],
+            subarray_beam_ids=[1],
+            channel_blocks=[2],
+        )
+        _ = call_with_json(
+            controller.Allocate,
+            subarray_id=2,
+            station_ids=[[2]],
+            subarray_beam_ids=[2],
+            channel_blocks=[2],
+        )
+        sleep()
 
-    # Now let's make tile 1 fail. We should see that failure
-    # propagate up to station and then to controller
-    tile_1.SimulateConnectionFailure(True)
+        assert subarray_1.healthState == HealthState.OK
+        assert subarray_2.healthState == HealthState.OK
 
-    assert tile_1.healthState == HealthState.FAILED
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.DEGRADED
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert subarray_1.healthState == HealthState.DEGRADED
-    assert subarray_2.healthState == HealthState.OK
-    assert controller.healthState == HealthState.DEGRADED
+        # Now let's make tile 1 fail. We should see that failure
+        # propagate up to station and then to controller
+        tile_1.SimulateConnectionFailure(True)
 
-    # It might take some time to replace the failed tile 1, and
-    # meanwhile we don't want it alarming for weeks. Let's disable it,
-    # then take it offline. The tile will still report itself as FAILED,
-    # but station will not take it into account when calculating its own
-    # health.
+        assert tile_1.healthState == HealthState.FAILED
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.DEGRADED
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert subarray_1.healthState == HealthState.DEGRADED
+        assert subarray_2.healthState == HealthState.OK
+        assert controller.healthState == HealthState.DEGRADED
 
-    tile_1.Off()
-    tile_1.Disable()
-    tile_1.adminMode = AdminMode.OFFLINE
+        # It might take some time to replace the failed tile 1, and
+        # meanwhile we don't want it alarming for weeks. Let's disable it,
+        # then take it offline. The tile will still report itself as FAILED,
+        # but station will not take it into account when calculating its own
+        # health.
 
-    # assert tile_1.healthState == HealthState.FAILED
-    assert tile_1.healthState == HealthState.UNKNOWN  # see above
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.OK
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert subarray_1.healthState == HealthState.OK
-    assert subarray_2.healthState == HealthState.OK
-    assert controller.healthState == HealthState.OK
+        tile_1.Off(empty_json_dict)
+        dev_states = {tile_1: DevState.OFF}
+        check_states(dev_states)
+        tile_1.Disable()
+        tile_1.adminMode = AdminMode.OFFLINE
 
-    # Okay, we've finally fixed the tile. Let's make it work again, and
-    # put it back online
-    tile_1.SimulateConnectionFailure(False)
+        # assert tile_1.healthState == HealthState.FAILED
+        assert tile_1.healthState == HealthState.UNKNOWN  # see above
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.OK
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert subarray_1.healthState == HealthState.OK
+        assert subarray_2.healthState == HealthState.OK
+        assert controller.healthState == HealthState.OK
 
-    tile_1.adminMode = AdminMode.ONLINE
-    tile_1.Off()
-    args = {"dummy": "args"}
-    dummy_json_args = json.dumps(args)
-    tile_1.On(dummy_json_args)
-    dev_states = {tile_1: DevState.ON}
-    check_states(dev_states)
-    assert tile_1.healthState == HealthState.OK
-    assert tile_2.healthState == HealthState.OK
-    assert tile_3.healthState == HealthState.OK
-    assert tile_4.healthState == HealthState.OK
-    sleep()
-    assert station_1.healthState == HealthState.OK
-    assert station_2.healthState == HealthState.OK
-    sleep()
-    assert subarray_1.healthState == HealthState.OK
-    assert subarray_2.healthState == HealthState.OK
-    assert controller.healthState == HealthState.OK
+        # Okay, we've finally fixed the tile. Let's make it work again, and
+        # put it back online
+        tile_1.SimulateConnectionFailure(False)
+
+        tile_1.adminMode = AdminMode.ONLINE
+
+        self.start_up_device(tile_1)
+
+        # tile_1.Off(empty_json_dict)
+        # dev_states = {tile_1: DevState.OFF}
+        # check_states(dev_states)
+        # tile_1.On(empty_json_dict)
+        # dev_states = {tile_1: DevState.ON}
+        # check_states(dev_states)
+
+        assert tile_1.healthState == HealthState.OK
+        assert tile_2.healthState == HealthState.OK
+        assert tile_3.healthState == HealthState.OK
+        assert tile_4.healthState == HealthState.OK
+        sleep()
+        assert station_1.healthState == HealthState.OK
+        assert station_2.healthState == HealthState.OK
+        sleep()
+        assert subarray_1.healthState == HealthState.OK
+        assert subarray_2.healthState == HealthState.OK
+        assert controller.healthState == HealthState.OK

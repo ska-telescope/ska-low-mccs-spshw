@@ -15,6 +15,8 @@ import pytest
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU
 
+from testing.harness import HelperClass
+
 
 @pytest.fixture()
 def device_to_load():
@@ -33,7 +35,7 @@ def device_to_load():
     }
 
 
-class TestDemoAPIU:
+class TestDemoAPIU(HelperClass):
     """
     This class contains the tests for the DemoAPIU device class.
     """
@@ -49,7 +51,7 @@ class TestDemoAPIU:
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test(self, device_under_test, dummy_json_args):
+    def test(self, device_under_test):
         """
         Test:
 
@@ -60,8 +62,6 @@ class TestDemoAPIU:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
 
         def assert_powered(expected):
@@ -76,8 +76,7 @@ class TestDemoAPIU:
                 for antenna_id in range(1, 5)
             ] == expected
 
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         assert_powered([False, False, False, False])
 

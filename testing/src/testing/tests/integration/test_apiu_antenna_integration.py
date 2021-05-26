@@ -13,14 +13,14 @@ This test module contains integration tests that exercise the power
 management functionality of the SKA Low MCCS system between the subrack
 and the TPM.
 """
-import time
-import json
+from time import sleep
 import pytest
 from tango import DevState
 
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -50,12 +50,28 @@ def devices_to_load():
     }
 
 
-class TestApiuAntennaIntegration:
+def check_states(dev_states):
+    """
+    Helper to check that each device is in the expected state with a
+    timeout.
+
+    :param dev_states: the devices and expected states of them
+    :type dev_states: dict
+    """
+    for device, state in dev_states.items():
+        count = 0.0
+        while device.State() != state and count < 3.0:
+            count += 0.1
+            sleep(0.1)
+        assert device.State() == state
+
+
+class TestApiuAntennaIntegration(HelperClass):
     """
     Integration test cases for MCCS subsystem's power management.
     """
 
-    def test_antenna_on(self, tango_harness: TangoHarness):
+    def test_antenna_on(self, tango_harness: TangoHarness, empty_json_dict: str):
         """
         Test that:
 
@@ -65,33 +81,34 @@ class TestApiuAntennaIntegration:
           TPM
 
         :param tango_harness: a test harness for tango devices
+        :param empty_json_dict:  an empty json encoded dictionary
         """
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")
 
-        assert apiu.state() == DevState.DISABLE
-        assert antenna.state() == DevState.DISABLE
+        dev_states = {
+            apiu: DevState.DISABLE,
+            antenna: DevState.DISABLE,
+        }
+        check_states(dev_states)
 
-        apiu.Off()
-        assert apiu.state() == DevState.OFF
-        args = {"dummy": "args"}
-        dummy_json_args = json.dumps(args)
-        apiu.On(dummy_json_args)
-        assert apiu.state() == DevState.ON
+        self.start_up_device(apiu)
 
         assert not apiu.isAntennaOn(1)
         # TODO: For now we need to get this device to OFF (highest state
         # of device readiness) in order to turn the antenna on. This is
         # a counterintuitive mess that will be fixed in SP-1501.
-        antenna.Off()
-        assert antenna.state() == DevState.OFF
+        antenna.Off(empty_json_dict)
+        dev_states = {antenna: DevState.OFF}
+        check_states(dev_states)
         assert apiu.IsAntennaOn(1)
 
         # TODO: For now we need to get this device to DISABLE (lowest
         # state of device readiness) in order to turn the antenna off.
         # This is a counterintuitive mess that will be fixed in SP-1501.
         antenna.Disable()
-        assert antenna.state() == DevState.DISABLE
+        dev_states = {antenna: DevState.DISABLE}
+        check_states(dev_states)
         assert not apiu.IsAntennaOn(1)
 
     def test_apiu_antenna_on(self, tango_harness: TangoHarness):
@@ -105,22 +122,21 @@ class TestApiuAntennaIntegration:
         antenna = tango_harness.get_device("low-mccs/antenna/000001")
         apiu = tango_harness.get_device("low-mccs/apiu/001")
 
-        apiu.Off()
-        args = {"dummy": "args"}
-        dummy_json_args = json.dumps(args)
-        apiu.On(dummy_json_args)
+        self.start_up_device(apiu)
 
-        assert antenna.state() == DevState.DISABLE
+        dev_states = {antenna: DevState.DISABLE}
+        check_states(dev_states)
+
         assert not apiu.IsAntennaOn(1)
 
         apiu.PowerUpAntenna(1)
 
         # Wait long enough for the event to get through the events subsystem
-        time.sleep(0.2)
-        assert antenna.state() == DevState.OFF
+        dev_states = {antenna: DevState.OFF}
+        check_states(dev_states)
 
         apiu.PowerDownAntenna(1)
 
         # Wait long enough for the event to get through the events subsystem
-        time.sleep(0.2)
-        assert antenna.state() == DevState.DISABLE
+        dev_states = {antenna: DevState.DISABLE}
+        check_states(dev_states)

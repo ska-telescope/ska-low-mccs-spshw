@@ -467,9 +467,6 @@ class MccsAntenna(SKABaseDevice):
             device._rms = 0.0
             device._xPolarisationFaulty = False
             device._yPolarisationFaulty = False
-            # device._fieldNodeLongitude = 0.0
-            # device._fieldNodeLatitude = 0.0
-            # device._altitude = 0.0
             device._xDisplacement = 0.0
             device._yDisplacement = 0.0
             device._zDisplacement = 0.0
@@ -863,7 +860,7 @@ class MccsAntenna(SKABaseDevice):
     )
     def xDisplacement(self):
         """
-        Return the Horizontal displacement east attribute.
+        Return the horizontal displacement east attribute.
 
         :return: the horizontal displacement eastwards from station reference position
         :rtype: float
@@ -877,7 +874,7 @@ class MccsAntenna(SKABaseDevice):
     )
     def yDisplacement(self):
         """
-        Return the vertical displacement north attribute.
+        Return the horizontal displacement north attribute.
 
         :return: the horizontal displacement northwards from station reference position
         :rtype: float

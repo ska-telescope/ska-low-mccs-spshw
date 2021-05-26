@@ -245,7 +245,6 @@ class TestMccsStation:
         """
         assert device_under_test.refHeight == 0.0
 
-
     def test_subarrayId(self, device_under_test, logger):
         """
         Test for subarrayId attribute.

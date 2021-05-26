@@ -2,6 +2,10 @@
 
 ## unreleased
 
+* MCCS-566 - Pin ska_tango_base and pause intersphinx cross-link checks
+             (Temporary workaround pending update to ska_tango_base
+             version 0.11.0)
+
 ## 0.8.1
 
 * MCCS-561 - Fix location of assignedResources attribute init

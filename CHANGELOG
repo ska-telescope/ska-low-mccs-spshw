@@ -2,6 +2,10 @@
 
 ## unreleased
 
+## 0.8.2
+
+* MCCS-581 - Fix assignedResources in Restart command
+* MCCS-564 - Fix assignedResources json string
 * MCCS-566 - Pin ska_tango_base and pause intersphinx cross-link checks
              (Temporary workaround pending update to ska_tango_base
              version 0.11.0)

@@ -1119,6 +1119,7 @@ class MccsAntenna(SKABaseDevice):
         Send a message to turn Antenna on.
 
         :param json_args: JSON encoded messaging system and command arguments
+        :type json_args: str
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -1138,6 +1139,7 @@ class MccsAntenna(SKABaseDevice):
             command for this :py:class:`.MccsAntenna` device.
 
             :param argin: Argument containing JSON encoded command message and result
+            :type argin: str
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -1157,6 +1159,7 @@ class MccsAntenna(SKABaseDevice):
         Send a message to turn Antenna off.
 
         :param json_args: JSON encoded messaging system and command arguments
+        :type json_args: str
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -1176,6 +1179,7 @@ class MccsAntenna(SKABaseDevice):
             command for this :py:class:`.MccsAntenna` device.
 
             :param argin: JSON encoded messaging system and command arguments
+            :type argin: str
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.

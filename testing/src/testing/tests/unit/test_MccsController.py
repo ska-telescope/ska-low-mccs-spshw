@@ -420,10 +420,10 @@ class TestMccsController:
 
         # TODO: Move this into shared fixture
         def wait_for_command_to_complete(
-            self, controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+            self, controller, expected_result=ResultCode.OK, timeout_limit=3.0
         ):
             """
-            Wait for the controller command to complete
+            Wait for the controller command to complete.
 
             :param controller: The controller device
             :type controller: DeviceProxy
@@ -438,7 +438,10 @@ class TestMccsController:
                 result = json.loads(controller.commandResult)
                 timeout += 0.5
                 sleep(0.5)
-                if result.get("result_code") == expected_result or timeout > timeout_limit:
+                if (
+                    result.get("result_code") == expected_result
+                    or timeout > timeout_limit
+                ):
                     busy = False
             assert result.get("result_code") == expected_result
             assert timeout <= timeout_limit
@@ -551,7 +554,9 @@ class TestMccsController:
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.STARTED
             )
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.FAILED)
+            self.wait_for_command_to_complete(
+                controller, expected_result=ResultCode.FAILED
+            )
 
             # check no side-effects
             mock_subarray_1.On.assert_not_called()

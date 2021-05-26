@@ -287,10 +287,10 @@ def test_subarray_health_rollup(tango_harness):
 
     # TODO: Move this into shared fixture
     def wait_for_command_to_complete(
-        controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+        controller, expected_result=ResultCode.OK, timeout_limit=3.0
     ):
         """
-        Wait for the controller command to complete
+        Wait for the controller command to complete.
 
         :param controller: The controller device
         :type controller: DeviceProxy

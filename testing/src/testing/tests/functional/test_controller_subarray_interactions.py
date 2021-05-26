@@ -192,14 +192,11 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     :type expected_result: :py:class:`~ska_tango_base.commands.ResultCode`
     """
     # Call the specified command synchronously
-    print(f"RCL: command_inout({command}, {argin})")
     result = device.command_inout(command, argin)
-    print(f"RCL: result = {result}")
     if expected_result is None:
         assert result is None
     else:
         ((result_code,), _) = result
-        print(f"RCL: result = {result_code}, expected = {expected_result}")
         assert result_code == expected_result
 
 
@@ -394,8 +391,8 @@ def check_reset_state(controller, subarrays, stations):
     assert subarrays[2].stationFQDNs is None
     assert stations[1].State() == DevState.OFF
     assert stations[2].State() == DevState.OFF
-    #assert stations[1].subarrayId == 0
-    #assert stations[2].subarrayId == 0
+    # assert stations[1].subarrayId == 0
+    # assert stations[2].subarrayId == 0
 
     timeout = 0.0
     while not stations[1].subarrayId == 0 and timeout < 10.0:
@@ -451,17 +448,13 @@ def component_is_ready_to_action_a_subarray(
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
     if component_name == "mccs":
-        print("RCL: Where does this come out?")
         tmc_tells_mccs_controller_to_start_up(controller)
-        print("RCL: 123")
         check_mccs_controller_state(controller, "on")
-        print("RCL: 234")
         assert subarrays[1].State() == DevState.OFF
         assert subarrays[2].State() == DevState.OFF
         assert stations[1].subarrayId == 0
         assert stations[2].subarrayId == 0
     elif component_name == "tmc":
-        print("RCL: 345")
         pass
     else:
         assert False
@@ -510,14 +503,12 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, val
         expected_result = ResultCode.FAILED
 
     json_string = json.dumps(parameters)
-    print("RCL: Pre allocate command")
     assert_command(
         device=controller,
         command="Allocate",
         argin=json_string,
         expected_result=expected_result,
     )
-    print("RCL: Post allocate command")
 
     # We need to wait until the subarray is in IDLE state
     timeout = 0.0
@@ -551,8 +542,8 @@ def the_stations_have_the_correct_subarray_id(stations):
     assert stations[2].subarrayId == 1
     assert timeout < 10.0
 
-    #assert stations[1].subarrayId == 1
-    #assert stations[2].subarrayId == 1
+    # assert stations[1].subarrayId == 1
+    # assert stations[2].subarrayId == 1
 
 
 @then(parsers.parse("subarray state is on"))

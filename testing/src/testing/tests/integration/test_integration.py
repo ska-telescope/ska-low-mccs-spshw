@@ -70,10 +70,10 @@ class TestMccsIntegration:
 
     # TODO: Move this into shared fixture
     def wait_for_command_to_complete(
-        self, controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+        self, controller, expected_result=ResultCode.OK, timeout_limit=3.0
     ):
         """
-        Wait for the controller command to complete
+        Wait for the controller command to complete.
 
         :param controller: The controller device
         :type controller: DeviceProxy
@@ -132,7 +132,6 @@ class TestMccsIntegration:
         }
         self.check_states(dev_states)
 
-        print("RCL: About to call controller.Allocate...")
         # allocate station_1 to subarray_1
         ((result_code,), (message, message_uid)) = call_with_json(
             controller.Allocate,
@@ -141,11 +140,9 @@ class TestMccsIntegration:
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        print("RCL: Do we get this far? 1")
         assert result_code == ResultCode.QUEUED
         assert message
         self.wait_for_command_to_complete(controller)
-        print("RCL: Do we get this far? 2")
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]

@@ -146,10 +146,10 @@ class TestMccsIntegrationTmc:
 
     # TODO: Move this into shared fixture
     def wait_for_command_to_complete(
-        self, controller, expected_result = ResultCode.OK, timeout_limit = 3.0
+        self, controller, expected_result=ResultCode.OK, timeout_limit=3.0
     ):
         """
-        Wait for the controller command to complete
+        Wait for the controller command to complete.
 
         :param controller: The controller device
         :type controller: DeviceProxy

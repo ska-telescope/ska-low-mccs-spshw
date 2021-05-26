@@ -1217,6 +1217,9 @@ class MccsController(SKAMaster):
                     "channel_blocks": channel_blocks,
                 }
             )
+            controllerdevice.push_change_event(
+                "assignedResources", controllerdevice._assigned_resources
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:
@@ -1402,7 +1405,19 @@ class MccsController(SKAMaster):
                 information purpose only.
             """
             controller = self.target
-            return controller._release_resources(argin, restart=True)
+            (result_code, status) = controller._release_resources(argin, restart=True)
+            controller._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": [],
+                    "station_ids": [],
+                    "channel_blocks": [],
+                }
+            )
+            controller.push_change_event(
+                "assignedResources", controller._assigned_resources
+            )
+            return (result_code, status)
 
         def check_allowed(self: MccsController.RestartCommand) -> bool:
             """
@@ -1471,7 +1486,19 @@ class MccsController(SKAMaster):
                 information purpose only.
             """
             controller = self.target
-            return controller._release_resources(argin)
+            (result_code, status) = controller._release_resources(argin)
+            controller._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": [],
+                    "station_ids": [],
+                    "channel_blocks": [],
+                }
+            )
+            controller.push_change_event(
+                "assignedResources", controller._assigned_resources
+            )
+            return (result_code, status)
 
         def check_allowed(self: MccsController.ReleaseCommand) -> bool:
             """

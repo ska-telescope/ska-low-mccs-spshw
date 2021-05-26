@@ -5,9 +5,9 @@
 APIU
 =====
 
-.. image:: apiu_classes.svg
+.. uml:: apiu_classes.uml
 
 Subarray Structure
 ==================
 
-.. image:: subarray_class_structure.svg
+.. uml:: subarray_class_structure.uml

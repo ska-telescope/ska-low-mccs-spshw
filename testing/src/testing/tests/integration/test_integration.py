@@ -4,6 +4,8 @@ particularly tango devices.
 """
 
 import pytest
+from time import sleep
+from tango import DevState
 
 from ska_tango_base.commands import ResultCode
 
@@ -50,6 +52,21 @@ class TestMccsIntegration:
     Integration test cases for the Mccs device classes.
     """
 
+    def check_states(self, dev_states):
+        """
+        Helper to check that each device is in the expected state with a
+        timeout.
+
+        :param dev_states: the devices and expected states of them
+        :type dev_states: dict
+        """
+        for device, state in dev_states.items():
+            count = 0.0
+            while device.State() != state and count < 3.0:
+                count += 0.1
+                sleep(0.1)
+            assert device.State() == state
+
     def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
         """
         Test that an MccsController device can allocate resources to an
@@ -78,14 +95,24 @@ class TestMccsIntegration:
         assert tile_4.subarrayId == 0
 
         controller.Startup()
+        dev_states = {
+            controller: DevState.ON,
+            station_1: DevState.ON,
+            station_2: DevState.ON,
+            tile_1: DevState.ON,
+            tile_2: DevState.ON,
+            tile_3: DevState.ON,
+            tile_4: DevState.ON,
+        }
+        self.check_states(dev_states)
 
         # allocate station_1 to subarray_1
         ((result_code,), (message,)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
-            station_ids=[1],
+            station_ids=[[1]],
             subarray_beam_ids=[1],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.OK
 
@@ -104,9 +131,9 @@ class TestMccsIntegration:
         ((result_code,), (_,)) = call_with_json(
             controller.Allocate,
             subarray_id=2,
-            station_ids=[1],
+            station_ids=[[1]],
             subarray_beam_ids=[1],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.FAILED
 
@@ -128,9 +155,9 @@ class TestMccsIntegration:
         ((result_code,), (message,)) = call_with_json(
             controller.Allocate,
             subarray_id=1,
-            station_ids=[1, 2],
+            station_ids=[[1, 2]],
             subarray_beam_ids=[2],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
         assert result_code == ResultCode.OK
 
@@ -165,23 +192,33 @@ class TestMccsIntegration:
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         controller.Startup()
+        dev_states = {
+            controller: DevState.ON,
+            station_1: DevState.ON,
+            station_2: DevState.ON,
+            tile_1: DevState.ON,
+            tile_2: DevState.ON,
+            tile_3: DevState.ON,
+            tile_4: DevState.ON,
+        }
+        self.check_states(dev_states)
 
         # allocate stations 1 to subarray 1
         call_with_json(
             controller.Allocate,
             subarray_id=1,
-            station_ids=[1],
+            station_ids=[[1]],
             subarray_beam_ids=[1],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
 
         # allocate station 2 to subarray 2
         call_with_json(
             controller.Allocate,
             subarray_id=2,
-            station_ids=[2],
+            station_ids=[[2]],
             subarray_beam_ids=[2],
-            channels=[[0, 8, 1, 1], [8, 8, 2, 1]],
+            channel_blocks=[2],
         )
 
         # check initial state

@@ -7,6 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
+
 """
 MCCS Station.
 
@@ -16,9 +17,10 @@ __all__ = ["MccsStation", "main"]
 
 import json
 import threading
+import tango
 
 # PyTango imports
-from tango import DebugIt, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread, SerialModel, Util, DevFailed
 from tango.server import attribute, command, device_property
 
 # additional imports
@@ -31,6 +33,7 @@ from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
+from ska_low_mccs.message_queue import MessageQueue
 
 
 class MccsStation(SKAObsDevice):
@@ -68,6 +71,14 @@ class MccsStation(SKAObsDevice):
     # ---------------
     # General methods
     # ---------------
+    def init_device(self):
+        """
+        Initialise the device; overridden here to change the Tango
+        serialisation model.
+        """
+        util = Util.instance()
+        util.set_serial_model(SerialModel.NO_SYNC)
+        super().init_device()
 
     class InitCommand(SKAObsDevice.InitCommand):
         """
@@ -102,6 +113,8 @@ class MccsStation(SKAObsDevice):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._message_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -115,7 +128,11 @@ class MccsStation(SKAObsDevice):
             """
             super().do()
             device = self.target
-
+            device.queue_debug = ""
+            device._heart_beat = 0
+            device._progress = 0
+            device._on_respond_to_fqdn = None
+            device._on_callback = None
             device._subarray_id = 0
             device._apiu_fqdn = device.APIUFQDN
             device._tile_fqdns = list(device.TileFQDNs)
@@ -151,6 +168,12 @@ class MccsStation(SKAObsDevice):
             device.device_pool = DevicePoolSequence(
                 [prerequisite_device_pool, antenna_pool], self.logger, connect=False
             )
+
+            # Start the Message queue for this device
+            device._message_queue = MessageQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -241,11 +264,22 @@ class MccsStation(SKAObsDevice):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
 
     # ----------
     # Attributes
     # ----------
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self):
+        """
+        Return the Heartbeat attribute value.
+
+        :return: heart beat as a percentage
+        """
+        return self._heart_beat
+
     def health_changed(self, health):
         """
         Callback to be called whenever the HealthModel's health state
@@ -429,6 +463,50 @@ class MccsStation(SKAObsDevice):
         """
         return self._calibration_coefficients
 
+    @attribute(dtype="DevString")
+    def aPoolStats(self):
+        """
+        Return the aPoolStats attribute.
+
+        :return: aPoolStats attribute
+        """
+        return self.device_pool.pool_stats()
+
+    @attribute(dtype="DevString")
+    def aQueueDebug(self):
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write
+    def aQueueDebug(self, debug_string):
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        :type debug_string: str
+        """
+        self.queue_debug = debug_string
+
+    @attribute(
+        dtype="DevUShort",
+        label="Command progress percentage",
+        rel_change=2,
+        abs_change=5,
+        max_value=100,
+        min_value=0,
+    )
+    def commandProgress(self):
+        """
+        Return the commandProgress attribute value.
+
+        :return: command progress as a percentage
+        """
+        return self._progress
+
     # --------
     # Commands
     # --------
@@ -441,39 +519,202 @@ class MccsStation(SKAObsDevice):
         args = (self, self.state_model, self.logger)
         self.register_command_object("InitialSetup", self.InitialSetupCommand(*args))
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
+        self.register_command_object("On", self.OnCommand(*args))
+        self.register_command_object("OnCallback", self.OnCallbackCommand(*args))
 
         pool_args = (self.device_pool, self.state_model, self.logger)
         self.register_command_object("Disable", self.DisableCommand(*pool_args))
         self.register_command_object("Standby", self.StandbyCommand(*pool_args))
         self.register_command_object("Off", self.OffCommand(*pool_args))
-        self.register_command_object("On", self.OnCommand(*pool_args))
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def On(self, json_args):
+        """
+        Send a message to turn the station on.
+
+        Method returns as soon as the message has been enqueued.
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self.logger.debug("Send message to Station On")
+
+        # TODO: The callback parameters here could be empty as this "On"
+        #       command is used by the StartUp command that is still
+        #       executed sequentially.
+        kwargs = json.loads(json_args)
+        self._on_respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        self._on_callback = kwargs.get("callback")
+
+        if self._on_respond_to_fqdn and self._on_callback:
+            # We would usually send a message with a response here, but this is a special
+            # case because Station has pools of devices. Only when all of the devices in
+            # all of the pools complete can we return a message to the caller of Station.
+            # Cache "On" command callback arguments
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message(command="On")
+            # Because the responses back to the requester will be from a callback
+            # command, we cache the message uid and return this when the pools are
+            # complete.
+            self._on_message_uid = message_uid
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call On sequentially
+            handler = self.get_command_object("On")
+            (result_code, status) = handler(json_args)
+            return [[result_code], [status]]
 
     class OnCommand(SKABaseDevice.OnCommand):
         """
         Class for handling the On() command.
         """
 
-        SUCCEEDED_MESSAGE = "On command completed OK"
-        FAILED_MESSAGE = "On command failed"
+        QUEUED_MESSAGE = "Station On command queued"
+        SUCCEEDED_MESSAGE = "Station On command complete"
+        FAILED_MESSAGE = "Station On command failed"
+        QUEUE_FAIL_MESSAGE = "Station device pool On command not queued"
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the
             (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
             command for this :py:class:`.MccsStation` device.
 
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            device_pool = self.target
+            device = self.target
+            device_pool = device.device_pool
 
-            if device_pool.on():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            if device._on_respond_to_fqdn and device._on_callback:
+                fqdn = device.get_name()
+                self.logger.debug(
+                    f"Pool invoke_command_with_callback('On', fqdn={fqdn}, 'OnCallback')"
+                )
+                if device_pool.invoke_command_with_callback(
+                    command_name="On",
+                    fqdn=fqdn,
+                    callback="OnCallback",
+                ):
+                    return (ResultCode.OK, self.QUEUED_MESSAGE)
+                else:
+                    self.logger.error(self.QUEUE_FAIL_MESSAGE)
+                    return (ResultCode.FAILED, self.QUEUE_FAIL_MESSAGE)
             else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                self.logger.debug("Calling device_pool.on()...")
+                if device_pool.on():
+                    return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+                else:
+                    return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def OnCallback(self, json_args):
+        """
+        On callback method.
+
+        :param json_args: Argument containing JSON encoded command message and result
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        self.logger.debug(f"Station OnCallback json_args={json_args}")
+        (result_code, message_uid, status) = self._message_queue.send_message(
+            command="OnCallback", json_args=json_args
+        )
+        return [[result_code], [status, message_uid]]
+
+    class OnCallbackCommand(ResponseCommand):
+        """
+        Class for handling the On Callback command.
+        """
+
+        def do(self, argin):
+            """
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsStation.OnCallback` command.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            device_pool = device.device_pool
+
+            device.logger.debug("Station OnCallbackCommand class do()")
+            # Defer callback to our pool device
+            (command_complete, result_code, _) = device_pool.callback(argin)
+
+            # Cache the original status message from the caller
+            kwargs = json.loads(argin)
+            status = kwargs.get("status")
+
+            if command_complete:
+                # Programming error if these aren't set
+                assert device._on_respond_to_fqdn
+                assert device._on_callback
+
+                # Post response back to requestor
+                try:
+                    response_device = tango.DeviceProxy(device._on_respond_to_fqdn)
+                except DevFailed:
+                    device._qdebug(
+                        f"Response device {device._on_respond_to_fqdn} not found"
+                    )
+                else:
+                    # As this response is to the original requestor, we need to reply
+                    # with the message ID that was given to the requester
+                    message = MessageQueue.Message(
+                        command="On",
+                        json_args="",
+                        message_uid=f"{device._on_message_uid}",
+                        notifications=False,
+                        respond_to_fqdn="",
+                        callback="",
+                    )
+                    response = {
+                        "message_object": message,
+                        "result_code": result_code,
+                        "status": status,
+                    }
+                    json_string = json.dumps(response, default=lambda obj: obj.__dict__)
+                    # Call the specified command asynchronously
+                    (rc, stat) = response_device.command_inout(
+                        device._on_callback, json_string
+                    )
+                    device.logger.debug(
+                        f"Station OnCallbackCommand posted message to {response_device},rc={rc},status={stat}"
+                    )
+
+                device.logger.debug(
+                    f"Station OnCallbackCommand class do(),rc={result_code.name},status={status}"
+                )
+                device._on_respond_to_fqdn = None
+                device._on_callback = None
+                return (result_code, status)
+            else:
+                device.logger.debug(
+                    f"Station OnCallbackCommand class do() STARTED, status={status}"
+                )
+                return (ResultCode.STARTED, status)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
@@ -496,7 +737,6 @@ class MccsStation(SKAObsDevice):
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             device_pool = self.target
-
             if device_pool.off():
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
@@ -665,6 +905,63 @@ class MccsStation(SKAObsDevice):
         """
         handler = self.get_command_object("InitialSetup")
         (return_code, message) = handler()
+        return [[return_code], [message]]
+
+    class ApplyPointingCommand(ResponseCommand):
+        """
+        Class for handling the ApplyPointing(argin) command.
+        """
+
+        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
+        FAILED_MESSAGE = "ApplyPointing command failed: ValueError in Tile"
+
+        def do(self, argin):
+            """
+            Implementation of :py:meth:`.MccsStation.ApplyPointing`
+            command functionality.
+
+            :param argin: an array containing a beam index and antenna
+                delays
+            :type argin: list(float)
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype:
+                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            for tile_fqdn in device.TileFQDNs:
+                proxy = MccsDeviceProxy(tile_fqdn, self.logger)
+                try:
+                    proxy.SetPointingDelay(argin)
+                except ValueError:
+                    return (ResultCode.FAILED, self.FAILED_MESSAGE)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+    )
+    def ApplyPointing(self, argin):
+        """
+        Set the pointing delay parameters of this Station's Tiles.
+
+        :param argin: an array containing a beam index followed by antenna delays
+        :type argin: list(float)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dp.command_inout("ApplyPointing", delay_list)
+        """
+        handler = self.get_command_object("ApplyPointing")
+        (return_code, message) = handler(argin)
         return [[return_code], [message]]
 
 

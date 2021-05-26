@@ -3,8 +3,9 @@ numpy == 1.19.2
 scipy
 pytango >= 9.3.3
 jsonschema >= 3.2.0
-ska-tango-base >= 0.9.1
+ska-tango-base == 0.10.1
 fire
 future
 requests
 pyfabil-1.0-py3-none-any.whl
+astropy

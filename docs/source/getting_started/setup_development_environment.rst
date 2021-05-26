@@ -103,7 +103,7 @@ The basic steps for this, regardless of operating system, are
 
 3. Install Docker;
 
-4. Start up a ``ska-python-buildenv`` docker container, with your code
+4. Start up a ``pytango-builder`` docker container, with your code
    repository mounted inside it, and with access to a bash terminal
    session.
 
@@ -215,6 +215,23 @@ other versions / Linux variants.
 Great! You are ready to run a SKA Docker container.
 
 
+Build the docs
+^^^^^^^^^^^^^^
+Since the docs ultimately need to build successfully on ReadTheDocs, we
+test our docs build by building them in a ReadTheDocs build container.
+This is managed through the project makefile:
+
+.. code-block:: shell-session
+
+  me@local:~$ make docs
+
+Documentation can also be built for the test suite:
+
+.. code-block:: shell-session
+
+  me@local:~$ make testdocs
+
+
 Developing in a SKA Docker container the manual way
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 From here, you can either manually set up a SKA Docker development
@@ -235,7 +252,7 @@ understanding of what your IDE is doing for you.
    .. code-block:: shell-session
 
      me@local:~$ cd ska-low-mccs
-     me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-docker/ska-python-buildenv:latest bash
+     me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-tango-images/pytango-builder:9.3.3.3 bash
      root@0852a572ffff:/app#
 
    (The first time you run this command, it may take a very long time.
@@ -278,8 +295,6 @@ understanding of what your IDE is doing for you.
 Tox commands you may find useful:
 
 * ``tox -e py37`` - run the tests
-
-* ``tox -e docs`` - build the docs
 
 * ``tox -e lint`` - lint the code (with flake8)
 

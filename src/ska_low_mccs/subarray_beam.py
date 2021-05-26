@@ -12,15 +12,27 @@ MCCS Subarray Beam TANGO device prototype.
 
 Prototype TANGO device server for the MCSS Subarray Beam
 """
-__all__ = ["MccsSubarrayBeam", "main"]
+from __future__ import annotations  # allow forward references in type hints
+
+__all__ = [
+    "MccsSubarrayBeam",
+    "SubarrayBeamHealthEvaluator",
+    "SubarrayBeamDriver",
+    "SubarrayBeamHardwareFactory",
+    "SubarrayBeamHardwareManager",
+    "main",
+]
 
 import json
+import logging
 import threading
+from typing import List, Tuple
 
 from tango import EnsureOmniThread
 from tango.server import attribute, command
 
-from ska_tango_base import SKAObsDevice
+from ska_tango_base import SKAObsDevice, SKABaseDevice
+from ska_tango_base.base_device import DeviceStateModel
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 import ska_low_mccs.release as release
@@ -38,8 +50,9 @@ from ska_low_mccs.health import HealthModel
 
 class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEval
-    uator` for a subarray beam.
+    A
+    :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEvaluator`
+    for a subarray beam.
 
     A Subarray beam doesn't have hardware as such. Here we are
     pretending it does because we have to set health to DEGRADED if the
@@ -53,17 +66,16 @@ class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
         The health model may need to be reviewed in light of this.
     """
 
-    def evaluate_health(self, hardware):
+    def evaluate_health(
+        self: SubarrayBeamHealthEvaluator, hardware: HardwareDriver
+    ) -> HealthState:
         """
         Evaluate the health of the "hardware".
 
         :param hardware: the "hardware" for which health is being
             evaluated
-        :type hardware:
-            :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareDriver`
 
         :return: the evaluated health of the hardware
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if not hardware.is_locked:
             return HealthState.DEGRADED
@@ -85,43 +97,39 @@ class SubarrayBeamDriver(HardwareDriver):
         The health model may need to be reviewed in light of this.
     """
 
-    def __init__(self, is_locked=False):
+    def __init__(self: SubarrayBeamDriver, is_locked: bool = False) -> None:
         """
         Create a new driver for subarray beam hardware.
 
         :param is_locked: initial value for whether this beam is locked
-        :type is_locked: bool
         """
         super().__init__(True)
         self._is_locked = is_locked
 
     @property
-    def connection_status(self):
+    def connection_status(self: SubarrayBeamDriver) -> ConnectionStatus:
         """
         Returns the status of the driver-hardware connection.
 
         :return: the status of the driver-hardware connection.
-        :rtype: py:class:`ska_low_mccs.hardware.base_hardware.ConnectionStatus`
         """
         return ConnectionStatus.CONNECTED
 
     @property
-    def is_locked(self):
+    def is_locked(self: SubarrayBeamDriver) -> bool:
         """
         Whether the subarray beam is locked.
 
         :return: whether the subarray beam is locked
-        :rtype: bool
         """
         return self._is_locked
 
     @is_locked.setter
-    def is_locked(self, value):
+    def is_locked(self: SubarrayBeamDriver, value: bool) -> None:
         """
         Setter for the is_locked property.
 
         :param value: whether the subarray beam is locked
-        :type value: bool
         """
         self._is_locked = value
 
@@ -140,22 +148,20 @@ class SubarrayBeamHardwareFactory(HardwareFactory):
         The health model may need to be reviewed in light of this.
     """
 
-    def __init__(self, is_locked):
+    def __init__(self: SubarrayBeamHardwareFactory, is_locked: bool) -> None:
         """
         Create a new factory instance.
 
         :param is_locked: initial value for whether this beam is locked
-        :type is_locked: bool
         """
         self._hardware = SubarrayBeamDriver(is_locked=is_locked)
 
     @property
-    def hardware(self):
+    def hardware(self: SubarrayBeamHardwareFactory) -> SubarrayBeamDriver:
         """
         Return a subarray beam driver created by this factory.
 
         :return: an subarray beam driver created by this factory
-        :rtype: :py:class:`SubarrayBeamDriver`
         """
         return self._hardware
 
@@ -176,37 +182,37 @@ class SubarrayBeamHardwareManager(HardwareManager):
         The health model may need to be reviewed in light of this.
     """
 
-    def __init__(self, is_locked=False, _factory=None):
+    def __init__(
+        self: SubarrayBeamHardwareManager,
+        is_locked: bool = False,
+        _factory: SubarrayBeamHardwareFactory = None,
+    ) -> None:
         """
         Initialise a new SubarrayBeamHardwareManager instance.
 
         :param is_locked: initial value for whether this beam is locked
-        :type is_locked: bool
         :param _factory: allows for substitution of a hardware factory.
             This is useful for testing, but generally should not be used
             in operations.
-        :type _factory: :py:class:`SubarrayBeamHardwareFactory`
         """
         hardware_factory = _factory or SubarrayBeamHardwareFactory(is_locked)
         super().__init__(hardware_factory, SubarrayBeamHealthEvaluator())
 
     @property
-    def is_locked(self):
+    def is_locked(self: SubarrayBeamHardwareManager) -> bool:
         """
         Whether the subarray beam is locked.
 
         :return: whether the subarray beam is locked
-        :rtype: bool
         """
         return self._factory.hardware.is_locked
 
     @is_locked.setter
-    def is_locked(self, value):
+    def is_locked(self: SubarrayBeamHardwareManager, value: bool) -> None:
         """
         Setter for the is_locked property.
 
         :param value: whether the subarray beam is locked
-        :type value: bool
         """
         self._factory.hardware.is_locked = value
         self._update_health()
@@ -240,22 +246,23 @@ class MccsSubarrayBeam(SKAObsDevice):
         called upon :py:class:`~.MccsSubarrayBeam`'s initialisation.
         """
 
-        def __init__(self, target, state_model, logger=None):
+        def __init__(
+            self: MccsSubarrayBeam.InitCommand,
+            target: object,
+            state_model: DeviceStateModel,
+            logger: logging.Logger = None,
+        ) -> None:
             """
             Create a new InitCommand.
 
             :param target: the object that this command acts upon; for
                 example, the device for which this class implements the
                 command
-            :type target: object
             :param state_model: the state model that this command uses
                  to check that it is allowed to run, and that it drives
                  with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.DeviceStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
             """
             super().__init__(target, state_model, logger)
 
@@ -263,7 +270,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self._lock = threading.Lock()
             self._interrupt = False
 
-        def do(self):
+        def do(self: MccsSubarrayBeam.InitCommand) -> Tuple[ResultCode, str]:
             """
             Initialises the attributes and properties of the
             :py:class:`.MccsSubarrayBeam`.
@@ -277,8 +284,6 @@ class MccsSubarrayBeam(SKAObsDevice):
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             (result_code, message) = super().do()
 
@@ -292,6 +297,8 @@ class MccsSubarrayBeam(SKAObsDevice):
             device._channels = []
             device._desired_pointing = []
             device._update_rate = 0.0
+            device._antenna_weights = []
+            device._phase_centre = []
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
@@ -303,13 +310,14 @@ class MccsSubarrayBeam(SKAObsDevice):
                 self._thread.start()
                 return (ResultCode.STARTED, "Init command started")
 
-        def _initialise_connections(self, device):
+        def _initialise_connections(
+            self: MccsSubarrayBeam.InitCommand, device: SKABaseDevice
+        ) -> None:
             """
             Thread target for asynchronous initialisation of connections
             to external entities such as hardware and other devices.
 
             :param device: the device being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             # https://pytango.readthedocs.io/en/stable/howto.html
             # #using-clients-with-multithreading
@@ -329,7 +337,9 @@ class MccsSubarrayBeam(SKAObsDevice):
                     self._thread = None
                     self._interrupt = False
 
-        def _initialise_hardware_management(self, device):
+        def _initialise_hardware_management(
+            self: MccsSubarrayBeam.InitCommand, device: SKABaseDevice
+        ) -> None:
             """
             Initialise the connection to the hardware being managed by
             this device. May also register commands that depend upon a
@@ -337,17 +347,17 @@ class MccsSubarrayBeam(SKAObsDevice):
 
             :param device: the device for which a connection to the
                 hardware is being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.hardware_manager = SubarrayBeamHardwareManager()
 
-        def _initialise_health_monitoring(self, device):
+        def _initialise_health_monitoring(
+            self: MccsSubarrayBeam.InitCommand, device: SKABaseDevice
+        ) -> None:
             """
             Initialise the health model for this device.
 
             :param device: the device for which the health model is
                 being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
             device.event_manager = EventManager(self.logger)
 
@@ -360,7 +370,7 @@ class MccsSubarrayBeam(SKAObsDevice):
                 device.health_changed,
             )
 
-        def interrupt(self):
+        def interrupt(self: MccsSubarrayBeam.InitCommand) -> bool:
             """
             Interrupt the initialisation thread (if one is running)
 
@@ -372,7 +382,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             self._interrupt = True
             return True
 
-    def init_command_objects(self):
+    def init_command_objects(self: MccsSubarrayBeam) -> None:
         """
         Initialises the command handlers for commands supported by this
         device.
@@ -383,14 +393,14 @@ class MccsSubarrayBeam(SKAObsDevice):
         self.register_command_object("Configure", self.ConfigureCommand(*args))
         self.register_command_object("Scan", self.ScanCommand(*args))
 
-    def always_executed_hook(self):
+    def always_executed_hook(self: MccsSubarrayBeam) -> None:
         """
         Method always executed before any TANGO command is executed.
         """
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
-    def delete_device(self):
+    def delete_device(self: MccsSubarrayBeam) -> None:
         """
         Hook to delete resources allocated in the
         :py:meth:`~.MccsSubarrayBeam.InitCommand.do` method of
@@ -407,14 +417,13 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
-    def health_changed(self, health):
+    def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
         """
         Callback to be called whenever the HealthModel's health state
         changes; responsible for updating the tango side of things i.e.
         making sure the attribute is up to date, and events are pushed.
 
         :param health: the new health value
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health_state == health:
             return
@@ -422,47 +431,43 @@ class MccsSubarrayBeam(SKAObsDevice):
         self.push_change_event("healthState", health)
 
     @attribute(dtype="DevLong", format="%i")
-    def subarrayId(self):
+    def subarrayId(self: MccsSubarrayBeam) -> int:
         """
         Return the subarray id.
 
         :return: the subarray id
-        :rtype: int
         """
         return self._subarray_id
 
     @attribute(dtype="DevLong", format="%i", max_value=47, min_value=0)
-    def subarrayBeamId(self):
+    def subarrayBeamId(self: MccsSubarrayBeam) -> int:
         """
         Return the subarray beam id.
 
         :return: the subarray beam id
-        :rtype: int
         """
         return self._subarray_beam_id
 
     @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
-    def stationIds(self):
+    def stationIds(self: MccsSubarrayBeam) -> List[int]:
         """
         Return the station ids.
 
         :return: the station ids
-        :rtype: List[int]
         """
         return self._station_ids
 
     @stationIds.write
-    def stationIds(self, station_ids):
+    def stationIds(self: MccsSubarrayBeam, station_ids: List[int]) -> None:
         """
         Set the station ids.
 
         :param station_ids: ids of the stations for this beam
-        :type station_ids: List[int]
         """
         self._station_ids = station_ids
 
     @attribute(dtype="DevLong", format="%i", max_value=7, min_value=0)
-    def logicalBeamId(self):
+    def logicalBeamId(self: MccsSubarrayBeam) -> int:
         """
         Return the logical beam id.
 
@@ -470,44 +475,40 @@ class MccsSubarrayBeam(SKAObsDevice):
             from beam id
 
         :return: the logical beam id
-        :rtype: int
         """
         return self._logical_beam_id
 
     @logicalBeamId.write
-    def logicalBeamId(self, logical_beam_id):
+    def logicalBeamId(self: MccsSubarrayBeam, logical_beam_id: int) -> None:
         """
         Set the logical beam id.
 
         :param logical_beam_id: the logical beam id
-        :type logical_beam_id: int
         """
         self._logical_beam_id = logical_beam_id
 
     @attribute(
         dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0
     )
-    def updateRate(self):
+    def updateRate(self: MccsSubarrayBeam) -> float:
         """
         Return the update rate (in hertz) for this subarray beam.
 
         :return: the update rate for this subarray beam
-        :rtype: float
         """
         return self._update_rate
 
     @attribute(dtype="DevBoolean")
-    def isBeamLocked(self):
+    def isBeamLocked(self: MccsSubarrayBeam) -> bool:
         """
         Return a flag indicating whether the beam is locked or not.
 
         :return: whether the beam is locked or not
-        :rtype: bool
         """
         return self.hardware_manager.is_locked
 
     @isBeamLocked.write
-    def isBeamLocked(self, value):
+    def isBeamLocked(self: MccsSubarrayBeam, value: bool) -> None:
         """
         Set a flag indicating whether the beam is locked or not.
 
@@ -516,29 +517,35 @@ class MccsSubarrayBeam(SKAObsDevice):
         """
         self.hardware_manager.is_locked = value
 
-    @attribute(dtype=("DevLong",), max_dim_x=384)
-    def channels(self):
+    @attribute(dtype=(("DevLong",),), max_dim_y=384, max_dim_x=4)
+    def channels(self: MccsSubarrayBeam) -> List[list[int]]:
         """
         Return the ids of the channels configured for this beam.
 
         :return: channel ids
-        :rtype: list(int)
         """
         return self._channels
 
+    @attribute(dtype=("DevFloat",), max_dim_x=384)
+    def antennaWeights(self: MccsSubarrayBeam) -> List[float]:
+        """
+        Return the antenna weights configured for this beam.
+
+        :return: antenna weightd
+        """
+        return self._antenna_weights
+
     @attribute(dtype=("DevDouble",), max_dim_x=5)
-    def desiredPointing(self):
+    def desiredPointing(self: MccsSubarrayBeam) -> list(float):
         """
         Return the desired pointing of this beam.
 
-        :return: the desired point of this beam
-        :rtype: list(float) conforming to the Sky Coordinate Set
-            definition
+        :return: the desired point of this beam, conforming to the Sky Coordinate Set definition
         """
         return self._desired_pointing
 
     @desiredPointing.write
-    def desiredPointing(self, values):
+    def desiredPointing(self: MccsSubarrayBeam, values: List[float]) -> None:
         """
         Set the desired pointing of this beam.
 
@@ -550,7 +557,6 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         :param values: the desired pointing of this beam, expressed as a
             sky coordinate set
-        :type values: list(float)
         """
         self._desired_pointing = values
 
@@ -564,57 +570,57 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
-        def do(self, argin):
+        def do(
+            self: MccsSubarrayBeam.ConfigureCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for the
             :py:meth:`.MccsSubarrayBeam.Configure` command
 
             :param argin: Configuration specification dict as a json
                 string
-            :type argin: str
+                {
+                "subarray_beam_id": 1,
+                "station_ids": [1,2],
+                "update_rate": 0.0,
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
+                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0],
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             config_dict = json.loads(argin)
             device = self.target
             device._logical_beam_id = 0
-            device._subarray_id = config_dict.get("subarray_id")
             device._subarray_beam_id = config_dict.get("subarray_beam_id")
             device._station_ids = config_dict.get("station_ids", [])
             device._channels = config_dict.get("channels", [])
             device._update_rate = config_dict.get("update_rate")
             device._desired_pointing = config_dict.get("sky_coordinates", [])
+            device._antenna_weights = config_dict.get("antenna_weights", [])
+            device._phase_centre = config_dict.get("phase_centre", [])
 
             # TODO: Forward configuration settings to all the subservient Stations
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Configure(self, argin):
+    def Configure(self: MccsSubarrayBeam, argin: str) -> Tuple[ResultCode, str]:
         """
         Configure the subarray_beam with all relevant parameters.
 
         :param argin: Configuration parameters encoded in a json string
-                {
-                "subarray_id": 1,
-                "subarray_beam_id": 1,
-                "station_ids": [1, 2],
-                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
-                "update_rate": 0.0,
-                "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
-                }
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
-        (result_code, message) = handler(argin)
-        return [[result_code], [message]]
+        (result_code, status) = handler(argin)
+        return [[result_code], [status]]
 
     class ScanCommand(ResponseCommand):
         """
@@ -623,63 +629,58 @@ class MccsSubarrayBeam(SKAObsDevice):
 
         SUCCEEDED_MESSAGE = "Scan command completed OK"
 
-        def do(self, argin):
+        def do(
+            self: MccsSubarrayBeam.ScanCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for the
             :py:meth:`.MccsSubarrayBeam.Scan` command
 
             :param argin: Scan parameters encoded in a json string
-            :type argin: str
+                {
+                "scan_id": 1,
+                "scan_time": 4
+                }
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             kwargs = json.loads(argin)
             device = self.target
-            device._scan_id = kwargs.get("id")
+            device._scan_id = kwargs.get("scan_id")
             device._scan_time = kwargs.get("scan_time")
 
             # TODO: Forward scan command and parameters to all the subservient Stations
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Scan(self, argin):
+    def Scan(self: MccsSubarrayBeam, argin: str) -> Tuple[ResultCode, str]:
         """
         Start a scan on the subarray_beam.
 
         :param argin: Scan parameters encoded in a json string
-                {
-                "id": 1,
-                "scan_time": 4
-                }
-        :type argin: str
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Scan")
-        (result_code, message) = handler(argin)
-        return [[result_code], [message]]
+        (result_code, status) = handler(argin)
+        return [[result_code], [status]]
 
 
 # ----------
 # Run server
 # ----------
-def main(args=None, **kwargs):
+def main(args: str = None, **kwargs: str) -> int:
     """
     Entry point for module.
 
     :param args: positional arguments
-    :type args: list
     :param kwargs: named arguments
-    :type kwargs: dict
 
     :return: exit code
-    :rtype: int
     """
     return MccsSubarrayBeam.run_server(args=args, **kwargs)
 

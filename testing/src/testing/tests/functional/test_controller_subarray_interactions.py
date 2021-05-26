@@ -104,9 +104,7 @@ def subracks(tango_harness: TangoHarness):
     :return: subracks by number
     :rtype: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    return {
-        1: tango_harness.get_device("low-mccs/subrack/01"),
-    }
+    return {1: tango_harness.get_device("low-mccs/subrack/01")}
 
 
 @pytest.fixture()
@@ -198,7 +196,7 @@ def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
     if expected_result is None:
         assert result is None
     else:
-        ((result_code,), (_,)) = result
+        ((result_code,), _) = result
         assert result_code == expected_result
 
 
@@ -290,7 +288,9 @@ def tmc_tells_mccs_controller_to_start_up(controller):
     :param controller: a proxy to the controller device
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     """
-    assert_command(device=controller, command="Startup")
+    assert_command(
+        device=controller, command="Startup", expected_result=ResultCode.QUEUED
+    )
 
     # TODO: Workaround for bug MCCS-409
     #
@@ -343,8 +343,11 @@ def check_mccs_controller_state(controller, device_state):
     :type device_state: str
     """
     state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
-
-    assert controller.state() in state_map[device_state]
+    count = 0.0
+    while not controller.State() in state_map[device_state] and count < 3.0:
+        count += 0.1
+        time.sleep(0.1)
+    assert controller.State() in state_map[device_state]
 
 
 @then(parsers.parse("all mccs station states are {state}"))
@@ -467,8 +470,8 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
     """
     parameters = {
         "subarray_id": 1,
-        "station_ids": [1, 2],
-        "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
+        "station_ids": [[1, 2]],
+        "channel_blocks": [2],
         "subarray_beam_ids": [1],
     }
     expected_result = ResultCode.OK
@@ -657,12 +660,13 @@ def configure_subarray(subarrays):
         "stations": [{"station_id": 1}, {"station_id": 2}],
         "subarray_beams": [
             {
-                "subarray_id": 1,
                 "subarray_beam_id": 1,
                 "station_ids": [1, 2],
                 "channels": [[0, 8, 1, 1], [8, 8, 2, 1]],
                 "update_rate": 0.0,
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0],
             }
         ],
     }

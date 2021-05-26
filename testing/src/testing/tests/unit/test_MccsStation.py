@@ -49,7 +49,7 @@ def device_to_load():
 
 
 @pytest.fixture()
-def mock_factory(mocker):
+def mock_factory(mocker, test_string):
     """
     Fixture that provides a mock factory for device proxy mocks. This
     default factory provides vanilla mocks, but this fixture can be
@@ -59,6 +59,8 @@ def mock_factory(mocker):
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
     :type mocker: :py:class:`pytest_mock.mocker`
+    :param test_string: a test string that we'll use as a UID
+    :type test_string: str
 
     :return: a factory for device proxy mocks
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
@@ -67,7 +69,7 @@ def mock_factory(mocker):
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
-    builder.add_result_command("On", ResultCode.OK)
+    builder.add_result_command("On", ResultCode.OK, message_uid=test_string)
     return builder
 
 
@@ -87,7 +89,7 @@ class TestMccsStation:
         """
         return tango_harness.get_device("low-mccs/station/001")
 
-    def test_InitDevice(self, device_under_test):
+    def test_InitDevice(self, device_under_test, dummy_json_args):
         """
         Test for Initial state. A freshly initialised station device has
         no assigned resources.
@@ -96,6 +98,8 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param dummy_json_args: dummy json encoded arguments
+        :type dummy_json_args: str
         """
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -117,10 +121,42 @@ class TestMccsStation:
 
         # check that initialisation leaves us in a state where turning
         # the device on doesn't put it into ALARM state
-        device_under_test.On()
-        assert device_under_test.state() == DevState.ON
+        device_under_test.On(dummy_json_args)
+
+        def check_device_state(device, state):
+            """
+            Helper to check that the device is in the expected state
+            with a timeout.
+
+            :param device: the devices to check
+            :type device: dict
+            :param state: the state the device is expected to be in
+            :type state: list(:py:class:`tango.DevState`)
+            """
+            count = 0.0
+            while device.State() != state and count < 3.0:
+                count += 0.1
+                time.sleep(0.1)
+            assert device.State() == state
+
+        check_device_state(device_under_test, DevState.ON)
         time.sleep(0.2)
-        assert device_under_test.state() == DevState.ON
+        check_device_state(device_under_test, DevState.ON)
+
+    def test_queue_debug(self, device_under_test, test_string):
+        """
+        Test that the queue debug attribute works correctly.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param test_string: a simple test string fixture
+        :type test_string: str
+        """
+        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
+        device_under_test.aQueueDebug = test_string
+        assert device_under_test.aQueueDebug == test_string
 
     def test_healthState(self, device_under_test, mock_callback):
         """
@@ -353,6 +389,22 @@ class TestMccsStation:
         assert result_code == ResultCode.OK
         assert message == MccsStation.ConfigureCommand.SUCCEEDED_MESSAGE
         assert device_under_test.isConfigured is True
+
+    def test_applyPointing(self, device_under_test):
+        """
+        Test for ApplyPointing command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        beam_index = 1.0
+        delay_array = [1.0e-9] * 512
+        argin = [beam_index] + delay_array
+        [[result_code], [message]] = device_under_test.ApplyPointing(argin)
+        assert result_code == ResultCode.OK
+        assert message == MccsStation.ApplyPointingCommand.SUCCEEDED_MESSAGE
 
 
 class TestInitCommand:

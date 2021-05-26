@@ -35,6 +35,7 @@ from ska_low_mccs.hardware import (
     HardwareManager,
 )
 from ska_low_mccs.health import MutableHealthModel
+from ska_low_mccs import MccsDeviceProxy
 
 
 class StationBeamHealthEvaluator(HardwareHealthEvaluator):
@@ -290,6 +291,7 @@ class MccsStationBeam(SKAObsDevice):
             device._pointing_delay_rate = []
             device._update_rate = 0.0
             device._antenna_weights = []
+            device._phase_centre = []
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
@@ -379,6 +381,7 @@ class MccsStationBeam(SKAObsDevice):
 
         args = (self, self.state_model, self.logger)
         self.register_command_object("Configure", self.ConfigureCommand(*args))
+        self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
 
     def always_executed_hook(self):
         """
@@ -428,11 +431,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         return self._beam_id
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=512,
-        format="%i",
-    )
+    @attribute(dtype=("DevLong",), max_dim_x=512, format="%i")
     def stationIds(self):
         """
         Return the station ids.
@@ -452,11 +451,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         self._station_ids = station_ids
 
-    @attribute(
-        dtype="DevString",
-        max_dim_x=512,
-        format="%s",
-    )
+    @attribute(dtype="DevString", max_dim_x=512, format="%s")
     def stationFqdn(self):
         """
         Return the station FQDN.
@@ -480,12 +475,7 @@ class MccsStationBeam(SKAObsDevice):
             self.health_model.add_devices((station_fqdn,))
         self._station_fqdn = station_fqdn
 
-    @attribute(
-        dtype="DevLong",
-        format="%i",
-        max_value=7,
-        min_value=0,
-    )
+    @attribute(dtype="DevLong", format="%i", max_value=7, min_value=0)
     def logicalBeamId(self):
         """
         Return the logical beam id.
@@ -509,11 +499,7 @@ class MccsStationBeam(SKAObsDevice):
         self._logical_beam_id = logical_beam_id
 
     @attribute(
-        dtype="DevDouble",
-        unit="Hz",
-        standard_unit="s^-1",
-        max_value=1e37,
-        min_value=0,
+        dtype="DevDouble", unit="Hz", standard_unit="s^-1", max_value=1e37, min_value=0
     )
     def updateRate(self):
         """
@@ -544,23 +530,17 @@ class MccsStationBeam(SKAObsDevice):
         """
         self.hardware_manager.is_locked = value
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=384,
-    )
+    @attribute(dtype=(("DevLong",),), max_dim_y=384, max_dim_x=4)
     def channels(self):
         """
         Return the ids of the channels configured for this beam.
 
         :return: channel ids
-        :rtype: list(int)
+        :rtype: list[list[int]]
         """
         return self._channels
 
-    @attribute(
-        dtype=("DevDouble",),
-        max_dim_x=5,
-    )
+    @attribute(dtype=("DevDouble",), max_dim_x=5)
     def desiredPointing(self):
         """
         Return the desired pointing of this beam.
@@ -588,10 +568,7 @@ class MccsStationBeam(SKAObsDevice):
         """
         self._desired_pointing = values
 
-    @attribute(
-        dtype=("DevDouble",),
-        max_dim_x=256,
-    )
+    @attribute(dtype=("DevDouble",), max_dim_x=256)
     def pointingDelay(self):
         """
         Return the pointing delay per antenna.
@@ -600,6 +577,16 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: list(float)
         """
         return self._pointing_delay
+
+    @pointingDelay.write
+    def pointingDelay(self, values):
+        """
+        Set the pointing delay per antenna.
+
+        :param values: the desired pointing delay per antenna
+        :type values: list(float)
+        """
+        self._pointing_delay = values
 
     @attribute(
         dtype=("DevDouble",),
@@ -613,6 +600,16 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: list(float)
         """
         return self._pointing_delay_rate
+
+    @pointingDelayRate.write
+    def pointingDelayRate(self, values):
+        """
+        Set the pointing delay rate for each antenna.
+
+        :param values: the desired pointing delay rate per antenna
+        :type values: list(float)
+        """
+        self._pointing_delay_rate = values
 
     @attribute(
         dtype=("DevDouble",),
@@ -663,27 +660,28 @@ class MccsStationBeam(SKAObsDevice):
             """
             config_dict = json.loads(argin)
             device = self.target
-            device._station_ids = config_dict.get("station_id")
-            device._channels = config_dict.get("channels")
+            device._station_ids = config_dict.get("station_ids", [])
+            device._channels = config_dict.get("channels", [])
             device._update_rate = config_dict.get("update_rate")
-            device._desired_pointing = config_dict.get("sky_coordinates")
+            device._desired_pointing = config_dict.get("sky_coordinates", [])
+            device._antenna_weights = config_dict.get("antenna_weights", [])
+            device._phase_centre = config_dict.get("phase_centre", [])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure(self, argin):
         """
         Configure the station_beam with all relevant parameters.
 
         :param argin: Configuration parameters encoded in a json string
                 {
-                "station_beam_id":1,
-                "station_id": [1,2]
-                "channels": [1,2,3,4,5,6,7,8],
+                "subarray_beam_id":1,
+                "station_ids": [1,2]
+                "channels": [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
                 "update_rate": 0.0,
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0]
+                "antenna_weights": [1.0, 1.0, 1.0],
+                "phase_centre": [0.0, 0.0]
                 }
         :type argin: str
 
@@ -693,7 +691,58 @@ class MccsStationBeam(SKAObsDevice):
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         handler = self.get_command_object("Configure")
-        (result_code, message) = handler(argin)
+        (result_code, status) = handler(argin)
+        return [[result_code], [status]]
+
+    class ApplyPointingCommand(ResponseCommand):
+        """
+        Class for handling the ApplyPointing(argin) command.
+        """
+
+        SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
+        FAILED_MESSAGE = "ApplyPointing command failed"
+
+        def do(self):
+            """
+            Stateless do-hook for the
+            :py:meth:`.MccsStationBeam.ApplyPointing` command
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+            """
+            device = self.target
+            # zip delays and rates for SetPointingDelay
+            zipped_delays_and_rates = [
+                item
+                for pair in zip(
+                    device._pointing_delay, device._pointing_delay_rate + [0]
+                )
+                for item in pair
+            ]
+            station_pointing_args = [device._logical_beam_id] + zipped_delays_and_rates
+            station_proxy = MccsDeviceProxy(device._station_fqdn, self.logger)
+            (result_code, message) = station_proxy.ApplyPointing(station_pointing_args)
+            if result_code == ResultCode.FAILED:
+                return (result_code, self.FAILED_MESSAGE)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def ApplyPointing(self):
+        """
+        Apply pointing delays to antennas associated with the
+        station_beam.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        handler = self.get_command_object("ApplyPointing")
+        (result_code, message) = handler()
         return [[result_code], [message]]
 
 

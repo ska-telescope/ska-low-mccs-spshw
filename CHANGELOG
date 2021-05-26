@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-423 - Add 40G interface programming: destination IP, status
 * MCCS-421 - Support for TPM test signal generator
 * MCCS-329 - Test harness refactor
 * MCCS-410 - Interface to subrack management board

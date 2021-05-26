@@ -20,7 +20,7 @@ import threading
 import tango
 
 # PyTango imports
-from tango import DebugIt, EnsureOmniThread, SerialModel, Util, DevFailed
+from tango import DebugIt, EnsureOmniThread, SerialModel, Util, DevFailed, Group
 from tango.server import attribute, command, device_property
 
 # additional imports
@@ -136,6 +136,9 @@ class MccsStation(SKAObsDevice):
             device._subarray_id = 0
             device._apiu_fqdn = device.APIUFQDN
             device._tile_fqdns = list(device.TileFQDNs)
+            device._tile_group = Group("tile_group")
+            for tile_fqdn in device._tile_fqdns:
+                device._tile_group.add(tile_fqdn)
             device._antenna_fqdns = list(device.AntennaFQDNs)
             device._beam_fqdns = []
             device._transient_buffer_fqdn = ""
@@ -320,9 +323,10 @@ class MccsStation(SKAObsDevice):
         :type subarray_id: int
         """
         self._subarray_id = subarray_id
-        for fqdn in self._tile_fqdns:
-            tile = MccsDeviceProxy(fqdn, self.logger)
-            tile.subarrayId = subarray_id
+        self._tile_group.write_attribute_asynch("subarrayID", subarray_id)
+        # for fqdn in self._tile_fqdns:            
+            # tile = MccsDeviceProxy(fqdn, self.logger)
+            # tile.subarrayId = subarray_id
 
     @attribute(
         dtype="DevString",

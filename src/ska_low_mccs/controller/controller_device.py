@@ -1167,6 +1167,7 @@ class MccsController(SKAMaster):
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
 
             # Manager gave this list of stations to release (no longer required)
+            stations_to_release_group = Group("stations_to_release_group")
             if stations_to_release is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
@@ -1178,10 +1179,14 @@ class MccsController(SKAMaster):
                         f"{message}",
                     )
                 for station_fqdn in stations_to_release:
+                    stations_to_release_group.add(station_fqdn)
+
                     # station = controllerdevice._station_group.get_device(station_fqdn)
                     # station = controllerdevice._station_dict[station_fqdn]
-                    station = MccsDeviceProxy(station_fqdn, self.logger)
-                    station.subarrayId = 0
+                    # station = MccsDeviceProxy(station_fqdn, self.logger)
+                    # write_attribute_asynch
+                    # station.subarrayId = 0
+                stations_to_release_group.write_attribute_asynch("subarrayId", 0)
 
                 # Inform manager that we made the releases
                 controllerdevice._stations_manager.release(stations_to_release)

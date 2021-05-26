@@ -108,6 +108,8 @@ class Tile12(object):
         self._lmc_port = lmc_port
         self._lmc_ip = socket.gethostbyname(lmc_ip)
         self._lmc_use_10g = False
+        self._arp_table = {}
+        self._40g_configuration = {}
         self._port = port
         self._ip = socket.gethostbyname(ip)
         self.tpm = None
@@ -193,7 +195,7 @@ class Tile12(object):
                     logger=self.logger,
                 )
         elif not self.tpm.is_programmed():
-            self.logger.warn("TPM is not programmed! No plugins loaded")
+            self.logger.warning("TPM is not programmed! No plugins loaded")
 
     def is_programmed(self):
         """
@@ -482,8 +484,9 @@ class Tile12(object):
         dst_port=None,
     ):
         """
-        Configure a 10G core TODO Legacy method. Checrki if it is to be
-        deleted.
+        Configure a 10G core.
+
+        :todo: Legacy method. Check whether to be deleted.
 
         :param core_id: 10G core ID
         :param src_mac: Source MAC address
@@ -514,8 +517,8 @@ class Tile12(object):
         arp_table_entry=0,
         src_mac=None,
         src_ip=None,
-        dst_ip=None,
         src_port=None,
+        dst_ip=None,
         dst_port=None,
     ):
         """
@@ -534,8 +537,6 @@ class Tile12(object):
             self.tpm.tpm_10g_core[core_id].set_src_mac(src_mac)
         if src_ip is not None:
             self.tpm.tpm_10g_core[core_id].set_src_ip(src_ip)
-        # if dst_mac is not None:
-        #     self.tpm.tpm_10g_core[core_id].set_dst_mac(dst_mac)
         if dst_ip is not None:
             self.tpm.tpm_10g_core[core_id].set_dst_ip(dst_ip, arp_table_entry)
         if src_port is not None:
@@ -547,14 +548,15 @@ class Tile12(object):
     @connected
     def get_10g_core_configuration(self, core_id):
         """
-        Get the configuration for a 10g core TODO CHeck whether to be
-        deleted.
+        Get the configuration for a 10g core.
 
         :param core_id: Core ID (0-7)
         :type core_id: int
 
         :return: core configuration
         :rtype: dict
+
+        :todo: Check whether to be deleted.
         """
         return {
             "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
@@ -578,17 +580,26 @@ class Tile12(object):
         :return: core configuration
         :rtype: dict
         """
-        return {
-            "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
-            "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
-            "dst_ip": int(self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)),
-            "src_port": int(
-                self.tpm.tpm_10g_core[core_id].get_src_port(arp_table_entry)
-            ),
-            "dst_port": int(
-                self.tpm.tpm_10g_core[core_id].get_dst_port(arp_table_entry)
-            ),
-        }
+        try:
+            self._40g_configuration = {
+                "core_id": core_id,
+                "arp_table_entry": arp_table_entry,
+                "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
+                "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
+                "dst_ip": int(
+                    self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)
+                ),
+                "src_port": int(
+                    self.tpm.tpm_10g_core[core_id].get_src_port(arp_table_entry)
+                ),
+                "dst_port": int(
+                    self.tpm.tpm_10g_core[core_id].get_dst_port(arp_table_entry)
+                ),
+            }
+        except IndexError:
+            self._40g_configuration = None
+
+        return self._40g_configuration
 
     @connected
     def set_lmc_download(
@@ -616,12 +627,6 @@ class Tile12(object):
                 self.logger.warning("Packet length too large for 10G")
                 return
 
-            if lmc_mac is None:
-                self.logger.warning(
-                    "LMC MAC must be specified for 10G lane configuration"
-                )
-                return
-
             # If dst_ip is None, use local lmc_ip
             if dst_ip is None:
                 dst_ip = self._lmc_ip
@@ -635,6 +640,12 @@ class Tile12(object):
                     0, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
                 )
             else:
+                if lmc_mac is None:
+                    self.logger.warning(
+                        "LMC MAC must be specified for 10G lane configuration"
+                    )
+                    return
+
                 self.configure_10g_core(
                     2,
                     dst_mac=lmc_mac,
@@ -694,11 +705,6 @@ class Tile12(object):
         """
         # Using 10G lane
         if mode.upper() == "10G":
-            if lmc_mac is None:
-                self.logger.error(
-                    "LMC MAC must be specified for 10G lane configuration"
-                )
-                return
 
             # If dst_ip is None, use local lmc_ip
             if dst_ip is None:
@@ -713,6 +719,11 @@ class Tile12(object):
                     0, 1, dst_ip=dst_ip, src_port=src_port, dst_port=dst_port
                 )
             else:
+                if lmc_mac is None:
+                    self.logger.error(
+                        "LMC MAC must be specified for 10G lane configuration"
+                    )
+                    return
                 self.configure_10g_core(
                     2,
                     dst_mac=lmc_mac,
@@ -743,66 +754,56 @@ class Tile12(object):
             )
 
     @connected
-    def check_arp_table(self):
+    def get_arp_table(self):
         """
-        Check that ARP table has been populated in for all used cores
+        Check that ARP table has been populated in for all used cores.
         40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
-        beamformer, 1 for LMC 10G interfaces use cores 0,1 (fpga0) and
+        beamformer, 1 for LMC. 10G interfaces use cores 0,1 (fpga0) and
         4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
 
-        :return: if ARP table is populated
-        :rtype: bool
+        :return: list of core id and arp table populated
+        :rtype: dict(list)
         """
         # wait UDP link up
         if self["fpga1.regfile.feature.xg_eth_implemented"] == 1:
             self.logger.info("Checking ARP table...")
+
             if self.tpm.tpm_test_firmware[0].xg_40g_eth:
-                core_id = [0, 1]
+                core_ids = [0, 1]
                 if self._lmc_use_10g:
-                    arp_table_id = [0, 1]
+                    arp_table_ids = [0, 1]
                 else:
-                    arp_table_id = [0]
+                    arp_table_ids = [0]
             else:
                 if self._lmc_use_10g:
-                    core_id = [0, 1, 2, 4, 5, 6]
+                    core_ids = [0, 1, 2, 4, 5, 6]
                 else:
-                    core_id = [0, 1, 4, 5]
-                arp_table_id = [0]
-            times = 0
-            while True:
-                linkup = True
-                for c in core_id:
-                    for a in arp_table_id:
-                        core_status = self.tpm.tpm_10g_core[c].get_arp_table_status(
-                            a, silent_mode=True
-                        )
+                    core_ids = [0, 1, 4, 5]
+                arp_table_ids = [0]
+
+            linkup = False
+            self._arp_table = {i: [] for i in core_ids}
+
+            for core_id in core_ids:
+                for arp_table in arp_table_ids:
+                    core_status = self.tpm.tpm_10g_core[core_id].get_arp_table_status(
+                        arp_table, silent_mode=True
+                    )
                     if core_status & 0x4 == 0:
-                        linkup = False
-                if linkup is False:
-                    self.logger.info("10G Link established! ARP table populated!")
-                    break
-                else:
-                    times += 1
-                    time.sleep(0.1)
-                    if times % 10 == 0:
-                        self.logger.warning(
-                            "10G Links not established after %d seconds! Waiting... "
-                            % int(0.1 * times)
+                        message = (
+                            f"CoreID {core_id} with ArpID {arp_table} is not "
+                            f"populated"
                         )
-                    if times == 60:
-                        self.logger.warning(
-                            "10G Links not established after %d seconds! ARP table not populated!"
-                            % int(0.5 * times)
-                        )
-                        break
-        else:
-            # time.sleep(2)
-            self.logger.info("Sending dummy packets to populate switch ARP tables...")
-            self.mii_exec_test(100, False)
-            self["fpga1.regfile.eth10g_ctrl"] = 0x0
-            self["fpga2.regfile.eth10g_ctrl"] = 0x0
-            linkup = True
-        return linkup
+
+                        self.logger.info(message)
+                    else:
+                        self._arp_table[core_id].append(arp_table)
+                        linkup = True
+
+            if linkup:
+                self.logger.info("10G Link established! ARP table populated!")
+
+        return self._arp_table
 
     @connected
     def set_station_id(self, station_id, tile_id):
@@ -1013,10 +1014,8 @@ class Tile12(object):
         # if trunc is a single value, apply to all channels
         if type(trunc) == int:
             if 0 > trunc or trunc > 7:
-                self.logger.warn(
-                    "Could not set channeliser truncation to "
-                    + str(trunc)
-                    + ", setting to 0"
+                self.logger.warning(
+                    f"Could not set channeliser truncation to " f"{trunc}, setting to 0"
                 )
                 trunc = 0
 
@@ -1046,7 +1045,7 @@ class Tile12(object):
                 self["fpga2.channelizer.block_sel"] = 2 * i + 1
                 self["fpga2.channelizer.rescale_data"] = trunc_vec2
             else:
-                self.logger.warn("Signal " + str(i) + " is outside range (0:31)")
+                self.logger.warning("Signal " + str(i) + " is outside range (0:31)")
 
     @connected
     def set_time_delays(self, delays):
@@ -1782,22 +1781,6 @@ class Tile12(object):
             )
 
     @connected
-    def stop_integrated_beam_data(self):
-        """
-        Stop transmission of integrated beam data.
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].stop_integrated_beam_data()
-
-    @connected
-    def stop_integrated_channel_data(self):
-        """
-        Stop transmission of integrated beam data.
-        """
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].stop_integrated_channel_data()
-
-    @connected
     def stop_integrated_data(self):
         """
         Stop transmission of integrated data.
@@ -1818,7 +1801,7 @@ class Tile12(object):
         :type sync: bool, optional
         """
         # Data transmission should be synchronised across FPGAs
-        self.synchronised_data_operation(secondsi=seconds, timestamp=timestamp)
+        self.synchronised_data_operation(seconds=seconds, timestamp=timestamp)
         # Send data from all FPGAs
         for i in range(len(self.tpm.tpm_test_firmware)):
             if sync:
@@ -1883,7 +1866,8 @@ class Tile12(object):
         seconds=0.2,
     ):
         """
-        Transmit data from a channel continuously.
+        Transmit data from a channel continuously. It can be stopped with
+        stop_data_transmission.
 
         :param channel_id: index of channel to send
         :type channel_id: int
@@ -1904,6 +1888,17 @@ class Tile12(object):
             self.tpm.tpm_test_firmware[i].send_channelised_data_continuous(
                 channel_id, number_of_samples
             )
+
+    @connected
+    def stop_data_transmission(self):
+        """
+        Stop data transmission for send_channelised_data_continuous.
+        """
+        logging.info("Stopping all transmission")
+        for k, v in iteritems(self._daq_threads):
+            if v == self._RUNNING:
+                self._daq_threads[k] = self._STOP
+        self.stop_channelised_data_continuous()
 
     @connected
     def send_channelised_data_narrowband(

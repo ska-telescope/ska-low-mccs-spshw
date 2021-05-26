@@ -34,7 +34,9 @@ class MccsTile {
   +TileId
   +TpmCpldPort
   +TpmIp
+  +TpmVersion
   +CalculateDelay()
+  +GetArpTable()
   +ComputeCalibrationCoefficients()
   +Configure40GCore()
   +ConfigureIntegratedBeamData()
@@ -97,7 +99,6 @@ class MccsTile {
   +firmwareName()
   +firmwareVersion()
   +fortyGbDestinationIps()
-  +fortyGbDestinationMacs()
   +fortyGbDestinationPorts()
   +fpga1_temperature()
   +fpga1_time()

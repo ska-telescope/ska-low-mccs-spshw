@@ -1192,22 +1192,6 @@ class MccsTile(SKABaseDevice):
         )
 
     @attribute(
-        dtype=("DevString",),
-        max_dim_x=256,
-    )
-    def fortyGbDestinationMacs(self):
-        """
-        Return the destination MAC addresses for all 40Gb ports on the
-        tile.
-
-        :return: MAC addresses
-        :rtype: list(str)
-        """
-        return tuple(
-            item["DstMac"] for item in self.hardware_manager.get_40g_configuration()
-        )
-
-    @attribute(
         dtype=("DevLong",),
         max_dim_x=256,
     )
@@ -1377,6 +1361,7 @@ class MccsTile(SKABaseDevice):
             ("Configure40GCore", self.Configure40GCoreCommand),
             ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
+            ("GetArpTable", self.GetArpTableCommand),
             ("SetChanneliserTruncation", self.SetChanneliserTruncationCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
@@ -1391,9 +1376,7 @@ class MccsTile(SKABaseDevice):
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
             ),
-            ("StopIntegratedChannelData", self.StopIntegratedChannelDataCommand),
             ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
-            ("StopIntegratedBeamData", self.StopIntegratedBeamDataCommand),
             ("StopIntegratedData", self.StopIntegratedDataCommand),
             ("SendRawData", self.SendRawDataCommand),
             ("SendChannelisedData", self.SendChannelisedDataCommand),
@@ -1998,32 +1981,42 @@ class MccsTile(SKABaseDevice):
                 against a schema
             """
             params = json.loads(argin)
+
             core_id = params.get("CoreID", None)
             if core_id is None:
-                self.logger.error("CoreID is a mandatory parameter")
-                raise ValueError("CoreID is a mandatory parameter")
+                message = "CoreID is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
+            arp_table_entry = params.get("ArpTableEntry", None)
+            if arp_table_entry is None:
+                message = "ArpTableEntry is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             src_mac = params.get("SrcMac", None)
             if src_mac is None:
-                self.logger.error("SrcMac is a mandatory parameter")
-                raise ValueError("SrcMac is a mandatory parameter")
+                message = "SrcMac is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             src_ip = params.get("SrcIP", None)
             src_port = params.get("SrcPort", None)
             if src_port is None:
-                self.logger.error("SrcPort is a mandatory parameter")
-                raise ValueError("SrcPort is a mandatory parameter")
-            dst_mac = params.get("DstMac", None)
+                message = "SrcPort is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             dst_ip = params.get("DstIP", None)
             if dst_ip is None:
-                self.logger.error("DstIP is a mandatory parameter")
-                raise ValueError("DstIP is a mandatory parameter")
+                message = "DstIP is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
             dst_port = params.get("DstPort", None)
             if dst_port is None:
-                self.logger.error("DstPort is a mandatory parameter")
-                raise ValueError("DstPort is a mandatory parameter")
+                message = "DstPort is a mandatory parameter."
+                self.logger.error(message)
+                raise ValueError(message)
 
             hardware_manager = self.target
             hardware_manager.configure_40g_core(
-                core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2039,12 +2032,13 @@ class MccsTile(SKABaseDevice):
         :param argin: json dictionary with optional keywords:
 
         * CoreID - (int) core id
-        * SrcMac - (string) mac address dot notation
-        * SrcIP - (string) IP dot notation. Default taken from main IP address
-        * SrcPort - (int) src port.
-        * DstMac - (string) mac address dot notation. Not used if ARP present
+        * ArpTableEntry - (int) ARP table entry ID
+        * SrcMac - (int) mac address
+        * SrcIP - (string) IP dot notation.
+        * SrcPort - (int) source port
+        * SrcPort - (int) source port
         * DstIP - (string) IP dot notation
-        * DstPort - (int) dest port
+        * DstPort - (int) destination port
 
         :type argin: str
 
@@ -2056,9 +2050,9 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"CoreID":2, "SrcMac":"10:fe:ed:08:0a:58", "SrcIP":"10.0.99.3",
-                    "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58", "DstIP":"10.0.99.3",
-                    "DstPort":5000}
+        >>> dict = {"CoreID":2, "ArpTableEntry":0, "SrcMac":0x62000a0a01c9,
+                    "SrcIP":"10.0.99.3", "SrcPort":4000, "DstMac":"10:fe:ed:08:0a:58",
+                    "DstIP":"10.0.99.3", "DstPort":5000}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("Configure40GCore", jstr)
         """
@@ -2077,23 +2071,26 @@ class MccsTile(SKABaseDevice):
             :py:meth:`.MccsTile.Get40GCoreConfiguration`
             command functionality.
 
-            :param argin: the core id
-            :type argin: int
+            :param argin: a JSON-encoded dictionary of arguments
+            :type argin: str
 
             :return: json string with configuration
             :rtype: str
 
             :raises ValueError: if the argin is an invalid code id
             """
-            core_id = argin
+            params = json.loads(argin)
+            core_id = params.get("CoreID", None)
+            arp_table_entry = params.get("ArpTableEntry", 0)
+
             hardware_manager = self.target
-            item = hardware_manager.get_40g_configuration(core_id)
+            item = hardware_manager.get_40g_configuration(core_id, arp_table_entry)
             if item is not None:
-                return json.dumps(item.pop("CoreID"))
-            raise ValueError("Invalid core id specified")
+                return json.dumps(item)
+            raise ValueError("Invalid core id or arp table id specified")
 
     @command(
-        dtype_in="DevLong",
+        dtype_in="DevString",
         dtype_out="DevString",
     )
     @DebugIt()
@@ -2102,18 +2099,22 @@ class MccsTile(SKABaseDevice):
         Get 40g core configuration for core_id. This is required to
         chain up TPMs to form a station.
 
-        :param argin: the core id
-        :type argin: int
+        :param argin: json dictionary with optional keywords:
+
+        * CoreID - (int) core id
+        * ArpTableEntry - (int) ARP table entry ID to use
 
         :return: the configuration is a json string comprising:
-                 src_mac, src_ip, src_port, dest_mac, dest_ip, dest_port
+                 core_id, arp_table_entry, src_mac, src_ip, src_port, dest_ip, dest_port
         :rtype: str
 
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> core_id = 2
-        >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id)
+        >>> arp_table_entry = 0
+        >>> argout = dp.command_inout("Get40GCoreConfiguration, core_id,
+                                        arp_table_entry)
         >>> params = json.loads(argout)
         """
         handler = self.get_command_object("Get40GCoreConfiguration")
@@ -2199,6 +2200,48 @@ class MccsTile(SKABaseDevice):
         handler = self.get_command_object("SetLmcDownload")
         (return_code, message) = handler(argin)
         return [[return_code], [message]]
+
+    class GetArpTableCommand(BaseCommand):
+        """
+        Class for handling the GetArpTable() command.
+        """
+
+        def do(self):
+            """
+            Implementation of
+            :py:meth:`.MccsTile.GetArpTable` command functionality.
+
+            :return: a JSON-encoded dictionary of coreId and populated arpID table
+            :rtype: str
+            """
+            hardware_manager = self.target
+            return json.dumps(hardware_manager.arp_table)
+
+    @command(dtype_out="DevString")
+    @DebugIt()
+    def GetArpTable(self):
+        """
+        Return a dictionary with populated ARP table  for all used
+        cores. 40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP
+        ID 0 for beamformer, 1 for LMC. 10G interfaces use cores 0,1
+        (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for LMC with
+        only one ARP.
+
+        :return: a JSON-encoded dictionary of coreId and populated arpID table
+        :rtype: str
+
+        :example:
+
+        >>> argout = dp.command_inout("GetArpTable")
+        >>> dict = json.loads(argout)
+        >>>    {
+        >>>    "core_id0": [arpID0, arpID1],
+        >>>    "core_id1": [arpID0],
+        >>>    "core_id3": [],
+        >>>    }
+        """
+        handler = self.get_command_object("GetArpTable")
+        return handler()
 
     class SetChanneliserTruncationCommand(ResponseCommand):
         """
@@ -3164,7 +3207,7 @@ class MccsTile(SKABaseDevice):
         Configure and start the transmission of integrated channel data
         with the provided integration time, first channel and last
         channel. Data are sent continuously until the
-        StopIntegratedChannelData command is run.
+        StopIntegratedData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -3184,46 +3227,6 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ConfigureIntegratedChannelData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
-
-    class StopIntegratedChannelDataCommand(ResponseCommand):
-        """
-        Class for handling the StopIntegratedChannelData command.
-        """
-
-        SUCCEEDED_MESSAGE = "StopIntegratedChannelData command completed OK"
-
-        def do(self):
-            """
-            Implementation of
-            :py:meth:`.MccsTile.StopIntegratedChannelData`
-            command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            hardware_manager.stop_integrated_channel_data()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def StopIntegratedChannelData(self):
-        """
-        Stop the integrated channel data.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("StopIntegratedChannelData")
-        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
@@ -3273,7 +3276,7 @@ class MccsTile(SKABaseDevice):
         Configure the transmission of integrated beam data with the
         provided integration time, the first channel and the last
         channel. The data are sent continuously until the
-        StopIntegratedBeamData command is run.
+        StopIntegratedData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -3293,46 +3296,6 @@ class MccsTile(SKABaseDevice):
         """
         handler = self.get_command_object("ConfigureIntegratedBeamData")
         (return_code, message) = handler(argin)
-        return [[return_code], [message]]
-
-    class StopIntegratedBeamDataCommand(ResponseCommand):
-        """
-        Class for handling the StopIntegratedBeamData command.
-        """
-
-        SUCCEEDED_MESSAGE = "StopIntegratedBeamData command completed OK"
-
-        def do(self):
-            """
-            Implementation of
-            :py:meth:`.MccsTile.StopIntegratedBeamData`
-            command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            hardware_manager.stop_integrated_beam_data()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    @DebugIt()
-    def StopIntegratedBeamData(self):
-        """
-        Stop the integrated beam data.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-        """
-        handler = self.get_command_object("StopIntegratedBeamData")
-        (return_code, message) = handler()
         return [[return_code], [message]]
 
     class StopIntegratedDataCommand(ResponseCommand):
@@ -3561,7 +3524,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SendChannelisedDataContinuous(self, argin):
         """
-        Send data from channel channel continuously (until stopped)
+        Send data from channel channel continuously (until stopped with
+        StopDataTransmission command)
 
         :param argin: json dictionary with 1 mandatory and optional keywords:
 

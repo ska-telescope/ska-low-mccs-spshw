@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* MCCS-423 - Add 40G interface programming: destination IP, status
+
 ## 0.8.2
 
 * MCCS-581 - Fix assignedResources in Restart command
@@ -30,6 +32,7 @@
 * MCCS-421 - Added support for TPM test signal generator to Tango tile
 * MCCS-523 - skip configure as well
 * MCCS-410 - Implement interface of Tango device with hardware Subrack
+>>>>>>> master
 * MCCS-517 - Fix to integration tests
 * MCCS-502 - convert apiu to svg & add subarray structure class diagram
 * MCCS-441 - enable abort and obsreset

@@ -44,7 +44,7 @@ mccs:
   image:
     registry: nexus.engageska-portugal.pt/ska-docker
     image: ska-low-mccs
-    tag: 0.8.1 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    tag: 0.8.2 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent
 
 

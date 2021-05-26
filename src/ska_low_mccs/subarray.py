@@ -26,7 +26,7 @@ import threading
 from typing import List, Tuple
 
 # PyTango imports
-from tango import DebugIt, EnsureOmniThread
+from tango import DebugIt, EnsureOmniThread, Group
 from tango.server import attribute, command
 
 # Additional import
@@ -110,21 +110,35 @@ class SubarrayBeamsResourceManager(ResourceManager):
                     self.assigned_station_fqdns.append(station_fqdn)
             station_ids_per_beam.append(station_id_sublist)
         subarray_beams = {}
+        subarray_beam_group = Group("subarray_beam_group")
+        subarray_beam_station_ids = List()
         for index, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
             subarray_beam_id = int(subarray_beam_fqdn.split("/")[-1:][0])
             subarray_beams[subarray_beam_id] = subarray_beam_fqdn
+            subarray_beam_group.add(subarray_beam_fqdn)
 
             # TODO: Establishment of connections should happen at initialization
-            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
-            subarray_beam.stationIds = sorted(station_ids_per_beam[index])
+            # subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
+            # subarray_beam.stationIds = sorted(station_ids_per_beam[index])
+            subarray_beam_station_ids.add(sorted(station_ids_per_beam[index]))
+        subarray_beam_group.write_attribute_asynch(
+            "stationIds", subarray_beam_station_ids, True, True
+        )
 
         self._add_to_managed(subarray_beams)
-        for subarray_beam_fqdn in subarray_beam_fqdns:
-            # TODO: Establishment of connections should happen at initialization
-            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
 
-            subarray_beam.isBeamLocked = True
-            self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
+        subarray_beam_group.write_attribute_asynch("isBeamLocked", True)
+        subarray_beam_health_states = subarray_beam_group.read_attribute("healthState")
+
+        for index, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
+
+            # TODO: Establishment of connections should happen at initialization
+            # subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
+
+            # subarray_beam.isBeamLocked = True
+            self.update_resource_health(
+                subarray_beam_fqdn, subarray_beam_health_states[index]
+            )
 
         self._health_monitor.add_devices(stations.values())
 

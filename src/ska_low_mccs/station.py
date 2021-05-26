@@ -324,9 +324,9 @@ class MccsStation(SKAObsDevice):
         """
         self._subarray_id = subarray_id
         self._tile_group.write_attribute_asynch("subarrayID", subarray_id)
-        # for fqdn in self._tile_fqdns:            
-            # tile = MccsDeviceProxy(fqdn, self.logger)
-            # tile.subarrayId = subarray_id
+        # for fqdn in self._tile_fqdns:
+        # tile = MccsDeviceProxy(fqdn, self.logger)
+        # tile.subarrayId = subarray_id
 
     @attribute(
         dtype="DevString",

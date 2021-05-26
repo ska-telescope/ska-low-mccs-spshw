@@ -762,8 +762,8 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         Configure and start the transmission of integrated channel data
         with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedData command is run.
+        channel. Data are sent continuously until the StopIntegratedData
+        command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -787,8 +787,8 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         Configure and start the transmission of integrated channel data
         with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedData command is run.
+        channel. Data are sent continuously until the StopIntegratedData
+        command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -866,8 +866,8 @@ class TileHardwareManager(SimulableHardwareManager):
         seconds=None,
     ):
         """
-        Transmit data from a channel continuously. It can be stopped with
-        stop_data_transmission.
+        Transmit data from a channel continuously. It can be stopped
+        with stop_data_transmission.
 
         :param channel_id: index of channel to send
         :type channel_id: int

@@ -21,6 +21,7 @@ import struct
 import numpy as np
 import time
 
+from future.utils import iteritems
 from pyfabil.base.definitions import Device, LibraryError, BoardError, Status
 from pyfabil.base.utils import ip2long
 from pyfabil.boards.tpm import TPM
@@ -1866,8 +1867,8 @@ class Tile12(object):
         seconds=0.2,
     ):
         """
-        Transmit data from a channel continuously. It can be stopped with
-        stop_data_transmission.
+        Transmit data from a channel continuously. It can be stopped
+        with stop_data_transmission.
 
         :param channel_id: index of channel to send
         :type channel_id: int

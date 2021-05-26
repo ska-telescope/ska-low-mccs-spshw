@@ -25,120 +25,45 @@ local system - is not supported because:
   Software development.
 
 For these reasons, the supported approaches are based on virtualisation.
-There are two options:
+The approach described on the `SKA software developer portal`_ is a
+legacy solution that is not recommended for MCCS development. Instead,
+we recommend a container development approach.
 
-
-.. Padding. See https://github.com/sphinx-doc/sphinx/issues/2258
-
-1. (Legacy solution) Install a hypervisor (i.e. a virtual machine
-   runner) such as VirtualBox, and use that hypervisor to spin up an
-   Ubuntu 18.04 virtual machine. From there, the installation process
-   has been mostly automated with Ansible playbooks.
-
-   In this approach, all SKA Software development is done in that
-   virtual machine, ensuring a consistent and isolated environment.
+The advantages of this approach are:
    
-   This approach is fully documented at the `SKA software developer
-   portal`_. Note that:
+ * SKA Software already has container images that contain all of the 
+   dependencies that you need to develop. These images are kept up to
+   date, so you won't need to worry about maintaining your system.
 
-   * The Ansible playbooks have been known to stall, for example if
-     you have unreliable network connectivity.
-       
-   * We have found the end result to be somewhat brittle. There are
-     some oddities in the setup (such as symlinks from one version of
-     a python shared library to another) that mean that you can easily
-     break the system doing things that you would expect to be benign
-     (such as upgrading python or installing ``venv``). You are
-     therefore not recommended to use this system for other
-     development.
+ * The SKA container images are the 'canonical' SKA Software development
+   environment: if your code runs on the SKA container image, your code
+   *runs*.
 
-   * SKA uses Docker and kubernetes for deployment and orchestration
-     of devices, and it is not recommended to run Docker and
-     kubernetes from inside a virtual machine. You are going to have
-     to get used to deploying your code to a Docker container
-     eventually, so...
+ * The only local system requirements for developing SKA-Low-MCCS in a
+   container are: a POSIX shell environment, GNU ``make``, Git and
+   Docker. Other than that, you are free to work on any operating
+   system, to use your favourite IDE, and generally to set up your local
+   system as you please.
 
-
-   .. Padding. See https://github.com/sphinx-doc/sphinx/issues/2258
-
-2. (*Recommended solution*) Instead of spinning up a full virtual
-   machine, we will do our development inside a Docker container. (A
-   Docker container is somewhat like a virtual machine, but it is very
-   lightweight and streamlined, containing only what is needed for the
-   job it was built for; and it is very easy to specify and share Docker
-   images.)
-   
-   The advantages of this approach are:
-   
-   * SKA Software already has Docker images that contain all of the
-     dependencies that you need to develop. These images are kept up to
-     date, so you won't need to worry about maintaining your system.
-     They also represent the 'canonical' SKA Software development
-     environment: if your code runs on the SKA Docker image, your code
-     *runs*.
-
-   * The only local system requirements are Git and Docker. Beyond that,
-     you are free to work on any operating system, to use your favourite
-     IDE, and generally to set up your local system as you please.
-
-
-   .. Padding. See https://github.com/sphinx-doc/sphinx/issues/2258
-
-   Note, however, that this approach can only be relied upon to allow
-   you to develop on the SKA Low MCCS subsystem. If you need to
-   contribute to other parts of the SKA Software codebase, you may find
-   that you are unable to do so, if, for example, your host machine is
-   running Windows.
-
-   Detailed instructions for this follow.
-
-
-SKA development with Docker
----------------------------
-As stated above, the only essential pre-requisites for SKA development
-with Docker are ``git`` and ``Docker``. MCCS also uses ``Make`` to
-automate many common tasks for developers on Linux.
+Basic development setup
+-----------------------
+The basic setup described here will allow you to edit code and
+documentation locally, and to launch basic testing, linting and
+documentation builds. For occasional dabblers in the MCCS code, this is
+the only setup required. For more serious developers, further steps are
+described in subsequent sections.
 
 The basic steps are
 
-1. Install and setup Git;
+1. Install Docker;
 
-2. Clone the SKA-Low-MCCS repository;
+2. Install and setup Git, and clone the ska-low-mccs repository. (For
+   Windows users, installing Git will also provide you with a POSIX
+   shell.)
 
-3. Install Docker;
+3. Install make.
 
-4. Start up a ``pytango-builder`` docker container, with your code
-   repository mounted inside it, and with access to a bash terminal
-   session.
-
-You can now edit your code locally, but use the container terminal to
-run your code inside the container.
-
-
-Git
-^^^
-1. Install git. This should be simple on any operating system.
-
-2. Set up git:
-
-   .. code-block:: shell-session
-
-     me@local:~$ git config --global user.name "Your Name"
-     me@local:~$ git config --global user.email "youremail@domain.com"
-
-3. At some point you will need to set up git commit signing too. Now is
-   as good a time as any. Follow the instructions at the SKA `Working
-   with Git`_ page.
-
-4. Clone the SKA-Low-MCCS repository:
-
-   .. code-block:: shell-session
-
-     me@local:~$ git clone https://gitlab.com/ska-telescope/ska-low-mccs.git
-
-
-Great, now it's time to dive into Docker.
-
+Details on these steps are provided below.
 
 Docker
 ^^^^^^
@@ -157,9 +82,10 @@ as Docker Toolbox) are fully uninstalled, and that all Docker
 environment variables have been deleted. Installing is very
 straight-forward: simply download and run the installer.
 
-Warning: By default, Docker Desktop enables the Hyper-V feature of
-Windows. Some people find that this interferes in the operation of other
-hypervisors such as VirtualBox.
+.. warning::
+   By default, Docker Desktop enables the Hyper-V feature of Windows.
+   Some people find that this interferes in the operation of other
+   hypervisors such as VirtualBox.
 
 If using WLS2, open the Docker Desktop for Windows dashboard, go into
 Settings | Resources | WSL Integration, and ensure Docker is integrated
@@ -218,125 +144,215 @@ other versions / Linux variants.
 
 Great! You are ready to run a SKA Docker container.
 
+Git
+^^^
+1. Install git. This should be simple on any operating system.
 
-Developing in a SKA Docker container the manual way
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-From here, you can either manually set up a SKA Docker development
-container, or, if you have an IDE that supports remote container
-development, you can let your IDE do it for you.
-
-The instructions that follow in this section are for manually setting up
-a SKA Docker development container. The next section describes how to do
-the same thing within the Visual Studio Code IDE. So you could skip this
-section if you want to use the VScode IDE. On the other hand, it won't
-hurt to work through this section, and it might lead to a better
-understanding of what your IDE is doing for you.
-
-1. Spin up a SKA Docker instance with the SKA-Low-MCCS repository
-   mounted at ``/app``, and with access to a container ``bash``
-   terminal session.
+2. Set up git:
 
    .. code-block:: shell-session
 
-     me@local:~$ cd ska-low-mccs
-     me@local:~/ska-low-mccs$ docker run --rm -ti -v `pwd`:/app nexus.engageska-portugal.pt/ska-tango-images/pytango-builder:9.3.3.3 bash
-     root@0852a572ffff:/app#
+     me@local:~$ git config --global user.name "Your Name"
+     me@local:~$ git config --global user.email "youremail@domain.com"
 
-   (The first time you run this command, it may take a very long time.
-   This is because the Docker image has to be downloaded. Once
-   downloaded, the image is cached, so the command will run much faster
-   in future.)
+3. At some point you will need to set up git commit signing too. Now is
+   as good a time as any. Follow the instructions at the SKA `Working
+   with Git`_ page.
 
-   Note the change in prompt. You are now the root user in a bash
-   terminal session that is running inside a Docker container named
-   "caa98e8e264d" (the name of your container will differ).
-
-2. List the contents of the current ``/app`` directory; you will see
-   that the repository is mounted inside the container:
-     
-   .. code-block:: shell-session
-
-     root@0852a572ffff:/app# ls
-     CHANGELOG   README.md   demos                 requirements-lint.txt  setup.py  values-demo.yaml         values-test.yaml
-     Dockerfile  build       docs                  requirements.txt       src       values-development.yaml
-     LICENSE     charts      pogo                  scripts                testing   values-gitlab-ci.yaml
-     Makefile    dashboards  requirements-dev.txt  setup.cfg              tox.ini   values-psi.yaml
-     
-
-3. Before you can run tests in the Docker container, you need to install
-   the SKA-Low-MCCS dependencies. Run this command (inside your
-   container):
+4. Clone the SKA-Low-MCCS repository:
 
    .. code-block:: shell-session
 
-     $ root@0852a572ffff:/app# python3 -m pip install -r requirements-dev.txt -r requirements-lint.txt -r testing/requirements.txt
-     
-4. Hooray, your container now has all dependencies installed, and can
-   now run the tests. To run the tests (inside the container):
-
-   .. code-block:: shell-session
-
-     $ root@0852a572ffff:/app# tox
+     me@local:~$ git clone https://gitlab.com/ska-telescope/ska-low-mccs.git
 
 
-Tox commands you may find useful:
+POSIX shell
+^^^^^^^^^^^
+The ``ska-low-mccs`` makefiles assume a POSIX shell environment. Thus,
+in order to run them, you will need a POSIX shell and the ``make``
+executable.
 
-* ``tox -e py37`` - run the tests
+If you are running on a Linux variant (including MacOS), then your
+terminal already provides a POSIX shell; for example, ``bash``.
 
-* ``tox -e lint`` - lint the code (with flake8)
+On Microsoft Windows, neither the Command Prompt nor Powershell are
+POSIX shells. There are various options for installing POSIX shells
+on Windows. These include WSL2, Cygwin and MinGW. Here we take the
+easiest option: your installation of Git comes with ``git-bash``, which
+provides a POSIX shell (actually a copy of MinGW). Let's use that.
 
-* ``tox -e py37 -- -k MccsController`` - run the tests for just the
-  MccsController device (the ``--`` argument tells tox to pass all
-  subsequent arguments to pytest, and the ``-k MccsController`` tells pytest
-  to run only commands that match the string ``MccsController``.
+.. note:: If following these instructions on Windows, remember that
+   whenever instructed to run a command in a local terminal, you *must*
+   run it in your POSIX shell *e.g.* git-bash.
 
-
-Since the repository is mounted in the container, it is possible to edit
-the code from inside the container. However this is not recommended:
-recollect that Docker containers are deliberately lightweight and
-streamlined, containing nothing that isn't needed for them to do their
-job. This Docker container was built to run SKA Software python code
-against Tango Controls; it was not built for you to edit code in. It
-doesn't even contain ``vi``! You could install what you need, but it
-makes more sense to edit your code in your local system, where you
-have your favourite IDE, and everything else you need, set up just the
-way you like it. Then, after saving your changes, switch over to the
-container terminal session to run the tests.
-
-.. _SKA software developer portal: https://developer.skatelescope.org/
-.. _Tango Development Environment set up: https://developer.skatelescope.org/en/latest/tools/tango-devenv-setup.html
-.. _Working with Git: https://developer.skatelescope.org/en/latest/tools/git.html
-.. _Gitlab repo: https://gitlab.com/ska-telescope/ska-low-mccs.git
-
-Build the docs
-^^^^^^^^^^^^^^
-Since the docs ultimately need to build successfully on ReadTheDocs, we
-test our docs build by building them in a ReadTheDocs build container.
+Make
+^^^^
+Linux instructions
+``````````````````
+On Linux, you can install Make via your package management system. For
+example, on Ubuntu:
 
 .. code-block:: shell-session
 
-  me@local:~$ docker build -t ska_low_mccs_docs_builder  . -f docs/Dockerfile
-  me@local:~$ docker run --rm -v `pwd`:/project --user ${UID}:${GID} ska_low_mccs_docs_builder
+  me@local:~$ sudo apt install build-essential
 
-Documentation can also be built for the test suite:
+will install a number of tools common to building tool-chains, including
+Make.
 
-.. code-block:: shell-session
+Windows instructions
+````````````````````
+On Windows (assuming git-bash), you'll need to download a make
+executable and put it where git-bash will find it:
 
-  me@local:~$ docker build --build-arg dir=testing/docs -t ska_low_mccs_docs_builder  . -f docs/Dockerfile
-  me@local:~$ docker run --rm -v `pwd`:/project --user ${UID}:${GID} ska_low_mccs_docs_builder
-  
-Shortcut Make targets
-^^^^^^^^^^^^^^^^^^^^^
-For developers on Linux, the following Make targets are available:
+1. Go to https://sourceforge.net/projects/ezwinports/files/
+
+2. Download the zipfile for make (without the dependency on guile); for
+   example, ``make-4.3-without-guile-w32-bin.zip``.
+
+3. Extract the zipfile.
+
+4. Copy the contents to your Git\\mingw64\\ folder. Merge the folders,
+   but do *not* overwrite/replace any existing files.
+
+Basic development tools
+^^^^^^^^^^^^^^^^^^^^^^^
+You now have a basic development setup. The following Make targets are
+available to you:
 
 * **make tests** - run the tests in a SKA docker container
-  
+     
 * **make lint** - run linting in a SKA docker container
-  
-* **make develop** - launch a bash terminal in a SKA docker container
   
 * **make docs** - build the project documentation in a ReadTheDocs
   docker container
   
 * **make testdocs** - build the test documentation in a ReadTheDocs
   docker container
+
+Try it out:
+
+.. code-block:: shell-session
+   :emphasize-lines: 3,4,5,6,19
+
+   me@local:~$ cd ska-low-mccs
+   me@local:~/ska-low-mccs$ make tests
+   ... [output from Docker building the container image] ...
+   ... [output from Docker launching the container] ...
+   ... [output from tox building its virtual environment] ...
+   ... [output from pytest launching its test session] ...
+
+   ============================= test session starts ==============================
+   platform linux -- Python 3.7.3, pytest-5.4.3, py-1.10.0, pluggy-0.13.1 -- /app/.tox/py/bin/python
+   cachedir: .tox/py/.pytest_cache
+   metadata: {'Python': '3.7.3', 'Platform': 'Linux-5.4.0-73-generic-x86_64-with-debian-10.8', 'Packages': {'pytest': '5.4.3', 'py': '1.10.0', 'pluggy': '0.13.1'}, 'Plugins': {'bdd': '4.0.2', 'forked': '1.3.0', 'mock': '3.6.1', 'cov': '2.12.0', 'repeat': '0.9.1', 'json-report': '1.3.0', 'metadata': '1.11.0', 'xdist': '1.34.0'}}
+   rootdir: /app, inifile: setup.cfg, testpaths: testing/src/
+   plugins: bdd-4.0.2, forked-1.3.0, mock-3.6.1, cov-2.12.0, repeat-0.9.1, json-report-1.3.0, metadata-1.11.0, xdist-1.34.0
+   collecting ... collected 974 items
+
+   testing/src/testing/tests/integration/test_health_management.py::test_controller_health_rollup PASSED [  0%]
+   testing/src/testing/tests/functional/test_controller_subarray_interactions.py::test_allocate_subarray SKIPPED       [  0%]
+
+   ... [lots more test results] ...
+
+   testing/src/testing/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":17, "stations":["station1"]}] PASSED [ 99%]
+   testing/src/testing/tests/unit/test_utils.py::TestUtils::test_json_input_schema_raises[{"subarray_id":1, "stations":[]}] PASSED [100%]
+   
+   ---------------------------------- generated xml file: /app/build/reports/unit-tests.xml ----------------------------------
+   ------------------------------------------------------- JSON report -------------------------------------------------------
+   JSON report written to: build/reports/report.json (3921454 bytes)
+   
+   ----------- coverage: platform linux, python 3.7.3-final-0 -----------
+   Coverage HTML written to dir build/htmlcov
+   Coverage XML written to file build/reports/code-coverage.xml
+   
+   ================================= 962 passed, 12 skipped, 1 warning in 377.42s (0:06:17) ==================================
+   _________________________________________________________ summary _________________________________________________________
+     py37: commands succeeded
+     congratulations :)
+   me@local:~/ska-low-mccs$
+   
+(The first time you run these commands, they may take a very long time.
+This is because the Docker image has to be downloaded. Once downloaded,
+the image is cached, so the command will run much faster in future.)
+
+
+Advanced development setup
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+The approach described above provides a few basic tools, but serious
+developers will want more than this. For example, ``make tests`` runs
+all the tests, but serious developers will want fine-grained control of 
+what tests to run.
+
+This is achieved by using ``make develop`` to launch a shell inside your
+container. From that shell, you have fine-grained control of testing and
+linting via the ``tox`` command.
+
+.. code-block:: shell-session
+
+   me@local:~/ska-low-mccs$ make develop
+   user@caa98e8e264d:/app$
+
+Note the change in prompt. You are now user ``user`` in a bash terminal
+session that is running inside a Docker container named ``caa98e8e264d``
+(the name of your container will differ).
+
+List the contents of the current ``/app`` directory; you will see that
+the ska-low-mccs repository is mounted inside the container:
+     
+.. code-block:: shell-session
+
+  user@caa98e8e264d:/app$ ls
+  CHANGELOG   build               dist           pyfabil-1.0-py3-none-any.whl  setup.cfg  values-demo.yaml
+  Dockerfile  charts              docs           requirements-dev.txt          setup.py   values-development.yaml
+  LICENSE     dashboards          itpm_v1_2.bit  requirements-lint.txt         src        values-gitlab-ci.yaml
+  Makefile    demos               itpm_v1_6.bit  requirements.txt              testing    values-psi.yaml
+  README.md   develop.Dockerfile  pogo           scripts                       tox.ini    values-test.yaml
+          
+From inside the container, testing and linting is managed by ``tox``:
+
+  .. code-block:: shell-session
+    :emphasize-lines: 2
+
+    user@caa98e8e264d:/app$ tox
+    ...
+    ================================= 962 passed, 12 skipped, 1 warning in 377.42s (0:06:17) ==================================
+    _________________________________________________________ summary _________________________________________________________
+      py37: commands succeeded
+      congratulations :)
+    user@caa98e8e264d:/app$ 
+
+Tox commands you may find useful:
+
+* ``tox -e py37`` - run the tests
+
+* ``tox -e py37 -- -x`` - run the tests but stop on first failure
+
+* ``tox -e py37 -- -k MccsController`` - run the tests for just the
+  MccsController device
+
+* ``tox -e lint`` - format and lint the code
+
+Since the repository is read-write mounted in the container, it is
+possible to edit the code from inside the container. However this is not
+recommended: Docker containers are deliberately lightweight and
+streamlined, containing nothing that isn't needed for them to do their
+job. This Docker container was built to run SKA Software python code,
+not for you to edit code in. It doesn't even contain ``vi``. You could
+install what you need, but it makes more sense to edit the code on your
+local system, where you have your favourite IDE, and everything else you
+need, set up just the way you like it. Then, after saving your changes,
+switch over to the container terminal session to run the tests.
+
+.. _SKA software developer portal: https://developer.skatelescope.org/
+.. _Tango Development Environment set up: https://developer.skatelescope.org/en/latest/tools/tango-devenv-setup.html
+.. _Working with Git: https://developer.skatelescope.org/en/latest/tools/git.html
+.. _Gitlab repo: https://gitlab.com/ska-telescope/ska-low-mccs.git
+
+IDE integration
+^^^^^^^^^^^^^^^
+The workflow described above - editing locally but deploying to a remote
+container for testing - is well supported by IDEs. The SKA-Low-MCCS
+repository is already set up for remote container development in
+Visual Studio Code ("vscode"). It is highly recommended that you use
+vscode to develop. To set up vscode, follow the instructions at
+:doc:`setup_vscode`.

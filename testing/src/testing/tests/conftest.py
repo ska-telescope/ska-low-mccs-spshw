@@ -320,7 +320,6 @@ class CommandHelper:
             sleep(0.1)
         assert device.State() == state
 
-
 @pytest.fixture()
 def command_helper():
     """

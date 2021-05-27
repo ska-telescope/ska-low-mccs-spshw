@@ -298,35 +298,7 @@ class TestHealthManagement(HelperClass):
         assert status
         assert ":Allocate" in message_uid
 
-        # TODO: Move this into shared fixture
-        def wait_for_command_to_complete(
-            controller, expected_result=ResultCode.OK, timeout_limit=3.0
-        ):
-            """
-            Wait for the controller command to complete.
-
-            :param controller: The controller device
-            :type controller: DeviceProxy
-            :param expected_result: The expected results
-            :type expected_result: ResultCode
-            :param timeout_limit: The maximum timeout allowed for a command to complete
-            :type timeout_limit: float
-            """
-            timeout = 0.0
-            busy = True
-            while busy:
-                result = json.loads(controller.commandResult)
-                timeout += 0.5
-                time.sleep(0.5)
-                if (
-                    result.get("result_code") == expected_result
-                    or timeout > timeout_limit
-                ):
-                    busy = False
-            assert result.get("result_code") == expected_result
-            assert timeout <= timeout_limit
-
-        wait_for_command_to_complete(controller)
+        self.wait_for_command_to_complete(controller)
 
         [result_code], [status, message_uid] = call_with_json(
             controller.Allocate,
@@ -338,7 +310,7 @@ class TestHealthManagement(HelperClass):
         assert result_code == ResultCode.QUEUED
         assert status
         assert ":Allocate" in message_uid
-        wait_for_command_to_complete(controller)
+        self.wait_for_command_to_complete(controller)
 
         assert subarray_1.healthState == HealthState.OK
         assert subarray_2.healthState == HealthState.OK

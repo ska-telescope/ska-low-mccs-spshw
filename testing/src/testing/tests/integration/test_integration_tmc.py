@@ -20,6 +20,7 @@ from ska_tango_base.control_model import ObsState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -54,7 +55,7 @@ def devices_to_load():
     }
 
 
-class TestMccsIntegrationTmc:
+class TestMccsIntegrationTmc(HelperClass):
     """
     Integration test cases for interactions between TMC and MCCS device
     classes.
@@ -143,31 +144,6 @@ class TestMccsIntegrationTmc:
                 count += 0.1
                 sleep(0.1)
             assert devices[device].State() == state
-
-    # TODO: Move this into shared fixture
-    def wait_for_command_to_complete(
-        self, controller, expected_result=ResultCode.OK, timeout_limit=3.0
-    ):
-        """
-        Wait for the controller command to complete.
-
-        :param controller: The controller device
-        :type controller: DeviceProxy
-        :param expected_result: The expected results
-        :type expected_result: ResultCode
-        :param timeout_limit: The maximum timeout allowed for a command to complete
-        :type timeout_limit: float
-        """
-        timeout = 0.0
-        busy = True
-        while busy:
-            result = json.loads(controller.commandResult)
-            timeout += 0.5
-            sleep(0.5)
-            if result.get("result_code") == expected_result or timeout > timeout_limit:
-                busy = False
-        assert result.get("result_code") == expected_result
-        assert timeout <= timeout_limit
 
     def test_controller_on(self, devices):
         """

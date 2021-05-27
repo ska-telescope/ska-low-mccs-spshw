@@ -1041,9 +1041,10 @@ class MccsController(SKAMaster):
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
 
         :example:
 

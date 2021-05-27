@@ -14,6 +14,7 @@ from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.utils import call_with_json
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -48,7 +49,7 @@ def devices_to_load():
     }
 
 
-class TestMccsIntegration:
+class TestMccsIntegration(HelperClass):
     """
     Integration test cases for the Mccs device classes.
     """
@@ -67,31 +68,6 @@ class TestMccsIntegration:
                 count += 0.1
                 sleep(0.1)
             assert device.State() == state
-
-    # TODO: Move this into shared fixture
-    def wait_for_command_to_complete(
-        self, controller, expected_result=ResultCode.OK, timeout_limit=3.0
-    ):
-        """
-        Wait for the controller command to complete.
-
-        :param controller: The controller device
-        :type controller: DeviceProxy
-        :param expected_result: The expected results
-        :type expected_result: ResultCode
-        :param timeout_limit: The maximum timeout allowed for a command to complete
-        :type timeout_limit: float
-        """
-        timeout = 0.0
-        busy = True
-        while busy:
-            result = json.loads(controller.commandResult)
-            timeout += 0.5
-            sleep(0.5)
-            if result.get("result_code") == expected_result or timeout > timeout_limit:
-                busy = False
-        assert result.get("result_code") == expected_result
-        assert timeout <= timeout_limit
 
     def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
         """

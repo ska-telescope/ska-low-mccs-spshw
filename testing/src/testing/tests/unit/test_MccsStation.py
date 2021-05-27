@@ -212,6 +212,39 @@ class TestMccsStation:
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
+    def test_refLongitude(self, device_under_test):
+        """
+        Test for refLongitude.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.refLongitude == 0.0
+
+    def test_refLatitude(self, device_under_test):
+        """
+        Test for refLatitude.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.refLatitude == 0.0
+
+    def test_refHeight(self, device_under_test):
+        """
+        Test for refHeight.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.refHeight == 0.0
+
     def test_subarrayId(self, device_under_test, logger):
         """
         Test for subarrayId attribute.

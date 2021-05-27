@@ -279,39 +279,6 @@ class TestMccsAntenna:
         """
         assert device_under_test.yPolarisationFaulty is False
 
-    def test_fieldNodeLongitude(self, device_under_test):
-        """
-        Test for fieldNodeLongitude.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.fieldNodeLongitude == 0.0
-
-    def test_fieldNodeLatitude(self, device_under_test):
-        """
-        Test for fieldNodeLatitude.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.fieldNodeLatitude == 0.0
-
-    def test_altitude(self, device_under_test):
-        """
-        Test for altitude.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.altitude == 0.0
-
     def test_xDisplacement(self, device_under_test):
         """
         Test for xDisplacement.
@@ -333,6 +300,17 @@ class TestMccsAntenna:
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
         assert device_under_test.yDisplacement == 0.0
+
+    def test_zDisplacement(self, device_under_test):
+        """
+        Test for zDisplacement.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.zDisplacement == 0.0
 
     def test_timestampOfLastSpectrum(self, device_under_test):
         """

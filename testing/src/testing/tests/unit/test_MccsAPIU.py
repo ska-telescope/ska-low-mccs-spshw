@@ -12,7 +12,6 @@
 This module contains the tests for MccsAPIU.
 """
 import random
-from time import sleep
 
 import pytest
 from tango import DevState, AttrQuality, EventType
@@ -29,6 +28,7 @@ from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu.apiu_device import APIUHardwareManager
 from ska_low_mccs.apiu.apiu_simulator import AntennaHardwareSimulator, APIUSimulator
 from ska_low_mccs.hardware import PowerMode
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -566,7 +566,7 @@ class TestAPIUHardwareManager:
         assert hardware_manager.turn_off_antennas()
 
 
-class TestMccsAPIU(object):
+class TestMccsAPIU(HelperClass, object):
     """
     Test class for MccsAPIU tests.
     """
@@ -648,9 +648,8 @@ class TestMccsAPIU(object):
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
-        sleep(0.1)  # Required to allow DUT thread to run
+        self.start_up_device(device_under_test)
+
         assert device_under_test.temperature == APIUSimulator.TEMPERATURE
         assert device_under_test.humidity == APIUSimulator.HUMIDITY
         assert device_under_test.voltage == APIUSimulator.VOLTAGE
@@ -678,9 +677,7 @@ class TestMccsAPIU(object):
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
-        sleep(0.1)  # Required to allow DUT thread to run
+        self.start_up_device(device_under_test)
 
         [[result_code], [message]] = device_under_test.PowerUp()
         assert result_code == ResultCode.OK
@@ -701,9 +698,7 @@ class TestMccsAPIU(object):
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
-        sleep(0.1)  # Required to allow DUT thread to run
+        self.start_up_device(device_under_test)
 
         [[result_code], [message]] = device_under_test.PowerDown()
         assert result_code == ResultCode.OK
@@ -726,9 +721,7 @@ class TestMccsAPIU(object):
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        device_under_test.Off()
-        _ = device_under_test.On(dummy_json_args)
-        sleep(0.1)  # Required to allow DUT thread to run
+        self.start_up_device(device_under_test)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)
@@ -763,9 +756,7 @@ class TestMccsAPIU(object):
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        device_under_test.Off()
-        _ = device_under_test.On(dummy_json_args)
-        sleep(0.1)  # Required to allow DUT thread to run
+        self.start_up_device(device_under_test)
 
         are_antennas_on = device_under_test.areAntennasOn
         assert not any(are_antennas_on)

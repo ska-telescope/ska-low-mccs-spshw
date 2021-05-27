@@ -18,7 +18,7 @@ import threading
 from time import sleep
 import pytest
 import tango
-from tango import AttrQuality
+from tango import AttrQuality, DevState
 from tango.server import command
 
 from ska_tango_base.commands import ResultCode
@@ -122,8 +122,8 @@ def mock_factory(mocker, test_string):
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
-    builder.add_result_command("Off", ResultCode.OK)
-    builder.add_result_command("On", ResultCode.OK, message_uid=test_string)
+    builder.add_result_command("Off", ResultCode.QUEUED, message_uid=test_string)
+    builder.add_result_command("On", ResultCode.QUEUED, message_uid=test_string)
     builder.add_result_command("Standby", ResultCode.OK)
     return builder
 
@@ -247,7 +247,9 @@ class TestMccsController:
         ):
             device_under_test.Reset()
 
-    def test_On(self, device_under_test, mock_event_callback):
+    def test_On(
+        self, device_under_test, mock_event_callback, command_helper, test_string
+    ):
         """
         Test for On (including end of command event testing).
 
@@ -258,25 +260,37 @@ class TestMccsController:
         :param mock_event_callback: fixture that provides a mock
             instance with callback support methods
         :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
+        :param command_helper: A command helper fixture.
+        :type command_helper: CommandHelper
+        :param test_string: a simple test string fixture
+        :type test_string: str
         """
-        device_under_test.Off()
+        controller = device_under_test
+        command_helper.device_command(controller, "Off", test_string)
+        command_helper.check_device_state(controller, DevState.OFF)
 
         # Test that subscription yields an event as expected
-        _ = device_under_test.subscribe_event(
+        _ = controller.subscribe_event(
             "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
         )
         mock_event_callback.check_event_data(name="commandResult", result=None)
 
-        device_under_test._command_result = [ResultCode.UNKNOWN, "", ""]
+        controller._command_result = [ResultCode.UNKNOWN, "", ""]
+
         # Call the On() command on the Controller device
-        [result_code], [_, message_uid] = device_under_test.On()
+        result_code, message_uid = command_helper.device_command(
+            controller, "On", test_string
+        )
         assert result_code == ResultCode.QUEUED
         assert ":On" in message_uid
+        command_helper.check_device_state(controller, DevState.ON)
         mock_event_callback.check_queued_command_result(
-            name="commandResult", result=ResultCode.STARTED
+            name="commandResult", result=ResultCode.OK
         )
 
-    def test_Off(self, device_under_test, mock_event_callback):
+    def test_Off(
+        self, device_under_test, mock_event_callback, command_helper, test_string
+    ):
         """
         Test for Off (including end of command event testing).
 
@@ -287,12 +301,18 @@ class TestMccsController:
         :param mock_event_callback: fixture that provides a mock
             instance with callback support methods
         :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
+        :param command_helper: A command helper fixture.
+        :type command_helper: CommandHelper
+        :param test_string: a simple test string fixture
+        :type test_string: str
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
-        controller.Off()
-        controller.On()
-        sleep(0.1)  # Required to allow DUT thread to run
+        command_helper.device_command(controller, "Off", test_string)
+        command_helper.check_device_state(controller, DevState.OFF)
+
+        command_helper.device_command(controller, "On", test_string)
+        command_helper.check_device_state(controller, DevState.ON)
 
         # Test that subscription yields an event as expected
         _ = controller.subscribe_event(
@@ -300,17 +320,20 @@ class TestMccsController:
         )
         mock_event_callback.check_event_data(name="commandResult", result=None)
 
-        # Call the Off() command on the Controller device
-        [[result_code], [message]] = controller.Off()
-        assert result_code == ResultCode.OK
-        assert message == MccsController.OffCommand.SUCCEEDED_MESSAGE
-        mock_event_callback.check_command_result(
-            name="commandResult", result=result_code
+        # Call the On() command on the Controller device
+        result_code, message_uid = command_helper.device_command(
+            controller, "Off", test_string
+        )
+        assert result_code == ResultCode.QUEUED
+        assert ":Off" in message_uid
+        command_helper.check_device_state(controller, DevState.OFF)
+        mock_event_callback.check_queued_command_result(
+            name="commandResult", result=ResultCode.OK
         )
 
-    def test_OnCallback(self, device_under_test, dummy_json_args):
+    def test_Callback(self, device_under_test, dummy_json_args):
         """
-        Test for OnCallback.
+        Test for Callback.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -319,9 +342,9 @@ class TestMccsController:
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
-        [result_code], [_, message_uid] = device_under_test.OnCallback(dummy_json_args)
+        [result_code], [_, message_uid] = device_under_test.Callback(dummy_json_args)
         assert result_code == ResultCode.QUEUED
-        assert ":OnCallback" in message_uid
+        assert ":Callback" in message_uid
 
     def test_StandbyLow(self, device_under_test):
         """
@@ -349,7 +372,7 @@ class TestMccsController:
         assert result_code == ResultCode.OK
         assert message == MccsController.StandbyFullCommand.SUCCEEDED_MESSAGE
 
-    def test_Operate(self, device_under_test):
+    def test_Operate(self, device_under_test, command_helper, empty_json_dict):
         """
         Test for Operate.
 
@@ -357,8 +380,13 @@ class TestMccsController:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param command_helper: A command helper fixture.
+        :type command_helper: CommandHelper
+        :param empty_json_dict: an empty json encoded dictionary
+        :type empty_json_dict: str
         """
-        device_under_test.Off()
+        command_helper.device_command(device_under_test, "Off", empty_json_dict)
+        command_helper.check_device_state(device_under_test, DevState.OFF)
 
         # assert device_under_test.Operate() == 0
         [[result_code], [message]] = device_under_test.Operate()
@@ -447,6 +475,14 @@ class TestMccsController:
             assert timeout <= timeout_limit
 
         def test_Allocate(self, device_under_test, mock_event_callback, logger):
+        def test_Allocate(
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
+        ):
             """
             Test the Allocate command (including end of command event
             testing).
@@ -462,6 +498,10 @@ class TestMccsController:
                 :py:class:`pytest_mock.mocker.Mock`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
@@ -469,9 +509,10 @@ class TestMccsController:
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
 
-            controller.Off()
-            controller.On()
-            sleep(0.1)  # Required to allow DUT thread to run
+            command_helper.device_command(controller, "Off", test_string)
+            command_helper.check_device_state(controller, DevState.OFF)
+            command_helper.device_command(controller, "On", test_string)
+            command_helper.check_device_state(controller, DevState.ON)
 
             call_with_json(
                 device_under_test.simulateAdminModeChange,
@@ -709,7 +750,14 @@ class TestMccsController:
             assert mock_station_1.subarrayId == 2
             assert mock_station_2.subarrayId == 2
 
-        def test_Release(self, device_under_test, mock_event_callback, logger):
+        def test_Release(
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
+        ):
             """
             Test Release command.
 
@@ -724,6 +772,10 @@ class TestMccsController:
             :param logger: the logger to be used by the object under
                 test
             :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
             """
             controller = device_under_test  # for readability
             mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
@@ -731,9 +783,10 @@ class TestMccsController:
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
 
-            controller.Off()
-            controller.On()
-            sleep(0.1)  # Required to allow DUT thread to run
+            command_helper.device_command(controller, "Off", test_string)
+            command_helper.check_device_state(controller, DevState.OFF)
+            command_helper.device_command(controller, "On", test_string)
+            command_helper.check_device_state(controller, DevState.ON)
 
             call_with_json(
                 device_under_test.simulateAdminModeChange,
@@ -846,7 +899,12 @@ class TestMccsController:
             assert mock_station_2.subarrayId == 0
 
         def test_assignedResources(
-            self, device_under_test, mock_event_callback, logger
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
         ):
             """
             Test the assigned resources attribute.
@@ -862,11 +920,18 @@ class TestMccsController:
                 :py:class:`pytest_mock.mocker.Mock`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
             """
             controller = device_under_test  # for readability
-            controller.Off()
-            controller.On()
-            sleep(0.1)  # Required to allow DUT thread to run
+            # Need to turn it on before we can turn it off
+            command_helper.device_command(controller, "Off", test_string)
+            command_helper.check_device_state(controller, DevState.OFF)
+
+            command_helper.device_command(controller, "On", test_string)
+            command_helper.check_device_state(controller, DevState.ON)
 
             call_with_json(
                 device_under_test.simulateAdminModeChange,

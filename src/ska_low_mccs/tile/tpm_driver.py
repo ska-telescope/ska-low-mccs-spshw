@@ -78,7 +78,7 @@ class TpmDriver(HardwareDriver):
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._test_generator_active = False
-
+        self._arp_table = {}
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
 
@@ -511,39 +511,33 @@ class TpmDriver(HardwareDriver):
             current_address = current_address + 4
 
     def configure_40g_core(
-        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
     ):
         """
         Configure the 40G code.
 
         :param core_id: id of the core
         :type core_id: int
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
         :param src_mac: MAC address of the source
-        :type src_mac: str
+        :type src_mac: int
         :param src_ip: IP address of the source
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
         :type dst_port: int
         """
-        core_dict = {
-            "CoreID": core_id,
-            "SrcMac": src_mac,
-            "SrcIP": src_ip,
-            "SrcPort": src_port,
-            "DstMac": dst_mac,
-            "DstIP": dst_ip,
-            "DstPort": dst_port,
-        }
-        self.logger.warning("TpmDriver: configure_40g_core is simulated")
-        self._forty_gb_core_list.append(core_dict)
 
-    def get_40g_configuration(self, core_id=-1):
+        self.logger.debug("TpmDriver: configure_40g_core")
+        self.tile.configure_40g_core(
+            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+        )
+
+    def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
         Return a 40G configuration.
 
@@ -551,17 +545,42 @@ class TpmDriver(HardwareDriver):
             be return. Defaults to -1, in which case all cores
             configurations are returned, defaults to -1
         :type core_id: int, optional
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list(dict)
+        :rtype: list(dict) or dict
         """
-        self.logger.warning("TpmDriver: get_40g_configuration is simulated")
+        self.logger.debug("TpmDriver: get_40g_configuration")
+        self._forty_gb_core_list = []
         if core_id == -1:
-            return self._forty_gb_core_list
-        for item in self._forty_gb_core_list:
-            if item.get("CoreID") == core_id:
-                return item
-        return
+            for core in range(0, 8):
+                dict_to_append = self.tile.get_40g_core_configuration(
+                    core, arp_table_entry
+                )
+                if dict_to_append is not None:
+                    self._forty_gb_core_list.append(dict_to_append)
+
+        else:
+            self._forty_gb_core_list = self.tile.get_40g_core_configuration(
+                core_id, arp_table_entry
+            )
+        return self._forty_gb_core_list
+
+    @property
+    def arp_table(self):
+        """
+        Check that ARP table has been populated in for all used cores
+        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
+        beamformer, 1 for LMC 10G interfaces use cores 0,1 (fpga0) and
+        4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
+
+        :return: list of core id and arp table populated
+        :rtype: dict(list)
+        """
+        self.logger.debug("TpmDriver: arp_table")
+        self._arp_table = self.tile.get_arp_table()
+        return self._arp_table
 
     def set_lmc_download(
         self,

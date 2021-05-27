@@ -115,6 +115,7 @@ class DevicePool:
         :return: Whether the messages were sent or not
         :rtype: bool
         """
+        self._logger.debug(f"pool.py:invoke_command_with_callback({command_name})")
         if len(self._responses):
             self._logger.error(f"{len(self._responses)} pool messages in progress")
             return False
@@ -384,7 +385,12 @@ class DevicePoolSequence:
         :return: Whether the command succeeded or not
         :rtype: bool
         """
-        return self.invoke_command("Off", reverse=reverse)
+        args = {
+            "respond_to_fqdn": "",
+            "callback": "",
+        }
+        json_string = json.dumps(args)
+        return self.invoke_command(command_name="Off", arg=json_string, reverse=reverse)
 
     def on(self, reverse=False):
         """

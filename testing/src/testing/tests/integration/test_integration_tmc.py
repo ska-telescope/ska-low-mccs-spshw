@@ -205,13 +205,15 @@ class TestMccsIntegrationTmc:
         )
         self.check_states(devices, dev_states)
 
-    def test_controller_off(self, devices):
+    def test_controller_off(self, devices, mocker):
         """
         Test that an asynchronous call to controller:Off() works
         correctly.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         dev_states = {
             "controller": DevState.DISABLE,
@@ -230,7 +232,16 @@ class TestMccsIntegrationTmc:
             "station_002": DevState.ON,
         }
         self.check_states(devices, dev_states)
-        self.assert_command(device=devices["controller"], command="Off")
+
+        # Need to patch tango.DeviceProxy for the message queue implementation
+        # as the devices are all behind MccsDeviceProxy...
+        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
+
+        self.assert_command(
+            device=devices["controller"],
+            command="Off",
+            expected_result=ResultCode.QUEUED,
+        )
         dev_states = {
             "controller": DevState.OFF,
             "station_001": DevState.OFF,
@@ -238,13 +249,15 @@ class TestMccsIntegrationTmc:
         }
         self.check_states(devices, dev_states)
 
-    def test_setup_only(self, devices):
+    def test_setup_only(self, devices, mocker):
         """
         Test that runs through the basic TMC<->MCCS interactions to
         setup and then tear down.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         # Turn on controller and stations
         self.assert_command(
@@ -281,9 +294,12 @@ class TestMccsIntegrationTmc:
         )
         self.wait_for_command_to_complete(devices["controller"])
 
+        dev_states = {
+            "subarray_01": DevState.ON,
+        }
+        self.check_states(devices, dev_states)
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
-        assert devices["subarray_01"].State() == DevState.ON
         assert devices["subarray_01"].obsState == ObsState.IDLE
         assert len(devices["subarray_01"].stationFQDNs) == 2
 
@@ -293,25 +309,44 @@ class TestMccsIntegrationTmc:
         self.assert_command(
             device=devices["controller"], command="Release", argin=json_string
         )
+        dev_states = {
+            "subarray_01": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_01"].stationFQDNs is None
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
+        # Need to patch tango.DeviceProxy for the message queue implementation
+        # as the devices are all behind MccsDeviceProxy...
+        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
+
         # Turn off controller and stations
-        self.assert_command(device=devices["controller"], command="Off")
+        self.assert_command(
+            device=devices["controller"],
+            command="Off",
+            expected_result=ResultCode.QUEUED,
+        )
+        dev_states = {
+            "controller": DevState.OFF,
+            "station_001": DevState.OFF,
+            "station_002": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
 
-    def test_setup_and_observation(self, devices):
+    def test_setup_and_observation(self, devices, mocker):
         """
         Test that runs through the basic TMC<->MCCS interactions to
         setup and perform an observation (without pointing updates)
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+        :param mocker: fixture that wraps unittest.Mock
+        :type mocker: :py:class:`pytest_mock.mocker`
         """
         # Turn on controller and stations
         self.assert_command(
@@ -346,9 +381,12 @@ class TestMccsIntegrationTmc:
         )
         self.wait_for_command_to_complete(devices["controller"])
 
+        dev_states = {
+            "subarray_01": DevState.ON,
+        }
+        self.check_states(devices, dev_states)
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
-        assert devices["subarray_01"].State() == DevState.ON
         assert devices["subarray_01"].obsState == ObsState.IDLE
 
         # Configure the subarray
@@ -395,14 +433,28 @@ class TestMccsIntegrationTmc:
         self.assert_command(
             device=devices["controller"], command="Release", argin=json_string
         )
+        dev_states = {
+            "subarray_01": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["subarray_01"].State() == DevState.OFF
         assert devices["subarray_01"].stationFQDNs is None
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
+        # Need to patch tango.DeviceProxy for the message queue implementation
+        # as the devices are all behind MccsDeviceProxy...
+        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
+
         # Turn off controller and stations
-        self.assert_command(device=devices["controller"], command="Off")
-        assert devices["controller"].State() == DevState.OFF
-        assert devices["station_001"].State() == DevState.OFF
-        assert devices["station_002"].State() == DevState.OFF
+        self.assert_command(
+            device=devices["controller"],
+            command="Off",
+            expected_result=ResultCode.QUEUED,
+        )
+        dev_states = {
+            "controller": DevState.OFF,
+            "station_001": DevState.OFF,
+            "station_002": DevState.OFF,
+        }
+        self.check_states(devices, dev_states)

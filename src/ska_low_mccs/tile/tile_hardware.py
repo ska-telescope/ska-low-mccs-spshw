@@ -521,31 +521,31 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.write_address(address, values)
 
     def configure_40g_core(
-        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
     ):
         """
         Configure the 40G code.
 
         :param core_id: id of the core
         :type core_id: int
+        :param arp_table_entry: ARP table entry ID
+        :type arp_table_entry: int
         :param src_mac: MAC address of the source
-        :type src_mac: str
+        :type src_mac: int
         :param src_ip: IP address of the source
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
         :type dst_port: int
         """
         self._factory.hardware.configure_40g_core(
-            core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
         )
 
-    def get_40g_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
         Return a 40G configuration.
 
@@ -553,11 +553,13 @@ class TileHardwareManager(SimulableHardwareManager):
             be return. Defaults to -1, in which case all cores
             configurations are returned, defaults to -1
         :type core_id: int, optional
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list(dict)
+        :rtype: list(dict) or dict
         """
-        return self._factory.hardware.get_40g_configuration(core_id)
+        return self._factory.hardware.get_40g_configuration(core_id, arp_table_entry)
 
     def set_lmc_download(
         self,
@@ -594,6 +596,16 @@ class TileHardwareManager(SimulableHardwareManager):
             dst_port=dst_port,
             lmc_mac=lmc_mac,
         )
+
+    @property
+    def arp_table(self):
+        """
+        Check that ARP table has been populated in for all used cores.
+
+        :return: list of core id and arp table populated
+        :rtype: dict(list)
+        """
+        return self._factory.hardware.arp_table
 
     def set_channeliser_truncation(self, array):
         """

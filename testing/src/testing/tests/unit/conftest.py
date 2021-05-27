@@ -147,10 +147,9 @@ def mock_event_callback(mocker):
         def check_queued_command_result(self, name, result):
             """
             Special callback check routine for commandResult. There
-            should always be three entries for commandResult; the first
-            should reset commandResult to ResultCode.UNKNOWN, the second
-            should be the QUEUED result, and the third should match the
-            expected result passed into this routine.
+            should always be four entries for commandResult; UNKNOWN,
+            QUEUED, STARTED and the expected result passed into this
+            routine.
 
             :param name: name of the registered event
             :type name: str
@@ -164,24 +163,15 @@ def mock_event_callback(mocker):
             time.sleep(0.2)
 
             self.assert_called()
-            assert len(self.mock_calls) == 3  # exactly two calls
+            assert len(self.mock_calls) == 4  # exactly four calls
 
-            first_event_data = self.mock_calls[0][1][0].attr_value
-            second_event_data = self.mock_calls[1][1][0].attr_value
-            third_event_data = self.mock_calls[2][1][0].attr_value
-            assert first_event_data.name.casefold() == name.casefold()
-            assert second_event_data.name.casefold() == name.casefold()
-            assert third_event_data.name.casefold() == name.casefold()
-            values = json.loads(first_event_data.value)
-            assert values.get("result_code") == ResultCode.UNKNOWN
-            assert first_event_data.quality == tango.AttrQuality.ATTR_VALID
-            values = json.loads(second_event_data.value)
-            assert values.get("result_code") == ResultCode.QUEUED
-            assert second_event_data.quality == tango.AttrQuality.ATTR_VALID
-            if result is not None:
-                values = json.loads(third_event_data.value)
-                assert values.get("result_code") == result
-                assert third_event_data.quality == tango.AttrQuality.ATTR_VALID
-            self.reset_mock()
+            lookup = [ResultCode.UNKNOWN, ResultCode.QUEUED, ResultCode.STARTED, result]
+            for entry in range(4):
+                event_data = self.mock_calls[entry][1][0].attr_value
+                assert event_data.name.casefold() == name.casefold()
+                values = json.loads(event_data.value)
+                if lookup[entry] is not None:
+                    assert values.get("result_code") == lookup[entry]
+                    assert event_data.quality == tango.AttrQuality.ATTR_VALID
 
     return _MockEventCallback()

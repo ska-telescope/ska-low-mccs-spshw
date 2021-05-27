@@ -13,6 +13,7 @@ This test module contains integration tests that exercise the health
 management functionality of the SKA Low MCCS system.
 """
 import time
+import json
 from tango import DevState
 import pytest
 
@@ -317,7 +318,10 @@ class TestHealthManagement(HelperClass):
                 result = json.loads(controller.commandResult)
                 timeout += 0.5
                 time.sleep(0.5)
-                if result.get("result_code") == expected_result or timeout > timeout_limit:
+                if (
+                    result.get("result_code") == expected_result
+                    or timeout > timeout_limit
+                ):
                     busy = False
             assert result.get("result_code") == expected_result
             assert timeout <= timeout_limit
@@ -387,13 +391,6 @@ class TestHealthManagement(HelperClass):
         tile_1.adminMode = AdminMode.ONLINE
 
         self.start_up_device(tile_1)
-
-        # tile_1.Off(empty_json_dict)
-        # dev_states = {tile_1: DevState.OFF}
-        # check_states(dev_states)
-        # tile_1.On(empty_json_dict)
-        # dev_states = {tile_1: DevState.ON}
-        # check_states(dev_states)
 
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK

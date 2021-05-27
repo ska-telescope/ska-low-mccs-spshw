@@ -173,5 +173,6 @@ def mock_event_callback(mocker):
                 if lookup[entry] is not None:
                     assert values.get("result_code") == lookup[entry]
                     assert event_data.quality == tango.AttrQuality.ATTR_VALID
+            self.reset_mock()
 
     return _MockEventCallback()

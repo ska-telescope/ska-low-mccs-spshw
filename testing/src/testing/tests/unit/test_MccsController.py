@@ -474,7 +474,6 @@ class TestMccsController:
             assert result.get("result_code") == expected_result
             assert timeout <= timeout_limit
 
-        def test_Allocate(self, device_under_test, mock_event_callback, logger):
         def test_Allocate(
             self,
             device_under_test,
@@ -553,10 +552,10 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            mock_event_callback.check_queued_command_result(
-                name="commandResult", result=ResultCode.STARTED
-            )
             self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
 
             # check that the mock subarray_1 was told to assign that resource
             mock_subarray_1.On.assert_called_once_with()
@@ -592,11 +591,11 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            mock_event_callback.check_queued_command_result(
-                name="commandResult", result=ResultCode.STARTED
-            )
             self.wait_for_command_to_complete(
                 controller, expected_result=ResultCode.FAILED
+            )
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.FAILED
             )
 
             # check no side-effects
@@ -630,10 +629,10 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            mock_event_callback.check_queued_command_result(
-                name="commandResult", result=ResultCode.STARTED
-            )
             self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -669,10 +668,10 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            mock_event_callback.check_queued_command_result(
-                name="commandResult", result=ResultCode.STARTED
-            )
             self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -727,10 +726,10 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            mock_event_callback.check_queued_command_result(
-                name="commandResult", result=ResultCode.STARTED
-            )
             self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -809,7 +808,14 @@ class TestMccsController:
                 health_state=HealthState.OK,
             )
 
-            call_with_json(
+            # Test that subscription yields an event as expected
+            _ = device_under_test.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
+            )
+            mock_event_callback.check_event_data(name="commandResult", result=None)
+
+            # Make the call to allocate
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -817,12 +823,20 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
             mock_subarray_1.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
 
             # allocate station 2 to subarray 2
-            call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
@@ -830,16 +844,18 @@ class TestMccsController:
                 station_ids=[[2]],
                 channel_blocks=[2],
             )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
             mock_subarray_2.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 2
-
-            # Test that subscription yields an event as expected
-            _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
-            )
-            mock_event_callback.check_event_data(name="commandResult", result=None)
 
             # release all resources from subarray_2
             ((result_code,), (_,)) = call_with_json(
@@ -967,7 +983,7 @@ class TestMccsController:
             }
 
             # Make the call to allocate
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -975,7 +991,14 @@ class TestMccsController:
                 station_ids=[[1, 2]],
                 channel_blocks=[3],
             )
-            assert result_code == ResultCode.OK
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
             result = device_under_test.assignedResources
             assert json.loads(result) == expected_result
 

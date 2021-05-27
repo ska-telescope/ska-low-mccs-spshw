@@ -13,7 +13,6 @@ This test module contains integration tests that exercise the health
 management functionality of the SKA Low MCCS system.
 """
 import time
-import json
 from tango import DevState
 import pytest
 

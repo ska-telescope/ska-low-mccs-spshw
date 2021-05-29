@@ -444,7 +444,7 @@ class TestMccsTile(HelperClass):
         self.start_up_device(device_under_test)
         device_under_test.current == StaticTpmSimulator.CURRENT
 
-    def test_board_temperature(self, device_under_test):
+    def test_boardTemperature(self, device_under_test):
         """
         Test for the board_temperature attribute.
 
@@ -458,12 +458,12 @@ class TestMccsTile(HelperClass):
         # counterintuitive mess that will be fixed in SP-1501.
         self.start_up_device(device_under_test)
         assert (
-            device_under_test.board_temperature == StaticTpmSimulator.BOARD_TEMPERATURE
+            device_under_test.boardTemperature == StaticTpmSimulator.BOARD_TEMPERATURE
         )
 
-    def test_fpga1_temperature(self, device_under_test):
+    def test_fpga1Temperature(self, device_under_test):
         """
-        Test for the fpga1_temperature attribute.
+        Test for the fpga1Temperature attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -475,12 +475,12 @@ class TestMccsTile(HelperClass):
         # counterintuitive mess that will be fixed in SP-1501.
         self.start_up_device(device_under_test)
         assert (
-            device_under_test.fpga1_temperature == StaticTpmSimulator.FPGA1_TEMPERATURE
+            device_under_test.fpga1Temperature == StaticTpmSimulator.FPGA1_TEMPERATURE
         )
 
-    def test_fpga2_temperature(self, device_under_test):
+    def test_fpga2Temperature(self, device_under_test):
         """
-        Test for the fpga2_temperature attribute.
+        Test for the fpga2Temperature attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -492,12 +492,12 @@ class TestMccsTile(HelperClass):
         # counterintuitive mess that will be fixed in SP-1501.
         self.start_up_device(device_under_test)
         assert (
-            device_under_test.fpga2_temperature == StaticTpmSimulator.FPGA2_TEMPERATURE
+            device_under_test.fpga2Temperature == StaticTpmSimulator.FPGA2_TEMPERATURE
         )
 
-    def test_fpga1_time(self, device_under_test):
+    def test_fpgasTime(self, device_under_test):
         """
-        Test for the fpga1_time attribute.
+        Test for the fpgasTime attribute.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -508,22 +508,8 @@ class TestMccsTile(HelperClass):
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
         self.start_up_device(device_under_test)
-        assert device_under_test.fpga1_time == StaticTpmSimulator.FPGA1_TIME
-
-    def test_fpga2_time(self, device_under_test):
-        """
-        Test for the fpga2_time attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        # TODO: For now we need to get this to OFF (highest state of
-        # device readiness) before we can turn this ON. This is a
-        # counterintuitive mess that will be fixed in SP-1501.
-        self.start_up_device(device_under_test)
-        assert device_under_test.fpga2_time == StaticTpmSimulator.FPGA2_TIME
+        assert device_under_test.fpgasTime == pytest.approx(
+            StaticTpmSimulator.FPGAS_TIME)
 
     def test_antennaIds(self, device_under_test):
         """

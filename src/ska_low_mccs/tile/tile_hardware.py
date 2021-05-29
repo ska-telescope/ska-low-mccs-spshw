@@ -314,24 +314,14 @@ class TileHardwareManager(SimulableHardwareManager):
         return self._factory.hardware.fpga2_temperature
 
     @property
-    def fpga1_time(self):
+    def fpgas_time(self):
         """
-        The FPGA 1 time.
+        The FPGAs time.
 
-        :return: the FPGA 1 time
-        :rtype: int
+        :return: the FPGAs time
+        :rtype: list(int)
         """
-        return self._factory.hardware.fpga1_time
-
-    @property
-    def fpga2_time(self):
-        """
-        The FPGA 2 time.
-
-        :return: the FPGA 2 time
-        :rtype: int
-        """
-        return self._factory.hardware.fpga2_time
+        return self._factory.hardware.fpgas_time
 
     @property
     def pps_delay(self):
@@ -1026,26 +1016,6 @@ class TileHardwareManager(SimulableHardwareManager):
         Tweak the transceivers.
         """
         self._factory.hardware.tweak_transceivers()
-
-    @property
-    def phase_terminal_count(self):
-        """
-        Return the phase terminal count.
-
-        :return: the phase terminal count
-        :rtype: int
-        """
-        return self._factory.hardware._phase_terminal_count
-
-    @phase_terminal_count.setter
-    def phase_terminal_count(self, value):
-        """
-        Set the phase terminal count.
-
-        :param value: the phase terminal count
-        :type value: int
-        """
-        self._factory.hardware.phase_terminal_count = value
 
     def post_synchronisation(self):
         """

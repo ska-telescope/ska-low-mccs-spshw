@@ -160,8 +160,7 @@ class TestCommon:
             ("fpga1_temperature", StaticTpmSimulator.FPGA1_TEMPERATURE),
             ("fpga2_temperature", StaticTpmSimulator.FPGA2_TEMPERATURE),
             ("adc_rms", StaticTpmSimulator.ADC_RMS),
-            ("fpga1_time", StaticTpmSimulator.FPGA1_TIME),
-            ("fpga2_time", StaticTpmSimulator.FPGA2_TIME),
+            ("fpgas_time", StaticTpmSimulator.FPGAS_TIME),
             (
                 "current_tile_beamformer_frame",
                 StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,

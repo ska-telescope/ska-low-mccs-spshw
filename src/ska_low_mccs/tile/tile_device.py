@@ -1089,7 +1089,7 @@ class MccsTile(SKABaseDevice):
         min_alarm=16.0,
         max_alarm=47.0,
     )
-    def board_temperature(self):
+    def boardTemperature(self):
         """
         Return the board temperature.
 
@@ -1106,7 +1106,7 @@ class MccsTile(SKABaseDevice):
         min_alarm=16.0,
         max_alarm=47.0,
     )
-    def fpga1_temperature(self):
+    def fpga1Temperature(self):
         """
         Return the temperature of FPGA 1.
 
@@ -1123,7 +1123,7 @@ class MccsTile(SKABaseDevice):
         min_alarm=16.0,
         max_alarm=47.0,
     )
-    def fpga2_temperature(self):
+    def fpga2Temperature(self):
         """
         Return the temperature of FPGA 2.
 
@@ -1132,25 +1132,17 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.fpga2_temperature
 
-    @attribute(dtype="DevLong")
-    def fpga1_time(self):
+    @attribute(dtype=("DevLong",),
+               max_dim_x=2,
+    )
+    def fpgasTime(self):
         """
-        Return the time for FPGA 1.
+        Return the time for FPGAs.
 
-        :return: the time for FPGA 1
-        :rtype: int
+        :return: the time for FPGAs
+        :rtype: tuple(int)
         """
-        return self.hardware_manager.fpga1_time
-
-    @attribute(dtype="DevLong")
-    def fpga2_time(self):
-        """
-        Return the time for FPGA 2.
-
-        :return: the time for FPGA 2
-        :rtype: int
-        """
-        return self.hardware_manager.fpga2_time
+        return tuple(self.hardware_manager.fpgas_time)
 
     @attribute(
         dtype=("DevLong",),
@@ -1330,7 +1322,7 @@ class MccsTile(SKABaseDevice):
         self.hardware_manager.test_mode = value
 
     @attribute(dtype="DevBoolean")
-    def TestGeneratorActive(self):
+    def testGeneratorActive(self):
         """
         Reports if the test generator is used for some channels.
 

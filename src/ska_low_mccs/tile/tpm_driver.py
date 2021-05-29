@@ -28,8 +28,7 @@ class TpmDriver(HardwareDriver):
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
     ADC_RMS = tuple(float(i) for i in range(32))
-    FPGA1_TIME = 1
-    FPGA2_TIME = 2
+    FPGAS_TIME = [1, 2]
     CURRENT_TILE_BEAMFORMER_FRAME = 23
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
@@ -79,8 +78,7 @@ class TpmDriver(HardwareDriver):
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._test_generator_active = False
         self._arp_table = {}
-        self._fpga1_time = self.FPGA1_TIME
-        self._fpga2_time = self.FPGA2_TIME
+        self._fpgas_time = self.FPGAS_TIME
 
         self._address_map = {}
         self._forty_gb_core_list = []
@@ -352,30 +350,20 @@ class TpmDriver(HardwareDriver):
         return tuple(self._adc_rms)
 
     @property
-    def fpga1_time(self):
+    def fpgas_time(self):
         """
-        Return the FPGA1 clock time. Useful for detecting clock skew,
+        Return the FPGAs clock time. Useful for detecting clock skew,
         propagation delays, contamination delays, etc.
 
-        :return: the FPGA1 clock time
-        :rtype: int
+        :return: the FPGAs clock time
+        :rtype: list(int)
         """
-        self.logger.debug("TpmDriver: fpga1_time")
-        self._fpga1_time = self.tile.get_fpga_time(Device.FPGA_1)
-        return self._fpga1_time
-
-    @property
-    def fpga2_time(self):
-        """
-        Return the FPGA2 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc.
-
-        :return: the FPGA2 clock time
-        :rtype: int
-        """
-        self.logger.debug("TpmDriver: fpga2_time")
-        self._fpga2_time = self.tile.get_fpga_time(Device.FPGA_2)
-        return self._fpga2_time
+        self.logger.debug("TpmDriver: fpgas_time")
+        self._fpgas_time = [
+            self.tile.get_fpga_time(Device.FPGA_1),
+            self.tile.get_fpga_time(Device.FPGA_2),
+        ]
+        return self._fpgas_time
 
     @property
     def pps_delay(self):

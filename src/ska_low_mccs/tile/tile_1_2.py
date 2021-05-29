@@ -888,7 +888,7 @@ class Tile12(object):
     # Time related methods
     ###########################################
     @connected
-    def get_fpga_time(self, device=Device.FPGA_1):
+    def get_fpga_time(self, device):
         """
         Return time from FPGA.
 

@@ -1132,8 +1132,9 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.fpga2_temperature
 
-    @attribute(dtype=("DevLong",),
-               max_dim_x=2,
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=2,
     )
     def fpgasTime(self):
         """

@@ -509,7 +509,8 @@ class TestMccsTile(HelperClass):
         # counterintuitive mess that will be fixed in SP-1501.
         self.start_up_device(device_under_test)
         assert device_under_test.fpgasTime == pytest.approx(
-            StaticTpmSimulator.FPGAS_TIME)
+            StaticTpmSimulator.FPGAS_TIME
+        )
 
     def test_antennaIds(self, device_under_test):
         """

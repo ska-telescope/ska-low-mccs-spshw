@@ -134,6 +134,9 @@ class MccsStation(SKAObsDevice):
             device._cmd_respond_to_fqdn = None
             device._cmd_callback = None
             device._subarray_id = 0
+            device._refLatitude = 0.0
+            device._refLongitude = 0.0
+            device._refHeight = 0.0
             device._apiu_fqdn = device.APIUFQDN
             device._tile_fqdns = list(device.TileFQDNs)
             device._antenna_fqdns = list(device.AntennaFQDNs)
@@ -323,6 +326,46 @@ class MccsStation(SKAObsDevice):
         for fqdn in self._tile_fqdns:
             tile = MccsDeviceProxy(fqdn, self.logger)
             tile.subarrayId = subarray_id
+
+    @attribute(
+        dtype="float",
+        label="refLongitude",
+    )
+    def refLongitude(self):
+        """
+        Return the refLongitude attribute.
+
+        :return: the WGS84 Longitude of the station reference position
+        :rtype: float
+        """
+        return self._refLongitude
+
+    @attribute(
+        dtype="float",
+        label="refLatitude",
+    )
+    def refLatitude(self):
+        """
+        Return the refLatitude attribute.
+
+        :return: the WGS84 Latitude of the station reference position
+        :rtype: float
+        """
+        return self._refLatitude
+
+    @attribute(
+        dtype="float",
+        label="refHeight",
+        unit="meters",
+    )
+    def refHeight(self):
+        """
+        Return the refHeight attribute.
+
+        :return: the ellipsoidal height of the station reference position
+        :rtype: float
+        """
+        return self._refHeight
 
     @attribute(
         dtype="DevString",

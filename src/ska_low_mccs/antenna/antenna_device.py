@@ -467,11 +467,9 @@ class MccsAntenna(SKABaseDevice):
             device._rms = 0.0
             device._xPolarisationFaulty = False
             device._yPolarisationFaulty = False
-            device._fieldNodeLongitude = 0.0
-            device._fieldNodeLatitude = 0.0
-            device._altitude = 0.0
             device._xDisplacement = 0.0
             device._yDisplacement = 0.0
+            device._zDisplacement = 0.0
             device._timestampOfLastSpectrum = ""
             device._logicalAntennaId = 0
             device._xPolarisationScalingFactor = [0]
@@ -862,9 +860,9 @@ class MccsAntenna(SKABaseDevice):
     )
     def xDisplacement(self):
         """
-        Return the Horizontal displacement attribute.
+        Return the horizontal displacement east attribute.
 
-        :return: the horizontal displacement from field node centre
+        :return: the horizontal displacement eastwards from station reference position
         :rtype: float
         """
         return self._xDisplacement
@@ -876,12 +874,26 @@ class MccsAntenna(SKABaseDevice):
     )
     def yDisplacement(self):
         """
-        Return the vertical displacement attribute.
+        Return the horizontal displacement north attribute.
 
-        :return: the vertical displacement from field node centre
+        :return: the horizontal displacement northwards from station reference position
         :rtype: float
         """
         return self._yDisplacement
+
+    @attribute(
+        dtype="float",
+        label="zDisplacement",
+        unit="meters",
+    )
+    def zDisplacement(self):
+        """
+        Return the vertical displacement attribute.
+
+        :return: the vertical displacement upwards from station reference position
+        :rtype: float
+        """
+        return self._zDisplacement
 
     @attribute(dtype="str", label="timestampOfLastSpectrum")
     def timestampOfLastSpectrum(self):

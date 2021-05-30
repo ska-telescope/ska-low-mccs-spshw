@@ -1323,7 +1323,7 @@ class MccsTile(SKABaseDevice):
         self.hardware_manager.test_mode = value
 
     @attribute(dtype="DevBoolean")
-    def testGeneratorActive(self):
+    def TestGeneratorActive(self):
         """
         Reports if the test generator is used for some channels.
 

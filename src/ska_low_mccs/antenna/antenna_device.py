@@ -397,7 +397,7 @@ class MccsAntenna(SKABaseDevice):
         serialisation model.
         """
         util = Util.instance()
-        util.set_serial_model(SerialModel.NO_SYNC)
+        util.set_serial_model(SerialModel.BY_DEVICE)
         super().init_device()
 
     class InitCommand(SKABaseDevice.InitCommand):

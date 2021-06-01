@@ -74,9 +74,10 @@ class HelperClass:
         busy = True
         while busy:
             result = json.loads(controller.commandResult)
-            timeout += 0.5
-            sleep(0.5)
-            if result.get("result_code") == expected_result or timeout > timeout_limit:
+            if result.get("result_code") == expected_result or timeout >= timeout_limit:
                 busy = False
+            else:
+                timeout += 0.1
+                sleep(0.1)
         assert result.get("result_code") == expected_result
         assert timeout <= timeout_limit

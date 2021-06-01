@@ -172,8 +172,13 @@ def subarraybeams(tango_harness: TangoHarness):
     return {
         1: tango_harness.get_device("low-mccs/subarraybeam/01"),
         2: tango_harness.get_device("low-mccs/subarraybeam/02"),
+<<<<<<< HEAD
         # 3: tango_harness.get_device("low-mccs/subarraybeam/03"),
         # 4: tango_harness.get_device("low-mccs/subarraybeam/04"),
+=======
+        #        3: tango_harness.get_device("low-mccs/subarraybeam/03"),
+        #        4: tango_harness.get_device("low-mccs/subarraybeam/04"),
+>>>>>>> MCCS-404 Fixing the tests
     }
 
 

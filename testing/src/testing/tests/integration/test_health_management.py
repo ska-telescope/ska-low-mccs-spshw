@@ -35,10 +35,10 @@ def devices_to_load():
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
+        "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
-            {"name": "controller", "proxy": MccsDeviceProxy},
+            #             {"name": "controller", "proxy": MccsDeviceProxy},
             {"name": "subarray_01", "proxy": MccsDeviceProxy},
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
             {"name": "station_001", "proxy": MccsDeviceProxy},

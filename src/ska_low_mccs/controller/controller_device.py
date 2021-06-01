@@ -554,7 +554,10 @@ class MccsController(SKAMaster):
                     self._interrupt = False
                     return
                 self._initialise_health_monitoring(
-                    device, device._subrack_fqdns + device._station_fqdns
+                    device,
+                    device._subrack_fqdns
+                    + device._station_fqdns
+                    + device._subarray_beam_fqdns,
                 )
                 if self._interrupt:
                     self._thread = None

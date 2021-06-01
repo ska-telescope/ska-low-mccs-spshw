@@ -22,15 +22,15 @@ Machine requirements
 
 Memory requirements
 ^^^^^^^^^^^^^^^^^^^
-As described below, MCCS uses the SKA `deploy-minikube` project to
-manage cluster deployment. By default, `deploy-minikube` requests 8Gb of
+As described below, MCCS uses the SKA `ska-cicd-deploy-minikube` project to
+manage cluster deployment. By default, `ska-cicd-deploy-minikube` requests 8Gb of
 memory for minikube. This implies that, assuming you want to be able to
 do other things with your computer while minikube is running, you will
 need upwards of 12Gb of memory.
 
 Actually, the MCCS chart currently requires only about 3Gb of memory, so
 if you need to deploy on a memory-constrained machine, it should be okay
-to overrule the `deploy-minikube` default with a setting of 4Gb or even
+to overrule the `ska-cicd-deploy-minikube` default with a setting of 4Gb or even
 slightly less.
 
 Team members have managed to deploy on hardware with even less memory,
@@ -59,7 +59,7 @@ these commands exceed the three second limit, resulting in timeout
 issues. (These slow commands should not exist. MCCS plans improvements
 in this area. So in future, these timeouts will not be an issue.)
 
-By default, `deploy-minikube` tells minikube to use two CPUs. As a rough
+By default, `ska-cicd-deploy-minikube` tells minikube to use two CPUs. As a rough
 rule of thumb: you probably won't see timeouts if minikube can get the
 two CPUs that it asks for; but if there is contention for those CPUs,
 you may see timeouts.
@@ -68,7 +68,7 @@ you may see timeouts.
 Overview of setup / teardown
 ----------------------------
 Installation and configuration of the cluster is handled by the SKA
-``deploy-minikube`` project. Thus, this project need only handle the
+``ska-cicd-deploy-minikube`` project. Thus, this project need only handle the
 deployment of our project charts to the cluster.
 
 The following state chart summarises the steps to deploying MCCS.
@@ -98,7 +98,7 @@ clusters of Docker containers.
    Don't be alarmed if running `kubectl` results in a config file error.
    A config file will be build the first time you run minikube.
 
-#. Clone the SKA ``deploy-minikube`` project. (But first, if you have
+#. Clone the SKA ``ska-cicd-deploy-minikube`` project. (But first, if you have
    run minikube before, remove any old copies and their configuration
    files.)
    
@@ -110,22 +110,22 @@ clusters of Docker containers.
 
    .. code-block:: bash
 
-      git clone git@gitlab.com:ska-telescope/sdi/deploy-minikube.git
+      git clone git@gitlab.com:ska-telescope/sdi/ska-cicd-deploy-minikube.git
 
 Start the cluster manager
 -------------------------
-#. Check for a new version of ``deploy-minikube``. Development is ongoing,
+#. Check for a new version of ``ska-cicd-deploy-minikube``. Development is ongoing,
    and you want to be running the latest version:
 
    .. code-block:: bash
 
-      cd ~/deploy-minikube
+      cd ~/ska-cicd-deploy-minikube
       git pull
 
    (Obviously there is no need to do this if you have only just cloned
    the project.)
 
-#. Use ``deploy-minikube`` to install and configure the cluster:
+#. Use ``ska-cicd-deploy-minikube`` to install and configure the cluster:
 
    .. code-block:: bash
 
@@ -281,7 +281,7 @@ There is no harm in leaving minikube running all the time. But if you
 
 .. code-block:: bash
 
-   cd ~/deploy-minikube
+   cd ~/ska-cicd-deploy-minikube
    make clean
 
 

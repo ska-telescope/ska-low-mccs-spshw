@@ -182,7 +182,6 @@ class SubarrayBeamsResourceManager(ResourceManager):
         :param subarray_beam_fqdns: list of FQDNs of station beams to be assigned
         :param station_fqdns: list of FQDNs of stations to be assigned
         """
-
         stations = {}
         station_ids_per_beam = []
         for station_sub_fqdns in station_fqdns:

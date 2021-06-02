@@ -930,7 +930,6 @@ class MccsSubrack(SKABaseDevice):
         unit="Celsius",
     )
     def boardTemperatures(self):
-
         """
         Return the temperatures of the subrack management board. Two values are
         returned.
@@ -1895,7 +1894,6 @@ def main(args=None, **kwargs):
     :return: exit code
     :rtype: int
     """
-
     return MccsSubrack.run_server(args=args, **kwargs)
 
 

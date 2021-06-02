@@ -67,7 +67,6 @@ class DynamicValuesGenerator:
             range every time.
         :type in_range_rate: float
         """
-
         # For a window size of n, our output values will be the sum of
         # n independent uniformly distributed values. We need to
         # parametrize that uniform distribution so as to get a final
@@ -122,7 +121,6 @@ class DynamicValuesUpdater:
             should be updated. Defaults to 1 second.
         :type update_rate: float
         """
-
         self._targets = []
 
         self._update_rate = update_rate

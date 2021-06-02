@@ -527,7 +527,6 @@ class TpmDriver(HardwareDriver):
         :param dst_port: port of the destination
         :type dst_port: int
         """
-
         self.logger.debug("TpmDriver: configure_40g_core")
         self.tile.configure_40g_core(
             core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port

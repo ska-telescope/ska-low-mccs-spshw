@@ -405,7 +405,6 @@ class ResourceManager:
         :return: List of FQDNs assigned to owner_id
         :rtype: list(str)
         """
-
         return [
             fqdn
             for fqdn, res in self._resources.items()
@@ -431,7 +430,6 @@ class ResourceManager:
             ReleaseList (list): The list of FQDNs to release, or None
         :rtype: tuple (bool, list of strings, list of strings)
         """
-
         self._except_on_unmanaged(fqdns)
 
         # Make a list of any FQDNs which are blocking this allocation
@@ -482,7 +480,6 @@ class ResourceManager:
         :type new_owner: int
         :raises ValueError: if any of the FQDNs are unavailable or not healthy
         """
-
         self._except_on_unmanaged(devices.values())
         for device_id in devices.keys():
             try:
@@ -539,7 +536,6 @@ class ResourceManager:
         :return: fqdn
         :rtype: string
         """
-
         for fqdn, res in self._resources.items():
             if res._device_id == device_id:
                 return fqdn

@@ -170,7 +170,6 @@ class TestSubrackBaySimulator:
             range for a temperature measurement
         :type random_temperature: float
         """
-
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
@@ -856,7 +855,6 @@ class TestMccsSubrack(HelperClass, object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         assert device_under_test.state() == DevState.DISABLE
         assert device_under_test.status() == "The device is in DISABLE state."
         assert device_under_test.healthState == HealthState.OK

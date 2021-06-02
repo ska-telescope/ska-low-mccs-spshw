@@ -450,7 +450,6 @@ class BaseTpmSimulator(HardwareSimulator):
         :param dst_port: port of the destination
         :type dst_port: int
         """
-
         core_dict = {
             "CoreID": core_id,
             "ArpTableEntry": arp_table_entry,

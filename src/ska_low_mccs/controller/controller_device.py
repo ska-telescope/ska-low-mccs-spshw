@@ -496,7 +496,6 @@ class MccsController(SKAMaster):
 
     @attribute(dtype="DevUShort", unit="s")
     def commandDelayExpected(self: MccsController) -> int:
-
         """
         Return the commandDelayExpected attribute.
 

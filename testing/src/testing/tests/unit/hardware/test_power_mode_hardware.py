@@ -62,7 +62,6 @@ class TestPowerModeHardware:
         :return: a hardware simulator
         :rtype: :py:class:`~ska_low_mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
         """
-
         parameters = getattr(request, "param", None)
         if parameters is None:
             return OnOffHardwareSimulator(power_mode=PowerMode.OFF)
@@ -91,7 +90,6 @@ class TestPowerModeHardware:
         :return: a hardware manager
         :rtype: :py:class:`~ska_low_mccs.hardware.power_mode_hardware.OnOffHardwareManager`
         """
-
         return OnStandbyOffHardwareManager(hardware_factory, hardware_health_evaluator)
 
     class TestHardwareSimulator:

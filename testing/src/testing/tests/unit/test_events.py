@@ -245,7 +245,6 @@ class TestDeviceEventManager:
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-
         event_count = 2  # test should pass for any positive number
         fqdn = "mock/mock/1"
 

@@ -1235,7 +1235,6 @@ def main(args=None, **kwargs):
     :return: exit code
     :rtype: int
     """
-
     return MccsAPIU.run_server(args=args, **kwargs)
 
 

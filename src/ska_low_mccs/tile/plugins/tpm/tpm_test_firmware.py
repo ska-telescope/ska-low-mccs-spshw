@@ -133,7 +133,6 @@ class TpmTestFirmware(FirmwareBlock):
         """
         FPGA synchronise clock.
         """
-
         if self._device_name == "fpga1":
 
             fpga1_phase = self.board["fpga1.pps_manager.sync_status.cnt_hf_pps"]
@@ -212,7 +211,6 @@ class TpmTestFirmware(FirmwareBlock):
         """
         Initialise DDR.
         """
-
         if self.board["board.regfile.ctrl.en_ddr_vdd"] == 0:
             self.board["board.regfile.ctrl.en_ddr_vdd"] = 1
             time.sleep(0.5)

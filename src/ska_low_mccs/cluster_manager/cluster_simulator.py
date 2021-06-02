@@ -206,7 +206,6 @@ class ClusterSimulator(HardwareSimulator):
         """
         Initialise a new ClusterSimulator instance.
         """
-
         self._configuration = dict(self.CONFIGURATION)
         self._job_stats = dict(self.JOB_STATS)
         self._resource_stats = dict(self.RESOURCE_STATS)

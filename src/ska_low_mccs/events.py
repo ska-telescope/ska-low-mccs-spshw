@@ -232,7 +232,6 @@ class DeviceEventManager:
         :raises ValueError: if the event is not in the list
             of allowed events
         """
-
         try:
             events = _parse_spec(event_spec, self._allowed_events)
         except ValueError as value_error:

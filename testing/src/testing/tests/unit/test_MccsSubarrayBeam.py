@@ -269,7 +269,6 @@ class TestMccsSubarrayBeam:
             equal if this string format yields the same string for both
         :type float_format: str
         """
-
         # SETUP
         write_as_string = [float_format.format(x) for x in value_to_write]
 

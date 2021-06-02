@@ -1058,7 +1058,6 @@ class Tile12(object):
         :return: Parameters in range
         :rtype: bool
         """
-
         # Compute maximum and minimum delay
         frame_length = (1.0 / self._sampling_rate) * 1e9
         min_delay = frame_length * -124
@@ -1629,7 +1628,6 @@ class Tile12(object):
         :param timestamp: Timestamp to synchronise against
         :param seconds: Number of seconds to delay operation
         """
-
         # Read timestamp
         if timestamp is None:
             t0 = self.tpm["fpga1.pps_manager.timestamp_read_val"]
@@ -1650,7 +1648,6 @@ class Tile12(object):
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
         """
-
         devices = ["fpga1", "fpga2"]
         for f in devices:
             self.tpm[f + ".regfile.eth10g_ctrl"] = 0x0

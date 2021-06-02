@@ -252,7 +252,6 @@ class TestMccsSubarray:
             :return: a dictionary of mocks, keyed by FQDN
             :rtype: dict
             """
-
             mock_subarray_factory = MockSubarrayBuilder(mock_factory)
 
             mock_station_factory = MockDeviceBuilder(mock_factory)

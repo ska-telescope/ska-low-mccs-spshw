@@ -154,7 +154,6 @@ class Tpm16TestFirmware(TpmTestFirmware):
         """
         Initialise DDR.
         """
-
         for n in range(3):
             logging.debug(self._device_name + " DDR3 reset")
             self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1

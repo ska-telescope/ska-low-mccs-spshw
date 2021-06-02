@@ -523,7 +523,6 @@ class MutableHealthMonitor(HealthMonitor):
             the FQDNs provided at initialisation are used.
         :type fqdn_spec: str or list(str) or None
         """
-
         if fqdn_spec is None:
             self._pool_callbacks.append(callback)
         super().register_callback(callback, fqdn_spec)

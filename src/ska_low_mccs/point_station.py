@@ -133,7 +133,6 @@ class Pointing(object):
 
         :param station_info: Basic information for station location and antenna displacements
         """
-
         # Store arguments
         self.station = station_info
 
@@ -166,7 +165,6 @@ class Pointing(object):
 
         :param pointing_time: Time at which delays should be generated
         """
-
         # If no time is specified, get current time
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
@@ -192,7 +190,6 @@ class Pointing(object):
         :param azimuth: azimuth coordinates of a sky object as astropy angles
         :param pointing_time: the time at which the pointing will be active
         """
-
         _ = pointing_time
 
         # Type conversions if required
@@ -223,7 +220,6 @@ class Pointing(object):
         :param delta_time: Delta timing for calculating delay rate
         :return: The (delay,delay rate) tuple for each antenna
         """
-
         # If no time is specified, get current time
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
@@ -275,7 +271,6 @@ class Pointing(object):
         :param start_channel: Start channel index
         :param nof_channels: Number of channels starting with start_channel
         """
-
         if self._delays is None:
             logging.error("No pointing delays generated")
             return
@@ -310,7 +305,6 @@ class Pointing(object):
         :param azimuth: The azimuth of the target astropy angle
         :return: The delay in seconds for each antenna
         """
-
         # Calculate transformation
         scale = np.array(
             [
@@ -338,7 +332,6 @@ class Pointing(object):
         :param location: astropy EarthLocation
         :return: Array containing altitude and azimuth of source as astropy angle
         """
-
         # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
         # coordinates (altitude/azimuth) from the antenna's perspective.
         sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, unit="deg")
@@ -442,7 +435,6 @@ class PointingDriver:
         :return: self - ready for another command
         :rtype: pointing_driver
         """
-
         self.calc = self.pointing.point_array_static
         self.point_kwargs["altitude"] = el
         self.point_kwargs["azimuth"] = az
@@ -548,7 +540,6 @@ class PointingDriver:
         :param results: queue for results
         :type results: multiprocessing.queue
         """
-
         while not jobs.empty():
             try:
                 # Time limit on queue get in case another process got there first
@@ -584,7 +575,6 @@ class PointingDriver:
         :return: self for next command
         :rtype: PointingDriver
         """
-
         if not isinstance(nproc, int):
             print("nproc must be an integer")
             return

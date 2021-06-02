@@ -238,7 +238,6 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         with pytest.raises(
             tango.DevFailed,
             match="Command Reset not allowed when the device is in DISABLE state",
@@ -959,7 +958,6 @@ class TestMccsController:
             with callback support methods
         :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         """
-
         # The device has subscribed to healthState change events on
         # its subsidiary devices, but hasn't heard from them (because in
         # unit testing these devices are mocked out), so its healthState

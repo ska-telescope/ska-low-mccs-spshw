@@ -590,7 +590,6 @@ class TestMccsAPIU(HelperClass, object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         assert device_under_test.state() == DevState.DISABLE
         assert device_under_test.status() == "The device is in DISABLE state."
         assert device_under_test.healthState == HealthState.OK

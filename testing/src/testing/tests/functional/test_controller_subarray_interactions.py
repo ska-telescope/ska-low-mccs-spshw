@@ -473,7 +473,6 @@ def subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate):
     :type cached_obsstate:
         dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
-
     for i in subarrays:
         obsstate = subarrays[i].obsstate
         assert (obsstate == ObsState.IDLE) or (obsstate == ObsState.EMPTY)

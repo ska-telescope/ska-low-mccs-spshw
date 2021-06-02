@@ -470,7 +470,6 @@ class TestCommon:
             TPM
         :type hardware_under_test: object
         """
-
         assert hardware_under_test.get_40g_configuration(-1, 0) == []
         assert hardware_under_test.get_40g_configuration("mock_core_id") is None
 

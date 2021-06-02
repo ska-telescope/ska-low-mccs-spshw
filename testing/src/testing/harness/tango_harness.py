@@ -520,7 +520,6 @@ class WrapperTangoHarness(TangoHarness):
 
         :return: a DeviceProxy for use in establishing connections.
         """
-
         return self._harness.connection_factory
 
     @property

@@ -155,7 +155,6 @@ class TestMccsStation:
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
         """
-
         # The device has subscribed to healthState change events on
         # its subsidiary, but hasn't heard from them (because in unit
         # testing these devices are mocked out), so its healthState is

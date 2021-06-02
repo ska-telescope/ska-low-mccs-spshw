@@ -165,7 +165,6 @@ class DevicePool:
         :param argin: result of the command
         :return: Whether all of the messages were completed, return_code and message
         """
-
         # check that each received message is on message_object and mark off as recevied
         kwargs = json.loads(argin)
         message_object = kwargs.get("message_object")

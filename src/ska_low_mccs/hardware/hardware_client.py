@@ -131,7 +131,6 @@ class HardwareClient:
 
 
 class WebHardwareClient(HardwareClient):
-
     """
     Implementation of the HardwareClient protocol using a web based interface.
     """
@@ -146,7 +145,6 @@ class WebHardwareClient(HardwareClient):
         :param port: Port of server
         :type port: int
         """
-
         super().__init__(ip_address, port)
         try:
             self._conn = requests.request(

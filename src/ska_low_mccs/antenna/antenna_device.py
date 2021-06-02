@@ -1210,7 +1210,6 @@ class MccsAntenna(SKABaseDevice):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)

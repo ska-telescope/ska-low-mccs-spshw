@@ -150,7 +150,6 @@ class MccsGroupDevice(SKABaseDevice):
                 information purpose only.
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(

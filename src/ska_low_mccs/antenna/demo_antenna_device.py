@@ -5,8 +5,12 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements a DemoAntennaDevice, with extra interface features that
-support testing and demonstrating the MCCS Antenna device."""
+"""
+This module implements a DemoAntennaDevice.
+
+DemoAntennaDevice extends MccsAntenna with extra interface features that
+support testing and demonstrating the MCCS Antenna device.
+"""
 from tango import DevState
 from tango.server import command
 
@@ -17,8 +21,7 @@ __all__ = ["DemoAntenna"]
 
 
 class DemoAntenna(MccsAntenna):
-    """A version of the MccsAntenna tango device with extra functionality for
-    testing/demos."""
+    """A version of MccsAntenna tango device with extra testing/demo functionality."""
 
     def init_device(self):
         """

@@ -598,8 +598,7 @@ class ClusterSimulator(HardwareSimulator):
         self._update_master_node()
 
     def _update_master_node(self):
-        """Helper method to update the master node after we have simulated failure of
-        the previous master node."""
+        """Helper method to update the master node when the current master fails."""
         if self._node_statuses[self.master_node_id] != HealthState.OK:
             try:
                 healthy_index = self.shadow_master_pool_status.index(HealthState.OK)

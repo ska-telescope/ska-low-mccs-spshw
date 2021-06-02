@@ -48,8 +48,11 @@ import json
 
 
 class HardwareClient:
-    """Class to establish a simple connection to a web hardware client Must be
-    subclassed to establish the actual network protocol."""
+    """
+    An abstract client to establish a connection to hardware.
+
+    This must be subclassed to establish the actual network protocol.
+    """
 
     def __init__(self, ip_address, port=80):
         """

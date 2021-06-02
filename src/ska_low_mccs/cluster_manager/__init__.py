@@ -5,8 +5,11 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This subpackage contains modules that implement the MCCS Cluster Manager, including a
-Tango device and a simulator."""
+"""
+This subpackage implements cluster manager functionality for MCCS.
+
+It includes a cluster manager Tango device and a simulator.
+"""
 
 
 __all__ = ["MccsClusterManagerDevice", "cluster_manager_device"]

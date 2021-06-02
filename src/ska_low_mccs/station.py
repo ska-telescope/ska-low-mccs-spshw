@@ -72,8 +72,11 @@ class MccsStation(SKAObsDevice):
     # General methods
     # ---------------
     def init_device(self):
-        """Initialise the device; overridden here to change the Tango serialisation
-        model."""
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()

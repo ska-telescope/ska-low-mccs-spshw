@@ -5,8 +5,13 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements a DemoControllerDevice, with extra interface features that
-support testing and demonstrating the MCCS Controller device."""
+"""
+This module implements a DemoControllerDevice.
+
+DemoControllerDevice extents MccsController with extra interface
+features that support testing and demonstrating the MCCS Controller
+device.
+"""
 from tango import DevState
 from tango.server import command
 
@@ -17,8 +22,7 @@ __all__ = ["DemoController"]
 
 
 class DemoController(MccsController):
-    """A version of the MccsController tango device with extra functionality for
-    testing/demos."""
+    """A version of the MccsController tango device with testing/demo functionality."""
 
     def init_device(self):
         """

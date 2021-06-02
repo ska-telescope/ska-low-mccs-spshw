@@ -6,8 +6,12 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""This module provides MccsSubarray, the Tango device class for the MCCS Subarray
-prototype."""
+"""
+This module implements MCCS functionality for monitoring and control of subarrays.
+
+It does this mainly by defining MccsSubarray, a Tango device class for
+MCCS subarrays.
+"""
 
 from __future__ import annotations  # allow forward references in type hints
 

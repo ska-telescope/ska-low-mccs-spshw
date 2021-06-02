@@ -7,8 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""This module contains an implementation of the SKA Low MCCS Antenna Device Server,
-based on the architecture in SKA-TEL-LFAA-06000052-02."""
+"""This module implements an antenna Tango device for MCCS."""
 __all__ = [
     "AntennaApiuProxy",
     "AntennaTileProxy",
@@ -127,8 +126,12 @@ class AntennaApiuProxy:
         self._power_callback = power_callback
 
     def connect(self):
-        """Establish a connection to the APIU device that manages the APIU that powers
-        this device's antenna."""
+        """
+        Connect to this antenna's APIU.
+
+        Specifically, establish a connection to the APIU device that
+        manages the APIU that powers this device's antenna.
+        """
         self._apiu = MccsDeviceProxy(self._fqdn, self._logger)
         self._apiu.check_initialised()
 
@@ -341,8 +344,13 @@ class AntennaTileProxy:
         self._logger = logger
 
     def connect(self):
-        """Establish a connection to the tile device that manages the TPM that consumes
-        the data stream from this device's antenna."""
+        """
+        Connect to this antenna's tile device.
+
+        Specifically, establish a connection to the tile device that
+        manages the TPM that consumes the data stream from this device's
+        antenna.
+        """
         self._tile = MccsDeviceProxy(self._fqdn, self._logger)
 
 
@@ -385,8 +393,11 @@ class MccsAntenna(SKABaseDevice):
     # General methods
     # ---------------
     def init_device(self):
-        """Initialise the device; overridden here to change the Tango serialisation
-        model."""
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()

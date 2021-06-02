@@ -272,8 +272,7 @@ class HardwareManager:
         return self._health
 
     def _update_health(self):
-        """Update the health of this hardware, ensuring that any registered callbacks
-        are called."""
+        """Update the health of this hardware, ensuring that callbacks are called."""
         health = self._health_evaluator.evaluate_health(self._factory.hardware)
         if self._health == health:
             return

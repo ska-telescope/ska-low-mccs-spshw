@@ -44,8 +44,11 @@ class AntennaInformation(object):
     """Class for holding a station's antenna information."""
 
     def __init__(self):
-        """Initialize AntennaInformation object with default 256 elements but no
-        displacements, &c."""
+        """
+        Initialize AntennaInformation object.
+
+        By default it will have 256 elements but no displacements, &c.
+        """
         self.nof_elements = 256
         self.xyz = None
         self.elementid = None
@@ -78,8 +81,13 @@ class StationInformation(object):
     """Class for holding information about a station."""
 
     def __init__(self):
-        """Initialize StationInformation object with no location data and default
-        AntennaInformation object (which will have no element diplacement data)"""
+        """
+        Initialize a new instance.
+
+        The instance is initialise with no location data and with a
+        default AntennaInformation object (which will have no element
+        displacement data).
+        """
         self.latitude = None
         self.longitude = None
         self.ellipsoidalheight = None

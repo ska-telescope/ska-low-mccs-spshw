@@ -37,9 +37,13 @@ from testing.harness.mock import MockDeviceBuilder, MockSubarrayBuilder
 
 
 class ControllerWithFailableDevices(MccsController):
-    """An extension of the MccsController device with additional commands that we can
-    use to tell the device to simulate the receipt of events from subservient
-    devices."""
+    """
+    An extension of the MccsController with extra functionality to support testing.
+
+    Specifically, it has some additional commands that we can use to
+    tell the device to simulate the receipt of certain events from
+    subservient devices.
+    """
 
     @command(dtype_in="DevString")
     def simulateHealthStateChange(self, argin):

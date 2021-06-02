@@ -1,6 +1,5 @@
 # type: ignore
-"""This module contains pytest fixtures and other test setups for unit testing
-ska_low_mccs.hardware modules."""
+"""This module contains pytest-specific test harness for unit testing in MCCS."""
 import pytest
 
 from ska_low_mccs.hardware import (

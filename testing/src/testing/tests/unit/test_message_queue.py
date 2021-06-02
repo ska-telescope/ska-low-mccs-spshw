@@ -139,8 +139,7 @@ class TestMessageQueue:
         """
 
         class SpecialisedMessageQueue(MessageQueue):
-            """Specialised message queue with a concrete implementation of notify
-            listener."""
+            """Specialised message queue that implements ``notify listener``."""
 
             def _notify_listener(self, result_code, message_uid, status):
                 """

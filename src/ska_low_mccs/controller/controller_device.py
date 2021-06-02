@@ -154,8 +154,11 @@ class MccsController(SKAMaster):
     # General methods
     # ---------------
     def init_device(self: MccsController) -> None:
-        """Initialise the device; overridden here to change the Tango serialisation
-        model."""
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
@@ -1359,15 +1362,13 @@ class MccsController(SKAMaster):
         return ([result_code], [status])
 
     class RestartCommand(ResponseCommand):
-        """Restart a sub-array's Capabilities and resources (stations), marking the
-        resources and Capabilities as unassigned and idle."""
+        """Restart a subarray."""
 
         def do(
             self: MccsController.RestartCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do hook for the
-            :py:meth:`.MccsController.Restart` command
+            Stateless do hook for the :py:meth:`.MccsController.Restart` command.
 
             :param argin: JSON-formatted string containing an integer subarray_id
 
@@ -1435,15 +1436,13 @@ class MccsController(SKAMaster):
         return ([result_code], [status])
 
     class ReleaseCommand(ResponseCommand):
-        """Release a sub-array's Capabilities and resources (stations), marking the
-        resources and Capabilities as unassigned and idle."""
+        """Release a subarray's resources."""
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do hook for the
-            :py:meth:`.MccsController.Release` command
+            Stateless do hook for the :py:meth:`.MccsController.Release` command.
 
             :param argin: JSON-formatted string containing an integer
                 subarray_id, a release all flag and array resources (TBD).

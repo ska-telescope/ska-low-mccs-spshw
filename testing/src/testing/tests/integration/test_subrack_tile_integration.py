@@ -9,8 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""This test module contains integration tests that exercise the power management
-functionality of the SKA Low MCCS system between the subrack and the TPM."""
+"""This module contains integration tests of tile-subrack interactions in MCCS."""
 import time
 
 import pytest

@@ -458,8 +458,7 @@ class TestContextTangoHarness(BaseTangoHarness):
 
 
 class WrapperTangoHarness(TangoHarness):
-    """A base class for a Tango test harness that wraps another harness, providing some
-    functionality in the wrapper."""
+    """A base class for a Tango test harness that wraps another harness."""
 
     def __init__(self: WrapperTangoHarness, harness: TangoHarness) -> None:
         """
@@ -593,8 +592,7 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         return self
 
     def _make_devices_ready(self: StartingStateTangoHarness) -> None:
-        """Helper method that applies actions and checks to ensure that devices are
-        ready to be tested."""
+        """Helper method that ensures that devices are ready to be tested."""
         if self._bypass_cache or self._check_ready or self._set_test_mode:
             for fqdn in self.fqdns:
                 device = self.get_device(fqdn)
@@ -607,8 +605,12 @@ class StartingStateTangoHarness(WrapperTangoHarness):
 
 
 class MockingTangoHarness(WrapperTangoHarness):
-    """A Tango test harness that wraps another harness, but only uses that harness for a
-    specified set of devices under test, and mocks out all other devices."""
+    """
+    A Tango test harness that mocks out devices not under test.
+
+    This harness wraps another harness, but only uses that harness for a
+    specified set of devices under test, and mocks out all others.
+    """
 
     def __init__(
         self: MockingTangoHarness,

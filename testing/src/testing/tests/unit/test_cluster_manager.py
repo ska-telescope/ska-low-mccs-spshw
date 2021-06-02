@@ -382,8 +382,7 @@ class TestClusterManager:
     """Contains tests specific to ClusterManager."""
 
     def test_init_simulation_mode(self):
-        """Test that we can't create an hardware manager that isn't in simulation
-        mode."""
+        """Test that we can't create a cluster manager that's not in simulation mode."""
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):

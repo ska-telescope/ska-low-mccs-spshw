@@ -8,8 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""This module contains an implementation of the MCCS Subrack Management Board Tango
-device and related classes."""
+"""This module implements a subrack Tango device for MCCS."""
 import threading
 import json
 import time
@@ -516,8 +515,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return all_off
 
     def _update_are_tpms_on(self):
-        """Update our record of which TPMs are off/on, ensureing that registered
-        callbacks are called."""
+        """Update our record of which TPMs are off/on, calling registered callbacks."""
         are_tpms_on = self._factory.hardware.are_tpms_on()
         if are_tpms_on is None:
             are_tpms_on = [False] * self._tpm_count
@@ -599,8 +597,11 @@ class MccsSubrack(SKABaseDevice):
     TileFQDNs = device_property(dtype=(str,), default_value=[])
 
     def init_device(self):
-        """Initialise the device; overridden here to change the Tango serialisation
-        model."""
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()

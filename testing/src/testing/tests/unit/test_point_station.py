@@ -25,8 +25,7 @@ class TestPointStation:
     """Tests of point_station.py."""
 
     def test_create_pointing(self):
-        """Create and test pointing class instance and the supporting StationInformation
-        object."""
+        """Test pointing class instance and the supporting StationInformation object."""
         station = point_station.StationInformation()
         # Load standard AAVS displacements
         station.load_displacements(locationsfile)

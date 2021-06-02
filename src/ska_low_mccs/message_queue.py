@@ -5,8 +5,12 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements a message queue that executes messages (in a serial fashion)
-in its own thread."""
+"""
+This module implements a message queue.
+
+The message queue addresses issues of concurrency by executes messages
+(in a serial fashion) in its own thread.
+"""
 import threading
 import json
 import tango

@@ -184,8 +184,7 @@ class EventSubscriptionHandler:
 
 
 class DeviceEventManager:
-    """Class DeviceEventManager is used to handle multiple events from a single
-    device."""
+    """This class is used to handle multiple events from a single device."""
 
     def __init__(self, fqdn, logger, events=None):
         """

@@ -7,9 +7,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
+"""This module implements tile hardware management for MCCS."""
 
-"""This module contains classes that support the MCCS Tile device's management of
-hardware."""
 __all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
 from ska_tango_base.control_model import SimulationMode, TestMode

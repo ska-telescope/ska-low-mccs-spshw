@@ -9,8 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""This test module contains integration tests that exercise the health management
-functionality of the SKA Low MCCS system."""
+"""This module contains integration tests of health management in MCCS."""
 import time
 from tango import DevState
 import pytest

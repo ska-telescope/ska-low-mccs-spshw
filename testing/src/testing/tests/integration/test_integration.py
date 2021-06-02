@@ -1,6 +1,5 @@
 # type: ignore
-"""This module contains tests of interactions between ska_low_mccs classes, particularly
-tango devices."""
+"""This module contains integration tests of MCCS device interactions."""
 
 import pytest
 from time import sleep

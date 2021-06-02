@@ -5,8 +5,12 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements a DemoTileDevice, with extra interface features that support
-testing and demonstrating the MCCS Tile device."""
+"""
+This module implements a DemoTileDevice.
+
+DemoTileDevice extends TileDevice with extra interface features that
+support testing and demonstrating the MCCS Tile device.
+"""
 from tango import DevState
 from tango.server import command, Device
 

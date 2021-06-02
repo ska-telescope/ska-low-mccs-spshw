@@ -5,8 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements simulation functionality for hardware in the MCCS
-subsystem."""
+"""This module implements hardware simulation functionality for MCCS."""
 __all__ = ["HardwareSimulator", "SimulableHardwareFactory", "SimulableHardwareManager"]
 
 from math import sqrt
@@ -261,8 +260,7 @@ class SimulableHardwareFactory(HardwareFactory):
         self._update_hardware()
 
     def _update_hardware(self):
-        """Update what this factory returns when asked for its hardware, according to
-        the simulation and test modes."""
+        """Update what this factory returns when asked for its hardware."""
         if self._simulation_mode:
             if self._test_mode:
                 self._hardware = self._get_static_simulator()

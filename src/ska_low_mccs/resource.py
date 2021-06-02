@@ -5,8 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements infrastructure for resource management in the MCCS subsystem,
-separate from or common to all devices."""
+"""This module implements infrastructure for resource management in MCCS."""
 from enum import Enum
 from ska_tango_base.control_model import HealthState
 

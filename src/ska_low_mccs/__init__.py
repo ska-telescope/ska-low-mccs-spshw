@@ -5,8 +5,12 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This package implements the Square Kilometre Array (SKA) Low telescope's Monitoring
-Control and Calibration Subsystem (MCCS)."""
+"""
+This package implements SKA Low's MCCS subsystem.
+
+The Monitoring Control and Calibration (MCCS) subsystem is responsible
+for, amongst other things, monitoring and control of LFAA.
+"""
 
 __all__ = [
     # devices

@@ -27,8 +27,11 @@ from ska_low_mccs.hardware.simulable_hardware import DynamicValuesGenerator
 
 @pytest.fixture()
 def zero_seed():
-    """Sets the random seed to zero, so that we get some determinism in our stochastic
-    tests."""
+    """
+    Set the random seed to zero.
+
+    This gives us some determinism in our stochastic tests.
+    """
     seed(0)
 
 

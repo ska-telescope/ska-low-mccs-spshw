@@ -5,8 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This module implements classes for MCCS hardware for which the power mode can be
-managed; i.e. we can turn it on and off."""
+"""This module implements MCCS hardware for which the power mode can be managed."""
 import enum
 
 from ska_low_mccs.hardware import HardwareDriver, HardwareManager, HardwareSimulator

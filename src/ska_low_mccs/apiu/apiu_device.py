@@ -8,8 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""This module contains an implementation of the MCCS APIU device and related
-classes."""
+"""This module implements the MCCS APIU device."""
 import threading
 import json
 
@@ -303,8 +302,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
 
     def _update_are_antennas_on(self):
-        """Update our record of which antennas are off/on, ensureing that callbacks are
-        called."""
+        """Update our record of which antennas are off/on, calling any callbacks."""
         are_antennas_on = self._factory.hardware.are_antennas_on()
         if are_antennas_on is None:
             are_antennas_on = [False] * self.antenna_count
@@ -372,8 +370,11 @@ class MccsAPIU(SKABaseDevice):
     AntennaFQDNs = device_property(dtype=(str,))
 
     def init_device(self):
-        """Initialise the device; overridden here to change the Tango serialisation
-        model."""
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()

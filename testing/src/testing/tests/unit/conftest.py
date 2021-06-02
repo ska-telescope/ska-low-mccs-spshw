@@ -1,6 +1,5 @@
 # type: ignore
-"""This module contains pytest fixtures and other test setups for the ska_low_mccs unit
-tests."""
+"""This module contains pytest-specific test harness for MCCS unit tests."""
 import pytest
 import time
 import tango

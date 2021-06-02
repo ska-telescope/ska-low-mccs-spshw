@@ -1,6 +1,5 @@
 # type: ignore
-"""This module contains tests of interactions between the TMC and ska_low_mccs
-classes."""
+"""This module contains integration tests of interactions between TMC and MCCS."""
 import json
 from time import sleep
 

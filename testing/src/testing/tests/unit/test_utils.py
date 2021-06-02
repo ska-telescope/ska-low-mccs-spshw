@@ -23,12 +23,10 @@ class TestUtils:
     """Test cases for ska_low_mccs.utils module."""
 
     def test_tango_raise_device(self):
-        """Test for correct execution of `tango_raise` helper function when used in a
-        tango device class method."""
+        """Test that `tango_raise` runs correctly when used in a tango device."""
 
         class DummyDevice(Device):
-            """A dummy device with a `method_to_raise` method that uses the
-            `tango_raise` helper function to raise a DevFailed exception."""
+            """A dummy device with a dummy method that calls `tango_raise`."""
 
             def __init__(self, device_class, device_name):
                 """
@@ -43,8 +41,7 @@ class TestUtils:
 
             @command
             def method_to_raise(self):
-                """A dummy command that uses the `tango_raise` helper function to raise
-                a DevFailed exception."""
+                """A dummy command that calls the `tango_raise` helper function."""
                 tango_raise("raise me")
 
         with DeviceTestContext(DummyDevice) as tango_device:
@@ -56,15 +53,13 @@ class TestUtils:
             assert ex.value.args[0].severity == ErrSeverity.ERR
 
     def test_tango_raise_not_device(self):
-        """Test that use of `tango_raise` helper function fails in a non- device class
-        with default argument (`origin=None`)."""
+        """Test that `tango_raise` fails in a non-device class."""
 
         class NonDevice:
             """Dummy class, not a tango Device."""
 
             def illegal_use(self):
-                """Dummy method that tries to use the `tango_raise` helper function to
-                raise a tango DevFailed exception."""
+                """Dummy method that calls the `tango_raise` helper function."""
                 tango_raise("Never happens")
 
         nondevice = NonDevice()

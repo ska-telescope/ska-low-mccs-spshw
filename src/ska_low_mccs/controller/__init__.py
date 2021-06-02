@@ -4,8 +4,11 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""This subpackage contains modules that implement the MCCS Controller, including a
-Tango device and a CLI."""
+"""
+This subpackage implements MCCS controller functionality.
+
+It includes a controller Tango device and a CLI.
+"""
 
 
 __all__ = [

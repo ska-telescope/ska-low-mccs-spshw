@@ -146,7 +146,9 @@ class AntennaApiuProxy:
 
     def on(self):
         """
-        Turn the antenna on (by telling the APIU to turn the right antenna on)
+        Turn the antenna on.
+
+        It does so by telling the APIU to turn the right antenna on.
 
         :raises NotImplementedError: if a device returns a ResultCode
             other than STARTED or FAILED
@@ -171,7 +173,9 @@ class AntennaApiuProxy:
 
     def off(self):
         """
-        Turn the antenna off (by telling the APIU to turn the right antenna off)
+        Turn the antenna off.
+
+        It does so by telling the APIU to turn the right antenna off.
 
         :raises NotImplementedError: if a device returns a ResultCode
             other than STARTED or FAILED

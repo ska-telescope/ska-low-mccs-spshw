@@ -6,8 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This subpackage contains modules for test mocking in the SKA Low MCCS
-tests.
+This subpackage contains modules for test mocking in the SKA Low MCCS tests.
 """
 
 

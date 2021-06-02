@@ -10,8 +10,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """
-This test module contains integration tests that exercise the health
-management functionality of the SKA Low MCCS system.
+This test module contains integration tests that exercise the health management
+functionality of the SKA Low MCCS system.
 """
 import time
 from tango import DevState
@@ -58,8 +58,8 @@ def devices_to_load():
 
 def sleep(seconds=0.2):
     """
-    Sleep for a short time. Used to allow time for events to be pushed
-    through the events subsystem.
+    Sleep for a short time. Used to allow time for events to be pushed through the
+    events subsystem.
 
     :param seconds: number of seconds to sleep; optional, defaults to 0.2
     :type seconds: float
@@ -69,8 +69,7 @@ def sleep(seconds=0.2):
 
 def check_states(dev_states):
     """
-    Helper to check that each device is in the expected state with a
-    timeout.
+    Helper to check that each device is in the expected state with a timeout.
 
     :param dev_states: the devices and expected states of them
     :type dev_states: dict

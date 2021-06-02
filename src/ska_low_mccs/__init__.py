@@ -6,8 +6,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This package implements the Square Kilometre Array (SKA) Low telescope's
-Monitoring Control and Calibration Subsystem (MCCS).
+This package implements the Square Kilometre Array (SKA) Low telescope's Monitoring
+Control and Calibration Subsystem (MCCS).
 """
 
 __all__ = [

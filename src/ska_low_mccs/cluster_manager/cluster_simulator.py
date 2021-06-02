@@ -268,8 +268,7 @@ class ClusterSimulator(HardwareSimulator):
 
     def _num_open_jobs_by_status(self, status):
         """
-        Helper method to return the number of open jobs with a given
-        status.
+        Helper method to return the number of open jobs with a given status.
 
         :param status: the job status for which the number of open jobs
             are sought
@@ -514,8 +513,8 @@ class ClusterSimulator(HardwareSimulator):
 
     def ping_master_pool(self):
         """
-        Ping the master pool nodes to make sure they are ok. This has
-        not been implemented.
+        Ping the master pool nodes to make sure they are ok. This has not been
+        implemented.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -548,9 +547,9 @@ class ClusterSimulator(HardwareSimulator):
 
     def submit_job(self, job_config):
         """
-        Submit a job to the cluster. Since the JobConfig class is not
-        yet implemented, this simply creates a unique job id for the
-        job, registers it as a STAGING job, and returns the job id.
+        Submit a job to the cluster. Since the JobConfig class is not yet implemented,
+        this simply creates a unique job id for the job, registers it as a STAGING job,
+        and returns the job id.
 
         :param job_config: specification of the submitted job
         :type job_config: :py:class:`.JobConfig`
@@ -592,8 +591,7 @@ class ClusterSimulator(HardwareSimulator):
 
     def simulate_node_failure(self, node_id, failed):
         """
-        Tells this simulator to simulate the failure of one of its
-        nodes.
+        Tells this simulator to simulate the failure of one of its nodes.
 
         :param node_id: id of the node whose failure status is to be
             changed
@@ -610,8 +608,8 @@ class ClusterSimulator(HardwareSimulator):
 
     def _update_master_node(self):
         """
-        Helper method to update the master node after we have simulated
-        failure of the previous master node.
+        Helper method to update the master node after we have simulated failure of the
+        previous master node.
         """
         if self._node_statuses[self.master_node_id] != HealthState.OK:
             try:

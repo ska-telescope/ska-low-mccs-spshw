@@ -6,8 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements infrastructure for health management in the MCCS
-subsystem.
+This module implements infrastructure for health management in the MCCS subsystem.
 """
 __all__ = [
     "DeviceHealthPolicy",
@@ -25,18 +24,17 @@ from ska_tango_base.control_model import AdminMode, HealthState
 
 class DeviceHealthPolicy:
     """
-    The DeviceHealthPolicy class implements a policy by which a
-    supervising device evaluates the health of a subservient device, on
-    the basis of its self-reported health state and on its admin mode (a
-    device's admin mode determines whether its health should be taken
-    into account or ignored).
+    The DeviceHealthPolicy class implements a policy by which a supervising device
+    evaluates the health of a subservient device, on the basis of its self-reported
+    health state and on its admin mode (a device's admin mode determines whether its
+    health should be taken into account or ignored).
     """
 
     @classmethod
     def compute_health(cls, admin_mode, health_state):
         """
-        Computes the health of the device, based on the device's admin
-        mode and self-reported health state.
+        Computes the health of the device, based on the device's admin mode and self-
+        reported health state.
 
         :param admin_mode: the value of the adminMode attribute of the
             device
@@ -65,10 +63,9 @@ class DeviceHealthPolicy:
 
 class DeviceHealthRollupPolicy:
     """
-    The DeviceHealthRollupPolicy class implements a policy by which a
-    device should determine its own health, on the basis of the health
-    of its hardware (if any) and of the devices that it supervises (if
-    any).
+    The DeviceHealthRollupPolicy class implements a policy by which a device should
+    determine its own health, on the basis of the health of its hardware (if any) and of
+    the devices that it supervises (if any).
 
     This is a very simple but flexible policy:
 
@@ -95,8 +92,7 @@ class DeviceHealthRollupPolicy:
 
     def _compute_device_health(self, device_healths):
         """
-        Helper method to roll up device healths into a single device
-        health.
+        Helper method to roll up device healths into a single device health.
 
         :param device_healths: sequence of healths of subservient
             devices
@@ -127,8 +123,8 @@ class DeviceHealthRollupPolicy:
 
     def compute_health(self, hardware_health, device_healths):
         """
-        Compute this devices health, given the health of its hardware
-        and the health of the devices that it supervises.
+        Compute this devices health, given the health of its hardware and the health of
+        the devices that it supervises.
 
         This currently has a very simple implementation: the device
         takes as its health the "maximum" health of its hardware and
@@ -211,9 +207,8 @@ class DeviceHealthMonitor:
 
     def _health_state_changed(self, fqdn, event_name, event_value, event_quality):
         """
-        Callback that this device registers with the event manager, so
-        that it is informed when the device's healthState attribute
-        changes.
+        Callback that this device registers with the event manager, so that it is
+        informed when the device's healthState attribute changes.
 
         :param fqdn: the fqdn for which healthState has changed
         :type fqdn: str
@@ -234,9 +229,8 @@ class DeviceHealthMonitor:
 
     def _admin_mode_changed(self, fqdn, event_name, event_value, event_quality):
         """
-        Callback that this device registers with the event manager, so
-        that it is informed when the device's adminMode attribute
-        changes.
+        Callback that this device registers with the event manager, so that it is
+        informed when the device's adminMode attribute changes.
 
         :param fqdn: the fqdn for which adminMode has changed
         :type fqdn: str
@@ -258,8 +252,7 @@ class DeviceHealthMonitor:
 
     def _compute_health(self):
         """
-        Re-evaluate the health of this device, on the basis of a
-        DeviceHealthPolicy.
+        Re-evaluate the health of this device, on the basis of a DeviceHealthPolicy.
         """
         interpreted_health = DeviceHealthPolicy.compute_health(
             self._device_admin_mode, self._device_health_state
@@ -268,8 +261,8 @@ class DeviceHealthMonitor:
 
     def _update_health(self, interpreted_health):
         """
-        Update this instances health value, ensuring that any registered
-        callbacks are called.
+        Update this instances health value, ensuring that any registered callbacks are
+        called.
 
         :param interpreted_health: the interpreted health of the device,
             or None if the device's health should be ignored
@@ -432,8 +425,8 @@ class HealthModel:
 
     def _hardware_health_changed(self, health):
         """
-        Passed to the hardware manager as a callback to be called when
-        the hardware health changes.
+        Passed to the hardware manager as a callback to be called when the hardware
+        health changes.
 
         :param health: the health of the hardware
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -443,8 +436,8 @@ class HealthModel:
 
     def _device_health_changed(self, fqdn, health):
         """
-        Passed to the HealthMonitor as a callback to be called when a
-        device's health changes.
+        Passed to the HealthMonitor as a callback to be called when a device's health
+        changes.
 
         :param fqdn: FQDN of the device whose health has changed
         :type fqdn: str
@@ -474,8 +467,8 @@ class HealthModel:
 
     def _update_health(self, health):
         """
-        Update the health of this device, ensuring that any registered
-        callbacks are called.
+        Update the health of this device, ensuring that any registered callbacks are
+        called.
 
         :param health: the new healthState of this device
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -490,8 +483,7 @@ class HealthModel:
 
 class MutableHealthMonitor(HealthMonitor):
     """
-    A HealthMonitor for which monitored devices can be dynamically added
-    and removed.
+    A HealthMonitor for which monitored devices can be dynamically added and removed.
     """
 
     def __init__(self, fqdns, event_manager, initial_callback=None):
@@ -571,8 +563,7 @@ class MutableHealthMonitor(HealthMonitor):
 
 class MutableHealthModel(HealthModel):
     """
-    A HealthModel for which monitored devices can be dynamically added
-    and removed.
+    A HealthModel for which monitored devices can be dynamically added and removed.
     """
 
     def __init__(self, hardware_manager, fqdns, event_manager, initial_callback=None):

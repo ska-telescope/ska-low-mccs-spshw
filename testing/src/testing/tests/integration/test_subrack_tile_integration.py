@@ -10,9 +10,8 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """
-This test module contains integration tests that exercise the power
-management functionality of the SKA Low MCCS system between the subrack
-and the TPM.
+This test module contains integration tests that exercise the power management
+functionality of the SKA Low MCCS system between the subrack and the TPM.
 """
 import time
 
@@ -92,9 +91,8 @@ class TestSubrackTileIntegration(HelperClass):
 
     def test_tpm_on(self, tango_harness: TangoHarness):
         """
-        Test that wnen we tell the subrack drive to turn a given TPM on,
-        the tile device recognises that its TPM has been powered, and
-        changes state.
+        Test that wnen we tell the subrack drive to turn a given TPM on, the tile device
+        recognises that its TPM has been powered, and changes state.
 
         :param tango_harness: a test harness for tango devices
         """

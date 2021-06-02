@@ -41,8 +41,8 @@ def connected(f):
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
         """
-        Wrapper that checks the TPM is connected before allowing the
-        wrapped method to proceed.
+        Wrapper that checks the TPM is connected before allowing the wrapped method to
+        proceed.
 
         :param self: the method called
         :type self: object
@@ -368,10 +368,9 @@ class Tile12(object):
 
     def program_cpld(self, bitfile):
         """
-        Program CPLD with specified bitfile. Use with VERY GREAT care,
-        this might leave the FPGA in an unreachable state. TODO Wiser to
-        leave the method out altogether and use a dedicated utility
-        instead?
+        Program CPLD with specified bitfile. Use with VERY GREAT care, this might leave
+        the FPGA in an unreachable state. TODO Wiser to leave the method out altogether
+        and use a dedicated utility instead?
 
         :param bitfile: Bitfile to flash to CPLD
 
@@ -757,10 +756,10 @@ class Tile12(object):
     @connected
     def get_arp_table(self):
         """
-        Check that ARP table has been populated in for all used cores.
-        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
-        beamformer, 1 for LMC. 10G interfaces use cores 0,1 (fpga0) and
-        4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
+        Check that ARP table has been populated in for all used cores. 40G interfaces
+        use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC. 10G
+        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
+        LMC with only one ARP.
 
         :return: list of core id and arp table populated
         :rtype: dict(list)
@@ -975,8 +974,7 @@ class Tile12(object):
     @connected
     def wait_pps_event(self):
         """
-        Wait for a PPS edge. Added timeout feture to avoid method to
-        stuck.
+        Wait for a PPS edge. Added timeout feture to avoid method to stuck.
 
         :raises BoardError: Hardware PPS stuck
         """
@@ -1051,8 +1049,8 @@ class Tile12(object):
     @connected
     def set_time_delays(self, delays):
         """
-        Set coarse zenith delay for input ADC streams Delay specified in
-        nanoseconds, nominal is 0.
+        Set coarse zenith delay for input ADC streams Delay specified in nanoseconds,
+        nominal is 0.
 
         :param delays: Delay in samples, positive delay adds delay to the signal stream
         :type delays: list(float)
@@ -1130,8 +1128,7 @@ class Tile12(object):
     @connected
     def initialise_beamformer(self, start_channel, nof_channels, is_first, is_last):
         """
-        Initialise tile and station beamformers for a simple single beam
-        configuration.
+        Initialise tile and station beamformers for a simple single beam configuration.
 
         :param start_channel: Initial channel, must be even
         :type start_channel: int
@@ -1186,11 +1183,10 @@ class Tile12(object):
     @connected
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        The method specifies the delay in seconds and the delay rate in
-        seconds/seconds. The delay_array specifies the delay and delay
-        rate for each antenna. beam_index specifies which beam is
-        described (range 0:7). Delay is updated inside the delay engine
-        at the time specified by method load_delay.
+        The method specifies the delay in seconds and the delay rate in seconds/seconds.
+        The delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is described (range 0:7). Delay is updated inside the delay
+        engine at the time specified by method load_delay.
 
         :param delay_array: delay and delay rate for each antenna
         :type delay_array: list(list(float))
@@ -1245,9 +1241,8 @@ class Tile12(object):
     @connected
     def load_antenna_tapering(self, beam, tapering_coefficients):
         """
-        tapering_coefficients is a vector of 16 values, one per antenna.
-        Default (at initialization) is 1.0. TODO modify plugin to allow
-        for different beams.
+        tapering_coefficients is a vector of 16 values, one per antenna. Default (at
+        initialization) is 1.0. TODO modify plugin to allow for different beams.
 
         :param beam: Beam index in range 0:47
         :type beam: int
@@ -1262,8 +1257,8 @@ class Tile12(object):
     @connected
     def load_beam_angle(self, angle_coefficients):
         """
-        Angle_coefficients is an array of one element per beam,
-        specifying a rotation angle, in radians, for the specified beam.
+        Angle_coefficients is an array of one element per beam, specifying a rotation
+        angle, in radians, for the specified beam.
 
         The rotation is the same for all antennas. Default is 0 (no
         rotation). A positive pi/4 value transfers the X polarization to
@@ -1278,8 +1273,7 @@ class Tile12(object):
 
     def compute_calibration_coefficients(self):
         """
-        Compute the calibration coefficients and load them in the
-        hardware.
+        Compute the calibration coefficients and load them in the hardware.
         """
         self.tpm.beamf_fd[0].compute_calibration_coefs()
         self.tpm.beamf_fd[1].compute_calibration_coefs()
@@ -1453,8 +1447,7 @@ class Tile12(object):
     @connected
     def sync_fpgas(self):
         """
-        Syncronises the two FPGAs in the tile Returns when these are
-        synchronised.
+        Syncronises the two FPGAs in the tile Returns when these are synchronised.
         """
         devices = ["fpga1", "fpga2"]
 
@@ -1475,8 +1468,7 @@ class Tile12(object):
     @connected
     def check_synchronization(self):
         """
-        Checks FPGA synchronisation, returns when these are
-        synchronised.
+        Checks FPGA synchronisation, returns when these are synchronised.
         """
         devices = ["fpga1", "fpga2"]
 
@@ -2002,8 +1994,8 @@ class Tile12(object):
     @connected
     def test_generator_input_select(self, inputs):
         """
-        Specify ADC inputs which are substitute to test signal.
-        Specified using a 32 bit mask, with LSB for ADC input 0.
+        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
+        mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int
@@ -2022,8 +2014,7 @@ class Tile12(object):
 
     def __getitem__(self, key):
         """
-        Read a register using indexing syntax:
-        value=tile['registername']
+        Read a register using indexing syntax: value=tile['registername']
 
         :param key: register address, symbolic or numeric
         :type key: str
@@ -2045,9 +2036,8 @@ class Tile12(object):
 
     def __getattr__(self, name):
         """
-        Handler for any requested attribute not found in the usual way;
-        tries to return the corresponding attribute of the connected
-        TPM.
+        Handler for any requested attribute not found in the usual way; tries to return
+        the corresponding attribute of the connected TPM.
 
         :param name: name of the requested attribute
         :type name: str

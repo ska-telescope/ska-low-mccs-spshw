@@ -31,8 +31,7 @@ __all__ = ["MccsTransientBuffer", "main"]
 
 class MccsTransientBuffer(MccsDevice):
     """
-    MccsTransientBuffer TANGO device class for the SKA Low MCCS
-    prototype.
+    MccsTransientBuffer TANGO device class for the SKA Low MCCS prototype.
 
     **Properties:**
 
@@ -106,9 +105,9 @@ class MccsTransientBuffer(MccsDevice):
     # ----------
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`

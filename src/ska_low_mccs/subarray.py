@@ -7,8 +7,8 @@
 # See LICENSE.txt for more info.
 
 """
-This module provides MccsSubarray, the Tango device class for the MCCS
-Subarray prototype.
+This module provides MccsSubarray, the Tango device class for the MCCS Subarray
+prototype.
 """
 
 from __future__ import annotations  # allow forward references in type hints
@@ -44,8 +44,7 @@ from ska_low_mccs.resource import ResourceManager
 
 class StationsResourceManager(ResourceManager):
     """
-    A simple manager for the pool of stations that are assigned to a
-    subarray.
+    A simple manager for the pool of stations that are assigned to a subarray.
 
     Inherits from ResourceManager.
     """
@@ -86,8 +85,8 @@ class StationsResourceManager(ResourceManager):
 
     def add_to_managed(self, stations):
         """
-        Add new stations(s) to be managed by this resource manager, will
-        also run InitialSetup() on stations.
+        Add new stations(s) to be managed by this resource manager, will also run
+        InitialSetup() on stations.
 
         :param stations: The IDs and FQDNs of devices to add
         :type stations: dict
@@ -129,8 +128,7 @@ class StationsResourceManager(ResourceManager):
 
 class SubarrayBeamsResourceManager(ResourceManager):
     """
-    A simple manager for the pool of subarray beams that are assigned to
-    a subarray.
+    A simple manager for the pool of subarray beams that are assigned to a subarray.
 
     Inherits from ResourceManager.
     """
@@ -167,8 +165,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def __len__(self) -> int:
         """
-        Return the number of stations assigned to this subarray resource
-        manager.
+        Return the number of stations assigned to this subarray resource manager.
 
         :return: the number of stations assigned to this subarray resource manager
         """
@@ -365,8 +362,7 @@ class TransientBufferManager:
 
     def send(self, segment_spec):
         """
-        Instructs the manager to send the specified segments of the
-        transient buffer.
+        Instructs the manager to send the specified segments of the transient buffer.
 
         :param segment_spec: JSON-encoded specification of the segment
             to be sent
@@ -377,8 +373,7 @@ class TransientBufferManager:
 
 class MccsSubarray(SKASubarray):
     """
-    MccsSubarray is the Tango device class for the MCCS Subarray
-    prototype.
+    MccsSubarray is the Tango device class for the MCCS Subarray prototype.
 
     This is a subclass of :py:class:`ska_tango_base.SKASubarray`.
     """
@@ -420,8 +415,8 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook for initialisation of the attributes and
-            properties of the :py:class:`.MccsSubarray`.
+            Stateless hook for initialisation of the attributes and properties of the
+            :py:class:`.MccsSubarray`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -455,8 +450,8 @@ class MccsSubarray(SKASubarray):
 
         def _initialise_connections(self, device):
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
@@ -528,8 +523,7 @@ class MccsSubarray(SKASubarray):
 
     def init_command_objects(self):
         """
-        Initialises the command handlers for commands supported by this
-        device.
+        Initialises the command handlers for commands supported by this device.
         """
         # TODO: Technical debt -- forced to register base class stuff rather than
         # calling super(), because AssignResources(), ReleaseResources() and
@@ -580,9 +574,9 @@ class MccsSubarray(SKASubarray):
     # ------------------
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -645,9 +639,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.On` command for this
+            :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -674,9 +668,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
+            :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -743,8 +737,7 @@ class MccsSubarray(SKASubarray):
 
         def succeeded(self):
             """
-            Action to take on successful completion of a resourcing
-            command.
+            Action to take on successful completion of a resourcing command.
             """
             if len(self.target) == 0:
                 action = "resourcing_succeeded_no_resources"
@@ -786,8 +779,7 @@ class MccsSubarray(SKASubarray):
 
         def succeeded(self):
             """
-            Action to take on successful completion of a resourcing
-            command.
+            Action to take on successful completion of a resourcing command.
             """
             if len(self.target):
                 action = "resourcing_succeeded_some_resources"
@@ -829,8 +821,7 @@ class MccsSubarray(SKASubarray):
 
         def succeeded(self):
             """
-            Action to take on successful completion of a resourcing
-            command.
+            Action to take on successful completion of a resourcing command.
             """
             if len(self.target):
                 action = "resourcing_succeeded_some_resources"
@@ -847,9 +838,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self, argin: str):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.Configure`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.Configure` command for this
+            :py:class:`.MccsSubarray` device.
 
             :param argin: JSON configuration specification
                 {
@@ -876,8 +867,7 @@ class MccsSubarray(SKASubarray):
 
         def check_allowed(self):
             """
-            Whether this command is allowed to be run in current device
-            state.
+            Whether this command is allowed to be run in current device state.
 
             :return: True if this command is allowed to be run in
                 current device obsstates
@@ -892,9 +882,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.Scan`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.Scan` command for this
+            :py:class:`.MccsSubarray` device.
 
             :param argin: JSON scan specification
                 {
@@ -933,9 +923,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.EndScan`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.EndScan` command for this
+            :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -955,9 +945,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.End`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.End` command for this
+            :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -980,9 +970,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.Abort`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.Abort` command for this
+            :py:class:`.MccsSubarray` device.
 
             An abort command will leave the system in an ABORTED state.
             Output to CSP is stopped, as is the beamformer and all running
@@ -1020,8 +1010,7 @@ class MccsSubarray(SKASubarray):
     @DebugIt()
     def Abort(self):
         """
-        Abort any long-running command such as ``Configure()`` or
-        ``Scan()``.
+        Abort any long-running command such as ``Configure()`` or ``Scan()``.
 
         To modify behaviour for this command, modify the do() method of
         the command class.
@@ -1049,9 +1038,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.ObsReset`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.ObsReset` command for this
+            :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1103,9 +1092,9 @@ class MccsSubarray(SKASubarray):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKASubarray.Restart`
-            command for this :py:class:`.MccsSubarray` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKASubarray.Restart` command for this
+            :py:class:`.MccsSubarray` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1162,8 +1151,8 @@ class MccsSubarray(SKASubarray):
     @DebugIt()
     def SendTransientBuffer(self, argin):
         """
-        Cause the subarray to send the requested segment of the
-        transient buffer to SDP. The requested segment is specified by:
+        Cause the subarray to send the requested segment of the transient buffer to SDP.
+        The requested segment is specified by:
 
         1. Start time (timestamp: milliseconds since UNIX epoch)
         2. End time (timestamp: milliseconds since UNIX epoch)

@@ -1,7 +1,7 @@
 # type: ignore
 """
-This module contains pytest fixtures and other test setups for the
-ska_low_mccs unit tests.
+This module contains pytest fixtures and other test setups for the ska_low_mccs unit
+tests.
 """
 import pytest
 import time
@@ -13,9 +13,8 @@ from ska_tango_base.commands import ResultCode
 
 def pytest_itemcollected(item):
     """
-    pytest hook implementation; add the "forked" custom mark to all
-    tests that use the ``tango_harness`` fixture, causing them to be
-    sandboxed in their own process.
+    pytest hook implementation; add the "forked" custom mark to all tests that use the
+    ``tango_harness`` fixture, causing them to be sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
     :type item: :py:class:`pytest.Item`
@@ -113,10 +112,10 @@ def mock_event_callback(mocker):
 
         def check_command_result(self, name, result):
             """
-            Special callback check routine for commandResult. There
-            should always be two entries for commandResult; the first
-            should reset commandResult to ResultCode.UNKNOWN, the second
-            should match the expected result passed into this routine.
+            Special callback check routine for commandResult. There should always be two
+            entries for commandResult; the first should reset commandResult to
+            ResultCode.UNKNOWN, the second should match the expected result passed into
+            this routine.
 
             :param name: name of the registered event
             :type name: str
@@ -147,10 +146,9 @@ def mock_event_callback(mocker):
 
         def check_queued_command_result(self, name, result):
             """
-            Special callback check routine for commandResult. There
-            should always be four entries for commandResult; UNKNOWN,
-            QUEUED, STARTED and the expected result passed into this
-            routine.
+            Special callback check routine for commandResult. There should always be
+            four entries for commandResult; UNKNOWN, QUEUED, STARTED and the expected
+            result passed into this routine.
 
             :param name: name of the registered event
             :type name: str

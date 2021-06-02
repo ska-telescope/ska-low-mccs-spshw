@@ -28,8 +28,8 @@ from ska_low_mccs.hardware.simulable_hardware import DynamicValuesGenerator
 @pytest.fixture()
 def zero_seed():
     """
-    Sets the random seed to zero, so that we get some determinism in our
-    stochastic tests.
+    Sets the random seed to zero, so that we get some determinism in our stochastic
+    tests.
     """
     seed(0)
 
@@ -41,8 +41,7 @@ class TestDynamicValuesGenerator:
 
     def test_collapse(self):
         """
-        Test that we get the fixed value we expect with in_range_rate
-        set to 1.
+        Test that we get the fixed value we expect with in_range_rate set to 1.
 
         (If you set the in_range_rate to 1, the model variance collapses
         to zero, and all your values end up being the mean of soft_min
@@ -93,10 +92,9 @@ class TestSimulableHardware:
     @pytest.fixture()
     def static_hardware_simulator(self, request):
         """
-        Fixture that returns a static hardware simulator for testing.
-        Actually there is nothing particularly static about this
-        simulator, but our test only requires that our static and
-        dynamic hardware simulators be distinct objects.
+        Fixture that returns a static hardware simulator for testing. Actually there is
+        nothing particularly static about this simulator, but our test only requires
+        that our static and dynamic hardware simulators be distinct objects.
 
         :param request: A pytest object giving access to the requesting
             test context.
@@ -110,10 +108,9 @@ class TestSimulableHardware:
     @pytest.fixture()
     def dynamic_hardware_simulator(self, request):
         """
-        Fixture that returns a dynamic hardware simulator for testing.
-        Actually there is nothing particularly dynamic about this
-        simulator, but our test only requires that our static and
-        dynamic hardware simulators be distinct objects.
+        Fixture that returns a dynamic hardware simulator for testing. Actually there is
+        nothing particularly dynamic about this simulator, but our test only requires
+        that our static and dynamic hardware simulators be distinct objects.
 
         :param request: A pytest object giving access to the requesting
             test context.
@@ -229,8 +226,8 @@ class TestSimulableHardware:
 
         def test_simulate_connection_failure(self, static_hardware_simulator):
             """
-            Test that simulating connection failure causes the hardware
-            simulator to think its connection has been lost.
+            Test that simulating connection failure causes the hardware simulator to
+            think its connection has been lost.
 
             :param static_hardware_simulator: the hardware simulator under test
             :type static_hardware_simulator:
@@ -277,8 +274,7 @@ class TestSimulableHardware:
             self, hardware_driver, static_hardware_simulator, hardware_factory
         ):
             """
-            Test that different hardware is returned depending on
-            simulation mode.
+            Test that different hardware is returned depending on simulation mode.
 
             :param hardware_driver: the hardware driver that the
                 hardware factory returns when not in simulation mode
@@ -316,8 +312,8 @@ class TestSimulableHardware:
             hardware_factory,
         ):
             """
-            Test that, when in simulation mode, a different simulator is
-            returned depending on test mode.
+            Test that, when in simulation mode, a different simulator is returned
+            depending on test mode.
 
             :param hardware_driver: the hardware driver that the
                 hardware factory returns when not in simulation mode
@@ -356,8 +352,7 @@ class TestSimulableHardware:
 
     class TestSimulableHardwareManager:
         """
-        This class contains the tests for the SimulableHardwareManager
-        class.
+        This class contains the tests for the SimulableHardwareManager class.
 
         (The SimulableHardwareManager class is a base class for classes
         that manage hardware, on behalf of a device, in circumstances
@@ -368,8 +363,8 @@ class TestSimulableHardware:
             self, hardware_driver, static_hardware_simulator, hardware_manager
         ):
             """
-            Test that changing simulation mode, where the simulator is
-            simulating connection failure, causes changes in health.
+            Test that changing simulation mode, where the simulator is simulating
+            connection failure, causes changes in health.
 
             :param hardware_driver: the hardware driver (simulated for
                 testing purposes)

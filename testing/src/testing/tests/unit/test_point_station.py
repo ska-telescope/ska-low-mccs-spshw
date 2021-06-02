@@ -8,8 +8,7 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska_low_mccs.point_station
-module.
+This module contains the tests for the ska_low_mccs.point_station module.
 """
 
 import pytest
@@ -31,8 +30,8 @@ class TestPointStation:
 
     def test_create_pointing(self):
         """
-        Create and test pointing class instance and the supporting
-        StationInformation object.
+        Create and test pointing class instance and the supporting StationInformation
+        object.
         """
         station = point_station.StationInformation()
         # Load standard AAVS displacements

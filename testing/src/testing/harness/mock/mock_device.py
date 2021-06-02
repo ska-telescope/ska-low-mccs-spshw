@@ -56,8 +56,8 @@ class MockDeviceBuilder:
         self: MockDeviceBuilder, name: str, return_value: typing.Any
     ) -> None:
         """
-        Tell this builder to build mocks with a specified command that
-        returns the provided value.
+        Tell this builder to build mocks with a specified command that returns the
+        provided value.
 
         :param name: name of the command
         :param return_value: what the command should return
@@ -72,9 +72,9 @@ class MockDeviceBuilder:
         status: str = "Mock information-only message",
     ) -> None:
         """
-        Tell this builder to build mocks with a specified command that
-        returns (ResultCode, [message, message_uid]) or (ResultCode,
-        message) tuples as required.
+        Tell this builder to build mocks with a specified command that returns
+        (ResultCode, [message, message_uid]) or (ResultCode, message) tuples as
+        required.
 
         :param name: the name of the command
         :param result_code: the
@@ -91,8 +91,7 @@ class MockDeviceBuilder:
 
     def set_state(self: MockDeviceBuilder, state: tango.DevState) -> None:
         """
-        Tell this builder to build mocks with the state set as
-        specified.
+        Tell this builder to build mocks with the state set as specified.
 
         :param state: the state of the mock
         """

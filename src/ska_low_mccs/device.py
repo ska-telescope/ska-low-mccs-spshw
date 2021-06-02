@@ -9,8 +9,7 @@
 # See LICENSE.txt for more info.
 
 """
-This module implements the MCCS Base Device, a base class for all MCCS
-devices.
+This module implements the MCCS Base Device, a base class for all MCCS devices.
 """
 __all__ = ["MccsDevice", "main"]
 
@@ -42,8 +41,8 @@ class MccsDevice(SKABaseDevice):
     # ---------------
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Base
-        Device. State is managed under the hood; the basic sequence is:
+        Class that implements device initialisation for the MCCS Base Device. State is
+        managed under the hood; the basic sequence is:
 
         1. Device state is set to INIT
         2. The do() method is run
@@ -55,8 +54,8 @@ class MccsDevice(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for device initialisation: initialises the
-            attributes and properties of the :py:class:`.MccsDevice`.
+            Stateless hook for device initialisation: initialises the attributes and
+            properties of the :py:class:`.MccsDevice`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -174,8 +173,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledUndefinedDevice(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        device that is not defined in the device database.
+        Return a flag indicating whether this device has tried to call a device that is
+        not defined in the device database.
 
         :return: whether this device has tried to call a device that is
             not defined in the device database
@@ -186,8 +185,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledDeadServer(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        dead server.
+        Return a flag indicating whether this device has tried to call a dead server.
 
         :return: whether this device has tried to call a dead server
         :rtype: bool
@@ -197,8 +195,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def detectedDeadServer(self):
         """
-        Return a flag indicating whether this device has detected a dead
-        server.
+        Return a flag indicating whether this device has detected a dead server.
 
         :return: whether this device has detected a dead server
         :rtype: bool
@@ -208,8 +205,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledNonRunningDevice(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        device that is not running.
+        Return a flag indicating whether this device has tried to call a device that is
+        not running.
 
         :return: whether this device has tried to call a device that is
             not running
@@ -220,8 +217,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def callTimeout(self):
         """
-        Return a flag indicating whether this device has experienced a
-        call timeout.
+        Return a flag indicating whether this device has experienced a call timeout.
 
         :return: whether this device has had a call timeout
         :rtype: bool
@@ -231,8 +227,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def callCommFailed(self):
         """
-        Return a flag indicating whether this device has had a call fail
-        due to communications failure.
+        Return a flag indicating whether this device has had a call fail due to
+        communications failure.
 
         :return: whether this device has had a call fail due to
             communications failure
@@ -243,8 +239,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def invalidAsynId(self):
         """
-        Return a flag indicating whether this device has had a call fail
-        due to an invalid "asyn" id.
+        Return a flag indicating whether this device has had a call fail due to an
+        invalid "asyn" id.
 
         :todo: what is an "asyn" id?
 
@@ -257,8 +253,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledInexistentCallback(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        nonexistent callback.
+        Return a flag indicating whether this device has tried to call a nonexistent
+        callback.
 
         :return: whether this device has tried to call a nonexistent
             callback
@@ -269,8 +265,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def requestIdMismatch(self):
         """
-        Return a flag indicating whether this device has experienced a
-        request id mismatch.
+        Return a flag indicating whether this device has experienced a request id
+        mismatch.
 
         :return: whether this device has experienced a request id
             mismatch
@@ -281,8 +277,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def expectedReplyNotReady(self):
         """
-        Return a flag indicating whether this device has experienced an
-        expected reply not being ready.
+        Return a flag indicating whether this device has experienced an expected reply
+        not being ready.
 
         :return: whether this device has experienced an expected reply
             not being ready
@@ -293,8 +289,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def experiencedSubscriptionFailure(self):
         """
-        Return a flag indicating whether this device has experienced a
-        subscription failure.
+        Return a flag indicating whether this device has experienced a subscription
+        failure.
 
         :return: whether this device has experienced a subscription
             failure
@@ -305,8 +301,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def invalidEventId(self):
         """
-        Return a flag indicating whether this device has errored due to
-        an invalid event id.
+        Return a flag indicating whether this device has errored due to an invalid event
+        id.
 
         :return: whether this device has errored due to an invalid event
             id
@@ -530,8 +526,7 @@ class MccsDevice(SKABaseDevice):
 
     class ConstructDeviceProxyAddressCommand(ResponseCommand):
         """
-        Class for handling the ConstructDeviceProxyAddress(argin)
-        command.
+        Class for handling the ConstructDeviceProxyAddress(argin) command.
 
         :todo: What does this command do? It sounds like it constructs
             an address, but if so it doesn't return it.

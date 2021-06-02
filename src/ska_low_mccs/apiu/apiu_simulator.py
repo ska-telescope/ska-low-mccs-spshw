@@ -277,8 +277,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def _check_antenna_id(self, logical_antenna_id):
         """
-        Helper method to check that an antenna id passed as an argument
-        is within range.
+        Helper method to check that an antenna id passed as an argument is within range.
 
         :param logical_antenna_id: the id to check
         :type logical_antenna_id: int
@@ -294,8 +293,8 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def are_antennas_on(self):
         """
-        Returns whether each antenna is powered or not.  Or None if the
-        APIU itself is turned off.
+        Returns whether each antenna is powered or not.  Or None if the APIU itself is
+        turned off.
 
         :return: whether each antenna is powered or not.
         :rtype: list(bool) or None

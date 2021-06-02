@@ -9,8 +9,7 @@
 # See LICENSE.txt for more info.
 
 """
-This module contains an implementation of a simulator for a subrack
-management board.
+This module contains an implementation of a simulator for a subrack management board.
 
 Some assumptions of this class are:
 
@@ -42,10 +41,10 @@ __all__ = ["SubrackBaySimulator", "SubrackBoardSimulator"]
 
 class SubrackBaySimulator:
     """
-    A generic simulator for a subrack bay that contains and supplies
-    power to some electronic module, such as a TPM. From the subrack's
-    point of view, it mostly doesn't care what that module is, so long
-    as it can turn it off and on, and monitor its vital signs.
+    A generic simulator for a subrack bay that contains and supplies power to some
+    electronic module, such as a TPM. From the subrack's point of view, it mostly
+    doesn't care what that module is, so long as it can turn it off and on, and monitor
+    its vital signs.
 
     It is assumed that the bay itself has sensors for temperature and
     current; i.e. it can monitor the temperature and current of the
@@ -388,8 +387,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def off(self):
         """
-        Turn me off. Before turning off, turns off all modules. If we
-        turn the subrack off, any housed equipment will lose power.
+        Turn me off. Before turning off, turns off all modules. If we turn the subrack
+        off, any housed equipment will lose power.
 
         :todo: for now we assume that the subrack management board can
             turn itself off and on. Actually, this would be done via the
@@ -425,8 +424,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def simulate_backplane_temperatures(self, backplane_temperatures):
         """
-        Set the simulated backplane temperatures for this subrack
-        simulator.
+        Set the simulated backplane temperatures for this subrack simulator.
 
         :param backplane_temperatures: the simulated backplane
             temperature for this subrack simulator.
@@ -544,8 +542,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def _check_tpm_id(self, logical_tpm_id):
         """
-        Helper method to check that a TPM id passed as an argument is
-        within range.
+        Helper method to check that a TPM id passed as an argument is within range.
 
         :param logical_tpm_id: the id to check
         :type logical_tpm_id: int
@@ -577,8 +574,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def simulate_tpm_temperatures(self, tpm_temperatures):
         """
-        Set the simulated temperatures for all TPMs housed in this
-        subrack simulator.
+        Set the simulated temperatures for all TPMs housed in this subrack simulator.
 
         :param tpm_temperatures: the simulated TPM temperatures.
         :type tpm_temperatures: list(float)
@@ -607,8 +603,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def simulate_tpm_currents(self, tpm_currents):
         """
-        Set the simulated currents for all TPMs housed in this subrack
-        simulator.
+        Set the simulated currents for all TPMs housed in this subrack simulator.
 
         :param tpm_currents: the simulated TPM currents.
         :type tpm_currents: list(float)
@@ -637,8 +632,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def simulate_tpm_powers(self, tpm_powers):
         """
-        Set the simulated powers for all TPMs housed in this subrack
-        simulator.
+        Set the simulated powers for all TPMs housed in this subrack simulator.
 
         :param tpm_powers: the simulated TPM currents.
         :type tpm_powers: list(float)
@@ -667,8 +661,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def simulate_tpm_voltages(self, tpm_voltages):
         """
-        Set the simulated voltages for all TPMs housed in this subrack
-        simulator.
+        Set the simulated voltages for all TPMs housed in this subrack simulator.
 
         :param tpm_voltages: the simulated TPM currents.
         :type tpm_voltages: list(float)
@@ -810,8 +803,8 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
 
     def are_tpms_on(self):
         """
-        Returns whether each TPM is powered or not. Or None if the
-        subrack itself is turned off.
+        Returns whether each TPM is powered or not. Or None if the subrack itself is
+        turned off.
 
         :return: whether each TPM is powered or not.
         :rtype: list(bool) or None

@@ -38,8 +38,7 @@ from ska_low_mccs.message_queue import MessageQueue
 
 class TilePowerManager:
     """
-    This class performs power management of the TPM on behalf of the
-    MCCS Tile device.
+    This class performs power management of the TPM on behalf of the MCCS Tile device.
 
     It has a simple job; all it needs to do is talk to the subrack that
     houses this TPM, to keep track of ensure that the TPM is
@@ -74,8 +73,7 @@ class TilePowerManager:
 
     def connect(self):
         """
-        Establish a connection to the subrack that powers this tile
-        device's TPM.
+        Establish a connection to the subrack that powers this tile device's TPM.
         """
         self._subrack = MccsDeviceProxy(self._subrack_fqdn, self._logger)
         self._subrack.check_initialised()
@@ -150,8 +148,8 @@ class TilePowerManager:
 
     def _subrack_power_changed(self, event_name, event_value, event_quality):
         """
-        Callback that this device registers with the event manager, so
-        that it is informed when the subrack power changes.
+        Callback that this device registers with the event manager, so that it is
+        informed when the subrack power changes.
 
         Because events may be delayed, a rapid off-on command sequence
         can result in an "off" event arriving after the on() command has
@@ -187,8 +185,7 @@ class TilePowerManager:
 
     def _read_power_mode(self):
         """
-        Helper method to read and interpret the power mode of the
-        hardware.
+        Helper method to read and interpret the power mode of the hardware.
 
         :return: the power mode of the hardware
         :rtype: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
@@ -258,8 +255,7 @@ class MccsTile(SKABaseDevice):
     # ---------------
     def init_device(self):
         """
-        Initialise the device; overridden here to change the Tango
-        serialisation model.
+        Initialise the device; overridden here to change the Tango serialisation model.
         """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
@@ -267,8 +263,8 @@ class MccsTile(SKABaseDevice):
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Tile is
-        managed under the hood; the basic sequence is:
+        Class that implements device initialisation for the MCCS Tile is managed under
+        the hood; the basic sequence is:
 
         1. Device state is set to INIT
         2. The do() method is run
@@ -303,8 +299,7 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             """
-            Initialises the attributes and properties of the MCCS Tile
-            device.
+            Initialises the attributes and properties of the MCCS Tile device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -356,8 +351,8 @@ class MccsTile(SKABaseDevice):
 
         def _initialise_connections(self, device):
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
@@ -450,9 +445,9 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Disable`
-            command for this :py:class:`.MccsTile` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
+            :py:class:`.MccsTile` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -483,9 +478,9 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Standby`
-            command for this :py:class:`.MccsTile` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Standby` command for this
+            :py:class:`.MccsTile` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -597,9 +592,9 @@ class MccsTile(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
-            command for this :py:class:`.MccsTile` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.On` command for this
+            :py:class:`.MccsTile` device.
 
             At present this does nothing but call its `super().do()`
             method, and interfere in the return message.
@@ -620,8 +615,7 @@ class MccsTile(SKABaseDevice):
 
     def _send_message(self, command, json_args):
         """
-        Helper method to send a message to execute the specified
-        command.
+        Helper method to send a message to execute the specified command.
 
         :param command: the command to send a message for
         :type command: str
@@ -688,9 +682,9 @@ class MccsTile(SKABaseDevice):
 
         def do(self, argin):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
-            command for this :py:class:`.MccsTile` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
+            :py:class:`.MccsTile` device.
 
             :param argin: Argument containing JSON encoded command message and result
             :return: A tuple containing a return code and a string
@@ -773,9 +767,9 @@ class MccsTile(SKABaseDevice):
 
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -787,10 +781,9 @@ class MccsTile(SKABaseDevice):
 
     def power_changed(self, power_mode):
         """
-        Callback to be called whenever the TilePowerManager's record of
-        the power mode of the TPM changes; responsible for updating the
-        tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
+        Callback to be called whenever the TilePowerManager's record of the power mode
+        of the TPM changes; responsible for updating the tango side of things i.e.
+        making sure the attribute is up to date, and events are pushed.
 
         :todo: There's way too much explicit management of state in this
             callback. We need to get this into the state machine so we
@@ -825,9 +818,8 @@ class MccsTile(SKABaseDevice):
 
     def _update_admin_mode(self, admin_mode):
         """
-        Helper method for changing admin_mode; passed to the state model
-        as a callback Deselect test generator if mode is not
-        MAINTENANCE.
+        Helper method for changing admin_mode; passed to the state model as a callback
+        Deselect test generator if mode is not MAINTENANCE.
 
         :param admin_mode: the new admin_mode value
         :type admin_mode: :py:class:`~ska_tango_base.control_model.AdminMode`
@@ -1213,8 +1205,8 @@ class MccsTile(SKABaseDevice):
     )
     def adcPower(self):
         """
-        Return the RMS power of every ADC signal (so a TPM processes 16
-        antennas, this should return 32 RMS value.
+        Return the RMS power of every ADC signal (so a TPM processes 16 antennas, this
+        should return 32 RMS value.
 
         :return: RMP power of ADC signals
         :rtype: list(float)
@@ -1226,8 +1218,8 @@ class MccsTile(SKABaseDevice):
     )
     def currentTileBeamformerFrame(self):
         """
-        Return current frame, in units of 256 ADC frames (276,48 us)
-        Currently this is required, not sure if it will remain so.
+        Return current frame, in units of 256 ADC frames (276,48 us) Currently this is
+        required, not sure if it will remain so.
 
         :return: current frame
         :rtype: int
@@ -1467,10 +1459,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def Initialise(self):
         """
-        Performs all required initialisation (switches on on-board
-        devices, locks PLL, performs synchronisation and other
-        operations required to start configuring the signal processing
-        functions of the firmware, such as channelisation and
+        Performs all required initialisation (switches on on-board devices, locks PLL,
+        performs synchronisation and other operations required to start configuring the
+        signal processing functions of the firmware, such as channelisation and
         beamforming)
 
         :return: A tuple containing a return code and a string
@@ -1508,11 +1499,10 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def GetFirmwareAvailable(self):
         """
-        Return a dictionary containing the following information for
-        each firmware stored on the board (such as in Flash memory). For
-        each firmware, a dictionary containing the following keys with
-        their respective values should be provided: ‘design’, which is a
-        textual name for the firmware, ‘major’, which is the major
+        Return a dictionary containing the following information for each firmware
+        stored on the board (such as in Flash memory). For each firmware, a dictionary
+        containing the following keys with their respective values should be provided:
+        ‘design’, which is a textual name for the firmware, ‘major’, which is the major
         version number, and ‘minor’.
 
         :return: a JSON-encoded dictionary of firmware details
@@ -1568,9 +1558,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def DownloadFirmware(self, argin):
         """
-        Downloads the firmware contained in bitfile to all FPGAs on the
-        board. This should also update the internal register mapping,
-        such that registers become available for use.
+        Downloads the firmware contained in bitfile to all FPGAs on the board. This
+        should also update the internal register mapping, such that registers become
+        available for use.
 
         :param argin: can either be the design name returned from
             :py:meth:`.GetFirmwareAvailable` command, or a path to a
@@ -1626,8 +1616,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def ProgramCPLD(self, argin):
         """
-        If the TPM has a CPLD (or other management chip which need
-        firmware), this function program it with the provided bitfile.
+        If the TPM has a CPLD (or other management chip which need firmware), this
+        function program it with the provided bitfile.
 
         :param argin: is the path to a file containing the required CPLD firmware
         :type argin: str
@@ -1667,8 +1657,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def GetRegisterList(self):
         """
-        Return a list containing description of the exposed firmware
-        (and CPLD) registers.
+        Return a list containing description of the exposed firmware (and CPLD)
+        registers.
 
         :return: a list of register names
         :rtype: list(str)
@@ -2099,8 +2089,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def Get40GCoreConfiguration(self, argin):
         """
-        Get 40g core configuration for core_id. This is required to
-        chain up TPMs to form a station.
+        Get 40g core configuration for core_id. This is required to chain up TPMs to
+        form a station.
 
         :param argin: json dictionary with optional keywords:
 
@@ -2174,8 +2164,7 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SetLmcDownload(self, argin):
         """
-        Specify whether control data will be transmitted over 1G or 40G
-        networks.
+        Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param argin: json dictionary with optional keywords:
 
@@ -2224,11 +2213,10 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def GetArpTable(self):
         """
-        Return a dictionary with populated ARP table  for all used
-        cores. 40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP
-        ID 0 for beamformer, 1 for LMC. 10G interfaces use cores 0,1
-        (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for LMC with
-        only one ARP.
+        Return a dictionary with populated ARP table  for all used cores. 40G interfaces
+        use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC. 10G
+        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
+        LMC with only one ARP.
 
         :return: a JSON-encoded dictionary of coreId and populated arpID table
         :rtype: str
@@ -2388,9 +2376,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SetBeamFormerRegions(self, argin):
         """
-        Set the frequency regions which are going to be beamformed into
-        each beam. region_array is defined as a 2D array, for a maximum
-        of 48 regions. Total number of channels must be <= 384.
+        Set the frequency regions which are going to be beamformed into each beam.
+        region_array is defined as a 2D array, for a maximum of 48 regions. Total number
+        of channels must be <= 384.
 
         :param argin: list of regions. Each region comprises:
 
@@ -2419,8 +2407,7 @@ class MccsTile(SKABaseDevice):
 
     class ConfigureStationBeamformerCommand(ResponseCommand):
         """
-        Class for handling the ConfigureStationBeamformer(argin)
-        command.
+        Class for handling the ConfigureStationBeamformer(argin) command.
         """
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
@@ -2503,8 +2490,7 @@ class MccsTile(SKABaseDevice):
 
     class LoadCalibrationCoefficientsCommand(ResponseCommand):
         """
-        Class for handling the LoadCalibrationCoefficients(argin)
-        command.
+        Class for handling the LoadCalibrationCoefficients(argin) command.
         """
 
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
@@ -2557,10 +2543,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadCalibrationCoefficients(self, argin):
         """
-        Loads calibration coefficients (but does not apply them, this is
-        performed by switch_calibration_bank). The calibration
-        coefficients may include any rotation matrix (e.g. the
-        parallactic angle), but do not include the geometric delay.
+        Loads calibration coefficients (but does not apply them, this is performed by
+        switch_calibration_bank). The calibration coefficients may include any rotation
+        matrix (e.g. the parallactic angle), but do not include the geometric delay.
 
         :param argin: list comprises:
 
@@ -2657,11 +2642,10 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadCalibrationCurve(self, argin):
         """
-        Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency. It
-        will be combined together with tapering coefficients and beam
-        angles by ComputeCalibrationCoefficients, which will also make
-        them active like SwitchCalibrationBank. The calibration
+        Load calibration curve. This is the frequency dependent response for a single
+        antenna and beam, as a function of frequency. It will be combined together with
+        tapering coefficients and beam angles by ComputeCalibrationCoefficients, which
+        will also make them active like SwitchCalibrationBank. The calibration
         coefficients do not include the geometric delay.
 
         :param argin: list comprises:
@@ -2742,11 +2726,10 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadBeamAngle(self, argin):
         """
-        angle_coefficients is an array of one element per beam,
-        specifying a rotation angle, in radians, for the specified beam.
-        The rotation is the same for all antennas. Default is 0 (no
-        rotation). A positive pi/4 value transfers the X polarization to
-        the Y polarization. The rotation is applied after regular
+        angle_coefficients is an array of one element per beam, specifying a rotation
+        angle, in radians, for the specified beam. The rotation is the same for all
+        antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X
+        polarization to the Y polarization. The rotation is applied after regular
         calibration.
 
         :param argin: list of angle coefficients for each beam
@@ -2839,8 +2822,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadAntennaTapering(self, argin):
         """
-        tapering_coefficients is a vector contains a value for each
-        antenna the TPM processes. Default at initialisation is 1.0.
+        tapering_coefficients is a vector contains a value for each antenna the TPM
+        processes. Default at initialisation is 1.0.
 
         :param argin: beam index, list of tapering coefficients for each antenna
         :type argin: list(float)
@@ -2985,10 +2968,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SetPointingDelay(self, argin):
         """
-        Specifies the delay in seconds and the delay rate in
-        seconds/second. The delay_array specifies the delay and delay
-        rate for each antenna. beam_index specifies which beam is
-        desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in seconds/second. The
+        delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is desired (range 0-7)
 
         :param argin: the delay in seconds and the delay rate in
             seconds/second.
@@ -3165,8 +3147,7 @@ class MccsTile(SKABaseDevice):
 
     class ConfigureIntegratedChannelDataCommand(ResponseCommand):
         """
-        Class for handling the ConfigureIntegratedChannelData(argin)
-        command.
+        Class for handling the ConfigureIntegratedChannelData(argin) command.
         """
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
@@ -3207,10 +3188,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def ConfigureIntegratedChannelData(self, argin):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedChannelData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedChannelData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -3274,8 +3254,7 @@ class MccsTile(SKABaseDevice):
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
         """
-        Class for handling the ConfigureIntegratedBeamData(argin)
-        command.
+        Class for handling the ConfigureIntegratedBeamData(argin) command.
         """
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
@@ -3316,10 +3295,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def ConfigureIntegratedBeamData(self, argin):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time, the first channel and the last
-        channel. The data are sent continuously until the
-        StopIntegratedBeamData command is run.
+        Configure the transmission of integrated beam data with the provided integration
+        time, the first channel and the last channel. The data are sent continuously
+        until the StopIntegratedBeamData command is run.
 
         :param argin: json dictionary with optional keywords:
 
@@ -3529,8 +3507,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SendChannelisedData(self, argin):
         """
-        Transmit a snapshot containing channelized data totalling
-        number_of_samples spectra.
+        Transmit a snapshot containing channelized data totalling number_of_samples
+        spectra.
 
         :param argin: json dictionary with optional keywords:
 
@@ -3558,8 +3536,7 @@ class MccsTile(SKABaseDevice):
 
     class SendChannelisedDataContinuousCommand(ResponseCommand):
         """
-        Class for handling the SendChannelisedDataContinuous(argin)
-        command.
+        Class for handling the SendChannelisedDataContinuous(argin) command.
         """
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataContinuous command completed OK"
@@ -3771,10 +3748,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def ComputeCalibrationCoefficients(self):
         """
-        Compute the calibration coefficients from previously specified
-        gain curves, tapering weights and beam angles, load them in the
-        hardware. It must be followed by switch_calibration_bank() to
-        make these active.
+        Compute the calibration coefficients from previously specified gain curves,
+        tapering weights and beam angles, load them in the hardware. It must be followed
+        by switch_calibration_bank() to make these active.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3886,8 +3862,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SetTimeDelays(self, argin):
         """
-        Set coarse zenith delay for input ADC streams Delay specified in
-        nanoseconds, nominal is 0.
+        Set coarse zenith delay for input ADC streams Delay specified in nanoseconds,
+        nominal is 0.
 
         :param argin: the delay in samples, positive delay adds delay
                        to the signal stream
@@ -4115,8 +4091,7 @@ class MccsTile(SKABaseDevice):
 
     class SendChannelisedDataNarrowbandCommand(ResponseCommand):
         """
-        Class for handling the SendChannelisedDataNarrowband(argin)
-        command.
+        Class for handling the SendChannelisedDataNarrowband(argin) command.
         """
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataNarrowband command completed OK"
@@ -4172,8 +4147,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def SendChannelisedDataNarrowband(self, argin):
         """
-        Continuously send channelised data from a single channel end
-        data from channel channel continuously (until stopped)
+        Continuously send channelised data from a single channel end data from channel
+        channel continuously (until stopped)
 
         This is a special mode used for UAV campaigns and not really
         part of the standard signal processing chain. I don’t know if

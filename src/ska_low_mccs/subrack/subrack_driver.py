@@ -76,8 +76,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         tpm_present=None,
     ):
         """
-        Initialise a new instance and tries to connect to the given IP
-        and port.
+        Initialise a new instance and tries to connect to the given IP and port.
 
         :param logger: a logger for this simulator to use
         :type logger: an instance of :py:class:`logging.Logger`, or
@@ -278,9 +277,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
     @property
     def tpm_count(self):
         """
-        Return the number of TPMs housed in this subrack. If powered off
-        return the last value stored, as it should not change often and
-        is meaningless when powered off.
+        Return the number of TPMs housed in this subrack. If powered off return the last
+        value stored, as it should not change often and is meaningless when powered off.
 
         :return: the number of TPMs housed in this subrack
         :rtype: int
@@ -304,8 +302,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
 
     def _check_tpm_id(self, logical_tpm_id):
         """
-        Helper method to check that a TPM id passed as an argument is
-        within range.
+        Helper method to check that a TPM id passed as an argument is within range.
 
         :param logical_tpm_id: the id to check
         :type logical_tpm_id: int
@@ -462,8 +459,8 @@ class SubrackBoardDriver(OnOffHardwareDriver):
 
     def are_tpms_on(self):
         """
-        Returns whether each TPM is powered or not. Or None if the
-        subrack itself is turned off.
+        Returns whether each TPM is powered or not. Or None if the subrack itself is
+        turned off.
 
         :return: whether each TPM is powered or not.
         :rtype: list(bool) or None

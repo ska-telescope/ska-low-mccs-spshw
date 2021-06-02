@@ -50,10 +50,9 @@ def device_to_load():
 @pytest.fixture()
 def mock_factory(mocker):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -333,11 +332,10 @@ class TestMccsStationBeam:
         self, device_under_test, attribute_name, value_to_write, float_format
     ):
         """
-        Helper method for testing a READ-WRITE double array attribute.
-        This is a messy test because there can be some loss of floating-
-        point precision during transfer, so you have to check
-        approximate equality when reading back what you've written. This
-        is done here by comparing the values by their string
+        Helper method for testing a READ-WRITE double array attribute. This is a messy
+        test because there can be some loss of floating- point precision during
+        transfer, so you have to check approximate equality when reading back what
+        you've written. This is done here by comparing the values by their string
         representation.
 
         :param device_under_test: fixture that provides a

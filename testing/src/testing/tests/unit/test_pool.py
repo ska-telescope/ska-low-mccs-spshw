@@ -55,9 +55,9 @@ class TestDevicePool:
     @pytest.fixture()
     def mock_factory(self, mocker, test_string):
         """
-        Fixture that provides a mock factory for device proxy mocks.
-        This factory ensures that calls to a mock's command_inout method
-        results in a (ResultCode.OK, message) return.
+        Fixture that provides a mock factory for device proxy mocks. This factory
+        ensures that calls to a mock's command_inout method results in a (ResultCode.OK,
+        message) return.
 
         :param mocker: a wrapper around the :py:mod:`unittest.mock` package
         :type mocker: :py:class:`pytest_mock.mocker`

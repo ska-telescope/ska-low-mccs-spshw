@@ -1,7 +1,7 @@
 # type: ignore
 """
-This module contains the pytest-bdd implementation of the Gherkin BDD
-tests for TMC and MCCS interactions.
+This module contains the pytest-bdd implementation of the Gherkin BDD tests for TMC and
+MCCS interactions.
 """
 import json
 import time
@@ -436,8 +436,7 @@ def component_is_ready_to_action_a_subarray(
     component_name, action, controller, subarrays, stations
 ):
     """
-    Asserts that a component is ready to perform an action on a
-    subarray.
+    Asserts that a component is ready to perform an action on a subarray.
 
     :param component_name: name of the component
     :type component_name: str

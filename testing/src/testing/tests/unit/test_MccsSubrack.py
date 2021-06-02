@@ -153,8 +153,8 @@ class TestSubrackBaySimulator:
         random_voltage,
     ):
         """
-        Test that we can simulate changes to the current and temperature
-        values reported by the bay.
+        Test that we can simulate changes to the current and temperature values reported
+        by the bay.
 
         :param subrack_bay: a simulator for a subrack bay housing an
             electronic module
@@ -201,8 +201,8 @@ class TestSubrackBaySimulator:
 @pytest.fixture()
 def subrack_bays(random_temperature, random_current, random_voltage):
     """
-    Return a list of subrack bay simulators for management by a subrack
-    management board simulator.
+    Return a list of subrack bay simulators for management by a subrack management board
+    simulator.
 
     :param random_temperature: a random value within a reasonable
         range for a temperature measurement
@@ -251,9 +251,8 @@ class TestSubrackBoardSimulator:
 
     def test_subrack_on_off(self, subrack_board):
         """
-        Test that we can change the subrack power mode, and that when
-        on, we can read attributes, and that when off or standby, we
-        can't.
+        Test that we can change the subrack power mode, and that when on, we can read
+        attributes, and that when off or standby, we can't.
 
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
@@ -262,8 +261,8 @@ class TestSubrackBoardSimulator:
 
         def assert_off_behaviour():
             """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned off.
+            Helper function to assert the behaviour expected when this hardware manager
+            is turned off.
             """
             assert subrack_board.power_mode == PowerMode.OFF
             with pytest.raises(ValueError, match="Subrack is not ON."):
@@ -289,8 +288,8 @@ class TestSubrackBoardSimulator:
 
         def assert_on_behaviour():
             """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned on.
+            Helper function to assert the behaviour expected when this hardware manager
+            is turned on.
             """
             assert subrack_board.power_mode == PowerMode.ON
             assert (
@@ -376,8 +375,8 @@ class TestSubrackBoardSimulator:
 
         def assert_tpms_on(is_on):
             """
-            Helper method that asserts TPMs to be either all off or all
-            on, depending on the argument.
+            Helper method that asserts TPMs to be either all off or all on, depending on
+            the argument.
 
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
@@ -409,8 +408,7 @@ class TestSubrackBoardSimulator:
         random_voltage,
     ):
         """
-        Test that the monitoring attributes of this simulator return
-        expected values.
+        Test that the monitoring attributes of this simulator return expected values.
 
         :param subrack_bays: list of subrack bay simulators for
             management by this subrack management board simulator
@@ -642,8 +640,7 @@ class TestSubrackHardwareManager:
 
     def test_init_simulation_mode(self, logger, mock_callback):
         """
-        Test that we can't create an hardware manager that isn't in
-        simulation mode.
+        Test that we can't create an hardware manager that isn't in simulation mode.
 
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
@@ -684,8 +681,8 @@ class TestSubrackHardwareManager:
 
         def assert_off_behaviour():
             """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned off.
+            Helper function to assert the behaviour expected when this hardware manager
+            is turned off.
             """
             assert hardware_manager.power_mode == PowerMode.OFF
             with pytest.raises(ValueError, match="Subrack is not ON."):
@@ -716,8 +713,8 @@ class TestSubrackHardwareManager:
 
         def assert_on_behaviour():
             """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned on.
+            Helper function to assert the behaviour expected when this hardware manager
+            is turned on.
             """
             assert hardware_manager.power_mode == PowerMode.ON
             assert hardware_manager.health == HealthState.OK
@@ -810,8 +807,8 @@ class TestSubrackHardwareManager:
 
         def assert_tpms_on(is_on):
             """
-            Helper method that asserts TPMs to be either all off or all
-            on, depending on the argument.
+            Helper method that asserts TPMs to be either all off or all on, depending on
+            the argument.
 
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool

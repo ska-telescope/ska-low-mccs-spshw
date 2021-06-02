@@ -1,7 +1,6 @@
 # type: ignore
 """
-This module contains tests of interactions between the TMC and
-ska_low_mccs classes.
+This module contains tests of interactions between the TMC and ska_low_mccs classes.
 """
 import json
 from time import sleep
@@ -57,8 +56,7 @@ def devices_to_load():
 
 class TestMccsIntegrationTmc:
     """
-    Integration test cases for interactions between TMC and MCCS device
-    classes.
+    Integration test cases for interactions between TMC and MCCS device classes.
     """
 
     @pytest.fixture()
@@ -130,8 +128,7 @@ class TestMccsIntegrationTmc:
 
     def check_states(self, devices, dev_states):
         """
-        Helper to check that each device is in the expected state with a
-        timeout.
+        Helper to check that each device is in the expected state with a timeout.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -147,8 +144,7 @@ class TestMccsIntegrationTmc:
 
     def test_controller_on(self, devices):
         """
-        Test that an asynchronous call to controller:On() works
-        correctly.
+        Test that an asynchronous call to controller:On() works correctly.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -183,8 +179,7 @@ class TestMccsIntegrationTmc:
 
     def test_controller_off(self, devices, mocker):
         """
-        Test that an asynchronous call to controller:Off() works
-        correctly.
+        Test that an asynchronous call to controller:Off() works correctly.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -227,8 +222,8 @@ class TestMccsIntegrationTmc:
 
     def test_setup_only(self, devices, mocker):
         """
-        Test that runs through the basic TMC<->MCCS interactions to
-        setup and then tear down.
+        Test that runs through the basic TMC<->MCCS interactions to setup and then tear
+        down.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
@@ -310,8 +305,8 @@ class TestMccsIntegrationTmc:
 
     def test_setup_and_observation(self, devices, mocker):
         """
-        Test that runs through the basic TMC<->MCCS interactions to
-        setup and perform an observation (without pointing updates)
+        Test that runs through the basic TMC<->MCCS interactions to setup and perform an
+        observation (without pointing updates)
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>

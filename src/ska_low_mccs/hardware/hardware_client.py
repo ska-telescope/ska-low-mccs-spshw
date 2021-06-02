@@ -6,8 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-Abstract class to establish a simple connection to a remote hardware
-device (client).
+Abstract class to establish a simple connection to a remote hardware device (client).
 
 Protocol is based on a set of commands and attributes (loosely related to
 Tango commands and attributes). An attribute is a property which can be
@@ -50,8 +49,8 @@ import json
 
 class HardwareClient:
     """
-    Class to establish a simple connection to a web hardware client Must
-    be subclassed to establish the actual network protocol.
+    Class to establish a simple connection to a web hardware client Must be subclassed
+    to establish the actual network protocol.
     """
 
     def __init__(self, ip_address, port=80):
@@ -69,8 +68,8 @@ class HardwareClient:
 
     def connect(self):
         """
-        Check if connected and establish a connection with the client.
-        If this is not possible, returns None.
+        Check if connected and establish a connection with the client. If this is not
+        possible, returns None.
 
         None if no connection available, True if connection OK
         """
@@ -134,14 +133,13 @@ class HardwareClient:
 class WebHardwareClient(HardwareClient):
 
     """
-    Implementation of the HardwareClient protocol using a web based
-    interface.
+    Implementation of the HardwareClient protocol using a web based interface.
     """
 
     def __init__(self, ip_address, port=80):
         """
-        Create a new instance of the HardwareClient protocol to a html
-        based HardwareServer device.
+        Create a new instance of the HardwareClient protocol to a html based
+        HardwareServer device.
 
         :param ip_address: IP address of server
         :type ip_address: str

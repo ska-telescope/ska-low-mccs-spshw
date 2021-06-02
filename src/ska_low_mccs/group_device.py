@@ -45,8 +45,7 @@ class MccsGroupDevice(SKABaseDevice):
 
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Group
-        Device.
+        Class that implements device initialisation for the MCCS Group Device.
         """
 
         SUCCEEDED_MESSAGE = "Init command completed OK"
@@ -121,8 +120,7 @@ class MccsGroupDevice(SKABaseDevice):
     # --------
     def init_command_objects(self):
         """
-        Initialises the command handlers for commands supported by this
-        device.
+        Initialises the command handlers for commands supported by this device.
         """
         super().init_command_objects()
 
@@ -248,8 +246,7 @@ class MccsGroupDevice(SKABaseDevice):
     @DebugIt()
     def Run(self, argin):
         """
-        A wrapper around running commands on a group proxy for this
-        group of devices.
+        A wrapper around running commands on a group proxy for this group of devices.
 
         :param argin: The command to run
         :type argin: str

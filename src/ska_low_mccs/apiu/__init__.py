@@ -6,8 +6,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This subpackage contains modules that implement the MCCS APIU, including
-a Tango device and an APIU simulator.
+This subpackage contains modules that implement the MCCS APIU, including a Tango device
+and an APIU simulator.
 """
 
 

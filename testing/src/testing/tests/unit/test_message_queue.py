@@ -8,8 +8,7 @@
 # See LICENSE.txt for more info.
 ########################################################################
 """
-This module contains the tests for the ska_low_mccs.message_queue
-module.
+This module contains the tests for the ska_low_mccs.message_queue module.
 """
 import pytest
 import threading
@@ -81,8 +80,8 @@ class TestMessageQueue:
     @pytest.fixture()
     def mock_device_proxy_with_devfailed(self, mocker):
         """
-        A fixture that monkey patches Tango's DeviceProxy and raises a
-        DevFailed exception.
+        A fixture that monkey patches Tango's DeviceProxy and raises a DevFailed
+        exception.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
         :return: A monkey patched Tango device proxy which raises a DevFailed exception
@@ -115,8 +114,8 @@ class TestMessageQueue:
     @pytest.fixture
     def message_queue(self, logger, target_mock):
         """
-        A fixture that yields a created and started message queue and
-        terminates it after each test.
+        A fixture that yields a created and started message queue and terminates it
+        after each test.
 
         :param logger: the logger to be used by the object under test
         :param target_mock: fixture that mocks a target device
@@ -133,8 +132,8 @@ class TestMessageQueue:
     @pytest.fixture
     def specialised_message_queue(self, logger, target_mock):
         """
-        A fixture that yields a created and started specialised message
-        queue and terminates it after each test.
+        A fixture that yields a created and started specialised message queue and
+        terminates it after each test.
 
         :param logger: the logger to be used by the object under test
         :param target_mock: fixture that mocks a target device
@@ -143,14 +142,12 @@ class TestMessageQueue:
 
         class SpecialisedMessageQueue(MessageQueue):
             """
-            Specialised message queue with a concrete implementation of
-            notify listener.
+            Specialised message queue with a concrete implementation of notify listener.
             """
 
             def _notify_listener(self, result_code, message_uid, status):
                 """
-                Concrete test implementation of abstract base class to
-                notify listeners.
+                Concrete test implementation of abstract base class to notify listeners.
 
                 :param result_code: Result code of the command being executed
                 :type result_code: :py:class:`~ska_tango_base.commands.ResultCode`
@@ -289,8 +286,8 @@ class TestMessageQueue:
         self, message_queue, mocker, target_mock, test_command
     ):
         """
-        Test that we can send a message with notifications (but without
-        derived class implementation)
+        Test that we can send a message with notifications (but without derived class
+        implementation)
 
         :param message_queue: message queue fixture
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
@@ -370,8 +367,7 @@ class TestMessageQueue:
         mock_device_proxy_with_devfailed,
     ):
         """
-        Test that we can handle a message with an incorrect response
-        FQDN.
+        Test that we can handle a message with an incorrect response FQDN.
 
         :param specialised_message_queue: specialised message queue fixture
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module

@@ -10,8 +10,7 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """
-Contains the tests for the MccsController Tango device_under_test
-prototype.
+Contains the tests for the MccsController Tango device_under_test prototype.
 """
 
 import json
@@ -41,16 +40,15 @@ from testing.harness.mock import MockDeviceBuilder, MockSubarrayBuilder
 
 class ControllerWithFailableDevices(MccsController):
     """
-    An extension of the MccsController device with additional commands
-    that we can use to tell the device to simulate the receipt of events
-    from subservient devices.
+    An extension of the MccsController device with additional commands that we can use
+    to tell the device to simulate the receipt of events from subservient devices.
     """
 
     @command(dtype_in="DevString")
     def simulateHealthStateChange(self, argin):
         """
-        Makes this controller think that a device that it manages has
-        had a change of healthState.
+        Makes this controller think that a device that it manages has had a change of
+        healthState.
 
         :param argin: JSON-encode dict with "fqdn" and "health" values
         :type argin: str
@@ -68,8 +66,8 @@ class ControllerWithFailableDevices(MccsController):
     @command(dtype_in="DevString")
     def simulateAdminModeChange(self, argin):
         """
-        Makes this controller think that a device that it manages has
-        had a change of adminMode.
+        Makes this controller think that a device that it manages has had a change of
+        adminMode.
 
         :param argin: JSON-encode dict with "fqdn" and "adminMode" values
         :type argin: str
@@ -105,10 +103,9 @@ def device_to_load():
 @pytest.fixture()
 def mock_factory(mocker, test_string):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -456,8 +453,7 @@ class TestMccsController:
             test_string,
         ):
             """
-            Test the Allocate command (including end of command event
-            testing).
+            Test the Allocate command (including end of command event testing).
 
             :param device_under_test: fixture that provides a
                 :py:class:`tango.DeviceProxy` to the device under test,
@@ -1204,8 +1200,7 @@ class TestInitCommand:
 
     class HangableInitCommand(MccsController.InitCommand):
         """
-        A subclass of InitCommand with the following properties that
-        support testing:
+        A subclass of InitCommand with the following properties that support testing:
 
         * A lock that, if acquired prior to calling the command, causes
           the command to hang until the lock is released
@@ -1236,8 +1231,8 @@ class TestInitCommand:
 
         def _initialise_device_pool(self, device):
             """
-            Initialise the device pool for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the device pool for this device (overridden here to inject a call
+            trace attribute).
 
             :param device: the device for which power management is
                 being initialised
@@ -1248,8 +1243,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the health model for this device (overridden here to inject a
+            call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -1264,8 +1259,8 @@ class TestInitCommand:
     )
     def test_interrupt(self, mocker):
         """
-        Test that the command's interrupt method will cause a running
-        thread to stop prematurely.
+        Test that the command's interrupt method will cause a running thread to stop
+        prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

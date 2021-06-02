@@ -1,7 +1,7 @@
 # type: ignore
 """
-This module contains tests of interactions between ska_low_mccs classes,
-particularly tango devices.
+This module contains tests of interactions between ska_low_mccs classes, particularly
+tango devices.
 """
 
 import pytest
@@ -50,8 +50,8 @@ class TestMccsIntegration:
 
     def test_stationbeam_apply_pointing(self, tango_harness: TangoHarness):
         """
-        Test that a MccsStationBeam device can apply delays to
-        associated MccsTile devices.
+        Test that a MccsStationBeam device can apply delays to associated MccsTile
+        devices.
 
         :param tango_harness: a test harness for tango devices
         """

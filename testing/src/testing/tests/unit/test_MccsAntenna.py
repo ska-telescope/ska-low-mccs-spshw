@@ -52,11 +52,10 @@ def device_to_load():
 @pytest.fixture()
 def hardware_driver():
     """
-    Returns a hardware driver for antenna hardware. The antenna tango
-    device is supposed to drive the APIU tango device, which drives the
-    APIU hardware (driver or simulator), which drives the Antenna
-    hardware (driver or simulator). But for unit testing, we bypass all
-    that and drive an antenna simulator directly.
+    Returns a hardware driver for antenna hardware. The antenna tango device is supposed
+    to drive the APIU tango device, which drives the APIU hardware (driver or
+    simulator), which drives the Antenna hardware (driver or simulator). But for unit
+    testing, we bypass all that and drive an antenna simulator directly.
 
     :return: an antenna hardware driver
     :rtype:
@@ -68,9 +67,9 @@ def hardware_driver():
 @pytest.fixture()
 def initial_mocks(mock_factory, request):
     """
-    Fixture that registers device proxy mocks prior to patching. The
-    default fixture is overridden here to ensure that a mock subrack
-    responds suitably to actions taken on it by the AntennaApiuProxy.
+    Fixture that registers device proxy mocks prior to patching. The default fixture is
+    overridden here to ensure that a mock subrack responds suitably to actions taken on
+    it by the AntennaApiuProxy.
 
     :param mock_factory: a factory for
         :py:class:`tango.DeviceProxy` mocks
@@ -98,10 +97,9 @@ def initial_mocks(mock_factory, request):
 @pytest.fixture()
 def mock_factory(mocker, request):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -155,8 +153,7 @@ class TestMccsAntenna:
 
     def test_Reset(self, device_under_test):
         """
-        Test for Reset. Expected to fail as can't reset in the Off
-        state.
+        Test for Reset. Expected to fail as can't reset in the Off state.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -526,8 +523,7 @@ class TestInitCommand:
 
     class HangableInitCommand(MccsAntenna.InitCommand):
         """
-        A subclass of InitCommand with the following properties that
-        support testing:
+        A subclass of InitCommand with the following properties that support testing:
 
         * A lock that, if acquired prior to calling the command, causes
           the command to hang until the lock is released
@@ -558,9 +554,8 @@ class TestInitCommand:
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device (overridden here to inject a call trace
-            attribute).
+            Initialise the connection to the hardware being managed by this device
+            (overridden here to inject a call trace attribute).
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -574,8 +569,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the health model for this device (overridden here to inject a
+            call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -590,8 +585,8 @@ class TestInitCommand:
     )
     def test_interrupt(self, mocker):
         """
-        Test that the command's interrupt method will cause a running
-        thread to stop prematurely.
+        Test that the command's interrupt method will cause a running thread to stop
+        prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

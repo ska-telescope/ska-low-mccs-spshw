@@ -50,9 +50,9 @@ def device_to_load():
 @pytest.fixture()
 def initial_mocks(mock_factory, request):
     """
-    Fixture that registers device proxy mocks prior to patching. The
-    default fixture is overridden here to ensure that a mock subrack
-    responds suitably to actions taken on it by the TilePowerManager.
+    Fixture that registers device proxy mocks prior to patching. The default fixture is
+    overridden here to ensure that a mock subrack responds suitably to actions taken on
+    it by the TilePowerManager.
 
     :param mock_factory: a factory for
         :py:class:`tango.DeviceProxy` mocks
@@ -80,10 +80,9 @@ def initial_mocks(mock_factory, request):
 @pytest.fixture()
 def mock_factory(mocker, request):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -167,8 +166,8 @@ class TestTilePowerManager:
         mock_factory,
     ):
         """
-        Test that the power manager initialises into the right state,
-        depending on whether the subrack says the TPM is off or on.
+        Test that the power manager initialises into the right state, depending on
+        whether the subrack says the TPM is off or on.
 
         :param device_under_test: a :py:class:`tango.DeviceProxy` to the
             device under test, within a
@@ -223,8 +222,8 @@ class TestTilePowerManager:
         mock_callback,
     ):
         """
-        Test that turning on this TilePowerManager results in the right
-        return code and state for each possible subrack state.
+        Test that turning on this TilePowerManager results in the right return code and
+        state for each possible subrack state.
 
         :param device_under_test: a :py:class:`tango.DeviceProxy` to the
             device under test, within a
@@ -277,8 +276,8 @@ class TestTilePowerManager:
         expected_power_mode,
     ):
         """
-        Test that turning on this TilePowerManager results in the right
-        return code and state for each possible subrack state.
+        Test that turning on this TilePowerManager results in the right return code and
+        state for each possible subrack state.
 
         :param device_under_test: a :py:class:`tango.DeviceProxy` to the
             device under test, within a
@@ -757,10 +756,9 @@ class TestMccsTileCommands(HelperClass):
         logger,
     ):
         """
-        Test of commands that return OK and have a simple pass-through
-        implementation, such that calling the command on the device
-        causes a corresponding command to be called on the TPM
-        simulator.
+        Test of commands that return OK and have a simple pass-through implementation,
+        such that calling the command on the device causes a corresponding command to be
+        called on the TPM simulator.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -876,8 +874,8 @@ class TestMccsTileCommands(HelperClass):
 
     def test_DownloadFirmware(self, device_under_test):
         """
-        Test for DownloadFirmware. Also functions as the test for the
-        isProgrammed and the firmwareName properties.
+        Test for DownloadFirmware. Also functions as the test for the isProgrammed and
+        the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -896,8 +894,8 @@ class TestMccsTileCommands(HelperClass):
 
     def test_MissingDownloadFirmwareFile(self, device_under_test):
         """
-        Test for a missing firmware download. Also functions as the test
-        for the isProgrammed and the firmwareName properties.
+        Test for a missing firmware download. Also functions as the test for the
+        isProgrammed and the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -1239,8 +1237,7 @@ class TestInitCommand:
 
     class HangableInitCommand(MccsTile.InitCommand):
         """
-        A subclass of InitCommand with the following properties that
-        support testing:
+        A subclass of InitCommand with the following properties that support testing:
 
         * A lock that, if acquired prior to calling the command, causes
           the command to hang until the lock is released
@@ -1271,9 +1268,8 @@ class TestInitCommand:
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device (overridden here to inject a call trace
-            attribute).
+            Initialise the connection to the hardware being managed by this device
+            (overridden here to inject a call trace attribute).
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -1287,8 +1283,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the health model for this device (overridden here to inject a
+            call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -1303,8 +1299,8 @@ class TestInitCommand:
     )
     def test_interrupt(self, mocker):
         """
-        Test that the command's interrupt method will cause a running
-        thread to stop prematurely.
+        Test that the command's interrupt method will cause a running thread to stop
+        prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

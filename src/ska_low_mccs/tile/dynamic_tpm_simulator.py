@@ -12,8 +12,7 @@ from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
 class DynamicTpmSimulator(BaseTpmSimulator):
     """
-    A simulator for a TPM, with dynamic value updates to certain
-    attributes.
+    A simulator for a TPM, with dynamic value updates to certain attributes.
 
     This is useful for demoing.
     """

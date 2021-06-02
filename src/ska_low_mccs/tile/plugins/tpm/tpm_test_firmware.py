@@ -386,8 +386,7 @@ class TpmTestFirmware(FirmwareBlock):
         self, band_frequency, round_bits, number_of_samples=128
     ):
         """
-        Continuously send channelised data from a single channel in
-        narrowband mode.
+        Continuously send channelised data from a single channel in narrowband mode.
 
         :param band_frequency: central frequency (in Hz) of narrowband
         :param round_bits: number of bits rounded after filter

@@ -9,8 +9,7 @@
 # See LICENSE.txt for more info.
 
 """
-This module contains classes that support the MCCS Tile device's
-management of hardware.
+This module contains classes that support the MCCS Tile device's management of hardware.
 """
 __all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
@@ -169,8 +168,8 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def firmware_available(self):
         """
-        Return specifications of the firmware loaded on the hardware and
-        available for use.
+        Return specifications of the firmware loaded on the hardware and available for
+        use.
 
         :return: specifications of the firmware stored on the hardware
         :rtype: dict
@@ -572,8 +571,7 @@ class TileHardwareManager(SimulableHardwareManager):
         lmc_mac=None,
     ):
         """
-        Specify whether control data will be transmitted over 1G or 40G
-        networks.
+        Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param mode: "1g" or "10g"
         :type mode: str
@@ -651,9 +649,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
-        Load calibration coefficients. These may include any rotation
-        matrix (e.g. the parallactic angle), but do not include the
-        geometric delay.
+        Load calibration coefficients. These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
@@ -667,11 +664,10 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def load_calibration_curve(self, antenna, beam, calibration_coefficients):
         """
-        Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency. It
-        will be combined together with tapering coefficients and beam
-        angles by ComputeCalibrationCoefficients, which will also make
-        them active like SwitchCalibrationBank. The calibration
+        Load calibration curve. This is the frequency dependent response for a single
+        antenna and beam, as a function of frequency. It will be combined together with
+        tapering coefficients and beam angles by ComputeCalibrationCoefficients, which
+        will also make them active like SwitchCalibrationBank. The calibration
         coefficients do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
@@ -721,9 +717,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def compute_calibration_coefficients(self):
         """
-        Compute the calibration coefficients from previously specified
-        gain curves, tapering weights and beam angles, load them in the
-        hardware.
+        Compute the calibration coefficients from previously specified gain curves,
+        tapering weights and beam angles, load them in the hardware.
 
         It must be followed by switch_calibration_bank() to make these
         active
@@ -732,10 +727,9 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in
-        seconds/second. The delay_array specifies the delay and delay
-        rate for each antenna. beam_index specifies which beam is
-        desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in seconds/second. The
+        delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :type delay_array: list(float)
@@ -761,10 +755,9 @@ class TileHardwareManager(SimulableHardwareManager):
         last_channel=None,
     ):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedChannelData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -792,10 +785,9 @@ class TileHardwareManager(SimulableHardwareManager):
         last_channel=None,
     ):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedBeamData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -848,8 +840,8 @@ class TileHardwareManager(SimulableHardwareManager):
         seconds=None,
     ):
         """
-        Transmit a snapshot containing channelized data totalling
-        number_of_samples spectra.
+        Transmit a snapshot containing channelized data totalling number_of_samples
+        spectra.
 
         :param number_of_samples: number of spectra to send, defaults to 1024
         :type number_of_samples: int, optional
@@ -1137,8 +1129,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def test_generator_input_select(self, inputs):
         """
-        Specify ADC inputs which are substitute to test signal.
-        Specified using a 32 bit mask, with LSB for ADC input 0.
+        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
+        mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int

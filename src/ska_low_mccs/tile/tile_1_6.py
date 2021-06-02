@@ -38,8 +38,8 @@ def connected(f):
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
         """
-        Wrapper that checks the TPM is connected before allowing the
-        wrapped method to proceed.
+        Wrapper that checks the TPM is connected before allowing the wrapped method to
+        proceed.
 
         :param self: the method called
         :type self: object

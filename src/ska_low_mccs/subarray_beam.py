@@ -85,11 +85,10 @@ class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
 
 class SubarrayBeamDriver(HardwareDriver):
     """
-    A hardware driver for a subarray beam. A subarray beam doesn't
-    actually have hardware. Here we are shoe-horning the subarray beam
-    implementation into the hardware model by pretending that the
-    `isBeamLocked` attribute of the associated stations is a hardware
-    property.
+    A hardware driver for a subarray beam. A subarray beam doesn't actually have
+    hardware. Here we are shoe-horning the subarray beam implementation into the
+    hardware model by pretending that the `isBeamLocked` attribute of the associated
+    stations is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -137,10 +136,9 @@ class SubarrayBeamDriver(HardwareDriver):
 
 class SubarrayBeamHardwareFactory(HardwareFactory):
     """
-    A hardware factory for a subarray beam. A subarray beam doesn't
-    actually have hardware. Here we are shoe-horning the subarray beam
-    implementation into the hardware model by pretending that the
-    `isLocked` attribute is a hardware property.
+    A hardware factory for a subarray beam. A subarray beam doesn't actually have
+    hardware. Here we are shoe-horning the subarray beam implementation into the
+    hardware model by pretending that the `isLocked` attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -315,8 +313,8 @@ class MccsSubarrayBeam(SKAObsDevice):
             self: MccsSubarrayBeam.InitCommand, device: SKABaseDevice
         ) -> None:
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             """
@@ -342,9 +340,8 @@ class MccsSubarrayBeam(SKAObsDevice):
             self: MccsSubarrayBeam.InitCommand, device: SKABaseDevice
         ) -> None:
             """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware.
+            Initialise the connection to the hardware being managed by this device. May
+            also register commands that depend upon a connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -385,8 +382,7 @@ class MccsSubarrayBeam(SKAObsDevice):
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
         """
-        Initialises the command handlers for commands supported by this
-        device.
+        Initialises the command handlers for commands supported by this device.
         """
         super().init_command_objects()
 
@@ -420,9 +416,9 @@ class MccsSubarrayBeam(SKAObsDevice):
     # ----------
     def health_changed(self: MccsSubarrayBeam, health: HealthState) -> None:
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         """

@@ -74,8 +74,7 @@ class DevicePool:
     # TODO: Deprecate this call (once converted to messaging system)
     def invoke_command(self, command_name, arg=None):
         """
-        A generic method for invoking a command on all devices in the
-        pool.
+        A generic method for invoking a command on all devices in the pool.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -286,8 +285,7 @@ class DevicePoolSequence:
 
     def invoke_command(self, command_name, arg=None, reverse=False):
         """
-        A generic method for sequential invoking a command on a list of
-        device pools.
+        A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -315,8 +313,7 @@ class DevicePoolSequence:
 
     def invoke_command_with_callback(self, command_name, fqdn, callback, reverse=False):
         """
-        A generic method for sequential invoking a command on a list of
-        device pools.
+        A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -424,8 +421,8 @@ class DevicePoolSequence:
 
     def callback(self, argin):
         """
-        We need to check all pools have received their callbacks
-        whenever we get a callback message.
+        We need to check all pools have received their callbacks whenever we get a
+        callback message.
 
         :param argin: results from executed command
         :return: A tuple containing a flag indicating whether pools are complete,

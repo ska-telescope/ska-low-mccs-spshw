@@ -49,9 +49,9 @@ class MccsTelState(SKATelState):
     # ----------
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -71,8 +71,8 @@ class MccsTelState(SKATelState):
 
         def do(self):
             """
-            Stateless hook for initialisation of the attributes and
-            properties of the :py:class:`.MccsTelState`.
+            Stateless hook for initialisation of the attributes and properties of the
+            :py:class:`.MccsTelState`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

@@ -49,16 +49,14 @@ def device_to_load():
 
 class TestEventSubscriptionHandler:
     """
-    This class contains unit tests for the EventSubscriptionHandler
-    class.
+    This class contains unit tests for the EventSubscriptionHandler class.
     """
 
     def test_subscribe(self, tango_harness: TangoHarness, logger):
         """
-        Test subscription: specifically, test that when an instance is
-        initialised with a given fqdn and the name of an event, the
-        device at that fqdn receives a subscribe_event call for that
-        event.
+        Test subscription: specifically, test that when an instance is initialised with
+        a given fqdn and the name of an event, the device at that fqdn receives a
+        subscribe_event call for that event.
 
         :param tango_harness: a test harness for tango devices
         :param logger: the logger to be used by the object under test
@@ -77,9 +75,8 @@ class TestEventSubscriptionHandler:
 
     def test_event_pushing(self, tango_harness: TangoHarness, mocker, logger):
         """
-        Test that when an instance's push_event subscription callback
-        method is called, it passes the event on by invoking its own
-        registered callbacks.
+        Test that when an instance's push_event subscription callback method is called,
+        it passes the event on by invoking its own registered callbacks.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
@@ -120,8 +117,8 @@ class TestEventSubscriptionHandler:
 
     def test_unsubscribe(self, tango_harness: TangoHarness, logger):
         """
-        Test that when an instance is deleted, the device receives an
-        unsubcribe_event call.
+        Test that when an instance is deleted, the device receives an unsubcribe_event
+        call.
 
         This is a pretty weak test because tango event unsubscription is
         via an event id, which this class under test stores internally.
@@ -181,8 +178,8 @@ class TestDeviceEventManager:
         logger,
     ):
         """
-        Check the various supported value types for event_spec argument,
-        including its interaction with the list of allowed events.
+        Check the various supported value types for event_spec argument, including its
+        interaction with the list of allowed events.
 
         :param allowed_events: list of allowed events to pass during
             initialisation of the instance under test
@@ -206,10 +203,9 @@ class TestDeviceEventManager:
 
     def test_subscription(self, tango_harness: TangoHarness, mocker, logger):
         """
-        Test subscription: specifically, test that when a a client
-        subscribes to a specified event from a DeviceEventManager, the
-        device managed by that DeviceEventManager receives a
-        subscribe_event call for the specified event.
+        Test subscription: specifically, test that when a a client subscribes to a
+        specified event from a DeviceEventManager, the device managed by that
+        DeviceEventManager receives a subscribe_event call for the specified event.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
@@ -239,10 +235,9 @@ class TestDeviceEventManager:
 
     def test_event_pushing(self, tango_harness: TangoHarness, mocker, logger):
         """
-        Test that when a EventSubscriptionHandler's push_event callback
-        method is called, this DeviceEventMonitor receives the event and
-        passes it down the change by invoking its own registered
-        callbacks.
+        Test that when a EventSubscriptionHandler's push_event callback method is
+        called, this DeviceEventMonitor receives the event and passes it down the change
+        by invoking its own registered callbacks.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
@@ -325,8 +320,8 @@ class TestEventManager:
         logger,
     ):
         """
-        Check the various supported value types for fqdn_spec argument,
-        including its interaction with the list of allowed fqdn.
+        Check the various supported value types for fqdn_spec argument, including its
+        interaction with the list of allowed fqdn.
 
         :param allowed_fqdns: list of FQDNs to pass during
             initialisation of the instance under test
@@ -352,10 +347,9 @@ class TestEventManager:
 
     def test_subscribe(self, tango_harness: TangoHarness, mock_callback, logger):
         """
-        Test subscription: specifically, test that when a a client uses
-        an EventManager to subscribe to a specified event from a
-        specified device, the device receives a subscribe_event call for
-        the specified event.
+        Test subscription: specifically, test that when a a client uses an EventManager
+        to subscribe to a specified event from a specified device, the device receives a
+        subscribe_event call for the specified event.
 
         :param tango_harness: a test harness for tango devices
         :param mock_callback: a mock to pass as a callback
@@ -389,9 +383,8 @@ class TestEventManager:
 
     def test_event_pushing(self, tango_harness: TangoHarness, mocker, logger):
         """
-        Test that when an device pushes an event, the event moves down
-        the tree and eventually causes the EventManager instance to call
-        its own callbacks.
+        Test that when an device pushes an event, the event moves down the tree and
+        eventually causes the EventManager instance to call its own callbacks.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock

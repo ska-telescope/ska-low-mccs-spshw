@@ -29,8 +29,7 @@ class HelperClass:
     @pytest.fixture(autouse=True)
     def _autouse_these_fixtures(self, command_helper, empty_json_dict):
         """
-        Autouse these fixtures for all tests. Store as part of the test
-        object.
+        Autouse these fixtures for all tests. Store as part of the test object.
 
         :param command_helper: A command helper fixture
         :type command_helper: CommandHelper

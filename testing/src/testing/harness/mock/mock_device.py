@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements infrastructure for mocking tango devices.
-"""
+"""This module implements infrastructure for mocking tango devices."""
 
 from __future__ import annotations  # allow forward references in type hints
 
@@ -25,9 +23,7 @@ __all__ = ["MockDeviceBuilder"]
 
 
 class MockDeviceBuilder:
-    """
-    This module implements a mock builder for tango devices.
-    """
+    """This module implements a mock builder for tango devices."""
 
     def __init__(
         self: MockDeviceBuilder, from_factory: unittest.mock.Mock = unittest.mock.Mock

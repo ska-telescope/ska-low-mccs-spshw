@@ -72,9 +72,8 @@ class MccsStation(SKAObsDevice):
     # General methods
     # ---------------
     def init_device(self):
-        """
-        Initialise the device; overridden here to change the Tango serialisation model.
-        """
+        """Initialise the device; overridden here to change the Tango serialisation
+        model."""
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
@@ -251,9 +250,7 @@ class MccsStation(SKAObsDevice):
             return True
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """
@@ -550,9 +547,7 @@ class MccsStation(SKAObsDevice):
     # Commands
     # --------
     def init_command_objects(self):
-        """
-        Set up the handler objects for Commands.
-        """
+        """Set up the handler objects for Commands."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -631,9 +626,7 @@ class MccsStation(SKAObsDevice):
         return self._store_callback_send_message("On", json_args=json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         QUEUED_MESSAGE = "Station On command queued"
         SUCCEEDED_MESSAGE = "Station On command complete"
@@ -699,9 +692,7 @@ class MccsStation(SKAObsDevice):
         return [[result_code], [status, message_uid]]
 
     class CallbackCommand(ResponseCommand):
-        """
-        Class for handling the Callback command.
-        """
+        """Class for handling the Callback command."""
 
         def do(self, argin):
             """
@@ -797,9 +788,7 @@ class MccsStation(SKAObsDevice):
         return self._store_callback_send_message("Off", json_args=json_args)
 
     class OffCommand(SKABaseDevice.OffCommand):
-        """
-        Class for handling the Off() command.
-        """
+        """Class for handling the Off() command."""
 
         QUEUED_MESSAGE = "Station Off command queued"
         SUCCEEDED_MESSAGE = "Station Off command complete"
@@ -846,9 +835,7 @@ class MccsStation(SKAObsDevice):
                     return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class StandbyCommand(SKABaseDevice.StandbyCommand):
-        """
-        Class for handling the Standby() command.
-        """
+        """Class for handling the Standby() command."""
 
         SUCCEEDED_MESSAGE = "Standby command completed OK"
         FAILED_MESSAGE = "Standby command failed"
@@ -873,9 +860,7 @@ class MccsStation(SKAObsDevice):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class DisableCommand(SKABaseDevice.DisableCommand):
-        """
-        Class for handling the Disable() command.
-        """
+        """Class for handling the Disable() command."""
 
         SUCCEEDED_MESSAGE = "Disable command completed OK"
         FAILED_MESSAGE = "Disable command failed"
@@ -900,9 +885,7 @@ class MccsStation(SKAObsDevice):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class ConfigureCommand(ResponseCommand):
-        """
-        Class for handling the Configure() command.
-        """
+        """Class for handling the Configure() command."""
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
         FAILED_WRONG_STATION_MESSAGE = "Configure failed: wrong station_id"
@@ -956,9 +939,7 @@ class MccsStation(SKAObsDevice):
         return [[return_code], [message]]
 
     class InitialSetupCommand(ResponseCommand):
-        """
-        Class for handling the InitialSetup() command.
-        """
+        """Class for handling the InitialSetup() command."""
 
         SUCCEEDED_MESSAGE = "InitialSetup command completed OK"
 
@@ -1011,9 +992,7 @@ class MccsStation(SKAObsDevice):
         return [[return_code], [message]]
 
     class ApplyPointingCommand(ResponseCommand):
-        """
-        Class for handling the ApplyPointing(argin) command.
-        """
+        """Class for handling the ApplyPointing(argin) command."""
 
         SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
         FAILED_MESSAGE = "ApplyPointing command failed: ValueError in Tile"

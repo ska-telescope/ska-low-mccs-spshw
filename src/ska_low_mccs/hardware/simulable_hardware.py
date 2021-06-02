@@ -5,9 +5,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements simulation functionality for hardware in the MCCS subsystem.
-"""
+"""This module implements simulation functionality for hardware in the MCCS
+subsystem."""
 __all__ = ["HardwareSimulator", "SimulableHardwareFactory", "SimulableHardwareManager"]
 
 from math import sqrt
@@ -109,9 +108,7 @@ class DynamicValuesGenerator:
 
 
 class DynamicValuesUpdater:
-    """
-    An dynamic updater of values, for use in a dynamic simulator.
-    """
+    """An dynamic updater of values, for use in a dynamic simulator."""
 
     def __init__(self, update_rate=1.0):
         """
@@ -128,16 +125,12 @@ class DynamicValuesUpdater:
         self._thread = Thread(target=self._update, args=(), daemon=True)
 
     def start(self):
-        """
-        Start the updater thread.
-        """
+        """Start the updater thread."""
         if not self._thread_is_running:
             self._thread.start()
 
     def stop(self):
-        """
-        Stop the updater thread.
-        """
+        """Stop the updater thread."""
         self._thread_is_running = False
 
     def add_target(self, generator, callback):
@@ -155,9 +148,7 @@ class DynamicValuesUpdater:
         self._targets.append((generator, callback))
 
     def _update(self):
-        """
-        Thread target that loops over the update targets, pushing new values.
-        """
+        """Thread target that loops over the update targets, pushing new values."""
         with EnsureOmniThread():
             self._thread_is_running = True
             while self._thread_is_running:
@@ -166,9 +157,7 @@ class DynamicValuesUpdater:
                 sleep(self._update_rate)
 
     def __del__(self):
-        """
-        Things to do before this object is garbage collected.
-        """
+        """Things to do before this object is garbage collected."""
         self.stop()
 
 
@@ -272,10 +261,8 @@ class SimulableHardwareFactory(HardwareFactory):
         self._update_hardware()
 
     def _update_hardware(self):
-        """
-        Update what this factory returns when asked for its hardware, according to the
-        simulation and test modes.
-        """
+        """Update what this factory returns when asked for its hardware, according to
+        the simulation and test modes."""
         if self._simulation_mode:
             if self._test_mode:
                 self._hardware = self._get_static_simulator()
@@ -410,9 +397,7 @@ class SimulableHardwareFactory(HardwareFactory):
 
 
 class SimulableHardwareManager(HardwareManager):
-    """
-    A hardware manager mixin for simulable hardware.
-    """
+    """A hardware manager mixin for simulable hardware."""
 
     @property
     def simulation_mode(self):

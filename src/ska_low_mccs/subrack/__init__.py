@@ -5,10 +5,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This subpackage contains modules that implement the MCCS subrack, including a Tango
-device and an subrack hardware simulator.
-"""
+"""This subpackage contains modules that implement the MCCS subrack, including a Tango
+device and an subrack hardware simulator."""
 
 
 __all__ = [

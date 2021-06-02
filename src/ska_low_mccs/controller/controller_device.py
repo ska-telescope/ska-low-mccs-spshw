@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains the SKA Low MCCS Controller device prototype.
-"""
+"""This module contains the SKA Low MCCS Controller device prototype."""
 
 from __future__ import annotations  # allow forward references in type hints
 
@@ -91,9 +89,7 @@ class ControllerResourceManager(ResourceManager):
 
 
 class MccsControllerQueue(MessageQueue):
-    """
-    A concrete implementation of a message queue specific to MccsController.
-    """
+    """A concrete implementation of a message queue specific to MccsController."""
 
     def _notify_listener(
         self: MccsControllerQueue,
@@ -158,17 +154,14 @@ class MccsController(SKAMaster):
     # General methods
     # ---------------
     def init_device(self: MccsController) -> None:
-        """
-        Initialise the device; overridden here to change the Tango serialisation model.
-        """
+        """Initialise the device; overridden here to change the Tango serialisation
+        model."""
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
 
     def init_command_objects(self: MccsController) -> None:
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -389,15 +382,11 @@ class MccsController(SKAMaster):
             return True
 
         def succeeded(self: MccsController.InitCommand) -> None:
-            """
-            Hook called when the initialisation thread finishes successfully.
-            """
+            """Hook called when the initialisation thread finishes successfully."""
             self.state_model.perform_action("init_succeeded_disable")
 
     def always_executed_hook(self: MccsController) -> None:
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self: MccsController) -> None:
         """
@@ -546,9 +535,7 @@ class MccsController(SKAMaster):
         )
 
     class StartupCommand(ResponseCommand):
-        """
-        Class for handling the Startup command.
-        """
+        """Class for handling the Startup command."""
 
         SUCCEEDED_MESSAGE = "Startup command completed OK"
         FAILED_OFF_MESSAGE = "Startup command failed: Off"
@@ -664,9 +651,7 @@ class MccsController(SKAMaster):
         )
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On command.
-        """
+        """Class for handling the On command."""
 
         QUEUED_MESSAGE = "Controller On command queued"
         FAILED_MESSAGE = "Controller On command failed"
@@ -714,9 +699,7 @@ class MccsController(SKAMaster):
         return self._check_and_send_message("Callback", json_args=json_args)
 
     class CallbackCommand(ResponseCommand):
-        """
-        Class for handling the Callback command.
-        """
+        """Class for handling the Callback command."""
 
         SUCCESSFUL_MESSAGE = "Callback completed successfully"
 
@@ -773,9 +756,7 @@ class MccsController(SKAMaster):
         return ([result_code], [status])
 
     class DisableCommand(SKABaseDevice.DisableCommand):
-        """
-        Class for handling the Disable command.
-        """
+        """Class for handling the Disable command."""
 
         SUCCEEDED_MESSAGE = "Disable command completed OK"
         FAILED_MESSAGE = "Disable command failed"
@@ -814,9 +795,7 @@ class MccsController(SKAMaster):
         )
 
     class OffCommand(SKABaseDevice.OffCommand):
-        """
-        Class for handling the Off command.
-        """
+        """Class for handling the Off command."""
 
         QUEUED_MESSAGE = "Controller Off command queued"
         FAILED_MESSAGE = "Controller Off command failed"
@@ -1006,9 +985,7 @@ class MccsController(SKAMaster):
         return True
 
     class ResetCommand(SKABaseDevice.ResetCommand):
-        """
-        Command class for the Reset() command.
-        """
+        """Command class for the Reset() command."""
 
         def do(self: MccsController.ResetCommand) -> Tuple[ResultCode, str]:
             """
@@ -1382,10 +1359,8 @@ class MccsController(SKAMaster):
         return ([result_code], [status])
 
     class RestartCommand(ResponseCommand):
-        """
-        Restart a sub-array's Capabilities and resources (stations), marking the
-        resources and Capabilities as unassigned and idle.
-        """
+        """Restart a sub-array's Capabilities and resources (stations), marking the
+        resources and Capabilities as unassigned and idle."""
 
         def do(
             self: MccsController.RestartCommand, argin: str
@@ -1460,10 +1435,8 @@ class MccsController(SKAMaster):
         return ([result_code], [status])
 
     class ReleaseCommand(ResponseCommand):
-        """
-        Release a sub-array's Capabilities and resources (stations), marking the
-        resources and Capabilities as unassigned and idle.
-        """
+        """Release a sub-array's Capabilities and resources (stations), marking the
+        resources and Capabilities as unassigned and idle."""
 
         def do(
             self: MccsController.ReleaseCommand, argin: str

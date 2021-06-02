@@ -9,10 +9,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the power management
-functionality of the SKA Low MCCS system between the subrack and the TPM.
-"""
+"""This test module contains integration tests that exercise the power management
+functionality of the SKA Low MCCS system between the subrack and the TPM."""
 from time import sleep
 import pytest
 from tango import DevState
@@ -66,9 +64,7 @@ def check_states(dev_states):
 
 
 class TestApiuAntennaIntegration(HelperClass):
-    """
-    Integration test cases for MCCS subsystem's power management.
-    """
+    """Integration test cases for MCCS subsystem's power management."""
 
     def test_antenna_on(self, tango_harness: TangoHarness, empty_json_dict: str):
         """

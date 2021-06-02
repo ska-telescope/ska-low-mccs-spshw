@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsStation.
-"""
+"""This module contains the tests for MccsStation."""
 import json
 import threading
 import time
@@ -74,9 +72,7 @@ def mock_factory(mocker, test_string):
 
 
 class TestMccsStation:
-    """
-    Test class for MccsStation tests.
-    """
+    """Test class for MccsStation tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

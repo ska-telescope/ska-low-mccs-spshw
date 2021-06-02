@@ -1,8 +1,6 @@
 # type: ignore
 # -*- coding: utf-8 -*-
-"""
-An implementation of a TPM simulator.
-"""
+"""An implementation of a TPM simulator."""
 import copy
 
 from ska_low_mccs.hardware import HardwareSimulator
@@ -11,9 +9,7 @@ __all__ = ["BaseTpmSimulator"]
 
 
 class BaseTpmSimulator(HardwareSimulator):
-    """
-    A simulator for a TPM.
-    """
+    """A simulator for a TPM."""
 
     ADC_RMS = tuple(float(i) for i in range(32))
     FPGA1_TIME = 1
@@ -722,9 +718,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._is_beamformer_running = True
 
     def stop_beamformer(self):
-        """
-        Stop the beamformer.
-        """
+        """Stop the beamformer."""
         self.logger.debug("TpmSimulator: Stop beamformer")
         self._is_beamformer_running = False
 

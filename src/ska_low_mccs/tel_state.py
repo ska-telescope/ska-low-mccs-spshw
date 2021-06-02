@@ -65,9 +65,7 @@ class MccsTelState(SKATelState):
     # General methods
     # ---------------
     class InitCommand(SKATelState.InitCommand):
-        """
-        Command class for device initialisation.
-        """
+        """Command class for device initialisation."""
 
         def do(self):
             """
@@ -99,9 +97,7 @@ class MccsTelState(SKATelState):
             return (result_code, message)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """

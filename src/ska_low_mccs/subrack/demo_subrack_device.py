@@ -5,10 +5,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements a DemoSubrackDevice, with extra interface features that support
-testing and demonstrating the MCCS Subrack device.
-"""
+"""This module implements a DemoSubrackDevice, with extra interface features that
+support testing and demonstrating the MCCS Subrack device."""
 from tango import DevState
 from tango.server import attribute, command
 

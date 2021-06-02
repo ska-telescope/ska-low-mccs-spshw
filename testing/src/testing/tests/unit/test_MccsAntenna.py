@@ -10,9 +10,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests for the MccsAntenna.
-"""
+"""This module contains the tests for the MccsAntenna."""
 import threading
 
 import pytest
@@ -121,9 +119,7 @@ def mock_factory(mocker, request):
 
 
 class TestMccsAntenna:
-    """
-    Test class for MccsAntenna tests.
-    """
+    """Test class for MccsAntenna tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

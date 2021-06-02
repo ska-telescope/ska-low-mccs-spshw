@@ -1,7 +1,6 @@
 # type: ignore
-"""
-This module contains tests of interactions between the TMC and ska_low_mccs classes.
-"""
+"""This module contains tests of interactions between the TMC and ska_low_mccs
+classes."""
 import json
 from time import sleep
 
@@ -55,9 +54,7 @@ def devices_to_load():
 
 
 class TestMccsIntegrationTmc:
-    """
-    Integration test cases for interactions between TMC and MCCS device classes.
-    """
+    """Integration test cases for interactions between TMC and MCCS device classes."""
 
     @pytest.fixture()
     def devices(self, tango_harness: TangoHarness):

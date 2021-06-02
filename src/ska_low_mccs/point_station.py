@@ -41,15 +41,11 @@ antennas_per_tile = 16
 
 
 class AntennaInformation(object):
-    """
-    Class for holding a station's antenna information.
-    """
+    """Class for holding a station's antenna information."""
 
     def __init__(self):
-        """
-        Initialize AntennaInformation object with default 256 elements but no
-        displacements, &c.
-        """
+        """Initialize AntennaInformation object with default 256 elements but no
+        displacements, &c."""
         self.nof_elements = 256
         self.xyz = None
         self.elementid = None
@@ -79,15 +75,11 @@ class AntennaInformation(object):
 
 
 class StationInformation(object):
-    """
-    Class for holding information about a station.
-    """
+    """Class for holding information about a station."""
 
     def __init__(self):
-        """
-        Initialize StationInformation object with no location data and default
-        AntennaInformation object (which will have no element diplacement data)
-        """
+        """Initialize StationInformation object with no location data and default
+        AntennaInformation object (which will have no element diplacement data)"""
         self.latitude = None
         self.longitude = None
         self.ellipsoidalheight = None
@@ -123,9 +115,7 @@ class StationInformation(object):
 
 
 class Pointing(object):
-    """
-    Helper class for generating beamforming coefficients.
-    """
+    """Helper class for generating beamforming coefficients."""
 
     def __init__(self, station_info):
         """
@@ -665,9 +655,7 @@ class PointingDriver:
                 np.savetxt(outfile, delays, delimiter=",")
 
     def done(self):
-        """
-        Command to signal no more output required.
-        """
+        """Command to signal no more output required."""
         print("Done")
 
 

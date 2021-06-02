@@ -1,8 +1,6 @@
 # type: ignore
-"""
-This module contains the pytest-bdd implementation of the Gherkin BDD tests for TMC and
-MCCS interactions.
-"""
+"""This module contains the pytest-bdd implementation of the Gherkin BDD tests for TMC
+and MCCS interactions."""
 import json
 import time
 

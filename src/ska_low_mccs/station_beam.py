@@ -369,9 +369,7 @@ class MccsStationBeam(SKAObsDevice):
             return True
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -379,9 +377,7 @@ class MccsStationBeam(SKAObsDevice):
         self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -633,9 +629,7 @@ class MccsStationBeam(SKAObsDevice):
     # Commands
     # --------
     class ConfigureCommand(ResponseCommand):
-        """
-        Class for handling the Configure(argin) command.
-        """
+        """Class for handling the Configure(argin) command."""
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
@@ -690,9 +684,7 @@ class MccsStationBeam(SKAObsDevice):
         return [[result_code], [status]]
 
     class ApplyPointingCommand(ResponseCommand):
-        """
-        Class for handling the ApplyPointing(argin) command.
-        """
+        """Class for handling the ApplyPointing(argin) command."""
 
         SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
         FAILED_MESSAGE = "ApplyPointing command failed"

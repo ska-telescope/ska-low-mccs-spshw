@@ -5,9 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements base classes for hardware management in the MCCS subsystem.
-"""
+"""This module implements base classes for hardware management in the MCCS subsystem."""
 __all__ = [
     "ConnectionStatus",
     "ControlMode",
@@ -43,9 +41,7 @@ class ControlMode(Enum):
 
 
 class ConnectionStatus(Enum):
-    """
-    Represents the status of a hardware driver's connection to its hardware.
-    """
+    """Represents the status of a hardware driver's connection to its hardware."""
 
     NOT_CONNECTIBLE = 1
     """
@@ -206,9 +202,7 @@ class HardwareHealthEvaluator:
 
 
 class HardwareFactory:
-    """
-    Abstract base class for a hardware factory.
-    """
+    """Abstract base class for a hardware factory."""
 
     @property
     def hardware(self):
@@ -261,9 +255,7 @@ class HardwareManager:
         # self._update_health()  # don't update health until after first connect attempt
 
     def poll(self):
-        """
-        Poll the hardware and respond to external events/changes.
-        """
+        """Poll the hardware and respond to external events/changes."""
         if self._factory.hardware.connection_status == ConnectionStatus.NOT_CONNECTED:
             _ = self._factory.hardware.connect()  # attempt re-connection
         self._update_health()
@@ -280,10 +272,8 @@ class HardwareManager:
         return self._health
 
     def _update_health(self):
-        """
-        Update the health of this hardware, ensuring that any registered callbacks are
-        called.
-        """
+        """Update the health of this hardware, ensuring that any registered callbacks
+        are called."""
         health = self._health_evaluator.evaluate_health(self._factory.hardware)
         if self._health == health:
             return

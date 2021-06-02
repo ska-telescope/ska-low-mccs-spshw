@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-The command line interface for the MCCS Controller device server.
-"""
+"""The command line interface for the MCCS Controller device server."""
 import types
 import functools
 
@@ -109,9 +107,8 @@ def format_wrapper(method):
 
     @functools.wraps(method)
     def _wrapper(*args, **kwargs):
-        """
-        Wrapper that ensure device command methods return results formatted as a a two-
-        line string.
+        """Wrapper that ensure device command methods return results formatted as a a
+        two- line string.
 
         :param args: positional arguments to the wrapped method
         :type args: list
@@ -334,9 +331,7 @@ class MccsControllerCli(metaclass=CliMeta):
 
 
 def main():
-    """
-    Entry point for CLI.
-    """
+    """Entry point for CLI."""
     Fire(MccsControllerCli)
 
 

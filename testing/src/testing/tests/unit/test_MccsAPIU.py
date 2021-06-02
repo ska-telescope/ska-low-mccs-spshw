@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsAPIU.
-"""
+"""This module contains the tests for MccsAPIU."""
 import random
 
 import pytest
@@ -49,9 +47,7 @@ def device_to_load():
 
 
 class TestAntennaHardwareSimulator:
-    """
-    Contains tests of the AntennaHardwareSimulator.
-    """
+    """Contains tests of the AntennaHardwareSimulator."""
 
     @pytest.fixture()
     def antenna_hardware_simulator(self):
@@ -102,9 +98,7 @@ class TestAntennaHardwareSimulator:
 
 
 class TestAPIUSimulator:
-    """
-    Contains tests of the APIUSimulator.
-    """
+    """Contains tests of the APIUSimulator."""
 
     @pytest.fixture()
     def apiu_simulator(self):
@@ -302,9 +296,7 @@ class TestAPIUSimulator:
 
 
 class TestAPIUHardwareManager:
-    """
-    Contains tests of the APIUHardwareManager.
-    """
+    """Contains tests of the APIUHardwareManager."""
 
     @pytest.fixture()
     def hardware_manager(self, mock_callback):
@@ -566,9 +558,7 @@ class TestAPIUHardwareManager:
 
 
 class TestMccsAPIU(HelperClass, object):
-    """
-    Test class for MccsAPIU tests.
-    """
+    """Test class for MccsAPIU tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

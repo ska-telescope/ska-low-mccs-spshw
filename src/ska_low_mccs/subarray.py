@@ -6,10 +6,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module provides MccsSubarray, the Tango device class for the MCCS Subarray
-prototype.
-"""
+"""This module provides MccsSubarray, the Tango device class for the MCCS Subarray
+prototype."""
 
 from __future__ import annotations  # allow forward references in type hints
 
@@ -100,9 +98,7 @@ class StationsResourceManager(ResourceManager):
         super()._add_to_managed(stations)
 
     def release_all(self):
-        """
-        Remove all stations from this resource manager.
-        """
+        """Remove all stations from this resource manager."""
         self._remove_from_managed(self.get_all_fqdns())
 
     @property
@@ -320,9 +316,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         super().release(subarray_beam_fqdns)
 
     def release_all(self: SubarrayBeamsResourceManager) -> None:
-        """
-        Release all devices from this subarray resource manager.
-        """
+        """Release all devices from this subarray resource manager."""
         devices = self.get_all_fqdns()
         self.release(devices, list())
         self._stations.release_all()
@@ -354,9 +348,7 @@ class TransientBufferManager:
     """
 
     def __init__(self):
-        """
-        Construct a new TransientBufferManager.
-        """
+        """Construct a new TransientBufferManager."""
         pass
 
     def send(self, segment_spec):
@@ -385,9 +377,7 @@ class MccsSubarray(SKASubarray):
     # General methods
     # ---------------
     class InitCommand(SKASubarray.InitCommand):
-        """
-        Command class for device initialisation.
-        """
+        """Command class for device initialisation."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -521,9 +511,7 @@ class MccsSubarray(SKASubarray):
                 )
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         # TODO: Technical debt -- forced to register base class stuff rather than
         # calling super(), because AssignResources(), ReleaseResources() and
         # ReleaseAllResources() are registered on a thread, and
@@ -551,9 +539,7 @@ class MccsSubarray(SKASubarray):
         )
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """
@@ -629,9 +615,7 @@ class MccsSubarray(SKASubarray):
     # Base class command and gatekeeper overrides
     # -------------------------------------------
     class OnCommand(SKASubarray.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         SUCCEEDED_MESSAGE = "Subarray On command completed OK"
         FAILED_MESSAGE = "Subarray On command failed"
@@ -658,9 +642,7 @@ class MccsSubarray(SKASubarray):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class OffCommand(SKASubarray.OffCommand):
-        """
-        Class for handling the Off() command.
-        """
+        """Class for handling the Off() command."""
 
         SUCCEEDED_MESSAGE = "Off command completed OK"
         FAILED_MESSAGE = "Off command failed"
@@ -687,9 +669,7 @@ class MccsSubarray(SKASubarray):
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     class AssignResourcesCommand(SKASubarray.AssignResourcesCommand):
-        """
-        Class for handling the AssignResources(argin) command.
-        """
+        """Class for handling the AssignResources(argin) command."""
 
         SUCCEEDED_MESSAGE = "AssignResources command completed OK"
         FAILED_MESSAGE = "AssignResources command failed"
@@ -735,9 +715,7 @@ class MccsSubarray(SKASubarray):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
-            """
-            Action to take on successful completion of a resourcing command.
-            """
+            """Action to take on successful completion of a resourcing command."""
             if len(self.target) == 0:
                 action = "resourcing_succeeded_no_resources"
             else:
@@ -745,9 +723,7 @@ class MccsSubarray(SKASubarray):
             self.state_model.perform_action(action)
 
     class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):
-        """
-        Class for handling the ReleaseResources(argin) command.
-        """
+        """Class for handling the ReleaseResources(argin) command."""
 
         SUCCEEDED_MESSAGE = "ReleaseResources command completed OK"
 
@@ -777,9 +753,7 @@ class MccsSubarray(SKASubarray):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
-            """
-            Action to take on successful completion of a resourcing command.
-            """
+            """Action to take on successful completion of a resourcing command."""
             if len(self.target):
                 action = "resourcing_succeeded_some_resources"
             else:
@@ -787,9 +761,7 @@ class MccsSubarray(SKASubarray):
             self.state_model.perform_action(action)
 
     class ReleaseAllResourcesCommand(SKASubarray.ReleaseAllResourcesCommand):
-        """
-        Class for handling the ReleaseAllResources() command.
-        """
+        """Class for handling the ReleaseAllResources() command."""
 
         SUCCEEDED_MESSAGE = "ReleaseAllResources command completed OK"
         FAILED_MESSAGE_PREFIX = "ReleaseAllResources command failed"
@@ -819,9 +791,7 @@ class MccsSubarray(SKASubarray):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
-            """
-            Action to take on successful completion of a resourcing command.
-            """
+            """Action to take on successful completion of a resourcing command."""
             if len(self.target):
                 action = "resourcing_succeeded_some_resources"
             else:
@@ -829,9 +799,7 @@ class MccsSubarray(SKASubarray):
             self.state_model.perform_action(action)
 
     class ConfigureCommand(SKASubarray.ConfigureCommand):
-        """
-        Class for handling the Configure(argin) command.
-        """
+        """Class for handling the Configure(argin) command."""
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
@@ -875,9 +843,7 @@ class MccsSubarray(SKASubarray):
             return self.state_model.obs_state in [ObsState.IDLE, ObsState.READY]
 
     class ScanCommand(SKASubarray.ScanCommand):
-        """
-        Class for handling the Scan(argin) command.
-        """
+        """Class for handling the Scan(argin) command."""
 
         def do(self, argin: str) -> Tuple[ResultCode, str]:
             """
@@ -916,9 +882,7 @@ class MccsSubarray(SKASubarray):
                 return (resource_failure_code, resource_message)
 
     class EndScanCommand(SKASubarray.EndScanCommand):
-        """
-        Class for handling the EndScan() command.
-        """
+        """Class for handling the EndScan() command."""
 
         def do(self):
             """
@@ -938,9 +902,7 @@ class MccsSubarray(SKASubarray):
             return (result_code, message)
 
     class EndCommand(SKASubarray.EndCommand):
-        """
-        Class for handling the End() command.
-        """
+        """Class for handling the End() command."""
 
         def do(self):
             """
@@ -960,9 +922,7 @@ class MccsSubarray(SKASubarray):
             return (result_code, message)
 
     class AbortCommand(SKASubarray.AbortCommand):
-        """
-        Class for handling the Abort() command.
-        """
+        """Class for handling the Abort() command."""
 
         SUCCEEDED_MESSAGE = "Abort command completed OK"
         FAILED_MESSAGE = "Abort command failed"
@@ -1028,9 +988,7 @@ class MccsSubarray(SKASubarray):
         return [[result_code], [message]]
 
     class ObsResetCommand(SKASubarray.ObsResetCommand):
-        """
-        Class for handling the ObsReset() command.
-        """
+        """Class for handling the ObsReset() command."""
 
         SUCCEEDED_MESSAGE = "ObsReset command completed OK"
         FAILED_MESSAGE = "ObsReset command failed"
@@ -1082,9 +1040,7 @@ class MccsSubarray(SKASubarray):
         return [[result_code], [message]]
 
     class RestartCommand(SKASubarray.RestartCommand):
-        """
-        Class for handling the Restart() command.
-        """
+        """Class for handling the Restart() command."""
 
         SUCCEEDED_MESSAGE = "RestartCommand command completed OK"
         FAILED_MESSAGE_PREFIX = "RestartCommand command failed"
@@ -1115,9 +1071,7 @@ class MccsSubarray(SKASubarray):
     # ---------------------
 
     class SendTransientBufferCommand(ResponseCommand):
-        """
-        Class for handling the SendTransientBuffer(argin) command.
-        """
+        """Class for handling the SendTransientBuffer(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendTransientBuffer command completed OK"
 

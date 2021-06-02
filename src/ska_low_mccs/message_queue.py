@@ -5,10 +5,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements a message queue that executes messages (in a serial fashion) in
-its own thread.
-"""
+"""This module implements a message queue that executes messages (in a serial fashion)
+in its own thread."""
 import threading
 import json
 import tango
@@ -32,9 +30,7 @@ class MessageQueue(threading.Thread):
     """
 
     class Message:
-        """
-        A message that is inserted onto the message queue.
-        """
+        """A message that is inserted onto the message queue."""
 
         def __init__(
             self,
@@ -87,9 +83,7 @@ class MessageQueue(threading.Thread):
             self._target.queue_debug += f"{message}\n"
 
     def run(self):
-        """
-        Thread run method executing the message queue loop.
-        """
+        """Thread run method executing the message queue loop."""
         # https://pytango.readthedocs.io/en/stable/howto.html
         # #using-clients-with-multithreading
         with EnsureOmniThread():
@@ -218,9 +212,7 @@ class MessageQueue(threading.Thread):
         self._execute_message(message)
 
     def terminate_thread(self):
-        """
-        External call to gracefully terminate this thread.
-        """
+        """External call to gracefully terminate this thread."""
         self._logger.warning(
             f"Device={self._target.get_name()} terminate message queue"
         )

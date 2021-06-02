@@ -1,8 +1,6 @@
 # type: ignore
-"""
-This module contains pytest fixtures and other test setups for the ska_low_mccs
-functional (BDD) tests.
-"""
+"""This module contains pytest fixtures and other test setups for the ska_low_mccs
+functional (BDD) tests."""
 import pytest
 import typing
 

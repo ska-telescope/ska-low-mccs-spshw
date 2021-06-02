@@ -1,8 +1,6 @@
 # type: ignore
-"""
-This module contains pytest fixtures and other test setups for the ska_low_mccs unit
-tests.
-"""
+"""This module contains pytest fixtures and other test setups for the ska_low_mccs unit
+tests."""
 import pytest
 import time
 import tango
@@ -87,9 +85,7 @@ def mock_event_callback(mocker):
     """
 
     class _MockEventCallback(mocker.Mock):
-        """
-        Mocker private class.
-        """
+        """Mocker private class."""
 
         def check_event_data(self, name, result):
             """

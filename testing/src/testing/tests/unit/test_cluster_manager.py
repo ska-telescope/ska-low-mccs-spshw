@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests of the cluster simulator.
-"""
+"""This module contains the tests of the cluster simulator."""
 import pytest
 
 from ska_tango_base.control_model import HealthState, SimulationMode
@@ -338,9 +336,7 @@ class TestClusterCommon:
 
 
 class TestClusterSimulator:
-    """
-    Contains tests specific to ClusterSimulator.
-    """
+    """Contains tests specific to ClusterSimulator."""
 
     def test_node_failure(self, cluster_simulator):
         """
@@ -383,14 +379,11 @@ class TestClusterSimulator:
 
 
 class TestClusterManager:
-    """
-    Contains tests specific to ClusterManager.
-    """
+    """Contains tests specific to ClusterManager."""
 
     def test_init_simulation_mode(self):
-        """
-        Test that we can't create an hardware manager that isn't in simulation mode.
-        """
+        """Test that we can't create an hardware manager that isn't in simulation
+        mode."""
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):

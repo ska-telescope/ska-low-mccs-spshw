@@ -5,9 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements infrastructure for health management in the MCCS subsystem.
-"""
+"""This module implements infrastructure for health management in the MCCS subsystem."""
 __all__ = [
     "DeviceHealthPolicy",
     "DeviceHealthRollupPolicy",
@@ -23,12 +21,10 @@ from ska_tango_base.control_model import AdminMode, HealthState
 
 
 class DeviceHealthPolicy:
-    """
-    The DeviceHealthPolicy class implements a policy by which a supervising device
+    """The DeviceHealthPolicy class implements a policy by which a supervising device
     evaluates the health of a subservient device, on the basis of its self-reported
     health state and on its admin mode (a device's admin mode determines whether its
-    health should be taken into account or ignored).
-    """
+    health should be taken into account or ignored)."""
 
     @classmethod
     def compute_health(cls, admin_mode, health_state):
@@ -157,9 +153,7 @@ class DeviceHealthRollupPolicy:
 
 
 class DeviceHealthMonitor:
-    """
-    Class that monitors the health of a single device.
-    """
+    """Class that monitors the health of a single device."""
 
     def __init__(self, event_manager, fqdn, initial_callback=None):
         """
@@ -251,9 +245,8 @@ class DeviceHealthMonitor:
         self._compute_health()
 
     def _compute_health(self):
-        """
-        Re-evaluate the health of this device, on the basis of a DeviceHealthPolicy.
-        """
+        """Re-evaluate the health of this device, on the basis of a
+        DeviceHealthPolicy."""
         interpreted_health = DeviceHealthPolicy.compute_health(
             self._device_admin_mode, self._device_health_state
         )
@@ -277,9 +270,7 @@ class DeviceHealthMonitor:
 
 
 class HealthMonitor:
-    """
-    Monitors the health of a collection of subservient devices.
-    """
+    """Monitors the health of a collection of subservient devices."""
 
     def __init__(self, fqdns, event_manager, initial_callback=None):
         """
@@ -336,9 +327,7 @@ class HealthMonitor:
 
 
 class HealthModel:
-    """
-    Represents and manages the health of a device.
-    """
+    """Represents and manages the health of a device."""
 
     def __init__(self, hardware_manager, fqdns, event_manager, initial_callback=None):
         """
@@ -482,9 +471,8 @@ class HealthModel:
 
 
 class MutableHealthMonitor(HealthMonitor):
-    """
-    A HealthMonitor for which monitored devices can be dynamically added and removed.
-    """
+    """A HealthMonitor for which monitored devices can be dynamically added and
+    removed."""
 
     def __init__(self, fqdns, event_manager, initial_callback=None):
         """
@@ -553,17 +541,14 @@ class MutableHealthMonitor(HealthMonitor):
             del self._device_health_monitors[fqdn]
 
     def remove_all_devices(self):
-        """
-        Remove all items from the list of devices to be monitored.
-        """
+        """Remove all items from the list of devices to be monitored."""
         fqdns = list(self._device_health_monitors.keys())
         self.remove_devices(fqdns)
 
 
 class MutableHealthModel(HealthModel):
-    """
-    A HealthModel for which monitored devices can be dynamically added and removed.
-    """
+    """A HealthModel for which monitored devices can be dynamically added and
+    removed."""
 
     def __init__(self, hardware_manager, fqdns, event_manager, initial_callback=None):
         """

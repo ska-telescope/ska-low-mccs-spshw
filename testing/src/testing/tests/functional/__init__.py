@@ -1,3 +1,1 @@
-"""
-This subpackage contains functional tests of the ska-low-mccs project.
-"""
+"""This subpackage contains functional tests of the ska-low-mccs project."""

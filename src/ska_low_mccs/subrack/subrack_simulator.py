@@ -380,9 +380,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
         )
 
     def connect(self):
-        """
-        Establish a connection to the subrack hardware.
-        """
+        """Establish a connection to the subrack hardware."""
         super().connect()
 
     def off(self):
@@ -843,9 +841,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
             return self._bays[logical_tpm_id - 1].on()
 
     def turn_on_tpms(self):
-        """
-        Turn on all TPMs. Only if they are actually present.
-        """
+        """Turn on all TPMs. Only if they are actually present."""
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
             for (bay, present) in zip(self._bays, self._tpm_present):
@@ -853,9 +849,7 @@ class SubrackBoardSimulator(OnOffHardwareSimulator):
                     bay.on()
 
     def turn_off_tpms(self):
-        """
-        Turn off all TPMs.
-        """
+        """Turn off all TPMs."""
         self.check_power_mode(PowerMode.ON)
         with self._bay_lock:
             for bay in self._bays:

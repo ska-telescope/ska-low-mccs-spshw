@@ -1,8 +1,6 @@
 # type: ignore
 # -*- coding: utf-8 -*-
-"""
-An implementation of a TPM simulator.
-"""
+"""An implementation of a TPM simulator."""
 from ska_low_mccs.hardware.simulable_hardware import (
     DynamicValuesGenerator,
     DynamicValuesUpdater,
@@ -55,9 +53,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         super().__init__(logger, fail_connect=fail_connect)
 
     def __del__(self):
-        """
-        Garbage-collection hook.
-        """
+        """Garbage-collection hook."""
         self._updater.stop()
 
     @property

@@ -8,9 +8,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains classes that support the MCCS Tile device's management of hardware.
-"""
+"""This module contains classes that support the MCCS Tile device's management of
+hardware."""
 __all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
 from ska_tango_base.control_model import SimulationMode, TestMode
@@ -113,9 +112,7 @@ class TileHardwareFactory(SimulableHardwareFactory):
 
 
 class TileHardwareManager(SimulableHardwareManager):
-    """
-    This class manages tile hardware.
-    """
+    """This class manages tile hardware."""
 
     def __init__(
         self,
@@ -419,9 +416,7 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def stop_beamformer(self):
-        """
-        Stop the beamformer.
-        """
+        """Stop the beamformer."""
         self._factory.hardware.stop_beamformer()
 
     @property
@@ -445,9 +440,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.phase_terminal_count = value
 
     def initialise(self):
-        """
-        Initialise the TPM.
-        """
+        """Initialise the TPM."""
         self._factory.hardware.initialise()
 
     @property
@@ -773,9 +766,7 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def stop_integrated_channel_data(self):
-        """
-        Stop integrated channel data.
-        """
+        """Stop integrated channel data."""
         self._factory.hardware.stop_integrated_channel_data()
 
     def configure_integrated_beam_data(
@@ -803,15 +794,11 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def stop_integrated_beam_data(self):
-        """
-        Stop integrated beam data.
-        """
+        """Stop integrated beam data."""
         self._factory.hardware.stop_integrated_beam_data()
 
     def stop_integrated_data(self):
-        """
-        Stop integrated data.
-        """
+        """Stop integrated data."""
         self._factory.hardware.stop_integrated_data()
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=None):
@@ -904,9 +891,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     def stop_data_transmission(self):
-        """
-        Stop data transmission.
-        """
+        """Stop data transmission."""
         self._factory.hardware.stop_data_transmission()
 
     def start_acquisition(self, start_time=None, delay=None):
@@ -1026,9 +1011,7 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def tweak_transceivers(self):
-        """
-        Tweak the transceivers.
-        """
+        """Tweak the transceivers."""
         self._factory.hardware.tweak_transceivers()
 
     @property
@@ -1052,15 +1035,11 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.phase_terminal_count = value
 
     def post_synchronisation(self):
-        """
-        Perform post tile configuration synchronization.
-        """
+        """Perform post tile configuration synchronization."""
         self._factory.hardware.post_synchronisation()
 
     def sync_fpgas(self):
-        """
-        Synchronise the FPGAs.
-        """
+        """Synchronise the FPGAs."""
         self._factory.hardware.sync_fpgas()
 
     def calculate_delay(self, current_delay, current_tc, ref_lo, ref_hi):

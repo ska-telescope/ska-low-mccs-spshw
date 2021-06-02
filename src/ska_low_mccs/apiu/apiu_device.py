@@ -8,9 +8,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains an implementation of the MCCS APIU device and related classes.
-"""
+"""This module contains an implementation of the MCCS APIU device and related
+classes."""
 import threading
 import json
 
@@ -304,10 +303,8 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
 
     def _update_are_antennas_on(self):
-        """
-        Update our record of which antennas are off/on, ensureing that callbacks are
-        called.
-        """
+        """Update our record of which antennas are off/on, ensureing that callbacks are
+        called."""
         are_antennas_on = self._factory.hardware.are_antennas_on()
         if are_antennas_on is None:
             are_antennas_on = [False] * self.antenna_count
@@ -317,9 +314,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
             self._are_antennas_on_change_callback(self._are_antennas_on)
 
     def poll(self):
-        """
-        Poll the hardware.
-        """
+        """Poll the hardware."""
         super().poll()
         self._update_are_antennas_on()
 
@@ -377,17 +372,14 @@ class MccsAPIU(SKABaseDevice):
     AntennaFQDNs = device_property(dtype=(str,))
 
     def init_device(self):
-        """
-        Initialise the device; overridden here to change the Tango serialisation model.
-        """
+        """Initialise the device; overridden here to change the Tango serialisation
+        model."""
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -406,9 +398,7 @@ class MccsAPIU(SKABaseDevice):
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
-        """
-        Class that implements device initialisation for the MCCS APIU device.
-        """
+        """Class that implements device initialisation for the MCCS APIU device."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -567,9 +557,7 @@ class MccsAPIU(SKABaseDevice):
             self.state_model.perform_action(action)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -930,9 +918,7 @@ class MccsAPIU(SKABaseDevice):
         return self._send_message("On", json_args=json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         def do(self, argin):
             """
@@ -999,9 +985,7 @@ class MccsAPIU(SKABaseDevice):
             return create_return(success, "off")
 
     class IsAntennaOnCommand(BaseCommand):
-        """
-        The command class for the IsAntennaOn command.
-        """
+        """The command class for the IsAntennaOn command."""
 
         def do(self, argin):
             """
@@ -1035,9 +1019,7 @@ class MccsAPIU(SKABaseDevice):
         return handler(argin)
 
     class PowerUpAntennaCommand(ResponseCommand):
-        """
-        The command class for the PowerDownAntenna command.
-        """
+        """The command class for the PowerDownAntenna command."""
 
         def do(self, argin):
             """
@@ -1081,9 +1063,7 @@ class MccsAPIU(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerDownAntennaCommand(ResponseCommand):
-        """
-        The command class for the PowerDownAntenna command.
-        """
+        """The command class for the PowerDownAntenna command."""
 
         def do(self, argin):
             """

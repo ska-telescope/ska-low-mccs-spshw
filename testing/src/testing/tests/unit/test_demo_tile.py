@@ -112,9 +112,7 @@ def check_states(dev_states):
 
 
 class TestDemoTile:
-    """
-    This class contains the tests for the DemoTile device class.
-    """
+    """This class contains the tests for the DemoTile device class."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

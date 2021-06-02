@@ -361,9 +361,7 @@ class Tile12(object):
 
     @connected
     def erase_fpga(self):
-        """
-        Erase FPGA configuration memory.
-        """
+        """Erase FPGA configuration memory."""
         self.tpm.erase_fpga()
 
     def program_cpld(self, bitfile):
@@ -859,9 +857,7 @@ class Tile12(object):
 
     @connected
     def tweak_transceivers(self):
-        """
-        Tweak transceivers.
-        """
+        """Tweak transceivers."""
         for f in ["fpga1", "fpga2"]:
             for n in range(4):
                 if len(self.tpm.find_register("fpga1.eth_10g_drp.gth_channel_0")) > 0:
@@ -1271,9 +1267,7 @@ class Tile12(object):
         self.tpm.beamf_fd[1].load_beam_angle(angle_coefficients)
 
     def compute_calibration_coefficients(self):
-        """
-        Compute the calibration coefficients and load them in the hardware.
-        """
+        """Compute the calibration coefficients and load them in the hardware."""
         self.tpm.beamf_fd[0].compute_calibration_coefs()
         self.tpm.beamf_fd[1].compute_calibration_coefs()
 
@@ -1418,9 +1412,7 @@ class Tile12(object):
             return False
 
     def stop_beamformer(self):
-        """
-        Stop beamformer.
-        """
+        """Stop beamformer."""
         self.tpm.station_beamf[0].abort()
         self.tpm.station_beamf[1].abort()
         return
@@ -1428,9 +1420,7 @@ class Tile12(object):
     # Synchronisation routines ------------------------------------
     @connected
     def post_synchronisation(self):
-        """
-        Post tile configuration synchronization.
-        """
+        """Post tile configuration synchronization."""
         self.wait_pps_event()
 
         current_tc = self.get_phase_terminal_count()
@@ -1445,9 +1435,7 @@ class Tile12(object):
 
     @connected
     def sync_fpgas(self):
-        """
-        Syncronises the two FPGAs in the tile Returns when these are synchronised.
-        """
+        """Syncronises the two FPGAs in the tile Returns when these are synchronised."""
         devices = ["fpga1", "fpga2"]
 
         # Setting internal PPS generator
@@ -1466,9 +1454,7 @@ class Tile12(object):
 
     @connected
     def check_synchronization(self):
-        """
-        Checks FPGA synchronisation, returns when these are synchronised.
-        """
+        """Checks FPGA synchronisation, returns when these are synchronised."""
         devices = ["fpga1", "fpga2"]
 
         for n in range(5):
@@ -1557,9 +1543,7 @@ class Tile12(object):
 
     @connected
     def set_c2c_burst(self):
-        """
-        Setting C2C burst when supported by FPGAs and CPLD.
-        """
+        """Setting C2C burst when supported by FPGAs and CPLD."""
         self.tpm["fpga1.regfile.c2c_stream_ctrl.idle_val"] = 0
         self.tpm["fpga2.regfile.c2c_stream_ctrl.idle_val"] = 0
         if len(self.tpm.find_register("fpga1.regfile.feature.c2c_linear_burst")) > 0:
@@ -1772,25 +1756,19 @@ class Tile12(object):
 
     @connected
     def stop_integrated_beam_data(self):
-        """
-        Stop transmission of integrated beam data.
-        """
+        """Stop transmission of integrated beam data."""
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].stop_integrated_beam_data()
 
     @connected
     def stop_integrated_channel_data(self):
-        """
-        Stop transmission of integrated beam data.
-        """
+        """Stop transmission of integrated beam data."""
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].stop_integrated_channel_data()
 
     @connected
     def stop_integrated_data(self):
-        """
-        Stop transmission of integrated data.
-        """
+        """Stop transmission of integrated data."""
         for i in range(len(self.tpm.tpm_integrator)):
             self.tpm.tpm_integrator[i].stop_integrated_data()
 
@@ -2078,9 +2056,7 @@ class Tile12(object):
         return lane_ok
 
     def reset_jesd_error_counter(self):
-        """
-        Reset errors in JESD lanes.
-        """
+        """Reset errors in JESD lanes."""
         self["fpga1.jesd204_if.core_id_0_error_reporting"] = 1
         self["fpga1.jesd204_if.core_id_1_error_reporting"] = 1
         self["fpga2.jesd204_if.core_id_0_error_reporting"] = 1

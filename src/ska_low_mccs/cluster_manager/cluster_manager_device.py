@@ -127,9 +127,7 @@ class ClusterFactory(SimulableHardwareFactory):
 
 
 class ClusterManager(SimulableHardwareManager):
-    """
-    This class manages a cluster on behalf of the MccsClusterManagerDevice device.
-    """
+    """This class manages a cluster on behalf of the MccsClusterManagerDevice device."""
 
     def __init__(self, simulation_mode, _factory=None):
         """
@@ -438,9 +436,7 @@ class ClusterManager(SimulableHardwareManager):
         self._factory.hardware.ping_master_pool()
 
     def clear_job_stats(self):
-        """
-        Clear stats for closed jobs.
-        """
+        """Clear stats for closed jobs."""
         self._factory.hardware.clear_job_stats()
 
     def get_job_status(self, job_id):
@@ -510,9 +506,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     # ---------------
 
     class InitCommand(MccsGroupDevice.InitCommand):
-        """
-        Command class for device initialisation.
-        """
+        """Command class for device initialisation."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -646,9 +640,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             return True
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.cluster_manager is not None:
             self.cluster_manager.poll()
 
@@ -1027,9 +1019,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     # --------
 
     class StartJobCommand(ResponseCommand):
-        """
-        Class for handling the StartJob(argin) command.
-        """
+        """Class for handling the StartJob(argin) command."""
 
         SUCCEEDED_MESSAGE = "StartJob command completed OK"
 
@@ -1076,9 +1066,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return [[return_code], [message]]
 
     class StopJobCommand(ResponseCommand):
-        """
-        Class for handling the StopJob(argin) command.
-        """
+        """Class for handling the StopJob(argin) command."""
 
         SUCCEEDED_MESSAGE = "StopJob command completed OK"
 
@@ -1125,9 +1113,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return [[return_code], [message]]
 
     class SubmitJobCommand(BaseCommand):
-        """
-        Class for handling the SubmitJob(argin) command.
-        """
+        """Class for handling the SubmitJob(argin) command."""
 
         def do(self, argin):
             """
@@ -1165,9 +1151,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return handler(argin)
 
     class GetJobStatusCommand(BaseCommand):
-        """
-        Class for handling the GetJobStatus(argin) command.
-        """
+        """Class for handling the GetJobStatus(argin) command."""
 
         def do(self, argin):
             """
@@ -1205,9 +1189,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return handler(argin)
 
     class ClearJobStatsCommand(ResponseCommand):
-        """
-        Class for handling the ClearJobStats() command.
-        """
+        """Class for handling the ClearJobStats() command."""
 
         SUCCEEDED_MESSAGE = "Job stats cleared"
 
@@ -1247,9 +1229,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return [[return_code], [message]]
 
     class PingMasterPoolCommand(ResponseCommand):
-        """
-        Class for handling the PingMasterPool() command.
-        """
+        """Class for handling the PingMasterPool() command."""
 
         SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
 

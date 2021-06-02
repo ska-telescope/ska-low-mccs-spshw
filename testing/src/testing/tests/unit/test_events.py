@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains unit tests for the ska_low_mccs.events module.
-"""
+"""This module contains unit tests for the ska_low_mccs.events module."""
 from contextlib import nullcontext
 import pytest
 from ska_low_mccs import MccsDeviceProxy
@@ -48,9 +46,7 @@ def device_to_load():
 
 
 class TestEventSubscriptionHandler:
-    """
-    This class contains unit tests for the EventSubscriptionHandler class.
-    """
+    """This class contains unit tests for the EventSubscriptionHandler class."""
 
     def test_subscribe(self, tango_harness: TangoHarness, logger):
         """
@@ -147,9 +143,7 @@ class TestEventSubscriptionHandler:
 
 
 class TestDeviceEventManager:
-    """
-    This class contains unit tests for the DeviceEventManager class.
-    """
+    """This class contains unit tests for the DeviceEventManager class."""
 
     @pytest.mark.parametrize(
         ("allowed_events", "event_spec", "raise_context"),
@@ -280,9 +274,7 @@ class TestDeviceEventManager:
 
 
 class TestEventManager:
-    """
-    This class contains unit tests for the EventManager class.
-    """
+    """This class contains unit tests for the EventManager class."""
 
     @pytest.mark.parametrize(
         ("allowed_fqdns", "fqdn_spec", "raise_context"),

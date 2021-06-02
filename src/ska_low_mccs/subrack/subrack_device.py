@@ -8,10 +8,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains an implementation of the MCCS Subrack Management Board Tango device
-and related classes.
-"""
+"""This module contains an implementation of the MCCS Subrack Management Board Tango
+device and related classes."""
 import threading
 import json
 import time
@@ -518,10 +516,8 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return all_off
 
     def _update_are_tpms_on(self):
-        """
-        Update our record of which TPMs are off/on, ensureing that registered callbacks
-        are called.
-        """
+        """Update our record of which TPMs are off/on, ensureing that registered
+        callbacks are called."""
         are_tpms_on = self._factory.hardware.are_tpms_on()
         if are_tpms_on is None:
             are_tpms_on = [False] * self._tpm_count
@@ -603,17 +599,14 @@ class MccsSubrack(SKABaseDevice):
     TileFQDNs = device_property(dtype=(str,), default_value=[])
 
     def init_device(self):
-        """
-        Initialise the device; overridden here to change the Tango serialisation model.
-        """
+        """Initialise the device; overridden here to change the Tango serialisation
+        model."""
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -641,9 +634,7 @@ class MccsSubrack(SKABaseDevice):
         )
 
     class InitCommand(SKABaseDevice.InitCommand):
-        """
-        Class that implements device initialisation for the MCCS Subrack device.
-        """
+        """Class that implements device initialisation for the MCCS Subrack device."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -797,9 +788,7 @@ class MccsSubrack(SKABaseDevice):
             self.state_model.perform_action(action)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -1291,9 +1280,7 @@ class MccsSubrack(SKABaseDevice):
             return create_return(success, "off")
 
     class IsTpmOnCommand(BaseCommand):
-        """
-        The command class for the IsTpmOn command.
-        """
+        """The command class for the IsTpmOn command."""
 
         def do(self, argin):
             """
@@ -1419,9 +1406,7 @@ class MccsSubrack(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerOffTpmCommand(ResponseCommand):
-        """
-        The command class for the PowerOffTpm command.
-        """
+        """The command class for the PowerOffTpm command."""
 
         def do(self, argin):
             """
@@ -1486,9 +1471,7 @@ class MccsSubrack(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerUpTpmsCommand(ResponseCommand):
-        """
-        The command class for the PowerUpTpms command.
-        """
+        """The command class for the PowerUpTpms command."""
 
         def do(self):
             """
@@ -1545,9 +1528,7 @@ class MccsSubrack(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerDownTpmsCommand(ResponseCommand):
-        """
-        The command class for the PowerDownTpms command.
-        """
+        """The command class for the PowerDownTpms command."""
 
         def do(self):
             """
@@ -1854,9 +1835,7 @@ class MccsSubrack(SKABaseDevice):
         return self._send_message("On", json_args=json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         SUCCEEDED_MESSAGE = "Subrack On command completed OK"
         FAILED_MESSAGE = "Subrack On command failed"

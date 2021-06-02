@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsStationBeam.
-"""
+"""This module contains the tests for MccsStationBeam."""
 import json
 import time
 
@@ -70,9 +68,7 @@ def mock_factory(mocker):
 
 # pylint: disable=invalid-name
 class TestMccsStationBeam:
-    """
-    Test class for MccsStationBeam tests.
-    """
+    """Test class for MccsStationBeam tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

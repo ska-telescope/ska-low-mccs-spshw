@@ -17,9 +17,7 @@ from pyfabil.base.definitions import Device
 
 
 class TpmDriver(HardwareDriver):
-    """
-    Hardware driver for a TPM.
-    """
+    """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
     # all methods are completed and tested
@@ -223,9 +221,7 @@ class TpmDriver(HardwareDriver):
         raise NotImplementedError
 
     def initialise(self):
-        """
-        Download firmware, if not already downloaded, and initializes tile.
-        """
+        """Download firmware, if not already downloaded, and initializes tile."""
         self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
             self.tile.program_fpgas(self._firmware_name)
@@ -780,9 +776,7 @@ class TpmDriver(HardwareDriver):
             self._is_beamformer_running = True
 
     def stop_beamformer(self):
-        """
-        Stop the beamformer.
-        """
+        """Stop the beamformer."""
         self.logger.debug("TpmDriver: Stop beamformer")
         self.tile.stop_beamformer()
         self._is_beamformer_running = False
@@ -813,9 +807,7 @@ class TpmDriver(HardwareDriver):
         )
 
     def stop_integrated_channel_data(self):
-        """
-        Stop the integrated channel data.
-        """
+        """Stop the integrated channel data."""
         self.logger.debug("TpmDriver: Stop integrated channel data")
         self.tile.stop_integrated_channel_data()
 
@@ -845,16 +837,12 @@ class TpmDriver(HardwareDriver):
         )
 
     def stop_integrated_beam_data(self):
-        """
-        Stop the integrated beam data.
-        """
+        """Stop the integrated beam data."""
         self.logger.debug("TpmDriver: Stop integrated beam data")
         self.tile.stop_integrated_beam_data()
 
     def stop_integrated_data(self):
-        """
-        Stop the integrated data.
-        """
+        """Stop the integrated data."""
         self.logger.debug("TpmDriver: Stop integrated data")
         self.tile.stop_integrated_data()
 
@@ -944,9 +932,7 @@ class TpmDriver(HardwareDriver):
         self.tile.send_beam_data(timestamp, seconds)
 
     def stop_data_transmission(self):
-        """
-        Stop data transmission for send_channelised_data_continuous.
-        """
+        """Stop data transmission for send_channelised_data_continuous."""
         self.logger.debug("TpmDriver: stop_data_transmission")
         self.tile.stop_data_transmission()
 

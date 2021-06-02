@@ -63,9 +63,7 @@ def tile_hardware_manager(logger):
 
 
 class TestTileHardwareManager:
-    """
-    Contains tests specific to TileHardwareManager.
-    """
+    """Contains tests specific to TileHardwareManager."""
 
     def test_init_simulation_mode(self, logger):
         """

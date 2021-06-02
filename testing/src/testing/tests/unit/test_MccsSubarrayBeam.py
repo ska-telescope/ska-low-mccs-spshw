@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsSubarrayBeam.
-"""
+"""This module contains the tests for MccsSubarrayBeam."""
 import json
 import time
 
@@ -46,9 +44,7 @@ def device_to_load():
 
 # pylint: disable=invalid-name
 class TestMccsSubarrayBeam:
-    """
-    Test class for MccsSubarrayBeam tests.
-    """
+    """Test class for MccsSubarrayBeam tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

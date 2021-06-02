@@ -5,10 +5,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements infrastructure for resource management in the MCCS subsystem,
-separate from or common to all devices.
-"""
+"""This module implements infrastructure for resource management in the MCCS subsystem,
+separate from or common to all devices."""
 from enum import Enum
 from ska_tango_base.control_model import HealthState
 
@@ -82,9 +80,7 @@ class ResourceAvailabilityPolicy:
         self._allocatable_health_states = list(health_states)
 
     def reset(self):
-        """
-        Reset to the default set of states allowed for allocation.
-        """
+        """Reset to the default set of states allowed for allocation."""
         self._allocatable_health_states = [HealthState.OK]
 
 
@@ -245,9 +241,7 @@ class Resource:
         # Unassigned or unavailable resource does not change state
 
     def make_unavailable(self):
-        """
-        Mark the resource as unavailable for assignment.
-        """
+        """Mark the resource as unavailable for assignment."""
         # Change resource state to unavailable
         # If it was previously AVAILABLE (not ASSIGNED) we can just switch
         if self.is_available():
@@ -258,9 +252,7 @@ class Resource:
             pass
 
     def make_available(self):
-        """
-        Mark the resource as available for assignment.
-        """
+        """Mark the resource as available for assignment."""
         # Change resource state to available
         # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
         if self.is_unavailable():
@@ -554,7 +546,5 @@ class ResourceManager:
         )
 
     def reset_resource_availability_policy(self):
-        """
-        Reset to the default list of health states which permit allocation.
-        """
+        """Reset to the default list of health states which permit allocation."""
         self.resource_availability_policy.reset()

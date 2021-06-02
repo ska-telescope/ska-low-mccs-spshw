@@ -7,9 +7,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-The command line interface for the MCCS Tile device server.
-"""
+"""The command line interface for the MCCS Tile device server."""
 import functools
 import json
 import types
@@ -105,9 +103,8 @@ def command_result_as_string(method):
 
     @functools.wraps(method)
     def _wrapper(*args, **kwargs):
-        """
-        Wrapper that ensure device command methods return results formatted as a a two-
-        line string.
+        """Wrapper that ensure device command methods return results formatted as a a
+        two- line string.
 
         :param args: positional arguments to the wrapped method
         :type args: list
@@ -388,9 +385,7 @@ class MccsTileCli(metaclass=CliMeta):
 
 
 def main():
-    """
-    Entry point for CLI.
-    """
+    """Entry point for CLI."""
     Fire(MccsTileCli)
 
 

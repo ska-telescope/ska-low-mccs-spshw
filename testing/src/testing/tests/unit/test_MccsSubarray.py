@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for MccsSubarray.
-"""
+"""This module contains the tests for MccsSubarray."""
 import json
 import pytest
 
@@ -84,9 +82,7 @@ def mock_factory(mocker):
 
 # pylint: disable=invalid-name
 class TestMccsSubarray:
-    """
-    Test class for MccsSubarray tests.
-    """
+    """Test class for MccsSubarray tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -466,9 +462,7 @@ class TestMccsSubarray:
 
 # pylint: disable=invalid-name
 class TestMccsSubarrayCommandClasses:
-    """
-    This class contains tests of MCCSSubarray command classes.
-    """
+    """This class contains tests of MCCSSubarray command classes."""
 
     def test_ScanCommand(self, subarray_state_model, mocker):
         """

@@ -1,8 +1,6 @@
 # type: ignore
-"""
-This module contains pytest fixtures and other test setups for the ska_low_mccs
-lightweight integration tests.
-"""
+"""This module contains pytest fixtures and other test setups for the ska_low_mccs
+lightweight integration tests."""
 
 
 def pytest_itemcollected(item):

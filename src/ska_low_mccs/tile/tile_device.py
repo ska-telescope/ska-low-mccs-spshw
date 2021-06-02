@@ -72,9 +72,7 @@ class TilePowerManager:
         self._power_mode = PowerMode.UNKNOWN
 
     def connect(self):
-        """
-        Establish a connection to the subrack that powers this tile device's TPM.
-        """
+        """Establish a connection to the subrack that powers this tile device's TPM."""
         self._subrack = MccsDeviceProxy(self._subrack_fqdn, self._logger)
         self._subrack.check_initialised()
 
@@ -254,9 +252,8 @@ class MccsTile(SKABaseDevice):
     # General methods
     # ---------------
     def init_device(self):
-        """
-        Initialise the device; overridden here to change the Tango serialisation model.
-        """
+        """Initialise the device; overridden here to change the Tango serialisation
+        model."""
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
@@ -435,9 +432,7 @@ class MccsTile(SKABaseDevice):
             self.state_model.perform_action(action)
 
     class DisableCommand(SKABaseDevice.DisableCommand):
-        """
-        Class for handling the Disable() command.
-        """
+        """Class for handling the Disable() command."""
 
         REDUNDANT_MESSAGE = "TPM was already off: nothing to do to disable device."
         FAILED_MESSAGE = "Failed to disable device: could not turn TPM off"
@@ -543,9 +538,7 @@ class MccsTile(SKABaseDevice):
         return self._send_message("On", json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On command sequence.
-        """
+        """Class for handling the On command sequence."""
 
         SUCCEEDED_MESSAGE = "Tile On command sequence completed OK"
 
@@ -583,9 +576,7 @@ class MccsTile(SKABaseDevice):
             return (return_code, self.SUCCEEDED_MESSAGE)
 
     class TileOnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         SUCCEEDED_MESSAGE = "Tile On command completed OK"
         FAILED_MESSAGE = "Tile On command failed"
@@ -731,9 +722,7 @@ class MccsTile(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_FROM_DISABLE_MESSAGE)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -1336,9 +1325,7 @@ class MccsTile(SKABaseDevice):
     # # Commands
     # # --------
     def init_command_objects(self):
-        """
-        Set up the handler objects for Commands.
-        """
+        """Set up the handler objects for Commands."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -1431,9 +1418,7 @@ class MccsTile(SKABaseDevice):
             )
 
     class InitialiseCommand(ResponseCommand):
-        """
-        Class for handling the Initialise() command.
-        """
+        """Class for handling the Initialise() command."""
 
         SUCCEEDED_MESSAGE = "Initialise command completed OK"
 
@@ -1479,9 +1464,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class GetFirmwareAvailableCommand(BaseCommand):
-        """
-        Class for handling the GetFirmwareAvailable() command.
-        """
+        """Class for handling the GetFirmwareAvailable() command."""
 
         def do(self):
             """
@@ -1526,9 +1509,7 @@ class MccsTile(SKABaseDevice):
         return handler()
 
     class DownloadFirmwareCommand(ResponseCommand):
-        """
-        Class for handling the DownloadFirmware(argin) command.
-        """
+        """Class for handling the DownloadFirmware(argin) command."""
 
         SUCCEEDED_MESSAGE = "DownloadFirmware command completed OK"
 
@@ -1586,9 +1567,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ProgramCPLDCommand(ResponseCommand):
-        """
-        Class for handling the ProgramCPLD(argin) command.
-        """
+        """Class for handling the ProgramCPLD(argin) command."""
 
         SUCCEEDED_MESSAGE = "ProgramCPLD command completed OK"
 
@@ -1641,9 +1620,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class GetRegisterListCommand(BaseCommand):
-        """
-        Class for handling the GetRegisterList() command.
-        """
+        """Class for handling the GetRegisterList() command."""
 
         def do(self):
             """
@@ -1676,9 +1653,7 @@ class MccsTile(SKABaseDevice):
         return handler()
 
     class ReadRegisterCommand(BaseCommand):
-        """
-        Class for handling the ReadRegister(argin) command.
-        """
+        """Class for handling the ReadRegister(argin) command."""
 
         def do(self, argin):
             """
@@ -1752,9 +1727,7 @@ class MccsTile(SKABaseDevice):
         return handler(argin)
 
     class WriteRegisterCommand(ResponseCommand):
-        """
-        Class for handling the WriteRegister(argin) command.
-        """
+        """Class for handling the WriteRegister(argin) command."""
 
         SUCCEEDED_MESSAGE = "WriteRegister command completed OK"
 
@@ -1839,9 +1812,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ReadAddressCommand(BaseCommand):
-        """
-        Class for handling the ReadAddress(argin) command.
-        """
+        """Class for handling the ReadAddress(argin) command."""
 
         def do(self, argin):
             """
@@ -1891,9 +1862,7 @@ class MccsTile(SKABaseDevice):
         return handler(argin)
 
     class WriteAddressCommand(ResponseCommand):
-        """
-        Class for handling the WriteAddress(argin) command.
-        """
+        """Class for handling the WriteAddress(argin) command."""
 
         SUCCEEDED_MESSAGE = "WriteAddress command completed OK"
 
@@ -1951,9 +1920,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class Configure40GCoreCommand(ResponseCommand):
-        """
-        Class for handling the Configure40GCore(argin) command.
-        """
+        """Class for handling the Configure40GCore(argin) command."""
 
         SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
 
@@ -2058,9 +2025,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class Get40GCoreConfigurationCommand(BaseCommand):
-        """
-        Class for handling the Get40GCoreConfiguration(argin) command.
-        """
+        """Class for handling the Get40GCoreConfiguration(argin) command."""
 
         def do(self, argin):
             """
@@ -2118,9 +2083,7 @@ class MccsTile(SKABaseDevice):
         return handler(argin)
 
     class SetLmcDownloadCommand(ResponseCommand):
-        """
-        Class for handling the SetLmcDownload(argin) command.
-        """
+        """Class for handling the SetLmcDownload(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
 
@@ -2198,9 +2161,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class GetArpTableCommand(BaseCommand):
-        """
-        Class for handling the GetArpTable() command.
-        """
+        """Class for handling the GetArpTable() command."""
 
         def do(self):
             """
@@ -2239,9 +2200,7 @@ class MccsTile(SKABaseDevice):
         return handler()
 
     class SetChanneliserTruncationCommand(ResponseCommand):
-        """
-        Class for handling the SetChanneliserTruncation(argin) command.
-        """
+        """Class for handling the SetChanneliserTruncation(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetChanneliserTruncation command completed OK"
 
@@ -2312,9 +2271,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SetBeamFormerRegionsCommand(ResponseCommand):
-        """
-        Class for handling the SetBeamFormerRegions(argin) command.
-        """
+        """Class for handling the SetBeamFormerRegions(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetBeamFormerRegions command completed OK"
 
@@ -2410,9 +2367,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ConfigureStationBeamformerCommand(ResponseCommand):
-        """
-        Class for handling the ConfigureStationBeamformer(argin) command.
-        """
+        """Class for handling the ConfigureStationBeamformer(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCoefficients command completed OK"
 
@@ -2493,9 +2448,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class LoadCalibrationCoefficientsCommand(ResponseCommand):
-        """
-        Class for handling the LoadCalibrationCoefficients(argin) command.
-        """
+        """Class for handling the LoadCalibrationCoefficients(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
@@ -2594,9 +2547,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class LoadCalibrationCurveCommand(ResponseCommand):
-        """
-        Class for handling the LoadCalibrationCurve(argin) command.
-        """
+        """Class for handling the LoadCalibrationCurve(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadCalibrationCurve command completed OK"
 
@@ -2698,9 +2649,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class LoadBeamAngleCommand(ResponseCommand):
-        """
-        Class for handling the LoadBeamAngle(argin) command.
-        """
+        """Class for handling the LoadBeamAngle(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadBeamAngle command completed OK"
 
@@ -2755,9 +2704,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class LoadAntennaTaperingCommand(ResponseCommand):
-        """
-        Class for handling the LoadAntennaTapering(argin) command.
-        """
+        """Class for handling the LoadAntennaTapering(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadAntennaTapering command completed OK"
 
@@ -2850,9 +2797,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SwitchCalibrationBankCommand(ResponseCommand):
-        """
-        Class for handling the SwitchCalibrationBank(argin) command.
-        """
+        """Class for handling the SwitchCalibrationBank(argin) command."""
 
         SUCCEEDED_MESSAGE = "SwitchCalibrationBank command completed OK"
 
@@ -2903,9 +2848,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SetPointingDelayCommand(ResponseCommand):
-        """
-        Class for handling the SetPointingDelay(argin) command.
-        """
+        """Class for handling the SetPointingDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetPointingDelay command completed OK"
 
@@ -2990,9 +2933,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class LoadPointingDelayCommand(ResponseCommand):
-        """
-        Class for handling the LoadPointingDelay(argin) command.
-        """
+        """Class for handling the LoadPointingDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "LoadPointingDelay command completed OK"
 
@@ -3043,9 +2984,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StartBeamformerCommand(ResponseCommand):
-        """
-        Class for handling the StartBeamformer(argin) command.
-        """
+        """Class for handling the StartBeamformer(argin) command."""
 
         SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
 
@@ -3105,9 +3044,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StopBeamformerCommand(ResponseCommand):
-        """
-        Class for handling the StopBeamformer() command.
-        """
+        """Class for handling the StopBeamformer() command."""
 
         SUCCEEDED_MESSAGE = "StopBeamformer command completed OK"
 
@@ -3150,9 +3087,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ConfigureIntegratedChannelDataCommand(ResponseCommand):
-        """
-        Class for handling the ConfigureIntegratedChannelData(argin) command.
-        """
+        """Class for handling the ConfigureIntegratedChannelData(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
 
@@ -3217,9 +3152,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StopIntegratedChannelDataCommand(ResponseCommand):
-        """
-        Class for handling the StopIntegratedChannelData command.
-        """
+        """Class for handling the StopIntegratedChannelData command."""
 
         SUCCEEDED_MESSAGE = "StopIntegratedChannelData command completed OK"
 
@@ -3257,9 +3190,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ConfigureIntegratedBeamDataCommand(ResponseCommand):
-        """
-        Class for handling the ConfigureIntegratedBeamData(argin) command.
-        """
+        """Class for handling the ConfigureIntegratedBeamData(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
 
@@ -3324,9 +3255,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StopIntegratedBeamDataCommand(ResponseCommand):
-        """
-        Class for handling the StopIntegratedBeamData command.
-        """
+        """Class for handling the StopIntegratedBeamData command."""
 
         SUCCEEDED_MESSAGE = "StopIntegratedBeamData command completed OK"
 
@@ -3364,9 +3293,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StopIntegratedDataCommand(ResponseCommand):
-        """
-        Class for handling the StopIntegratedData command.
-        """
+        """Class for handling the StopIntegratedData command."""
 
         SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
 
@@ -3404,9 +3331,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SendRawDataCommand(ResponseCommand):
-        """
-        Class for handling the SendRawData(argin) command.
-        """
+        """Class for handling the SendRawData(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendRawData command completed OK"
 
@@ -3466,9 +3391,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SendChannelisedDataCommand(ResponseCommand):
-        """
-        Class for handling the SendChannelisedData(argin) command.
-        """
+        """Class for handling the SendChannelisedData(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendChannelisedData command completed OK"
 
@@ -3539,9 +3462,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SendChannelisedDataContinuousCommand(ResponseCommand):
-        """
-        Class for handling the SendChannelisedDataContinuous(argin) command.
-        """
+        """Class for handling the SendChannelisedDataContinuous(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataContinuous command completed OK"
 
@@ -3617,9 +3538,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SendBeamDataCommand(ResponseCommand):
-        """
-        Class for handling the SendBeamData(argin) command.
-        """
+        """Class for handling the SendBeamData(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendBeamData command completed OK"
 
@@ -3679,9 +3598,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StopDataTransmissionCommand(ResponseCommand):
-        """
-        Class for handling the StopDataTransmission() command.
-        """
+        """Class for handling the StopDataTransmission() command."""
 
         SUCCEEDED_MESSAGE = "StopDataTransmission command completed OK"
 
@@ -3724,9 +3641,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ComputeCalibrationCoefficientsCommand(ResponseCommand):
-        """
-        Class for handling the ComputeCalibrationCoefficients() command.
-        """
+        """Class for handling the ComputeCalibrationCoefficients() command."""
 
         SUCCEEDED_MESSAGE = "ComputeCalibrationCoefficients command completed OK"
 
@@ -3771,9 +3686,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class StartAcquisitionCommand(ResponseCommand):
-        """
-        Class for handling the StartAcquisition(argin) command.
-        """
+        """Class for handling the StartAcquisition(argin) command."""
 
         SUCCEEDED_MESSAGE = "StartAcquisition command completed OK"
 
@@ -3833,9 +3746,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SetTimeDelaysCommand(ResponseCommand):
-        """
-        Class for handling the SetTimeDelays(argin) command.
-        """
+        """Class for handling the SetTimeDelays(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetTimeDelays command completed OK"
 
@@ -3889,9 +3800,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SetCspRoundingCommand(ResponseCommand):
-        """
-        Class for handling the SetCspRounding(argin) command.
-        """
+        """Class for handling the SetCspRounding(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetCspRounding command completed OK"
 
@@ -3942,9 +3851,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SetLmcIntegratedDownloadCommand(ResponseCommand):
-        """
-        Class for handling the SetLmcIntegratedDownload(argin) command.
-        """
+        """Class for handling the SetLmcIntegratedDownload(argin) command."""
 
         SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
 
@@ -4031,9 +3938,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SendRawDataSynchronisedCommand(ResponseCommand):
-        """
-        Class for handling the SendRawDataSynchronised(argin) command.
-        """
+        """Class for handling the SendRawDataSynchronised(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendRawDataSynchronised command completed OK"
 
@@ -4094,9 +3999,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SendChannelisedDataNarrowbandCommand(ResponseCommand):
-        """
-        Class for handling the SendChannelisedDataNarrowband(argin) command.
-        """
+        """Class for handling the SendChannelisedDataNarrowband(argin) command."""
 
         SUCCEEDED_MESSAGE = "SendChannelisedDataNarrowband command completed OK"
 
@@ -4188,9 +4091,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class TweakTransceiversCommand(ResponseCommand):
-        """
-        Class for handling the TweakTransceivers() command.
-        """
+        """Class for handling the TweakTransceivers() command."""
 
         SUCCEEDED_MESSAGE = "TweakTransceivers command completed OK"
 
@@ -4233,9 +4134,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class PostSynchronisationCommand(ResponseCommand):
-        """
-        Class for handling the PostSynchronisation() command.
-        """
+        """Class for handling the PostSynchronisation() command."""
 
         SUCCEEDED_MESSAGE = "PostSynchronisation command completed OK"
 
@@ -4278,9 +4177,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class SyncFpgasCommand(ResponseCommand):
-        """
-        Class for handling the SyncFpgas() command.
-        """
+        """Class for handling the SyncFpgas() command."""
 
         SUCCEEDED_MESSAGE = "SyncFpgas command completed OK"
 
@@ -4323,9 +4220,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class CalculateDelayCommand(ResponseCommand):
-        """
-        Class for handling the CalculateDelay(argin) command.
-        """
+        """Class for handling the CalculateDelay(argin) command."""
 
         SUCCEEDED_MESSAGE = "CalculateDelay command completed OK"
 
@@ -4407,9 +4302,7 @@ class MccsTile(SKABaseDevice):
         return [[return_code], [message]]
 
     class ConfigureTestGeneratorCommand(BaseCommand):
-        """
-        Class for handling the ConfigureTestGenerator(argin) command.
-        """
+        """Class for handling the ConfigureTestGenerator(argin) command."""
 
         SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
 

@@ -24,10 +24,8 @@ from ska_low_mccs.tile.tile_1_6 import Tile16
 
 
 class HwTile(object):
-    """
-    Wrapper for Tile12 and Tile16 Returns the right object depending on magic number in
-    hardware.
-    """
+    """Wrapper for Tile12 and Tile16 Returns the right object depending on magic number
+    in hardware."""
 
     def __new__(
         cls,

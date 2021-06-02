@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-Contains the tests for the MccsController Tango device_under_test prototype.
-"""
+"""Contains the tests for the MccsController Tango device_under_test prototype."""
 
 import json
 import threading
@@ -39,10 +37,9 @@ from testing.harness.mock import MockDeviceBuilder, MockSubarrayBuilder
 
 
 class ControllerWithFailableDevices(MccsController):
-    """
-    An extension of the MccsController device with additional commands that we can use
-    to tell the device to simulate the receipt of events from subservient devices.
-    """
+    """An extension of the MccsController device with additional commands that we can
+    use to tell the device to simulate the receipt of events from subservient
+    devices."""
 
     @command(dtype_in="DevString")
     def simulateHealthStateChange(self, argin):
@@ -139,9 +136,7 @@ def device_under_test(tango_harness):
 
 
 class TestMccsController:
-    """
-    Tests of the MccsController device.
-    """
+    """Tests of the MccsController device."""
 
     def test_queue_debug(self, device_under_test, test_string):
         """

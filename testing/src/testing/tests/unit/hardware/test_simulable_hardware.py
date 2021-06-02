@@ -27,17 +27,13 @@ from ska_low_mccs.hardware.simulable_hardware import DynamicValuesGenerator
 
 @pytest.fixture()
 def zero_seed():
-    """
-    Sets the random seed to zero, so that we get some determinism in our stochastic
-    tests.
-    """
+    """Sets the random seed to zero, so that we get some determinism in our stochastic
+    tests."""
     seed(0)
 
 
 class TestDynamicValuesGenerator:
-    """
-    Contains tests of the dynamic values generator.
-    """
+    """Contains tests of the dynamic values generator."""
 
     def test_collapse(self):
         """

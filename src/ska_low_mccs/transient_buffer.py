@@ -47,9 +47,7 @@ class MccsTransientBuffer(MccsDevice):
     # ---------------
 
     class InitCommand(MccsDevice.InitCommand):
-        """
-        Command class for device initialisation.
-        """
+        """Command class for device initialisation."""
 
         SUCCEEDED_MESSAGE = "Init command completed OK"
 
@@ -82,9 +80,7 @@ class MccsTransientBuffer(MccsDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """

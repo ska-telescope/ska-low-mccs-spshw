@@ -35,9 +35,7 @@ from time import sleep
 
 
 class TpmTestFirmware(FirmwareBlock):
-    """
-    FirmwareBlock tests class.
-    """
+    """FirmwareBlock tests class."""
 
     @firmware({"design": "tpm_test", "major": "1", "minor": ">1"})
     @compatibleboards(BoardMake.TpmBoard)
@@ -130,9 +128,7 @@ class TpmTestFirmware(FirmwareBlock):
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
     def fpga_clk_sync(self):
-        """
-        FPGA synchronise clock.
-        """
+        """FPGA synchronise clock."""
         if self._device_name == "fpga1":
 
             fpga1_phase = self.board["fpga1.pps_manager.sync_status.cnt_hf_pps"]
@@ -177,9 +173,7 @@ class TpmTestFirmware(FirmwareBlock):
             )
 
     def start_ddr_initialisation(self):
-        """
-        Start DDR initialisation.
-        """
+        """Start DDR initialisation."""
         if self.board["board.regfile.ctrl.en_ddr_vdd"] == 0:
             self.board["board.regfile.ctrl.en_ddr_vdd"] = 1
             time.sleep(0.5)
@@ -188,9 +182,7 @@ class TpmTestFirmware(FirmwareBlock):
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
     def check_ddr_initialisation(self):
-        """
-        Check whether DDR has initialised.
-        """
+        """Check whether DDR has initialised."""
         if self.board.memory_map.has_register(
             self._device_name + ".regfile.stream_status.ddr_init_done"
         ):
@@ -208,9 +200,7 @@ class TpmTestFirmware(FirmwareBlock):
             return
 
     def initialise_ddr(self):
-        """
-        Initialise DDR.
-        """
+        """Initialise DDR."""
         if self.board["board.regfile.ctrl.en_ddr_vdd"] == 0:
             self.board["board.regfile.ctrl.en_ddr_vdd"] = 1
             time.sleep(0.5)
@@ -294,22 +284,16 @@ class TpmTestFirmware(FirmwareBlock):
     #######################################################################################
 
     def initialize_spead(self):
-        """
-        Initialize SPEAD.
-        """
+        """Initialize SPEAD."""
         self.board[self._device_name + ".lmc_spead_tx.control"] = 0x0400100C
 
     def send_raw_data(self):
-        """
-        Send raw data from the TPM.
-        """
+        """Send raw data from the TPM."""
         self.board[self._device_name + ".lmc_gen.raw_all_channel_mode_enable"] = 0x0
         self.board[self._device_name + ".lmc_gen.request.raw_data"] = 0x1
 
     def send_raw_data_synchronised(self):
-        """
-        Send raw data from the TPM.
-        """
+        """Send raw data from the TPM."""
         self.board[self._device_name + ".lmc_gen.raw_all_channel_mode_enable"] = 0x1
         self.board[self._device_name + ".lmc_gen.request.raw_data"] = 0x1
 
@@ -424,49 +408,35 @@ class TpmTestFirmware(FirmwareBlock):
         self.board[self._device_name + ".lmc_gen.request.channelized_data"] = 0x1
 
     def stop_channelised_data_narrowband(self):
-        """
-        Stop transmission of narrowband channel data.
-        """
+        """Stop transmission of narrowband channel data."""
         self.stop_channelised_data_continuous()
 
     def stop_channelised_data_continuous(self):
-        """
-        Stop transmission of continuous channel data.
-        """
+        """Stop transmission of continuous channel data."""
         self.board[
             self._device_name + ".lmc_gen.channelized_single_channel_mode.enable"
         ] = 0x0
 
     def stop_channelised_data(self):
-        """
-        Stop sending channelised data.
-        """
+        """Stop sending channelised data."""
         self.board[
             self._device_name + ".lmc_gen.channelized_single_channel_mode.enable"
         ] = 0x0
 
     def send_beam_data(self):
-        """
-        Send beam data from the TPM.
-        """
+        """Send beam data from the TPM."""
         self.board[self._device_name + ".lmc_gen.request.beamformed_data"] = 0x1
 
     def stop_integrated_channel_data(self):
-        """
-        Stop receiving integrated beam data from the board.
-        """
+        """Stop receiving integrated beam data from the board."""
         self._integrator.stop_integrated_channel_data()
 
     def stop_integrated_beam_data(self):
-        """
-        Stop receiving integrated beam data from the board.
-        """
+        """Stop receiving integrated beam data from the board."""
         self._integrator.stop_integrated_beam_data()
 
     def stop_integrated_data(self):
-        """
-        Stop transmission of integrated data.
-        """
+        """Stop transmission of integrated data."""
         self._integrator.stop_integrated_data()
 
     def download_beamforming_weights(self, weights, antenna):

@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements the MCCS Base Device, a base class for all MCCS devices.
-"""
+"""This module implements the MCCS Base Device, a base class for all MCCS devices."""
 __all__ = ["MccsDevice", "main"]
 
 # PyTango imports
@@ -86,9 +84,7 @@ class MccsDevice(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     def init_command_objects(self):
-        """
-        Set up the handler objects for Commands.
-        """
+        """Set up the handler objects for Commands."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -105,9 +101,7 @@ class MccsDevice(SKABaseDevice):
             )
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """
@@ -435,9 +429,7 @@ class MccsDevice(SKABaseDevice):
         return [[return_code], [message]]
 
     class GetFullReportCommand(BaseCommand):
-        """
-        Class for handling the GetFullReport() command.
-        """
+        """Class for handling the GetFullReport() command."""
 
         def do(self):
             """
@@ -467,9 +459,7 @@ class MccsDevice(SKABaseDevice):
         return handler()
 
     class GetCommandReportCommand(BaseCommand):
-        """
-        Class for handling the GetCommandReport() command.
-        """
+        """Class for handling the GetCommandReport() command."""
 
         def do(self):
             """
@@ -495,9 +485,7 @@ class MccsDevice(SKABaseDevice):
         return handler()
 
     class GetAttributeReportCommand(BaseCommand):
-        """
-        Class for handling the GetAttributeReport() command.
-        """
+        """Class for handling the GetAttributeReport() command."""
 
         def do(self):
             """

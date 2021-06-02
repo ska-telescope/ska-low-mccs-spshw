@@ -9,10 +9,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the power management
-functionality of the SKA Low MCCS system between the subrack and the TPM.
-"""
+"""This test module contains integration tests that exercise the power management
+functionality of the SKA Low MCCS system between the subrack and the TPM."""
 import time
 
 import pytest
@@ -46,9 +44,7 @@ def devices_to_load():
 
 
 class TestSubrackTileIntegration(HelperClass):
-    """
-    Integration test cases for MCCS subsystem's power management.
-    """
+    """Integration test cases for MCCS subsystem's power management."""
 
     def test_tile_on(self, tango_harness: TangoHarness, empty_json_dict: str):
         """

@@ -381,9 +381,7 @@ class MccsSubarrayBeam(SKAObsDevice):
             return True
 
     def init_command_objects(self: MccsSubarrayBeam) -> None:
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -391,9 +389,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         self.register_command_object("Scan", self.ScanCommand(*args))
 
     def always_executed_hook(self: MccsSubarrayBeam) -> None:
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -561,9 +557,7 @@ class MccsSubarrayBeam(SKAObsDevice):
     # Commands
     # --------
     class ConfigureCommand(ResponseCommand):
-        """
-        Class for handling the Configure(argin) command.
-        """
+        """Class for handling the Configure(argin) command."""
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
@@ -620,9 +614,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         return [[result_code], [status]]
 
     class ScanCommand(ResponseCommand):
-        """
-        Class for handling the Scan(argin) command.
-        """
+        """Class for handling the Scan(argin) command."""
 
         SUCCEEDED_MESSAGE = "Scan command completed OK"
 

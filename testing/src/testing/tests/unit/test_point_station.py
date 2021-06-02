@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the ska_low_mccs.point_station module.
-"""
+"""This module contains the tests for the ska_low_mccs.point_station module."""
 
 import pytest
 
@@ -24,15 +22,11 @@ stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 
 
 class TestPointStation:
-    """
-    Tests of point_station.py.
-    """
+    """Tests of point_station.py."""
 
     def test_create_pointing(self):
-        """
-        Create and test pointing class instance and the supporting StationInformation
-        object.
-        """
+        """Create and test pointing class instance and the supporting StationInformation
+        object."""
         station = point_station.StationInformation()
         # Load standard AAVS displacements
         station.load_displacements(locationsfile)

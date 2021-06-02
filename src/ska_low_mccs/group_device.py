@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-Grouping of MCCS devices.
-"""
+"""Grouping of MCCS devices."""
 __all__ = ["MccsGroupDevice", "main"]
 
 # PyTango imports
@@ -44,9 +42,7 @@ class MccsGroupDevice(SKABaseDevice):
     # ---------------
 
     class InitCommand(SKABaseDevice.InitCommand):
-        """
-        Class that implements device initialisation for the MCCS Group Device.
-        """
+        """Class that implements device initialisation for the MCCS Group Device."""
 
         SUCCEEDED_MESSAGE = "Init command completed OK"
 
@@ -69,9 +65,7 @@ class MccsGroupDevice(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """
@@ -119,9 +113,7 @@ class MccsGroupDevice(SKABaseDevice):
     # Commands
     # --------
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -131,9 +123,7 @@ class MccsGroupDevice(SKABaseDevice):
         self.register_command_object("Run", self.RunCommand(*args))
 
     class AddMemberCommand(ResponseCommand):
-        """
-        Class for handling the AddMember(argin) command.
-        """
+        """Class for handling the AddMember(argin) command."""
 
         SUCCEEDED_MESSAGE = "AddMember command completed OK"
 
@@ -174,9 +164,7 @@ class MccsGroupDevice(SKABaseDevice):
         return [[return_code], [message]]
 
     class RemoveMemberCommand(ResponseCommand):
-        """
-        Class for handling the RemoveMember(argin) command.
-        """
+        """Class for handling the RemoveMember(argin) command."""
 
         SUCCEEDED_MESSAGE = "RemoveMember command completed OK"
 
@@ -217,9 +205,7 @@ class MccsGroupDevice(SKABaseDevice):
         return [[return_code], [message]]
 
     class RunCommand(ResponseCommand):
-        """
-        Class for handling the Run(argin) command.
-        """
+        """Class for handling the Run(argin) command."""
 
         SUCCEEDED_MESSAGE = "Run command completed OK"
 

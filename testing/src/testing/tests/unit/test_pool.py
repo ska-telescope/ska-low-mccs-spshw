@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the ska_low_mccs.pool module.
-"""
+"""This module contains the tests for the ska_low_mccs.pool module."""
 import pytest
 import json
 from ska_tango_base.commands import ResultCode

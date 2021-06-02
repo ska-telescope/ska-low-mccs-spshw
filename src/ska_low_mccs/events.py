@@ -5,9 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements infrastructure for event management in the MCCS subsystem.
-"""
+"""This module implements infrastructure for event management in the MCCS subsystem."""
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
 from functools import partial
@@ -175,24 +173,19 @@ class EventSubscriptionHandler:
             self._call(callback, attribute_data)
 
     def _unsubscribe(self):
-        """
-        Unsubscribe from the event.
-        """
+        """Unsubscribe from the event."""
         if self._subscription_id is not None:
             self._device.unsubscribe_event(self._subscription_id)
             self._subscription_id = None
 
     def __del__(self):
-        """
-        Cleanup before destruction.
-        """
+        """Cleanup before destruction."""
         self._unsubscribe()
 
 
 class DeviceEventManager:
-    """
-    Class DeviceEventManager is used to handle multiple events from a single device.
-    """
+    """Class DeviceEventManager is used to handle multiple events from a single
+    device."""
 
     def __init__(self, fqdn, logger, events=None):
         """

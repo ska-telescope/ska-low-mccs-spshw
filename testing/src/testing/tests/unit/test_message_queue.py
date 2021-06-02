@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the ska_low_mccs.message_queue module.
-"""
+"""This module contains the tests for the ska_low_mccs.message_queue module."""
 import pytest
 import threading
 import time
@@ -141,9 +139,8 @@ class TestMessageQueue:
         """
 
         class SpecialisedMessageQueue(MessageQueue):
-            """
-            Specialised message queue with a concrete implementation of notify listener.
-            """
+            """Specialised message queue with a concrete implementation of notify
+            listener."""
 
             def _notify_listener(self, result_code, message_uid, status):
                 """

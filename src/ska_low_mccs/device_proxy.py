@@ -5,9 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements a base device proxy for MCCS devices.
-"""
+"""This module implements a base device proxy for MCCS devices."""
 
 __all__ = [
     "MccsDeviceProxy",
@@ -21,8 +19,8 @@ import tango
 
 
 class MccsDeviceProxy:
-    """
-    This class implements a base device proxy for MCCS devices. At present it supports:
+    """This class implements a base device proxy for MCCS devices. At present it
+    supports:
 
     * deferred connection: we can create the proxy without immediately
       trying to connect to the proxied device.
@@ -131,8 +129,8 @@ class MccsDeviceProxy:
             fqdn: str,
         ) -> tango.DeviceProxy:
             """
-            Attempt connection to a specified device, using an exponential backoff-retry
-            scheme in case of failure.
+            Attempt connection to a specified device, using an exponential backoff-
+            retry scheme in case of failure.
 
             :param connection_factory: the factory to use to establish
                 the connection

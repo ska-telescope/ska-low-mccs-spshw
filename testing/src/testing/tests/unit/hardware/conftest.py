@@ -1,8 +1,6 @@
 # type: ignore
-"""
-This module contains pytest fixtures and other test setups for unit testing
-ska_low_mccs.hardware modules.
-"""
+"""This module contains pytest fixtures and other test setups for unit testing
+ska_low_mccs.hardware modules."""
 import pytest
 
 from ska_low_mccs.hardware import (
@@ -54,9 +52,7 @@ def hardware_factory(hardware_driver):
     """
 
     class BasicHardwareFactory(HardwareFactory):
-        """
-        A basic hardware factory that always returns the same hardware.
-        """
+        """A basic hardware factory that always returns the same hardware."""
 
         def __init__(self, hardware):
             """

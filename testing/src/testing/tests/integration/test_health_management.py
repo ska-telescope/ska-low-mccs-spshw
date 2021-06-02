@@ -9,10 +9,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the health management
-functionality of the SKA Low MCCS system.
-"""
+"""This test module contains integration tests that exercise the health management
+functionality of the SKA Low MCCS system."""
 import time
 from tango import DevState
 import pytest
@@ -83,9 +81,7 @@ def check_states(dev_states):
 
 
 class TestHealthManagement(HelperClass):
-    """
-    Test cases for the MCCS health management subsystem.
-    """
+    """Test cases for the MCCS health management subsystem."""
 
     def test_controller_health_rollup(self, tango_harness, empty_json_dict):
         """

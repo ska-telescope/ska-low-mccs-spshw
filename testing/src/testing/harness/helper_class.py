@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements an MCCS test helper class.
-"""
+"""This module implements an MCCS test helper class."""
 
 import pytest
 from tango import DevState

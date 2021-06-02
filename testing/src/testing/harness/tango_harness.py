@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements a MCCS test harness for Tango devices.
-"""
+"""This module implements a MCCS test harness for Tango devices."""
 
 from __future__ import annotations  # Allow forward refs in type hints; see PEP 563
 from collections import defaultdict
@@ -190,9 +188,7 @@ class TangoHarness:
     """
 
     def __init__(self: TangoHarness) -> None:
-        """
-        Initialise a new instance.
-        """
+        """Initialise a new instance."""
         MccsDeviceProxy.set_default_connection_factory(self.connection_factory)
 
     @property
@@ -311,9 +307,7 @@ class BaseTangoHarness(TangoHarness):
 
 
 class ClientProxyTangoHarness(BaseTangoHarness):
-    """
-    A test harness for Tango devices that can return tailored client proxies.
-    """
+    """A test harness for Tango devices that can return tailored client proxies."""
 
     def __init__(
         self: BaseTangoHarness,
@@ -464,10 +458,8 @@ class TestContextTangoHarness(BaseTangoHarness):
 
 
 class WrapperTangoHarness(TangoHarness):
-    """
-    A base class for a Tango test harness that wraps another harness, providing some
-    functionality in the wrapper.
-    """
+    """A base class for a Tango test harness that wraps another harness, providing some
+    functionality in the wrapper."""
 
     def __init__(self: WrapperTangoHarness, harness: TangoHarness) -> None:
         """
@@ -601,10 +593,8 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         return self
 
     def _make_devices_ready(self: StartingStateTangoHarness) -> None:
-        """
-        Helper method that applies actions and checks to ensure that devices are ready
-        to be tested.
-        """
+        """Helper method that applies actions and checks to ensure that devices are
+        ready to be tested."""
         if self._bypass_cache or self._check_ready or self._set_test_mode:
             for fqdn in self.fqdns:
                 device = self.get_device(fqdn)
@@ -617,10 +607,8 @@ class StartingStateTangoHarness(WrapperTangoHarness):
 
 
 class MockingTangoHarness(WrapperTangoHarness):
-    """
-    A Tango test harness that wraps another harness, but only uses that harness for a
-    specified set of devices under test, and mocks out all other devices.
-    """
+    """A Tango test harness that wraps another harness, but only uses that harness for a
+    specified set of devices under test, and mocks out all other devices."""
 
     def __init__(
         self: MockingTangoHarness,

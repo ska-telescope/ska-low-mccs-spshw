@@ -248,9 +248,7 @@ def test_string():
 
 
 class CommandHelper:
-    """
-    Class providing helper methods for testing.
-    """
+    """Class providing helper methods for testing."""
 
     @staticmethod
     def device_command(device_under_test, command, mock_message_uid):

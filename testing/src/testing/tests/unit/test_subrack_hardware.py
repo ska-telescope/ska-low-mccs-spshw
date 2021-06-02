@@ -68,9 +68,7 @@ def subrack_hardware_manager(logger, mock_callback):
 
 
 class TestSubrackHardwareManager:
-    """
-    Contains tests specific to SubrackHardwareManager.
-    """
+    """Contains tests specific to SubrackHardwareManager."""
 
     def test_init_simulation_mode(self, logger, mock_callback):
         """

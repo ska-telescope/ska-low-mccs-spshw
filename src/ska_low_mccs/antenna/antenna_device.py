@@ -7,10 +7,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains an implementation of the SKA Low MCCS Antenna Device Server, based
-on the architecture in SKA-TEL-LFAA-06000052-02.
-"""
+"""This module contains an implementation of the SKA Low MCCS Antenna Device Server,
+based on the architecture in SKA-TEL-LFAA-06000052-02."""
 __all__ = [
     "AntennaApiuProxy",
     "AntennaTileProxy",
@@ -129,10 +127,8 @@ class AntennaApiuProxy:
         self._power_callback = power_callback
 
     def connect(self):
-        """
-        Establish a connection to the APIU device that manages the APIU that powers this
-        device's antenna.
-        """
+        """Establish a connection to the APIU device that manages the APIU that powers
+        this device's antenna."""
         self._apiu = MccsDeviceProxy(self._fqdn, self._logger)
         self._apiu.check_initialised()
 
@@ -345,10 +341,8 @@ class AntennaTileProxy:
         self._logger = logger
 
     def connect(self):
-        """
-        Establish a connection to the tile device that manages the TPM that consumes the
-        data stream from this device's antenna.
-        """
+        """Establish a connection to the tile device that manages the TPM that consumes
+        the data stream from this device's antenna."""
         self._tile = MccsDeviceProxy(self._fqdn, self._logger)
 
 
@@ -370,9 +364,7 @@ class MccsAntenna(SKABaseDevice):
     LogicalTileAntennaId = device_property(dtype=int)
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -393,17 +385,14 @@ class MccsAntenna(SKABaseDevice):
     # General methods
     # ---------------
     def init_device(self):
-        """
-        Initialise the device; overridden here to change the Tango serialisation model.
-        """
+        """Initialise the device; overridden here to change the Tango serialisation
+        model."""
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
 
     class InitCommand(SKABaseDevice.InitCommand):
-        """
-        Initialises the command handlers for commands supported by this device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -1036,9 +1025,7 @@ class MccsAntenna(SKABaseDevice):
     # Commands
     # --------
     class DisableCommand(SKABaseDevice.DisableCommand):
-        """
-        Class for handling the Disable() command.
-        """
+        """Class for handling the Disable() command."""
 
         def do(self):
             """
@@ -1136,9 +1123,7 @@ class MccsAntenna(SKABaseDevice):
         return self._send_message("On", json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         def do(self, argin):
             """
@@ -1176,9 +1161,7 @@ class MccsAntenna(SKABaseDevice):
         return self._send_message("Off", json_args)
 
     class OffCommand(SKABaseDevice.OffCommand):
-        """
-        Class for handling the Off() command.
-        """
+        """Class for handling the Off() command."""
 
         def do(self, argin):
             """
@@ -1198,9 +1181,7 @@ class MccsAntenna(SKABaseDevice):
             return create_return(success, "off")
 
     class ResetCommand(SKABaseDevice.ResetCommand):
-        """
-        Command class for the Reset() command.
-        """
+        """Command class for the Reset() command."""
 
         def do(self):
             """

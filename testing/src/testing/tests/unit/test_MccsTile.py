@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests for MccsTile.
-"""
+"""This module contains the tests for MccsTile."""
 
 import json
 import itertools
@@ -610,9 +608,7 @@ class TestMccsTile(HelperClass):
 
 
 class TestMccsTileCommands(HelperClass):
-    """
-    Tests of MccsTile device commands.
-    """
+    """Tests of MccsTile device commands."""
 
     @pytest.mark.parametrize(
         ("device_command", "arg"),

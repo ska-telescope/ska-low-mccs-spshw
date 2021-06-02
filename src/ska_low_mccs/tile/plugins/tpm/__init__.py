@@ -1,3 +1,1 @@
-"""
-This subpackage contains plugin code for TPMs.
-"""
+"""This subpackage contains plugin code for TPMs."""

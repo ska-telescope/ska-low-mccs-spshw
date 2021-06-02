@@ -1,3 +1,1 @@
-"""
-This subpackage contains code specific to TPM version 1.6.
-"""
+"""This subpackage contains code specific to TPM version 1.6."""

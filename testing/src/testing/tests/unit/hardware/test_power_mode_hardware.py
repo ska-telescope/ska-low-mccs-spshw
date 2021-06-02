@@ -27,8 +27,8 @@ from ska_low_mccs.hardware import (
 
 
 class TestPowerModeHardware:
-    """
-    Contains tests of the hardware classes that support `off`, `standby` and `on` modes:
+    """Contains tests of the hardware classes that support `off`, `standby` and `on`
+    modes:
 
     * :py:class:`ska_low_mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
     * :py:class:`ska_low_mccs.hardware.power_mode_hardware.OnStandbyHardwareSimulator`

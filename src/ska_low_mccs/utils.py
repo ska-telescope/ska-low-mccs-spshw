@@ -1,7 +1,5 @@
 # type: ignore
-"""
-Module for MCCS utils.
-"""
+"""Module for MCCS utils."""
 from functools import wraps
 import inspect
 import json

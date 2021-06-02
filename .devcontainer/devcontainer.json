@@ -1,7 +1,7 @@
 {
     "name": "MCCS Dev",
+    "dockerFile": "../develop.Dockerfile",
     "context": "..",
-    "dockerFile": "Dockerfile",
     // Set *default* container specific settings.json values on container create.
     "settings": {
         "terminal.integrated.shell.linux": "/bin/bash",
@@ -14,10 +14,10 @@
         ],
         "coverage-gutters.showLineCoverage": true,
         "files.exclude": {
-            "**/.tox/**": true
+            "**/.tox/**": true,
         },
         "files.watcherExclude": {
-            "**/.tox/**": true
+            "**/.tox/**": true,
         }
     },
     // Add the IDs of extensions you want installed when the container is created.

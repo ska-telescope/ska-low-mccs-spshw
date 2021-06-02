@@ -86,7 +86,7 @@ class Tile12(object):
         logger=None,
     ):
         """
-        HwTile initialization.
+        Iniitalise a new Tile12 instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
@@ -1797,7 +1797,7 @@ class Tile12(object):
     @connected
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
         """
-        send raw data from the TPM.
+        Send raw data from the TPM.
 
         :param timestamp: When to start. Default now.
         :type timestamp: int, optional
@@ -1825,7 +1825,7 @@ class Tile12(object):
         seconds=0.2,
     ):
         """
-        send channelised data from the TPM.
+        Send channelised data from the TPM.
 
         :param number_of_samples: number of spectra to send
         :type number_of_samples: int, optional
@@ -1935,7 +1935,7 @@ class Tile12(object):
         self, generator, frequency=100e6, amplitude=0.0, phase=0.0, load_time=0
     ):
         """
-        test generator tone setting.
+        Test generator tone setting.
 
         :param generator: generator select. 0 or 1
         :type generator: int
@@ -1962,7 +1962,7 @@ class Tile12(object):
     @connected
     def set_test_generator_noise(self, amplitude=0.0, load_time=0):
         """
-        test generator Gaussian white noise  setting.
+        Test generator Gaussian white noise setting.
 
         :param amplitude: Tone peak amplitude, normalized to 26.03 ADC units, resolution 0.102 ADU
         :type amplitude: float
@@ -1978,7 +1978,7 @@ class Tile12(object):
     @connected
     def set_test_generator_pulse(self, freq_code, amplitude=0.0):
         """
-        test generator Gaussian white noise  setting.
+        Test generator Gaussian white noise setting.
 
         :param freq_code: Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
         :type freq_code: int
@@ -2054,7 +2054,7 @@ class Tile12(object):
     @connected
     def check_jesd_lanes(self):
         """
-        check if JESD204 lanes are error free.
+        Check if JESD204 lanes are error free.
 
         :return: true if all OK
         :rtype: bool
@@ -2098,7 +2098,7 @@ class Tile12(object):
 
     def check_jesd_error_counter(self, show_result=True):
         """
-        check JESD204 lanes errors.
+        Check JESD204 lanes errors.
 
         :param show_result: prints error counts on logger
         :type show_result: bool

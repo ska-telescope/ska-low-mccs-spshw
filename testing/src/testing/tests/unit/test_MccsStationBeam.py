@@ -315,7 +315,7 @@ class TestMccsStationBeam:
 
     def test_antennaWeights(self, device_under_test):
         """
-        test for antenna weights.
+        Test for antenna weights.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

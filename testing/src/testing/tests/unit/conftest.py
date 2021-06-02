@@ -13,8 +13,11 @@ from ska_tango_base.commands import ResultCode
 
 def pytest_itemcollected(item):
     """
-    pytest hook implementation; add the "forked" custom mark to all tests that use the
-    ``tango_harness`` fixture, causing them to be sandboxed in their own process.
+    Modify a test after it has been collected by pytest.
+
+    This pytest hook implementation adds the "forked" custom mark to all
+    tests that use the ``tango_harness`` fixture, causing them to be
+    sandboxed in their own process.
 
     :param item: the collected test for which this hook is called
     :type item: :py:class:`pytest.Item`

@@ -45,7 +45,7 @@ class TpmTestFirmware(FirmwareBlock):
     @maxinstances(2)
     def __init__(self, board, **kwargs):
         """
-        TpmTestFirmware initializer.
+        Initialize a new TpmTestFirmware instance.
 
         :param board: Pointer to board instance
         :param kwargs: named arguments

@@ -81,7 +81,7 @@ class Tile16(Tile12):
         logger=None,
     ):
         """
-        HwTile initialization.
+        Initialize a new instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.

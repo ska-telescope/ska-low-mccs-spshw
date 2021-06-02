@@ -884,9 +884,11 @@ class MccsController(SKAMaster):
     @DebugIt()
     def StandbyLow(self: MccsController) -> DevVarLongStringArrayType:
         """
-        StandbyLow Command.
+        Put MCCS into low standby mode.
 
-        :todo: What does this command do?
+        :todo: Some elements of SKA Mid have both low and full standby
+            modes, but SKA Low has no such elements. We just need a
+            Standby command, not separate StandbyLow and StandbyFull.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -930,9 +932,11 @@ class MccsController(SKAMaster):
     @DebugIt()
     def StandbyFull(self: MccsController) -> DevVarLongStringArrayType:
         """
-        StandbyFull Command.
+        Put MCCS into full standby mode.
 
-        :todo: What does this command do?
+        :todo: Some elements of SKA Mid have both low and full standby
+            modes, but SKA Low has no such elements. We just need a
+            Standby command, not separate StandbyLow and StandbyFull.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

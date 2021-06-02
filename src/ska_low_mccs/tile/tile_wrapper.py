@@ -40,7 +40,7 @@ class HwTile(object):
         tpm_version=None,
     ):
         """
-        HwTile creation.
+        Create a new HwTile instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
@@ -87,7 +87,7 @@ class HwTile(object):
         logger=None,
     ):
         """
-        HwTile initialization.
+        Initialise a new HwTile instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.

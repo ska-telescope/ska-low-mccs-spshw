@@ -1499,10 +1499,14 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def GetFirmwareAvailable(self):
         """
-        Return a dictionary containing the following information for each firmware
-        stored on the board (such as in Flash memory). For each firmware, a dictionary
-        containing the following keys with their respective values should be provided:
-        ‘design’, which is a textual name for the firmware, ‘major’, which is the major
+        Get available firmware.
+
+        Return a dictionary containing the following information for
+        each firmware stored on the board (such as in Flash memory).
+
+        For each firmware, a dictionary containing the following keys
+        with their respective values should be provided: ‘design’, which
+        is a textual name for the firmware, ‘major’, which is the major
         version number, and ‘minor’.
 
         :return: a JSON-encoded dictionary of firmware details
@@ -4488,7 +4492,9 @@ class MccsTile(SKABaseDevice):
 
         def check_allowed(self):
             """
-            command is allowed only in maintenance mode.
+            Check if command is allowed.
+
+            It is allowed only in maintenance mode.
 
             :returns: whether the command is allowed
             :rtype: bool

@@ -341,7 +341,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def ExceptionCallback(self):
         """
-        ExceptionCallback Command.
+        Command called as a callback when an exception occurs.
 
         :todo: What does this command do?
 
@@ -381,7 +381,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def DefaultAlarmOnCallback(self):
         """
-        DefaultAlarmOnCallback Command.
+        Command called by default as a callback for when an alarm is turned on.
 
         :todo: What does this command do?
 
@@ -421,7 +421,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def DefaultAlarmOffCallback(self):
         """
-        DefaultAlarmOffCallback Command.
+        Command called by default as a callback for when an alarm is turned off.
 
         :todo: What does this command do?
 
@@ -456,7 +456,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetFullReport(self):
         """
-        GetFullReport Command.
+        Get a full report.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -486,7 +486,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetCommandReport(self):
         """
-        GetCommandReport Command.
+        Get a command report.
 
         :return: a command report
         :rtype: list(str)
@@ -516,7 +516,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetAttributeReport(self):
         """
-        GetAttributeReport Command.
+        Get an attribute report.
 
         :return: an attribute report
         :rtype: list(str)
@@ -557,7 +557,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def ConstructDeviceProxyAddress(self, argin):
         """
-        ConstructDeviceProxyAddress Command.
+        Command to constrcut a device proxy address.
 
         :param argin: 'DevString'
 

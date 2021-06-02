@@ -386,7 +386,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def test_generator_active(self):
         """
-        check if the test generator is active.
+        Check if the test generator is active.
 
         :return: whether the test generator is active
         :rtype: bool
@@ -396,7 +396,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @test_generator_active.setter
     def test_generator_active(self, active):
         """
-        set the test generator active flag.
+        Set the test generator active flag.
 
         :param active: True if the generator has been activated
         :type active: bool
@@ -1092,7 +1092,7 @@ class TileHardwareManager(SimulableHardwareManager):
         load_time=0,
     ):
         """
-        test generator configuration.
+        Test generator configuration.
 
         :param frequency0: Tone frequency in Hz of DDC 0
         :type frequency0: float

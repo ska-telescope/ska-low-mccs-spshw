@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 """
 An implementation of a TPM driver.

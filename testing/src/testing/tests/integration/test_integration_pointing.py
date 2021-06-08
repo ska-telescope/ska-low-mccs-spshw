@@ -1,3 +1,4 @@
+# type: ignore
 """
 This module contains tests of interactions between ska_low_mccs classes,
 particularly tango devices.

@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* MCCS-536 - Convert Controller.Allocate to use message queue
 * MCCS-423 - Add 40G interface programming: destination IP, status
 
 ## 0.8.2

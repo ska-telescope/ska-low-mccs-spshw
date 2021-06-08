@@ -1,3 +1,4 @@
+# type: ignore
 """
 Module for MCCS utils.
 """

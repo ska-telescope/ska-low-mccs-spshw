@@ -1,3 +1,4 @@
+# type: ignore
 """
 Test for release module.
 """

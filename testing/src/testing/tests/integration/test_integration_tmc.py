@@ -1,3 +1,4 @@
+# type: ignore
 """
 This module contains tests of interactions between the TMC and
 ska_low_mccs classes.

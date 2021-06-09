@@ -16,7 +16,7 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 # PyTango imports
 from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
@@ -27,16 +27,19 @@ from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.pool import DevicePool, DevicePoolSequence
+from ska_low_mccs import MccsDeviceProxy  # type: ignore[attr-defined]
+from ska_low_mccs.pool import DevicePool, DevicePoolSequence  # type: ignore[attr-defined]
 import ska_low_mccs.release as release
-from ska_low_mccs.utils import call_with_json, tango_raise
-from ska_low_mccs.events import EventManager
-from ska_low_mccs.health import HealthModel, HealthMonitor
-from ska_low_mccs.resource import ResourceManager
-from ska_low_mccs.message_queue import MessageQueue
+from ska_low_mccs.utils import call_with_json, tango_raise  # type: ignore[attr-defined]
+from ska_low_mccs.events import EventManager  # type: ignore[attr-defined]
+from ska_low_mccs.health import HealthModel, HealthMonitor  # type: ignore[attr-defined]
+from ska_low_mccs.resource import ResourceManager  # type: ignore[attr-defined]
+from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
 
 __all__ = ["MccsController", "ControllerResourceManager", "main"]
+
+
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
 class ControllerResourceManager(ResourceManager):
@@ -225,7 +228,7 @@ class MccsController(SKAMaster):
             """
             super().__init__(target, state_model, logger)
 
-            self._thread = None
+            self._thread: Optional[threading.Thread] = None
             self._lock = threading.Lock()
             self._interrupt = False
             self._message_queue = None
@@ -428,6 +431,8 @@ class MccsController(SKAMaster):
 
         :param health: the new health value
         """
+        self._health_state: Optional[HealthState]  # type hint only
+
         if self._health_state == health:
             return
         self._health_state = health
@@ -461,7 +466,7 @@ class MccsController(SKAMaster):
         """
         return self.queue_debug
 
-    @aQueueDebug.write
+    @aQueueDebug.write  # type: ignore[no-redef]
     def aQueueDebug(self: MccsController, debug_string: str) -> None:
         """
         Update the queue debug attribute.
@@ -534,7 +539,7 @@ class MccsController(SKAMaster):
     # --------
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Startup(self: MccsController) -> Tuple[ResultCode, [str, str]]:
+    def Startup(self: MccsController) -> DevVarLongStringArrayType:
         """
         Start up the MCCS subsystem.
 
@@ -607,7 +612,7 @@ class MccsController(SKAMaster):
         json_args: str = "",
         check_is_allowed: bool = False,
         notifications: bool = False,
-    ) -> Tuple[ResultCode, [str, str]]:
+    ) -> DevVarLongStringArrayType:
         """
         Helper method to check initial status and send a message to
         execute the specified command.
@@ -634,10 +639,10 @@ class MccsController(SKAMaster):
                 self.logger.error(
                     f"_check_and_send_message() FAILED: {command_progress.name}"
                 )
-                return [
+                return (
                     [ResultCode.FAILED],
                     ["A controller command is already in progress", None],
-                ]
+                )
 
         if notifications:
             self.notify_listener(ResultCode.UNKNOWN, "", "")
@@ -646,11 +651,11 @@ class MccsController(SKAMaster):
         (result_code, message_uid, status) = self._message_queue.send_message(
             command=command, notifications=notifications, json_args=json_args
         )
-        return [[result_code], [status, message_uid]]
+        return ([result_code], [status, message_uid])
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def On(self: MccsController) -> Tuple[ResultCode, [str, str]]:
+    def On(self: MccsController) -> DevVarLongStringArrayType:
         """
         Send a message to turn the controller on.
 
@@ -702,7 +707,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Callback(self: MccsController, json_args: str) -> Tuple[ResultCode, [str, str]]:
+    def Callback(self: MccsController, json_args: str) -> DevVarLongStringArrayType:
         """
         Callback method for pool device command completion.
 
@@ -760,7 +765,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Disable(self: MccsController) -> Tuple[ResultCode, str]:
+    def Disable(self: MccsController) -> DevVarLongStringArrayType:
         """
         Disable the controller.
 
@@ -772,7 +777,7 @@ class MccsController(SKAMaster):
         command = self.get_command_object("Disable")
         (result_code, status) = command()
         self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class DisableCommand(SKABaseDevice.DisableCommand):
         """
@@ -800,7 +805,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Off(self: MccsController) -> Tuple[ResultCode, [str, str]]:
+    def Off(self: MccsController) -> DevVarLongStringArrayType:
         """
         Send a message to turn the controller off.
 
@@ -884,7 +889,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def StandbyLow(self: MccsController) -> Tuple[ResultCode, str]:
+    def StandbyLow(self: MccsController) -> DevVarLongStringArrayType:
         """
         StandbyLow Command.
 
@@ -896,7 +901,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("StandbyLow")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class StandbyFullCommand(ResponseCommand):
         """
@@ -930,7 +935,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def StandbyFull(self: MccsController) -> Tuple[ResultCode, str]:
+    def StandbyFull(self: MccsController) -> DevVarLongStringArrayType:
         """
         StandbyFull Command.
 
@@ -942,7 +947,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("StandbyFull")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class OperateCommand(ResponseCommand):
         """
@@ -978,7 +983,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Operate(self: MccsController) -> Tuple[ResultCode, str]:
+    def Operate(self: MccsController) -> DevVarLongStringArrayType:
         """
         Transit to the OPERATE operating state, ready for signal
         processing.
@@ -991,7 +996,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("Operate")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     def is_Operate_allowed(self: MccsController) -> bool:
         """
@@ -1029,7 +1034,7 @@ class MccsController(SKAMaster):
             return (result_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Allocate(self: MccsController, argin: str) -> Tuple[ResultCode, [str, str]]:
+    def Allocate(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
         Allocate a set of unallocated MCCS resources to a sub-array. The
         JSON argument specifies the overall sub-array composition in
@@ -1065,17 +1070,17 @@ class MccsController(SKAMaster):
             ResultCode.STARTED,
             ResultCode.QUEUED,
         ]:
-            return [
+            return (
                 [ResultCode.FAILED],
                 ["A controller command is already in progress", None],
-            ]
+            )
         else:
             self.notify_listener(ResultCode.UNKNOWN, "", "")
             self.logger.debug("send_message(Allocate)")
             (result_code, message_uid, status) = self._message_queue.send_message(
                 command="Allocate", json_args=argin, notifications=True
             )
-            return [[result_code], [status, message_uid]]
+            return ([result_code], [status, message_uid])
 
     class AllocateCommand(ResponseCommand):
         """
@@ -1412,7 +1417,7 @@ class MccsController(SKAMaster):
         return (ResultCode.OK, "Release resources completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Restart(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def Restart(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
         Restart an MCCS Sub-Array.
 
@@ -1426,7 +1431,7 @@ class MccsController(SKAMaster):
         handler = self.get_command_object("Restart")
         (result_code, status) = handler(argin)
         self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class RestartCommand(ResponseCommand):
         """
@@ -1486,7 +1491,7 @@ class MccsController(SKAMaster):
         return True
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Release(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def Release(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
         Release resources from an MCCS Sub-Array.
 
@@ -1506,7 +1511,7 @@ class MccsController(SKAMaster):
         handler = self.get_command_object("Release")
         (result_code, status) = handler(argin)
         self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class ReleaseCommand(ResponseCommand):
         """
@@ -1590,7 +1595,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Maintenance(self: MccsController) -> Tuple[ResultCode, str]:
+    def Maintenance(self: MccsController) -> DevVarLongStringArrayType:
         """
         Transition the MCCS to a MAINTENANCE state.
 
@@ -1602,7 +1607,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("Maintenance")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
 
 # ----------

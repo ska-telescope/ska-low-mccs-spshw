@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the ska_low_mccs.utils module.
-"""
+"""This module contains the tests for the ska_low_mccs.utils module."""
 import json
 
 import jsonschema
@@ -22,22 +20,13 @@ from ska_low_mccs.utils import call_with_json, json_input, tango_raise
 
 
 class TestUtils:
-    """
-    Test cases for ska_low_mccs.utils module.
-    """
+    """Test cases for ska_low_mccs.utils module."""
 
     def test_tango_raise_device(self):
-        """
-        Test for correct execution of `tango_raise` helper function when
-        used in a tango device class method.
-        """
+        """Test that `tango_raise` runs correctly when used in a tango device."""
 
         class DummyDevice(Device):
-            """
-            A dummy device with a `method_to_raise` method that uses the
-            `tango_raise` helper function to raise a DevFailed
-            exception.
-            """
+            """A dummy device with a dummy method that calls `tango_raise`."""
 
             def __init__(self, device_class, device_name):
                 """
@@ -52,10 +41,7 @@ class TestUtils:
 
             @command
             def method_to_raise(self):
-                """
-                A dummy command that uses the `tango_raise` helper
-                function to raise a DevFailed exception.
-                """
+                """A dummy command that calls the `tango_raise` helper function."""
                 tango_raise("raise me")
 
         with DeviceTestContext(DummyDevice) as tango_device:
@@ -67,21 +53,13 @@ class TestUtils:
             assert ex.value.args[0].severity == ErrSeverity.ERR
 
     def test_tango_raise_not_device(self):
-        """
-        Test that use of `tango_raise` helper function fails in a non-
-        device class with default argument (`origin=None`).
-        """
+        """Test that `tango_raise` fails in a non-device class."""
 
         class NonDevice:
-            """
-            Dummy class, not a tango Device.
-            """
+            """Dummy class, not a tango Device."""
 
             def illegal_use(self):
-                """
-                Dummy method that tries to use the `tango_raise` helper
-                function to raise a tango DevFailed exception.
-                """
+                """Dummy method that calls the `tango_raise` helper function."""
                 tango_raise("Never happens")
 
         nondevice = NonDevice()
@@ -96,8 +74,8 @@ class TestUtils:
     )
     def test_tango_raise_with_args(self, origin, severity):
         """
-        Test for correct execution of `tango_raise` helper function when
-        used with optional parameters.
+        Test for correct execution of `tango_raise` helper function when used with
+        optional parameters.
 
         :param origin: the source of this exception
         :type origin: str
@@ -115,9 +93,8 @@ class TestUtils:
     @json_input()
     def json_input_posargs_tester(self, stations, tiles):
         """
-        Helper method, takes arguments `stations` and `tiles` but
-        decorated to take them as a JSON string encoding of a dictionary
-        containing these keys.
+        Helper method, takes arguments `stations` and `tiles` but decorated to take them
+        as a JSON string encoding of a dictionary containing these keys.
 
         :param stations: value of "stations" key in JSON string
         :type stations: list(str)
@@ -131,8 +108,8 @@ class TestUtils:
     @json_input()
     def json_input_kwargs_tester(self, **kwargs):
         """
-        Helper method, takes any arguments but decorated to take them as
-        a JSON string encoding of a dictionary.
+        Helper method, takes any arguments but decorated to take them as a JSON string
+        encoding of a dictionary.
 
         :param kwargs: a dictionary of named arguments to this method
         :type kwargs: dict
@@ -145,9 +122,9 @@ class TestUtils:
     @json_input("MccsController_Allocate_lax.json")
     def json_input_schema_tester(self, **kwargs):
         """
-        Helper method, takes any arguments but decorated to take them as
-        a JSON string encoding of a dictionary. Additionally, this JSON
-        string must validate against the specified schema.
+        Helper method, takes any arguments but decorated to take them as a JSON string
+        encoding of a dictionary. Additionally, this JSON string must validate against
+        the specified schema.
 
         :param kwargs: a dictionary of named arguments to this method
         :type kwargs: dict
@@ -158,9 +135,7 @@ class TestUtils:
         return kwargs
 
     def test_call_with_json_posargs(self):
-        """
-        Test for `call_with_json` with posargs provided.
-        """
+        """Test for `call_with_json` with posargs provided."""
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
         returned = call_with_json(
@@ -171,9 +146,7 @@ class TestUtils:
         assert returned == arg_dict
 
     def test_call_with_json_kwargs(self):
-        """
-        Test for `call_with_json` with kwargs dictionary provided.
-        """
+        """Test for `call_with_json` with kwargs dictionary provided."""
         arg_dict = {"stations": ["station1", "station2"], "tiles": ["tile1", "tile2"]}
 
         returned = call_with_json(self.json_input_posargs_tester, **arg_dict)
@@ -235,8 +208,8 @@ class TestUtils:
     )
     def test_json_input_schema_raises(self, json_arg_string):
         """
-        Test that a method decorated with @json_input with a schema
-        argument will raise an exception on input that doesn't validate.
+        Test that a method decorated with @json_input with a schema argument will raise
+        an exception on input that doesn't validate.
 
         :todo: test for FileNotFoundException on missing schema
         :todo: test for json.JSONDecodeError on bad schema

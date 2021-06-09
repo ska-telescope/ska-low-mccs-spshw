@@ -41,14 +41,13 @@ antennas_per_tile = 16
 
 
 class AntennaInformation(object):
-    """
-    Class for holding a station's antenna information.
-    """
+    """Class for holding a station's antenna information."""
 
     def __init__(self):
         """
-        Initialize AntennaInformation object with default 256 elements
-        but no displacements, &c.
+        Initialize AntennaInformation object.
+
+        By default it will have 256 elements but no displacements, &c.
         """
         self.nof_elements = 256
         self.xyz = None
@@ -79,15 +78,15 @@ class AntennaInformation(object):
 
 
 class StationInformation(object):
-    """
-    Class for holding information about a station.
-    """
+    """Class for holding information about a station."""
 
     def __init__(self):
         """
-        Initialize StationInformation object with no location data and
+        Initialize a new instance.
+
+        The instance is initialise with no location data and with a
         default AntennaInformation object (which will have no element
-        diplacement data)
+        displacement data).
         """
         self.latitude = None
         self.longitude = None
@@ -124,18 +123,14 @@ class StationInformation(object):
 
 
 class Pointing(object):
-    """
-    Helper class for generating beamforming coefficients.
-    """
+    """Helper class for generating beamforming coefficients."""
 
     def __init__(self, station_info):
         """
-        Pointing class, generates delay and delay rates to be downloaded
-        to TPMs.
+        Pointing class, generates delay and delay rates to be downloaded to TPMs.
 
         :param station_info: Basic information for station location and antenna displacements
         """
-
         # Store arguments
         self.station = station_info
 
@@ -168,7 +163,6 @@ class Pointing(object):
 
         :param pointing_time: Time at which delays should be generated
         """
-
         # If no time is specified, get current time
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
@@ -187,14 +181,13 @@ class Pointing(object):
 
     def point_array_static(self, altitude, azimuth, pointing_time=None):
         """
-        Calculate the delay given the altitude and azimuth coordinates
-        of a sky object as astropy angles.
+        Calculate the delay given the altitude and azimuth coordinates of a sky object
+        as astropy angles.
 
         :param altitude: altitude coordinates of a sky object as astropy angle
         :param azimuth: azimuth coordinates of a sky object as astropy angles
         :param pointing_time: the time at which the pointing will be active
         """
-
         _ = pointing_time
 
         # Type conversions if required
@@ -225,7 +218,6 @@ class Pointing(object):
         :param delta_time: Delta timing for calculating delay rate
         :return: The (delay,delay rate) tuple for each antenna
         """
-
         # If no time is specified, get current time
         if pointing_time is None:
             pointing_time = Time(datetime.utcnow(), scale="utc")
@@ -277,7 +269,6 @@ class Pointing(object):
         :param start_channel: Start channel index
         :param nof_channels: Number of channels starting with start_channel
         """
-
         if self._delays is None:
             logging.error("No pointing delays generated")
             return
@@ -312,7 +303,6 @@ class Pointing(object):
         :param azimuth: The azimuth of the target astropy angle
         :return: The delay in seconds for each antenna
         """
-
         # Calculate transformation
         scale = np.array(
             [
@@ -331,8 +321,8 @@ class Pointing(object):
     @staticmethod
     def _ra_dec_to_alt_az(right_ascension, declination, time, location):
         """
-        Calculate the altitude and azimuth coordinates of a sky object
-        from right ascension and declination and time.
+        Calculate the altitude and azimuth coordinates of a sky object from right
+        ascension and declination and time.
 
         :param right_ascension: Right ascension of source - astropy Angle / string convertable to Angle
         :param declination: Declination of source - astropy Angle / string convertable to Angle
@@ -340,7 +330,6 @@ class Pointing(object):
         :param location: astropy EarthLocation
         :return: Array containing altitude and azimuth of source as astropy angle
         """
-
         # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
         # coordinates (altitude/azimuth) from the antenna's perspective.
         sky_coordinates = SkyCoord(ra=right_ascension, dec=declination, unit="deg")
@@ -364,8 +353,8 @@ class Pointing(object):
 
     def is_above_horizon(self, right_ascension, declination, pointing_time):
         """
-        Determine whether the target is above the horizon, at the
-        specified time for the reference antenna.
+        Determine whether the target is above the horizon, at the specified time for the
+        reference antenna.
 
         :param right_ascension: The right ascension of the target as a astropy angle
         :param declination: The declination of the target as an astropy angle.
@@ -391,8 +380,8 @@ class PointingDriver:
 
     def __init__(self):
         """
-        Initialize point_driver object with a default StationInformation
-        setup for array centre and create the Pointing object.
+        Initialize point_driver object with a default StationInformation setup for array
+        centre and create the Pointing object.
 
         Otherwise leave everything at None.
         """
@@ -435,8 +424,7 @@ class PointingDriver:
 
     def azel(self, az, el):
         """
-        Generate static delays to point to the given azimuth and
-        elevation.
+        Generate static delays to point to the given azimuth and elevation.
 
         :param az: Azimuth in format parseable by astropy e.g. 180d
         :type az: String
@@ -445,7 +433,6 @@ class PointingDriver:
         :return: self - ready for another command
         :rtype: pointing_driver
         """
-
         self.calc = self.pointing.point_array_static
         self.point_kwargs["altitude"] = el
         self.point_kwargs["azimuth"] = az
@@ -455,8 +442,7 @@ class PointingDriver:
 
     def radec(self, ra, dec):
         """
-        Generate delays and rates to track the given Right Ascension and
-        Declination.
+        Generate delays and rates to track the given Right Ascension and Declination.
 
         :param ra: Right Ascension in format parseable by astropy e.g. 00h42m30s
         :type ra: String
@@ -544,16 +530,14 @@ class PointingDriver:
 
     def pointing_job(self, jobs, results):
         """
-        Worker method for pointing job processes. Keep get times from
-        the jobs queue, processing delays for each time and output
-        results to results queue.
+        Worker method for pointing job processes. Keep get times from the jobs queue,
+        processing delays for each time and output results to results queue.
 
         :param jobs: queue of jobs
         :type jobs: multiprocessing.queue
         :param results: queue for results
         :type results: multiprocessing.queue
         """
-
         while not jobs.empty():
             try:
                 # Time limit on queue get in case another process got there first
@@ -577,8 +561,8 @@ class PointingDriver:
 
     def msequence(self, count, interval, nproc):
         """
-        Multiprocessing version of the sequence CLI command, adding a
-        parameter to set the number of processes.
+        Multiprocessing version of the sequence CLI command, adding a parameter to set
+        the number of processes.
 
         :param count: The number of frames to process
         :type count: int
@@ -589,7 +573,6 @@ class PointingDriver:
         :return: self for next command
         :rtype: PointingDriver
         """
-
         if not isinstance(nproc, int):
             print("nproc must be an integer")
             return
@@ -680,9 +663,7 @@ class PointingDriver:
                 np.savetxt(outfile, delays, delimiter=",")
 
     def done(self):
-        """
-        Command to signal no more output required.
-        """
+        """Command to signal no more output required."""
         print("Done")
 
 

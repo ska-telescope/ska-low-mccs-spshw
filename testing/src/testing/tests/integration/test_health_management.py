@@ -9,10 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the health
-management functionality of the SKA Low MCCS system.
-"""
+"""This module contains integration tests of health management in MCCS."""
 import time
 from tango import DevState
 import pytest
@@ -58,8 +55,8 @@ def devices_to_load():
 
 def sleep(seconds=0.2):
     """
-    Sleep for a short time. Used to allow time for events to be pushed
-    through the events subsystem.
+    Sleep for a short time. Used to allow time for events to be pushed through the
+    events subsystem.
 
     :param seconds: number of seconds to sleep; optional, defaults to 0.2
     :type seconds: float
@@ -69,8 +66,7 @@ def sleep(seconds=0.2):
 
 def check_states(dev_states):
     """
-    Helper to check that each device is in the expected state with a
-    timeout.
+    Helper to check that each device is in the expected state with a timeout.
 
     :param dev_states: the devices and expected states of them
     :type dev_states: dict
@@ -84,9 +80,7 @@ def check_states(dev_states):
 
 
 class TestHealthManagement(HelperClass):
-    """
-    Test cases for the MCCS health management subsystem.
-    """
+    """Test cases for the MCCS health management subsystem."""
 
     def test_controller_health_rollup(self, tango_harness, empty_json_dict):
         """

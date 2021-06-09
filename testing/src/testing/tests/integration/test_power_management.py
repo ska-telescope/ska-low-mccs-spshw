@@ -9,10 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the power
-management functionality of the SKA Low MCCS system.
-"""
+"""This module contains integration tests of MCCS power management functionality."""
 from time import sleep
 
 import pytest
@@ -26,9 +23,10 @@ from testing.harness.tango_harness import TangoHarness
 
 class TestPowerManagement:
     """
-    Integration test cases for MCCS subsystem's power management,
-    focussing on the path from the controller down to the tiles and
-    antennas.
+    Integration test cases for MCCS subsystem's power management.
+
+    These tests focus on the path from the controller down to the tiles
+    and antennas.
     """
 
     @pytest.fixture()
@@ -62,8 +60,7 @@ class TestPowerManagement:
         self, tango_harness: TangoHarness, mocker: pytest_mock.mocker
     ):
         """
-        Test that a MccsController device can enable an MccsSubarray
-        device.
+        Test that a MccsController device can enable an MccsSubarray device.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock

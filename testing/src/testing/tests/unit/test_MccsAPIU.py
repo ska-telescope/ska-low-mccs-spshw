@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsAPIU.
-"""
+"""This module contains the tests for MccsAPIU."""
 import random
 
 import pytest
@@ -49,9 +47,7 @@ def device_to_load():
 
 
 class TestAntennaHardwareSimulator:
-    """
-    Contains tests of the AntennaHardwareSimulator.
-    """
+    """Contains tests of the AntennaHardwareSimulator."""
 
     @pytest.fixture()
     def antenna_hardware_simulator(self):
@@ -102,9 +98,7 @@ class TestAntennaHardwareSimulator:
 
 
 class TestAPIUSimulator:
-    """
-    Contains tests of the APIUSimulator.
-    """
+    """Contains tests of the APIUSimulator."""
 
     @pytest.fixture()
     def apiu_simulator(self):
@@ -119,9 +113,9 @@ class TestAPIUSimulator:
 
     def test_apiu_on_off(self, apiu_simulator):
         """
-        Test that we can turn the APIU on and off, that when on, we can
-        read APIU attributes, and that turning the APIU on doesn't mean
-        the antennas get turned on.
+        Test that we can turn the APIU on and off, that when on, we can read APIU
+        attributes, and that turning the APIU on doesn't mean the antennas get turned
+        on.
 
         :param apiu_simulator: a simulator for APIU hardware
         :type apiu_simulator:
@@ -252,8 +246,8 @@ class TestAPIUSimulator:
 
         def check_all_antennas_on_off(mode):
             """
-            Helper function to check that all antennas are on, or that
-            all antennas are off, depending on the mode.
+            Helper function to check that all antennas are on, or that all antennas are
+            off, depending on the mode.
 
             :param mode: whether all antennas are expected to be on or
                 off. If true, all antennas are expected to be on. If
@@ -302,9 +296,7 @@ class TestAPIUSimulator:
 
 
 class TestAPIUHardwareManager:
-    """
-    Contains tests of the APIUHardwareManager.
-    """
+    """Contains tests of the APIUHardwareManager."""
 
     @pytest.fixture()
     def hardware_manager(self, mock_callback):
@@ -322,8 +314,7 @@ class TestAPIUHardwareManager:
 
     def test_init_simulation_mode(self, mock_callback):
         """
-        Test that we can't create an hardware manager that isn't in
-        simulation mode.
+        Test that we can't create an hardware manager that isn't in simulation mode.
 
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
@@ -335,8 +326,7 @@ class TestAPIUHardwareManager:
 
     def test_simulation_mode(self, hardware_manager):
         """
-        Test that we can't take the hardware manager out of simulation
-        mode.
+        Test that we can't take the hardware manager out of simulation mode.
 
         :param hardware_manager: a hardware manager for APIU hardware
         :type hardware_manager:
@@ -349,8 +339,8 @@ class TestAPIUHardwareManager:
 
     def test_on_off(self, hardware_manager, mocker):
         """
-        Test that the hardware manager receives updated values, and re-
-        evaluates device health, each time it polls the hardware.
+        Test that the hardware manager receives updated values, and re- evaluates device
+        health, each time it polls the hardware.
 
         :param hardware_manager: a hardware manager for APIU hardware
         :type hardware_manager:
@@ -416,8 +406,8 @@ class TestAPIUHardwareManager:
 
     def test_antenna_on_off(self, hardware_manager):
         """
-        Test that the hardware manager supports monitoring antennas and
-        turning them on and off.
+        Test that the hardware manager supports monitoring antennas and turning them on
+        and off.
 
         :param hardware_manager: a hardware manager for APIU hardware
         :type hardware_manager:
@@ -492,8 +482,8 @@ class TestAPIUHardwareManager:
 
     def test_antennas_on_off(self, hardware_manager):
         """
-        Test that the hardware manager supports monitoring turning all
-        antennas on and off at once.
+        Test that the hardware manager supports monitoring turning all antennas on and
+        off at once.
 
         :param hardware_manager: a hardware manager for APIU hardware
         :type hardware_manager:
@@ -502,8 +492,8 @@ class TestAPIUHardwareManager:
 
         def check_all_antennas_on_off(mode):
             """
-            Helper function to check that all antennas are on, or that
-            all antennas are off, depending on the mode.
+            Helper function to check that all antennas are on, or that all antennas are
+            off, depending on the mode.
 
             :param mode: whether all antennas are expected to be on or
                 off. If true, all antennas are expected to be on. If
@@ -568,9 +558,7 @@ class TestAPIUHardwareManager:
 
 
 class TestMccsAPIU(HelperClass, object):
-    """
-    Test class for MccsAPIU tests.
-    """
+    """Test class for MccsAPIU tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -592,7 +580,6 @@ class TestMccsAPIU(HelperClass, object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         assert device_under_test.state() == DevState.DISABLE
         assert device_under_test.status() == "The device is in DISABLE state."
         assert device_under_test.healthState == HealthState.OK

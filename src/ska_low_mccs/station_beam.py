@@ -41,11 +41,10 @@ from ska_low_mccs import MccsDeviceProxy
 
 class StationBeamHealthEvaluator(HardwareHealthEvaluator):
     """
-    A :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEval
-    uator` for a station beam. A station beam doesn't have hardware as
-    such. Here we are pretending it does because we have to set health
-    to DEGRADED if the beam is not locked, so for now we pretend that
-    the `isBeamLocked` attribute is a hardware property.
+    A :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareHealthEval uator` for a
+    station beam. A station beam doesn't have hardware as such. Here we are pretending
+    it does because we have to set health to DEGRADED if the beam is not locked, so for
+    now we pretend that the `isBeamLocked` attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -73,10 +72,9 @@ class StationBeamHealthEvaluator(HardwareHealthEvaluator):
 
 class StationBeamDriver(HardwareDriver):
     """
-    A hardware driver for a station beam. A station beam doesn't
-    actually have hardware. Here we are shoe-horning the station beam
-    implementation into the hardware model by pretending that the
-    `isBeamLocked` attribute is a hardware property.
+    A hardware driver for a station beam. A station beam doesn't actually have hardware.
+    Here we are shoe-horning the station beam implementation into the hardware model by
+    pretending that the `isBeamLocked` attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -128,10 +126,9 @@ class StationBeamDriver(HardwareDriver):
 
 class StationBeamHardwareFactory(HardwareFactory):
     """
-    A hardware factory for a station beam. A station beam doesn't
-    actually have hardware. Here we are shoe-horning the station beam
-    implementation into the hardware model by pretending that the
-    `isLocked` attribute is a hardware property.
+    A hardware factory for a station beam. A station beam doesn't actually have
+    hardware. Here we are shoe-horning the station beam implementation into the hardware
+    model by pretending that the `isLocked` attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -162,10 +159,9 @@ class StationBeamHardwareFactory(HardwareFactory):
 
 class StationBeamHardwareManager(HardwareManager):
     """
-    This class manages station beam "hardware".  A station beam doesn't
-    actually have hardware. Here we are shoe-horning the station beam
-    implementation into the hardware model by pretending that the
-    `isLocked` attribute is a hardware property.
+    This class manages station beam "hardware".  A station beam doesn't actually have
+    hardware. Here we are shoe-horning the station beam implementation into the hardware
+    model by pretending that the `isLocked` attribute is a hardware property.
 
     :todo: It seems that the health of a device can depend on more than
         just hardware health plus subservient device health. Here,
@@ -306,8 +302,8 @@ class MccsStationBeam(SKAObsDevice):
 
         def _initialise_connections(self, device):
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
@@ -332,9 +328,8 @@ class MccsStationBeam(SKAObsDevice):
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware.
+            Initialise the connection to the hardware being managed by this device. May
+            also register commands that depend upon a connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -374,10 +369,7 @@ class MccsStationBeam(SKAObsDevice):
             return True
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this
-        device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -385,9 +377,7 @@ class MccsStationBeam(SKAObsDevice):
         self.register_command_object("ApplyPointing", self.ApplyPointingCommand(*args))
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -410,9 +400,9 @@ class MccsStationBeam(SKAObsDevice):
     # ----------
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -639,9 +629,7 @@ class MccsStationBeam(SKAObsDevice):
     # Commands
     # --------
     class ConfigureCommand(ResponseCommand):
-        """
-        Class for handling the Configure(argin) command.
-        """
+        """Class for handling the Configure(argin) command."""
 
         SUCCEEDED_MESSAGE = "Configure command completed OK"
 
@@ -696,9 +684,7 @@ class MccsStationBeam(SKAObsDevice):
         return [[result_code], [status]]
 
     class ApplyPointingCommand(ResponseCommand):
-        """
-        Class for handling the ApplyPointing(argin) command.
-        """
+        """Class for handling the ApplyPointing(argin) command."""
 
         SUCCEEDED_MESSAGE = "ApplyPointing command completed OK"
         FAILED_MESSAGE = "ApplyPointing command failed"
@@ -734,8 +720,7 @@ class MccsStationBeam(SKAObsDevice):
     )
     def ApplyPointing(self):
         """
-        Apply pointing delays to antennas associated with the
-        station_beam.
+        Apply pointing delays to antennas associated with the station_beam.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

@@ -127,10 +127,7 @@ class ClusterFactory(SimulableHardwareFactory):
 
 
 class ClusterManager(SimulableHardwareManager):
-    """
-    This class manages a cluster on behalf of the
-    MccsClusterManagerDevice device.
-    """
+    """This class manages a cluster on behalf of the MccsClusterManagerDevice device."""
 
     def __init__(self, simulation_mode, _factory=None):
         """
@@ -439,9 +436,7 @@ class ClusterManager(SimulableHardwareManager):
         self._factory.hardware.ping_master_pool()
 
     def clear_job_stats(self):
-        """
-        Clear stats for closed jobs.
-        """
+        """Clear stats for closed jobs."""
         self._factory.hardware.clear_job_stats()
 
     def get_job_status(self, job_id):
@@ -494,8 +489,8 @@ class ClusterManager(SimulableHardwareManager):
 
 class MccsClusterManagerDevice(MccsGroupDevice):
     """
-    An implementation of the Cluster Manager tango device server for
-    SKA-Low-MCCS based upon architecture in SKA-TEL-LFAA-06000052-02.
+    An implementation of the Cluster Manager tango device server for SKA-Low-MCCS based
+    upon architecture in SKA-TEL-LFAA-06000052-02.
 
     **Properties:**
 
@@ -511,9 +506,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     # ---------------
 
     class InitCommand(MccsGroupDevice.InitCommand):
-        """
-        Command class for device initialisation.
-        """
+        """Command class for device initialisation."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -568,8 +561,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def _initialise_connections(self, device):
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
@@ -592,9 +585,8 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware.
+            Initialise the connection to the hardware being managed by this device. May
+            also register commands that depend upon a connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -648,9 +640,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
             return True
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.cluster_manager is not None:
             self.cluster_manager.poll()
 
@@ -699,9 +689,9 @@ class MccsClusterManagerDevice(MccsGroupDevice):
 
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -914,8 +904,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     @attribute(dtype="DevFloat", label="masterDiskPercent")
     def masterDiskPercent(self):
         """
-        Return the proportion of the master node disk that has been
-        used.
+        Return the proportion of the master node disk that has been used.
 
         :return: the proportion of the master node disk that has been
             used, as a percentage
@@ -947,8 +936,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemPercent(self):
         """
-        Return the proportion of memory that has been used on the master
-        node.
+        Return the proportion of memory that has been used on the master node.
 
         :return:  the proportion of memory that has been used on the
             master node
@@ -959,8 +947,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     @attribute(dtype="DevFloat", label="masterMemPercent")
     def masterMemUsed(self):
         """
-        Return the amount of memory that has been used on the master
-        node.
+        Return the amount of memory that has been used on the master node.
 
         :return:  the amount of memory that has been used on the master
             node
@@ -1032,9 +1019,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     # --------
 
     class StartJobCommand(ResponseCommand):
-        """
-        Class for handling the StartJob(argin) command.
-        """
+        """Class for handling the StartJob(argin) command."""
 
         SUCCEEDED_MESSAGE = "StartJob command completed OK"
 
@@ -1081,9 +1066,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return [[return_code], [message]]
 
     class StopJobCommand(ResponseCommand):
-        """
-        Class for handling the StopJob(argin) command.
-        """
+        """Class for handling the StopJob(argin) command."""
 
         SUCCEEDED_MESSAGE = "StopJob command completed OK"
 
@@ -1130,9 +1113,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return [[return_code], [message]]
 
     class SubmitJobCommand(BaseCommand):
-        """
-        Class for handling the SubmitJob(argin) command.
-        """
+        """Class for handling the SubmitJob(argin) command."""
 
         def do(self, argin):
             """
@@ -1170,9 +1151,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return handler(argin)
 
     class GetJobStatusCommand(BaseCommand):
-        """
-        Class for handling the GetJobStatus(argin) command.
-        """
+        """Class for handling the GetJobStatus(argin) command."""
 
         def do(self, argin):
             """
@@ -1210,9 +1189,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return handler(argin)
 
     class ClearJobStatsCommand(ResponseCommand):
-        """
-        Class for handling the ClearJobStats() command.
-        """
+        """Class for handling the ClearJobStats() command."""
 
         SUCCEEDED_MESSAGE = "Job stats cleared"
 
@@ -1252,9 +1229,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
         return [[return_code], [message]]
 
     class PingMasterPoolCommand(ResponseCommand):
-        """
-        Class for handling the PingMasterPool() command.
-        """
+        """Class for handling the PingMasterPool() command."""
 
         SUCCEEDED_MESSAGE = "PingMasterPool command completed OK"
 
@@ -1282,8 +1257,7 @@ class MccsClusterManagerDevice(MccsGroupDevice):
     @DebugIt()
     def PingMasterPool(self):
         """
-        Pings all nodes in shadow master pool, to maintain status of
-        each.
+        Pings all nodes in shadow master pool, to maintain status of each.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

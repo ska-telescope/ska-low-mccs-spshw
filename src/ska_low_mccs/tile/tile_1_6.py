@@ -38,8 +38,8 @@ def connected(f):
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
         """
-        Wrapper that checks the TPM is connected before allowing the
-        wrapped method to proceed.
+        Wrapper that checks the TPM is connected before allowing the wrapped method to
+        proceed.
 
         :param self: the method called
         :type self: object
@@ -81,7 +81,7 @@ class Tile16(Tile12):
         logger=None,
     ):
         """
-        HwTile initialization.
+        Initialize a new instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
@@ -267,24 +267,18 @@ class Tile16(Tile12):
         self.start_acquisition()
 
     def f2f_aurora_test_start(self):
-        """
-        Start test on Aurora f2f link.
-        """
+        """Start test on Aurora f2f link."""
         for f2f in self.tpm.tpm_f2f:
             f2f.start_tx_test()
         for f2f in self.tpm.tpm_f2f:
             f2f.start_rx_test()
 
     def f2f_aurora_test_check(self):
-        """
-        Get test results for Aurora f2f link Tests printed on stdout.
-        """
+        """Get test results for Aurora f2f link Tests printed on stdout."""
         for f2f in self.tpm.tpm_f2f:
             f2f.get_test_result()
 
     def f2f_aurora_test_stop(self):
-        """
-        Stop test on Aurora f2f link.
-        """
+        """Stop test on Aurora f2f link."""
         for f2f in self.tpm.tpm_f2f:
             f2f.stop_test()

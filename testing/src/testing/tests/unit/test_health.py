@@ -7,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the ska_low_mccs.health module.
-"""
+"""This module contains the tests for the ska_low_mccs.health module."""
 import pytest
 
 # from tango import DevState
@@ -36,10 +34,9 @@ from testing.harness.tango_harness import TangoHarness
 @pytest.fixture()
 def mock_factory(mocker):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -232,8 +229,8 @@ class TestDeviceHealthMonitor:
 
     def test(self, tango_harness: TangoHarness, mocker, mock_callback, logger):
         """
-        Test that a DeviceHealthMonitor registers a change in device
-        health when the device emits relevant events.
+        Test that a DeviceHealthMonitor registers a change in device health when the
+        device emits relevant events.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
@@ -285,8 +282,8 @@ class TestHealthMonitor:
 
     def test(self, tango_harness: TangoHarness, mocker, mock_callback, logger):
         """
-        Test that a HealthMonitor registers changes in device health
-        when devices emit relevant events.
+        Test that a HealthMonitor registers changes in device health when devices emit
+        relevant events.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
@@ -354,8 +351,8 @@ class TestHealthModel:
         logger,
     ):
         """
-        Test that the health of a HealthModel changes with changes to
-        hardware health and/or changes to the health of managed devices.
+        Test that the health of a HealthModel changes with changes to hardware health
+        and/or changes to the health of managed devices.
 
         :param with_hardware: whether the model manages hardware or not
         :type with_hardware: bool
@@ -406,8 +403,8 @@ class TestMutableHealthMonitor:
 
     def test(self, tango_harness: TangoHarness, mocker, mock_callback, logger):
         """
-        Test that one can add and remove device, and a
-        MutableHealthMonitor behaves as expected.
+        Test that one can add and remove device, and a MutableHealthMonitor behaves as
+        expected.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.mock
@@ -477,8 +474,8 @@ class TestMutableHealthModel:
         self, with_hardware, tango_harness: TangoHarness, mocker, mock_callback, logger
     ):
         """
-        Test that the health of a MutableHealthModel changes with
-        changes to the collection of managed devices.
+        Test that the health of a MutableHealthModel changes with changes to the
+        collection of managed devices.
 
         :param with_hardware: whether the model manages hardware or not
         :type with_hardware: bool

@@ -6,8 +6,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements infrastructure for hardware management in the
-MCCS subsystem.
+This module implements infrastructure for hardware management in the MCCS subsystem.
 
 Conceptually, the model comprises:
 

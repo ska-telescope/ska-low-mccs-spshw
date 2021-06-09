@@ -1,8 +1,5 @@
 # type: ignore
-"""
-This module contains tests of interactions between ska_low_mccs classes,
-particularly tango devices.
-"""
+"""This module contains integration tests of MCCS device interactions."""
 
 import pytest
 from time import sleep
@@ -49,14 +46,11 @@ def devices_to_load():
 
 
 class TestMccsIntegration:
-    """
-    Integration test cases for the Mccs device classes.
-    """
+    """Integration test cases for the Mccs device classes."""
 
     def check_states(self, dev_states):
         """
-        Helper to check that each device is in the expected state with a
-        timeout.
+        Helper to check that each device is in the expected state with a timeout.
 
         :param dev_states: the devices and expected states of them
         :type dev_states: dict
@@ -70,8 +64,8 @@ class TestMccsIntegration:
 
     def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
         """
-        Test that an MccsController device can allocate resources to an
-        MccsSubarray device.
+        Test that an MccsController device can allocate resources to an MccsSubarray
+        device.
 
         :param tango_harness: a test harness for tango devices
         """
@@ -177,8 +171,8 @@ class TestMccsIntegration:
 
     def test_controller_release_subarray(self, tango_harness: TangoHarness):
         """
-        Test that an MccsController device can release the resources of
-        an MccsSubarray device.
+        Test that an MccsController device can release the resources of an MccsSubarray
+        device.
 
         :param tango_harness: a test harness for tango devices
         """
@@ -282,9 +276,8 @@ class TestMccsIntegration:
 
     def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
         """
-        Test that a write to attribute subarrayId on an MccsStation
-        device also results in an update to attribute subarrayId on its
-        MccsTiles.
+        Test that a write to attribute subarrayId on an MccsStation device also results
+        in an update to attribute subarrayId on its MccsTiles.
 
         :param tango_harness: a test harness for tango devices
         """

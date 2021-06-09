@@ -8,10 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains an implementation of the MCCS Subrack Management
-Board Tango device and related classes.
-"""
+"""This module implements a subrack Tango device for MCCS."""
 import threading
 import json
 import time
@@ -72,9 +69,9 @@ def create_return(success, action):
 
 class SubrackHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
-    A placeholder for a class that implements a policy by which the
-    subrack hardware manager evaluates the health of the subrack
-    management board hardware that it manages.
+    A placeholder for a class that implements a policy by which the subrack hardware
+    manager evaluates the health of the subrack management board hardware that it
+    manages.
 
     At present this just inherits from the base class unchanged.
     """
@@ -417,8 +414,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def is_tpm_on(self, logical_tpm_id):
         """
-        Check whether this subrack is supplying power to a specified
-        TPM.
+        Check whether this subrack is supplying power to a specified TPM.
 
         :param logical_tpm_id: this subrack's internal id for the
             TPM being queried
@@ -432,10 +428,9 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
     def turn_on_tpm(self, logical_tpm_id):
         """
-        Turn on a specified TPM. Reading the device status just after a
-        command execution can return the old power status since the
-        hardware takes a finite time to update it. For this reason a
-        delay of 0.1s is added.
+        Turn on a specified TPM. Reading the device status just after a command
+        execution can return the old power status since the hardware takes a finite time
+        to update it. For this reason a delay of 0.1s is added.
 
         :param logical_tpm_id: the subrack's internal id for the
             TPM to be turned on
@@ -520,10 +515,7 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         return all_off
 
     def _update_are_tpms_on(self):
-        """
-        Update our record of which TPMs are off/on, ensureing that
-        registered callbacks are called.
-        """
+        """Update our record of which TPMs are off/on, calling registered callbacks."""
         are_tpms_on = self._factory.hardware.are_tpms_on()
         if are_tpms_on is None:
             are_tpms_on = [False] * self._tpm_count
@@ -583,11 +575,10 @@ class SubrackHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
 
 class MccsSubrack(SKABaseDevice):
     """
-    An implementation of MCCS Subrack device. The device is controlled
-    by a remote microcontroller, which answers to simple commands. It
-    has the capabilities to switch on and off individual TPMs, to
-    measure temperatures, voltages and currents, and to set-check fan
-    speeds.
+    An implementation of MCCS Subrack device. The device is controlled by a remote
+    microcontroller, which answers to simple commands. It has the capabilities to switch
+    on and off individual TPMs, to measure temperatures, voltages and currents, and to
+    set-check fan speeds.
 
     This class is a subclass of
     :py:class:`ska_tango_base.SKABaseDevice`.
@@ -607,18 +598,16 @@ class MccsSubrack(SKABaseDevice):
 
     def init_device(self):
         """
-        Initialise the device; overridden here to change the Tango
-        serialisation model.
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
         """
         util = Util.instance()
         util.set_serial_model(SerialModel.NO_SYNC)
         super().init_device()
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this
-        device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -646,10 +635,7 @@ class MccsSubrack(SKABaseDevice):
         )
 
     class InitCommand(SKABaseDevice.InitCommand):
-        """
-        Class that implements device initialisation for the MCCS Subrack
-        device.
-        """
+        """Class that implements device initialisation for the MCCS Subrack device."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -725,8 +711,8 @@ class MccsSubrack(SKABaseDevice):
 
         def _initialise_connections(self, device):
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
@@ -749,9 +735,8 @@ class MccsSubrack(SKABaseDevice):
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware.
+            Initialise the connection to the hardware being managed by this device. May
+            also register commands that depend upon a connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -804,9 +789,7 @@ class MccsSubrack(SKABaseDevice):
             self.state_model.perform_action(action)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -830,9 +813,9 @@ class MccsSubrack(SKABaseDevice):
     # ----------
     def are_tpms_on_changed(self, are_tpms_on):
         """
-        Callback to be called whenever power to the TPMs changes;
-        responsible for updating the tango side of things i.e. making
-        sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever power to the TPMs changes; responsible for
+        updating the tango side of things i.e. making sure the attribute is up to date,
+        and events are pushed.
 
         :param are_tpms_on: whether each TPM is pwoered
         :type are_tpms_on: list(bool)
@@ -844,9 +827,9 @@ class MccsSubrack(SKABaseDevice):
 
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -921,9 +904,9 @@ class MccsSubrack(SKABaseDevice):
     )
     def backplaneTemperatures(self):
         """
-        Return the temperatures of the subrack backplane. Two values are
-        returned, respectively for the first (bays 1-4) and second (bays
-        5-8) halves of the backplane.
+        Return the temperatures of the subrack backplane. Two values are returned,
+        respectively for the first (bays 1-4) and second (bays 5-8) halves of the
+        backplane.
 
         :return: the temperatures of the subrack backplane
         :rtype: tuple(float)
@@ -937,10 +920,9 @@ class MccsSubrack(SKABaseDevice):
         unit="Celsius",
     )
     def boardTemperatures(self):
-
         """
-        Return the temperatures of the subrack management board. Two
-        values are returned.
+        Return the temperatures of the subrack management board. Two values are
+        returned.
 
         :return: the temperatures of the subrack management board
         :rtype: tuple(float)
@@ -950,8 +932,8 @@ class MccsSubrack(SKABaseDevice):
     @attribute(dtype="float", label="Board current")
     def boardCurrent(self):
         """
-        Return the subrack management board current. Total current
-        provided by the two power supplies.
+        Return the subrack management board current. Total current provided by the two
+        power supplies.
 
         :return: the subrack management board current
         :rtype: float
@@ -965,8 +947,8 @@ class MccsSubrack(SKABaseDevice):
     )
     def subrackFanSpeeds(self):
         """
-        Return the subrack fan speeds, in RPM Four fans are present in
-        the subrack back side.
+        Return the subrack fan speeds, in RPM Four fans are present in the subrack back
+        side.
 
         :return: the subrack fan speeds
         :rtype: tuple(float)
@@ -980,11 +962,10 @@ class MccsSubrack(SKABaseDevice):
     )
     def subrackFanSpeedsPercent(self):
         """
-        Return the subrack fan speeds in percent. This is the commanded
-        value, the relation between this level and the actual RPMs is
-        not linear. Subrack speed is managed automatically by the
-        controller, by default (see subrack_fan_mode) Commanded speed is
-        the same for fans 1-2 and 3-4.
+        Return the subrack fan speeds in percent. This is the commanded value, the
+        relation between this level and the actual RPMs is not linear. Subrack speed is
+        managed automatically by the controller, by default (see subrack_fan_mode)
+        Commanded speed is the same for fans 1-2 and 3-4.
 
         :return: the subrack fan speeds in percent
         :rtype: list(float)
@@ -998,11 +979,10 @@ class MccsSubrack(SKABaseDevice):
     )
     def subrackFanMode(self):
         """
-        Return the subrackFanMode. The mode is 1 (AUTO) at power-on When
-        mode is AUTO, the fan speed is managed automatically. When mode
-        is MANUAL (0), the fan speed is directly controlled using the
-        SetSubrackFanSpeed command Mode is the same for fans 1-2 and
-        3-4.
+        Return the subrackFanMode. The mode is 1 (AUTO) at power-on When mode is AUTO,
+        the fan speed is managed automatically. When mode is MANUAL (0), the fan speed
+        is directly controlled using the SetSubrackFanSpeed command Mode is the same for
+        fans 1-2 and 3-4.
 
         :return: the subrack fan mode, 1 AUTO 0 MANUAL
         :rtype: tuple(int)
@@ -1031,8 +1011,8 @@ class MccsSubrack(SKABaseDevice):
     )
     def tpmPresent(self):
         """
-        Return info about TPM board present on subrack. Returns a list
-        of 8 Bool specifying presence of TPM in bays 1-8.
+        Return info about TPM board present on subrack. Returns a list of 8 Bool
+        specifying presence of TPM in bays 1-8.
 
         :return: the TPMs detected
         :rtype: tuple(bool)
@@ -1046,9 +1026,9 @@ class MccsSubrack(SKABaseDevice):
     )
     def tpmSupplyFault(self):
         """
-        Return info about about TPM supply fault status. Returns a list
-        of 8 int specifying fault codeof TPM in bays 1-8 Current codes
-        are 0 (no fault) or 1 (fault)
+        Return info about about TPM supply fault status. Returns a list of 8 int
+        specifying fault codeof TPM in bays 1-8 Current codes are 0 (no fault) or 1
+        (fault)
 
         :return: the TPM supply fault status
         :rtype: tuple(int)
@@ -1058,8 +1038,8 @@ class MccsSubrack(SKABaseDevice):
     @attribute(dtype=(float,), label="TPM temperatures", max_dim_x=8)
     def tpmTemperatures(self):
         """
-        Return the temperatures of the TPMs housed in subrack bays.
-        COmmand is not yet implemented.
+        Return the temperatures of the TPMs housed in subrack bays. COmmand is not yet
+        implemented.
 
         :return: the TPM temperatures
         :rtype: tuple(float)
@@ -1087,8 +1067,8 @@ class MccsSubrack(SKABaseDevice):
     )
     def tpmVoltages(self):
         """
-        Return the voltage at the power connector in the subrack bays
-        Voltage is (approx) 0 for powered off bays.
+        Return the voltage at the power connector in the subrack bays Voltage is
+        (approx) 0 for powered off bays.
 
         :return: the TPM voltages
         :rtype: tuple(float)
@@ -1102,8 +1082,8 @@ class MccsSubrack(SKABaseDevice):
     )
     def tpmCurrents(self):
         """
-        Return the currents of the subrack bays (hence the currents of
-        the TPMs housed in those bays).
+        Return the currents of the subrack bays (hence the currents of the TPMs housed
+        in those bays).
 
         :return: the TPM currents
         :rtype: tuple(float)
@@ -1142,8 +1122,8 @@ class MccsSubrack(SKABaseDevice):
     )
     def powerSupplyFanSpeeds(self):
         """
-        Return the powerSupply FanSpeed for the two redundant power
-        supplies in percent of maximum.
+        Return the powerSupply FanSpeed for the two redundant power supplies in percent
+        of maximum.
 
         :return: the power supply fan speeds
         :rtype: tuple(float)
@@ -1171,8 +1151,7 @@ class MccsSubrack(SKABaseDevice):
     )
     def powerSupplyPowers(self):
         """
-        Return the power supply power for the two redundant power
-        supplies.
+        Return the power supply power for the two redundant power supplies.
 
         :return: the power supply power
         :rtype: tuple(float)
@@ -1186,8 +1165,7 @@ class MccsSubrack(SKABaseDevice):
     )
     def powerSupplyVoltages(self):
         """
-        Return the power supply voltages for the two redundant power
-        supplies.
+        Return the power supply voltages for the two redundant power supplies.
 
         :return: the power supply voltages
         :rtype: tuple(float)
@@ -1211,9 +1189,9 @@ class MccsSubrack(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Disable`
-            command for this :py:class:`.MccsSubrack` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
+            :py:class:`.MccsSubrack` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1243,9 +1221,9 @@ class MccsSubrack(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Standby`
-            command for this :py:class:`.MccsSubrack` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Standby` command for this
+            :py:class:`.MccsSubrack` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1284,9 +1262,9 @@ class MccsSubrack(SKABaseDevice):
 
         def do(self, argin):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
-            command for this :py:class:`.MccsStation` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
+            :py:class:`.MccsStation` device.
 
             :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
@@ -1303,9 +1281,7 @@ class MccsSubrack(SKABaseDevice):
             return create_return(success, "off")
 
     class IsTpmOnCommand(BaseCommand):
-        """
-        The command class for the IsTpmOn command.
-        """
+        """The command class for the IsTpmOn command."""
 
         def do(self, argin):
             """
@@ -1337,8 +1313,7 @@ class MccsSubrack(SKABaseDevice):
 
     def is_IsTpmOn_allowed(self):
         """
-        Whether the ``Reset()`` command is allowed to be run in the
-        current state.
+        Whether the ``Reset()`` command is allowed to be run in the current state.
 
         :returns: whether the ``Reset()`` command is allowed to be run in the
             current state
@@ -1399,8 +1374,7 @@ class MccsSubrack(SKABaseDevice):
 
     def is_PowerOnTpm_allowed(self):
         """
-        Whether the ``PowerOnTpm()`` command is allowed to be run in the
-        current state.
+        Whether the ``PowerOnTpm()`` command is allowed to be run in the current state.
 
         :returns: whether the ``PowerOnTpm()`` command is allowed to be run in the
             current state
@@ -1416,8 +1390,8 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def PowerOnTpm(self, argin):
         """
-        Power up the TPM. Power on an individual TPM, specified by the
-        TPM ID (range 1-8) Execution time is ~1.5 seconds.
+        Power up the TPM. Power on an individual TPM, specified by the TPM ID (range
+        1-8) Execution time is ~1.5 seconds.
 
         :param argin: the logical id of the TPM to power
             up
@@ -1433,9 +1407,7 @@ class MccsSubrack(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerOffTpmCommand(ResponseCommand):
-        """
-        The command class for the PowerOffTpm command.
-        """
+        """The command class for the PowerOffTpm command."""
 
         def do(self, argin):
             """
@@ -1467,8 +1439,7 @@ class MccsSubrack(SKABaseDevice):
 
     def is_PowerOffTpm_allowed(self):
         """
-        Whether the ``PowerOffTpm()`` command is allowed to be run in
-        the current state.
+        Whether the ``PowerOffTpm()`` command is allowed to be run in the current state.
 
         :returns: whether the ``PowerOffTpm()`` command is allowed to be run in the
             current state
@@ -1484,8 +1455,8 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def PowerOffTpm(self, argin):
         """
-        Power down the TPM. Power off an individual TPM, specified by
-        the TPM ID (range 1-8) Execution time is ~1.5 seconds.
+        Power down the TPM. Power off an individual TPM, specified by the TPM ID (range
+        1-8) Execution time is ~1.5 seconds.
 
         :param argin: the logical id of the TPM to power
             down
@@ -1501,9 +1472,7 @@ class MccsSubrack(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerUpTpmsCommand(ResponseCommand):
-        """
-        The command class for the PowerUpTpms command.
-        """
+        """The command class for the PowerUpTpms command."""
 
         def do(self):
             """
@@ -1531,8 +1500,7 @@ class MccsSubrack(SKABaseDevice):
 
     def is_PowerUpTpms_allowed(self):
         """
-        Whether the ``PowerUpTpm()`` command is allowed to be run in the
-        current state.
+        Whether the ``PowerUpTpm()`` command is allowed to be run in the current state.
 
         :returns: whether the ``PowerUpTpms()`` command is allowed to be run in the
             current state
@@ -1547,9 +1515,9 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def PowerUpTpms(self):
         """
-        Power up the TPMs. Power on all the TPMs in the subrack.
-        Execution time depends on the number of TPMs present, for a
-        fully populated subrack it may exceed 10 seconds.
+        Power up the TPMs. Power on all the TPMs in the subrack. Execution time depends
+        on the number of TPMs present, for a fully populated subrack it may exceed 10
+        seconds.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1561,9 +1529,7 @@ class MccsSubrack(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerDownTpmsCommand(ResponseCommand):
-        """
-        The command class for the PowerDownTpms command.
-        """
+        """The command class for the PowerDownTpms command."""
 
         def do(self):
             """
@@ -1591,8 +1557,8 @@ class MccsSubrack(SKABaseDevice):
 
     def is_PowerDownTpms_allowed(self):
         """
-        Whether the ``PowerDownTpms()`` command is allowed to be run in
-        the current state.
+        Whether the ``PowerDownTpms()`` command is allowed to be run in the current
+        state.
 
         :returns: whether the ``PowerDownTpms()`` command is allowed to be run in the
             current state
@@ -1607,9 +1573,9 @@ class MccsSubrack(SKABaseDevice):
     @DebugIt()
     def PowerDownTpms(self):
         """
-        Power down all the TPMs. Power off all the TPMs in the subrack.
-        Execution time depends on the number of TPMs present, for a
-        fully populated subrack it may exceed 10 seconds.
+        Power down all the TPMs. Power off all the TPMs in the subrack. Execution time
+        depends on the number of TPMs present, for a fully populated subrack it may
+        exceed 10 seconds.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1694,9 +1660,8 @@ class MccsSubrack(SKABaseDevice):
 
         def do(self, argin):
             """
-            Hook for the implementation of
-            py:meth:`.MccsSubrack.SetSubrackFanMode` command
-            functionality.
+            Hook for the implementation of py:meth:`.MccsSubrack.SetSubrackFanMode`
+            command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -1755,9 +1720,8 @@ class MccsSubrack(SKABaseDevice):
 
         def do(self, argin):
             """
-            Hook for the implementation of
-            py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command
-            functionality.
+            Hook for the implementation of py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed`
+            command functionality.
 
             :param argin: a JSON-encoded dictionary of arguments
             :type argin: str
@@ -1821,8 +1785,7 @@ class MccsSubrack(SKABaseDevice):
 
     def _send_message(self, command, json_args):
         """
-        Helper method to send a message to execute the specified
-        command.
+        Helper method to send a message to execute the specified command.
 
         :param command: the command to send a message for
         :type command: str
@@ -1873,18 +1836,16 @@ class MccsSubrack(SKABaseDevice):
         return self._send_message("On", json_args=json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         SUCCEEDED_MESSAGE = "Subrack On command completed OK"
         FAILED_MESSAGE = "Subrack On command failed"
 
         def do(self, argin):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.On`
-            command for this :py:class:`.MccsStation` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.On` command for this
+            :py:class:`.MccsStation` device.
 
             :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
@@ -1913,7 +1874,6 @@ def main(args=None, **kwargs):
     :return: exit code
     :rtype: int
     """
-
     return MccsSubrack.run_server(args=args, **kwargs)
 
 

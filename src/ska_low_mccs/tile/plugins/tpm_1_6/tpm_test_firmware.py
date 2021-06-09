@@ -33,9 +33,7 @@ from time import sleep
 
 
 class Tpm16TestFirmware(TpmTestFirmware):
-    """
-    FirmwareBlock tests class.
-    """
+    """FirmwareBlock tests class."""
 
     @firmware({"design": "tpm_test", "major": "1", "minor": ">1"})
     @compatibleboards(BoardMake.Tpm16Board)
@@ -139,9 +137,7 @@ class Tpm16TestFirmware(TpmTestFirmware):
         self._device_name = "fpga1" if self._device is Device.FPGA_1 else "fpga2"
 
     def start_ddr_initialisation(self):
-        """
-        Start DDR initialisation.
-        """
+        """Start DDR initialisation."""
         # In TPM 1.6 ddr_vdd is controled with en_fpga so it's already enabled to program FPGAs
         # if self.board['board.regfile.ctrl.en_ddr_vdd'] == 0:
         #     self.board['board.regfile.ctrl.en_ddr_vdd'] = 1
@@ -151,10 +147,7 @@ class Tpm16TestFirmware(TpmTestFirmware):
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
     def initialise_ddr(self):
-        """
-        Initialise DDR.
-        """
-
+        """Initialise DDR."""
         for n in range(3):
             logging.debug(self._device_name + " DDR3 reset")
             self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1

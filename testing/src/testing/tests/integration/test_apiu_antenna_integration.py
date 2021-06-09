@@ -9,11 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the power
-management functionality of the SKA Low MCCS system between the subrack
-and the TPM.
-"""
+"""This module contains integration tests of MCCS power management functionality."""
 from time import sleep
 import pytest
 from tango import DevState
@@ -53,8 +49,7 @@ def devices_to_load():
 
 def check_states(dev_states):
     """
-    Helper to check that each device is in the expected state with a
-    timeout.
+    Helper to check that each device is in the expected state with a timeout.
 
     :param dev_states: the devices and expected states of them
     :type dev_states: dict
@@ -68,9 +63,7 @@ def check_states(dev_states):
 
 
 class TestApiuAntennaIntegration(HelperClass):
-    """
-    Integration test cases for MCCS subsystem's power management.
-    """
+    """Integration test cases for MCCS subsystem's power management."""
 
     def test_antenna_on(self, tango_harness: TangoHarness, empty_json_dict: str):
         """
@@ -114,9 +107,8 @@ class TestApiuAntennaIntegration(HelperClass):
 
     def test_apiu_antenna_on(self, tango_harness: TangoHarness):
         """
-        Test that wnen we tell the APIU drive to turn a given antenna
-        on, the antenna device recognises that its hardware has been
-        powered, and changes state.
+        Test that wnen we tell the APIU drive to turn a given antenna on, the antenna
+        device recognises that its hardware has been powered, and changes state.
 
         :param tango_harness: a test harness for tango devices
         """

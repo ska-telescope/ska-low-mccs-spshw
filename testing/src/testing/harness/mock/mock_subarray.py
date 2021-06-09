@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements infrastructure for mocking MCCS subarray devices.
-"""
+"""This module implements infrastructure for mocking MCCS subarray devices."""
 from __future__ import annotations  # allow forward references in type hints
 
 import unittest.mock
@@ -26,9 +24,7 @@ __all__ = ["MockSubarrayBuilder"]
 
 
 class MockSubarrayBuilder(MockDeviceBuilder):
-    """
-    This module implements a mock builder for MCCS subarray devices.
-    """
+    """This module implements a mock builder for MCCS subarray devices."""
 
     def __init__(
         self: MockSubarrayBuilder, from_factory: unittest.mock.Mock = unittest.mock.Mock

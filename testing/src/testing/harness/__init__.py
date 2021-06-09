@@ -5,10 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This subpackage contains modules for helper classes in the SKA Low MCCS
-tests.
-"""
+"""This subpackage contains modules for helper classes in the SKA Low MCCS tests."""
 
 
 __all__ = ["HelperClass"]

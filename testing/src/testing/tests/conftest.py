@@ -1,7 +1,7 @@
 # type: ignore
 """
-This module contains pytest fixtures and other test setups common to all
-ska_low_mccs tests: unit, integration and functional (BDD).
+This module contains pytest fixtures and other test setups common to all ska_low_mccs
+tests: unit, integration and functional (BDD).
 """
 import logging
 import typing
@@ -34,9 +34,9 @@ def pytest_sessionstart(session):
 
 def pytest_addoption(parser):
     """
-    Pytest hook; implemented to add the `--true-context` option, used to
-    indicate that a true Tango subsystem is available, so there is no
-    need for a :py:class:`tango.test_context.MultiDeviceTestContext`.
+    Pytest hook; implemented to add the `--true-context` option, used to indicate that a
+    true Tango subsystem is available, so there is no need for a
+    :py:class:`tango.test_context.MultiDeviceTestContext`.
 
     :param parser: the command line options parser
     :type parser: :py:class:`argparse.ArgumentParser`
@@ -55,10 +55,9 @@ def pytest_addoption(parser):
 @pytest.fixture()
 def initial_mocks():
     """
-    Fixture that registers device proxy mocks prior to patching. By
-    default no initial mocks are registered, but this fixture can be
-    overridden by test modules/classes that need to register initial
-    mocks.
+    Fixture that registers device proxy mocks prior to patching. By default no initial
+    mocks are registered, but this fixture can be overridden by test modules/classes
+    that need to register initial mocks.
 
     :return: an empty dictionary
     :rtype: dict
@@ -69,10 +68,9 @@ def initial_mocks():
 @pytest.fixture()
 def mock_factory():
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :return: a factory for device proxy mocks
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
@@ -83,9 +81,9 @@ def mock_factory():
 @pytest.fixture(scope="session")
 def tango_harness_factory(request, logger):
     """
-    Returns a factory for creating a test harness for testing Tango
-    devices. The Tango context used depends upon whether or not pytest
-    was invoked with the `--true-context` option.
+    Returns a factory for creating a test harness for testing Tango devices. The Tango
+    context used depends upon whether or not pytest was invoked with the `--true-
+    context` option.
 
     If yes, then this harness assumes that devices are already running;
     that is, we are testing a deployed system.
@@ -166,8 +164,8 @@ def tango_harness_factory(request, logger):
 @pytest.fixture()
 def tango_config() -> typing.Dict[str, str]:
     """
-    Fixture that returns basic configuration information for a Tango
-    test harness, such as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness, such
+    as whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """
@@ -250,15 +248,12 @@ def test_string():
 
 
 class CommandHelper:
-    """
-    Class providing helper methods for testing.
-    """
+    """Class providing helper methods for testing."""
 
     @staticmethod
     def device_command(device_under_test, command, mock_message_uid):
         """
-        Help method to transition the device under test into the desired
-        state.
+        Help method to transition the device under test into the desired state.
 
         As commands use the message queue, a callback is required to complete
         the commands. This method simply sends the desired command and then
@@ -307,8 +302,7 @@ class CommandHelper:
     @staticmethod
     def check_device_state(device, state):
         """
-        Helper to check that the device is in the expected state with a
-        timeout.
+        Helper to check that the device is in the expected state with a timeout.
 
         :param device: the devices to check
         :type device: dict

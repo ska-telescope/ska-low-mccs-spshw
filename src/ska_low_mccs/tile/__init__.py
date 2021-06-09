@@ -6,9 +6,10 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This subpackage contains modules that implement the MCCS tile, including
-an operational Tango device, a demonstrator Tango device, modules for
-driving and simulating TPM hardware, and a CLI.
+This subpackage implement tile functionality for the MCCS.
+
+It includes an operational Tango device, a demonstrator Tango device,
+modules for driving and simulating TPM hardware, and a CLI.
 """
 
 

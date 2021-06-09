@@ -6,8 +6,10 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements a message queue that executes messages (in a
-serial fashion) in its own thread.
+This module implements a message queue.
+
+The message queue addresses issues of concurrency by executes messages
+(in a serial fashion) in its own thread.
 """
 import threading
 import json
@@ -20,8 +22,8 @@ from ska_tango_base.commands import ResultCode
 
 class MessageQueue(threading.Thread):
     """
-    A class for managing a queue of messages and the serial execution of
-    said messages in the queue's execution thread.
+    A class for managing a queue of messages and the serial execution of said messages
+    in the queue's execution thread.
 
     A Tango device can use this message queue mechanism to run in a
     separate thread. This thread will monitor and execute messages
@@ -32,9 +34,7 @@ class MessageQueue(threading.Thread):
     """
 
     class Message:
-        """
-        A message that is inserted onto the message queue.
-        """
+        """A message that is inserted onto the message queue."""
 
         def __init__(
             self,
@@ -79,8 +79,7 @@ class MessageQueue(threading.Thread):
 
     def _qdebug(self, message):
         """
-        A method to push a message onto the queue debug attribute of the
-        target device.
+        A method to push a message onto the queue debug attribute of the target device.
 
         :param message: message string to add to the queue debug attribute
         """
@@ -88,9 +87,7 @@ class MessageQueue(threading.Thread):
             self._target.queue_debug += f"{message}\n"
 
     def run(self):
-        """
-        Thread run method executing the message queue loop.
-        """
+        """Thread run method executing the message queue loop."""
         # https://pytango.readthedocs.io/en/stable/howto.html
         # #using-clients-with-multithreading
         with EnsureOmniThread():
@@ -104,8 +101,8 @@ class MessageQueue(threading.Thread):
 
     def _notify_listener(self, result_code, message_uid, status):
         """
-        Abstract method that requires implementation by derived concrete
-        class for specific notifications.
+        Abstract method that requires implementation by derived concrete class for
+        specific notifications.
 
         :param result_code: Result code of the command being executed
         :param message_uid: The message uid that needs a push notification
@@ -219,9 +216,7 @@ class MessageQueue(threading.Thread):
         self._execute_message(message)
 
     def terminate_thread(self):
-        """
-        External call to gracefully terminate this thread.
-        """
+        """External call to gracefully terminate this thread."""
         self._logger.warning(
             f"Device={self._target.get_name()} terminate message queue"
         )
@@ -236,9 +231,9 @@ class MessageQueue(threading.Thread):
         callback: str = "",
     ):
         """
-        Add message to the Tango device queue with the option of using
-        Tango push notifications to indicate message progress and
-        completion to subscribed listeners.
+        Add message to the Tango device queue with the option of using Tango push
+        notifications to indicate message progress and completion to subscribed
+        listeners.
 
         :param command: Command to add to Tango device's message queue
         :param json_args: JSON encoded arguments to send to the command
@@ -285,9 +280,9 @@ class MessageQueue(threading.Thread):
         notifications: bool = False,
     ):
         """
-        Add message to the Tango device queue with the option of using
-        Tango push notifications to indicate message progress and
-        completion to subscribed listeners.
+        Add message to the Tango device queue with the option of using Tango push
+        notifications to indicate message progress and completion to subscribed
+        listeners.
 
         :param command: Command to add to Tango device's message queue
         :param respond_to_fqdn: Response message FQDN

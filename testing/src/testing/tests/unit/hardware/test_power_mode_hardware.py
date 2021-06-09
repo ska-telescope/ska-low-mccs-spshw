@@ -27,9 +27,8 @@ from ska_low_mccs.hardware import (
 
 
 class TestPowerModeHardware:
-    """
-    Contains tests of the hardware classes that support `off`, `standby`
-    and `on` modes:
+    """Contains tests of the hardware classes that support `off`, `standby` and `on`
+    modes:
 
     * :py:class:`ska_low_mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
     * :py:class:`ska_low_mccs.hardware.power_mode_hardware.OnStandbyHardwareSimulator`
@@ -40,8 +39,8 @@ class TestPowerModeHardware:
     @pytest.fixture()
     def hardware_driver(self, request):
         """
-        Fixture that returns a hardware driver (actually a simulator for
-        testing purposes)
+        Fixture that returns a hardware driver (actually a simulator for testing
+        purposes)
 
         :param request: A pytest object giving access to the requesting test
             context.
@@ -63,7 +62,6 @@ class TestPowerModeHardware:
         :return: a hardware simulator
         :rtype: :py:class:`~ska_low_mccs.hardware.power_mode_hardware.OnOffHardwareSimulator`
         """
-
         parameters = getattr(request, "param", None)
         if parameters is None:
             return OnOffHardwareSimulator(power_mode=PowerMode.OFF)
@@ -92,13 +90,11 @@ class TestPowerModeHardware:
         :return: a hardware manager
         :rtype: :py:class:`~ska_low_mccs.hardware.power_mode_hardware.OnOffHardwareManager`
         """
-
         return OnStandbyOffHardwareManager(hardware_factory, hardware_health_evaluator)
 
     class TestHardwareSimulator:
         """
-        This class contains the tests for the OnOffHardwareSimulator
-        class.
+        This class contains the tests for the OnOffHardwareSimulator class.
 
         (The OnOffHardwareSimulator class is a software representation
         of hardware that can be turned on and off.)
@@ -418,9 +414,9 @@ class TestPowerModeHardware:
             self, hardware_simulator, command_name, expected_power_mode
         ):
             """
-            Test that we can use the off, on and standby commands to
-            transition simulator power mode, as delimited by the
-            particular hardware simulator in use.
+            Test that we can use the off, on and standby commands to transition
+            simulator power mode, as delimited by the particular hardware simulator in
+            use.
 
             :param hardware_simulator: the hardware simulator under
                 test

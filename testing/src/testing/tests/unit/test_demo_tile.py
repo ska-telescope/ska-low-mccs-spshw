@@ -45,9 +45,9 @@ def device_to_load():
 @pytest.fixture()
 def initial_mocks(mock_factory, request):
     """
-    Fixture that registers device proxy mocks prior to patching. The
-    default fixture is overridden here to ensure that a mock subrack
-    responds suitably to actions taken on it by the TilePowerManager.
+    Fixture that registers device proxy mocks prior to patching. The default fixture is
+    overridden here to ensure that a mock subrack responds suitably to actions taken on
+    it by the TilePowerManager.
 
     :param mock_factory: a factory for
         :py:class:`tango.DeviceProxy` mocks
@@ -73,10 +73,9 @@ def initial_mocks(mock_factory, request):
 @pytest.fixture()
 def mock_factory(mocker, request):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -99,8 +98,7 @@ def mock_factory(mocker, request):
 
 def check_states(dev_states):
     """
-    Helper to check that each device is in the expected state with a
-    timeout.
+    Helper to check that each device is in the expected state with a timeout.
 
     :param dev_states: the devices and expected states of them
     :type dev_states: dict
@@ -114,9 +112,7 @@ def check_states(dev_states):
 
 
 class TestDemoTile:
-    """
-    This class contains the tests for the DemoTile device class.
-    """
+    """This class contains the tests for the DemoTile device class."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -146,8 +142,7 @@ class TestDemoTile:
 
     def test_health(self, device_under_test, empty_json_dict):
         """
-        Test that device health changes to failed when we simulate
-        connection failure.
+        Test that device health changes to failed when we simulate connection failure.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

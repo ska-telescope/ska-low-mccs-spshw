@@ -4,9 +4,7 @@
 #
 #
 #
-"""
-Release information for SKA MCCS Python Package.
-"""
+"""Release information for SKA MCCS Python Package."""
 import sys
 from typing import Optional
 

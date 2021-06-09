@@ -45,8 +45,8 @@ def subrack_simulator(logger):
 @pytest.fixture()
 def subrack_hardware_manager(logger, mock_callback):
     """
-    Fixture that returns a hardware manager for the MCCS subrack device,
-    in hardware simulation mode.
+    Fixture that returns a hardware manager for the MCCS subrack device, in hardware
+    simulation mode.
 
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
@@ -68,14 +68,11 @@ def subrack_hardware_manager(logger, mock_callback):
 
 
 class TestSubrackHardwareManager:
-    """
-    Contains tests specific to SubrackHardwareManager.
-    """
+    """Contains tests specific to SubrackHardwareManager."""
 
     def test_init_simulation_mode(self, logger, mock_callback):
         """
-        Test that we cannot create an hardware manager that isn't in
-        simulation mode.
+        Test that we cannot create an hardware manager that isn't in simulation mode.
 
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
@@ -93,8 +90,7 @@ class TestSubrackHardwareManager:
 
     def test_simulation_mode(self, subrack_hardware_manager):
         """
-        Test that we can't take the subrack hardware manager out of
-        simulation mode.
+        Test that we can't take the subrack hardware manager out of simulation mode.
 
         :param subrack_hardware_manager: a manager for subrack hardware
         :type subrack_hardware_manager:
@@ -107,11 +103,10 @@ class TestSubrackHardwareManager:
 
 class TestCommon:
     """
-    Because the SubrackHardwareManager is designed to pass commands
-    through to the SubrackBoardSimulator or SubrackDriver that it is
-    driving, many commands are common to SubrackHardwareManager and
-    SubrackBoardSimulator, and they will also be common to the
-    SubrackDriver when we eventually implement it.
+    Because the SubrackHardwareManager is designed to pass commands through to the
+    SubrackBoardSimulator or SubrackDriver that it is driving, many commands are common
+    to SubrackHardwareManager and SubrackBoardSimulator, and they will also be common to
+    the SubrackDriver when we eventually implement it.
 
     Therefore this class contains common tests, parametrised to test
     against each class
@@ -120,10 +115,9 @@ class TestCommon:
     @pytest.fixture(params=["subrack_simulator", "subrack_hardware_manager"])
     def hardware_under_test(self, subrack_simulator, subrack_hardware_manager, request):
         """
-        Return the hardware under test. This is parametrised to return
-        both a TPM simulator and a subrack hardware manager, so any test
-        that relies on this fixture will be run twice: once for each
-        hardware type.
+        Return the hardware under test. This is parametrised to return both a TPM
+        simulator and a subrack hardware manager, so any test that relies on this
+        fixture will be run twice: once for each hardware type.
 
         :param subrack_simulator: an instance of the simulator
         :param subrack_hardware_manager: an instance of the subrack hardware manager
@@ -187,9 +181,9 @@ class TestCommon:
     )
     def test_read_attribute(self, hardware_under_test, attribute_name, expected_value):
         """
-        Tests that read-only attributes take certain known initial
-        values. This is a weak test; over time we should find ways to
-        more thoroughly test each of these independently.
+        Tests that read-only attributes take certain known initial values. This is a
+        weak test; over time we should find ways to more thoroughly test each of these
+        independently.
 
         :param hardware_under_test: the hardware object under test. This
             could be a SubrackBoardSimulator, or a SubrackHardwareManager, or, when
@@ -218,9 +212,8 @@ class TestCommon:
     )
     def test_command(self, hardware_under_test, command_name, num_args):
         """
-        Test of commands that require no parameters don't really do
-        anything, these tests simply check that the command can be
-        called.
+        Test of commands that require no parameters don't really do anything, these
+        tests simply check that the command can be called.
 
         :param hardware_under_test: the hardware object under test. This
             could be a SubrackBoardSimulator, or a SubrackHardwareManager, or, when
@@ -250,9 +243,8 @@ class TestCommon:
     )
     def test_command_numeric(self, hardware_under_test, command_name, num_args):
         """
-        Test of commands that require numeric parameters don't really do
-        anything, these tests simply check that the command can be
-        called.
+        Test of commands that require numeric parameters don't really do anything, these
+        tests simply check that the command can be called.
 
         :param hardware_under_test: the hardware object under test. This
             could be a SubrackBoardSimulator, or a SubrackHardwareManager, or, when

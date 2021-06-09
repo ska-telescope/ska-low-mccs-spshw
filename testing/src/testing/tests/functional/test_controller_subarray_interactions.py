@@ -1,8 +1,5 @@
 # type: ignore
-"""
-This module contains the pytest-bdd implementation of the Gherkin BDD
-tests for TMC and MCCS interactions.
-"""
+"""This module contains the BDD tests for TMC-MCCS interactions."""
 import json
 import time
 
@@ -439,8 +436,7 @@ def component_is_ready_to_action_a_subarray(
     component_name, action, controller, subarrays, stations
 ):
     """
-    Asserts that a component is ready to perform an action on a
-    subarray.
+    Asserts that a component is ready to perform an action on a subarray.
 
     :param component_name: name of the component
     :type component_name: str
@@ -477,7 +473,6 @@ def subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate):
     :type cached_obsstate:
         dict<string, :py:class:`~ska_tango_base.control_model.ObsState`>
     """
-
     for i in subarrays:
         obsstate = subarrays[i].obsstate
         assert (obsstate == ObsState.IDLE) or (obsstate == ObsState.EMPTY)

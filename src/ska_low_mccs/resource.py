@@ -5,10 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements infrastructure for resource management in the
-MCCS subsystem, separate from or common to all devices.
-"""
+"""This module implements infrastructure for resource management in MCCS."""
 from enum import Enum
 from ska_tango_base.control_model import HealthState
 
@@ -41,8 +38,8 @@ class ResourceState(Enum):
 
 class ResourceAvailabilityPolicy:
     """
-    This inner class implements a resource allocation policy for the
-    resources belonging to the parent.
+    This inner class implements a resource allocation policy for the resources belonging
+    to the parent.
 
     Initialise with a list of allocatable health states:
     (OK = 0, DEGRADED = 1, FAILED = 2, UNKNOWN = 3).
@@ -82,9 +79,7 @@ class ResourceAvailabilityPolicy:
         self._allocatable_health_states = list(health_states)
 
     def reset(self):
-        """
-        Reset to the default set of states allowed for allocation.
-        """
+        """Reset to the default set of states allowed for allocation."""
         self._allocatable_health_states = [HealthState.OK]
 
 
@@ -153,8 +148,8 @@ class Resource:
 
     def is_not_available(self):
         """
-        Check if this resource is not available A resource is not
-        available if it is ASSIGNED or UNAVAILABLE.
+        Check if this resource is not available A resource is not available if it is
+        ASSIGNED or UNAVAILABLE.
 
         :return: True if not unavailable
         :rtype: bool
@@ -166,8 +161,8 @@ class Resource:
 
     def is_healthy(self):
         """
-        Check if this resource is in a healthy state, as defined by its
-        resource availability policy.
+        Check if this resource is in a healthy state, as defined by its resource
+        availability policy.
 
         :return: True if healthy
         :rtype: bool
@@ -245,9 +240,7 @@ class Resource:
         # Unassigned or unavailable resource does not change state
 
     def make_unavailable(self):
-        """
-        Mark the resource as unavailable for assignment.
-        """
+        """Mark the resource as unavailable for assignment."""
         # Change resource state to unavailable
         # If it was previously AVAILABLE (not ASSIGNED) we can just switch
         if self.is_available():
@@ -258,9 +251,7 @@ class Resource:
             pass
 
     def make_available(self):
-        """
-        Mark the resource as available for assignment.
-        """
+        """Mark the resource as available for assignment."""
         # Change resource state to available
         # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
         if self.is_unavailable():
@@ -323,8 +314,8 @@ class ResourceManager:
 
     def _except_on_unmanaged(self, fqdns):
         """
-        Raise an exception if any of the listed FQDNs are not being
-        managed by this manager.
+        Raise an exception if any of the listed FQDNs are not being managed by this
+        manager.
 
         :param fqdns: The FQDNs to check
         :type fqdns: list(str)
@@ -368,8 +359,7 @@ class ResourceManager:
 
     def update_resource_health(self, fqdn, health_state):
         """
-        Update the health state of a resource managed by this resource
-        manager.
+        Update the health state of a resource managed by this resource manager.
 
         :param fqdn: The FQDN of the resource for which the HealthState is
             being updated
@@ -406,7 +396,6 @@ class ResourceManager:
         :return: List of FQDNs assigned to owner_id
         :rtype: list(str)
         """
-
         return [
             fqdn
             for fqdn, res in self._resources.items()
@@ -415,11 +404,10 @@ class ResourceManager:
 
     def query_allocation(self, fqdns, new_owner):
         """
-        Test if a (re)allocation is allowed, and if so, return lists of
-        FQDNs to assign and to release. If the allocation is not
-        permitted due to some FQDNs being allocated to another owner
-        already, the list of blocking FQDNs is returned as the
-        ReleaseList.
+        Test if a (re)allocation is allowed, and if so, return lists of FQDNs to assign
+        and to release. If the allocation is not permitted due to some FQDNs being
+        allocated to another owner already, the list of blocking FQDNs is returned as
+        the ReleaseList.
 
         :param fqdns: The list of FQDNs we would like to assign
         :type fqdns: list(str)
@@ -433,7 +421,6 @@ class ResourceManager:
             ReleaseList (list): The list of FQDNs to release, or None
         :rtype: tuple (bool, list of strings, list of strings)
         """
-
         self._except_on_unmanaged(fqdns)
 
         # Make a list of any FQDNs which are blocking this allocation
@@ -484,7 +471,6 @@ class ResourceManager:
         :type new_owner: int
         :raises ValueError: if any of the FQDNs are unavailable or not healthy
         """
-
         self._except_on_unmanaged(devices.values())
         for device_id in devices.keys():
             try:
@@ -509,8 +495,8 @@ class ResourceManager:
 
     def make_unavailable(self, fqdns):
         """
-        For each resource in the given list of FQDNs make its
-        availability state unavailable.
+        For each resource in the given list of FQDNs make its availability state
+        unavailable.
 
         :param fqdns: The list of device FQDNs to make unavailable
         :type fqdns: list(str)
@@ -521,8 +507,8 @@ class ResourceManager:
 
     def make_available(self, fqdns):
         """
-        For each resource in the given list of FQDNs make its
-        availability state available.
+        For each resource in the given list of FQDNs make its availability state
+        available.
 
         :param fqdns: The list of device FQDNs to make unavailable
         :type fqdns: list(str)
@@ -541,7 +527,6 @@ class ResourceManager:
         :return: fqdn
         :rtype: string
         """
-
         for fqdn, res in self._resources.items():
             if res._device_id == device_id:
                 return fqdn
@@ -560,8 +545,5 @@ class ResourceManager:
         )
 
     def reset_resource_availability_policy(self):
-        """
-        Reset to the default list of health states which permit
-        allocation.
-        """
+        """Reset to the default list of health states which permit allocation."""
         self.resource_availability_policy.reset()

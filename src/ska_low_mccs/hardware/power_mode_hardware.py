@@ -5,10 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements classes for MCCS hardware for which the power
-mode can be managed; i.e. we can turn it on and off.
-"""
+"""This module implements MCCS hardware for which the power mode can be managed."""
 import enum
 
 from ska_low_mccs.hardware import HardwareDriver, HardwareManager, HardwareSimulator
@@ -32,9 +29,7 @@ __all__ = [
 
 
 class PowerMode(enum.IntEnum):
-    """
-    Enumerated type for hardware power mode.
-    """
+    """Enumerated type for hardware power mode."""
 
     UNKNOWN = 0
     """
@@ -86,8 +81,8 @@ class BasePowerModeHardwareDriver(HardwareDriver):
 
     def check_power_mode(self, power_mode, error=None):
         """
-        Helper method to check that the hardware power mode is what it
-        is expected to be, and raise a suitable error if it is not.
+        Helper method to check that the hardware power mode is what it is expected to
+        be, and raise a suitable error if it is not.
 
         :param power_mode: the expected power mode
         :type power_mode: :py:class:`PowerMode`
@@ -104,10 +99,7 @@ class BasePowerModeHardwareDriver(HardwareDriver):
 
 
 class OnOffHardwareDriver(BasePowerModeHardwareDriver):
-    """
-    A mixin that adds an abstract :py:meth:`.off` method to a hardware
-    driver.
-    """
+    """A mixin that adds an abstract :py:meth:`.off` method to a hardware driver."""
 
     def off(self):
         """
@@ -120,10 +112,7 @@ class OnOffHardwareDriver(BasePowerModeHardwareDriver):
 
 
 class OnStandbyHardwareDriver(BasePowerModeHardwareDriver):
-    """
-    A mixin that adds an abstract :py:meth:`.standby` method to a
-    hardware driver.
-    """
+    """A mixin that adds an abstract :py:meth:`.standby` method to a hardware driver."""
 
     def standby(self):
         """
@@ -150,8 +139,8 @@ class OnStandbyOffHardwareDriver(OnOffHardwareDriver, OnStandbyHardwareDriver):
 
 class BasePowerModeHardwareSimulator(HardwareSimulator, BasePowerModeHardwareDriver):
     """
-    A mixin that add an :py:meth:`.on` method and :py:attr:`.power_mode`
-    property to a :py:class:`.HardwareSimulator`.
+    A mixin that add an :py:meth:`.on` method and :py:attr:`.power_mode` property to a
+    :py:class:`.HardwareSimulator`.
     """
 
     def __init__(
@@ -179,9 +168,7 @@ class BasePowerModeHardwareSimulator(HardwareSimulator, BasePowerModeHardwareDri
         self._power_mode = power_mode
 
     def on(self):
-        """
-        Turn me on.
-        """
+        """Turn me on."""
         self.check_connected()
         self._power_mode = PowerMode.ON
 
@@ -204,9 +191,7 @@ class OnOffHardwareSimulator(BasePowerModeHardwareSimulator, OnOffHardwareDriver
     """
 
     def off(self):
-        """
-        Turn me off.
-        """
+        """Turn me off."""
         self.check_connected()
         self._power_mode = PowerMode.OFF
 
@@ -221,9 +206,7 @@ class OnStandbyHardwareSimulator(
     """
 
     def standby(self):
-        """
-        Put me into low-power standby mode.
-        """
+        """Put me into low-power standby mode."""
         self.check_connected()
         self._power_mode = PowerMode.STANDBY
 
@@ -293,10 +276,7 @@ class BasePowerModeHardwareManager(HardwareManager):
 
 
 class OnOffHardwareManager(BasePowerModeHardwareManager):
-    """
-    A :py:class:`.HardwareManager` mixin that adds an :py:meth:`.off`
-    method.
-    """
+    """A :py:class:`.HardwareManager` mixin that adds an :py:meth:`.off` method."""
 
     def off(self):
         """

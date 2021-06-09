@@ -37,9 +37,7 @@ def device_to_load():
 
 
 class TestDemoAPIU(HelperClass):
-    """
-    This class contains the tests for the DemoAPIU device class.
-    """
+    """This class contains the tests for the DemoAPIU device class."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

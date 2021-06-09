@@ -1,8 +1,5 @@
 # type: ignore
-"""
-This module contains pytest fixtures and other test setups for the
-ska_low_mccs functional (BDD) tests.
-"""
+"""This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
 import pytest
 import typing
 
@@ -29,10 +26,9 @@ def pytest_configure(config):
 @pytest.fixture(scope="module")
 def initial_mocks():
     """
-    Fixture that registers device proxy mocks prior to patching. By
-    default no initial mocks are registered, but this fixture can be
-    overridden by test modules/classes that need to register initial
-    mocks.
+    Fixture that registers device proxy mocks prior to patching. By default no initial
+    mocks are registered, but this fixture can be overridden by test modules/classes
+    that need to register initial mocks.
 
     (Overruled here with the same implementation, just to give the
     fixture module scope)
@@ -46,10 +42,9 @@ def initial_mocks():
 @pytest.fixture(scope="module")
 def mock_factory():
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     (Overruled here with the same implementation, just to give the
     fixture module scope)
@@ -63,8 +58,8 @@ def mock_factory():
 @pytest.fixture(scope="module")
 def tango_config():
     """
-    Fixture that returns basic configuration information for a Tango
-    test harness, such as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness, such
+    as whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """

@@ -7,9 +7,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-The command line interface for the MCCS Tile device server.
-"""
+"""The command line interface for the MCCS Tile device server."""
 import functools
 import json
 import types
@@ -23,8 +21,8 @@ from ska_tango_base.commands import ResultCode
 
 class CliMeta(type):
     """
-    Metaclass to catch and dissect :py:class:`tango.DevFailed` and other
-    exceptions for all class methods.
+    Metaclass to catch and dissect :py:class:`tango.DevFailed` and other exceptions for
+    all class methods.
 
     They get turned into `fire.core.FireError` exceptions.
     """
@@ -105,9 +103,8 @@ def command_result_as_string(method):
 
     @functools.wraps(method)
     def _wrapper(*args, **kwargs):
-        """
-        Wrapper that ensure device command methods return results
-        formatted as a a two-line string.
+        """Wrapper that ensure device command methods return results formatted as a a
+        two- line string.
 
         :param args: positional arguments to the wrapped method
         :type args: list
@@ -249,8 +246,8 @@ class MccsTileCli(metaclass=CliMeta):
         seconds=0.2,
     ):
         """
-        Transmit a snapshot containing channelized data totalling
-        number_of_samples spectra.
+        Transmit a snapshot containing channelized data totalling number_of_samples
+        spectra.
 
         :param num_samples: number of spectra to send, defaults to 1024
         :type num_samples: int, optional
@@ -306,8 +303,8 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def ConfigureIntegratedBeamData(self, integration_time=0.5):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time.
+        Configure the transmission of integrated beam data with the provided integration
+        time.
 
         :param integration_time: integration time in seconds, defaults
             to 0.5
@@ -323,8 +320,8 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def ConfigureIntegratedChannelData(self, integration_time=0.5):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure the transmission of integrated channel data with the provided
+        integration time.
 
         :param integration_time: integration_time in seconds (defaults
             to 0.5)
@@ -388,9 +385,7 @@ class MccsTileCli(metaclass=CliMeta):
 
 
 def main():
-    """
-    Entry point for CLI.
-    """
+    """Entry point for CLI."""
     Fire(MccsTileCli)
 
 

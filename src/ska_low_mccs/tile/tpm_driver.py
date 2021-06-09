@@ -17,9 +17,7 @@ from pyfabil.base.definitions import Device
 
 
 class TpmDriver(HardwareDriver):
-    """
-    Hardware driver for a TPM.
-    """
+    """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
     # all methods are completed and tested
@@ -130,8 +128,7 @@ class TpmDriver(HardwareDriver):
     @property
     def firmware_name(self):
         """
-        Return the name of the firmware that this TPM simulator is
-        running.
+        Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware name
         :rtype: str
@@ -142,8 +139,7 @@ class TpmDriver(HardwareDriver):
     @property
     def firmware_version(self):
         """
-        Return the name of the firmware that this TPM simulator is
-        running.
+        Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware version (major.minor)
         :rtype: str
@@ -165,8 +161,7 @@ class TpmDriver(HardwareDriver):
     @property
     def is_programmed(self):
         """
-        Return whether this TPM is programmed (i.e. firmware has been
-        downloaded to it)
+        Return whether this TPM is programmed (i.e. firmware has been downloaded to it)
 
         :return: whether this TPM is programmed
         :rtype: bool
@@ -214,8 +209,7 @@ class TpmDriver(HardwareDriver):
 
     def cpld_flash_write(self, bitfile):
         """
-        Flash a program to the tile's CPLD (complex programmable logic
-        device).
+        Flash a program to the tile's CPLD (complex programmable logic device).
 
         :param bitfile: the program to be flashed
         :type bitfile: bytes
@@ -227,10 +221,7 @@ class TpmDriver(HardwareDriver):
         raise NotImplementedError
 
     def initialise(self):
-        """
-        Download firmware, if not already downloaded, and initializes
-        tile.
-        """
+        """Download firmware, if not already downloaded, and initializes tile."""
         self.logger.debug("TpmDriver: initialise")
         if self.tile.tpm is None or not self.tile.tpm.is_programmed():
             self.tile.program_fpgas(self._firmware_name)
@@ -355,8 +346,8 @@ class TpmDriver(HardwareDriver):
     @property
     def fpga1_time(self):
         """
-        Return the FPGA1 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc.
+        Return the FPGA1 clock time. Useful for detecting clock skew, propagation
+        delays, contamination delays, etc.
 
         :return: the FPGA1 clock time
         :rtype: int
@@ -368,8 +359,8 @@ class TpmDriver(HardwareDriver):
     @property
     def fpga2_time(self):
         """
-        Return the FPGA2 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc.
+        Return the FPGA2 clock time. Useful for detecting clock skew, propagation
+        delays, contamination delays, etc.
 
         :return: the FPGA2 clock time
         :rtype: int
@@ -532,7 +523,6 @@ class TpmDriver(HardwareDriver):
         :param dst_port: port of the destination
         :type dst_port: int
         """
-
         self.logger.debug("TpmDriver: configure_40g_core")
         self.tile.configure_40g_core(
             core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
@@ -571,10 +561,10 @@ class TpmDriver(HardwareDriver):
     @property
     def arp_table(self):
         """
-        Check that ARP table has been populated in for all used cores
-        40G interfaces use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for
-        beamformer, 1 for LMC 10G interfaces use cores 0,1 (fpga0) and
-        4,5 (fpga1) for beamforming, and 2, 6 for LMC with only one ARP.
+        Check that ARP table has been populated in for all used cores 40G interfaces use
+        cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC 10G
+        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
+        LMC with only one ARP.
 
         :return: list of core id and arp table populated
         :rtype: dict(list)
@@ -593,8 +583,7 @@ class TpmDriver(HardwareDriver):
         lmc_mac=None,
     ):
         """
-        Specify whether control data will be transmitted over 1G or 40G
-        networks.
+        Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param mode: "1g" or "10g"
         :type mode: str
@@ -661,9 +650,8 @@ class TpmDriver(HardwareDriver):
 
     def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
-        Load calibration coefficients. These may include any rotation
-        matrix (e.g. the parallactic angle), but do not include the
-        geometric delay.
+        Load calibration coefficients. These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
@@ -676,11 +664,10 @@ class TpmDriver(HardwareDriver):
 
     def load_calibration_curve(self, antenna, beam, calibration_coefficients):
         """
-        Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency. It
-        will be combined together with tapering coefficients and beam
-        angles by ComputeCalibrationCoefficients, and made active by
-        SwitchCalibrationBank. The calibration coefficients do not
+        Load calibration curve. This is the frequency dependent response for a single
+        antenna and beam, as a function of frequency. It will be combined together with
+        tapering coefficients and beam angles by ComputeCalibrationCoefficients, and
+        made active by SwitchCalibrationBank. The calibration coefficients do not
         include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
@@ -736,9 +723,8 @@ class TpmDriver(HardwareDriver):
 
     def compute_calibration_coefficients(self):
         """
-        Compute the calibration coefficients from previously specified
-        gain curves, tapering weights and beam angles, load them in the
-        hardware.
+        Compute the calibration coefficients from previously specified gain curves,
+        tapering weights and beam angles, load them in the hardware.
 
         It must be followed by switch_calibration_bank() to make these
         active.
@@ -748,10 +734,9 @@ class TpmDriver(HardwareDriver):
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in
-        seconds/second. The delay_array specifies the delay and delay
-        rate for each antenna. beam_index specifies which beam is
-        desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in seconds/second. The
+        delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :type delay_array: list(float)
@@ -791,9 +776,7 @@ class TpmDriver(HardwareDriver):
             self._is_beamformer_running = True
 
     def stop_beamformer(self):
-        """
-        Stop the beamformer.
-        """
+        """Stop the beamformer."""
         self.logger.debug("TpmDriver: Stop beamformer")
         self.tile.stop_beamformer()
         self._is_beamformer_running = False
@@ -805,10 +788,9 @@ class TpmDriver(HardwareDriver):
         last_channel=511,
     ):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedChannelData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -825,9 +807,7 @@ class TpmDriver(HardwareDriver):
         )
 
     def stop_integrated_channel_data(self):
-        """
-        Stop the integrated channel data.
-        """
+        """Stop the integrated channel data."""
         self.logger.debug("TpmDriver: Stop integrated channel data")
         self.tile.stop_integrated_channel_data()
 
@@ -838,10 +818,9 @@ class TpmDriver(HardwareDriver):
         last_channel=191,
     ):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedBeamData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -858,16 +837,12 @@ class TpmDriver(HardwareDriver):
         )
 
     def stop_integrated_beam_data(self):
-        """
-        Stop the integrated beam data.
-        """
+        """Stop the integrated beam data."""
         self.logger.debug("TpmDriver: Stop integrated beam data")
         self.tile.stop_integrated_beam_data()
 
     def stop_integrated_data(self):
-        """
-        Stop the integrated data.
-        """
+        """Stop the integrated data."""
         self.logger.debug("TpmDriver: Stop integrated data")
         self.tile.stop_integrated_data()
 
@@ -894,8 +869,8 @@ class TpmDriver(HardwareDriver):
         seconds=0.2,
     ):
         """
-        Transmit a snapshot containing channelized data totalling
-        number_of_samples spectra.
+        Transmit a snapshot containing channelized data totalling number_of_samples
+        spectra.
 
         :param number_of_samples: number of spectra to send, defaults to 1024
         :type number_of_samples: int, optional
@@ -957,9 +932,7 @@ class TpmDriver(HardwareDriver):
         self.tile.send_beam_data(timestamp, seconds)
 
     def stop_data_transmission(self):
-        """
-        Stop data transmission for send_channelised_data_continuous.
-        """
+        """Stop data transmission for send_channelised_data_continuous."""
         self.logger.debug("TpmDriver: stop_data_transmission")
         self.tile.stop_data_transmission()
 
@@ -1180,7 +1153,7 @@ class TpmDriver(HardwareDriver):
     @property
     def test_generator_active(self):
         """
-        check if the test generator is active.
+        Check if the test generator is active.
 
         :return: whether the test generator is active
         :rtype: bool
@@ -1190,7 +1163,7 @@ class TpmDriver(HardwareDriver):
     @test_generator_active.setter
     def test_generator_active(self, active):
         """
-        set the test generator active flag.
+        Set the test generator active flag.
 
         :param active: True if the generator has been activated
         :type active: bool
@@ -1209,7 +1182,7 @@ class TpmDriver(HardwareDriver):
         load_time=0,
     ):
         """
-        test generator setting.
+        Test generator setting.
 
         :param frequency0: Tone frequency in Hz of DDC 0
         :type frequency0: float
@@ -1260,8 +1233,8 @@ class TpmDriver(HardwareDriver):
 
     def test_generator_input_select(self, inputs=0):
         """
-        Specify ADC inputs which are substitute to test signal.
-        Specified using a 32 bit mask, with LSB for ADC input 0.
+        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
+        mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int

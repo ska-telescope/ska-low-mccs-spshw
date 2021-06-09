@@ -9,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsStationBeam.
-"""
+"""This module contains the tests for MccsStationBeam."""
 import json
 import time
 
@@ -50,10 +48,9 @@ def device_to_load():
 @pytest.fixture()
 def mock_factory(mocker):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -71,9 +68,7 @@ def mock_factory(mocker):
 
 # pylint: disable=invalid-name
 class TestMccsStationBeam:
-    """
-    Test class for MccsStationBeam tests.
-    """
+    """Test class for MccsStationBeam tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -316,7 +311,7 @@ class TestMccsStationBeam:
 
     def test_antennaWeights(self, device_under_test):
         """
-        test for antenna weights.
+        Test for antenna weights.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -333,11 +328,10 @@ class TestMccsStationBeam:
         self, device_under_test, attribute_name, value_to_write, float_format
     ):
         """
-        Helper method for testing a READ-WRITE double array attribute.
-        This is a messy test because there can be some loss of floating-
-        point precision during transfer, so you have to check
-        approximate equality when reading back what you've written. This
-        is done here by comparing the values by their string
+        Helper method for testing a READ-WRITE double array attribute. This is a messy
+        test because there can be some loss of floating- point precision during
+        transfer, so you have to check approximate equality when reading back what
+        you've written. This is done here by comparing the values by their string
         representation.
 
         :param device_under_test: fixture that provides a
@@ -353,7 +347,6 @@ class TestMccsStationBeam:
             equal if this string format yields the same string for both
         :type float_format: str
         """
-
         # SETUP
         write_as_string = [float_format.format(x) for x in value_to_write]
 

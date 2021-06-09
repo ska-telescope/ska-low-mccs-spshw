@@ -8,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests of the cluster simulator.
-"""
+"""This module contains the tests of the cluster simulator."""
 import pytest
 
 from ska_tango_base.control_model import HealthState, SimulationMode
@@ -37,8 +35,8 @@ def cluster_simulator():
 @pytest.fixture()
 def cluster_manager():
     """
-    Fixture that returns a cluster manager for the MCCS cluster manager
-    device, in hardware simulation mode.
+    Fixture that returns a cluster manager for the MCCS cluster manager device, in
+    hardware simulation mode.
 
     :return: a cluster manager for the MCCS cluster manager device, in
         hardware simulation mode
@@ -50,11 +48,10 @@ def cluster_manager():
 
 class TestClusterCommon:
     """
-    Because the ClusterManager is designed to pass commands through to
-    the ClusterSimulator or ClusterDriver that it is driving, many
-    commands are common to ClusterManager and ClusterSimulator, and they
-    will also be common to the ClusterDriver when we eventually
-    implement it.
+    Because the ClusterManager is designed to pass commands through to the
+    ClusterSimulator or ClusterDriver that it is driving, many commands are common to
+    ClusterManager and ClusterSimulator, and they will also be common to the
+    ClusterDriver when we eventually implement it.
 
     Therefore this class contains common tests, parametrised to test
     against each class
@@ -63,10 +60,9 @@ class TestClusterCommon:
     @pytest.fixture(params=["cluster_simulator", "cluster_manager"])
     def cluster(self, cluster_simulator, cluster_manager, request):
         """
-        Return the hardware under test. This is parametrised to return
-        both a cluster simulator and a cluster manager, so any test that
-        relies on this fixture will be run twice: once for each hardware
-        type.
+        Return the hardware under test. This is parametrised to return both a cluster
+        simulator and a cluster manager, so any test that relies on this fixture will be
+        run twice: once for each hardware type.
 
         :param cluster_simulator: the cluster simulator to return
         :type cluster_simulator:
@@ -276,8 +272,8 @@ class TestClusterCommon:
 
     def test_ping_master_pool(self, cluster):
         """
-        Test the ping master node command. This command has not been
-        implemented, so the test is correspondingly weak.
+        Test the ping master node command. This command has not been implemented, so the
+        test is correspondingly weak.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -291,8 +287,8 @@ class TestClusterCommon:
 
     def test_submit_job(self, cluster):
         """
-        Test that when we submit a job, we get a job id for it, and the
-        status of the job is STAGING.
+        Test that when we submit a job, we get a job id for it, and the status of the
+        job is STAGING.
 
         :param cluster: the simulated cluster
         :type cluster:
@@ -340,14 +336,12 @@ class TestClusterCommon:
 
 
 class TestClusterSimulator:
-    """
-    Contains tests specific to ClusterSimulator.
-    """
+    """Contains tests specific to ClusterSimulator."""
 
     def test_node_failure(self, cluster_simulator):
         """
-        Test for the master node id is as expected, and that it changes
-        if we simulate node failure.
+        Test for the master node id is as expected, and that it changes if we simulate
+        node failure.
 
         We're going to repeatedly make the master node fail, and watch
         the cluster choose a new master from the master pool, until
@@ -385,15 +379,10 @@ class TestClusterSimulator:
 
 
 class TestClusterManager:
-    """
-    Contains tests specific to ClusterManager.
-    """
+    """Contains tests specific to ClusterManager."""
 
     def test_init_simulation_mode(self):
-        """
-        Test that we can't create an hardware manager that isn't in
-        simulation mode.
-        """
+        """Test that we can't create a cluster manager that's not in simulation mode."""
         with pytest.raises(
             NotImplementedError, match=("._create_driver method not implemented.")
         ):
@@ -401,8 +390,7 @@ class TestClusterManager:
 
     def test_simulation_mode(self, cluster_manager):
         """
-        Test that we can't take the cluster manager out of simulation
-        mode.
+        Test that we can't take the cluster manager out of simulation mode.
 
         :param cluster_manager: a manager for an external cluster
         :type cluster_manager:

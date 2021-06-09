@@ -5,10 +5,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements simulation functionality for hardware in the MCCS
-subsystem.
-"""
+"""This module implements hardware simulation functionality for MCCS."""
 __all__ = ["HardwareSimulator", "SimulableHardwareFactory", "SimulableHardwareManager"]
 
 from math import sqrt
@@ -68,7 +65,6 @@ class DynamicValuesGenerator:
             range every time.
         :type in_range_rate: float
         """
-
         # For a window size of n, our output values will be the sum of
         # n independent uniformly distributed values. We need to
         # parametrize that uniform distribution so as to get a final
@@ -111,9 +107,7 @@ class DynamicValuesGenerator:
 
 
 class DynamicValuesUpdater:
-    """
-    An dynamic updater of values, for use in a dynamic simulator.
-    """
+    """An dynamic updater of values, for use in a dynamic simulator."""
 
     def __init__(self, update_rate=1.0):
         """
@@ -123,7 +117,6 @@ class DynamicValuesUpdater:
             should be updated. Defaults to 1 second.
         :type update_rate: float
         """
-
         self._targets = []
 
         self._update_rate = update_rate
@@ -131,16 +124,12 @@ class DynamicValuesUpdater:
         self._thread = Thread(target=self._update, args=(), daemon=True)
 
     def start(self):
-        """
-        Start the updater thread.
-        """
+        """Start the updater thread."""
         if not self._thread_is_running:
             self._thread.start()
 
     def stop(self):
-        """
-        Stop the updater thread.
-        """
+        """Stop the updater thread."""
         self._thread_is_running = False
 
     def add_target(self, generator, callback):
@@ -158,10 +147,7 @@ class DynamicValuesUpdater:
         self._targets.append((generator, callback))
 
     def _update(self):
-        """
-        Thread target that loops over the update targets, pushing new
-        values.
-        """
+        """Thread target that loops over the update targets, pushing new values."""
         with EnsureOmniThread():
             self._thread_is_running = True
             while self._thread_is_running:
@@ -170,9 +156,7 @@ class DynamicValuesUpdater:
                 sleep(self._update_rate)
 
     def __del__(self):
-        """
-        Things to do before this object is garbage collected.
-        """
+        """Things to do before this object is garbage collected."""
         self.stop()
 
 
@@ -213,8 +197,8 @@ class HardwareSimulator(HardwareDriver):
 
     def simulate_connection_failure(self, fail):
         """
-        Set whether this hardware simulator is simulating failure to
-        connect to the hardware.
+        Set whether this hardware simulator is simulating failure to connect to the
+        hardware.
 
         :param fail: whether or not this hardware simulator should
             simulate failure to connect to the hardware
@@ -276,10 +260,7 @@ class SimulableHardwareFactory(HardwareFactory):
         self._update_hardware()
 
     def _update_hardware(self):
-        """
-        Update what this factory returns when asked for its hardware,
-        according to the simulation and test modes.
-        """
+        """Update what this factory returns when asked for its hardware."""
         if self._simulation_mode:
             if self._test_mode:
                 self._hardware = self._get_static_simulator()
@@ -342,8 +323,7 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _get_driver(self):
         """
-        Helper method to return a :py:class:`.HardwareDriver` to drive
-        the hardware.
+        Helper method to return a :py:class:`.HardwareDriver` to drive the hardware.
 
         :return: a hardware driver to driver the hardware
         :rtype: :py:class:`.HardwareDriver`
@@ -354,8 +334,7 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _create_driver(self):
         """
-        Helper method to create a :py:class:`.HardwareDriver` to drive
-        the hardware.
+        Helper method to create a :py:class:`.HardwareDriver` to drive the hardware.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a concrete subclass
@@ -366,8 +345,8 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _get_static_simulator(self):
         """
-        Helper method to return a static :py:class:`.HardwareSimulator`
-        to simulate the hardware.
+        Helper method to return a static :py:class:`.HardwareSimulator` to simulate the
+        hardware.
 
         :return: the simulator, just created, to be used by this
             :py:class:`.HardwareManager`
@@ -379,8 +358,8 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _create_static_simulator(self):
         """
-        Helper method to create a static :py:class:`.HardwareSimulator`
-        to drive the hardware.
+        Helper method to create a static :py:class:`.HardwareSimulator` to drive the
+        hardware.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a concrete subclass
@@ -391,8 +370,8 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _get_dynamic_simulator(self):
         """
-        Helper method to return a dynamic :py:class:`.HardwareSimulator`
-        to simulate the hardware.
+        Helper method to return a dynamic :py:class:`.HardwareSimulator` to simulate the
+        hardware.
 
         :return: the simulator, just created, to be used by this
             :py:class:`.HardwareManager`
@@ -404,8 +383,8 @@ class SimulableHardwareFactory(HardwareFactory):
 
     def _create_dynamic_simulator(self):
         """
-        Helper method to create a dynamic :py:class:`.HardwareSimulator`
-        to drive the hardware.
+        Helper method to create a dynamic :py:class:`.HardwareSimulator` to drive the
+        hardware.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a concrete subclass
@@ -416,9 +395,7 @@ class SimulableHardwareFactory(HardwareFactory):
 
 
 class SimulableHardwareManager(HardwareManager):
-    """
-    A hardware manager mixin for simulable hardware.
-    """
+    """A hardware manager mixin for simulable hardware."""
 
     @property
     def simulation_mode(self):

@@ -62,9 +62,7 @@ class DevicePool:
             self.connect()
 
     def connect(self):
-        """
-        Connect to the devices in the pool.
-        """
+        """Connect to the devices in the pool."""
         if self._devices is None:
             # TODO: it would save some time if we were connecting asynchronously.
             self._devices = [
@@ -74,8 +72,7 @@ class DevicePool:
     # TODO: Deprecate this call (once converted to messaging system)
     def invoke_command(self, command_name, arg=None):
         """
-        A generic method for invoking a command on all devices in the
-        pool.
+        A generic method for invoking a command on all devices in the pool.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -166,7 +163,6 @@ class DevicePool:
         :param argin: result of the command
         :return: Whether all of the messages were completed, return_code and message
         """
-
         # check that each received message is on message_object and mark off as recevied
         kwargs = json.loads(argin)
         message_object = kwargs.get("message_object")
@@ -278,16 +274,13 @@ class DevicePoolSequence:
             self.connect()
 
     def connect(self):
-        """
-        Connect to the devices in the pools.
-        """
+        """Connect to the devices in the pools."""
         for pool in self._pools:
             pool.connect()
 
     def invoke_command(self, command_name, arg=None, reverse=False):
         """
-        A generic method for sequential invoking a command on a list of
-        device pools.
+        A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -315,8 +308,7 @@ class DevicePoolSequence:
 
     def invoke_command_with_callback(self, command_name, fqdn, callback, reverse=False):
         """
-        A generic method for sequential invoking a command on a list of
-        device pools.
+        A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -424,8 +416,8 @@ class DevicePoolSequence:
 
     def callback(self, argin):
         """
-        We need to check all pools have received their callbacks
-        whenever we get a callback message.
+        We need to check all pools have received their callbacks whenever we get a
+        callback message.
 
         :param argin: results from executed command
         :return: A tuple containing a flag indicating whether pools are complete,

@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -11,12 +10,17 @@ This module implements a message queue.
 The message queue addresses issues of concurrency by executes messages
 (in a serial fashion) in its own thread.
 """
-import threading
+
+from __future__ import annotations  # allow forward references in type hints
+
 import json
-import tango
+import logging
+import threading
 from uuid import uuid4
-from tango import EnsureOmniThread, DevFailed
 from queue import SimpleQueue, Empty
+
+from tango import EnsureOmniThread, DevFailed, DeviceProxy  # type: ignore[attr-defined]
+
 from ska_tango_base.commands import ResultCode
 
 
@@ -37,7 +41,7 @@ class MessageQueue(threading.Thread):
         """A message that is inserted onto the message queue."""
 
         def __init__(
-            self,
+            self: MessageQueue.Message,
             command: str,
             json_args: str,
             message_uid: str,
@@ -62,7 +66,9 @@ class MessageQueue(threading.Thread):
             self.respond_to_fqdn = respond_to_fqdn
             self.callback = callback
 
-    def __init__(self, target, lock, logger=None):
+    def __init__(
+        self: MessageQueue, target: object, lock: threading.Lock, logger: logging.Logger
+    ):
         """
         Initialise a new MessageQueue object.
 
@@ -77,7 +83,7 @@ class MessageQueue(threading.Thread):
         self._qdebuglock = lock
         self._logger = logger
 
-    def _qdebug(self, message):
+    def _qdebug(self: MessageQueue, message: str) -> None:
         """
         A method to push a message onto the queue debug attribute of the target device.
 
@@ -86,8 +92,10 @@ class MessageQueue(threading.Thread):
         with self._qdebuglock:
             self._target.queue_debug += f"{message}\n"
 
-    def run(self):
-        """Thread run method executing the message queue loop."""
+    def run(self: MessageQueue) -> None:
+        """
+        Thread run method executing the message queue loop.
+        """
         # https://pytango.readthedocs.io/en/stable/howto.html
         # #using-clients-with-multithreading
         with EnsureOmniThread():
@@ -99,7 +107,9 @@ class MessageQueue(threading.Thread):
             f"Device={self._target.get_name()} message queue terminated"
         )
 
-    def _notify_listener(self, result_code, message_uid, status):
+    def _notify_listener(
+        self: MessageQueue, result_code: ResultCode, message_uid: str, status: str
+    ) -> None:
         """
         Abstract method that requires implementation by derived concrete class for
         specific notifications.
@@ -116,7 +126,7 @@ class MessageQueue(threading.Thread):
         # Terminate the thread execution loop
         self._terminate = True
 
-    def _execute_message(self, message):
+    def _execute_message(self: MessageQueue, message: Message) -> None:
         """
         Execute message from the message queue.
 
@@ -127,7 +137,7 @@ class MessageQueue(threading.Thread):
             # Check we have a device to respond to before executing a command
             if message.respond_to_fqdn:
                 try:
-                    response_device = tango.DeviceProxy(message.respond_to_fqdn)
+                    response_device = DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
                     err_status = f"Response device {message.respond_to_fqdn} not found"
                     self._qdebug(err_status)
@@ -203,7 +213,7 @@ class MessageQueue(threading.Thread):
             self._qdebug("No reply required")
         self._qdebug(f"EndOfMessage({message.message_uid})")
 
-    def _check_message_queue(self):
+    def _check_message_queue(self: MessageQueue) -> None:
         """
         Check to see if a message is waiting to be executed.
 
@@ -215,21 +225,23 @@ class MessageQueue(threading.Thread):
             return
         self._execute_message(message)
 
-    def terminate_thread(self):
-        """External call to gracefully terminate this thread."""
+    def terminate_thread(self: MessageQueue) -> None:
+        """
+        External call to gracefully terminate this thread.
+        """
         self._logger.warning(
             f"Device={self._target.get_name()} terminate message queue"
         )
         self._terminate = True
 
     def send_message(
-        self,
+        self: MessageQueue,
         command: str,
         json_args: str = "",
         notifications: bool = False,
         respond_to_fqdn: str = "",
         callback: str = "",
-    ):
+    ) -> tuple[ResultCode, str, str]:
         """
         Add message to the Tango device queue with the option of using Tango push
         notifications to indicate message progress and completion to subscribed
@@ -241,10 +253,8 @@ class MessageQueue(threading.Thread):
             for command's result attribute
         :param respond_to_fqdn: Response message FQDN
         :param callback: Callback command to call call
-        :type callback: str
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
-        :rtype: (ResultCode, str, str)
         """
         message_uid = f"{str(uuid4())}:{command}"
         message = self.Message(
@@ -272,13 +282,13 @@ class MessageQueue(threading.Thread):
         return (result_code, message.message_uid, status)
 
     def send_message_with_response(
-        self,
+        self: MessageQueue,
         command: str,
         respond_to_fqdn: str,
         callback: str,
         json_args: str = "",
         notifications: bool = False,
-    ):
+    ) -> tuple[ResultCode, str, str]:
         """
         Add message to the Tango device queue with the option of using Tango push
         notifications to indicate message progress and completion to subscribed

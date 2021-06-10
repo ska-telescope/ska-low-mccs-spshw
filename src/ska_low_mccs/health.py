@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -6,6 +5,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """This module implements infrastructure for health management in the MCCS subsystem."""
+
+from __future__ import annotations  # allow forward references in type hints
+
 __all__ = [
     "DeviceHealthPolicy",
     "DeviceHealthRollupPolicy",
@@ -16,8 +18,15 @@ __all__ = [
 
 from collections import Counter
 from functools import partial
+from typing import Callable, Optional, Union, Literal
+
+from tango import AttrQuality  # type: ignore[attr-defined]
 
 from ska_tango_base.control_model import AdminMode, HealthState
+from ska_low_mccs.events import EventManager
+from ska_low_mccs.hardware import HardwareManager  # type: ignore[attr-defined]
+
+OptListOrStr = Optional[Union[list[str], str]]
 
 from ska_low_mccs import MccsDeviceProxy
 
@@ -33,20 +42,18 @@ class DeviceHealthPolicy:
     """
 
     @classmethod
-    def compute_health(cls, admin_mode, health_state):
+    def compute_health(
+        cls: DeviceHealthPolicy, admin_mode: AdminMode, health_state: HealthState
+    ) -> Union[HealthState, None]:
         """
         Computes the health of the device, based on the device's admin mode and self-
         reported health state.
 
         :param admin_mode: the value of the adminMode attribute of the
             device
-        :type admin_mode: :py:class:`~ska_tango_base.control_model.AdminMode`
         :param health_state: the value of the healthState attribute of
             the device
-        :type health_state:
-            :py:class:`~ska_tango_base.control_model.HealthState`
-        :return: the evaluated health of the device
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`, or None
+        :return: the evaluated health of the device or None
             if the health should be ignored.
         """
         if admin_mode is None:
@@ -78,31 +85,32 @@ class DeviceHealthRollupPolicy:
       DEGRADED.
     """
 
-    def __init__(self, degraded_weight=1.0, failed_weight=1.0):
+    def __init__(
+        self: DeviceHealthRollupPolicy,
+        degraded_weight: Optional[float] = 1.0,
+        failed_weight: Optional[float] = 1.0,
+    ) -> None:
         """
         Create a new instances.
 
         :param degraded_weight: the weight to give to devices with
             DEGRADED health, defaults to 1.0
-        :type degraded_weight: float, optional
         :param failed_weight: the weight to give to devices with FAILED
             health, defaults to 1.0
-        :type failed_weight: float, optional
         """
         self._degraded_weight = degraded_weight
         self._failed_weight = failed_weight
 
-    def _compute_device_health(self, device_healths):
+    def _compute_device_health(
+        self: DeviceHealthRollupPolicy, device_healths: list[HealthState]
+    ) -> HealthState:
         """
         Helper method to roll up device healths into a single device health.
 
         :param device_healths: sequence of healths of subservient
             devices
-        :type device_healths:
-            list(:py:class:`~ska_tango_base.control_model.HealthState`)
 
         :return: a rolled up health state
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if device_healths is None:
             return HealthState.OK
@@ -123,7 +131,11 @@ class DeviceHealthRollupPolicy:
             return HealthState.DEGRADED
         return HealthState.OK
 
-    def compute_health(self, hardware_health, device_healths):
+    def compute_health(
+        self: DeviceHealthRollupPolicy,
+        hardware_health: Optional[HealthState],
+        device_healths: list[HealthState],
+    ) -> HealthState:
         """
         Compute this devices health, given the health of its hardware and the health of
         the devices that it supervises.
@@ -134,16 +146,12 @@ class DeviceHealthRollupPolicy:
 
         :param hardware_health: the health of the hardware, if any
             (optional)
-        :type hardware_health:
-            :py:class:`~ska_tango_base.control_model.HealthState`, optional
         :param device_healths: the healths of supervised devices: a
             list, where each value is either a
             :py:class:`~ska_tango_base.control_model.HealthState`, or None if
             the device's health should be ignored.
-        :type device_healths:
-            list(:py:class:`~ska_tango_base.control_model.HealthState`)
+
         :return: the health of this device
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         rolled_up_device_health = self._compute_device_health(device_healths)
 
@@ -162,16 +170,19 @@ class DeviceHealthMonitor:
     """Class that monitors the health of a single device."""
 
     def __init__(self, fqdn, logger, initial_callback=None):
+        self: DeviceHealthMonitor,
+        fqdn: str,
+        logger: logging.Logger,
+        initial_callback: Optional[Callable] = None,
+    ) -> None:
         """
         Initialise a new DeviceHealthMonitor instance.
 
         :param fqdn: the name of the device for which health is to be
             monitored
-        :type fqdn: str
         :param logger: a logger for the MutableHealthMonitor instance
         :param initial_callback: an optional function handle to be
             called if device health changes, defaults to None
-        :type initial_callback: callable, optional
         """
         self._fqdn = fqdn
 
@@ -189,29 +200,29 @@ class DeviceHealthMonitor:
         self._proxy.add_change_event_callback("healthState", self._health_state_changed)
         self._proxy.add_change_event_callback("adminMode", self._admin_mode_changed)
 
-    def register_callback(self, callback):
+    def register_callback(self: DeviceHealthMonitor, callback: Callable) -> None:
         """
         Register a callback to be called when device health changes.
 
         :param callback: callback to be called when device health changes
-        :type callback: callable
         """
         self._callbacks.append(callback)
         callback(self._interpreted_health)
 
-    def _health_state_changed(self, event_name, event_value, event_quality):
+    def _health_state_changed(
+        self: DeviceHealthMonitor,
+        event_name: Literal["healthState"],
+        event_value: HealthState,
+        event_quality: AttrQuality,
+    ) -> None:
         """
         Callback that this device registers with the event manager, so that it is
         informed when the device's healthState attribute changes.
 
         :param event_name: name of the event; will always be
             "healthState" for this callback
-        :type event_name: str; will always be "healthState" for this
-            callback
         :param event_value: the new healthState value
-        :type event_value: :py:class:`~ska_tango_base.control_model.HealthState`
         :param event_quality: the quality of the change event
-        :type event_quality: :py:class:`tango.AttrQuality`
         """
         assert (
             event_name.lower() == "healthstate"
@@ -219,19 +230,20 @@ class DeviceHealthMonitor:
         self._device_health_state = event_value
         self._compute_health()
 
-    def _admin_mode_changed(self, event_name, event_value, event_quality):
+    def _admin_mode_changed(
+        self: DeviceHealthMonitor,
+        event_name: Literal["adminMode"],
+        event_value: AdminMode,
+        event_quality: AttrQuality,
+    ) -> None:
         """
         Callback that this device registers with the event manager, so that it is
         informed when the device's adminMode attribute changes.
 
         :param event_name: name of the event; will always be "adminMode"
             for this callback
-        :type event_name: str; will always be "adminMode" for this
-            callback
         :param event_value: the new adminMode value
-        :type event_value: :py:class:`~ska_tango_base.control_model.AdminMode`
         :param event_quality: the quality of the change event
-        :type event_quality: :py:class:`tango.AttrQuality`
 
         :raises AssertionError: if the event name is not
             "adminMode"
@@ -240,22 +252,25 @@ class DeviceHealthMonitor:
         self._device_admin_mode = event_value
         self._compute_health()
 
-    def _compute_health(self):
-        """Evaluate the health of this device, on the basis of a DeviceHealthPolicy."""
+    def _compute_health(self: DeviceHealthMonitor) -> None:
+        """
+        Re-evaluate the health of this device, on the basis of a
+        DeviceHealthPolicy.
+        """
         interpreted_health = DeviceHealthPolicy.compute_health(
             self._device_admin_mode, self._device_health_state
         )
         self._update_health(interpreted_health)
 
-    def _update_health(self, interpreted_health):
+    def _update_health(
+        self: DeviceHealthMonitor, interpreted_health: HealthState
+    ) -> None:
         """
         Update this instances health value, ensuring that any registered callbacks are
         called.
 
         :param interpreted_health: the interpreted health of the device,
             or None if the device's health should be ignored
-        :type interpreted_health:
-            :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._interpreted_health == interpreted_health:
             return
@@ -267,17 +282,20 @@ class DeviceHealthMonitor:
 class HealthMonitor:
     """Monitors the health of a collection of subservient devices."""
 
-    def __init__(self, fqdns, logger, initial_callback=None):
+    def __init__(
+        self: HealthMonitor,
+        fqdns: list[str],
+        logging: logging.Logger,
+        initial_callback: Optional[Callable] = None,
+    ) -> None:
         """
         Initialise a new HealthMonitor instance.
 
         :param fqdns: fqdns of the devices for which health is to be
             monitored
-        :type fqdns: list(str)
         :param logger: a logger for this HealthMonitor instance
         :param initial_callback: A function handle, to be called if the
             health of any device changes
-        :type initial_callback: callable, optional
         """
         self._device_health_monitors = {
             fqdn: DeviceHealthMonitor(fqdn, logger) for fqdn in fqdns
@@ -285,19 +303,19 @@ class HealthMonitor:
         if initial_callback is not None:
             self.register_callback(initial_callback)
 
-    def register_callback(self, callback, fqdn_spec=None):
+    def register_callback(
+        self: HealthMonitor, callback: Callable, fqdn_spec: OptListOrStr = None
+    ) -> None:
         """
         Register a callback on change to health from one or more fqdns.
 
         :param callback: a function handle of the form
             ``callback(fqdn, name, value, quality)``, to be called
             whenever the event is received
-        :type callback: callable
         :param fqdn_spec: specification of the devices upon which the
             callback is registered. This specification may be the FQDN
             of a device, or a list of such FQDNs, or None, in which case
             the FQDNs provided at initialisation are used.
-        :type fqdn_spec: str or list(str) or None
 
         :raises ValueError: if an unknown FQDN is passed
         """
@@ -321,20 +339,22 @@ class HealthMonitor:
 class HealthModel:
     """Represents and manages the health of a device."""
 
-    def __init__(self, hardware_manager, fqdns, logger, initial_callback=None):
+    def __init__(
+        self: HealthModel,
+        hardware_manager: HardwareManager,
+        fqdns: Optional(list[str]),
+        logger: logging.Logger,
+        initial_callback: Optional(Callable) = None,
+    ):
         """
         Initialise a new HealthModel instance.
 
         :param hardware_manager: the hardware managed by this device, or
             None if the device doesn't manage any hardware
-        :type hardware_manager:
-            :py:class:`ska_low_mccs.hardware.base_hardware.HardwareManager`
         :param fqdns: fqdns of supervised devices (optional)
-        :type fqdns: list(str), optional
         :param logger: a logger for this HealthModel instance
         :param initial_callback: A function handle to be called if the
             health of this device changes
-        :type initial_callback: callable, optional
         """
         self._logger = logger
 
@@ -367,65 +387,61 @@ class HealthModel:
         # ensure that health gets computed once.
         self._compute_health()
 
-    def _init_health_monitor(self, fqdns):
+    def _init_health_monitor(
+        self: HealthModel, fqdns: list[str]) -> HealthMonitor:
         """
         Initialise a new HealthMonitor.
 
         :param fqdns: FQDNs of devices to be monitored
-        :type fqdns: list(str)
 
         :return: a health monitor instance
-        :rtype: :py:class:`.HealthMonitor`
         """
         return HealthMonitor(fqdns, self._logger)
 
     @property
-    def health(self):
+    def health(self: HealthModel) -> HealthState:
         """
         Returns the health of this HealthModel.
 
         :return: the health state of this HealthModel
-        :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         return self._health
 
-    def register_callback(self, callback):
+    def register_callback(self: HealthModel, callback: Callable) -> None:
         """
         Register a callback for change of this device's health.
 
         :param callback: a function handle to be called when this
             device's health changes
-        :type callback: callable
         """
         self._callbacks.append(callback)
         callback(self._health)
 
-    def _hardware_health_changed(self, health):
+    def _hardware_health_changed(self: HealthModel, health: HealthState) -> None:
         """
         Passed to the hardware manager as a callback to be called when the hardware
         health changes.
 
         :param health: the health of the hardware
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self._hardware_health = health
         self._compute_health()
 
-    def _device_health_changed(self, fqdn, health):
+    def _device_health_changed(
+        self: HealthModel, fqdn: str, health: HealthState
+    ) -> None:
         """
         Passed to the HealthMonitor as a callback to be called when a device's health
         changes.
 
         :param fqdn: FQDN of the device whose health has changed
-        :type fqdn: str
         :param health: The device's new healthState attribute value, or
             None if the device's health is to be ignored
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self._device_health[fqdn] = health
         self._compute_health()
 
-    def _compute_health(self):
+    def _compute_health(self: HealthModel) -> None:
         """
         Re-evaluate health of this device, by applying the
         :py:class:`.DeviceHealthRollupPolicy` to the current health of
@@ -442,13 +458,12 @@ class HealthModel:
             # even created the health attributes
             pass
 
-    def _update_health(self, health):
+    def _update_health(self: HealthModel, health: HealthState) -> None:
         """
         Update the health of this device, ensuring that any registered callbacks are
         called.
 
         :param health: the new healthState of this device
-        :type health: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         if self._health == health:
             return
@@ -461,17 +476,20 @@ class HealthModel:
 class MutableHealthMonitor(HealthMonitor):
     """A HealthMonitor for which monitored devices can be added and removed."""
 
-    def __init__(self, fqdns, logger, initial_callback=None):
+    def __init__(
+        self: MutableHealthMonitor,
+        fqdns: list[str],
+        logger: logging.Logger,
+        initial_callback: Optional(Callable) = None,
+    ) -> None:
         """
         Initialise a new MutableHealthMonitor instance.
 
         :param fqdns: fqdns of the devices for which health is to be
             monitored
-        :type fqdns: list(str)
         :param logger: a logger for this MutableHealthMonitor instance
         :param initial_callback: An optional function handle to be
             called if the health of any device changes
-        :type initial_callback: callable, optional
         """
         self._logger = logger
 
@@ -481,30 +499,29 @@ class MutableHealthMonitor(HealthMonitor):
 
         super().__init__(fqdns, logger, initial_callback)
 
-    def register_callback(self, callback, fqdn_spec=None):
+    def register_callback(
+        self: MutableHealthMonitor, callback: Callable, fqdn_spec: OptListOrStr = None
+    ) -> None:
         """
         Register a callback on change to health from one or more fqdns.
 
         :param callback: function handle of the form
             ``callback(fqdn, name, value, quality)``, to be called
             whenever the event is received
-        :type callback: callable
         :param fqdn_spec: specification of the devices upon which the
             callback is registered. This specification may be the FQDN
             of a device, or a list of such FQDNs, or None, in which case
             the FQDNs provided at initialisation are used.
-        :type fqdn_spec: str or list(str) or None
         """
         if fqdn_spec is None:
             self._pool_callbacks.append(callback)
         super().register_callback(callback, fqdn_spec)
 
-    def add_devices(self, fqdns):
+    def add_devices(self: MutableHealthMonitor, fqdns: list[str]) -> None:
         """
         Add to the list of devices to be monitored.
 
         :param fqdns: fqdns of devices to be added
-        :type fqdns: list(str)
         """
         for fqdn in fqdns:
             if fqdn not in self._device_health_monitors:
@@ -514,18 +531,19 @@ class MutableHealthMonitor(HealthMonitor):
                 for callback in self._pool_callbacks:
                     self.register_callback(callback, fqdn)
 
-    def remove_devices(self, fqdns):
+    def remove_devices(self: MutableHealthMonitor, fqdns: list[str]) -> None:
         """
         Remove items from the list of devices to be monitored.
 
         :param fqdns: fqdns of devices to be added
-        :type fqdns: list(str)
         """
         for fqdn in fqdns:
             del self._device_health_monitors[fqdn]
 
-    def remove_all_devices(self):
-        """Remove all items from the list of devices to be monitored."""
+    def remove_all_devices(self: MutableHealthMonitor) -> None:
+        """
+        Remove all items from the list of devices to be monitored.
+        """
         fqdns = list(self._device_health_monitors.keys())
         self.remove_devices(fqdns)
 
@@ -533,52 +551,51 @@ class MutableHealthMonitor(HealthMonitor):
 class MutableHealthModel(HealthModel):
     """A HealthModel for which devices can be dynamically added and removed."""
 
-    def __init__(self, hardware_manager, fqdns, logger, initial_callback=None):
+    def __init__(
+        self: MutableHealthModel,
+        hardware_manager: Optional(HardwareManager),
+        fqdns: Optional(list[str]),
+        logging: logging.Logger,
+        initial_callback: Optional(Callable) = None,
+    ):
         """
         Initialise a new MutableHealthModel instance.
 
         :param hardware_manager: the hardware managed by this device
             (optional)
-        :type hardware_manager:
-            :py:class:`~ska_low_mccs.hardware.base_hardware.HardwareManager`
         :param fqdns: fqdns of supervised devices (optional)
-        :type fqdns: list(str), optional
         :param logger: a logger for this MutableHealthModel instance
         :param initial_callback: An option function handle, to be called
-            if the health of this device changes
-        :type initial_callback: callable, optional
+            if the health of this device changes (optional)
         """
         super().__init__(hardware_manager, fqdns, logger, initial_callback)
 
-    def _init_health_monitor(self, fqdns):
+    def _init_health_monitor(
+        self: MutableHealthModel, fqdns: list[str]) -> HealthMonitor:
         """
         Initialise a new HealthMonitor.
 
         :param fqdns: FQDNs of devices to be monitored
-        :type fqdns: list(str)
 
         :return: a health monitor instance
-        :rtype: :py:class:`.HealthMonitor`
         """
         return MutableHealthMonitor(fqdns, self._logger)
 
-    def add_devices(self, fqdns):
+    def add_devices(self: MutableHealthModel, fqdns: list[str]) -> None:
         """
         Add to the list of devices to be monitored.
 
         :param fqdns: fqdns of devices to be added
-        :type fqdns: list(str)
         """
         if self._health_monitor is None:
             self._health_monitor = self._init_health_monitor(fqdns)
         else:
             self._health_monitor.add_devices(fqdns)
 
-    def remove_devices(self, fqdns):
+    def remove_devices(self: MutableHealthModel, fqdns: list[str]) -> None:
         """
         Remove items from the list of devices to be monitored.
 
         :param fqdns: fqdns of devices to be added
-        :type fqdns: list(str)
         """
         self._health_monitor.remove_devices(fqdns)

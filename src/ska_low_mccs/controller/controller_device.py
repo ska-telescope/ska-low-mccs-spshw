@@ -22,7 +22,8 @@ from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska_tango_base import DeviceStateModel, SKAController, SKABaseDevice
+from ska_tango_base import SKABaseDevice, SKAController
+from ska_tango_base.base import OpStateModel
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
@@ -242,7 +243,7 @@ class MccsController(SKAController):
         def __init__(
             self: MccsController.InitCommand,
             target: object,
-            state_model: DeviceStateModel,
+            state_model: OpStateModel,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """

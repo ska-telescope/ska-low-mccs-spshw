@@ -611,7 +611,6 @@ class MccsSubrack(SKABaseDevice):
         super().init_command_objects()
 
         for (command_name, command_object) in [
-            ("Disable", self.DisableCommand),
             ("Standby", self.StandbyCommand),
             ("Off", self.OffCommand),
             ("IsTpmOn", self.IsTpmOnCommand),
@@ -1175,34 +1174,6 @@ class MccsSubrack(SKABaseDevice):
     # --------
     # Commands
     # --------
-    class DisableCommand(SKABaseDevice.DisableCommand):
-        """
-        Class for handling the Disable() command.
-
-        :todo: We assume for now that the Subrack hardware has control of
-            its own power mode i.e. is able to turn itself off and on.
-            Actually it is more likely that some upstream hardware would
-            turn the subrack off and on, in which case this command would be
-            implemented by passing the command to the tango device that manages
-            the upstream hardware
-        """
-
-        def do(self):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
-            :py:class:`.MccsSubrack` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            hardware_manager = self.target
-            success = hardware_manager.off()
-
-            return create_return(success, "disable")
-
     class StandbyCommand(SKABaseDevice.StandbyCommand):
         """
         Class for handling the Standby() command.

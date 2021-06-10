@@ -210,7 +210,6 @@ class MccsController(SKAController):
         self.register_command_object("Maintenance", self.MaintenanceCommand(*args))
 
         for (command_name, command_object) in [
-            ("Disable", self.DisableCommand),
             ("StandbyLow", self.StandbyLowCommand),
             ("StandbyFull", self.StandbyFullCommand),
         ]:
@@ -799,28 +798,6 @@ class MccsController(SKAController):
         (result_code, status) = command()
         self.notify_listener(result_code, "", status)
         return ([result_code], [status])
-
-    class DisableCommand(SKABaseDevice.DisableCommand):
-        """Class for handling the Disable command."""
-
-        SUCCEEDED_MESSAGE = "Disable command completed OK"
-        FAILED_MESSAGE = "Disable command failed"
-
-        def do(self: MccsController.DisableCommand) -> Tuple[ResultCode, str]:
-            """
-            Stateless do-hook for implementing the functionality of the
-            :py:meth:`.MccsController.Off` command
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            device_pool = self.target
-
-            if device_pool.disable():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()

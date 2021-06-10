@@ -427,34 +427,6 @@ class MccsTile(SKABaseDevice):
                     action = "init_succeeded_standby"
             self.state_model.perform_action(action)
 
-    class DisableCommand(SKABaseDevice.DisableCommand):
-        """Class for handling the Disable() command."""
-
-        REDUNDANT_MESSAGE = "TPM was already off: nothing to do to disable device."
-        FAILED_MESSAGE = "Failed to disable device: could not turn TPM off"
-        SUCCEEDED_MESSAGE = "Device disabled; TPM has been turned off"
-
-        def do(self):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
-            :py:class:`.MccsTile` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            result = self.target.power_manager.off()
-            if result is None:
-                self.target.hardware_manager.set_connectible(False)
-                return (ResultCode.OK, self.REDUNDANT_MESSAGE)
-
-            if not result:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     class StandbyCommand(SKABaseDevice.StandbyCommand):
         """
         Class for handling the Standby() command.
@@ -1331,7 +1303,6 @@ class MccsTile(SKABaseDevice):
         )
 
         for (command_name, command_object) in [
-            ("Disable", self.DisableCommand),
             ("Standby", self.StandbyCommand),
             ("Off", self.OffCommand),
             ("On", self.OnCommand),

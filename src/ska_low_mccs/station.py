@@ -521,7 +521,6 @@ class MccsStation(SKAObsDevice):
         self.register_command_object("Callback", self.CallbackCommand(*args))
 
         pool_args = (self.device_pool, self.state_model, self.logger)
-        self.register_command_object("Disable", self.DisableCommand(*pool_args))
         self.register_command_object("Standby", self.StandbyCommand(*pool_args))
 
     def _store_callback_send_message(self, command, json_args):
@@ -813,31 +812,6 @@ class MccsStation(SKAObsDevice):
             device_pool = self.target
 
             if device_pool.standby():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
-    class DisableCommand(SKABaseDevice.DisableCommand):
-        """Class for handling the Disable() command."""
-
-        SUCCEEDED_MESSAGE = "Disable command completed OK"
-        FAILED_MESSAGE = "Disable command failed"
-
-        def do(self):
-            """
-            Stateless hook implementing the functionality of the (inherited)
-            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
-            :py:class:`.MccsStation` device.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
-            """
-            device_pool = self.target
-
-            if device_pool.disable():
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
             else:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)

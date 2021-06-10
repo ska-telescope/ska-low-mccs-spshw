@@ -13,6 +13,7 @@ from ska_tango_base.control_model import AdminMode, ObsState, HealthState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture(scope="module")
@@ -223,7 +224,6 @@ def test_start_up_low_telescope(
     """
     command_helper.device_command(controller, "Off", test_string)
     command_helper.check_device_state(controller, DevState.OFF)
-    check_mccs_controller_state(controller, "off")
     check_reset_state(controller, subarrays, stations)
 
 
@@ -281,7 +281,8 @@ def component_is_ready_to_receive_a_startup_command(
     :type direction: str
     """
     if component_name == "mccs":
-        assert controller.state() == DevState.DISABLE
+        allowed_states = [DevState.DISABLE, DevState.OFF, DevState.ON]
+        assert controller.state() in allowed_states
     elif component_name == "tmc":
         pass
     else:
@@ -344,23 +345,26 @@ def tmc_turns_mccs_controller_onoff(
     command_helper.device_command(controller, command, test_string)
 
 
-@then(parsers.parse("mccs controller state is {device_state}"))
-def check_mccs_controller_state(controller, device_state):
+@then(parsers.parse("mccs {device} state is {device_state}"))
+def check_mccs_device_state(device, device_state):
     """
-    Asserts that the mccs controller device is on/off.
+    Asserts that the mccs device is on/off.
 
-    :param controller: a proxy to the controller device
-    :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
+    :param device: a proxy to the device
+    :type device: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
     :param device_state: asserted state of the device -- either "off" or
         "on"
     :type device_state: str
     """
-    state_map = {"off": [DevState.OFF], "on": [DevState.ON, DevState.ALARM]}
+    state_map = {
+        "off": [DevState.OFF],
+        "on": [DevState.ON, DevState.ALARM],
+    }
     count = 0.0
-    while not controller.State() in state_map[device_state] and count < 3.0:
+    while not device.State() in state_map[device_state] and count < 3.0:
         count += 0.1
         time.sleep(0.1)
-    assert controller.State() in state_map[device_state]
+    assert device.State() in state_map[device_state]
 
 
 @then(parsers.parse("all mccs station states are {state}"))
@@ -391,13 +395,13 @@ def check_reset_state(controller, subarrays, stations):
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    check_mccs_controller_state(controller, "off")
-    assert subarrays[1].State() == DevState.OFF
-    assert subarrays[2].State() == DevState.OFF
+    check_mccs_device_state(controller, "off")
+    check_mccs_device_state(subarrays[1], "off")
+    check_mccs_device_state(subarrays[2], "off")
     assert subarrays[1].stationFQDNs is None
     assert subarrays[2].stationFQDNs is None
-    assert stations[1].State() == DevState.OFF
-    assert stations[2].State() == DevState.OFF
+    check_mccs_device_state(stations[1], "off")
+    check_mccs_device_state(stations[2], "off")
     assert stations[1].subarrayId == 0
     assert stations[2].subarrayId == 0
 
@@ -448,9 +452,9 @@ def component_is_ready_to_action_a_subarray(
     """
     if component_name == "mccs":
         tmc_tells_mccs_controller_to_start_up(controller)
-        check_mccs_controller_state(controller, "on")
-        assert subarrays[1].State() == DevState.OFF
-        assert subarrays[2].State() == DevState.OFF
+        check_mccs_device_state(controller, "on")
+        check_mccs_device_state(subarrays[1], "off")
+        check_mccs_device_state(subarrays[2], "off")
         assert stations[1].subarrayId == 0
         assert stations[2].subarrayId == 0
     elif component_name == "tmc":
@@ -477,12 +481,14 @@ def subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate):
 
 
 @when(parsers.parse("tmc allocates a subarray with {validity} parameters"))
-def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
+def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, validity):
     """
     TMC allocates a subarray.
 
     :param controller: a proxy to the controller device
     :type controller: :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`
+    :param subarrays: proxies to the subarray devices, keyed by number
+    :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     :param validity: whether the allocate has valid|invalid parameters
     :type validity: str
     """
@@ -492,19 +498,35 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, validity):
         "channel_blocks": [2],
         "subarray_beam_ids": [1],
     }
-    expected_result = ResultCode.OK
 
     if validity == "invalid":
         parameters["subarray_id"] = 3
-        expected_result = ResultCode.FAILED
+        json_string = json.dumps(parameters)
+        assert_command(
+            device=controller,
+            command="Allocate",
+            argin=json_string,
+            expected_result=ResultCode.FAILED,
+        )
+        return
 
     json_string = json.dumps(parameters)
-    assert_command(
-        device=controller,
-        command="Allocate",
-        argin=json_string,
-        expected_result=expected_result,
-    )
+    [result], [message, uid] = controller.command_inout("Allocate", json_string)
+    assert result == ResultCode.QUEUED
+    assert ":Allocate" in uid
+    assert message
+
+    # Check that the allocate command has completed
+    helper = HelperClass()
+    helper.wait_for_command_to_complete(controller)
+
+    command_result = controller.commandResult
+    kwargs = json.loads(command_result)
+    message_uid = kwargs.get("message_uid")
+    assert message_uid == uid
+
+    # We need to wait until the subarray is in IDLE state
+    assert subarrays[1].obsstate == ObsState.IDLE
 
 
 @then(parsers.parse("the stations have the correct subarray id"))
@@ -515,8 +537,14 @@ def the_stations_have_the_correct_subarray_id(stations):
     :param stations: proxies to the station devices, keyed by number
     :type stations: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    assert stations[1].subarrayId == 1
-    assert stations[2].subarrayId == 1
+    # We need to wait until the subarray is in IDLE state
+    for station_id in [1, 2]:
+        timeout = 0.0
+        while not stations[station_id].subarrayId == 1 and timeout < 5.0:
+            timeout += 0.1
+            time.sleep(0.1)
+        assert stations[station_id].subarrayId == 1
+        assert timeout < 5.0
 
 
 @then(parsers.parse("subarray state is on"))
@@ -561,7 +589,7 @@ def other_resources_are_not_affected(subarrays):
     :param subarrays: proxies to the subarray devices, keyed by number
     :type subarrays: dict<int, :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy`>
     """
-    assert subarrays[2].State() == DevState.OFF
+    check_mccs_device_state(subarrays[2], "off")
     assert subarrays[2].obsState == ObsState.EMPTY
 
 
@@ -662,7 +690,8 @@ def we_have_a_successfully_configured_and_or_allocated_subarray(
         "mccs", "allocate", controller, subarrays, stations
     )
     subarray_obsstate_is_idle_or_empty(subarrays, cached_obsstate)
-    tmc_allocates_a_subarray_with_validity_parameters(controller, "valid")
+    tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, "valid")
+
     if desired_state == "configured" or desired_state == "scanning":
         configure_subarray(subarrays)
         the_subarray_obsstate_is(subarrays, "ready")

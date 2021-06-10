@@ -160,7 +160,7 @@ class MccsController(SKAMaster):
         This is overridden here to change the Tango serialisation model.
         """
         util = Util.instance()
-        util.set_serial_model(SerialModel.NO_SYNC)
+        util.set_serial_model(SerialModel.BY_DEVICE)
         super().init_device()
 
     def init_command_objects(self: MccsController) -> None:
@@ -1014,12 +1014,15 @@ class MccsController(SKAMaster):
         specifies the overall sub-array composition in terms of which stations should be
         allocated to the specified Sub-Array.
 
+        Method returns as soon as the message has been enqueued.
+
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
 
         :example:
 
@@ -1036,11 +1039,21 @@ class MccsController(SKAMaster):
                 )
             )
         """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
-        handler = self.get_command_object("Allocate")
-        (result_code, status) = handler(argin)
-        self.notify_listener(result_code, "", status)
-        return ([result_code], [status])
+        if self._command_result.get("result_code") in [
+            ResultCode.STARTED,
+            ResultCode.QUEUED,
+        ]:
+            return (
+                [ResultCode.FAILED],
+                ["A controller command is already in progress", None],
+            )
+        else:
+            self.notify_listener(ResultCode.UNKNOWN, "", "")
+            self.logger.debug("send_message(Allocate)")
+            (result_code, message_uid, status) = self._message_queue.send_message(
+                command="Allocate", json_args=argin, notifications=True
+            )
+            return ([result_code], [status, message_uid])
 
     class AllocateCommand(ResponseCommand):
         """
@@ -1105,6 +1118,7 @@ class MccsController(SKAMaster):
                 stations_per_beam.append(station_sublist)
             station_fqdns = all_stations.values()
             subarray_beams = {}
+
             for subarray_beam_id in subarray_beam_ids:
                 subarray_beams[
                     subarray_beam_id
@@ -1124,10 +1138,17 @@ class MccsController(SKAMaster):
             ) = controllerdevice._stations_manager.query_allocation(
                 station_fqdns, subarray_id
             )
+            message_uid = controllerdevice._command_result.get("message_uid")
+
             if not alloc_allowed:
                 # If manager returns False (not allowed) stations_to_release
                 # gives the list of FQDNs blocking the allocation.
                 aalist = ", ".join(stations_to_release)
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
+                )
                 return (
                     ResultCode.FAILED,
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
@@ -1141,6 +1162,12 @@ class MccsController(SKAMaster):
                     subarray_device.ReleaseResources, stations=stations_to_release
                 )
                 if result_code == ResultCode.FAILED:
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED,
+                        message_uid,
+                        f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{message}",
+                    )
                     return (
                         ResultCode.FAILED,
                         f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
@@ -1158,6 +1185,11 @@ class MccsController(SKAMaster):
                 self._enable_subarray(subarray_id)
 
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
+                )
                 return (
                     ResultCode.FAILED,
                     f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
@@ -1172,6 +1204,12 @@ class MccsController(SKAMaster):
                     channel_blocks=channel_blocks,
                 )
                 if result_code == ResultCode.FAILED:
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED,
+                        message_uid,
+                        f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{message}",
+                    )
                     return (
                         ResultCode.FAILED,
                         f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
@@ -1197,6 +1235,11 @@ class MccsController(SKAMaster):
             )
             controllerdevice.push_change_event(
                 "assignedResources", controllerdevice._assigned_resources
+            )
+            controllerdevice.notify_listener(
+                ResultCode.OK,
+                message_uid,
+                self.SUCCEEDED_MESSAGE,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 

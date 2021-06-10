@@ -18,6 +18,7 @@ from ska_tango_base.control_model import ObsState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -52,7 +53,7 @@ def devices_to_load():
     }
 
 
-class TestMccsIntegrationTmc:
+class TestMccsIntegrationTmc(HelperClass):
     """Integration test cases for interactions between TMC and MCCS device classes."""
 
     @pytest.fixture()
@@ -243,6 +244,8 @@ class TestMccsIntegrationTmc:
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
+        devices["subarraybeam_01"].isBeamLocked = True
+
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
@@ -250,11 +253,15 @@ class TestMccsIntegrationTmc:
             "channel_blocks": [2],
             "subarray_beam_ids": [1],
         }
-        devices["subarraybeam_01"].isBeamLocked = True
         json_string = json.dumps(parameters)
         self.assert_command(
-            device=devices["controller"], command="Allocate", argin=json_string
+            device=devices["controller"],
+            command="Allocate",
+            argin=json_string,
+            expected_result=ResultCode.QUEUED,
         )
+        self.wait_for_command_to_complete(devices["controller"])
+
         dev_states = {
             "subarray_01": DevState.ON,
         }
@@ -335,8 +342,13 @@ class TestMccsIntegrationTmc:
         }
         json_string = json.dumps(parameters)
         self.assert_command(
-            device=devices["controller"], command="Allocate", argin=json_string
+            device=devices["controller"],
+            command="Allocate",
+            argin=json_string,
+            expected_result=ResultCode.QUEUED,
         )
+        self.wait_for_command_to_complete(devices["controller"])
+
         dev_states = {
             "subarray_01": DevState.ON,
         }

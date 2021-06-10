@@ -603,7 +603,7 @@ class MccsSubrack(SKABaseDevice):
         This is overridden here to change the Tango serialisation model.
         """
         util = Util.instance()
-        util.set_serial_model(SerialModel.NO_SYNC)
+        util.set_serial_model(SerialModel.BY_DEVICE)
         super().init_device()
 
     def init_command_objects(self):

@@ -15,6 +15,7 @@ from tango import DevState
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
+from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
@@ -280,21 +281,30 @@ class TestHealthManagement(HelperClass):
         assert subarray_1.healthState == HealthState.OK
         assert subarray_2.healthState == HealthState.OK
 
-        _ = call_with_json(
+        [result_code], [status, message_uid] = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        _ = call_with_json(
+        assert result_code == ResultCode.QUEUED
+        assert status
+        assert ":Allocate" in message_uid
+
+        self.wait_for_command_to_complete(controller)
+
+        [result_code], [status, message_uid] = call_with_json(
             controller.Allocate,
             subarray_id=2,
             station_ids=[[2]],
             subarray_beam_ids=[2],
             channel_blocks=[2],
         )
-        sleep()
+        assert result_code == ResultCode.QUEUED
+        assert status
+        assert ":Allocate" in message_uid
+        self.wait_for_command_to_complete(controller)
 
         assert subarray_1.healthState == HealthState.OK
         assert subarray_2.healthState == HealthState.OK
@@ -347,13 +357,6 @@ class TestHealthManagement(HelperClass):
         tile_1.adminMode = AdminMode.ONLINE
 
         self.start_up_device(tile_1)
-
-        # tile_1.Off(empty_json_dict)
-        # dev_states = {tile_1: DevState.OFF}
-        # check_states(dev_states)
-        # tile_1.On(empty_json_dict)
-        # dev_states = {tile_1: DevState.ON}
-        # check_states(dev_states)
 
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK

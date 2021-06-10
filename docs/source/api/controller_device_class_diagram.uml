@@ -16,5 +16,5 @@ MccsController : -_health_state
 MccsController : -_command_result
 
 ResourceManager <|-- ControllerResourceManager
-SKAMaster <|-- MccsController
+SKAController <|-- MccsController
 @enduml

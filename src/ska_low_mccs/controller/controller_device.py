@@ -22,7 +22,7 @@ from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util
 from tango.server import attribute, command, device_property
 
 # Additional import
-from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
+from ska_tango_base import DeviceStateModel, SKAController, SKABaseDevice
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
@@ -148,132 +148,11 @@ class MccsControllerQueue(MessageQueue):
         device.push_change_event("commandResult", json_results)
 
 
-class SubarrayBeamsResourceManager(ResourceManager):
-    """
-    A simple manager for the subarray beams that are assigned to a subarray.
-
-    Inherits from ResourceManager.
-    """
-
-    def __init__(
-        self: SubarrayBeamsResourceManager,
-        health_monitor: MutableHealthMonitor,
-        subarray_beam_fqdns: List[str],
-        stations_manager: StationsResourceManager,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        Initialise a new SubarrayBeamsResourceManager.
-
-        :param health_monitor: Provides for monitoring of health states
-        :param subarray_beam_fqdns: the FQDNs of the subarray_beams that this
-            subarray manages
-        :param stations_manager: the StationResourceManager holding the station
-            devices belonging to the parent Subarray
-        :param logger: the logger to be used by the object under test
-        """
-        self._stations_manager = stations_manager
-        self._logger = logger
-        subarray_beams = {}
-        for subarray_beam_fqdn in subarray_beam_fqdns:
-            subarray_beam_id = int(subarray_beam_fqdn.split("/")[-1:][0])
-            subarray_beams[subarray_beam_id] = subarray_beam_fqdn
-        super().__init__(
-            health_monitor,
-            "Subarray Beams Resource Manager",
-            subarray_beams,
-            logger,
-            [HealthState.OK],
-        )
-
-    def assign(  # type: ignore[override]
-        self: SubarrayBeamsResourceManager,
-        subarray_id: int,
-        subarray_beams: dict[int, str],
-        stations: List[dict[int, str]],
-    ) -> None:
-        """
-        Assign devices to this subarray beams resource manager.
-
-        :param subarray_id: subarray device id
-        :param subarray_beams: dictionary of ids and FQDNs of station beams to be assigned
-        :param stations: list of dictionaries of ids & FQDNs of stations to be assigned
-        """
-        all_stations = {}
-        for stations_dict in stations:
-            for station_id, station_fqdn in stations_dict.items():
-                all_stations[station_id] = station_fqdn
-                if station_fqdn not in self._stations_manager.get_all_fqdns():
-                    self._stations_manager._add_to_managed({station_id: station_fqdn})
-
-        self._add_to_managed(subarray_beams)
-        for index, (subarray_beam_id, subarray_beam_fqdn) in enumerate(
-            subarray_beams.items()
-        ):
-            # TODO: Establishment of connections should happen at initialization
-            subarraybeam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
-            subarraybeam.stationIds = sorted(stations[index].keys())
-            subarraybeam.isBeamLocked = True
-
-            # self.update_resource_health(subarray_beam_fqdn, subarraybeam.healthState)
-            self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
-        super().assign(subarray_beams, subarray_id)
-
-    def release(  # type: ignore[override]
-        self: SubarrayBeamsResourceManager,
-        subarray_beam_fqdns: List[str],
-        station_fqdns: List[str],
-    ) -> None:
-        """
-        Release devices from this subarray beams resource manager.
-
-        :param subarray_beam_fqdns: list of  FQDNs of subarray_beams to be released
-        :param station_fqdns: list of  FQDNs of the stations which if assigned to,
-            subarray_beams should be released
-        """
-        station_ids_to_release = []
-        # release subarray_beams assigned to station_fqdns
-        for station_id, station_fqdn in self._stations_manager.items().items():
-            if station_fqdn in station_fqdns:
-                station_ids_to_release.append(station_id)
-        for subarray_beam in self._resources.values():
-            if subarray_beam._assigned_to in station_ids_to_release:
-                if subarray_beam.fqdn not in subarray_beam_fqdns:
-                    subarray_beam_fqdns.append(subarray_beam.fqdn)
-
-        # release subarray_beams by given fqdns
-        for subarray_beam_fqdn in subarray_beam_fqdns:
-            # TODO: Establishment of connections should happen at initialization
-            subarraybeam_proxy = MccsDeviceProxy(
-                subarray_beam_fqdn, logger=self._logger
-            )
-
-            subarraybeam_proxy.stationIds = []
-            subarraybeam_proxy.stationFqdn = None
-        super().release(subarray_beam_fqdns)
-
-    def release_all(self: SubarrayBeamsResourceManager) -> None:
-        """Release all devices from this subarray beams resource manager."""
-        subarray_beam_fqdns = self.get_all_fqdns()
-        super().release(subarray_beam_fqdns)
-        # self.release(devices, list())
-        self._stations_manager.release_all()
-
-    @property
-    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> List[str]:
-        """
-        Returns the FQDNs of currently assigned subarray_beams.
-
-        :return: FQDNs of currently assigned subarray_beams
-        """
-        return sorted(self.get_all_fqdns())
-
-
-class MccsController(SKAMaster):
+class MccsController(SKAController):
     """
     MccsController TANGO device class for the MCCS prototype.
 
-    This is a subclass of :py:class:`ska_tango_base.SKAMaster`.
+    This is a subclass of :py:class:`ska_tango_base.SKAController`.
 
     **Properties:**
 
@@ -351,7 +230,7 @@ class MccsController(SKAMaster):
                 command_name, command_object(self, self.state_model, self.logger)
             )
 
-    class InitCommand(SKAMaster.InitCommand):
+    class InitCommand(SKAController.InitCommand):
         """
         A class for :py:class:`~.MccsController`'s Init command.
 

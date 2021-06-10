@@ -411,7 +411,7 @@ class MccsAntenna(SKABaseDevice):
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska_tango_base.DeviceStateModel`
+                :py:class:`~ska_tango_base.base.OpStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`

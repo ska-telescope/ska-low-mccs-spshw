@@ -18,7 +18,7 @@ import threading
 import pytest
 from tango import AttrQuality, DevFailed, DevState, EventType
 
-from ska_tango_base import DeviceStateModel
+from ska_tango_base.base import OpStateModel
 from ska_tango_base.control_model import HealthState, SimulationMode, TestMode
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsDeviceProxy, MccsTile
@@ -758,7 +758,7 @@ class TestMccsTileCommands(HelperClass):
 
         # Now check that calling the command object results in the
         # correct TPM simulator command being called.
-        state_model = DeviceStateModel(logger)
+        state_model = OpStateModel(logger)
 
         mock_tpm_simulator = mocker.Mock()
         hardware_factory = SimulableHardwareFactory(
@@ -1224,7 +1224,7 @@ class TestInitCommand:
                  to check that it is allowed to run, and that it drives
                  with actions.
             :type state_model:
-                :py:class:`~ska_tango_base.DeviceStateModel`
+                :py:class:`~ska_tango_base.OpStateModel`
             :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
             :type logger: :py:class:`logging.Logger`

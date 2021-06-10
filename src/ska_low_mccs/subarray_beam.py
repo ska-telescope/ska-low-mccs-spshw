@@ -33,7 +33,7 @@ from tango import EnsureOmniThread
 from tango.server import attribute, command
 
 from ska_tango_base import SKAObsDevice, SKABaseDevice
-from ska_tango_base.base_device import DeviceStateModel
+from ska_tango_base.base import OpStateModel
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 import ska_low_mccs.release as release
@@ -247,7 +247,7 @@ class MccsSubarrayBeam(SKAObsDevice):
         def __init__(
             self: MccsSubarrayBeam.InitCommand,
             target: object,
-            state_model: DeviceStateModel,
+            state_model: OpStateModel,
             logger: logging.Logger = None,
         ) -> None:
             """

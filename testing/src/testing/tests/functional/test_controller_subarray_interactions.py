@@ -13,6 +13,7 @@ from ska_tango_base.control_model import AdminMode, ObsState, HealthState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
 @pytest.fixture(scope="module")
@@ -516,21 +517,13 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, val
     assert message
 
     # Check that the allocate command has completed
-    busy = True
-    timeout = 0.0
-    max_time = 5.0
-    result_code = None
-    while busy and timeout < max_time:
-        command_result = controller.commandResult
-        kwargs = json.loads(command_result)
-        result_code = kwargs.get("result_code")
-        message_uid = kwargs.get("message_uid")
-        if message_uid == uid and result_code == ResultCode.OK:
-            busy = False
-        else:
-            timeout += 0.2
-            time.sleep(0.2)
-    assert result_code == ResultCode.OK
+    helper = HelperClass()
+    helper.wait_for_command_to_complete(controller)
+
+    command_result = controller.commandResult
+    kwargs = json.loads(command_result)
+    message_uid = kwargs.get("message_uid")
+    assert(message_uid == uid)
 
     # We need to wait until the subarray is in IDLE state
     assert subarrays[1].obsstate == ObsState.IDLE

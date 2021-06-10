@@ -57,6 +57,17 @@ class TestMccsIntegrationTmc(HelperClass):
     """Integration test cases for interactions between TMC and MCCS device classes."""
 
     @pytest.fixture()
+    def mock_device_proxy(self, mocker):
+        """
+        A fixture that monkey patches Tango's DeviceProxy.
+
+        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
+        :return: A monkey patched Tango device proxy
+        """
+        mock = mocker.patch("tango.DeviceProxy", return_value=mocker)
+        return mock
+
+    @pytest.fixture()
     def devices(self, tango_harness: TangoHarness):
         """
         Fixture that provides access to devices via their names.
@@ -139,12 +150,13 @@ class TestMccsIntegrationTmc(HelperClass):
                 sleep(0.1)
             assert devices[device].State() == state
 
-    def test_controller_on(self, devices):
+    def test_controller_on(self, devices, mock_device_proxy):
         """
         Test that an asynchronous call to controller:On() works correctly.
 
         :param devices: fixture that provides access to devices by their name
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
+        :param mock_device_proxy: monkey patched device proxy
         """
         dev_states = {
             "controller": DevState.DISABLE,

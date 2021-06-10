@@ -64,7 +64,7 @@ class TestMccsIntegrationTmc(HelperClass):
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
         :return: A monkey patched Tango device proxy
         """
-        mock = mocker.patch("tango.DeviceProxy", return_value=mocker)
+        mock = mocker.patch("tango.DeviceProxy", return_value=mocker.Mock())
         return mock
 
     @pytest.fixture()

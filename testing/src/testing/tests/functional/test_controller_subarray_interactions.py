@@ -523,7 +523,7 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, val
     command_result = controller.commandResult
     kwargs = json.loads(command_result)
     message_uid = kwargs.get("message_uid")
-    assert(message_uid == uid)
+    assert message_uid == uid
 
     # We need to wait until the subarray is in IDLE state
     assert subarrays[1].obsstate == ObsState.IDLE

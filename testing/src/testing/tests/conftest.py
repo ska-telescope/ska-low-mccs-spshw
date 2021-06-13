@@ -141,7 +141,10 @@ def tango_harness_factory(request, logger):
 
         :return: a tango test harness
         """
-        device_info = MccsDeviceInfo(**devices_to_load)
+        if devices_to_load is None:
+            device_info = None
+        else:
+            device_info = MccsDeviceInfo(**devices_to_load)
 
         if true_context:
             tango_harness = ClientProxyTangoHarness(device_info, logger)

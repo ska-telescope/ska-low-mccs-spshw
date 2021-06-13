@@ -41,6 +41,9 @@ def devices_to_load(device_to_load):
         device) to load
     :rtype: dict
     """
+    if device_to_load is None:
+        return None
+
     device_spec = {
         "path": device_to_load["path"],
         "package": device_to_load["package"],

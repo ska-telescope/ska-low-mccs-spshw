@@ -14,7 +14,6 @@ import pytest
 from tango import AttrQuality
 
 from ska_tango_base.control_model import AdminMode, HealthState
-from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import (
     DeviceHealthPolicy,
@@ -198,26 +197,13 @@ class TestDeviceHealthRollupPolicy:
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing.
-
-    This is a slightly lazy hack to allow us to test event subscription
-    against mock devices. We need our tango harness to be up and running
-    for this to work, but the Tango test contexts require at least one
-    device to be running. So we stand up a single device, which we won't
-    actually be using in any way.
-
-    TODO: Find a way to stand up a Tango test harness that is 100% mock
-    devices, and thus doesn't use a Tango test context at all.
+    Fixture that specifies the device to be loaded for testing. In this case we mock all
+    devices, so there is no need to stand any up.
 
     :return: specification of the device to be loaded
     :rtype: dict
     """
-    return {
-        "path": "charts/ska-low-mccs/data/extra.json",
-        "package": "ska_low_mccs",
-        "device": "device",
-        "proxy": MccsDeviceProxy,
-    }
+    return None
 
 
 class TestDeviceHealthMonitor:

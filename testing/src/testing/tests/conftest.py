@@ -32,24 +32,75 @@ def pytest_sessionstart(session):
     print(tango.utils.info())
 
 
+_test_contexts = {
+    "test": set(),
+    "local": {"tangodb"},
+    "stfc": {"tangodb"},
+    "psi": {"tangodb", "tpm"},
+}
+
+
+def pytest_configure(config):
+    """
+    Register custom markers to avoid pytest warnings.
+
+    :param config: the pytest config object
+    :type config: :py:class:`pytest.config.Config`
+    """
+    all_tags = set().union(*_test_contexts.values())
+    for tag in all_tags:
+        config.addinivalue_line("markers", f"needs_{tag}")
+
+
 def pytest_addoption(parser):
     """
-    Pytest hook; implemented to add the `--true-context` option, used to indicate that a
-    true Tango subsystem is available, so there is no need for a
-    :py:class:`tango.test_context.MultiDeviceTestContext`.
+    Pytest hook; implemented to add the `--context` option, used to
+    specify the context in which the test is running. This could be
+    used, for example, to skip tests that have requirements not met by
+    the context.
 
     :param parser: the command line options parser
     :type parser: :py:class:`argparse.ArgumentParser`
     """
     parser.addoption(
-        "--true-context",
-        action="store_true",
-        default=False,
-        help=(
-            "Tell pytest that you have a true Tango context and don't "
-            "need to spin up a Tango test context"
-        ),
+        "--context",
+        choices=_test_contexts.keys(),
+        default="test",
+        help="Specify the context in which the tests are running.",
     )
+
+
+def pytest_collection_modifyitems(config, items):
+    """
+    Modify the list of tests to be run, after pytest has collected them.
+
+    This hook implementation skips tests that are marked as needing some
+    tag that is not provided by the current test context, as specified
+    by the "--context" option.
+
+    For example, if we have a hardware test that requires the presence
+    of a real TPM, we can tag it with "@needs_tpm". When we run in a
+    "test" context (that is, with "--context test" option), the test
+    will be skipped because the "test" context does not provide a TPM.
+    But when we run in "pss" context, the test will be run because the
+    "pss" context provides a TPM.
+
+    :param config: the pytest config object
+    :type config: :py:class:`pytest.config.Config`
+    :param items: list of tests collected by pytest
+    :type items: list(:py:class:`pytest.Item`)
+    """
+    context = config.getoption("--context")
+    available_tags = _test_contexts.get(context, set())
+    for item in items:
+        needs_tags = set(tag[6:] for tag in item.keywords if tag.startswith("needs_"))
+        unmet_tags = list(needs_tags - available_tags)
+        if unmet_tags:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason=f"Context '{context}' does not meet test needs: {unmet_tags}."
+                )
+            )
 
 
 @pytest.fixture()
@@ -81,15 +132,16 @@ def mock_factory():
 @pytest.fixture(scope="session")
 def tango_harness_factory(request, logger):
     """
-    Returns a factory for creating a test harness for testing Tango devices. The Tango
-    context used depends upon whether or not pytest was invoked with the `--true-
-    context` option.
+    Returns a factory for creating a test harness for testing Tango
+    devices. The Tango context used depends upon the context in which
+    the tests are being run, as specified by the `--context` option.
 
-    If yes, then this harness assumes that devices are already running;
-    that is, we are testing a deployed system.
-
-    If no, then this harness deploys the specified devices into a
+    If the context is "test", then this harness deploys the specified
+    devices into a
     :py:class:`tango.test_context.MultiDeviceTestContext`.
+
+    Otherwise, this harness assumes that devices are already running;
+    that is, we are testing a deployed system.
 
     This fixture is implemented as a factory so that the actual
     `tango_harness` fixture can vary in scope: unit tests require test
@@ -117,7 +169,7 @@ def tango_harness_factory(request, logger):
 
         pass
 
-    true_context = request.config.getoption("--true-context")
+    context = request.config.getoption("--context")
 
     def build_harness(
         tango_config: typing.Dict[str, str],
@@ -146,10 +198,10 @@ def tango_harness_factory(request, logger):
         else:
             device_info = MccsDeviceInfo(**devices_to_load)
 
-        if true_context:
-            tango_harness = ClientProxyTangoHarness(device_info, logger)
-        else:
+        if context == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
+        else:
+            tango_harness = ClientProxyTangoHarness(device_info, logger)
 
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 

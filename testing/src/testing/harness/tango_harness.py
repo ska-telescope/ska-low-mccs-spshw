@@ -267,7 +267,7 @@ class BaseTangoHarness(TangoHarness):
         :param device_info: object that makes device info available
         :param logger: a logger for the harness
         """
-        self._fqdns = list(device_info.fqdns)
+        self._fqdns = [] if device_info is None else list(device_info.fqdns)
         self.logger = logger
         super().__init__()
 
@@ -311,7 +311,7 @@ class ClientProxyTangoHarness(BaseTangoHarness):
 
     def __init__(
         self: BaseTangoHarness,
-        device_info: MccsDeviceInfo,
+        device_info: typing.Optional[MccsDeviceInfo],
         logger: logging.Logger,
         **kwargs: typing.Any,
     ) -> None:
@@ -322,7 +322,10 @@ class ClientProxyTangoHarness(BaseTangoHarness):
         :param logger: a logger for the harness
         :param kwargs: keyword arguments
         """
-        self._proxy_map = dict(device_info.proxy_map)
+        if device_info is None:
+            self._proxy_map = {}
+        else:
+            self._proxy_map = dict(device_info.proxy_map)
         super().__init__(device_info, logger, **kwargs)
 
     def get_device(
@@ -351,7 +354,7 @@ class TestContextTangoHarness(BaseTangoHarness):
 
     def __init__(
         self: TestContextTangoHarness,
-        device_info: MccsDeviceInfo,
+        device_info: typing.Optional[MccsDeviceInfo],
         logger: logging.Logger,
         process: bool = False,
         **kwargs: typing.Any,
@@ -386,12 +389,15 @@ class TestContextTangoHarness(BaseTangoHarness):
 
         self._port = _get_open_port()
 
-        self._test_context = MultiDeviceTestContext(
-            device_info.as_mdtc_device_info(),
-            process=process,
-            host=self._host,
-            port=self._port,
-        )
+        if device_info is None:
+            self._test_context = None
+        else:
+            self._test_context = MultiDeviceTestContext(
+                device_info.as_mdtc_device_info(),
+                process=process,
+                host=self._host,
+                port=self._port,
+            )
         super().__init__(device_info, logger, **kwargs)
 
     @property
@@ -432,7 +438,8 @@ class TestContextTangoHarness(BaseTangoHarness):
 
         :return: the context object
         """
-        self._test_context.__enter__()
+        if self._test_context is not None:
+            self._test_context.__enter__()
         return super().__enter__()
 
     def __exit__(
@@ -451,7 +458,9 @@ class TestContextTangoHarness(BaseTangoHarness):
         :returns: whether the exception (if any) has been fully handled
             by this method and should be swallowed i.e. not re-raised
         """
-        if self._test_context.__exit__(exc_type, exception, trace):
+        if self._test_context is not None and self._test_context.__exit__(
+            exc_type, exception, trace
+        ):
             return super().__exit__(None, None, None)
         else:
             return super().__exit__(exc_type, exception, trace)

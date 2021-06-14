@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Optional
 
 from ska_tango_base.control_model import HealthState
-from ska_low_mccs.health import HealthMonitor
+from ska_low_mccs.health import MutableHealthMonitor
 
 
 class ResourceState(Enum):
@@ -280,7 +280,7 @@ class ResourceManager:
 
     def __init__(
         self: ResourceManager,
-        health_monitor: HealthMonitor,
+        health_monitor: MutableHealthMonitor,
         managername: str,
         devices: dict[int, str],
         logger: logging.Logger,
@@ -335,7 +335,7 @@ class ResourceManager:
 
         :param devices: The IDs and FQDNs of devices to add
         """
-        self._health_monitor.add_devices(devices.values())
+        self._health_monitor.add_devices(list(devices.values()))
         for device_id, fqdn in devices.items():
             if fqdn not in self.get_all_fqdns():
                 self._resources[fqdn] = Resource(
@@ -435,11 +435,13 @@ class ResourceManager:
             return (False, None, blocking)
 
         # Make a list of wanted FQDNs not already assigned
+        needed = None
         needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].is_assigned())]
-        if len(needed) == 0:
-            needed = None
+        #         if len(needed) == 0:
+        #             needed = None
 
         # Make a list of already-assigned FQDNs no longer wanted
+        to_release = None
         to_release = [
             fqdn
             for (fqdn, res) in self._resources.items()
@@ -449,8 +451,8 @@ class ResourceManager:
                 and fqdn not in fqdns
             )
         ]
-        if len(to_release) == 0:
-            to_release = None
+        #         if len(to_release) == 0:
+        #             to_release = None
 
         # Return True (ok to proceed), with the lists
         return (True, needed, to_release)

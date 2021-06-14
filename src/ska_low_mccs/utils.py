@@ -15,7 +15,7 @@ import inspect
 import jsonschema
 import pkg_resources
 from functools import wraps
-from typing import Optional, Callable
+from typing import Callable, cast
 
 from tango import Except, ErrSeverity  # type: ignore[attr-defined]
 from tango.server import Device  # type: ignore[attr-defined]
@@ -24,9 +24,9 @@ from ska_tango_base.commands import ResultCode
 
 def tango_raise(
     msg: str,
-    reason: Optional[str] = "API_CommandFailed",
-    severity: Optional[ErrSeverity] = ErrSeverity.ERR,
-    _origin: Optional[str] = None,
+    reason: str = "API_CommandFailed",
+    severity: ErrSeverity = ErrSeverity.ERR,
+    _origin: str = None,
 ) -> None:
     """
     Helper function to provide a concise way to throw
@@ -55,13 +55,21 @@ def tango_raise(
         instance
     """
     if _origin is None:
-        frame = inspect.currentframe().f_back
-        calling_method = frame.f_code.co_name
-        calling_class = frame.f_locals["self"].__class__
-        if Device not in inspect.getmro(calling_class):
-            raise TypeError("Can only be used in a tango device instance")
-        class_name = calling_class.__name__
-        _origin = f"{class_name}.{calling_method}()"
+        current_frame = inspect.currentframe()
+        if current_frame is not None:
+            frame = current_frame.f_back
+            if frame is not None:
+                fcode = frame.f_code
+                flocals = frame.f_locals["self"]
+                if fcode is not None and flocals is not None:
+                    calling_method = fcode.co_name
+                    calling_class = frame.f_locals["self"].__class__
+                    if Device not in inspect.getmro(calling_class):
+                        raise TypeError("Can only be used in a tango device instance")
+                    class_name = calling_class.__name__
+                    _origin = f"{class_name}.{calling_method}()"
+                    Except.throw_exception(reason, msg, _origin, severity)
+        raise TypeError("Can't access frame, f_code or f_locals")
     Except.throw_exception(reason, msg, _origin, severity)
 
 
@@ -159,7 +167,8 @@ class json_input:  # noqa: N801
             :return: whatever the function to be wrapped returns
             """
             json_object = self._parse(json_string)
-            return func(obj, **json_object)
+            cast(dict, json_object)
+            return func(obj, **cast(dict, json_object))
 
         return wrapped
 

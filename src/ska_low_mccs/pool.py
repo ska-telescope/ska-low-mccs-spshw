@@ -22,10 +22,10 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 import json
 import logging
-from typing import Optional, Union, Iterable
+from typing import Union, Any
 
 from ska_tango_base.commands import ResultCode
-from ska_low_mccs import MccsDeviceProxy  # type: ignore[attr-defined]
+from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
 class DevicePool:
@@ -59,7 +59,7 @@ class DevicePool:
         """
         self._fqdns = fqdns or []
         self._logger = logger
-        self._devices: Iterable[MccsDeviceProxy] = None
+        self._devices: list[MccsDeviceProxy] = []
         self._responses: dict[str, bool] = {}
         self._results: list[ResultCode] = []
 
@@ -71,17 +71,14 @@ class DevicePool:
         """
         Connect to the devices in the pool.
         """
-
-        if self._devices is None:
+        if not self._devices:
             # TODO: it would save some time if we were connecting asynchronously.
             self._devices = [
                 MccsDeviceProxy(fqdn, self._logger) for fqdn in self._fqdns
             ]
 
     # TODO: Deprecate this call (once converted to messaging system)
-    def invoke_command(
-        self: DevicePool, command_name: str, arg: Optional[object] = None
-    ) -> bool:
+    def invoke_command(self: DevicePool, command_name: str, arg: Any = None) -> bool:
         """
         A generic method for invoking a command on all devices in the pool.
 
@@ -90,7 +87,7 @@ class DevicePool:
 
         :return: Whether the command succeeded or not
         """
-        if self._devices is None:
+        if not self._devices:
             self.connect()
 
         async_ids = []
@@ -126,7 +123,7 @@ class DevicePool:
             self._logger.error(f"{len(self._responses)} pool messages in progress")
             return False
 
-        if self._devices is None:
+        if not self._devices:
             self.connect()
 
         self._results = []
@@ -309,7 +306,7 @@ class DevicePoolSequence:
     def invoke_command(
         self: DevicePoolSequence,
         command_name: str,
-        arg: Optional[object] = None,
+        arg: Any = None,
         reverse: bool = False,
     ) -> Union[bool, None]:
         """

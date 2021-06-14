@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -12,8 +11,9 @@ import logging
 from typing import Any, Callable
 import warnings
 
-import backoff
-import tango
+import backoff  # type: ignore[attr-defined]
+from tango import DevState
+from tango import DevFailed, DeviceProxy  # type: ignore[attr-defined]
 
 
 __all__ = ["MccsDeviceProxy"]
@@ -48,7 +48,7 @@ class MccsDeviceProxy:
         """
         Set the default connection factory for this class. This is super
         useful for unit testing: we can mock out
-        :py:class:`tango.DeviceProxy` altogether, by simply setting this
+        :py:class:`DeviceProxy` altogether, by simply setting this
         class's default connection factory to a mock factory.
 
         :param connection_factory: default factory to use to establish
@@ -71,9 +71,9 @@ class MccsDeviceProxy:
         :param logger: a logger for this proxy to use
         :param connection_factory: how we obtain a connection to the\
             device we are proxying. By default this is
-            :py:class:`tango.DeviceProxy`, but occasionally this needs
+            :py:class:`DeviceProxy`, but occasionally this needs
             to be changed. For example, when testing against a
-            :py:class:`tango.test_context.MultiDeviceTestContext`, we
+            :py:class:`test_context.MultiDeviceTestContext`, we
             obtain connections to the devices under test via
             ``test_context.get_device(fqdn)``.
         :param connect: whether to connect immediately to the device. If
@@ -118,7 +118,8 @@ class MccsDeviceProxy:
                 the call args and the elapsed time
             """
             args = details.get("args")
-            fqdn = args[1]
+            argslist = cast(list, args)
+            fqdn = argslist[1]
             elapsed = details.get("elapsed")
             self._logger.warning(
                 f"Gave up trying to connect to device {fqdn} after "
@@ -127,15 +128,14 @@ class MccsDeviceProxy:
 
         @backoff.on_exception(
             backoff.expo,
-            tango.DevFailed,
+            DevFailed,
             on_giveup=_on_giveup_connect,
             factor=1,
             max_time=max_time,
         )
         def _backoff_connect(
-            connection_factory: Callable[[str], tango.DeviceProxy],
-            fqdn: str,
-        ) -> tango.DeviceProxy:
+            connection_factory: Callable[[str], DeviceProxy], fqdn: str
+        ) -> DeviceProxy:
             """
             Attempt connection to a specified device.
 
@@ -151,9 +151,8 @@ class MccsDeviceProxy:
             return _connect(connection_factory, fqdn)
 
         def _connect(
-            connection_factory: Callable[[str], tango.DeviceProxy],
-            fqdn: str,
-        ) -> tango.DeviceProxy:
+            connection_factory: Callable[[str], DeviceProxy], fqdn: str
+        ) -> DeviceProxy:
             """
             Make a single attempt to connect to a device.
 
@@ -203,7 +202,7 @@ class MccsDeviceProxy:
             factor=1,
             max_time=max_time,
         )
-        def _backoff_check_initialised(device: tango.DeviceProxy) -> bool:
+        def _backoff_check_initialised(device: DeviceProxy) -> bool:
             """
             Check that the device has completed initialisation.
 
@@ -217,7 +216,7 @@ class MccsDeviceProxy:
             """
             return _check_initialised(device)
 
-        def _check_initialised(device: tango.DeviceProxy) -> bool:
+        def _check_initialised(device: DeviceProxy) -> bool:
             """
             Check that the device has completed initialisation.
 
@@ -241,8 +240,8 @@ class MccsDeviceProxy:
             :return: whether the device has completed initialisation
             """
             try:
-                return device.state() != tango.DevState.INIT
-            except tango.DevFailed:
+                return device.state() != DevState.INIT
+            except DevFailed:
                 self._logger.debug(
                     "Caught a DevFailed exception while checking that the device has "
                     "initialised. This is most likely a 'BAD_INV_ORDER_ORBHasShutdown "
@@ -387,7 +386,7 @@ class MccsDeviceProxy:
                 raise ConnectionError("MccsDeviceProxy has not connected yet.")
             setattr(self._device, name, value)
 
-    def __getattr__(self, name, default_value=None):
+    def __getattr__(self, name: str, default_value: Any = None) -> Any:
         """
         Handler for any requested attribute not found in the usual way.
 
@@ -395,16 +394,13 @@ class MccsDeviceProxy:
         attribute from the underlying proxy.
 
         :param name: name of the requested attribute
-        :type name: str
         :param default_value: value to return if the attribute is not
             found
-        :type default_value: obj
 
         :raises AttributeError: if neither this class nor the underlying
             proxy (if in pass-through mode) has the attribute.
 
         :return: the requested attribute
-        :rtype: obj
         """
         if self._pass_through and self._device is not None:
             return getattr(self._device, name, default_value)

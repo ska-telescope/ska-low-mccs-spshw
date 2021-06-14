@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -18,7 +19,4 @@ __all__ = [
     "demo_controller_device",
 ]
 
-from .controller_device import (
-    MccsController,
-    ControllerResourceManager,
-)
+from .controller_device import MccsController, ControllerResourceManager

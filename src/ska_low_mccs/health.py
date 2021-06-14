@@ -14,21 +14,19 @@ __all__ = [
     "DeviceHealthMonitor",
     "HealthMonitor",
     "HealthModel",
+    "MutableHealthMonitor",
+    "MutableHealthModel",
 ]
 
 from collections import Counter
 from functools import partial
-from typing import Callable, Optional, Union, Literal
+from typing import Callable, Optional, Union, cast, Type
 
-from tango import AttrQuality  # type: ignore[attr-defined]
+from tango import AttrQuality
 
 from ska_tango_base.control_model import AdminMode, HealthState
 from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import HardwareManager  # type: ignore[attr-defined]
-
-OptListOrStr = Optional[Union[list[str], str]]
-
-from ska_low_mccs import MccsDeviceProxy
 
 
 class DeviceHealthPolicy:
@@ -43,7 +41,7 @@ class DeviceHealthPolicy:
 
     @classmethod
     def compute_health(
-        cls: DeviceHealthPolicy, admin_mode: AdminMode, health_state: HealthState
+        cls: Type[DeviceHealthPolicy], admin_mode: AdminMode, health_state: HealthState
     ) -> Union[HealthState, None]:
         """
         Computes the health of the device, based on the device's admin mode and self-
@@ -63,7 +61,7 @@ class DeviceHealthPolicy:
             AdminMode.RESERVED,
             AdminMode.OFFLINE,
         ):
-            return
+            return None
         elif health_state is None:
             return HealthState.UNKNOWN
         else:
@@ -87,8 +85,8 @@ class DeviceHealthRollupPolicy:
 
     def __init__(
         self: DeviceHealthRollupPolicy,
-        degraded_weight: Optional[float] = 1.0,
-        failed_weight: Optional[float] = 1.0,
+        degraded_weight: float = 1.0,
+        failed_weight: float = 1.0,
     ) -> None:
         """
         Create a new instances.
@@ -102,7 +100,8 @@ class DeviceHealthRollupPolicy:
         self._failed_weight = failed_weight
 
     def _compute_device_health(
-        self: DeviceHealthRollupPolicy, device_healths: list[HealthState]
+        self: DeviceHealthRollupPolicy,
+        device_healths: Optional[list[HealthState]] = None,
     ) -> HealthState:
         """
         Helper method to roll up device healths into a single device health.
@@ -134,7 +133,7 @@ class DeviceHealthRollupPolicy:
     def compute_health(
         self: DeviceHealthRollupPolicy,
         hardware_health: Optional[HealthState],
-        device_healths: list[HealthState],
+        device_healths: Optional[list[HealthState]] = None,
     ) -> HealthState:
         """
         Compute this devices health, given the health of its hardware and the health of
@@ -189,7 +188,7 @@ class DeviceHealthMonitor:
         self._device_admin_mode = None
         self._device_health_state = None
         self._interpreted_health = None
-        self._callbacks = []
+        self._callbacks: list[Callable] = []
 
         self._compute_health()
 
@@ -211,7 +210,7 @@ class DeviceHealthMonitor:
 
     def _health_state_changed(
         self: DeviceHealthMonitor,
-        event_name: Literal["healthState"],
+        event_name: str,
         event_value: HealthState,
         event_quality: AttrQuality,
     ) -> None:
@@ -232,7 +231,7 @@ class DeviceHealthMonitor:
 
     def _admin_mode_changed(
         self: DeviceHealthMonitor,
-        event_name: Literal["adminMode"],
+        event_name: str,
         event_value: AdminMode,
         event_quality: AttrQuality,
     ) -> None:
@@ -304,7 +303,7 @@ class HealthMonitor:
             self.register_callback(initial_callback)
 
     def register_callback(
-        self: HealthMonitor, callback: Callable, fqdn_spec: OptListOrStr = None
+        self: HealthMonitor, callback: Callable, fqdn_spec: Union[list[str], str] = None
     ) -> None:
         """
         Register a callback on change to health from one or more fqdns.
@@ -320,7 +319,7 @@ class HealthMonitor:
         :raises ValueError: if an unknown FQDN is passed
         """
         if fqdn_spec is None:
-            fqdns = self._device_health_monitors.keys()
+            fqdns = list(self._device_health_monitors.keys())
         elif isinstance(fqdn_spec, str):
             fqdns = [fqdn_spec]
         else:
@@ -361,7 +360,7 @@ class HealthModel:
         self._device_health_rollup_policy = DeviceHealthRollupPolicy()
         self._health = HealthState.UNKNOWN
 
-        self._callbacks = []
+        self._callbacks: list[Callable] = []
         if initial_callback is not None:
             self.register_callback(initial_callback)
 
@@ -438,8 +437,9 @@ class HealthModel:
         :param health: The device's new healthState attribute value, or
             None if the device's health is to be ignored
         """
-        self._device_health[fqdn] = health
-        self._compute_health()
+        if self._device_health is not None:
+            self._device_health[fqdn] = health
+            self._compute_health()
 
     def _compute_health(self: HealthModel) -> None:
         """
@@ -450,7 +450,9 @@ class HealthModel:
         try:
             health = self._device_health_rollup_policy.compute_health(
                 self._hardware_health,
-                None if self._device_health is None else self._device_health.values(),
+                None
+                if self._device_health is None
+                else list(self._device_health.values()),
             )
             self._update_health(health)
         except AttributeError:
@@ -495,12 +497,14 @@ class MutableHealthMonitor(HealthMonitor):
 
         # remember callbacks that are registered against all fqdns in the device pool,
         # so that we can register them against fqdns that are added to the pool later
-        self._pool_callbacks = list()
+        self._pool_callbacks: list[Callable] = list()
 
         super().__init__(fqdns, logger, initial_callback)
 
     def register_callback(
-        self: MutableHealthMonitor, callback: Callable, fqdn_spec: OptListOrStr = None
+        self: MutableHealthMonitor,
+        callback: Callable,
+        fqdn_spec: Union[list[str], str] = None,
     ) -> None:
         """
         Register a callback on change to health from one or more fqdns.
@@ -590,7 +594,7 @@ class MutableHealthModel(HealthModel):
         if self._health_monitor is None:
             self._health_monitor = self._init_health_monitor(fqdns)
         else:
-            self._health_monitor.add_devices(fqdns)
+            cast(MutableHealthMonitor, self._health_monitor).add_devices(fqdns)
 
     def remove_devices(self: MutableHealthModel, fqdns: list[str]) -> None:
         """
@@ -598,4 +602,4 @@ class MutableHealthModel(HealthModel):
 
         :param fqdns: fqdns of devices to be added
         """
-        self._health_monitor.remove_devices(fqdns)
+        cast(MutableHealthMonitor, self._health_monitor).remove_devices(fqdns)

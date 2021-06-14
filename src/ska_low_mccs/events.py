@@ -14,18 +14,21 @@ from functools import partial
 import warnings
 import logging
 import backoff
-from typing import Callable, Optional, Union
+from typing import Callable, Union
 
-from tango import DevFailed, EventType, DeviceProxy  # type: ignore[attr-defined]
-from tango.server import EventData, DeviceAttribute  # type: ignore[attr-defined]
+from tango import (
+    DevFailed,
+    EventData,
+    EventType,
+    DeviceProxy,
+    DeviceAttribute,
+)  # type: ignore[attr-defined]
 
-from ska_low_mccs import MccsDeviceProxy  # type: ignore[attr-defined]
-
-OptListOrStr = Optional[Union[list[str], str]]
+from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
 def _parse_spec(
-    spec: OptListOrStr = None, allowed: Optional[list[str]] = None
+    spec: Union[list[str], str] = None, allowed: list[str] = None
 ) -> list[str]:
     """
     Helper function that implements parsing of a specification (of events or fqdns)
@@ -201,7 +204,7 @@ class DeviceEventManager:
         self: DeviceEventManager,
         fqdn: str,
         logger: logging.Logger,
-        events: Optional[list[str]] = None,
+        events: list[str] = None,
     ) -> None:
         """
         Initialise a new DeviceEventManager object.
@@ -222,7 +225,9 @@ class DeviceEventManager:
         self._device = MccsDeviceProxy(fqdn, logger)
 
     def register_callback(
-        self: DeviceEventManager, callback: Callable, event_spec: OptListOrStr = None
+        self: DeviceEventManager,
+        callback: Callable,
+        event_spec: Union[list[str], str] = None,
     ) -> None:
         """
         Register a callback for an event (or events) handled by this handler.
@@ -270,8 +275,8 @@ class EventManager:
     def __init__(
         self: EventManager,
         logger: logging.Logger,
-        fqdns: Optional[list[str]] = None,
-        events: Optional[list[str]] = None,
+        fqdns: list[str] = None,
+        events: list[str] = None,
     ) -> None:
         """
         Initialise a new EventManager object.
@@ -293,8 +298,8 @@ class EventManager:
     def register_callback(
         self: EventManager,
         callback: Callable,
-        fqdn_spec: OptListOrStr = None,
-        event_spec: OptListOrStr = None,
+        fqdn_spec: Union[list[str], str] = None,
+        event_spec: Union[list[str], str] = None,
     ) -> None:
         """
         Register a callback for a particular event from a particularly device.

@@ -18,6 +18,7 @@ import logging
 import threading
 from uuid import uuid4
 from queue import SimpleQueue, Empty
+from typing import Any
 
 from tango import EnsureOmniThread, DevFailed, DeviceProxy  # type: ignore[attr-defined]
 
@@ -67,7 +68,7 @@ class MessageQueue(threading.Thread):
             self.callback = callback
 
     def __init__(
-        self: MessageQueue, target: object, lock: threading.Lock, logger: logging.Logger
+        self: MessageQueue, target: Any, lock: threading.Lock, logger: logging.Logger
     ):
         """
         Initialise a new MessageQueue object.
@@ -77,7 +78,7 @@ class MessageQueue(threading.Thread):
         :param logger: the logger to be used by this object.
         """
         threading.Thread.__init__(self)
-        self._message_queue = SimpleQueue()
+        self._message_queue: SimpleQueue = SimpleQueue()
         self._terminate = False
         self._target = target
         self._qdebuglock = lock

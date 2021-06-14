@@ -16,11 +16,12 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
+from typing import Any
 from uuid import uuid4
 from queue import SimpleQueue, Empty
-from typing import Any
 
-from tango import EnsureOmniThread, DevFailed, DeviceProxy  # type: ignore[attr-defined]
+import tango
+from tango import EnsureOmniThread, DevFailed
 
 from ska_tango_base.commands import ResultCode
 
@@ -49,7 +50,7 @@ class MessageQueue(threading.Thread):
             notifications: bool,
             respond_to_fqdn: str,
             callback: str,
-        ):
+        ) -> None:
             """
             Message constructor.
 
@@ -69,7 +70,7 @@ class MessageQueue(threading.Thread):
 
     def __init__(
         self: MessageQueue, target: Any, lock: threading.Lock, logger: logging.Logger
-    ):
+    ) -> None:
         """
         Initialise a new MessageQueue object.
 
@@ -138,7 +139,7 @@ class MessageQueue(threading.Thread):
             # Check we have a device to respond to before executing a command
             if message.respond_to_fqdn:
                 try:
-                    response_device = DeviceProxy(message.respond_to_fqdn)
+                    response_device = tango.DeviceProxy(message.respond_to_fqdn)
                 except DevFailed:
                     err_status = f"Response device {message.respond_to_fqdn} not found"
                     self._qdebug(err_status)
@@ -254,6 +255,7 @@ class MessageQueue(threading.Thread):
             for command's result attribute
         :param respond_to_fqdn: Response message FQDN
         :param callback: Callback command to call call
+
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
@@ -301,9 +303,9 @@ class MessageQueue(threading.Thread):
         :param json_args: JSON encoded arguments to send to the command
         :param notifications: Client requirement for push notifications for
             command's result attribute
+
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
-        :rtype: (ResultCode, str, str)
         """
         return self.send_message(
             command=command,

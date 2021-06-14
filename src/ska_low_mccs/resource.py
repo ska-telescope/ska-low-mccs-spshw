@@ -83,7 +83,6 @@ class ResourceAvailabilityPolicy:
         Set the health states allowed for allocation.
 
         :param health_states: Allowed health states
-        :type health_states: :py:class:`~ska_tango_base.control_model.HealthState`
         """
         self._allocatable_health_states = list(health_states)
 
@@ -285,7 +284,7 @@ class ResourceManager:
         devices: dict[int, str],
         logger: logging.Logger,
         availability_policy: list[HealthState] = [HealthState.OK],
-    ):
+    ) -> None:
         """
         Initialize new ResourceManager instance.
 
@@ -437,8 +436,8 @@ class ResourceManager:
         # Make a list of wanted FQDNs not already assigned
         needed = None
         needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].is_assigned())]
-        #         if len(needed) == 0:
-        #             needed = None
+        if len(needed) == 0:
+            needed = None
 
         # Make a list of already-assigned FQDNs no longer wanted
         to_release = None
@@ -451,8 +450,8 @@ class ResourceManager:
                 and fqdn not in fqdns
             )
         ]
-        #         if len(to_release) == 0:
-        #             to_release = None
+        if len(to_release) == 0:
+            to_release = None
 
         # Return True (ok to proceed), with the lists
         return (True, needed, to_release)

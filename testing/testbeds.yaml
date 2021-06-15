@@ -1,0 +1,4 @@
+test: !!set {}
+local: !!set {tangoDB}
+STFC: !!set {tangoDB}
+PSI: !!set {tangoDB, tpm}

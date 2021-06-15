@@ -66,11 +66,8 @@ class DevicePool:
         if connect:
             self.connect()
 
-
     def connect(self: DevicePool) -> None:
-        """
-        Connect to the devices in the pool.
-        """
+        """Connect to the devices in the pool."""
         if not self._devices:
             # TODO: it would save some time if we were connecting asynchronously.
             self._devices = [
@@ -294,12 +291,8 @@ class DevicePoolSequence:
         if connect:
             self.connect()
 
-
     def connect(self: DevicePoolSequence) -> None:
-        """
-        Connect to the devices in the pools.
-        """
-
+        """Connect to the devices in the pools."""
         for pool in self._pools:
             pool.connect()
 

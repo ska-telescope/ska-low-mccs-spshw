@@ -4,16 +4,15 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-Module for MCCS utils.
-"""
+
+"""Module for MCCS utils."""
 
 from __future__ import annotations  # allow forward references in type hints
 
 import json
 import inspect
 import jsonschema
-import pkg_resources
+import pkg_resources  # type: ignore
 from functools import wraps
 from typing import Callable, cast
 
@@ -62,7 +61,7 @@ def tango_raise(
                 fcode = frame.f_code
                 flocals = frame.f_locals["self"]
                 if fcode is not None and flocals is not None:
-                    calling_method = fcode.co_name
+                    calling_method = fcode.co_name  # type: ignore[attr-defined]
                     calling_class = frame.f_locals["self"].__class__
                     if Device not in inspect.getmro(calling_class):
                         raise TypeError("Can only be used in a tango device instance")

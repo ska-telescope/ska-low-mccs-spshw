@@ -183,17 +183,13 @@ class EventSubscriptionHandler:
             self._call(callback, attribute_data)
 
     def _unsubscribe(self: EventSubscriptionHandler) -> None:
-        """
-        Unsubscribe from the event.
-        """
+        """Unsubscribe from the event."""
         if self._subscription_id is not None:
             self._device.unsubscribe_event(self._subscription_id)
             self._subscription_id = None
 
     def __del__(self: EventSubscriptionHandler) -> None:
-        """
-        Cleanup before destruction.
-        """
+        """Cleanup before destruction."""
         self._unsubscribe()
 
 

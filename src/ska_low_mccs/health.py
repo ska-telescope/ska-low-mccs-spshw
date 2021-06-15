@@ -252,10 +252,7 @@ class DeviceHealthMonitor:
         self._compute_health()
 
     def _compute_health(self: DeviceHealthMonitor) -> None:
-        """
-        Re-evaluate the health of this device, on the basis of a
-        DeviceHealthPolicy.
-        """
+        """Re-evaluate the health of this device using DeviceHealthPolicy."""
         interpreted_health = DeviceHealthPolicy.compute_health(
             self._device_admin_mode, self._device_health_state
         )
@@ -545,9 +542,7 @@ class MutableHealthMonitor(HealthMonitor):
             del self._device_health_monitors[fqdn]
 
     def remove_all_devices(self: MutableHealthMonitor) -> None:
-        """
-        Remove all items from the list of devices to be monitored.
-        """
+        """Remove all items from the list of devices to be monitored."""
         fqdns = list(self._device_health_monitors.keys())
         self.remove_devices(fqdns)
 

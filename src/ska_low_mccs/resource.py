@@ -87,9 +87,7 @@ class ResourceAvailabilityPolicy:
         self._allocatable_health_states = list(health_states)
 
     def reset(self: ResourceAvailabilityPolicy) -> None:
-        """
-        Reset to the default set of states allowed for allocation.
-        """
+        """Reset to the default set of states allowed for allocation."""
         self._allocatable_health_states = [HealthState.OK]
 
 
@@ -167,6 +165,8 @@ class Resource:
 
     def is_healthy(self: Resource) -> bool:
         """
+        ame}")
+
         Check if this resource is in a healthy state, as defined by its resource
         availability policy.
 
@@ -176,7 +176,7 @@ class Resource:
 
     def _health_changed(self: Resource, fqdn: str, event_value: int) -> None:
         """
-        Update the health state of the resource.
+        Update the health state of the resource. ame}")
 
         :param fqdn: FQDN of the device for which healthState has
             changed
@@ -242,9 +242,7 @@ class Resource:
         # Unassigned or unavailable resource does not change state
 
     def make_unavailable(self: Resource) -> None:
-        """
-        Mark the resource as unavailable for assignment.
-        """
+        """Mark the resource as unavailable for assignment."""
         # Change resource state to unavailable
         # If it was previously AVAILABLE (not ASSIGNED) we can just switch
         if self.is_available():
@@ -255,9 +253,7 @@ class Resource:
             pass
 
     def make_available(self: Resource) -> None:
-        """
-        Mark the resource as available for assignment.
-        """
+        """Mark the resource as available for assignment."""
         # Change resource state to available
         # If it was previously UNAVAILABLE (not ASSIGNED) we can just switch
         if self.is_unavailable():
@@ -537,8 +533,5 @@ class ResourceManager:
         )
 
     def reset_resource_availability_policy(self: ResourceManager) -> None:
-        """
-        Reset to the default list of health states which permit
-        allocation.
-        """
+        """Reset to the default list of health states which permit allocation."""
         self.resource_availability_policy.reset()

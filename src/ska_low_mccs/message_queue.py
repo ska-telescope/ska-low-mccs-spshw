@@ -95,9 +95,7 @@ class MessageQueue(threading.Thread):
             self._target.queue_debug += f"{message}\n"
 
     def run(self: MessageQueue) -> None:
-        """
-        Thread run method executing the message queue loop.
-        """
+        """Thread run method executing the message queue loop."""
         # https://pytango.readthedocs.io/en/stable/howto.html
         # #using-clients-with-multithreading
         with EnsureOmniThread():
@@ -228,9 +226,7 @@ class MessageQueue(threading.Thread):
         self._execute_message(message)
 
     def terminate_thread(self: MessageQueue) -> None:
-        """
-        External call to gracefully terminate this thread.
-        """
+        """External call to gracefully terminate this thread."""
         self._logger.warning(
             f"Device={self._target.get_name()} terminate message queue"
         )

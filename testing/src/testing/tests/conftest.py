@@ -9,6 +9,7 @@ import json
 from time import sleep
 import pytest
 import tango
+import yaml
 
 from ska_tango_base.commands import ResultCode
 from testing.harness.mock import MockDeviceBuilder
@@ -32,12 +33,8 @@ def pytest_sessionstart(session):
     print(tango.utils.info())
 
 
-_test_contexts = {
-    "test": set(),
-    "local": {"tangodb"},
-    "stfc": {"tangodb"},
-    "psi": {"tangodb", "tpm"},
-}
+with open("testing/testbeds.yaml", "r") as stream:
+    _testbeds = yaml.safe_load(stream)
 
 
 def pytest_configure(config):
@@ -47,26 +44,25 @@ def pytest_configure(config):
     :param config: the pytest config object
     :type config: :py:class:`pytest.config.Config`
     """
-    all_tags = set().union(*_test_contexts.values())
+    all_tags = set().union(*_testbeds.values())
     for tag in all_tags:
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
 def pytest_addoption(parser):
     """
-    Pytest hook; implemented to add the `--context` option, used to
-    specify the context in which the test is running. This could be
-    used, for example, to skip tests that have requirements not met by
-    the context.
+    Pytest hook; implemented to add the `--testbed` option, used to specify the context
+    in which the test is running. This could be used, for example, to skip tests that
+    have requirements not met by the context.
 
     :param parser: the command line options parser
     :type parser: :py:class:`argparse.ArgumentParser`
     """
     parser.addoption(
-        "--context",
-        choices=_test_contexts.keys(),
+        "--testbed",
+        choices=_testbeds.keys(),
         default="test",
-        help="Specify the context in which the tests are running.",
+        help="Specify the testbed on which the tests are running.",
     )
 
 
@@ -76,11 +72,11 @@ def pytest_collection_modifyitems(config, items):
 
     This hook implementation skips tests that are marked as needing some
     tag that is not provided by the current test context, as specified
-    by the "--context" option.
+    by the "--testbed" option.
 
     For example, if we have a hardware test that requires the presence
     of a real TPM, we can tag it with "@needs_tpm". When we run in a
-    "test" context (that is, with "--context test" option), the test
+    "test" context (that is, with "--testbed test" option), the test
     will be skipped because the "test" context does not provide a TPM.
     But when we run in "pss" context, the test will be run because the
     "pss" context provides a TPM.
@@ -90,15 +86,22 @@ def pytest_collection_modifyitems(config, items):
     :param items: list of tests collected by pytest
     :type items: list(:py:class:`pytest.Item`)
     """
-    context = config.getoption("--context")
-    available_tags = _test_contexts.get(context, set())
+    testbed = config.getoption("--testbed")
+    available_tags = _testbeds.get(testbed, set())
+
+    prefix = "needs_"
     for item in items:
-        needs_tags = set(tag[6:] for tag in item.keywords if tag.startswith("needs_"))
+        needs_tags = set(
+            tag[len(prefix) :] for tag in item.keywords if tag.startswith(prefix)
+        )
         unmet_tags = list(needs_tags - available_tags)
         if unmet_tags:
             item.add_marker(
                 pytest.mark.skip(
-                    reason=f"Context '{context}' does not meet test needs: {unmet_tags}."
+                    reason=(
+                        f"Testbed '{testbed}' does not meet test needs: "
+                        f"{unmet_tags}."
+                    )
                 )
             )
 
@@ -132,9 +135,9 @@ def mock_factory():
 @pytest.fixture(scope="session")
 def tango_harness_factory(request, logger):
     """
-    Returns a factory for creating a test harness for testing Tango
-    devices. The Tango context used depends upon the context in which
-    the tests are being run, as specified by the `--context` option.
+    Returns a factory for creating a test harness for testing Tango devices. The Tango
+    context used depends upon the context in which the tests are being run, as specified
+    by the `--testbed` option.
 
     If the context is "test", then this harness deploys the specified
     devices into a
@@ -169,7 +172,7 @@ def tango_harness_factory(request, logger):
 
         pass
 
-    context = request.config.getoption("--context")
+    testbed = request.config.getoption("--testbed")
 
     def build_harness(
         tango_config: typing.Dict[str, str],
@@ -198,7 +201,7 @@ def tango_harness_factory(request, logger):
         else:
             device_info = MccsDeviceInfo(**devices_to_load)
 
-        if context == "test":
+        if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)

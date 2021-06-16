@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -5,8 +6,10 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements a DemoTileDevice, with extra interface features
-that support testing and demonstrating the MCCS Tile device.
+This module implements a DemoTileDevice.
+
+DemoTileDevice extends TileDevice with extra interface features that
+support testing and demonstrating the MCCS Tile device.
 """
 from tango import DevState
 from tango.server import command, Device
@@ -20,8 +23,7 @@ __all__ = ["ConnectionFailableDevice", "DemoTile"]
 
 class ConnectionFailableDevice(Device):
     """
-    A tango device mixin that adds a single simulate_connection_failure
-    command.
+    A tango device mixin that adds a single simulate_connection_failure command.
 
     This can be used with any tango device that has a
     hardware_manager attribute that is an instance of
@@ -30,8 +32,7 @@ class ConnectionFailableDevice(Device):
 
     def is_SimulateConnectionFailure_allowed(self):
         """
-        Return whether the SimulateConnectionFailure command is allowed
-        to be called.
+        Return whether the SimulateConnectionFailure command is allowed to be called.
 
         :return: whether the SimulateConnectionFailure command is
             allowed to be called
@@ -42,8 +43,7 @@ class ConnectionFailableDevice(Device):
     @command(dtype_in=bool)
     def SimulateConnectionFailure(self, is_fail):
         """
-        Tells the simulate whether or not to simulate connection
-        failure.
+        Tells the simulate whether or not to simulate connection failure.
 
         :param is_fail: whether or not to simulate connection failure.
         :type is_fail: bool

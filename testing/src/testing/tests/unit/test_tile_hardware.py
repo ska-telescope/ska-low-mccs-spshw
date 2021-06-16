@@ -1,3 +1,4 @@
+# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -9,8 +10,8 @@
 # See LICENSE.txt for more info.
 #########################################################################
 """
-This module contains the tests of the tile hardware, including the
-TileHardwareManager class and the TpmSimulator.
+This module contains the tests of the tile hardware, including the TileHardwareManager
+class and the TpmSimulator.
 
 When we eventually have a TpmDriver that drives real hardware, this
 module could also be used to test that.
@@ -40,8 +41,8 @@ def tpm_simulator(logger):
 @pytest.fixture()
 def tile_hardware_manager(logger):
     """
-    Fixture that returns a hardware manager for the MCCS tile device, in
-    hardware simulation mode.
+    Fixture that returns a hardware manager for the MCCS tile device, in hardware
+    simulation mode.
 
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
@@ -62,14 +63,11 @@ def tile_hardware_manager(logger):
 
 
 class TestTileHardwareManager:
-    """
-    Contains tests specific to TileHardwareManager.
-    """
+    """Contains tests specific to TileHardwareManager."""
 
     def test_init_simulation_mode(self, logger):
         """
-        Test that we can create an hardware manager that isn't in
-        simulation mode.
+        Test that we can create an hardware manager that isn't in simulation mode.
 
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
@@ -85,8 +83,7 @@ class TestTileHardwareManager:
 
     def test_simulation_mode(self, tile_hardware_manager):
         """
-        Test that we can take the tile hardware manager out of
-        simulation mode.
+        Test that we can take the tile hardware manager out of simulation mode.
 
         :param tile_hardware_manager: a manager for tile hardware
         :type tile_hardware_manager:
@@ -98,8 +95,7 @@ class TestTileHardwareManager:
 
     def test_test_mode(self, tile_hardware_manager):
         """
-        Test that we can take the tile hardware manager out of test
-        mode.
+        Test that we can take the tile hardware manager out of test mode.
 
         :param tile_hardware_manager: a manager for tile hardware
         :type tile_hardware_manager:
@@ -112,10 +108,10 @@ class TestTileHardwareManager:
 
 class TestCommon:
     """
-    Because the TileHardwareManager is designed to pass commands through
-    to the TpmSimulator or TpmDriver that it is driving, many commands
-    are common to TileHardwareManager and TpmSimulator, and they will
-    also be common to the TpmDriver when we eventually implement it.
+    Because the TileHardwareManager is designed to pass commands through to the
+    TpmSimulator or TpmDriver that it is driving, many commands are common to
+    TileHardwareManager and TpmSimulator, and they will also be common to the TpmDriver
+    when we eventually implement it.
 
     Therefore this class contains common tests, parametrised to test
     against each class
@@ -124,10 +120,9 @@ class TestCommon:
     @pytest.fixture(params=["tpm_simulator", "tile_hardware_manager"])
     def hardware_under_test(self, tpm_simulator, tile_hardware_manager, request):
         """
-        Return the hardware under test. This is parametrised to return
-        both a TPM simulator and a tile hardware manager, so any test
-        that relies on this fixture will be run twice: once for each
-        hardware type.
+        Return the hardware under test. This is parametrised to return both a TPM
+        simulator and a tile hardware manager, so any test that relies on this fixture
+        will be run twice: once for each hardware type.
 
         :param tpm_simulator: the TPM simulator to return
         :type tpm_simulator:
@@ -173,9 +168,9 @@ class TestCommon:
     )
     def test_read_attribute(self, hardware_under_test, attribute_name, expected_value):
         """
-        Tests that read-only attributes take certain known initial
-        values. This is a weak test; over time we should find ways to
-        more thoroughly test each of these independently.
+        Tests that read-only attributes take certain known initial values. This is a
+        weak test; over time we should find ways to more thoroughly test each of these
+        independently.
 
         :param hardware_under_test: the hardware object under test. This
             could be a TpmSimulator, or a TileHardwareManager, or, when
@@ -199,8 +194,8 @@ class TestCommon:
         self, hardware_under_test, attribute_name, initial_value, values_to_write
     ):
         """
-        Tests that read-write attributes take certain known initial
-        values, and that their values can be updated.
+        Tests that read-write attributes take certain known initial values, and that
+        their values can be updated.
 
         This is a weak test; over time we should find ways to more
         thoroughly test each of these independently.
@@ -265,9 +260,8 @@ class TestCommon:
     )
     def test_command(self, mocker, hardware_under_test, command_name, num_args):
         """
-        Test of commands that aren't implemented yet. Since the comands
-        don't really do anything, these tests simply check that the
-        command can be called.
+        Test of commands that aren't implemented yet. Since the comands don't really do
+        anything, these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
         :type mocker: :py:class:`pytest_mock.mocker`
@@ -413,8 +407,8 @@ class TestCommon:
 
         def buffer_slice(address, length):
             """
-            Helper function that returns a slice that tells you where to
-            read from or write to the buffer.
+            Helper function that returns a slice that tells you where to read from or
+            write to the buffer.
 
             :param address: the start address being read from or written
                 to
@@ -471,7 +465,6 @@ class TestCommon:
             TPM
         :type hardware_under_test: object
         """
-
         assert hardware_under_test.get_40g_configuration(-1, 0) == []
         assert hardware_under_test.get_40g_configuration("mock_core_id") is None
 

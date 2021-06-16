@@ -1,3 +1,4 @@
+# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests for MccsClusterManagerDevice.
-"""
+"""This module contains the tests for MccsClusterManagerDevice."""
 import json
 
 import pytest
@@ -40,9 +39,7 @@ def device_to_load():
 
 
 class TestMccsClusterManagerDevice:
-    """
-    Test class for MccsClusterManagerDevice tests.
-    """
+    """Test class for MccsClusterManagerDevice tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

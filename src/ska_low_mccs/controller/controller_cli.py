@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-The command line interface for the MCCS Controller device server.
-"""
+"""The command line interface for the MCCS Controller device server."""
 import types
 import functools
 
@@ -25,8 +24,8 @@ from ska_low_mccs.utils import call_with_json
 
 class CliMeta(type):
     """
-    Metaclass to catch and dissect :py:exc:`tango.DevFailed` and other
-    exceptions for all class methods.
+    Metaclass to catch and dissect :py:exc:`tango.DevFailed` and other exceptions for
+    all class methods.
 
     They get turned into :py:exc:`fire.core.FireError` exceptions.
     """
@@ -96,8 +95,8 @@ class CliMeta(type):
 
 def format_wrapper(method):
     """
-    Wraps a method with a wrapper that ensures that the method returns
-    results formatted as a two-line string.
+    Wraps a method with a wrapper that ensures that the method returns results formatted
+    as a two-line string.
 
     :param method: the method to be wrapped
     :type method: callable
@@ -108,9 +107,8 @@ def format_wrapper(method):
 
     @functools.wraps(method)
     def _wrapper(*args, **kwargs):
-        """
-        Wrapper that ensure device command methods return results
-        formatted as a a two-line string.
+        """Wrapper that ensure device command methods return results formatted as a a
+        two- line string.
 
         :param args: positional arguments to the wrapped method
         :type args: list
@@ -232,8 +230,7 @@ class MccsControllerCli(metaclass=CliMeta):
     @format_wrapper
     def standbylow(self):
         """
-        Put the controller (and hence all of MCCS) into low-power
-        standby mode.
+        Put the controller (and hence all of MCCS) into low-power standby mode.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -245,8 +242,7 @@ class MccsControllerCli(metaclass=CliMeta):
     @format_wrapper
     def standbyfull(self):
         """
-        Put the controller (and hence all of MCCS) into full-power
-        standby mode.
+        Put the controller (and hence all of MCCS) into full-power standby mode.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -335,9 +331,7 @@ class MccsControllerCli(metaclass=CliMeta):
 
 
 def main():
-    """
-    Entry point for CLI.
-    """
+    """Entry point for CLI."""
     Fire(MccsControllerCli)
 
 

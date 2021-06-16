@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,15 +9,13 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the health
-management functionality of the SKA Low MCCS system.
-"""
+"""This module contains integration tests of health management in MCCS."""
 import time
 from tango import DevState
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
+from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
@@ -57,8 +56,8 @@ def devices_to_load():
 
 def sleep(seconds=0.2):
     """
-    Sleep for a short time. Used to allow time for events to be pushed
-    through the events subsystem.
+    Sleep for a short time. Used to allow time for events to be pushed through the
+    events subsystem.
 
     :param seconds: number of seconds to sleep; optional, defaults to 0.2
     :type seconds: float
@@ -68,8 +67,7 @@ def sleep(seconds=0.2):
 
 def check_states(dev_states):
     """
-    Helper to check that each device is in the expected state with a
-    timeout.
+    Helper to check that each device is in the expected state with a timeout.
 
     :param dev_states: the devices and expected states of them
     :type dev_states: dict
@@ -83,9 +81,7 @@ def check_states(dev_states):
 
 
 class TestHealthManagement(HelperClass):
-    """
-    Test cases for the MCCS health management subsystem.
-    """
+    """Test cases for the MCCS health management subsystem."""
 
     def test_controller_health_rollup(self, tango_harness, empty_json_dict):
         """
@@ -285,21 +281,30 @@ class TestHealthManagement(HelperClass):
         assert subarray_1.healthState == HealthState.OK
         assert subarray_2.healthState == HealthState.OK
 
-        _ = call_with_json(
+        [result_code], [status, message_uid] = call_with_json(
             controller.Allocate,
             subarray_id=1,
             station_ids=[[1]],
             subarray_beam_ids=[1],
             channel_blocks=[2],
         )
-        _ = call_with_json(
+        assert result_code == ResultCode.QUEUED
+        assert status
+        assert ":Allocate" in message_uid
+
+        self.wait_for_command_to_complete(controller)
+
+        [result_code], [status, message_uid] = call_with_json(
             controller.Allocate,
             subarray_id=2,
             station_ids=[[2]],
             subarray_beam_ids=[2],
             channel_blocks=[2],
         )
-        sleep()
+        assert result_code == ResultCode.QUEUED
+        assert status
+        assert ":Allocate" in message_uid
+        self.wait_for_command_to_complete(controller)
 
         assert subarray_1.healthState == HealthState.OK
         assert subarray_2.healthState == HealthState.OK
@@ -352,13 +357,6 @@ class TestHealthManagement(HelperClass):
         tile_1.adminMode = AdminMode.ONLINE
 
         self.start_up_device(tile_1)
-
-        # tile_1.Off(empty_json_dict)
-        # dev_states = {tile_1: DevState.OFF}
-        # check_states(dev_states)
-        # tile_1.On(empty_json_dict)
-        # dev_states = {tile_1: DevState.ON}
-        # check_states(dev_states)
 
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK

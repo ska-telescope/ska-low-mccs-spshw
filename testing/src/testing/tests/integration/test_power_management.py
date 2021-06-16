@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,10 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This test module contains integration tests that exercise the power
-management functionality of the SKA Low MCCS system.
-"""
+"""This module contains integration tests of MCCS power management functionality."""
 from time import sleep
 
 import pytest
@@ -25,10 +23,25 @@ from testing.harness.tango_harness import TangoHarness
 
 class TestPowerManagement:
     """
-    Integration test cases for MCCS subsystem's power management,
-    focussing on the path from the controller down to the tiles and
-    antennas.
+    Integration test cases for MCCS subsystem's power management.
+
+    These tests focus on the path from the controller down to the tiles
+    and antennas.
     """
+
+    def check_states(self, dev_states):
+        """
+        Helper to check that each device is in the expected state with a timeout.
+
+        :param dev_states: the devices and expected states of them
+        :type dev_states: dict
+        """
+        for device, state in dev_states.items():
+            count = 0.0
+            while device.State() != state and count < 3.0:
+                count += 0.1
+                sleep(0.1)
+            assert device.State() == state
 
     @pytest.fixture()
     def devices_to_load(self):
@@ -61,8 +74,7 @@ class TestPowerManagement:
         self, tango_harness: TangoHarness, mocker: pytest_mock.mocker
     ):
         """
-        Test that a MccsController device can enable an MccsSubarray
-        device.
+        Test that a MccsController device can enable an MccsSubarray device.
 
         :param tango_harness: a test harness for tango devices
         :param mocker: fixture that wraps unittest.Mock
@@ -97,15 +109,21 @@ class TestPowerManagement:
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
         controller.Startup()
-        sleep(0.5)  # Required to allow DUT thread to run
+        dev_states = {
+            controller: DevState.ON,
+            subrack: DevState.ON,
+            station: DevState.ON,
+            tile_1: DevState.ON,
+            tile_2: DevState.ON,
+            tile_3: DevState.ON,
+            tile_4: DevState.ON,
+        }
+        self.check_states(dev_states)
 
-        assert controller.State() == DevState.ON
-        assert subrack.State() == DevState.ON
         assert subrack.IsTpmOn(1)
         assert subrack.IsTpmOn(2)
         assert subrack.IsTpmOn(3)
         assert subrack.IsTpmOn(4)
-        assert station.State() == DevState.ON
 
         # The default testMode is TestMode.NONE, in which case certain
         # attributes are continually updated. By design, these

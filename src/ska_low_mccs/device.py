@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -7,10 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements the MCCS Base Device, a base class for all MCCS
-devices.
-"""
+"""This module implements the MCCS Base Device, a base class for all MCCS devices."""
 __all__ = ["MccsDevice", "main"]
 
 # PyTango imports
@@ -41,8 +39,8 @@ class MccsDevice(SKABaseDevice):
     # ---------------
     class InitCommand(SKABaseDevice.InitCommand):
         """
-        Class that implements device initialisation for the MCCS Base
-        Device. State is managed under the hood; the basic sequence is:
+        Class that implements device initialisation for the MCCS Base Device. State is
+        managed under the hood; the basic sequence is:
 
         1. Device state is set to INIT
         2. The do() method is run
@@ -54,8 +52,8 @@ class MccsDevice(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook for device initialisation: initialises the
-            attributes and properties of the :py:class:`.MccsDevice`.
+            Stateless hook for device initialisation: initialises the attributes and
+            properties of the :py:class:`.MccsDevice`.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -86,9 +84,7 @@ class MccsDevice(SKABaseDevice):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     def init_command_objects(self):
-        """
-        Set up the handler objects for Commands.
-        """
+        """Set up the handler objects for Commands."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -105,9 +101,7 @@ class MccsDevice(SKABaseDevice):
             )
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self):
         """
@@ -173,8 +167,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledUndefinedDevice(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        device that is not defined in the device database.
+        Return a flag indicating whether this device has tried to call a device that is
+        not defined in the device database.
 
         :return: whether this device has tried to call a device that is
             not defined in the device database
@@ -185,8 +179,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledDeadServer(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        dead server.
+        Return a flag indicating whether this device has tried to call a dead server.
 
         :return: whether this device has tried to call a dead server
         :rtype: bool
@@ -196,8 +189,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def detectedDeadServer(self):
         """
-        Return a flag indicating whether this device has detected a dead
-        server.
+        Return a flag indicating whether this device has detected a dead server.
 
         :return: whether this device has detected a dead server
         :rtype: bool
@@ -207,8 +199,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledNonRunningDevice(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        device that is not running.
+        Return a flag indicating whether this device has tried to call a device that is
+        not running.
 
         :return: whether this device has tried to call a device that is
             not running
@@ -219,8 +211,7 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def callTimeout(self):
         """
-        Return a flag indicating whether this device has experienced a
-        call timeout.
+        Return a flag indicating whether this device has experienced a call timeout.
 
         :return: whether this device has had a call timeout
         :rtype: bool
@@ -230,8 +221,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def callCommFailed(self):
         """
-        Return a flag indicating whether this device has had a call fail
-        due to communications failure.
+        Return a flag indicating whether this device has had a call fail due to
+        communications failure.
 
         :return: whether this device has had a call fail due to
             communications failure
@@ -242,8 +233,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def invalidAsynId(self):
         """
-        Return a flag indicating whether this device has had a call fail
-        due to an invalid "asyn" id.
+        Return a flag indicating whether this device has had a call fail due to an
+        invalid "asyn" id.
 
         :todo: what is an "asyn" id?
 
@@ -256,8 +247,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def calledInexistentCallback(self):
         """
-        Return a flag indicating whether this device has tried to call a
-        nonexistent callback.
+        Return a flag indicating whether this device has tried to call a nonexistent
+        callback.
 
         :return: whether this device has tried to call a nonexistent
             callback
@@ -268,8 +259,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def requestIdMismatch(self):
         """
-        Return a flag indicating whether this device has experienced a
-        request id mismatch.
+        Return a flag indicating whether this device has experienced a request id
+        mismatch.
 
         :return: whether this device has experienced a request id
             mismatch
@@ -280,8 +271,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def expectedReplyNotReady(self):
         """
-        Return a flag indicating whether this device has experienced an
-        expected reply not being ready.
+        Return a flag indicating whether this device has experienced an expected reply
+        not being ready.
 
         :return: whether this device has experienced an expected reply
             not being ready
@@ -292,8 +283,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def experiencedSubscriptionFailure(self):
         """
-        Return a flag indicating whether this device has experienced a
-        subscription failure.
+        Return a flag indicating whether this device has experienced a subscription
+        failure.
 
         :return: whether this device has experienced a subscription
             failure
@@ -304,8 +295,8 @@ class MccsDevice(SKABaseDevice):
     @attribute(dtype="DevBoolean")
     def invalidEventId(self):
         """
-        Return a flag indicating whether this device has errored due to
-        an invalid event id.
+        Return a flag indicating whether this device has errored due to an invalid event
+        id.
 
         :return: whether this device has errored due to an invalid event
             id
@@ -344,7 +335,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def ExceptionCallback(self):
         """
-        ExceptionCallback Command.
+        Command called as a callback when an exception occurs.
 
         :todo: What does this command do?
 
@@ -384,7 +375,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def DefaultAlarmOnCallback(self):
         """
-        DefaultAlarmOnCallback Command.
+        Command called by default as a callback for when an alarm is turned on.
 
         :todo: What does this command do?
 
@@ -424,7 +415,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def DefaultAlarmOffCallback(self):
         """
-        DefaultAlarmOffCallback Command.
+        Command called by default as a callback for when an alarm is turned off.
 
         :todo: What does this command do?
 
@@ -438,9 +429,7 @@ class MccsDevice(SKABaseDevice):
         return [[return_code], [message]]
 
     class GetFullReportCommand(BaseCommand):
-        """
-        Class for handling the GetFullReport() command.
-        """
+        """Class for handling the GetFullReport() command."""
 
         def do(self):
             """
@@ -459,7 +448,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetFullReport(self):
         """
-        GetFullReport Command.
+        Get a full report.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -470,9 +459,7 @@ class MccsDevice(SKABaseDevice):
         return handler()
 
     class GetCommandReportCommand(BaseCommand):
-        """
-        Class for handling the GetCommandReport() command.
-        """
+        """Class for handling the GetCommandReport() command."""
 
         def do(self):
             """
@@ -489,7 +476,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetCommandReport(self):
         """
-        GetCommandReport Command.
+        Get a command report.
 
         :return: a command report
         :rtype: list(str)
@@ -498,9 +485,7 @@ class MccsDevice(SKABaseDevice):
         return handler()
 
     class GetAttributeReportCommand(BaseCommand):
-        """
-        Class for handling the GetAttributeReport() command.
-        """
+        """Class for handling the GetAttributeReport() command."""
 
         def do(self):
             """
@@ -519,7 +504,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def GetAttributeReport(self):
         """
-        GetAttributeReport Command.
+        Get an attribute report.
 
         :return: an attribute report
         :rtype: list(str)
@@ -529,8 +514,7 @@ class MccsDevice(SKABaseDevice):
 
     class ConstructDeviceProxyAddressCommand(ResponseCommand):
         """
-        Class for handling the ConstructDeviceProxyAddress(argin)
-        command.
+        Class for handling the ConstructDeviceProxyAddress(argin) command.
 
         :todo: What does this command do? It sounds like it constructs
             an address, but if so it doesn't return it.
@@ -561,7 +545,7 @@ class MccsDevice(SKABaseDevice):
     @DebugIt()
     def ConstructDeviceProxyAddress(self, argin):
         """
-        ConstructDeviceProxyAddress Command.
+        Command to constrcut a device proxy address.
 
         :param argin: 'DevString'
 

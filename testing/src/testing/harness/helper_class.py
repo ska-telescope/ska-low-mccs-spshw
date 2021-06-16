@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -7,11 +8,11 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements an MCCS test helper class.
-"""
+"""This module implements an MCCS test helper class."""
 
 import pytest
+import json
+from time import sleep
 from tango import DevState
 from ska_tango_base.commands import ResultCode
 
@@ -28,8 +29,7 @@ class HelperClass:
     @pytest.fixture(autouse=True)
     def _autouse_these_fixtures(self, command_helper, empty_json_dict):
         """
-        Autouse these fixtures for all tests. Store as part of the test
-        object.
+        Autouse these fixtures for all tests. Store as part of the test object.
 
         :param command_helper: A command helper fixture
         :type command_helper: CommandHelper
@@ -54,3 +54,28 @@ class HelperClass:
         [result_code], _ = device_under_test.On(self._empty_json_dict)
         assert result_code == ResultCode.OK
         self._command_helper.check_device_state(device_under_test, DevState.ON)
+
+    def wait_for_command_to_complete(
+        self, controller, expected_result=ResultCode.OK, timeout_limit=5.0
+    ):
+        """
+        Wait for the controller command to complete.
+
+        :param controller: The controller device
+        :type controller: DeviceProxy
+        :param expected_result: The expected results
+        :type expected_result: ResultCode
+        :param timeout_limit: The maximum timeout allowed for a command to complete
+        :type timeout_limit: float
+        """
+        timeout = 0.0
+        busy = True
+        while busy:
+            result = json.loads(controller.commandResult)
+            if result.get("result_code") == expected_result or timeout >= timeout_limit:
+                busy = False
+            else:
+                timeout += 0.1
+                sleep(0.1)
+        assert result.get("result_code") == expected_result
+        assert timeout <= timeout_limit

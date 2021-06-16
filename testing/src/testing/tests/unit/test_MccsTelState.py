@@ -1,3 +1,4 @@
+# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests for MccsTelState.
-"""
+"""This module contains the tests for MccsTelState."""
 import pytest
 from tango import AttrQuality, DevFailed, DevState, EventType
 from ska_tango_base.control_model import (
@@ -42,9 +41,7 @@ def device_to_load():
 
 # Device test case
 class TestMccsTelState(object):
-    """
-    Tests for MccsTelState device.
-    """
+    """Tests for MccsTelState device."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

@@ -6,5 +6,5 @@ appVersion: "0.8.2"
 icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
 dependencies:
 - name: tango-util
-  version: 0.2.11
+  version: 0.2.13
   repository: https://nexus.engageska-portugal.pt/repository/helm-chart

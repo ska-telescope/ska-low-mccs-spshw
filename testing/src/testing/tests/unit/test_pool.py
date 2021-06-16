@@ -1,3 +1,4 @@
+# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -6,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for the ska_low_mccs.pool module.
-"""
+"""This module contains the tests for the ska_low_mccs.pool module."""
 import pytest
 import json
 from ska_tango_base.commands import ResultCode
@@ -23,26 +22,13 @@ from testing.harness.tango_harness import TangoHarness
 @pytest.fixture()
 def device_to_load():
     """
-    Fixture that specifies the device to be loaded for testing.
-
-    This is a slightly lazy hack to allow us to test event subscription
-    against mock devices. We need our tango harness to be up and running
-    for this to work, but the Tango test contexts require at least one
-    device to be running. So we stand up a single device, which we won't
-    actually be using in any way.
-
-    TODO: Find a way to stand up a Tango test harness that is 100% mock
-    devices, and thus doesn't use a Tango test context at all.
+    Fixture that specifies the device to be loaded for testing. In this case we mock all
+    devices, so there is no need to stand any up.
 
     :return: specification of the device to be loaded
     :rtype: dict
     """
-    return {
-        "path": "charts/ska-low-mccs/data/extra.json",
-        "package": "ska_low_mccs",
-        "device": "device",
-        "proxy": MccsDeviceProxy,
-    }
+    return None
 
 
 class TestDevicePool:
@@ -54,9 +40,9 @@ class TestDevicePool:
     @pytest.fixture()
     def mock_factory(self, mocker, test_string):
         """
-        Fixture that provides a mock factory for device proxy mocks.
-        This factory ensures that calls to a mock's command_inout method
-        results in a (ResultCode.OK, message) return.
+        Fixture that provides a mock factory for device proxy mocks. This factory
+        ensures that calls to a mock's command_inout method results in a (ResultCode.OK,
+        message) return.
 
         :param mocker: a wrapper around the :py:mod:`unittest.mock` package
         :type mocker: :py:class:`pytest_mock.mocker`

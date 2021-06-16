@@ -1,6 +1,7 @@
+# type: ignore
 """
-This module contains pytest fixtures and other test setups common to all
-ska_low_mccs tests: unit, integration and functional (BDD).
+This module contains pytest fixtures and other test setups common to all ska_low_mccs
+tests: unit, integration and functional (BDD).
 """
 import logging
 import typing
@@ -8,6 +9,7 @@ import json
 from time import sleep
 import pytest
 import tango
+import yaml
 
 from ska_tango_base.commands import ResultCode
 from testing.harness.mock import MockDeviceBuilder
@@ -31,33 +33,85 @@ def pytest_sessionstart(session):
     print(tango.utils.info())
 
 
+with open("testing/testbeds.yaml", "r") as stream:
+    _testbeds = yaml.safe_load(stream)
+
+
+def pytest_configure(config):
+    """
+    Register custom markers to avoid pytest warnings.
+
+    :param config: the pytest config object
+    :type config: :py:class:`pytest.config.Config`
+    """
+    all_tags = set().union(*_testbeds.values())
+    for tag in all_tags:
+        config.addinivalue_line("markers", f"needs_{tag}")
+
+
 def pytest_addoption(parser):
     """
-    Pytest hook; implemented to add the `--true-context` option, used to
-    indicate that a true Tango subsystem is available, so there is no
-    need for a :py:class:`tango.test_context.MultiDeviceTestContext`.
+    Pytest hook; implemented to add the `--testbed` option, used to specify the context
+    in which the test is running. This could be used, for example, to skip tests that
+    have requirements not met by the context.
 
     :param parser: the command line options parser
     :type parser: :py:class:`argparse.ArgumentParser`
     """
     parser.addoption(
-        "--true-context",
-        action="store_true",
-        default=False,
-        help=(
-            "Tell pytest that you have a true Tango context and don't "
-            "need to spin up a Tango test context"
-        ),
+        "--testbed",
+        choices=_testbeds.keys(),
+        default="test",
+        help="Specify the testbed on which the tests are running.",
     )
+
+
+def pytest_collection_modifyitems(config, items):
+    """
+    Modify the list of tests to be run, after pytest has collected them.
+
+    This hook implementation skips tests that are marked as needing some
+    tag that is not provided by the current test context, as specified
+    by the "--testbed" option.
+
+    For example, if we have a hardware test that requires the presence
+    of a real TPM, we can tag it with "@needs_tpm". When we run in a
+    "test" context (that is, with "--testbed test" option), the test
+    will be skipped because the "test" context does not provide a TPM.
+    But when we run in "pss" context, the test will be run because the
+    "pss" context provides a TPM.
+
+    :param config: the pytest config object
+    :type config: :py:class:`pytest.config.Config`
+    :param items: list of tests collected by pytest
+    :type items: list(:py:class:`pytest.Item`)
+    """
+    testbed = config.getoption("--testbed")
+    available_tags = _testbeds.get(testbed, set())
+
+    prefix = "needs_"
+    for item in items:
+        needs_tags = set(
+            tag[len(prefix) :] for tag in item.keywords if tag.startswith(prefix)
+        )
+        unmet_tags = list(needs_tags - available_tags)
+        if unmet_tags:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason=(
+                        f"Testbed '{testbed}' does not meet test needs: "
+                        f"{unmet_tags}."
+                    )
+                )
+            )
 
 
 @pytest.fixture()
 def initial_mocks():
     """
-    Fixture that registers device proxy mocks prior to patching. By
-    default no initial mocks are registered, but this fixture can be
-    overridden by test modules/classes that need to register initial
-    mocks.
+    Fixture that registers device proxy mocks prior to patching. By default no initial
+    mocks are registered, but this fixture can be overridden by test modules/classes
+    that need to register initial mocks.
 
     :return: an empty dictionary
     :rtype: dict
@@ -68,10 +122,9 @@ def initial_mocks():
 @pytest.fixture()
 def mock_factory():
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :return: a factory for device proxy mocks
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an instance)
@@ -82,15 +135,16 @@ def mock_factory():
 @pytest.fixture(scope="session")
 def tango_harness_factory(request, logger):
     """
-    Returns a factory for creating a test harness for testing Tango
-    devices. The Tango context used depends upon whether or not pytest
-    was invoked with the `--true-context` option.
+    Returns a factory for creating a test harness for testing Tango devices. The Tango
+    context used depends upon the context in which the tests are being run, as specified
+    by the `--testbed` option.
 
-    If yes, then this harness assumes that devices are already running;
-    that is, we are testing a deployed system.
-
-    If no, then this harness deploys the specified devices into a
+    If the context is "test", then this harness deploys the specified
+    devices into a
     :py:class:`tango.test_context.MultiDeviceTestContext`.
+
+    Otherwise, this harness assumes that devices are already running;
+    that is, we are testing a deployed system.
 
     This fixture is implemented as a factory so that the actual
     `tango_harness` fixture can vary in scope: unit tests require test
@@ -118,7 +172,7 @@ def tango_harness_factory(request, logger):
 
         pass
 
-    true_context = request.config.getoption("--true-context")
+    testbed = request.config.getoption("--testbed")
 
     def build_harness(
         tango_config: typing.Dict[str, str],
@@ -142,12 +196,15 @@ def tango_harness_factory(request, logger):
 
         :return: a tango test harness
         """
-        device_info = MccsDeviceInfo(**devices_to_load)
-
-        if true_context:
-            tango_harness = ClientProxyTangoHarness(device_info, logger)
+        if devices_to_load is None:
+            device_info = None
         else:
+            device_info = MccsDeviceInfo(**devices_to_load)
+
+        if testbed == "test":
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
+        else:
+            tango_harness = ClientProxyTangoHarness(device_info, logger)
 
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 
@@ -165,8 +222,8 @@ def tango_harness_factory(request, logger):
 @pytest.fixture()
 def tango_config() -> typing.Dict[str, str]:
     """
-    Fixture that returns basic configuration information for a Tango
-    test harness, such as whether or not to run in a separate process.
+    Fixture that returns basic configuration information for a Tango test harness, such
+    as whether or not to run in a separate process.
 
     :return: a dictionary of configuration key-value pairs
     """
@@ -249,15 +306,12 @@ def test_string():
 
 
 class CommandHelper:
-    """
-    Class providing helper methods for testing.
-    """
+    """Class providing helper methods for testing."""
 
     @staticmethod
     def device_command(device_under_test, command, mock_message_uid):
         """
-        Help method to transition the device under test into the desired
-        state.
+        Help method to transition the device under test into the desired state.
 
         As commands use the message queue, a callback is required to complete
         the commands. This method simply sends the desired command and then
@@ -306,8 +360,7 @@ class CommandHelper:
     @staticmethod
     def check_device_state(device, state):
         """
-        Helper to check that the device is in the expected state with a
-        timeout.
+        Helper to check that the device is in the expected state with a timeout.
 
         :param device: the devices to check
         :type device: dict

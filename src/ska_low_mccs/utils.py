@@ -1,6 +1,5 @@
-"""
-Module for MCCS utils.
-"""
+# type: ignore
+"""Module for MCCS utils."""
 from functools import wraps
 import inspect
 import json
@@ -57,8 +56,8 @@ def tango_raise(
 
 def call_with_json(func, **kwargs):
     """
-    Allows the calling of a command that accepts a JSON string as input,
-    with the actual unserialised parameters.
+    Allows the calling of a command that accepts a JSON string as input, with the actual
+    unserialised parameters.
 
     For example, suppose you need to use `Allocate(resources)` command
     to tell a controller device to allocate certain stations and tiles
@@ -89,10 +88,10 @@ def call_with_json(func, **kwargs):
 
 class json_input:  # noqa: N801
     """
-    Method decorator that parses and validates JSON input into a python
-    dictionary, which is then passed to the method as kwargs. The
-    wrapped method is thus called with a JSON string, but can be
-    implemented as if it had been passed a sequence of named arguments.
+    Method decorator that parses and validates JSON input into a python dictionary,
+    which is then passed to the method as kwargs. The wrapped method is thus called with
+    a JSON string, but can be implemented as if it had been passed a sequence of named
+    arguments.
 
     If the string cannot be parsed as JSON, an exception is raised.
 
@@ -113,8 +112,8 @@ class json_input:  # noqa: N801
 
     def __init__(self, schema_path=None):
         """
-        Initialises a callable json_input object, to function as a
-        device method generator.
+        Initialises a callable json_input object, to function as a device method
+        generator.
 
         :param schema_path: an optional path to a schema against which
             the JSON should be validated. Not working at the moment, so
@@ -131,9 +130,8 @@ class json_input:  # noqa: N801
 
     def __call__(self, func):
         """
-        The decorator method. Makes this class callable, and ensures
-        that when called on a device method, a wrapped method is
-        returned.
+        The decorator method. Makes this class callable, and ensures that when called on
+        a device method, a wrapped method is returned.
 
         :param func: The target of the decorator
         :type func: callable

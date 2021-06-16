@@ -4,13 +4,13 @@ state "Cluster running MCCS" as ClusterRunningMCCS
 
 ClusterNotReady --> ClusterReady 
 note on link
-  cd ~/deploy-minikube
+  cd ~/ska-cicd-deploy-minikube
   make all
 end note
 
 ClusterReady --> ClusterNotReady
 note on link
-  cd ~/deploy-minikube
+  cd ~/ska-cicd-deploy-minikube
   make clean
 end note
 

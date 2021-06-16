@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -52,18 +53,14 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
         super().__init__(fail_connect=fail_connect, power_mode=power_mode)
 
     def off(self):
-        """
-        Turn me off.
-        """
+        """Turn me off."""
         super().off()
         self._voltage = None
         self._current = None
         self._temperature = None
 
     def on(self):
-        """
-        Turn me on.
-        """
+        """Turn me on."""
         super().on()
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -147,9 +144,7 @@ class AntennaHardwareSimulator(OnOffHardwareSimulator):
 
 
 class APIUSimulator(OnOffHardwareSimulator):
-    """
-    A simulator of APIU hardware.
-    """
+    """A simulator of APIU hardware."""
 
     VOLTAGE = 3.4
     CURRENT = 20.5
@@ -195,9 +190,7 @@ class APIUSimulator(OnOffHardwareSimulator):
         return True
 
     def off(self):
-        """
-        Turn me off.
-        """
+        """Turn me off."""
         super().off()
         self._voltage = None
         self._current = None
@@ -209,9 +202,7 @@ class APIUSimulator(OnOffHardwareSimulator):
                 antenna.off()
 
     def on(self):
-        """
-        Turn me on.
-        """
+        """Turn me on."""
         super().on()
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -276,8 +267,7 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def _check_antenna_id(self, logical_antenna_id):
         """
-        Helper method to check that an antenna id passed as an argument
-        is within range.
+        Helper method to check that an antenna id passed as an argument is within range.
 
         :param logical_antenna_id: the id to check
         :type logical_antenna_id: int
@@ -293,8 +283,8 @@ class APIUSimulator(OnOffHardwareSimulator):
 
     def are_antennas_on(self):
         """
-        Returns whether each antenna is powered or not.  Or None if the
-        APIU itself is turned off.
+        Returns whether each antenna is powered or not.  Or None if the APIU itself is
+        turned off.
 
         :return: whether each antenna is powered or not.
         :rtype: list(bool) or None
@@ -349,18 +339,14 @@ class APIUSimulator(OnOffHardwareSimulator):
             self._antennas[logical_antenna_id - 1].on()
 
     def turn_off_antennas(self):
-        """
-        Turn off all antennas.
-        """
+        """Turn off all antennas."""
         self.check_power_mode(PowerMode.ON)
         with self._antennas_lock:
             for antenna in self._antennas:
                 antenna.off()
 
     def turn_on_antennas(self):
-        """
-        Turn on all antennas.
-        """
+        """Turn on all antennas."""
         self.check_power_mode(PowerMode.ON)
         with self._antennas_lock:
             for antenna in self._antennas:

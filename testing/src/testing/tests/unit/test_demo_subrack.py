@@ -1,3 +1,4 @@
+# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -36,9 +37,7 @@ def device_to_load():
 
 
 class TestDemoSubrack(HelperClass):
-    """
-    This class contains the tests for the DemoSubrack device class.
-    """
+    """This class contains the tests for the DemoSubrack device class."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

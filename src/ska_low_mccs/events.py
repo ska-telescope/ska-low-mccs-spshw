@@ -1,13 +1,11 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements infrastructure for event management in the MCCS
-subsystem.
-"""
+"""This module implements infrastructure for event management in the MCCS subsystem."""
 __all__ = ["EventSubscriptionHandler", "DeviceEventManager", "EventManager"]
 
 from functools import partial
@@ -21,8 +19,8 @@ from ska_low_mccs import MccsDeviceProxy
 
 def _parse_spec(spec, allowed):
     """
-    Helper function that implements parsing of a specification (of
-    events or fqdns) against which to register a callback.
+    Helper function that implements parsing of a specification (of events or fqdns)
+    against which to register a callback.
 
     :param spec: specification (of events or fqdns) against which to
         register a callback. This is either a list of items, or a single
@@ -59,8 +57,8 @@ def _parse_spec(spec, allowed):
 
 class EventSubscriptionHandler:
     """
-    This class handles subscription to change events on a single
-    attribute from a single device.
+    This class handles subscription to change events on a single attribute from a single
+    device.
 
     It allows registration of multiple callbacks.
     """
@@ -108,8 +106,8 @@ class EventSubscriptionHandler:
 
     def _read(self):
         """
-        Manually read an attribute. Used when we receive an event with
-        empty attribute data.
+        Manually read an attribute. Used when we receive an event with empty attribute
+        data.
 
         :return: the attribute value
         :rtype: object
@@ -118,9 +116,8 @@ class EventSubscriptionHandler:
 
     def _process_event(self, event):
         """
-        Extract the attribute value from a received event; or, if the
-        event failed to carry an attribute value, read the attribute
-        value directly.
+        Extract the attribute value from a received event; or, if the event failed to
+        carry an attribute value, read the attribute value directly.
 
         :param event: the received event
         :type event: :py:class:`tango.EventData`
@@ -165,8 +162,8 @@ class EventSubscriptionHandler:
 
     def push_event(self, event):
         """
-        Callback called by the tango system when a subscribed event
-        occurs. It in turn invokes all its own callbacks.
+        Callback called by the tango system when a subscribed event occurs. It in turn
+        invokes all its own callbacks.
 
         :param event: an object encapsulating the event data.
         :type event: :py:class:`tango.EventData`
@@ -176,25 +173,18 @@ class EventSubscriptionHandler:
             self._call(callback, attribute_data)
 
     def _unsubscribe(self):
-        """
-        Unsubscribe from the event.
-        """
+        """Unsubscribe from the event."""
         if self._subscription_id is not None:
             self._device.unsubscribe_event(self._subscription_id)
             self._subscription_id = None
 
     def __del__(self):
-        """
-        Cleanup before destruction.
-        """
+        """Cleanup before destruction."""
         self._unsubscribe()
 
 
 class DeviceEventManager:
-    """
-    Class DeviceEventManager is used to handle multiple events from a
-    single device.
-    """
+    """This class is used to handle multiple events from a single device."""
 
     def __init__(self, fqdn, logger, events=None):
         """
@@ -220,8 +210,7 @@ class DeviceEventManager:
 
     def register_callback(self, callback, event_spec=None):
         """
-        Register a callback for an event (or events) handled by this
-        handler.
+        Register a callback for an event (or events) handled by this handler.
 
         :param callback: function handle of the form
             ``callback(name, value, quality)``.
@@ -235,7 +224,6 @@ class DeviceEventManager:
         :raises ValueError: if the event is not in the list
             of allowed events
         """
-
         try:
             events = _parse_spec(event_spec, self._allowed_events)
         except ValueError as value_error:
@@ -261,8 +249,7 @@ class DeviceEventManager:
 
 class EventManager:
     """
-    Class EventManager is used to handle events from the tango
-    subsystem.
+    Class EventManager is used to handle events from the tango subsystem.
 
     It supports and manages multiple event types from multiple devices.
     """
@@ -290,8 +277,7 @@ class EventManager:
 
     def register_callback(self, callback, fqdn_spec=None, event_spec=None):
         """
-        Register a callback for a particular event from a particularly
-        device.
+        Register a callback for a particular event from a particularly device.
 
         :param callback: function handle of the form
             ``callback(fqdn, name, value, quality)``.

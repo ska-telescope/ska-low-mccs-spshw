@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,10 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-Contains the tests for the MccsController Tango device_under_test
-prototype.
-"""
+"""Contains the tests for the MccsController Tango device_under_test prototype."""
 
 import json
 import threading
@@ -36,20 +34,23 @@ from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import call_with_json
 
 from testing.harness.mock import MockDeviceBuilder, MockSubarrayBuilder
+from testing.harness import HelperClass
 
 
 class ControllerWithFailableDevices(MccsController):
     """
-    An extension of the MccsController device with additional commands
-    that we can use to tell the device to simulate the receipt of events
-    from subservient devices.
+    An extension of the MccsController with extra functionality to support testing.
+
+    Specifically, it has some additional commands that we can use to
+    tell the device to simulate the receipt of certain events from
+    subservient devices.
     """
 
     @command(dtype_in="DevString")
     def simulateHealthStateChange(self, argin):
         """
-        Makes this controller think that a device that it manages has
-        had a change of healthState.
+        Makes this controller think that a device that it manages has had a change of
+        healthState.
 
         :param argin: JSON-encode dict with "fqdn" and "health" values
         :type argin: str
@@ -67,8 +68,8 @@ class ControllerWithFailableDevices(MccsController):
     @command(dtype_in="DevString")
     def simulateAdminModeChange(self, argin):
         """
-        Makes this controller think that a device that it manages has
-        had a change of adminMode.
+        Makes this controller think that a device that it manages has had a change of
+        adminMode.
 
         :param argin: JSON-encode dict with "fqdn" and "adminMode" values
         :type argin: str
@@ -104,10 +105,9 @@ def device_to_load():
 @pytest.fixture()
 def mock_factory(mocker, test_string):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -141,9 +141,7 @@ def device_under_test(tango_harness):
 
 
 class TestMccsController:
-    """
-    Tests of the MccsController device.
-    """
+    """Tests of the MccsController device."""
 
     def test_queue_debug(self, device_under_test, test_string):
         """
@@ -240,7 +238,6 @@ class TestMccsController:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         with pytest.raises(
             tango.DevFailed,
             match="Command Reset not allowed when the device is in DISABLE state",
@@ -407,7 +404,7 @@ class TestMccsController:
         assert result_code == ResultCode.OK
         assert message == MccsController.MaintenanceCommand.SUCCEEDED_MESSAGE
 
-    class TestAllocateRelease:
+    class TestAllocateRelease(HelperClass):
         """
         Class containing fixtures and tests of the MccsController's
         :py:meth:`~ska_low_mccs.controller.controller_device.MccsController.Allocate`
@@ -455,8 +452,7 @@ class TestMccsController:
             test_string,
         ):
             """
-            Test the Allocate command (including end of command event
-            testing).
+            Test the Allocate command (including end of command event testing).
 
             :param device_under_test: fixture that provides a
                 :py:class:`tango.DeviceProxy` to the device under test,
@@ -513,7 +509,7 @@ class TestMccsController:
             mock_event_callback.check_event_data(name="commandResult", result=None)
 
             # Make the call to allocate
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -521,8 +517,13 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(name="commandResult", result=None)
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
 
             # check that the mock subarray_1 was told to assign that resource
             mock_subarray_1.On.assert_called_once_with()
@@ -547,7 +548,7 @@ class TestMccsController:
 
             # allocating station_1 to subarray 2 should fail, because it is already
             # allocated to subarray 1
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
@@ -555,8 +556,15 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.FAILED
-            mock_event_callback.check_command_result(name="commandResult", result=None)
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(
+                controller, expected_result=ResultCode.FAILED
+            )
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.FAILED
+            )
 
             # check no side-effects
             mock_subarray_1.On.assert_not_called()
@@ -578,7 +586,7 @@ class TestMccsController:
                 (ResultCode.OK, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
             )
 
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -586,8 +594,13 @@ class TestMccsController:
                 station_ids=[[1, 2]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(name="commandResult", result=None)
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
 
             # check
             mock_subarray_1.On.assert_not_called()
@@ -612,7 +625,7 @@ class TestMccsController:
 
             # allocating station 2 to subarray 1 should succeed, because
             # it only requires resource release
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -620,9 +633,12 @@ class TestMccsController:
                 station_ids=[[2]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(
-                name="commandResult", result=result_code
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
             )
 
             # check
@@ -667,7 +683,7 @@ class TestMccsController:
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
 
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
@@ -675,9 +691,12 @@ class TestMccsController:
                 station_ids=[[1, 2]],
                 channel_blocks=[2],
             )
-            assert result_code == ResultCode.OK
-            mock_event_callback.check_command_result(
-                name="commandResult", result=result_code
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
             )
 
             # check
@@ -757,7 +776,14 @@ class TestMccsController:
                 health_state=HealthState.OK,
             )
 
-            call_with_json(
+            # Test that subscription yields an event as expected
+            _ = device_under_test.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
+            )
+            mock_event_callback.check_event_data(name="commandResult", result=None)
+
+            # Make the call to allocate
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -765,12 +791,20 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
             mock_subarray_1.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
 
             # allocate station 2 to subarray 2
-            call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=2,
@@ -778,16 +812,18 @@ class TestMccsController:
                 station_ids=[[2]],
                 channel_blocks=[2],
             )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
             mock_subarray_2.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 2
-
-            # Test that subscription yields an event as expected
-            _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
-            )
-            mock_event_callback.check_event_data(name="commandResult", result=None)
 
             # release all resources from subarray_2
             ((result_code,), (_,)) = call_with_json(
@@ -915,7 +951,7 @@ class TestMccsController:
             }
 
             # Make the call to allocate
-            ((result_code,), (_,)) = call_with_json(
+            ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
                 interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
                 subarray_id=1,
@@ -923,7 +959,14 @@ class TestMccsController:
                 station_ids=[[1, 2]],
                 channel_blocks=[3],
             )
-            assert result_code == ResultCode.OK
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
             result = device_under_test.assignedResources
             assert json.loads(result) == expected_result
 
@@ -962,7 +1005,6 @@ class TestMccsController:
             with callback support methods
         :type mock_event_callback: :py:class:`pytest_mock.mocker.Mock`
         """
-
         # The device has subscribed to healthState change events on
         # its subsidiary devices, but hasn't heard from them (because in
         # unit testing these devices are mocked out), so its healthState
@@ -1203,8 +1245,7 @@ class TestInitCommand:
 
     class HangableInitCommand(MccsController.InitCommand):
         """
-        A subclass of InitCommand with the following properties that
-        support testing:
+        A subclass of InitCommand with the following properties that support testing:
 
         * A lock that, if acquired prior to calling the command, causes
           the command to hang until the lock is released
@@ -1235,8 +1276,8 @@ class TestInitCommand:
 
         def _initialise_device_pool(self, device):
             """
-            Initialise the device pool for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the device pool for this device (overridden here to inject a call
+            trace attribute).
 
             :param device: the device for which power management is
                 being initialised
@@ -1247,8 +1288,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the health model for this device (overridden here to inject a
+            call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -1263,8 +1304,8 @@ class TestInitCommand:
     )
     def test_interrupt(self, mocker):
         """
-        Test that the command's interrupt method will cause a running
-        thread to stop prematurely.
+        Test that the command's interrupt method will cause a running thread to stop
+        prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

@@ -4,10 +4,10 @@
 #
 #
 #
-"""
-Release information for SKA MCCS Python Package.
-"""
+"""Release information for SKA MCCS Python Package."""
 import sys
+from typing import Optional
+
 
 name = "ska_low_mccs"
 version = "0.8.2"
@@ -22,7 +22,7 @@ copyright = (  # noqa: A001
 )
 
 
-def get_release_info(clsname=None):
+def get_release_info(clsname: Optional[str] = None) -> str:
     """
     Return a formatted release info string.
 
@@ -32,7 +32,9 @@ def get_release_info(clsname=None):
     :return: str
     """
     rmod = sys.modules[__name__]
-    info = ", ".join((rmod.name, rmod.version, rmod.description))
+    info = ", ".join(
+        (rmod.name, rmod.version, rmod.description)  # type: ignore[attr-defined]
+    )
     if clsname is None:
         return info
     return ", ".join((clsname, info))

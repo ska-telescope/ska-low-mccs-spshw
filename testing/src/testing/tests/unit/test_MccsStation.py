@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsStation.
-"""
+"""This module contains the tests for MccsStation."""
 import json
 import threading
 import time
@@ -51,10 +50,9 @@ def device_to_load():
 @pytest.fixture()
 def mock_factory(mocker, test_string):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -74,9 +72,7 @@ def mock_factory(mocker, test_string):
 
 
 class TestMccsStation:
-    """
-    Test class for MccsStation tests.
-    """
+    """Test class for MccsStation tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -89,15 +85,17 @@ class TestMccsStation:
         """
         return tango_harness.get_device("low-mccs/station/001")
 
-    def test_InitDevice(self, device_under_test, dummy_json_args):
+    def test_InitDevice(self, device_under_test, command_helper, dummy_json_args):
         """
-        Test for Initial state. A freshly initialised station device has
-        no assigned resources.
+        Test for Initial state. A freshly initialised station device has no assigned
+        resources.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param command_helper: A command helper fixture.
+        :type command_helper: CommandHelper
         :param dummy_json_args: dummy json encoded arguments
         :type dummy_json_args: str
         """
@@ -123,25 +121,9 @@ class TestMccsStation:
         # the device on doesn't put it into ALARM state
         device_under_test.On(dummy_json_args)
 
-        def check_device_state(device, state):
-            """
-            Helper to check that the device is in the expected state
-            with a timeout.
-
-            :param device: the devices to check
-            :type device: dict
-            :param state: the state the device is expected to be in
-            :type state: list(:py:class:`tango.DevState`)
-            """
-            count = 0.0
-            while device.State() != state and count < 3.0:
-                count += 0.1
-                time.sleep(0.1)
-            assert device.State() == state
-
-        check_device_state(device_under_test, DevState.ON)
+        command_helper.check_device_state(device_under_test, DevState.ON)
         time.sleep(0.2)
-        check_device_state(device_under_test, DevState.ON)
+        command_helper.check_device_state(device_under_test, DevState.ON)
 
     def test_queue_debug(self, device_under_test, test_string):
         """
@@ -169,7 +151,6 @@ class TestMccsStation:
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
         """
-
         # The device has subscribed to healthState change events on
         # its subsidiary, but hasn't heard from them (because in unit
         # testing these devices are mocked out), so its healthState is
@@ -226,6 +207,39 @@ class TestMccsStation:
         assert device_under_test.versionId == release.version
 
     # MccsStation attributes
+    def test_refLongitude(self, device_under_test):
+        """
+        Test for refLongitude.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.refLongitude == 0.0
+
+    def test_refLatitude(self, device_under_test):
+        """
+        Test for refLatitude.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.refLatitude == 0.0
+
+    def test_refHeight(self, device_under_test):
+        """
+        Test for refHeight.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        """
+        assert device_under_test.refHeight == 0.0
+
     def test_subarrayId(self, device_under_test, logger):
         """
         Test for subarrayId attribute.
@@ -283,10 +297,9 @@ class TestMccsStation:
 
     def test_delayCentre(self, device_under_test):
         """
-        Test for delayCentre attribute. This is a messy test because
-        there is some loss of floating-point precision during transfer,
-        so you have to check approximate equality when reading back what
-        you've written.
+        Test for delayCentre attribute. This is a messy test because there is some loss
+        of floating-point precision during transfer, so you have to check approximate
+        equality when reading back what you've written.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -415,8 +428,7 @@ class TestInitCommand:
 
     class HangableInitCommand(MccsStation.InitCommand):
         """
-        A subclass of InitCommand with the following properties that
-        support testing:
+        A subclass of InitCommand with the following properties that support testing:
 
         * A lock that, if acquired prior to calling the command, causes
           the command to hang until the lock is released
@@ -447,8 +459,8 @@ class TestInitCommand:
 
         def _initialise_device_pool(self, device):
             """
-            Initialise the device pool for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the device pool for this device (overridden here to inject a call
+            trace attribute).
 
             :param device: the device for which the device pool is
                 being initialised
@@ -462,8 +474,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the health model for this device (overridden here to inject a
+            call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -478,8 +490,8 @@ class TestInitCommand:
     )
     def test_interrupt(self, mocker):
         """
-        Test that the command's interrupt method will cause a running
-        thread to stop prematurely.
+        Test that the command's interrupt method will cause a running thread to stop
+        prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

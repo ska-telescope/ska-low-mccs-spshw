@@ -7,16 +7,14 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains the SKA Low MCCS Controller device prototype.
-"""
+"""This module contains the SKA Low MCCS Controller device prototype."""
 
 from __future__ import annotations  # allow forward references in type hints
 
 import json
 import logging
 import threading
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 # PyTango imports
 from tango import DebugIt, DevState, EnsureOmniThread, SerialModel, Util, Group
@@ -27,17 +25,18 @@ from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
-from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.pool import DevicePool, DevicePoolSequence
+from ska_low_mccs import MccsDeviceProxy  # type: ignore[attr-defined]
+from ska_low_mccs.pool import DevicePool, DevicePoolSequence  # type: ignore[attr-defined]
 import ska_low_mccs.release as release
-from ska_low_mccs.utils import call_with_json, tango_raise
-from ska_low_mccs.events import EventManager
-from ska_low_mccs.health import HealthModel, HealthMonitor
-from ska_low_mccs.resource import ResourceManager
-from ska_low_mccs.message_queue import MessageQueue
+from ska_low_mccs.utils import call_with_json, tango_raise  # type: ignore[attr-defined]
+from ska_low_mccs.events import EventManager  # type: ignore[attr-defined]
+from ska_low_mccs.health import HealthModel, HealthMonitor  # type: ignore[attr-defined]
+from ska_low_mccs.resource import ResourceManager  # type: ignore[attr-defined]
+from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
 
 __all__ = ["MccsController", "StationsResourceManager", "main"]
 
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 class StationsResourceManager(ResourceManager):
     """
@@ -122,10 +121,7 @@ class StationsResourceManager(ResourceManager):
 
 
 class MccsControllerQueue(MessageQueue):
-    """
-    A concrete implementation of a message queue specific to
-    MccsController.
-    """
+    """A concrete implementation of a message queue specific to MccsController."""
 
     def _notify_listener(
         self: MccsControllerQueue,
@@ -191,18 +187,16 @@ class MccsController(SKAMaster):
     # ---------------
     def init_device(self: MccsController) -> None:
         """
-        Initialise the device; overridden here to change the Tango
-        serialisation model.
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
         """
         util = Util.instance()
-        util.set_serial_model(SerialModel.NO_SYNC)
+        util.set_serial_model(SerialModel.BY_DEVICE)
         super().init_device()
 
     def init_command_objects(self: MccsController) -> None:
-        """
-        Initialises the command handlers for commands supported by this
-        device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         args = (self, self.state_model, self.logger)
@@ -222,7 +216,7 @@ class MccsController(SKAMaster):
         for (command_name, command_object) in [
             ("Startup", self.StartupCommand),
             ("On", self.OnCommand),
-            ("OnCallback", self.OnCallbackCommand),
+            ("Callback", self.CallbackCommand),
             ("Off", self.OffCommand),
         ]:
             self.register_command_object(
@@ -258,7 +252,7 @@ class MccsController(SKAMaster):
             """
             super().__init__(target, state_model, logger)
 
-            self._thread = None
+            self._thread: Optional[threading.Thread] = None
             self._lock = threading.Lock()
             self._interrupt = False
             self._message_queue = None
@@ -266,9 +260,8 @@ class MccsController(SKAMaster):
 
         def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
-            Initialises the attributes and properties of the
-            `MccsController`. State is managed under the hood; the basic
-            sequence is:
+            Initialises the attributes and properties of the `MccsController`. State is
+            managed under the hood; the basic sequence is:
 
             1. Device state is set to INIT
             2. The do() method is run
@@ -332,8 +325,8 @@ class MccsController(SKAMaster):
             self: MccsController.InitCommand, device: SKABaseDevice
         ) -> None:
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             """
@@ -438,16 +431,11 @@ class MccsController(SKAMaster):
             return True
 
         def succeeded(self: MccsController.InitCommand) -> None:
-            """
-            Hook called when the initialisation thread finishes
-            successfully.
-            """
+            """Hook called when the initialisation thread finishes successfully."""
             self.state_model.perform_action("init_succeeded_disable")
 
     def always_executed_hook(self: MccsController) -> None:
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
 
     def delete_device(self: MccsController) -> None:
         """
@@ -469,12 +457,14 @@ class MccsController(SKAMaster):
     # ----------
     def health_changed(self: MccsController, health: HealthState) -> None:
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         """
+        self._health_state: Optional[HealthState]  # type hint only
+
         if self._health_state == health:
             return
         self._health_state = health
@@ -508,7 +498,7 @@ class MccsController(SKAMaster):
         """
         return self.queue_debug
 
-    @aQueueDebug.write
+    @aQueueDebug.write  # type: ignore[no-redef]
     def aQueueDebug(self: MccsController, debug_string: str) -> None:
         """
         Update the queue debug attribute.
@@ -544,7 +534,6 @@ class MccsController(SKAMaster):
 
     @attribute(dtype="DevUShort", unit="s")
     def commandDelayExpected(self: MccsController) -> int:
-
         """
         Return the commandDelayExpected attribute.
 
@@ -581,34 +570,21 @@ class MccsController(SKAMaster):
     # --------
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Startup(self: MccsController) -> Tuple[ResultCode, [str, str]]:
+    def Startup(self: MccsController) -> DevVarLongStringArrayType:
         """
         Start up the MCCS subsystem.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
         """
-        if self._command_result.get("result_code") in [
-            ResultCode.STARTED,
-            ResultCode.QUEUED,
-        ]:
-            return [
-                [ResultCode.FAILED],
-                ["A controller command is already in progress", None],
-            ]
-        else:
-            self.notify_listener(ResultCode.UNKNOWN, "", "")
-            self.logger.debug("send_message(Startup)")
-            (result_code, message_uid, status) = self._message_queue.send_message(
-                command="Startup", notifications=True
-            )
-            return [[result_code], [status, message_uid]]
+        return self._check_and_send_message(
+            "Startup", check_is_allowed=True, notifications=True
+        )
 
     class StartupCommand(ResponseCommand):
-        """
-        Class for handling the Startup command.
-        """
+        """Class for handling the Startup command."""
 
         SUCCEEDED_MESSAGE = "Startup command completed OK"
         FAILED_OFF_MESSAGE = "Startup command failed: Off"
@@ -659,38 +635,72 @@ class MccsController(SKAMaster):
                 )
                 return (ResultCode.FAILED, message_uid + "," + self.FAILED_ON_MESSAGE)
 
+    def _check_and_send_message(
+        self: MccsController,
+        command: str,
+        json_args: str = "",
+        check_is_allowed: bool = False,
+        notifications: bool = False,
+    ) -> DevVarLongStringArrayType:
+        """
+        Helper method to check initial status and send a message to execute the
+        specified command.
+
+        :param command: the command to send a message for
+        :param json_args: arguments to pass with the command
+        :param check_is_allowed: check for any previous ongoing command
+        :param notifications: requestor notification required
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
+        """
+        self.logger.debug(f"_check_and_send_message({command})")
+        if check_is_allowed:
+            command_progress = self._command_result.get("result_code")
+            if command_progress in [
+                ResultCode.STARTED,
+                ResultCode.QUEUED,
+            ]:
+                self.logger.error(
+                    f"_check_and_send_message() FAILED: {command_progress.name}"
+                )
+                return (
+                    [ResultCode.FAILED],
+                    ["A controller command is already in progress", None],
+                )
+
+        if notifications:
+            self.notify_listener(ResultCode.UNKNOWN, "", "")
+
+        self.logger.debug(f"send_message({command})")
+        (result_code, message_uid, status) = self._message_queue.send_message(
+            command=command, notifications=notifications, json_args=json_args
+        )
+        return ([result_code], [status, message_uid])
+
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def On(self: MccsController) -> Tuple[ResultCode, [str, str]]:
+    def On(self: MccsController) -> DevVarLongStringArrayType:
         """
         Send a message to turn the controller on.
 
         Method returns as soon as the message has been enqueued.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
         """
-        if self._command_result.get("result_code") in [
-            ResultCode.STARTED,
-            ResultCode.QUEUED,
-        ]:
-            return [
-                [ResultCode.FAILED],
-                ["A controller command is already in progress", None],
-            ]
-        else:
-            self.notify_listener(ResultCode.UNKNOWN, "", "")
-            self.logger.debug("send_message(On)")
-            (result_code, message_uid, status) = self._message_queue.send_message(
-                command="On", notifications=True
-            )
-            return [[result_code], [status, message_uid]]
+        return self._check_and_send_message(
+            "On", check_is_allowed=True, notifications=True
+        )
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On command.
-        """
+        """Class for handling the On command."""
 
         QUEUED_MESSAGE = "Controller On command queued"
         FAILED_MESSAGE = "Controller On command failed"
@@ -710,7 +720,7 @@ class MccsController(SKAMaster):
 
             message_uid = device._command_result.get("message_uid")
             if device_pool.invoke_command_with_callback(
-                command_name="On", fqdn=device.get_name(), callback="OnCallback"
+                command_name="On", fqdn=device.get_name(), callback="Callback"
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
@@ -718,40 +728,36 @@ class MccsController(SKAMaster):
                 device.notify_listener(
                     ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
                 )
+                # TODO: Determine if this next statement is correct:
                 # This needs to be successful or it drives the state machine into FAULT
                 return (ResultCode.OK, message_uid + "," + self.FAILED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def OnCallback(self: MccsController, argin: str) -> Tuple[ResultCode, [str, str]]:
+    def Callback(self: MccsController, json_args: str) -> DevVarLongStringArrayType:
         """
-        On callback method.
+        Callback method for pool device command completion.
 
-        :param argin: Argument containing JSON encoded command message and result
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :param json_args: Argument containing JSON encoded command message and result
+        :return: A tuple containing a return code, a string message indicating status and
+            message UID. The string message is for information purposes only, but the
+            message UID is for message management use.
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
-        (result_code, message_uid, status) = self._message_queue.send_message(
-            command="OnCallback", json_args=argin
-        )
-        return [[result_code], [status, message_uid]]
+        return self._check_and_send_message("Callback", json_args=json_args)
 
-    class OnCallbackCommand(ResponseCommand):
-        """
-        Class for handling the On Callback command.
-        """
+    class CallbackCommand(ResponseCommand):
+        """Class for handling the Callback command."""
 
-        SUCCESSFUL_MESSAGE = "On command completed successfully"
+        SUCCESSFUL_MESSAGE = "Callback completed successfully"
 
         def do(
-            self: MccsController.OnCallbackCommand, argin: str
+            self: MccsController.CallbackCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
-            :py:meth:`.MccsController.OnCallback` command.
+            :py:meth:`.MccsController.Callback` command.
 
             :param argin: Argument containing JSON encoded command message and result
             :return: A tuple containing a return code and a string
@@ -760,6 +766,7 @@ class MccsController(SKAMaster):
             :rtype:
                 (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
+            self.logger.debug(f"Class CallbackCommand argin = {argin}")
             device = self.target
             device_pool = device.device_pool
             device.logger.debug("Controller Callback called")
@@ -767,9 +774,12 @@ class MccsController(SKAMaster):
             message_uid = device._command_result.get("message_uid")
             # Defer callback to our pool device
             (command_complete, result_code, status) = device_pool.callback(argin)
+            self.logger.debug(
+                f"{command_complete}, {result_code}, {status} = device_pool.callback({argin})"
+            )
             if command_complete:
                 device.logger.debug(
-                    f"OnCallback({result_code.name}:{message_uid}:{self.SUCCESSFUL_MESSAGE})"
+                    f"Callback({result_code.name}:{message_uid}:{self.SUCCESSFUL_MESSAGE})"
                 )
                 device.notify_listener(
                     result_code, message_uid, self.SUCCESSFUL_MESSAGE
@@ -780,7 +790,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Disable(self: MccsController) -> Tuple[ResultCode, str]:
+    def Disable(self: MccsController) -> DevVarLongStringArrayType:
         """
         Disable the controller.
 
@@ -792,12 +802,10 @@ class MccsController(SKAMaster):
         command = self.get_command_object("Disable")
         (result_code, status) = command()
         self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class DisableCommand(SKABaseDevice.DisableCommand):
-        """
-        Class for handling the Disable command.
-        """
+        """Class for handling the Disable command."""
 
         SUCCEEDED_MESSAGE = "Disable command completed OK"
         FAILED_MESSAGE = "Disable command failed"
@@ -820,43 +828,55 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Off(self: MccsController) -> Tuple[ResultCode, str]:
+    def Off(self: MccsController) -> DevVarLongStringArrayType:
         """
-        Turn the controller off.
+        Send a message to turn the controller off.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        Method returns as soon as the message has been enqueued.
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
         """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
-        command = self.get_command_object("Off")
-        (result_code, status) = command()
-        self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return self._check_and_send_message(
+            "Off", check_is_allowed=True, notifications=True
+        )
 
     class OffCommand(SKABaseDevice.OffCommand):
-        """
-        Class for handling the Off command.
-        """
+        """Class for handling the Off command."""
 
-        SUCCEEDED_MESSAGE = "Off command completed OK"
-        FAILED_MESSAGE = "Off command failed"
+        QUEUED_MESSAGE = "Controller Off command queued"
+        FAILED_MESSAGE = "Controller Off command failed"
 
-        def do(self: MccsController.OffCommand) -> Tuple[ResultCode, str]:
+        def do(self: MccsController.OffCommand, argin: str) -> Tuple[ResultCode, str]:
             """
-            Stateless do-hook for implementing the functionality of the
-            :py:meth:`.MccsController.Off` command
+            Stateless do hook for implementing the functionality of the
+            :py:meth:`.MccsController.Off` command.
 
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
             device = self.target
             device_pool = device.device_pool
-            if device_pool.off():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+            message_uid = device._command_result.get("message_uid")
+            if device_pool.invoke_command_with_callback(
+                command_name="Off",
+                fqdn=device.get_name(),
+                callback="Callback",
+            ):
+                return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
+                self.logger.error(message_uid + "," + self.FAILED_MESSAGE)
+                device.notify_listener(
+                    ResultCode.FAILED, message_uid, self.FAILED_MESSAGE
+                )
+                # TODO: Determine if this next statement is correct:
+                # This needs to be successful or it drives the state machine into FAULT
+                return (ResultCode.OK, message_uid + "," + self.FAILED_MESSAGE)
 
     class StandbyLowCommand(ResponseCommand):
         """
@@ -890,11 +910,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def StandbyLow(self: MccsController) -> Tuple[ResultCode, str]:
+    def StandbyLow(self: MccsController) -> DevVarLongStringArrayType:
         """
-        StandbyLow Command.
+        Put MCCS into low standby mode.
 
-        :todo: What does this command do?
+        :todo: Some elements of SKA Mid have both low and full standby
+            modes, but SKA Low has no such elements. We just need a
+            Standby command, not separate StandbyLow and StandbyFull.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -902,7 +924,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("StandbyLow")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class StandbyFullCommand(ResponseCommand):
         """
@@ -936,11 +958,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def StandbyFull(self: MccsController) -> Tuple[ResultCode, str]:
+    def StandbyFull(self: MccsController) -> DevVarLongStringArrayType:
         """
-        StandbyFull Command.
+        Put MCCS into full standby mode.
 
-        :todo: What does this command do?
+        :todo: Some elements of SKA Mid have both low and full standby
+            modes, but SKA Low has no such elements. We just need a
+            Standby command, not separate StandbyLow and StandbyFull.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -948,7 +972,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("StandbyFull")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class OperateCommand(ResponseCommand):
         """
@@ -974,8 +998,7 @@ class MccsController(SKAMaster):
 
         def check_allowed(self: MccsController.OperateCommand) -> bool:
             """
-            Whether this command is allowed to be run in current device
-            state.
+            Whether this command is allowed to be run in current device state.
 
             :return: True if this command is allowed to be run in
                 current device state
@@ -984,10 +1007,9 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Operate(self: MccsController) -> Tuple[ResultCode, str]:
+    def Operate(self: MccsController) -> DevVarLongStringArrayType:
         """
-        Transit to the OPERATE operating state, ready for signal
-        processing.
+        Transit to the OPERATE operating state, ready for signal processing.
 
         :todo: What does this command do?
 
@@ -997,12 +1019,11 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("Operate")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     def is_Operate_allowed(self: MccsController) -> bool:
         """
-        Whether this command is allowed to be run in current device
-        state.
+        Whether this command is allowed to be run in current device state.
 
         :return: True if this command is allowed to be run in
             current device state
@@ -1013,15 +1034,13 @@ class MccsController(SKAMaster):
         return True
 
     class ResetCommand(SKABaseDevice.ResetCommand):
-        """
-        Command class for the Reset() command.
-        """
+        """Command class for the Reset() command."""
 
         def do(self: MccsController.ResetCommand) -> Tuple[ResultCode, str]:
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Reset`
-            command for this :py:class:`.MccsController` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Reset` command for this
+            :py:class:`.MccsController` device.
 
             This implementation resets the MCCS system as a whole as an
             attempt to clear a FAULT state.
@@ -1035,19 +1054,21 @@ class MccsController(SKAMaster):
             return (result_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Allocate(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def Allocate(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
-        Allocate a set of unallocated MCCS resources to a sub-array. The
-        JSON argument specifies the overall sub-array composition in
-        terms of which stations should be allocated to the specified
-        Sub-Array.
+        Allocate a set of unallocated MCCS resources to a sub-array. The JSON argument
+        specifies the overall sub-array composition in terms of which stations should be
+        allocated to the specified Sub-Array.
+
+        Method returns as soon as the message has been enqueued.
 
         :param argin: JSON-formatted string containing an integer
             subarray_id, station_ids, channels and subarray_beam_ids.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
 
         :example:
 
@@ -1064,11 +1085,21 @@ class MccsController(SKAMaster):
                 )
             )
         """
-        self.notify_listener(ResultCode.UNKNOWN, "", "")
-        handler = self.get_command_object("Allocate")
-        (result_code, status) = handler(argin)
-        self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        if self._command_result.get("result_code") in [
+            ResultCode.STARTED,
+            ResultCode.QUEUED,
+        ]:
+            return (
+                [ResultCode.FAILED],
+                ["A controller command is already in progress", None],
+            )
+        else:
+            self.notify_listener(ResultCode.UNKNOWN, "", "")
+            self.logger.debug("send_message(Allocate)")
+            (result_code, message_uid, status) = self._message_queue.send_message(
+                command="Allocate", json_args=argin, notifications=True
+            )
+            return ([result_code], [status, message_uid])
 
     class AllocateCommand(ResponseCommand):
         """
@@ -1133,6 +1164,7 @@ class MccsController(SKAMaster):
                 stations_per_beam.append(station_sublist)
             station_fqdns = all_stations.values()
             subarray_beams = {}
+
             for subarray_beam_id in subarray_beam_ids:
                 subarray_beams[
                     subarray_beam_id
@@ -1152,10 +1184,17 @@ class MccsController(SKAMaster):
             ) = controllerdevice._stations_manager.query_allocation(
                 station_fqdns, subarray_id
             )
+            message_uid = controllerdevice._command_result.get("message_uid")
+
             if not alloc_allowed:
                 # If manager returns False (not allowed) stations_to_release
                 # gives the list of FQDNs blocking the allocation.
                 aalist = ", ".join(stations_to_release)
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
+                )
                 return (
                     ResultCode.FAILED,
                     f"{self.FAILED_ALREADY_ALLOCATED_MESSAGE_PREFIX}: {aalist}",
@@ -1173,6 +1212,12 @@ class MccsController(SKAMaster):
                     subarray_device.ReleaseResources, stations=stations_to_release
                 )
                 if result_code == ResultCode.FAILED:
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED,
+                        message_uid,
+                        f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{message}",
+                    )
                     return (
                         ResultCode.FAILED,
                         f"{self.FAILED_TO_RELEASE_MESSAGE_PREFIX} {subarray_fqdn}:"
@@ -1196,6 +1241,11 @@ class MccsController(SKAMaster):
                 self._enable_subarray(subarray_id)
 
             if not controllerdevice._subarray_enabled[subarray_id - 1]:
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
+                )
                 return (
                     ResultCode.FAILED,
                     f"{self.FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX} {subarray_fqdn}",
@@ -1210,6 +1260,12 @@ class MccsController(SKAMaster):
                     channel_blocks=channel_blocks,
                 )
                 if result_code == ResultCode.FAILED:
+                    controllerdevice.notify_listener(
+                        ResultCode.FAILED,
+                        message_uid,
+                        f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
+                        f"{message}",
+                    )
                     return (
                         ResultCode.FAILED,
                         f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:"
@@ -1234,12 +1290,19 @@ class MccsController(SKAMaster):
                     "channel_blocks": channel_blocks,
                 }
             )
+            controllerdevice.push_change_event(
+                "assignedResources", controllerdevice._assigned_resources
+            )
+            controllerdevice.notify_listener(
+                ResultCode.OK,
+                message_uid,
+                self.SUCCEEDED_MESSAGE,
+            )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:
             """
-            Whether this command is allowed to be run in current device
-            state.
+            Whether this command is allowed to be run in current device state.
 
             :return: True if this command is allowed to be run in
                 current device state
@@ -1291,8 +1354,7 @@ class MccsController(SKAMaster):
 
     def is_Allocate_allowed(self: MccsController) -> bool:
         """
-        Whether this command is allowed to be run in current device
-        state.
+        Whether this command is allowed to be run in current device state.
 
         :return: True if this command is allowed to be run in
             current device state
@@ -1383,7 +1445,7 @@ class MccsController(SKAMaster):
         return (ResultCode.OK, "Release resources completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Restart(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def Restart(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
         Restart an MCCS Sub-Array.
 
@@ -1397,20 +1459,16 @@ class MccsController(SKAMaster):
         handler = self.get_command_object("Restart")
         (result_code, status) = handler(argin)
         self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class RestartCommand(ResponseCommand):
-        """
-        Restart a sub-array's Capabilities and resources (stations),
-        marking the resources and Capabilities as unassigned and idle.
-        """
+        """Restart a subarray."""
 
         def do(
             self: MccsController.RestartCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do hook for the
-            :py:meth:`.MccsController.Restart` command
+            Stateless do hook for the :py:meth:`.MccsController.Restart` command.
 
             :param argin: JSON-formatted string containing an integer subarray_id
 
@@ -1419,12 +1477,32 @@ class MccsController(SKAMaster):
                 information purpose only.
             """
             controller = self.target
-            return controller._release_resources(argin, restart=True)
+            (result_code, status) = controller._release_resources(argin, restart=True)
+            controller._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": [],
+                    "station_ids": [],
+                    "channel_blocks": [],
+                }
+            )
+            controller.push_change_event(
+                "assignedResources", controller._assigned_resources
+            )
+            return (result_code, status)
+
+        def check_allowed(self: MccsController.RestartCommand) -> bool:
+            """
+            Whether this command is allowed to be run in current device state.
+
+            :return: True if this command is allowed to be run in
+                current device state
+            """
+            return self.state_model.op_state == DevState.ON
 
     def is_Restart_allowed(self: MccsController) -> bool:
         """
-        Whether this command is allowed to be run in current device
-        state.
+        Whether this command is allowed to be run in current device state.
 
         :return: True if this command is allowed to be run in
             current device state
@@ -1435,7 +1513,7 @@ class MccsController(SKAMaster):
         return True
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Release(self: MccsController, argin: str) -> Tuple[ResultCode, str]:
+    def Release(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
         Release resources from an MCCS Sub-Array.
 
@@ -1455,20 +1533,16 @@ class MccsController(SKAMaster):
         handler = self.get_command_object("Release")
         (result_code, status) = handler(argin)
         self.notify_listener(result_code, "", status)
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
     class ReleaseCommand(ResponseCommand):
-        """
-        Release a sub-array's Capabilities and resources (stations),
-        marking the resources and Capabilities as unassigned and idle.
-        """
+        """Release a subarray's resources."""
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
-            Stateless do hook for the
-            :py:meth:`.MccsController.Release` command
+            Stateless do hook for the :py:meth:`.MccsController.Release` command.
 
             :param argin: JSON-formatted string containing an integer
                 subarray_id, a release all flag and array resources (TBD).
@@ -1478,12 +1552,23 @@ class MccsController(SKAMaster):
                 information purpose only.
             """
             controller = self.target
-            return controller._release_resources(argin)
+            (result_code, status) = controller._release_resources(argin)
+            controller._assigned_resources = json.dumps(
+                {
+                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                    "subarray_beam_ids": [],
+                    "station_ids": [],
+                    "channel_blocks": [],
+                }
+            )
+            controller.push_change_event(
+                "assignedResources", controller._assigned_resources
+            )
+            return (result_code, status)
 
         def check_allowed(self: MccsController.ReleaseCommand) -> bool:
             """
-            Whether this command is allowed to be run in current device
-            state.
+            Whether this command is allowed to be run in current device state.
 
             :return: True if this command is allowed to be run in
                 current device state
@@ -1492,8 +1577,7 @@ class MccsController(SKAMaster):
 
     def is_Release_allowed(self: MccsController) -> bool:
         """
-        Whether this command is allowed to be run in current device
-        state.
+        Whether this command is allowed to be run in current device state.
 
         :return: True if this command is allowed to be run in
             current device state
@@ -1527,7 +1611,7 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def Maintenance(self: MccsController) -> Tuple[ResultCode, str]:
+    def Maintenance(self: MccsController) -> DevVarLongStringArrayType:
         """
         Transition the MCCS to a MAINTENANCE state.
 
@@ -1539,7 +1623,7 @@ class MccsController(SKAMaster):
         """
         handler = self.get_command_object("Maintenance")
         (result_code, status) = handler()
-        return [[result_code], [status]]
+        return ([result_code], [status])
 
 
 # ----------

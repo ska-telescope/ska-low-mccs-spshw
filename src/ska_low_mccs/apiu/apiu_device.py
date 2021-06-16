@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -7,10 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module contains an implementation of the MCCS APIU device and
-related classes.
-"""
+"""This module implements the MCCS APIU device."""
 import threading
 import json
 
@@ -69,8 +67,8 @@ def create_return(success, action):
 
 class APIUHardwareHealthEvaluator(HardwareHealthEvaluator):
     """
-    A placeholder for a class that implements a policy by which the
-    antenna hardware manager evaluates the health of its hardware.
+    A placeholder for a class that implements a policy by which the antenna hardware
+    manager evaluates the health of its hardware.
 
     At present this just inherits from the base class unchanged.
     """
@@ -304,10 +302,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
         )
 
     def _update_are_antennas_on(self):
-        """
-        Update our record of which antennas are off/on, ensureing that
-        callbacks are called.
-        """
+        """Update our record of which antennas are off/on, calling any callbacks."""
         are_antennas_on = self._factory.hardware.are_antennas_on()
         if are_antennas_on is None:
             are_antennas_on = [False] * self.antenna_count
@@ -317,9 +312,7 @@ class APIUHardwareManager(OnOffHardwareManager, SimulableHardwareManager):
             self._are_antennas_on_change_callback(self._are_antennas_on)
 
     def poll(self):
-        """
-        Poll the hardware.
-        """
+        """Poll the hardware."""
         super().poll()
         self._update_are_antennas_on()
 
@@ -378,18 +371,16 @@ class MccsAPIU(SKABaseDevice):
 
     def init_device(self):
         """
-        Initialise the device; overridden here to change the Tango
-        serialisation model.
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
         """
         util = Util.instance()
-        util.set_serial_model(SerialModel.NO_SYNC)
+        util.set_serial_model(SerialModel.BY_DEVICE)
         super().init_device()
 
     def init_command_objects(self):
-        """
-        Initialises the command handlers for commands supported by this
-        device.
-        """
+        """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
         for (command_name, command_object) in [
@@ -408,10 +399,7 @@ class MccsAPIU(SKABaseDevice):
             )
 
     class InitCommand(SKABaseDevice.InitCommand):
-        """
-        Class that implements device initialisation for the MCCS APIU
-        device.
-        """
+        """Class that implements device initialisation for the MCCS APIU device."""
 
         def __init__(self, target, state_model, logger=None):
             """
@@ -491,8 +479,8 @@ class MccsAPIU(SKABaseDevice):
 
         def _initialise_connections(self, device):
             """
-            Thread target for asynchronous initialisation of connections
-            to external entities such as hardware and other devices.
+            Thread target for asynchronous initialisation of connections to external
+            entities such as hardware and other devices.
 
             :param device: the device being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
@@ -515,9 +503,8 @@ class MccsAPIU(SKABaseDevice):
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device. May also register commands that depend upon a
-            connection to that hardware.
+            Initialise the connection to the hardware being managed by this device. May
+            also register commands that depend upon a connection to that hardware.
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -571,9 +558,7 @@ class MccsAPIU(SKABaseDevice):
             self.state_model.perform_action(action)
 
     def always_executed_hook(self):
-        """
-        Method always executed before any TANGO command is executed.
-        """
+        """Method always executed before any TANGO command is executed."""
         if self.hardware_manager is not None:
             self.hardware_manager.poll()
 
@@ -597,9 +582,9 @@ class MccsAPIU(SKABaseDevice):
     # ----------
     def are_antennas_on_changed(self, are_antennas_on):
         """
-        Callback to be called whenever power to the antennas changes;
-        responsible for updating the tango side of things i.e. making
-        sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever power to the antennas changes; responsible for
+        updating the tango side of things i.e. making sure the attribute is up to date,
+        and events are pushed.
 
         :param are_antennas_on: whether each antenna is pwoered
         :type are_antennas_on: list(bool)
@@ -611,9 +596,9 @@ class MccsAPIU(SKABaseDevice):
 
     def health_changed(self, health):
         """
-        Callback to be called whenever the HealthModel's health state
-        changes; responsible for updating the tango side of things i.e.
-        making sure the attribute is up to date, and events are pushed.
+        Callback to be called whenever the HealthModel's health state changes;
+        responsible for updating the tango side of things i.e. making sure the attribute
+        is up to date, and events are pushed.
 
         :param health: the new health value
         :type health: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -832,9 +817,9 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Disable`
-            command for this :py:class:`.MccsAPIU` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Disable` command for this
+            :py:class:`.MccsAPIU` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -866,9 +851,9 @@ class MccsAPIU(SKABaseDevice):
 
         def do(self):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Standby`
-            command for this :py:class:`.MccsAPIU` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Standby` command for this
+            :py:class:`.MccsAPIU` device.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -878,6 +863,43 @@ class MccsAPIU(SKABaseDevice):
             hardware_manager = self.target
             success = hardware_manager.on()
             return create_return(success, "standby")
+
+    def _send_message(self, command, json_args):
+        """
+        Helper method to send a message to execute the specified command.
+
+        :param command: the command to send a message for
+        :type command: str
+        :param json_args: arguments to pass with the command
+        :type json_args: str
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        :rtype:
+            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
+        """
+        self.logger.info(f"APIU {command}")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        if respond_to_fqdn and callback:
+            self.logger.debug(f"APIU {command} message call")
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+            return [[result_code], [status, message_uid]]
+        else:
+            # Call command sequentially
+            command = self.get_command_object(command)
+            (result_code, message) = command(json_args)
+            return [[result_code], [message]]
 
     @command(
         dtype_in="DevString",
@@ -894,37 +916,16 @@ class MccsAPIU(SKABaseDevice):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self.logger.info("APIU On")
-
-        kwargs = json.loads(json_args)
-        respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        callback = kwargs.get("callback")
-        if respond_to_fqdn and callback:
-            self.logger.debug("APIU On message call")
-            (
-                result_code,
-                message_uid,
-                status,
-            ) = self._message_queue.send_message_with_response(
-                command="On", respond_to_fqdn=respond_to_fqdn, callback=callback
-            )
-            return [[result_code], [status, message_uid]]
-        else:
-            # Call On sequentially
-            command = self.get_command_object("On")
-            (result_code, message) = command(json_args)
-            return [[result_code], [message]]
+        return self._send_message("On", json_args=json_args)
 
     class OnCommand(SKABaseDevice.OnCommand):
-        """
-        Class for handling the On() command.
-        """
+        """Class for handling the On() command."""
 
         def do(self, argin):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
-            command for this :py:class:`.MccsAPIU` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
+            :py:class:`.MccsAPIU` device.
 
             :param argin: Argument containing JSON encoded command message and result
             :return: A tuple containing a return code and a string
@@ -935,6 +936,23 @@ class MccsAPIU(SKABaseDevice):
             (result_code, message) = super().do()
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def Off(self, json_args):
+        """
+        Send a message to turn APIU off.
+
+        :param json_args: JSON encoded messaging system and command arguments
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
+        """
+        return self._send_message("Off", json_args=json_args)
 
     class OffCommand(SKABaseDevice.OffCommand):
         """
@@ -948,12 +966,13 @@ class MccsAPIU(SKABaseDevice):
             device that manages the upstream hardware.
         """
 
-        def do(self):
+        def do(self, argin):
             """
-            Stateless hook implementing the functionality of the
-            (inherited) :py:meth:`ska_tango_base.SKABaseDevice.Off`
-            command for this :py:class:`.MccsAPIU` device.
+            Stateless hook implementing the functionality of the (inherited)
+            :py:meth:`ska_tango_base.SKABaseDevice.Off` command for this
+            :py:class:`.MccsAPIU` device.
 
+            :param argin: JSON encoded messaging system and command arguments
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -967,9 +986,7 @@ class MccsAPIU(SKABaseDevice):
             return create_return(success, "off")
 
     class IsAntennaOnCommand(BaseCommand):
-        """
-        The command class for the IsAntennaOn command.
-        """
+        """The command class for the IsAntennaOn command."""
 
         def do(self, argin):
             """
@@ -1003,9 +1020,7 @@ class MccsAPIU(SKABaseDevice):
         return handler(argin)
 
     class PowerUpAntennaCommand(ResponseCommand):
-        """
-        The command class for the PowerDownAntenna command.
-        """
+        """The command class for the PowerDownAntenna command."""
 
         def do(self, argin):
             """
@@ -1049,9 +1064,7 @@ class MccsAPIU(SKABaseDevice):
         return [[return_code], [message]]
 
     class PowerDownAntennaCommand(ResponseCommand):
-        """
-        The command class for the PowerDownAntenna command.
-        """
+        """The command class for the PowerDownAntenna command."""
 
         def do(self, argin):
             """
@@ -1203,7 +1216,6 @@ def main(args=None, **kwargs):
     :return: exit code
     :rtype: int
     """
-
     return MccsAPIU.run_server(args=args, **kwargs)
 
 

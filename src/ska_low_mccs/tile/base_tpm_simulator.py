@@ -1,7 +1,6 @@
+# type: ignore
 # -*- coding: utf-8 -*-
-"""
-An implementation of a TPM simulator.
-"""
+"""An implementation of a TPM simulator."""
 import copy
 
 from ska_low_mccs.hardware import HardwareSimulator
@@ -10,9 +9,7 @@ __all__ = ["BaseTpmSimulator"]
 
 
 class BaseTpmSimulator(HardwareSimulator):
-    """
-    A simulator for a TPM.
-    """
+    """A simulator for a TPM."""
 
     ADC_RMS = tuple(float(i) for i in range(32))
     FPGA1_TIME = 1
@@ -40,13 +37,13 @@ class BaseTpmSimulator(HardwareSimulator):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
+    ARP_TABLE = {0: [0, 1], 1: [1]}
     # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120
 
     def _arp(self, ip):
         """
-        Return MAC address from ARP resolution table Private method for
-        the simulator.
+        Return MAC address from ARP resolution table Private method for the simulator.
 
         :param ip: IP address in dot decimal format
         :type ip: str
@@ -84,7 +81,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._pps_delay = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
-
+        self._arp_table = copy.deepcopy(self.ARP_TABLE)
         self._fpga1_time = self.FPGA1_TIME
         self._fpga2_time = self.FPGA2_TIME
 
@@ -108,8 +105,7 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def firmware_name(self):
         """
-        Return the name of the firmware that this TPM simulator is
-        running.
+        Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware name
         :rtype: str
@@ -130,8 +126,7 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def firmware_version(self):
         """
-        Return the name of the firmware that this TPM simulator is
-        running.
+        Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware version (major.minor)
         :rtype: str
@@ -143,8 +138,7 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def is_programmed(self):
         """
-        Return whether this TPM is programmed (i.e. firmware has been
-        downloaded to it)
+        Return whether this TPM is programmed (i.e. firmware has been downloaded to it)
 
         :return: whether this TPM is programmed
         :rtype: bool
@@ -175,8 +169,7 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def cpld_flash_write(self, bitfile):
         """
-        Flash a program to the tile's CPLD (complex programmable logic
-        device).
+        Flash a program to the tile's CPLD (complex programmable logic device).
 
         :param bitfile: the program to be flashed
         :type bitfile: bytes
@@ -189,8 +182,7 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def initialise(self):
         """
-        Real TPM driver performs connectivity checks, programs and
-        initialises the TPM.
+        Real TPM driver performs connectivity checks, programs and initialises the TPM.
 
         The simulator will emulate programming the firmware.
         """
@@ -314,8 +306,8 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def fpga1_time(self):
         """
-        Return the FPGA1 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc.
+        Return the FPGA1 clock time. Useful for detecting clock skew, propagation
+        delays, contamination delays, etc.
 
         :return: the FPGA1 clock time
         :rtype: int
@@ -326,8 +318,8 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def fpga2_time(self):
         """
-        Return the FPGA2 clock time. Useful for detecting clock skew,
-        propagation delays, contamination delays, etc.
+        Return the FPGA2 clock time. Useful for detecting clock skew, propagation
+        delays, contamination delays, etc.
 
         :return: the FPGA2 clock time
         :rtype: int
@@ -433,40 +425,39 @@ class BaseTpmSimulator(HardwareSimulator):
             self._address_map.update({key: value})
 
     def configure_40g_core(
-        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
     ):
         """
-        Configure the 40G code. The dst_mac parmeter is ignored in true
-        40G core (ARP resolution used instead)
+        Configure the 40G code. The dst_mac parameter is ignored in true 40G core (ARP
+        resolution used instead)
 
         :param core_id: id of the core
         :type core_id: int
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
         :param src_mac: MAC address of the source
         :type src_mac: str
         :param src_ip: IP address of the source
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
         :type dst_port: int
         """
-
         core_dict = {
             "CoreID": core_id,
+            "ArpTableEntry": arp_table_entry,
             "SrcMac": src_mac,
             "SrcIP": src_ip,
             "SrcPort": src_port,
-            "DstMac": self._arp(dst_ip),
             "DstIP": dst_ip,
             "DstPort": dst_port,
         }
         self._forty_gb_core_list.append(core_dict)
 
-    def get_40g_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
         Return a 40G configuration.
 
@@ -474,6 +465,8 @@ class BaseTpmSimulator(HardwareSimulator):
             be return. Defaults to -1, in which case all cores
             configurations are returned, defaults to -1
         :type core_id: int, optional
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
         :rtype: dict or list(dict)
@@ -485,6 +478,20 @@ class BaseTpmSimulator(HardwareSimulator):
                 return item
         return
 
+    @property
+    def arp_table(self):
+        """
+        Check that ARP table has been populated in for all used cores. 40G interfaces
+        use cores 0 (fpga0) and 1(fpga1) and ARP ID 0 for beamformer, 1 for LMC. 10G
+        interfaces use cores 0,1 (fpga0) and 4,5 (fpga1) for beamforming, and 2, 6 for
+        LMC with only one ARP.
+
+        :return: dictionary containing coreID and populated arpID
+        :rtype: dict
+        """
+        self.logger.debug("TpmSimulator: arp_table")
+        return copy.deepcopy(self._arp_table)
+
     def set_lmc_download(
         self,
         mode,
@@ -495,8 +502,7 @@ class BaseTpmSimulator(HardwareSimulator):
         lmc_mac=None,
     ):
         """
-        Specify whether control data will be transmitted over 1G or 40G
-        networks.
+        Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param mode: "1g" or "10g"
         :type mode: str
@@ -571,9 +577,8 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
-        Load calibration coefficients. These may include any rotation
-        matrix (e.g. the parallactic angle), but do not include the
-        geometric delay.
+        Load calibration coefficients. These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
@@ -589,11 +594,10 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def load_calibration_curve(self, antenna, beam, calibration_coefficients):
         """
-        Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency. It
-        will be combined together with tapering coefficients and beam
-        angles by ComputeCalibrationCoefficients, and made active by
-        SwitchCalibrationBank. The calibration coefficients do not
+        Load calibration curve. This is the frequency dependent response for a single
+        antenna and beam, as a function of frequency. It will be combined together with
+        tapering coefficients and beam angles by ComputeCalibrationCoefficients, and
+        made active by SwitchCalibrationBank. The calibration coefficients do not
         include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
@@ -658,10 +662,9 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def compute_calibration_coefficients(self):
         """
-        Compute the calibration coefficients from previously specified
-        gain curves, tapering weights and beam angles, load them in the
-        hardware. It must be followed by switch_calibration_bank() to
-        make these active.
+        Compute the calibration coefficients from previously specified gain curves,
+        tapering weights and beam angles, load them in the hardware. It must be followed
+        by switch_calibration_bank() to make these active.
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
@@ -671,10 +674,9 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in
-        seconds/second. The delay_array specifies the delay and delay
-        rate for each antenna. beam_index specifies which beam is
-        desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in seconds/second. The
+        delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :type delay_array: list(float)
@@ -716,9 +718,7 @@ class BaseTpmSimulator(HardwareSimulator):
         self._is_beamformer_running = True
 
     def stop_beamformer(self):
-        """
-        Stop the beamformer.
-        """
+        """Stop the beamformer."""
         self.logger.debug("TpmSimulator: Stop beamformer")
         self._is_beamformer_running = False
 
@@ -729,8 +729,8 @@ class BaseTpmSimulator(HardwareSimulator):
         last_channel=511,
     ):
         """
-        Configure the transmission of integrated channel data with the
-        provided integration time.
+        Configure the transmission of integrated channel data with the provided
+        integration time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -752,7 +752,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmDriver: Stop integrated channel data")
+        self.logger.debug("TpmSimulator: Stop integrated channel data")
         raise NotImplementedError
 
     def configure_integrated_beam_data(
@@ -762,8 +762,8 @@ class BaseTpmSimulator(HardwareSimulator):
         last_channel=191,
     ):
         """
-        Configure the transmission of integrated beam data with the
-        provided integration time.
+        Configure the transmission of integrated beam data with the provided integration
+        time.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -785,7 +785,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmDriver: Stop integrated beam data")
+        self.logger.debug("TpmSimulator: Stop integrated beam data")
         raise NotImplementedError
 
     def stop_integrated_data(self):
@@ -795,7 +795,7 @@ class BaseTpmSimulator(HardwareSimulator):
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """
-        self.logger.debug("TpmDriver: Stop integrated data")
+        self.logger.debug("TpmSimulator: Stop integrated data")
         raise NotImplementedError
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=0.2):
@@ -824,8 +824,8 @@ class BaseTpmSimulator(HardwareSimulator):
         seconds=0.2,
     ):
         """
-        Transmit a snapshot containing channelized data totalling
-        number_of_samples spectra.
+        Transmit a snapshot containing channelized data totalling number_of_samples
+        spectra.
 
         :param number_of_samples: number of spectra to send, defaults to 1024
         :type number_of_samples: int, optional
@@ -1126,7 +1126,7 @@ class BaseTpmSimulator(HardwareSimulator):
         load_time=0,
     ):
         """
-        test generator configuration.
+        Test generator configuration.
 
         :param frequency0: Tone frequency in Hz of DDC 0
         :type frequency0: float
@@ -1192,8 +1192,8 @@ class BaseTpmSimulator(HardwareSimulator):
 
     def test_generator_input_select(self, inputs):
         """
-        Specify ADC inputs which are substitute to test signal.
-        Specified using a 32 bit mask, with LSB for ADC input 0.
+        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
+        mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int
@@ -1206,7 +1206,7 @@ class BaseTpmSimulator(HardwareSimulator):
     @property
     def test_generator_active(self):
         """
-        check if the test generator is active.
+        Check if the test generator is active.
 
         :return: whether the test generator is active
         :rtype: bool
@@ -1216,7 +1216,7 @@ class BaseTpmSimulator(HardwareSimulator):
     @test_generator_active.setter
     def test_generator_active(self, active):
         """
-        set the test generator active flag.
+        Set the test generator active flag.
 
         :param active: True if the generator has been activated
         :type active: bool

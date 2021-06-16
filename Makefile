@@ -75,16 +75,6 @@ CUSTOM_VALUES := --values $(VALUES_FILE) $(CUSTOM_VALUES)
 else
 endif
 
-XAUTHORITYx ?= ${XAUTHORITY}
-
-IF_COMMAND := ifconfig
-ifeq (, $(shell which ifconfig))
-	IF_COMMAND := ip a
-endif
-
-THIS_HOST := $(shell $(IF_COMMAND) | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -n1)
-DISPLAY := $(THIS_HOST):0
-
 # define private overrides for above variables in here
 -include PrivateRules.mak
 
@@ -99,7 +89,7 @@ TEST_RUNNER = test-runner-$(HELM_CHART)-$(HELM_RELEASE)
 include .make/release.mk
 include .make/docker.mk
 include .make/k8s.mk
-include .make/docs.mk
+include .make/develop.mk
 
-.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete-namespace kubeconfig rlint docs testdocs
+.PHONY: all help k8s show deploy delete logs describe mkcerts localip namespace delete-namespace kubeconfig rlint develop tests lint docs testdocs
 

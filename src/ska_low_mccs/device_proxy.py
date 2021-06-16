@@ -1,12 +1,11 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements a base device proxy for MCCS devices.
-"""
+"""This module implements a base device proxy for MCCS devices."""
 
 __all__ = [
     "MccsDeviceProxy",
@@ -20,9 +19,8 @@ import tango
 
 
 class MccsDeviceProxy:
-    """
-    This class implements a base device proxy for MCCS devices. At
-    present it supports:
+    """This class implements a base device proxy for MCCS devices. At present it
+    supports:
 
     * deferred connection: we can create the proxy without immediately
       trying to connect to the proxied device.
@@ -105,8 +103,8 @@ class MccsDeviceProxy:
 
         def _on_giveup_connect(details: dict) -> None:
             """
-            Handler for when the backoff-retry loop gives up trying to
-            make a connection to the device.
+            Handler for when the backoff-retry loop gives up trying to make a connection
+            to the device.
 
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
@@ -131,8 +129,8 @@ class MccsDeviceProxy:
             fqdn: str,
         ) -> tango.DeviceProxy:
             """
-            Attempt connection to a specified device, using an
-            exponential backoff-retry scheme in case of failure.
+            Attempt connection to a specified device, using an exponential backoff-
+            retry scheme in case of failure.
 
             :param connection_factory: the factory to use to establish
                 the connection
@@ -166,8 +164,8 @@ class MccsDeviceProxy:
 
     def check_initialised(self, max_time: float = 120.0) -> bool:
         """
-        Check that the device has completed initialisation; that is, it
-        is no longer in state INIT.
+        Check that the device has completed initialisation; that is, it is no longer in
+        state INIT.
 
         :param max_time: the (optional) maximum time, in seconds, to
             wait for the device to complete initialisation. The default
@@ -179,8 +177,8 @@ class MccsDeviceProxy:
 
         def _on_giveup_check_initialised(details: dict) -> None:
             """
-            Handler for when the backoff-retry loop gives up waiting for
-            the device to complete initialisation.
+            Handler for when the backoff-retry loop gives up waiting for the device to
+            complete initialisation.
 
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
@@ -199,9 +197,8 @@ class MccsDeviceProxy:
         )
         def _backoff_check_initialised(device: tango.DeviceProxy) -> bool:
             """
-            Check that the device has completed initialisation (that is,
-            it is no longer in DevState.INIT) in an exponential backoff-
-            retry loop.
+            Check that the device has completed initialisation (that is, it is no longer
+            in DevState.INIT) in an exponential backoff- retry loop.
 
             :param device: the device to be checked
 
@@ -211,8 +208,8 @@ class MccsDeviceProxy:
 
         def _check_initialised(device: tango.DeviceProxy) -> bool:
             """
-            Check that the device has completed initialisation; that is,
-            it is no longer in DevState.INIT.
+            Check that the device has completed initialisation; that is, it is no longer
+            in DevState.INIT.
 
             Checking that a device has initialised means calling its
             `state()` method, and even after the device returns a
@@ -247,11 +244,10 @@ class MccsDeviceProxy:
 
     def __setattr__(self, name: str, value: Any) -> None:
         """
-        Handler for setting attributes on this object. If the name
-        matches an attribute that this object already has, we update it.
-        But we refuse to create any new attributes. Instead, if we're in
-        pass-through mode, we pass the setattr down to the underlying
-        connection.
+        Handler for setting attributes on this object. If the name matches an attribute
+        that this object already has, we update it. But we refuse to create any new
+        attributes. Instead, if we're in pass-through mode, we pass the setattr down to
+        the underlying connection.
 
         :param name: the name of the attribute to be set
         :param value: the new value for the attribute
@@ -267,9 +263,9 @@ class MccsDeviceProxy:
 
     def __getattr__(self, name, default_value=None):
         """
-        Handler for any requested attribute not found in the usual way.
-        If this proxy is in pass-through mode, then we try to get this
-        attribute from the underlying proxy.
+        Handler for any requested attribute not found in the usual way. If this proxy is
+        in pass-through mode, then we try to get this attribute from the underlying
+        proxy.
 
         :param name: name of the requested attribute
         :type name: str

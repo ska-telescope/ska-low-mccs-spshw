@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsSubrack.
-"""
+"""This module contains the tests for MccsSubrack."""
 import random
 import pytest
 from tango import DevState, AttrQuality, EventType
@@ -30,6 +29,7 @@ from ska_low_mccs.subrack.subrack_simulator import (
     SubrackBaySimulator,
     SubrackBoardSimulator,
 )
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -93,9 +93,7 @@ def random_fan_speed():
 
 
 class TestSubrackBaySimulator:
-    """
-    Contains tests of the SubrackBaySimulator.
-    """
+    """Contains tests of the SubrackBaySimulator."""
 
     @pytest.fixture()
     def subrack_bay(self):
@@ -151,8 +149,8 @@ class TestSubrackBaySimulator:
         random_voltage,
     ):
         """
-        Test that we can simulate changes to the current and temperature
-        values reported by the bay.
+        Test that we can simulate changes to the current and temperature values reported
+        by the bay.
 
         :param subrack_bay: a simulator for a subrack bay housing an
             electronic module
@@ -168,7 +166,6 @@ class TestSubrackBaySimulator:
             range for a temperature measurement
         :type random_temperature: float
         """
-
         assert subrack_bay.power_mode == PowerMode.OFF
         assert subrack_bay.temperature == SubrackBaySimulator.DEFAULT_TEMPERATURE
         assert subrack_bay.current == 0.0
@@ -199,8 +196,8 @@ class TestSubrackBaySimulator:
 @pytest.fixture()
 def subrack_bays(random_temperature, random_current, random_voltage):
     """
-    Return a list of subrack bay simulators for management by a subrack
-    management board simulator.
+    Return a list of subrack bay simulators for management by a subrack management board
+    simulator.
 
     :param random_temperature: a random value within a reasonable
         range for a temperature measurement
@@ -227,9 +224,7 @@ def subrack_bays(random_temperature, random_current, random_voltage):
 
 
 class TestSubrackBoardSimulator:
-    """
-    Contains tests of the SubrackBoardSimulator.
-    """
+    """Contains tests of the SubrackBoardSimulator."""
 
     @pytest.fixture()
     def subrack_board(self, subrack_bays):
@@ -249,9 +244,8 @@ class TestSubrackBoardSimulator:
 
     def test_subrack_on_off(self, subrack_board):
         """
-        Test that we can change the subrack power mode, and that when
-        on, we can read attributes, and that when off or standby, we
-        can't.
+        Test that we can change the subrack power mode, and that when on, we can read
+        attributes, and that when off or standby, we can't.
 
         :param subrack_board: a simulator for a subrack management board
         :type subrack_board:
@@ -259,10 +253,7 @@ class TestSubrackBoardSimulator:
         """
 
         def assert_off_behaviour():
-            """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned off.
-            """
+            """Assert expected behaviour when this hardware manager is turned off."""
             assert subrack_board.power_mode == PowerMode.OFF
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = subrack_board.backplane_temperatures
@@ -286,10 +277,7 @@ class TestSubrackBoardSimulator:
                 assert subrack_board.is_tpm_on(tpm_id) is None
 
         def assert_on_behaviour():
-            """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned on.
-            """
+            """Assert the behaviour expected when this hardware manager is turned on."""
             assert subrack_board.power_mode == PowerMode.ON
             assert (
                 subrack_board.backplane_temperatures
@@ -374,8 +362,8 @@ class TestSubrackBoardSimulator:
 
         def assert_tpms_on(is_on):
             """
-            Helper method that asserts TPMs to be either all off or all
-            on, depending on the argument.
+            Helper method that asserts TPMs to be either all off or all on, depending on
+            the argument.
 
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
@@ -407,8 +395,7 @@ class TestSubrackBoardSimulator:
         random_voltage,
     ):
         """
-        Test that the monitoring attributes of this simulator return
-        expected values.
+        Test that the monitoring attributes of this simulator return expected values.
 
         :param subrack_bays: list of subrack bay simulators for
             management by this subrack management board simulator
@@ -543,9 +530,7 @@ class TestSubrackBoardSimulator:
 
 
 class TestSubrackHardwareManager:
-    """
-    Contains tests of the SubrackHardwareManager.
-    """
+    """Contains tests of the SubrackHardwareManager."""
 
     @pytest.fixture()
     def subrack_board(
@@ -640,8 +625,7 @@ class TestSubrackHardwareManager:
 
     def test_init_simulation_mode(self, logger, mock_callback):
         """
-        Test that we can't create an hardware manager that isn't in
-        simulation mode.
+        Test that we can't create an hardware manager that isn't in simulation mode.
 
         :param mock_callback: a mock to pass as a callback
         :type mock_callback: :py:class:`unittest.mock.Mock`
@@ -681,10 +665,7 @@ class TestSubrackHardwareManager:
         """
 
         def assert_off_behaviour():
-            """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned off.
-            """
+            """Assert expected behaviour when this hardware manager is turned off."""
             assert hardware_manager.power_mode == PowerMode.OFF
             with pytest.raises(ValueError, match="Subrack is not ON."):
                 _ = hardware_manager.backplane_temperatures
@@ -713,10 +694,7 @@ class TestSubrackHardwareManager:
             assert hardware_manager.health == HealthState.OK
 
         def assert_on_behaviour():
-            """
-            Helper function to assert the behaviour expected when this
-            hardware manager is turned on.
-            """
+            """Assert the behaviour expected when this hardware manager is turned on."""
             assert hardware_manager.power_mode == PowerMode.ON
             assert hardware_manager.health == HealthState.OK
 
@@ -808,8 +786,8 @@ class TestSubrackHardwareManager:
 
         def assert_tpms_on(is_on):
             """
-            Helper method that asserts TPMs to be either all off or all
-            on, depending on the argument.
+            Helper method that asserts TPMs to be either all off or all on, depending on
+            the argument.
 
             :param is_on: whether to assert that all TPMs are on or off
             :type is_on: bool
@@ -832,10 +810,8 @@ class TestSubrackHardwareManager:
         assert_tpms_on(False)
 
 
-class TestMccsSubrack(object):
-    """
-    Test class for MccsSubrack tests.
-    """
+class TestMccsSubrack(HelperClass, object):
+    """Test class for MccsSubrack tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -857,7 +833,6 @@ class TestMccsSubrack(object):
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-
         assert device_under_test.state() == DevState.DISABLE
         assert device_under_test.status() == "The device is in DISABLE state."
         assert device_under_test.healthState == HealthState.OK
@@ -903,7 +878,7 @@ class TestMccsSubrack(object):
         assert event_data.value == HealthState.OK
         assert event_data.quality == AttrQuality.ATTR_VALID
 
-    def test_attributes(self, device_under_test, dummy_json_args):
+    def test_attributes(self, device_under_test):
         """
         Test of attributes.
 
@@ -911,11 +886,9 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
+
         assert (
             list(device_under_test.backplaneTemperatures)
             == SubrackBoardSimulator.DEFAULT_BACKPLANE_TEMPERATURE
@@ -955,7 +928,7 @@ class TestMccsSubrack(object):
         assert list(device_under_test.tpmPowers) == [0.0, 0.0, 0.0, 0.0]
         assert list(device_under_test.tpmVoltages) == [0.0, 0.0, 0.0, 0.0]
 
-    def test_PowerOnTpm(self, device_under_test, dummy_json_args):
+    def test_PowerOnTpm(self, device_under_test):
         """
         Test for PowerOnTpm.
 
@@ -963,11 +936,8 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
-        device_under_test.Off()
-        _ = device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         [[result_code], [message]] = device_under_test.PowerOnTpm(1)
         assert result_code == ResultCode.OK
@@ -977,7 +947,7 @@ class TestMccsSubrack(object):
         assert result_code == ResultCode.OK
         assert message == "Subrack TPM 1 power-on is redundant"
 
-    def test_PowerOffTpm(self, device_under_test, dummy_json_args):
+    def test_PowerOffTpm(self, device_under_test):
         """
         Test for PowerOffTpm.
 
@@ -985,11 +955,8 @@ class TestMccsSubrack(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
-        device_under_test.Off()
-        _ = device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         [[result_code], [message]] = device_under_test.PowerOffTpm(1)
         assert result_code == ResultCode.OK

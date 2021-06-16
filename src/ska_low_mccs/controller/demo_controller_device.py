@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -5,7 +6,9 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-This module implements a DemoControllerDevice, with extra interface
+This module implements a DemoControllerDevice.
+
+DemoControllerDevice extents MccsController with extra interface
 features that support testing and demonstrating the MCCS Controller
 device.
 """
@@ -19,10 +22,7 @@ __all__ = ["DemoController"]
 
 
 class DemoController(MccsController):
-    """
-    A version of the MccsController tango device with extra
-    functionality for testing/demos.
-    """
+    """A version of the MccsController tango device with testing/demo functionality."""
 
     def init_device(self):
         """

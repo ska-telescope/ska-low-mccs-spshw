@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsDevice.
-"""
+"""This module contains the tests for MccsDevice."""
 
 import pytest
 from tango import DevState
@@ -38,9 +37,7 @@ def device_to_load():
 
 
 class TestMccsDevice(object):
-    """
-    Test class for MccsDevice tests.
-    """
+    """Test class for MccsDevice tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):

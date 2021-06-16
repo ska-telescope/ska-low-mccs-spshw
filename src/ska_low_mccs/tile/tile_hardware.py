@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -6,11 +7,8 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
+"""This module implements tile hardware management for MCCS."""
 
-"""
-This module contains classes that support the MCCS Tile device's
-management of hardware.
-"""
 __all__ = ["TileHardwareFactory", "TileHardwareHealthEvaluator", "TileHardwareManager"]
 
 from ska_tango_base.control_model import SimulationMode, TestMode
@@ -113,9 +111,7 @@ class TileHardwareFactory(SimulableHardwareFactory):
 
 
 class TileHardwareManager(SimulableHardwareManager):
-    """
-    This class manages tile hardware.
-    """
+    """This class manages tile hardware."""
 
     def __init__(
         self,
@@ -168,8 +164,8 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def firmware_available(self):
         """
-        Return specifications of the firmware loaded on the hardware and
-        available for use.
+        Return specifications of the firmware loaded on the hardware and available for
+        use.
 
         :return: specifications of the firmware stored on the hardware
         :rtype: dict
@@ -386,7 +382,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @property
     def test_generator_active(self):
         """
-        check if the test generator is active.
+        Check if the test generator is active.
 
         :return: whether the test generator is active
         :rtype: bool
@@ -396,7 +392,7 @@ class TileHardwareManager(SimulableHardwareManager):
     @test_generator_active.setter
     def test_generator_active(self, active):
         """
-        set the test generator active flag.
+        Set the test generator active flag.
 
         :param active: True if the generator has been activated
         :type active: bool
@@ -419,9 +415,7 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def stop_beamformer(self):
-        """
-        Stop the beamformer.
-        """
+        """Stop the beamformer."""
         self._factory.hardware.stop_beamformer()
 
     @property
@@ -445,9 +439,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.phase_terminal_count = value
 
     def initialise(self):
-        """
-        Initialise the TPM.
-        """
+        """Initialise the TPM."""
         self._factory.hardware.initialise()
 
     @property
@@ -521,31 +513,31 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.write_address(address, values)
 
     def configure_40g_core(
-        self, core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+        self, core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
     ):
         """
         Configure the 40G code.
 
         :param core_id: id of the core
         :type core_id: int
+        :param arp_table_entry: ARP table entry ID
+        :type arp_table_entry: int
         :param src_mac: MAC address of the source
-        :type src_mac: str
+        :type src_mac: int
         :param src_ip: IP address of the source
         :type src_ip: str
         :param src_port: port of the source
         :type src_port: int
-        :param dst_mac: MAC address of the destination
-        :type dst_mac: str
         :param dst_ip: IP address of the destination
         :type dst_ip: str
         :param dst_port: port of the destination
         :type dst_port: int
         """
         self._factory.hardware.configure_40g_core(
-            core_id, src_mac, src_ip, src_port, dst_mac, dst_ip, dst_port
+            core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
         )
 
-    def get_40g_configuration(self, core_id=-1):
+    def get_40g_configuration(self, core_id=-1, arp_table_entry=0):
         """
         Return a 40G configuration.
 
@@ -553,11 +545,13 @@ class TileHardwareManager(SimulableHardwareManager):
             be return. Defaults to -1, in which case all cores
             configurations are returned, defaults to -1
         :type core_id: int, optional
+        :param arp_table_entry: ARP table entry to use
+        :type arp_table_entry: int
 
         :return: core configuration or list of core configurations
-        :rtype: dict or list(dict)
+        :rtype: list(dict) or dict
         """
-        return self._factory.hardware.get_40g_configuration(core_id)
+        return self._factory.hardware.get_40g_configuration(core_id, arp_table_entry)
 
     def set_lmc_download(
         self,
@@ -569,8 +563,7 @@ class TileHardwareManager(SimulableHardwareManager):
         lmc_mac=None,
     ):
         """
-        Specify whether control data will be transmitted over 1G or 40G
-        networks.
+        Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param mode: "1g" or "10g"
         :type mode: str
@@ -594,6 +587,16 @@ class TileHardwareManager(SimulableHardwareManager):
             dst_port=dst_port,
             lmc_mac=lmc_mac,
         )
+
+    @property
+    def arp_table(self):
+        """
+        Check that ARP table has been populated in for all used cores.
+
+        :return: list of core id and arp table populated
+        :rtype: dict(list)
+        """
+        return self._factory.hardware.arp_table
 
     def set_channeliser_truncation(self, array):
         """
@@ -638,9 +641,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def load_calibration_coefficients(self, antenna, calibration_coefficients):
         """
-        Load calibration coefficients. These may include any rotation
-        matrix (e.g. the parallactic angle), but do not include the
-        geometric delay.
+        Load calibration coefficients. These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
         :type antenna: int
@@ -654,11 +656,10 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def load_calibration_curve(self, antenna, beam, calibration_coefficients):
         """
-        Load calibration curve. This is the frequency dependent response
-        for a single antenna and beam, as a function of frequency. It
-        will be combined together with tapering coefficients and beam
-        angles by ComputeCalibrationCoefficients, which will also make
-        them active like SwitchCalibrationBank. The calibration
+        Load calibration curve. This is the frequency dependent response for a single
+        antenna and beam, as a function of frequency. It will be combined together with
+        tapering coefficients and beam angles by ComputeCalibrationCoefficients, which
+        will also make them active like SwitchCalibrationBank. The calibration
         coefficients do not include the geometric delay.
 
         :param antenna: the antenna to which the coefficients apply
@@ -708,9 +709,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def compute_calibration_coefficients(self):
         """
-        Compute the calibration coefficients from previously specified
-        gain curves, tapering weights and beam angles, load them in the
-        hardware.
+        Compute the calibration coefficients from previously specified gain curves,
+        tapering weights and beam angles, load them in the hardware.
 
         It must be followed by switch_calibration_bank() to make these
         active
@@ -719,10 +719,9 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def set_pointing_delay(self, delay_array, beam_index):
         """
-        Specifies the delay in seconds and the delay rate in
-        seconds/second. The delay_array specifies the delay and delay
-        rate for each antenna. beam_index specifies which beam is
-        desired (range 0-7)
+        Specifies the delay in seconds and the delay rate in seconds/second. The
+        delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is desired (range 0-7)
 
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :type delay_array: list(float)
@@ -748,10 +747,9 @@ class TileHardwareManager(SimulableHardwareManager):
         last_channel=None,
     ):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedChannelData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedChannelData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -767,9 +765,7 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def stop_integrated_channel_data(self):
-        """
-        Stop integrated channel data.
-        """
+        """Stop integrated channel data."""
         self._factory.hardware.stop_integrated_channel_data()
 
     def configure_integrated_beam_data(
@@ -779,10 +775,9 @@ class TileHardwareManager(SimulableHardwareManager):
         last_channel=None,
     ):
         """
-        Configure and start the transmission of integrated channel data
-        with the provided integration time, first channel and last
-        channel. Data are sent continuously until the
-        StopIntegratedBeamData command is run.
+        Configure and start the transmission of integrated channel data with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedBeamData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -798,15 +793,11 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def stop_integrated_beam_data(self):
-        """
-        Stop integrated beam data.
-        """
+        """Stop integrated beam data."""
         self._factory.hardware.stop_integrated_beam_data()
 
     def stop_integrated_data(self):
-        """
-        Stop integrated data.
-        """
+        """Stop integrated data."""
         self._factory.hardware.stop_integrated_data()
 
     def send_raw_data(self, sync=False, timestamp=None, seconds=None):
@@ -835,8 +826,8 @@ class TileHardwareManager(SimulableHardwareManager):
         seconds=None,
     ):
         """
-        Transmit a snapshot containing channelized data totalling
-        number_of_samples spectra.
+        Transmit a snapshot containing channelized data totalling number_of_samples
+        spectra.
 
         :param number_of_samples: number of spectra to send, defaults to 1024
         :type number_of_samples: int, optional
@@ -899,9 +890,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     def stop_data_transmission(self):
-        """
-        Stop data transmission.
-        """
+        """Stop data transmission."""
         self._factory.hardware.stop_data_transmission()
 
     def start_acquisition(self, start_time=None, delay=None):
@@ -1021,9 +1010,7 @@ class TileHardwareManager(SimulableHardwareManager):
         )
 
     def tweak_transceivers(self):
-        """
-        Tweak the transceivers.
-        """
+        """Tweak the transceivers."""
         self._factory.hardware.tweak_transceivers()
 
     @property
@@ -1047,15 +1034,11 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.phase_terminal_count = value
 
     def post_synchronisation(self):
-        """
-        Perform post tile configuration synchronization.
-        """
+        """Perform post tile configuration synchronization."""
         self._factory.hardware.post_synchronisation()
 
     def sync_fpgas(self):
-        """
-        Synchronise the FPGAs.
-        """
+        """Synchronise the FPGAs."""
         self._factory.hardware.sync_fpgas()
 
     def calculate_delay(self, current_delay, current_tc, ref_lo, ref_hi):
@@ -1087,7 +1070,7 @@ class TileHardwareManager(SimulableHardwareManager):
         load_time=0,
     ):
         """
-        test generator configuration.
+        Test generator configuration.
 
         :param frequency0: Tone frequency in Hz of DDC 0
         :type frequency0: float
@@ -1124,8 +1107,8 @@ class TileHardwareManager(SimulableHardwareManager):
 
     def test_generator_input_select(self, inputs):
         """
-        Specify ADC inputs which are substitute to test signal.
-        Specified using a 32 bit mask, with LSB for ADC input 0.
+        Specify ADC inputs which are substitute to test signal. Specified using a 32 bit
+        mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
         :type inputs: int

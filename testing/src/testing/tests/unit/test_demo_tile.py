@@ -1,3 +1,4 @@
+# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -11,6 +12,9 @@ This module contains the tests for the
 :py:mod:`ska_low_mccs.tile.demo_tile_device` module.
 """
 import pytest
+from time import sleep
+
+from tango import DevState
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, SimulationMode
@@ -41,9 +45,9 @@ def device_to_load():
 @pytest.fixture()
 def initial_mocks(mock_factory, request):
     """
-    Fixture that registers device proxy mocks prior to patching. The
-    default fixture is overridden here to ensure that a mock subrack
-    responds suitably to actions taken on it by the TilePowerManager.
+    Fixture that registers device proxy mocks prior to patching. The default fixture is
+    overridden here to ensure that a mock subrack responds suitably to actions taken on
+    it by the TilePowerManager.
 
     :param mock_factory: a factory for
         :py:class:`tango.DeviceProxy` mocks
@@ -69,10 +73,9 @@ def initial_mocks(mock_factory, request):
 @pytest.fixture()
 def mock_factory(mocker, request):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -93,10 +96,23 @@ def mock_factory(mocker, request):
     return builder
 
 
+def check_states(dev_states):
+    """
+    Helper to check that each device is in the expected state with a timeout.
+
+    :param dev_states: the devices and expected states of them
+    :type dev_states: dict
+    """
+    for device, state in dev_states.items():
+        count = 0.0
+        while device.State() != state and count < 3.0:
+            count += 0.1
+            sleep(0.1)
+        assert device.State() == state
+
+
 class TestDemoTile:
-    """
-    This class contains the tests for the DemoTile device class.
-    """
+    """This class contains the tests for the DemoTile device class."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -124,20 +140,23 @@ class TestDemoTile:
         device_under_test.aQueueDebug = test_string
         assert device_under_test.aQueueDebug == test_string
 
-    def test_health(self, device_under_test):
+    def test_health(self, device_under_test, empty_json_dict):
         """
-        Test that device health changes to failed when we simulate
-        connection failure.
+        Test that device health changes to failed when we simulate connection failure.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param empty_json_dict: an empty json encoded dictionary
+        :type empty_json_dict: str
         """
         assert device_under_test.simulationMode == SimulationMode.TRUE
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        device_under_test.Off()
+        device_under_test.Off(empty_json_dict)
+        dev_states = {device_under_test: DevState.OFF}
+        check_states(dev_states)
 
         assert device_under_test.healthState == HealthState.OK
 

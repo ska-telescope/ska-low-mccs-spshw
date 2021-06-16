@@ -1,7 +1,5 @@
-"""
-This module contains pytest fixtures and other test setups for unit
-testing ska_low_mccs.hardware modules.
-"""
+# type: ignore
+"""This module contains pytest-specific test harness for unit testing in MCCS."""
 import pytest
 
 from ska_low_mccs.hardware import (
@@ -39,8 +37,8 @@ def hardware_driver():
 @pytest.fixture()
 def hardware_factory(hardware_driver):
     """
-    Fixture that provides a basic hardware factory that always returns a
-    pre-defined hardware driver.
+    Fixture that provides a basic hardware factory that always returns a pre-defined
+    hardware driver.
 
     :param hardware_driver: the hardware driver for this factory to
         return
@@ -53,9 +51,7 @@ def hardware_factory(hardware_driver):
     """
 
     class BasicHardwareFactory(HardwareFactory):
-        """
-        A basic hardware factory that always returns the same hardware.
-        """
+        """A basic hardware factory that always returns the same hardware."""
 
         def __init__(self, hardware):
             """

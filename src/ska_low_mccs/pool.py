@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -61,9 +62,7 @@ class DevicePool:
             self.connect()
 
     def connect(self):
-        """
-        Connect to the devices in the pool.
-        """
+        """Connect to the devices in the pool."""
         if self._devices is None:
             # TODO: it would save some time if we were connecting asynchronously.
             self._devices = [
@@ -73,8 +72,7 @@ class DevicePool:
     # TODO: Deprecate this call (once converted to messaging system)
     def invoke_command(self, command_name, arg=None):
         """
-        A generic method for invoking a command on all devices in the
-        pool.
+        A generic method for invoking a command on all devices in the pool.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -115,6 +113,7 @@ class DevicePool:
         :return: Whether the messages were sent or not
         :rtype: bool
         """
+        self._logger.debug(f"pool.py:invoke_command_with_callback({command_name})")
         if len(self._responses):
             self._logger.error(f"{len(self._responses)} pool messages in progress")
             return False
@@ -164,7 +163,6 @@ class DevicePool:
         :param argin: result of the command
         :return: Whether all of the messages were completed, return_code and message
         """
-
         # check that each received message is on message_object and mark off as recevied
         kwargs = json.loads(argin)
         message_object = kwargs.get("message_object")
@@ -276,16 +274,13 @@ class DevicePoolSequence:
             self.connect()
 
     def connect(self):
-        """
-        Connect to the devices in the pools.
-        """
+        """Connect to the devices in the pools."""
         for pool in self._pools:
             pool.connect()
 
     def invoke_command(self, command_name, arg=None, reverse=False):
         """
-        A generic method for sequential invoking a command on a list of
-        device pools.
+        A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -313,8 +308,7 @@ class DevicePoolSequence:
 
     def invoke_command_with_callback(self, command_name, fqdn, callback, reverse=False):
         """
-        A generic method for sequential invoking a command on a list of
-        device pools.
+        A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
         :type command_name: str
@@ -384,7 +378,12 @@ class DevicePoolSequence:
         :return: Whether the command succeeded or not
         :rtype: bool
         """
-        return self.invoke_command("Off", reverse=reverse)
+        args = {
+            "respond_to_fqdn": "",
+            "callback": "",
+        }
+        json_string = json.dumps(args)
+        return self.invoke_command(command_name="Off", arg=json_string, reverse=reverse)
 
     def on(self, reverse=False):
         """
@@ -417,8 +416,8 @@ class DevicePoolSequence:
 
     def callback(self, argin):
         """
-        We need to check all pools have received their callbacks
-        whenever we get a callback message.
+        We need to check all pools have received their callbacks whenever we get a
+        callback message.
 
         :param argin: results from executed command
         :return: A tuple containing a flag indicating whether pools are complete,

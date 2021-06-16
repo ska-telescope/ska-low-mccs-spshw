@@ -260,12 +260,12 @@
                             "LoggingLevelDefault": [
                                 "3"
                             ],
-			    "SubrackIp": [
-				"10.0.10.64"
-			    ],
-			    "SubrackPort": [
-				"8081"
-			    ]
+                            "SubrackIp": [
+                                "10.0.10.64"
+                            ],
+                            "SubrackPort": [
+                                "8081"
+                            ]
                         }
                     }
                 }
@@ -297,8 +297,8 @@
                             "TpmCpldPort": [
                                 "10000"
                             ],
-			    "TpmVersion": [
-				"tpm_v1_6"
+                            "TpmVersion": [
+                                "tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -336,8 +336,8 @@
                             "TpmCpldPort": [
                                 "10000"
                             ],
-			    "TpmVersion": [
-				"tpm_v1_6"
+                            "TpmVersion": [
+                                "tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {
@@ -375,8 +375,8 @@
                             "TpmCpldPort": [
                                 "10000"
                             ],
-			    "TpmVersion": [
-				"tpm_v1_2"
+                            "TpmVersion": [
+                                "tpm_v1_2"
                             ]
                         },
                         "attribute_properties": {
@@ -414,8 +414,8 @@
                             "TpmCpldPort": [
                                 "10000"
                             ],
-			    "TpmVersion": [
-				"tpm_v1_6"
+                            "TpmVersion": [
+                                "tpm_v1_6"
                             ]
                         },
                         "attribute_properties": {

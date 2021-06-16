@@ -1,13 +1,11 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""
-This module implements base classes for hardware management in the MCCS
-subsystem.
-"""
+"""This module implements base classes for hardware management in the MCCS subsystem."""
 __all__ = [
     "ConnectionStatus",
     "ControlMode",
@@ -43,10 +41,7 @@ class ControlMode(Enum):
 
 
 class ConnectionStatus(Enum):
-    """
-    Represents the status of a hardware driver's connection to its
-    hardware.
-    """
+    """Represents the status of a hardware driver's connection to its hardware."""
 
     NOT_CONNECTIBLE = 1
     """
@@ -69,9 +64,9 @@ class ConnectionStatus(Enum):
 
 class HardwareDriver:
     """
-    An abstract base class for hardware drivers. A hardware driver
-    provides a python interface to hardware, hiding details of the
-    actual control interface of the hardware.
+    An abstract base class for hardware drivers. A hardware driver provides a python
+    interface to hardware, hiding details of the actual control interface of the
+    hardware.
 
     The only functionality it mandates is the ability to check whether
     this driver is connected to hardware.
@@ -120,8 +115,7 @@ class HardwareDriver:
 
     def _connect(self):
         """
-        Try to connect to the hardware, and returns whether successful
-        or not.
+        Try to connect to the hardware, and returns whether successful or not.
 
         :raises NotImplementedError: because this method needs to be
             implemented by a subclass
@@ -152,8 +146,8 @@ class HardwareDriver:
 
     def check_connected(self, connectible_error=None, connection_error=None):
         """
-        Helper method to check that a connection is in place, and raise
-        a suitable error if it is not.
+        Helper method to check that a connection is in place, and raise a suitable error
+        if it is not.
 
         :param connectible_error: the error message for the exception to
             be raised if the hardware is not currently connectible (e.g.
@@ -179,8 +173,8 @@ class HardwareDriver:
 
 class HardwareHealthEvaluator:
     """
-    An simple base class that implements a policy by which a hardware
-    manager evaluates the health of its hardware.
+    An simple base class that implements a policy by which a hardware manager evaluates
+    the health of its hardware.
 
     This evaluator treads the hardware as failed if the connection to
     the hardware is broken, and OK otherwise.
@@ -208,9 +202,7 @@ class HardwareHealthEvaluator:
 
 
 class HardwareFactory:
-    """
-    Abstract base class for a hardware factory.
-    """
+    """Abstract base class for a hardware factory."""
 
     @property
     def hardware(self):
@@ -227,8 +219,8 @@ class HardwareFactory:
 
 class HardwareManager:
     """
-    A base class for a hardware manager. The hardware manager manages
-    hardware on behalf of a device.
+    A base class for a hardware manager. The hardware manager manages hardware on behalf
+    of a device.
 
     This base class supports only monitoring and reporting on hardware
     health. To this end, it allows for:
@@ -263,9 +255,7 @@ class HardwareManager:
         # self._update_health()  # don't update health until after first connect attempt
 
     def poll(self):
-        """
-        Poll the hardware and respond to external events/changes.
-        """
+        """Poll the hardware and respond to external events/changes."""
         if self._factory.hardware.connection_status == ConnectionStatus.NOT_CONNECTED:
             _ = self._factory.hardware.connect()  # attempt re-connection
         self._update_health()
@@ -273,8 +263,8 @@ class HardwareManager:
     @property
     def health(self):
         """
-        Getter for health property; returns the health of the hardware,
-        as evaluated by this manager.
+        Getter for health property; returns the health of the hardware, as evaluated by
+        this manager.
 
         :return: the health of the hardware
         :rtype: :py:class:`~ska_tango_base.control_model.HealthState`
@@ -282,10 +272,7 @@ class HardwareManager:
         return self._health
 
     def _update_health(self):
-        """
-        Update the health of this hardware, ensuring that any registered
-        callbacks are called.
-        """
+        """Update the health of this hardware, ensuring that callbacks are called."""
         health = self._health_evaluator.evaluate_health(self._factory.hardware)
         if self._health == health:
             return
@@ -295,8 +282,7 @@ class HardwareManager:
 
     def register_health_callback(self, callback):
         """
-        Register a callback to be called when the health of the hardware
-        changes.
+        Register a callback to be called when the health of the hardware changes.
 
         :param callback: function handle to be called when the health of
             the hardware changes
@@ -329,8 +315,7 @@ class HardwareManager:
 
     def set_connectible(self, is_connectible):
         """
-        Sets whether it should be possible to establish a software-
-        hardware connection.
+        Sets whether it should be possible to establish a software- hardware connection.
 
         This is used to signal to the software whether there is any
         point in trying to connect to the hardware. For example, if

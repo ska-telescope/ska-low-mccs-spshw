@@ -1,3 +1,4 @@
+# type: ignore
 ###############################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ###############################################################################
-"""
-This module contains the tests for MccsSubarrayBeam.
-"""
+"""This module contains the tests for MccsSubarrayBeam."""
 import json
 import time
 
@@ -45,9 +44,7 @@ def device_to_load():
 
 # pylint: disable=invalid-name
 class TestMccsSubarrayBeam:
-    """
-    Test class for MccsSubarrayBeam tests.
-    """
+    """Test class for MccsSubarrayBeam tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -249,11 +246,10 @@ class TestMccsSubarrayBeam:
         self, device_under_test, attribute_name, value_to_write, float_format
     ):
         """
-        Helper method for testing a READ-WRITE double array attribute.
-        This is a messy test because there can be some loss of floating-
-        point precision during transfer, so you have to check
-        approximate equality when reading back what you've written. This
-        is done here by comparing the values by their string
+        Helper method for testing a READ-WRITE double array attribute. This is a messy
+        test because there can be some loss of floating- point precision during
+        transfer, so you have to check approximate equality when reading back what
+        you've written. This is done here by comparing the values by their string
         representation.
 
         :param device_under_test: fixture that provides a
@@ -269,7 +265,6 @@ class TestMccsSubarrayBeam:
             equal if this string format yields the same string for both
         :type float_format: str
         """
-
         # SETUP
         write_as_string = [float_format.format(x) for x in value_to_write]
 

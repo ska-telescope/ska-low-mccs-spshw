@@ -1,14 +1,14 @@
-"""
-This module contains pytest fixtures and other test setups for the
-ska_low_mccs lightweight integration tests.
-"""
+# type: ignore
+"""This module contains pytest-specific test harness for MCCS integration tests."""
 
 
 def pytest_itemcollected(item):
     """
-    pytest hook implementation; add the "forked" custom mark to all
-    tests that use the `tango_harness` fixture, causing them to be
-    sandboxed in their own process.
+    Modify a test after it has been collected by pytest.
+
+    This hook implementation adds the "forked" custom mark to all tests
+    that use the `tango_harness` fixture, causing them to be sandboxed
+    in their own process.
 
     :param item: the collected test for which this hook is called
     :type item: :py:class:`pytest.Item`

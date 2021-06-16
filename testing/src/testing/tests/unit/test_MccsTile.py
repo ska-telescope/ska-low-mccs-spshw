@@ -1,3 +1,4 @@
+# type: ignore
 #########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -8,9 +9,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 #########################################################################
-"""
-This module contains the tests for MccsTile.
-"""
+"""This module contains the tests for MccsTile."""
 
 import json
 import itertools
@@ -27,6 +26,7 @@ from ska_low_mccs.hardware import PowerMode, SimulableHardwareFactory
 from ska_low_mccs.tile import TileHardwareManager, TilePowerManager, StaticTpmSimulator
 
 from testing.harness.mock import MockDeviceBuilder
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -48,9 +48,9 @@ def device_to_load():
 @pytest.fixture()
 def initial_mocks(mock_factory, request):
     """
-    Fixture that registers device proxy mocks prior to patching. The
-    default fixture is overridden here to ensure that a mock subrack
-    responds suitably to actions taken on it by the TilePowerManager.
+    Fixture that registers device proxy mocks prior to patching. The default fixture is
+    overridden here to ensure that a mock subrack responds suitably to actions taken on
+    it by the TilePowerManager.
 
     :param mock_factory: a factory for
         :py:class:`tango.DeviceProxy` mocks
@@ -78,10 +78,9 @@ def initial_mocks(mock_factory, request):
 @pytest.fixture()
 def mock_factory(mocker, request):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -165,8 +164,8 @@ class TestTilePowerManager:
         mock_factory,
     ):
         """
-        Test that the power manager initialises into the right state,
-        depending on whether the subrack says the TPM is off or on.
+        Test that the power manager initialises into the right state, depending on
+        whether the subrack says the TPM is off or on.
 
         :param device_under_test: a :py:class:`tango.DeviceProxy` to the
             device under test, within a
@@ -221,8 +220,8 @@ class TestTilePowerManager:
         mock_callback,
     ):
         """
-        Test that turning on this TilePowerManager results in the right
-        return code and state for each possible subrack state.
+        Test that turning on this TilePowerManager results in the right return code and
+        state for each possible subrack state.
 
         :param device_under_test: a :py:class:`tango.DeviceProxy` to the
             device under test, within a
@@ -275,8 +274,8 @@ class TestTilePowerManager:
         expected_power_mode,
     ):
         """
-        Test that turning on this TilePowerManager results in the right
-        return code and state for each possible subrack state.
+        Test that turning on this TilePowerManager results in the right return code and
+        state for each possible subrack state.
 
         :param device_under_test: a :py:class:`tango.DeviceProxy` to the
             device under test, within a
@@ -303,7 +302,7 @@ class TestTilePowerManager:
         assert power_manager.power_mode == expected_power_mode
 
 
-class TestMccsTile:
+class TestMccsTile(HelperClass):
     """
     Test class for MccsTile tests.
 
@@ -413,7 +412,7 @@ class TestMccsTile:
         device_under_test.cspDestinationPort = 4567
         assert device_under_test.cspDestinationPort == 4567
 
-    def test_voltage(self, device_under_test, dummy_json_args):
+    def test_voltage(self, device_under_test):
         """
         Test for the voltage attribute.
 
@@ -421,17 +420,14 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert device_under_test.voltage == StaticTpmSimulator.VOLTAGE
 
-    def test_current(self, device_under_test, dummy_json_args):
+    def test_current(self, device_under_test):
         """
         Test for the current attribute.
 
@@ -439,17 +435,14 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         device_under_test.current == StaticTpmSimulator.CURRENT
 
-    def test_board_temperature(self, device_under_test, dummy_json_args):
+    def test_board_temperature(self, device_under_test):
         """
         Test for the board_temperature attribute.
 
@@ -457,19 +450,16 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert (
             device_under_test.board_temperature == StaticTpmSimulator.BOARD_TEMPERATURE
         )
 
-    def test_fpga1_temperature(self, device_under_test, dummy_json_args):
+    def test_fpga1_temperature(self, device_under_test):
         """
         Test for the fpga1_temperature attribute.
 
@@ -477,19 +467,16 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert (
             device_under_test.fpga1_temperature == StaticTpmSimulator.FPGA1_TEMPERATURE
         )
 
-    def test_fpga2_temperature(self, device_under_test, dummy_json_args):
+    def test_fpga2_temperature(self, device_under_test):
         """
         Test for the fpga2_temperature attribute.
 
@@ -497,19 +484,16 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert (
             device_under_test.fpga2_temperature == StaticTpmSimulator.FPGA2_TEMPERATURE
         )
 
-    def test_fpga1_time(self, device_under_test, dummy_json_args):
+    def test_fpga1_time(self, device_under_test):
         """
         Test for the fpga1_time attribute.
 
@@ -517,17 +501,14 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert device_under_test.fpga1_time == StaticTpmSimulator.FPGA1_TIME
 
-    def test_fpga2_time(self, device_under_test, dummy_json_args):
+    def test_fpga2_time(self, device_under_test):
         """
         Test for the fpga2_time attribute.
 
@@ -535,14 +516,11 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert device_under_test.fpga2_time == StaticTpmSimulator.FPGA2_TIME
 
     def test_antennaIds(self, device_under_test):
@@ -559,7 +537,7 @@ class TestMccsTile:
         device_under_test.antennaIds = new_ids
         assert tuple(device_under_test.antennaIds) == new_ids
 
-    def test_adcPower(self, device_under_test, dummy_json_args):
+    def test_adcPower(self, device_under_test):
         """
         Test for the adcPowerattribute.
 
@@ -567,18 +545,15 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         expected = tuple(float(i) for i in range(32))
         assert device_under_test.adcPower == pytest.approx(expected)
 
-    def test_currentTileBeamformerFrame(self, device_under_test, dummy_json_args):
+    def test_currentTileBeamformerFrame(self, device_under_test):
         """
         Test for the currentTileBeamformerFrame attribute.
 
@@ -586,20 +561,17 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert (
             device_under_test.currentTileBeamformerFrame
             == StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME
         )
 
-    def test_phaseTerminalCount(self, device_under_test, dummy_json_args):
+    def test_phaseTerminalCount(self, device_under_test):
         """
         Test for the phaseTerminalCount attribute.
 
@@ -607,14 +579,11 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert (
             device_under_test.PhaseTerminalCount
             == StaticTpmSimulator.PHASE_TERMINAL_COUNT
@@ -622,7 +591,7 @@ class TestMccsTile:
         device_under_test.PhaseTerminalCount = 45
         assert device_under_test.PhaseTerminalCount == 45
 
-    def test_ppsDelay(self, device_under_test, dummy_json_args):
+    def test_ppsDelay(self, device_under_test):
         """
         Test for the ppsDelay attribute.
 
@@ -630,21 +599,16 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert device_under_test.ppsDelay == 12
 
 
-class TestMccsTileCommands:
-    """
-    Tests of MccsTile device commands.
-    """
+class TestMccsTileCommands(HelperClass):
+    """Tests of MccsTile device commands."""
 
     @pytest.mark.parametrize(
         ("device_command", "arg"),
@@ -735,9 +699,7 @@ class TestMccsTileCommands:
             ),
         ),
     )
-    def test_command_not_implemented(
-        self, device_under_test, device_command, arg, dummy_json_args
-    ):
+    def test_command_not_implemented(self, device_under_test, device_command, arg):
         """
         A very weak test for commands that are not implemented yet.
 
@@ -749,14 +711,11 @@ class TestMccsTileCommands:
         :type device_command: str
         :param arg: argument to the command (optional)
         :type arg: str
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         args = [] if arg is None else [arg]
         with pytest.raises(DevFailed, match="NotImplementedError"):
@@ -791,13 +750,11 @@ class TestMccsTileCommands:
         arg,
         tpm_command,
         logger,
-        dummy_json_args,
     ):
         """
-        Test of commands that return OK and have a simple pass-through
-        implementation, such that calling the command on the device
-        causes a corresponding command to be called on the TPM
-        simulator.
+        Test of commands that return OK and have a simple pass-through implementation,
+        such that calling the command on the device causes a corresponding command to be
+        called on the TPM simulator.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -815,14 +772,11 @@ class TestMccsTileCommands:
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
         :type logger: :py:class:`logging.Logger`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         # First test that the calling the command on the device results
         # in a NotImplementedError
@@ -868,7 +822,7 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert message == MccsTile.InitialiseCommand.SUCCEEDED_MESSAGE
 
-    def test_On(self, device_under_test, dummy_json_args):
+    def test_On(self, device_under_test):
         """
         Test for On.
 
@@ -876,18 +830,16 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        [result_code], [_, message_uid] = device_under_test.On(dummy_json_args)
-        assert result_code == ResultCode.QUEUED
-        assert ":On" in message_uid
+        #
+        # Not testing the message queue implementation here as it's
+        # covered in integration tests.
+        self.start_up_device(device_under_test)
 
-    def test_GetFirmwareAvailable(self, device_under_test, dummy_json_args):
+    def test_GetFirmwareAvailable(self, device_under_test):
         """
         Test for:
 
@@ -899,14 +851,11 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         firmware_available_str = device_under_test.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)
@@ -921,8 +870,8 @@ class TestMccsTileCommands:
 
     def test_DownloadFirmware(self, device_under_test):
         """
-        Test for DownloadFirmware. Also functions as the test for the
-        isProgrammed and the firmwareName properties.
+        Test for DownloadFirmware. Also functions as the test for the isProgrammed and
+        the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -941,8 +890,8 @@ class TestMccsTileCommands:
 
     def test_MissingDownloadFirmwareFile(self, device_under_test):
         """
-        Test for a missing firmware download. Also functions as the test
-        for the isProgrammed and the firmwareName properties.
+        Test for a missing firmware download. Also functions as the test for the
+        isProgrammed and the firmwareName properties.
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -962,7 +911,7 @@ class TestMccsTileCommands:
         assert not device_under_test.isProgrammed
         assert device_under_test.firmwareName == existing_firmware_name
 
-    def test_GetRegisterList(self, device_under_test, dummy_json_args):
+    def test_GetRegisterList(self, device_under_test):
         """
         Test for GetRegisterList.
 
@@ -970,19 +919,16 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
         assert device_under_test.GetRegisterList() == list(
             StaticTpmSimulator.REGISTER_MAP[0].keys()
         )
 
-    def test_ReadRegister(self, device_under_test, dummy_json_args):
+    def test_ReadRegister(self, device_under_test):
         """
         Test for ReadRegister.
 
@@ -990,14 +936,11 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         num_values = 4
         arg = {
@@ -1018,7 +961,7 @@ class TestMccsTileCommands:
             ):
                 _ = device_under_test.ReadRegister(bad_json_arg)
 
-    def test_WriteRegister(self, device_under_test, dummy_json_args):
+    def test_WriteRegister(self, device_under_test):
         """
         Test for WriteRegister.
 
@@ -1026,14 +969,11 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         arg = {
             "RegisterName": "test-reg1",
@@ -1055,7 +995,7 @@ class TestMccsTileCommands:
             ):
                 _ = device_under_test.WriteRegister(bad_json_arg)
 
-    def test_ReadAddress(self, device_under_test, dummy_json_args):
+    def test_ReadAddress(self, device_under_test):
         """
         Test for ReadAddress.
 
@@ -1063,14 +1003,11 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         address = 0xF
         nvalues = 10
@@ -1080,7 +1017,7 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed):
             _ = device_under_test.ReadAddress([address])
 
-    def test_WriteAddress(self, device_under_test, dummy_json_args):
+    def test_WriteAddress(self, device_under_test):
         """
         Test for WriteAddress.
 
@@ -1093,57 +1030,51 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         [[result_code], [message]] = device_under_test.WriteAddress([20, 1, 2, 3])
         assert result_code == ResultCode.OK
         assert message == MccsTile.WriteAddressCommand.SUCCEEDED_MESSAGE
 
-    def test_Configure40GCore(self, device_under_test, dummy_json_args):
+    def test_Configure40GCore(self, device_under_test):
         """
         Test for.
 
         * Configure40GCore command
-        * fortyGDestinationIps attribute
-        * fortyGDestinationMacs attribute
-        * fortyGDestinationPorts attribute
+        * fortyGBDestinationIps attribute
+        * fortyGBDestinationPorts attribute
 
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         config_1 = {
             "CoreID": 1,
+            "ArpTableEntry": 0,
             "SrcMac": "10:fe:ed:08:0a:58",
             "SrcIP": "10.0.99.3",
             "SrcPort": 4000,
-            "DstMac": "10:fe:ed:08:0b:59",
             "DstIP": "10.0.98.3",
             "DstPort": 5000,
         }
         device_under_test.Configure40GCore(json.dumps(config_1))
+
         config_2 = {
             "CoreID": 2,
+            "ArpTableEntry": 1,
             "SrcMac": "10:fe:ed:08:0a:56",
             "SrcIP": "10.0.99.4",
             "SrcPort": 4001,
-            "DstMac": "10:fe:ed:08:0b:57",
             "DstIP": "10.0.98.4",
             "DstPort": 5001,
         }
@@ -1153,24 +1084,30 @@ class TestMccsTileCommands:
             "10.0.98.3",
             "10.0.98.4",
         )
-        assert tuple(device_under_test.fortyGbDestinationMacs) == (
-            "10:fe:ed:08:0b:59",
-            "10:fe:ed:08:0b:57",
-        )
         assert tuple(device_under_test.fortyGbDestinationPorts) == (5000, 5001)
 
-        result_str = device_under_test.Get40GCoreConfiguration(1)
+        arg = {
+            "CoreID": 1,
+            "ArpTableEntry": 0,
+        }
+        json_arg = json.dumps(arg)
+        result_str = device_under_test.Get40GCoreConfiguration(json_arg)
         result = json.loads(result_str)
-        assert result == config_1.pop("CoreID")
+        assert result["CoreID"] == config_1.pop("CoreID")
 
-        with pytest.raises(DevFailed, match="Invalid core id specified"):
-            _ = device_under_test.Get40GCoreConfiguration(3)
+        arg = {
+            "CoreID": 3,
+            "ArpTableEntry": 0,
+        }
+        json_arg = json.dumps(arg)
+        with pytest.raises(
+            DevFailed, match="Invalid core id or arp table id specified"
+        ):
+            _ = device_under_test.Get40GCoreConfiguration(json_arg)
 
     @pytest.mark.parametrize("channels", (2, 3))
     @pytest.mark.parametrize("frequencies", (1, 2, 3))
-    def test_SetChanneliserTruncation(
-        self, device_under_test, channels, frequencies, dummy_json_args
-    ):
+    def test_SetChanneliserTruncation(self, device_under_test, channels, frequencies):
         """
         Test for SetChanneliserTruncation.
 
@@ -1181,14 +1118,11 @@ class TestMccsTileCommands:
         :param channels: number of channels to set
         :type channels: int
         :param frequencies: number of frequencies to set
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
 
         array = [channels] + [frequencies] + [1.0] * (channels * frequencies)
 
@@ -1199,7 +1133,7 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="ValueError: cannot reshape array"):
             _ = device_under_test.SetChanneliserTruncation(array + [1.0])
 
-    def test_LoadCalibrationCoefficients(self, device_under_test, dummy_json_args):
+    def test_LoadCalibrationCoefficients(self, device_under_test):
         """
         Test for LoadCalibrationCoefficients.
 
@@ -1207,14 +1141,12 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
+
         antenna = 2
         complex_coefficients = [
             [complex(3.4, 1.2), complex(2.3, 4.1), complex(4.6, 8.2), complex(6.8, 2.4)]
@@ -1232,7 +1164,7 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="ValueError"):
             _ = device_under_test.LoadCalibrationCoefficients(coefficients[0:16])
 
-    def test_LoadCalibrationCurve(self, device_under_test, dummy_json_args):
+    def test_LoadCalibrationCurve(self, device_under_test):
         """
         Test for LoadCalibrationCurve.
 
@@ -1240,11 +1172,9 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
+
         antenna = 2
         beam = 0
         complex_coefficients = [
@@ -1265,9 +1195,7 @@ class TestMccsTileCommands:
 
     @pytest.mark.parametrize("start_time", (None, 0))
     @pytest.mark.parametrize("duration", (None, -1))
-    def test_start_and_stop_beamformer(
-        self, device_under_test, start_time, duration, dummy_json_args
-    ):
+    def test_start_and_stop_beamformer(self, device_under_test, start_time, duration):
         """
         Test for.
 
@@ -1283,14 +1211,12 @@ class TestMccsTileCommands:
         :type start_time: int or None
         :param duration: duration of time that the beamformer should run
         :type duration: int or None
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         # TODO: For now we need to get this to OFF (highest state of
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
-        device_under_test.Off()
-        device_under_test.On(dummy_json_args)
+        self.start_up_device(device_under_test)
+
         assert not device_under_test.isBeamformerRunning
         args = {"StartTime": start_time, "Duration": duration}
         device_under_test.StartBeamformer(json.dumps(args))
@@ -1307,8 +1233,7 @@ class TestInitCommand:
 
     class HangableInitCommand(MccsTile.InitCommand):
         """
-        A subclass of InitCommand with the following properties that
-        support testing:
+        A subclass of InitCommand with the following properties that support testing:
 
         * A lock that, if acquired prior to calling the command, causes
           the command to hang until the lock is released
@@ -1339,9 +1264,8 @@ class TestInitCommand:
 
         def _initialise_hardware_management(self, device):
             """
-            Initialise the connection to the hardware being managed by
-            this device (overridden here to inject a call trace
-            attribute).
+            Initialise the connection to the hardware being managed by this device
+            (overridden here to inject a call trace attribute).
 
             :param device: the device for which a connection to the
                 hardware is being initialised
@@ -1355,8 +1279,8 @@ class TestInitCommand:
 
         def _initialise_health_monitoring(self, device):
             """
-            Initialise the health model for this device (overridden here
-            to inject a call trace attribute).
+            Initialise the health model for this device (overridden here to inject a
+            call trace attribute).
 
             :param device: the device for which the health model is
                 being initialised
@@ -1371,8 +1295,8 @@ class TestInitCommand:
     )
     def test_interrupt(self, mocker):
         """
-        Test that the command's interrupt method will cause a running
-        thread to stop prematurely.
+        Test that the command's interrupt method will cause a running thread to stop
+        prematurely.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock`
             module

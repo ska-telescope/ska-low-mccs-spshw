@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -7,9 +8,8 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """
-Hardware functions for the TPM hardware. Factory around the Tile_1_2 and
-Tile_1_6 modules: Queries the board version and selects the correct
-object.
+Hardware functions for the TPM hardware. Factory around the Tile_1_2 and Tile_1_6
+modules: Queries the board version and selects the correct object.
 
 This is derived from pyaavs.Tile object and depends heavily on the
 pyfabil low level software and specific hardware module plugins.
@@ -25,8 +25,9 @@ from ska_low_mccs.tile.tile_1_6 import Tile16
 
 class HwTile(object):
     """
-    Wrapper for Tile12 and Tile16 Returns the right object depending on
-    magic number in hardware.
+    Wrapper for Tile12 and Tile16.
+
+    Returns the right object depending on magic number in hardware.
     """
 
     def __new__(
@@ -40,7 +41,7 @@ class HwTile(object):
         tpm_version=None,
     ):
         """
-        HwTile creation.
+        Create a new HwTile instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.
@@ -87,7 +88,7 @@ class HwTile(object):
         logger=None,
     ):
         """
-        HwTile initialization.
+        Initialise a new HwTile instance.
 
         :param logger: the logger to be used by this Command. If not
                 provided, then a default module logger will be used.

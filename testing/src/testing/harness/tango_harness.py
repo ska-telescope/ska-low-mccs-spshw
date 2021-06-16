@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -7,9 +8,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 
-"""
-This module implements a MCCS test harness for Tango devices.
-"""
+"""This module implements a MCCS test harness for Tango devices."""
 
 from __future__ import annotations  # Allow forward refs in type hints; see PEP 563
 from collections import defaultdict
@@ -179,10 +178,9 @@ class MccsDeviceInfo:
 
 class TangoHarness:
     """
-    Abstract base class for Tango test harnesses. This does very little,
-    because it needs to support both harnesses that directly interact
-    with Tango, and wrapper harnesses that add functionality to another
-    harness.
+    Abstract base class for Tango test harnesses. This does very little, because it
+    needs to support both harnesses that directly interact with Tango, and wrapper
+    harnesses that add functionality to another harness.
 
     The one really important thing it does do, is ensure that
     :py:class:`ska_low_mccs.device_proxy.MccsDeviceProxy` uses this
@@ -190,16 +188,13 @@ class TangoHarness:
     """
 
     def __init__(self: TangoHarness) -> None:
-        """
-        Initialise a new instance.
-        """
+        """Initialise a new instance."""
         MccsDeviceProxy.set_default_connection_factory(self.connection_factory)
 
     @property
     def connection_factory(self: TangoHarness) -> None:
         """
-        The connection factory to use when establishing connections to
-        devices.
+        The connection factory to use when establishing connections to devices.
 
         :raises NotImplementedError: because this method is abstract
         """
@@ -279,8 +274,7 @@ class BaseTangoHarness(TangoHarness):
     @property
     def connection_factory(self: BaseTangoHarness) -> typing.Type[tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to
-        devices.
+        The connection factory to use when establishing connections to devices.
 
         This class uses :py:class:`tango.DeviceProxy` as its connection
         factory.
@@ -313,10 +307,7 @@ class BaseTangoHarness(TangoHarness):
 
 
 class ClientProxyTangoHarness(BaseTangoHarness):
-    """
-    A test harness for Tango devices that can return tailored client
-    proxies.
-    """
+    """A test harness for Tango devices that can return tailored client proxies."""
 
     def __init__(
         self: BaseTangoHarness,
@@ -351,8 +342,7 @@ class ClientProxyTangoHarness(BaseTangoHarness):
 
 class TestContextTangoHarness(BaseTangoHarness):
     """
-    A test harness for testing MCCS Tango devices in a lightweight test
-    context.
+    A test harness for testing MCCS Tango devices in a lightweight test context.
 
     It stands up a
     :py:class:`tango.test_context.MultiDeviceTestContext` with the
@@ -379,8 +369,7 @@ class TestContextTangoHarness(BaseTangoHarness):
 
         def _get_open_port() -> int:
             """
-            Helper function that returns an available port on the local
-            machine.
+            Helper function that returns an available port on the local machine.
 
             TODO: Note the possibility of a race condition here. By the
             time the calling method tries to make use of this port, it
@@ -410,8 +399,7 @@ class TestContextTangoHarness(BaseTangoHarness):
         self: TestContextTangoHarness,
     ) -> typing.Callable[[str, ...], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to
-        devices.
+        The connection factory to use when establishing connections to devices.
 
         This class uses :py:class:`tango.DeviceProxy` but patches it to
         use the long-form FQDN, as a workaround to an issue with
@@ -470,10 +458,7 @@ class TestContextTangoHarness(BaseTangoHarness):
 
 
 class WrapperTangoHarness(TangoHarness):
-    """
-    A base class for a Tango test harness that wraps another harness,
-    providing some functionality in the wrapper.
-    """
+    """A base class for a Tango test harness that wraps another harness."""
 
     def __init__(self: WrapperTangoHarness, harness: TangoHarness) -> None:
         """
@@ -520,14 +505,12 @@ class WrapperTangoHarness(TangoHarness):
         self: WrapperTangoHarness,
     ) -> typing.Callable[[str, ...], tango.DeviceProxy]:
         """
-        The connection factory to use when establishing connections to
-        devices.
+        The connection factory to use when establishing connections to devices.
 
         This just uses the connection factory of the wrapped harness.
 
         :return: a DeviceProxy for use in establishing connections.
         """
-
         return self._harness.connection_factory
 
     @property
@@ -558,9 +541,8 @@ class WrapperTangoHarness(TangoHarness):
 
 class StartingStateTangoHarness(WrapperTangoHarness):
     """
-    A test harness for testing Tango devices, that provides for certain
-    actions and checks that ensure that devices are in a desired initial
-    state prior to testing.
+    A test harness for testing Tango devices, that provides for certain actions and
+    checks that ensure that devices are in a desired initial state prior to testing.
 
     Specifically, it can:
 
@@ -610,10 +592,7 @@ class StartingStateTangoHarness(WrapperTangoHarness):
         return self
 
     def _make_devices_ready(self: StartingStateTangoHarness) -> None:
-        """
-        Helper method that applies actions and checks to ensure that
-        devices are ready to be tested.
-        """
+        """Helper method that ensures that devices are ready to be tested."""
         if self._bypass_cache or self._check_ready or self._set_test_mode:
             for fqdn in self.fqdns:
                 device = self.get_device(fqdn)
@@ -627,9 +606,10 @@ class StartingStateTangoHarness(WrapperTangoHarness):
 
 class MockingTangoHarness(WrapperTangoHarness):
     """
-    A Tango test harness that wraps another harness, but only uses that
-    harness for a specified set of devices under test, and mocks out all
-    other devices.
+    A Tango test harness that mocks out devices not under test.
+
+    This harness wraps another harness, but only uses that harness for a
+    specified set of devices under test, and mocks out all others.
     """
 
     def __init__(
@@ -656,8 +636,7 @@ class MockingTangoHarness(WrapperTangoHarness):
         [str, ...], typing.Union[tango.DeviceProxy, unittest.mock.Mock]
     ]:
         """
-        The connection factory to use when establishing connections to
-        devices.
+        The connection factory to use when establishing connections to devices.
 
         This is where we check whether the requested device is on our
         list. Devices on the list are passed to the connection factory

@@ -1,14 +1,11 @@
+# type: ignore
 # -*- coding: utf-8 -*-
-"""
-An implementation of a TPM simulator.
-"""
+"""An implementation of a TPM simulator."""
 from ska_low_mccs.tile.base_tpm_simulator import BaseTpmSimulator
 
 
 class StaticTpmSimulator(BaseTpmSimulator):
-    """
-    A simulator for a TPM.
-    """
+    """A simulator for a TPM."""
 
     VOLTAGE = 4.7
     CURRENT = 0.4

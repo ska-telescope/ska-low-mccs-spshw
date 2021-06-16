@@ -1,3 +1,4 @@
+# type: ignore
 ########################################################################
 # -*- coding: utf-8 -*-
 #
@@ -6,9 +7,7 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 ########################################################################
-"""
-This module contains the tests for MccsSubarray.
-"""
+"""This module contains the tests for MccsSubarray."""
 import json
 import pytest
 
@@ -63,10 +62,9 @@ def device_to_load():
 @pytest.fixture()
 def mock_factory(mocker):
     """
-    Fixture that provides a mock factory for device proxy mocks. This
-    default factory provides vanilla mocks, but this fixture can be
-    overridden by test modules/classes to provide mocks with specified
-    behaviours.
+    Fixture that provides a mock factory for device proxy mocks. This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
 
     :param mocker: the pytest `mocker` fixture is a wrapper around the
         `unittest.mock` package
@@ -84,9 +82,7 @@ def mock_factory(mocker):
 
 # pylint: disable=invalid-name
 class TestMccsSubarray:
-    """
-    Test class for MccsSubarray tests.
-    """
+    """Test class for MccsSubarray tests."""
 
     @pytest.fixture()
     def device_under_test(self, tango_harness):
@@ -252,7 +248,6 @@ class TestMccsSubarray:
             :return: a dictionary of mocks, keyed by FQDN
             :rtype: dict
             """
-
             mock_subarray_factory = MockSubarrayBuilder(mock_factory)
 
             mock_station_factory = MockDeviceBuilder(mock_factory)
@@ -477,9 +472,7 @@ class TestMccsSubarray:
 
 # pylint: disable=invalid-name
 class TestMccsSubarrayCommandClasses:
-    """
-    This class contains tests of MCCSSubarray command classes.
-    """
+    """This class contains tests of MCCSSubarray command classes."""
 
     def test_ScanCommand(self, subarray_state_model, mocker):
         """

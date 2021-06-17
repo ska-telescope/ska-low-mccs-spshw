@@ -29,7 +29,6 @@ from ska_tango_base.control_model import HealthState, SimulationMode, AdminMode
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import ConnectionStatus, PowerMode
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.tile import TileHardwareManager
@@ -380,13 +379,12 @@ class MccsTile(SKABaseDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
                 device.hardware_manager,
                 None,
-                device.event_manager,
+                self.logger,
                 device.health_changed,
             )
 

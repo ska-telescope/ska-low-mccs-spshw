@@ -28,7 +28,6 @@ from ska_low_mccs.cluster_manager.cluster_simulator import (
     JobStatus,
     JobConfig,
 )
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import (
     ConnectionStatus,
     HardwareHealthEvaluator,
@@ -617,13 +616,12 @@ class MccsClusterManagerDevice(MccsGroupDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
                 device.cluster_manager,
                 None,
-                device.event_manager,
+                self.logger,
                 device.health_changed,
             )
 

@@ -29,7 +29,6 @@ from ska_tango_base.control_model import (
 )
 from ska_low_mccs import MccsController, MccsDeviceProxy, MccsSubarray, release
 from ska_low_mccs.controller import ControllerResourceManager
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import call_with_json
 
@@ -63,7 +62,7 @@ class ControllerWithFailableDevices(MccsController):
 
         self.health_model._health_monitor._device_health_monitors[
             fqdn
-        ]._health_state_changed(fqdn, "healthState", health, AttrQuality.ATTR_VALID)
+        ]._health_state_changed("healthState", health, AttrQuality.ATTR_VALID)
 
     @command(dtype_in="DevString")
     def simulateAdminModeChange(self, argin):
@@ -82,7 +81,7 @@ class ControllerWithFailableDevices(MccsController):
 
         self.health_model._health_monitor._device_health_monitors[
             fqdn
-        ]._admin_mode_changed(fqdn, "adminMode", admin_mode, AttrQuality.ATTR_VALID)
+        ]._admin_mode_changed("adminMode", admin_mode, AttrQuality.ATTR_VALID)
 
 
 @pytest.fixture()
@@ -1168,9 +1167,7 @@ class TestControllerResourceManager:
         """
         self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
 
-        # Event manager to take health events
-        self.event_manager = EventManager(logger, self.stations)
-        self.health_model = HealthModel(None, self.stations, self.event_manager)
+        self.health_model = HealthModel(None, self.stations, logger)
         # HACK pending device pool management refactor
         self.health_monitor = self.health_model._health_monitor
 

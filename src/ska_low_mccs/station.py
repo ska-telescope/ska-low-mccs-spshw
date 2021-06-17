@@ -32,7 +32,6 @@ from ska_tango_base.control_model import HealthState
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.message_queue import MessageQueue
 
@@ -232,12 +231,10 @@ class MccsStation(SKAObsDevice):
             if device._apiu_fqdn is not None:
                 fqdns.append(device._apiu_fqdn)
 
-            device.event_manager = EventManager(self.logger)
-
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, fqdns, device.event_manager, device.health_changed
+                None, fqdns, self.logger, device.health_changed
             )
 
         def interrupt(self):

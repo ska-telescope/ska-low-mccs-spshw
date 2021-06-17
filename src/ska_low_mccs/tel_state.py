@@ -22,7 +22,6 @@ from ska_tango_base import SKATelState
 from ska_tango_base.control_model import HealthState
 
 import ska_low_mccs.release as release
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 
 
@@ -87,11 +86,10 @@ class MccsTelState(SKATelState):
             device._build_state = release.get_release_info()
             device._version_id = release.version
 
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, None, device.event_manager, device.health_changed
+                None, None, self.logger, device.health_changed
             )
 
             return (result_code, message)

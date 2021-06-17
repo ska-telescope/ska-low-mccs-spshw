@@ -38,7 +38,6 @@ from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import MutableHealthModel, HealthMonitor
 import ska_low_mccs.release as release
 from ska_low_mccs.resource import ResourceManager
@@ -473,11 +472,10 @@ class MccsSubarray(SKASubarray):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.OK
             device.set_change_event("healthState", True, False)
             device.health_model = MutableHealthModel(
-                None, [], device.event_manager, device.health_changed
+                None, [], self.logger, device.health_changed
             )
 
         def _initialise_resource_management(self, device):

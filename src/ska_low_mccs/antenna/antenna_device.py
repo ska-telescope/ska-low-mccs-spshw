@@ -27,7 +27,6 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, SimulationMode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import (
     HardwareHealthEvaluator,
     PowerMode,
@@ -548,14 +547,12 @@ class MccsAntenna(SKABaseDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
-
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
                 None,
                 [device._apiu_fqdn, device._tile_fqdn],
-                device.event_manager,
+                self.logger,
                 device.health_changed,
             )
 

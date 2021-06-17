@@ -17,9 +17,11 @@ of subservient devices.
     that send commands in a sequence that complies with a complex
     dependency graph.
 """
+import functools
+import json
+
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs import MccsDeviceProxy
-import json
 
 
 class DevicePool:
@@ -223,6 +225,23 @@ class DevicePool:
         :rtype: bool
         """
         return self.invoke_command("On")
+
+    def add_change_event_callback(self, attribute_name, callback):
+        """
+        Register a callback for change events being pushed by devices in this pool.
+
+        :param attribute_name: the name of the attribute for which
+            change events are subscribed.
+        :param callback: the function to be called when a change event
+            arrives.
+        """
+        if self._devices is None:
+            self.connect()
+
+        for device in self._devices:
+            device.add_change_event_callback(
+                attribute_name, functools.partial(callback, device.dev_name())
+            )
 
 
 class DevicePoolSequence:

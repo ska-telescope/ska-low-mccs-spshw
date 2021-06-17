@@ -29,7 +29,6 @@ from ska_low_mccs import MccsDeviceProxy  # type: ignore[attr-defined]
 from ska_low_mccs.pool import DevicePool, DevicePoolSequence  # type: ignore[attr-defined]
 import ska_low_mccs.release as release
 from ska_low_mccs.utils import call_with_json, tango_raise  # type: ignore[attr-defined]
-from ska_low_mccs.events import EventManager  # type: ignore[attr-defined]
 from ska_low_mccs.health import HealthModel, HealthMonitor  # type: ignore[attr-defined]
 from ska_low_mccs.resource import ResourceManager  # type: ignore[attr-defined]
 from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
@@ -337,12 +336,10 @@ class MccsController(SKAMaster):
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
             """
-            device.event_manager = EventManager(self.logger, fqdns)
-
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, fqdns, device.event_manager, device.health_changed
+                None, fqdns, self.logger, device.health_changed
             )
 
         def _initialise_resource_management(

@@ -48,7 +48,6 @@ __all__ = [
     "tel_state",
     "transient_buffer",
     # non-device modules
-    "events",
     "hardware",
     "health",
     "message_queue",

@@ -14,11 +14,11 @@ import pytest
 from tango import AttrQuality
 
 from ska_tango_base.control_model import AdminMode, HealthState
-from ska_low_mccs.events import EventManager
+
 from ska_low_mccs.health import (
+    DeviceHealthMonitor,
     DeviceHealthPolicy,
     DeviceHealthRollupPolicy,
-    DeviceHealthMonitor,
     HealthMonitor,
     HealthModel,
     MutableHealthMonitor,
@@ -227,8 +227,8 @@ class TestDeviceHealthMonitor:
         :type logger: :py:class:`logging.Logger`
         """
         fqdn = "mock/mock/1"
-        event_manager = EventManager(logger)
-        _ = DeviceHealthMonitor(event_manager, fqdn, mock_callback)
+
+        device_health_monitor = DeviceHealthMonitor(fqdn, logger, mock_callback)
 
         mock_callback.assert_called_once_with(HealthState.UNKNOWN)
         mock_callback.reset_mock()
@@ -241,9 +241,7 @@ class TestDeviceHealthMonitor:
         admin_mode_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
         # push the event
-        event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
-            admin_mode_mock_event
-        )
+        device_health_monitor._proxy._change_event_received(admin_mode_mock_event)
         mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
@@ -252,9 +250,7 @@ class TestDeviceHealthMonitor:
         health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
         # push the event
-        event_manager._handlers[fqdn]._handlers["healthState"].push_event(
-            health_state_mock_event
-        )
+        device_health_monitor._proxy._change_event_received(health_state_mock_event)
         mock_callback.assert_called_once_with(HealthState.DEGRADED)
 
 
@@ -280,8 +276,7 @@ class TestHealthMonitor:
         :type logger: :py:class:`logging.Logger`
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
-        event_manager = EventManager(logger)
-        _ = HealthMonitor(fqdns, event_manager, mock_callback)
+        health_monitor = HealthMonitor(fqdns, logger, mock_callback)
 
         posargs = [call[0] for call in mock_callback.call_args_list]
         assert set(posargs) == set((fqdn, HealthState.UNKNOWN) for fqdn in fqdns)
@@ -296,7 +291,7 @@ class TestHealthMonitor:
         mock_callback.reset_mock()
         for fqdn in fqdns:
             # push the event
-            event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
+            health_monitor._device_health_monitors[fqdn]._proxy._change_event_received(
                 admin_mode_mock_event
             )
             mock_callback.assert_not_called()
@@ -309,7 +304,7 @@ class TestHealthMonitor:
         for fqdn in fqdns:
             # push the event
             mock_callback.reset_mock()
-            event_manager._handlers[fqdn]._handlers["healthState"].push_event(
+            health_monitor._device_health_monitors[fqdn]._proxy._change_event_received(
                 health_state_mock_event
             )
             mock_callback.assert_called_once_with(fqdn, HealthState.DEGRADED)
@@ -354,9 +349,8 @@ class TestHealthModel:
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"] if with_devices else None
-        event_manager = EventManager(logger)
 
-        health_model = HealthModel(hardware, fqdns, event_manager, mock_callback)
+        health_model = HealthModel(hardware, fqdns, logger, mock_callback)
         if with_hardware or with_devices:
             mock_callback.assert_called_with(HealthState.UNKNOWN)
         else:
@@ -402,10 +396,7 @@ class TestMutableHealthMonitor:
         """
         fqdns = ["mock/mock/1", "mock/mock/2"]
 
-        event_manager = EventManager(logger)
-        mutable_health_monitor = MutableHealthMonitor(
-            fqdns, event_manager, mock_callback
-        )
+        mutable_health_monitor = MutableHealthMonitor(fqdns, logger, mock_callback)
 
         posargs = [call[0] for call in mock_callback.call_args_list]
         assert set(posargs) == set((fqdn, HealthState.UNKNOWN) for fqdn in fqdns)
@@ -427,9 +418,9 @@ class TestMutableHealthMonitor:
         mock_callback.reset_mock()
         for fqdn in fqdns:
             # push the event
-            event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
-                admin_mode_mock_event
-            )
+            mutable_health_monitor._device_health_monitors[
+                fqdn
+            ]._proxy._change_event_received(admin_mode_mock_event)
             mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
@@ -437,12 +428,12 @@ class TestMutableHealthMonitor:
         health_state_mock_event.attr_value.value = HealthState.DEGRADED
         health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
-        event_manager._handlers[new_fqdn]._handlers["adminMode"].push_event(
-            admin_mode_mock_event
-        )
-        event_manager._handlers[new_fqdn]._handlers["healthState"].push_event(
-            health_state_mock_event
-        )
+        mutable_health_monitor._device_health_monitors[
+            new_fqdn
+        ]._proxy._change_event_received(admin_mode_mock_event)
+        mutable_health_monitor._device_health_monitors[
+            new_fqdn
+        ]._proxy._change_event_received(health_state_mock_event)
 
         mock_callback.assert_called_once_with(new_fqdn, HealthState.DEGRADED)
 
@@ -475,9 +466,8 @@ class TestMutableHealthModel:
         """
         hardware = mocker.Mock() if with_hardware else None
         fqdns = ["mock/mock/1", "mock/mock/2"]
-        event_manager = EventManager(logger)
 
-        health_model = MutableHealthModel(hardware, fqdns, event_manager, mock_callback)
+        health_model = MutableHealthModel(hardware, fqdns, logger, mock_callback)
         mock_callback.assert_called_with(HealthState.UNKNOWN)
         mock_callback.reset_mock()
 

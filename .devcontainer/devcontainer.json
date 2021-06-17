@@ -24,6 +24,7 @@
     "extensions": [
         "ms-python.python",
         "lextudio.restructuredtext",
+        "rstcheck",
         "davidanson.vscode-markdownlint",
         "alexkrechik.cucumberautocomplete",
         "ryanluker.vscode-coverage-gutters"

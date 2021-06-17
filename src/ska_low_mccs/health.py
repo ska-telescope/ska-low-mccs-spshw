@@ -20,7 +20,7 @@ __all__ = [
 
 from collections import Counter
 from functools import partial
-from typing import Callable, Optional, Union, cast, Type
+from typing import Callable, Iterable, Optional, Type, Union
 
 from tango import AttrQuality
 
@@ -42,7 +42,7 @@ class DeviceHealthPolicy:
     @classmethod
     def compute_health(
         cls: Type[DeviceHealthPolicy], admin_mode: AdminMode, health_state: HealthState
-    ) -> Union[HealthState, None]:
+    ) -> Optional[HealthState]:
         """
         Computes the health of the device, based on the device's admin mode and self-
         reported health state.
@@ -172,7 +172,7 @@ class DeviceHealthMonitor:
         self: DeviceHealthMonitor,
         fqdn: str,
         logger: logging.Logger,
-        initial_callback: Optional[Callable] = None,
+        initial_callback: Optional[Callable[[HealthState], None]] = None,
     ) -> None:
         """
         Initialise a new DeviceHealthMonitor instance.
@@ -188,7 +188,7 @@ class DeviceHealthMonitor:
         self._device_admin_mode = None
         self._device_health_state = None
         self._interpreted_health = None
-        self._callbacks: list[Callable] = []
+        self._callbacks: list[Callable[[HealthState], None]] = []
 
         self._compute_health()
 
@@ -199,7 +199,9 @@ class DeviceHealthMonitor:
         self._proxy.add_change_event_callback("healthState", self._health_state_changed)
         self._proxy.add_change_event_callback("adminMode", self._admin_mode_changed)
 
-    def register_callback(self: DeviceHealthMonitor, callback: Callable) -> None:
+    def register_callback(
+        self: DeviceHealthMonitor, callback: Callable[[HealthState], None]
+    ) -> None:
         """
         Register a callback to be called when device health changes.
 
@@ -282,7 +284,7 @@ class HealthMonitor:
         self: HealthMonitor,
         fqdns: list[str],
         logging: logging.Logger,
-        initial_callback: Optional[Callable] = None,
+        initial_callback: Optional[Callable[[str, int], None]] = None,
     ) -> None:
         """
         Initialise a new HealthMonitor instance.
@@ -300,7 +302,9 @@ class HealthMonitor:
             self.register_callback(initial_callback)
 
     def register_callback(
-        self: HealthMonitor, callback: Callable, fqdn_spec: Union[list[str], str] = None
+        self: HealthMonitor,
+        callback: Callable[[str, int], None],
+        fqdn_spec: Optional[Union[list[str], str]] = None,
     ) -> None:
         """
         Register a callback on change to health from one or more fqdns.
@@ -340,7 +344,7 @@ class HealthModel:
         hardware_manager: HardwareManager,
         fqdns: Optional(list[str]),
         logger: logging.Logger,
-        initial_callback: Optional(Callable) = None,
+        initial_callback: Optional[Callable[[HealthState], None]] = None,
     ):
         """
         Initialise a new HealthModel instance.
@@ -357,7 +361,7 @@ class HealthModel:
         self._device_health_rollup_policy = DeviceHealthRollupPolicy()
         self._health = HealthState.UNKNOWN
 
-        self._callbacks: list[Callable] = []
+        self._callbacks: list[Callable[[HealthState], None]] = []
         if initial_callback is not None:
             self.register_callback(initial_callback)
 
@@ -403,7 +407,9 @@ class HealthModel:
         """
         return self._health
 
-    def register_callback(self: HealthModel, callback: Callable) -> None:
+    def register_callback(
+        self: HealthModel, callback: Callable[[HealthState], None]
+    ) -> None:
         """
         Register a callback for change of this device's health.
 
@@ -479,7 +485,7 @@ class MutableHealthMonitor(HealthMonitor):
         self: MutableHealthMonitor,
         fqdns: list[str],
         logger: logging.Logger,
-        initial_callback: Optional(Callable) = None,
+        initial_callback: Optional[Callable[[str, int], None]] = None,
     ) -> None:
         """
         Initialise a new MutableHealthMonitor instance.
@@ -494,14 +500,14 @@ class MutableHealthMonitor(HealthMonitor):
 
         # remember callbacks that are registered against all fqdns in the device pool,
         # so that we can register them against fqdns that are added to the pool later
-        self._pool_callbacks: list[Callable] = list()
+        self._pool_callbacks: list[Callable[[str, int], None]] = list()
 
         super().__init__(fqdns, logger, initial_callback)
 
     def register_callback(
         self: MutableHealthMonitor,
-        callback: Callable,
-        fqdn_spec: Union[list[str], str] = None,
+        callback: Callable[[str, int], None],
+        fqdn_spec: Optional[Union[list[str], str]] = None,
     ) -> None:
         """
         Register a callback on change to health from one or more fqdns.
@@ -518,7 +524,7 @@ class MutableHealthMonitor(HealthMonitor):
             self._pool_callbacks.append(callback)
         super().register_callback(callback, fqdn_spec)
 
-    def add_devices(self: MutableHealthMonitor, fqdns: list[str]) -> None:
+    def add_devices(self: MutableHealthMonitor, fqdns: Iterable[str]) -> None:
         """
         Add to the list of devices to be monitored.
 
@@ -568,6 +574,7 @@ class MutableHealthModel(HealthModel):
             if the health of this device changes (optional)
         """
         super().__init__(hardware_manager, fqdns, logger, initial_callback)
+        self._health_monitor: MutableHealthMonitor  # type hint only
 
     def _init_health_monitor(
         self: MutableHealthModel, fqdns: list[str]) -> HealthMonitor:
@@ -589,7 +596,7 @@ class MutableHealthModel(HealthModel):
         if self._health_monitor is None:
             self._health_monitor = self._init_health_monitor(fqdns)
         else:
-            cast(MutableHealthMonitor, self._health_monitor).add_devices(fqdns)
+            self._health_monitor.add_devices(fqdns)
 
     def remove_devices(self: MutableHealthModel, fqdns: list[str]) -> None:
         """
@@ -597,4 +604,4 @@ class MutableHealthModel(HealthModel):
 
         :param fqdns: fqdns of devices to be added
         """
-        cast(MutableHealthMonitor, self._health_monitor).remove_devices(fqdns)
+        self._health_monitor.remove_devices(fqdns)

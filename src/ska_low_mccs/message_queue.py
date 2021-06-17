@@ -16,7 +16,6 @@ from __future__ import annotations  # allow forward references in type hints
 import json
 import logging
 import threading
-from typing import Any
 from uuid import uuid4
 from queue import SimpleQueue, Empty
 
@@ -24,6 +23,7 @@ import tango
 from tango import EnsureOmniThread, DevFailed
 
 from ska_tango_base.commands import ResultCode
+from ska_tango_base import SKABaseDevice
 
 
 class MessageQueue(threading.Thread):
@@ -69,7 +69,10 @@ class MessageQueue(threading.Thread):
             self.callback = callback
 
     def __init__(
-        self: MessageQueue, target: Any, lock: threading.Lock, logger: logging.Logger
+        self: MessageQueue,
+        target: SKABaseDevice,
+        lock: threading.Lock,
+        logger: logging.Logger,
     ) -> None:
         """
         Initialise a new MessageQueue object.

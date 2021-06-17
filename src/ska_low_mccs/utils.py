@@ -9,15 +9,16 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import json
-import inspect
-import jsonschema
-import pkg_resources  # type: ignore
 from functools import wraps
-from typing import Callable, cast
+import inspect
+import json
+import pkg_resources
+from typing import Callable, Optional
 
-from tango import Except, ErrSeverity  # type: ignore[attr-defined]
-from tango.server import Device  # type: ignore[attr-defined]
+import jsonschema
+from tango import Except, ErrSeverity
+from tango.server import Device
+
 from ska_tango_base.commands import ResultCode
 
 
@@ -25,7 +26,7 @@ def tango_raise(
     msg: str,
     reason: str = "API_CommandFailed",
     severity: ErrSeverity = ErrSeverity.ERR,
-    _origin: str = None,
+    _origin: Optional[str] = None,
 ) -> None:
     """
     Helper function to provide a concise way to throw
@@ -61,7 +62,7 @@ def tango_raise(
                 fcode = frame.f_code
                 flocals = frame.f_locals["self"]
                 if fcode is not None and flocals is not None:
-                    calling_method = fcode.co_name  # type: ignore[attr-defined]
+                    calling_method = fcode.co_name
                     calling_class = frame.f_locals["self"].__class__
                     if Device not in inspect.getmro(calling_class):
                         raise TypeError("Can only be used in a tango device instance")
@@ -126,7 +127,7 @@ class json_input:  # noqa: N801
     decoding for you.
     """
 
-    def __init__(self: json_input, schema_path: str = None):
+    def __init__(self: json_input, schema_path: Optional[str] = None):
         """
         Initialises a callable json_input object, to function as a device method
         generator.
@@ -166,18 +167,17 @@ class json_input:  # noqa: N801
             :return: whatever the function to be wrapped returns
             """
             json_object = self._parse(json_string)
-            cast(dict, json_object)
-            return func(obj, **cast(dict, json_object))
+            return func(obj, **json_object)
 
         return wrapped
 
-    def _parse(self: json_input, json_string: str) -> object:
+    def _parse(self: json_input, json_string: str) -> dict[str, str]:
         """
         Parses and validates the JSON string input.
 
         :param json_string: a string, purportedly a JSON-encoded object
 
-        :return: an object parsed from the input JSON string
+        :return: a dictionary parsed from the input JSON string
         """
         json_object = json.loads(json_string)
 

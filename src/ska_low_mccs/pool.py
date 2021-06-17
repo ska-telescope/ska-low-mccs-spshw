@@ -22,9 +22,10 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 import json
 import logging
-from typing import Union, Any
+from typing import Any, Optional
 
 from ska_tango_base.commands import ResultCode
+
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
@@ -301,7 +302,7 @@ class DevicePoolSequence:
         command_name: str,
         arg: Any = None,
         reverse: bool = False,
-    ) -> Union[bool, None]:
+    ) -> Optional[bool]:
         """
         A generic method for sequential invoking a command on a list of device pools.
 
@@ -355,7 +356,7 @@ class DevicePoolSequence:
                 all_ok = False
         return all_ok
 
-    def disable(self: DevicePoolSequence, reverse: bool = False) -> Union[bool, None]:
+    def disable(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call Disable() on all the devices in this device pool.
 
@@ -368,7 +369,7 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Disable", reverse=reverse)
 
-    def standby(self: DevicePoolSequence, reverse: bool = False) -> Union[bool, None]:
+    def standby(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call Standby() on all the devices in this device pool.
 
@@ -381,7 +382,7 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Standby", reverse=reverse)
 
-    def off(self: DevicePoolSequence, reverse: bool = False) -> Union[bool, None]:
+    def off(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call Off() on all the devices in this device pool.
 
@@ -396,7 +397,7 @@ class DevicePoolSequence:
         json_string = json.dumps(args)
         return self.invoke_command(command_name="Off", arg=json_string, reverse=reverse)
 
-    def on(self: DevicePoolSequence, reverse: bool = False) -> Union[bool, None]:
+    def on(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call On() on all the devices in this device pool.
 

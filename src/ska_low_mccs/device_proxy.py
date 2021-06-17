@@ -8,12 +8,20 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
+<<<<<<< HEAD
 from typing import Any, Callable
 import warnings
+=======
+from typing import Any, Callable, Optional
+from typing_extensions import TypedDict
+>>>>>>> MCCS-576 review changes
 
-import backoff  # type: ignore[attr-defined]
-from tango import DevState
-from tango import DevFailed, DeviceProxy  # type: ignore[attr-defined]
+import backoff
+import tango
+from tango import DevFailed, DevState
+
+# type for the "details" dictionary that backoff calls its callbacks with
+BackoffDetailsType = TypedDict("BackoffDetailsType", {"args": list, "elapsed": float})
 
 
 __all__ = ["MccsDeviceProxy"]
@@ -39,6 +47,11 @@ class MccsDeviceProxy:
       :py:meth:``add_change_event_callback`` method.
     """
 
+<<<<<<< HEAD
+=======
+    ConnectionFactory = Callable[[str], tango.DeviceProxy]
+
+>>>>>>> MCCS-576 review changes
     _default_connection_factory = tango.DeviceProxy
 
     @classmethod
@@ -48,7 +61,7 @@ class MccsDeviceProxy:
         """
         Set the default connection factory for this class. This is super
         useful for unit testing: we can mock out
-        :py:class:`DeviceProxy` altogether, by simply setting this
+        :py:class:`tango.DeviceProxy` altogether, by simply setting this
         class's default connection factory to a mock factory.
 
         :param connection_factory: default factory to use to establish
@@ -61,7 +74,7 @@ class MccsDeviceProxy:
         fqdn: str,
         logger: logging.Logger,
         connect: bool = True,
-        connection_factory: ConnectionFactory = None,
+        connection_factory: Optional[ConnectionFactory] = None,
         pass_through: bool = True,
     ) -> None:
         """
@@ -71,7 +84,7 @@ class MccsDeviceProxy:
         :param logger: a logger for this proxy to use
         :param connection_factory: how we obtain a connection to the\
             device we are proxying. By default this is
-            :py:class:`DeviceProxy`, but occasionally this needs
+            :py:class:`tango.DeviceProxy`, but occasionally this needs
             to be changed. For example, when testing against a
             :py:class:`test_context.MultiDeviceTestContext`, we
             obtain connections to the devices under test via
@@ -110,17 +123,15 @@ class MccsDeviceProxy:
             made, and the call returns immediately.
         """
 
-        def _on_giveup_connect(details: dict) -> None:
+        def _on_giveup_connect(details: BackoffDetailsType) -> None:
             """
             Give up trying to make a connection to the device.
 
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
             """
-            args = details.get("args")
-            argslist = cast(list, args)
-            fqdn = argslist[1]
-            elapsed = details.get("elapsed")
+            fqdn = details["args"][1]
+            elapsed = details["elapsed"]
             self._logger.warning(
                 f"Gave up trying to connect to device {fqdn} after "
                 f"{elapsed} seconds."
@@ -134,8 +145,8 @@ class MccsDeviceProxy:
             max_time=max_time,
         )
         def _backoff_connect(
-            connection_factory: Callable[[str], DeviceProxy], fqdn: str
-        ) -> DeviceProxy:
+            connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str
+        ) -> tango.DeviceProxy:
             """
             Attempt connection to a specified device.
 
@@ -151,8 +162,8 @@ class MccsDeviceProxy:
             return _connect(connection_factory, fqdn)
 
         def _connect(
-            connection_factory: Callable[[str], DeviceProxy], fqdn: str
-        ) -> DeviceProxy:
+            connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str
+        ) -> tango.DeviceProxy:
             """
             Make a single attempt to connect to a device.
 
@@ -183,7 +194,7 @@ class MccsDeviceProxy:
         :return: whether the device is initialised yet
         """
 
-        def _on_giveup_check_initialised(details: dict) -> None:
+        def _on_giveup_check_initialised(details: BackoffDetailsType) -> None:
             """
             Give up waiting for the device to complete initialisation.
 
@@ -202,7 +213,7 @@ class MccsDeviceProxy:
             factor=1,
             max_time=max_time,
         )
-        def _backoff_check_initialised(device: DeviceProxy) -> bool:
+        def _backoff_check_initialised(device: tango.DeviceProxy) -> bool:
             """
             Check that the device has completed initialisation.
 
@@ -216,7 +227,7 @@ class MccsDeviceProxy:
             """
             return _check_initialised(device)
 
-        def _check_initialised(device: DeviceProxy) -> bool:
+        def _check_initialised(device: tango.DeviceProxy) -> bool:
             """
             Check that the device has completed initialisation.
 

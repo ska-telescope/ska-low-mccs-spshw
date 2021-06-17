@@ -10,7 +10,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 from enum import Enum
-from typing import Optional
+from typing import Iterable, Optional
 
 from ska_tango_base.control_model import HealthState
 from ska_low_mccs.health import MutableHealthMonitor
@@ -165,8 +165,6 @@ class Resource:
 
     def is_healthy(self: Resource) -> bool:
         """
-        ame}")
-
         Check if this resource is in a healthy state, as defined by its resource
         availability policy.
 
@@ -176,7 +174,7 @@ class Resource:
 
     def _health_changed(self: Resource, fqdn: str, event_value: int) -> None:
         """
-        Update the health state of the resource. ame}")
+        Update the health state of the resource.
 
         :param fqdn: FQDN of the device for which healthState has
             changed
@@ -307,7 +305,7 @@ class ResourceManager:
                 self._resources[fqdn]._health_changed, fqdn
             )
 
-    def _except_on_unmanaged(self: ResourceManager, fqdns: list[str]) -> None:
+    def _except_on_unmanaged(self: ResourceManager, fqdns: Iterable[str]) -> None:
         """
         Raise an exception if any of the listed FQDNs are not being managed by this
         manager.
@@ -330,7 +328,7 @@ class ResourceManager:
 
         :param devices: The IDs and FQDNs of devices to add
         """
-        self._health_monitor.add_devices(list(devices.values()))
+        self._health_monitor.add_devices(devices.values())
         for device_id, fqdn in devices.items():
             if fqdn not in self.get_all_fqdns():
                 self._resources[fqdn] = Resource(
@@ -345,7 +343,7 @@ class ResourceManager:
         """
         Remove device(s) from this resource manager.
 
-        :param fqdns: The The FQDNs of devices to remove
+        :param fqdns: The FQDNs of devices to remove
         """
         for fqdn in fqdns:
             self._resources.pop(fqdn)
@@ -430,13 +428,13 @@ class ResourceManager:
             return (False, None, blocking)
 
         # Make a list of wanted FQDNs not already assigned
-        needed = None
-        needed = [fqdn for fqdn in fqdns if (not self._resources[fqdn].is_assigned())]
-        if len(needed) == 0:
-            needed = None
+        needed = [
+            fqdn for fqdn in fqdns if (not self._resources[fqdn].is_assigned())
+        ] or None
+        #         if len(needed) == 0:
+        #             needed = None
 
         # Make a list of already-assigned FQDNs no longer wanted
-        to_release = None
         to_release = [
             fqdn
             for (fqdn, res) in self._resources.items()
@@ -445,9 +443,9 @@ class ResourceManager:
                 and res.assigned_to() == new_owner
                 and fqdn not in fqdns
             )
-        ]
-        if len(to_release) == 0:
-            to_release = None
+        ] or None
+        #         if len(to_release) == 0:
+        #             to_release = None
 
         # Return True (ok to proceed), with the lists
         return (True, needed, to_release)
@@ -461,7 +459,7 @@ class ResourceManager:
 
         :raises ValueError: if any of the FQDNs are unavailable or not healthy
         """
-        self._except_on_unmanaged(list(devices.values()))
+        self._except_on_unmanaged(devices.values())
         for device_id in devices.keys():
             try:
                 self._resources[devices[device_id]].assign(new_owner)

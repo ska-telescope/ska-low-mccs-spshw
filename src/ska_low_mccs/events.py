@@ -14,21 +14,22 @@ from functools import partial
 import warnings
 import logging
 import backoff
-from typing import Callable, Union
+from typing import Any, Callable, Optional, Union
 
 from tango import (
+    AttrQuality,
     DevFailed,
     EventData,
     EventType,
     DeviceProxy,
     DeviceAttribute,
-)  # type: ignore[attr-defined]
+)
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
 def _parse_spec(
-    spec: Union[list[str], str] = None, allowed: list[str] = None
+    spec: Optional[Union[list[str], str]] = None, allowed: Optional[list[str]] = None
 ) -> list[str]:
     """
     Helper function that implements parsing of a specification (of events or fqdns)
@@ -94,7 +95,7 @@ class EventSubscriptionHandler:
         self._event_value = None
         self._event_quality = None
         self._subscription_id = None
-        self._callbacks: list[Callable] = []
+        self._callbacks: list[Callable[[str, Any, AttrQuality], None]] = []
 
         self._subscribe()
 
@@ -115,7 +116,7 @@ class EventSubscriptionHandler:
             self._event_name, EventType.CHANGE_EVENT, self
         )
 
-    def _read(self: EventSubscriptionHandler) -> object:
+    def _read(self: EventSubscriptionHandler) -> Any:
         """
         Manually read an attribute. Used when we receive an event with empty attribute
         data.
@@ -149,7 +150,7 @@ class EventSubscriptionHandler:
 
     def _call(
         self: EventSubscriptionHandler,
-        callback: Callable,
+        callback: Callable[[str, Any, AttrQuality], None],
         attribute_data: DeviceAttribute,
     ) -> None:
         """
@@ -161,7 +162,10 @@ class EventSubscriptionHandler:
         """
         callback(attribute_data.name, attribute_data.value, attribute_data.quality)
 
-    def register_callback(self: EventSubscriptionHandler, callback: Callable) -> None:
+    def register_callback(
+        self: EventSubscriptionHandler,
+        callback: Callable[[str, Any, AttrQuality], None],
+    ) -> None:
         """
         Register a callback for events handled by this handler.
 
@@ -200,7 +204,7 @@ class DeviceEventManager:
         self: DeviceEventManager,
         fqdn: str,
         logger: logging.Logger,
-        events: list[str] = None,
+        events: Optional[list[str]] = None,
     ) -> None:
         """
         Initialise a new DeviceEventManager object.
@@ -222,8 +226,8 @@ class DeviceEventManager:
 
     def register_callback(
         self: DeviceEventManager,
-        callback: Callable,
-        event_spec: Union[list[str], str] = None,
+        callback: Callable[[str, Any, AttrQuality], None],
+        event_spec: Optional[Union[list[str], str]] = None,
     ) -> None:
         """
         Register a callback for an event (or events) handled by this handler.
@@ -271,8 +275,8 @@ class EventManager:
     def __init__(
         self: EventManager,
         logger: logging.Logger,
-        fqdns: list[str] = None,
-        events: list[str] = None,
+        fqdns: Optional[list[str]] = None,
+        events: Optional[list[str]] = None,
     ) -> None:
         """
         Initialise a new EventManager object.
@@ -293,9 +297,9 @@ class EventManager:
 
     def register_callback(
         self: EventManager,
-        callback: Callable,
-        fqdn_spec: Union[list[str], str] = None,
-        event_spec: Union[list[str], str] = None,
+        callback: Callable[[str, str, Any, AttrQuality], None],
+        fqdn_spec: Optional[Union[list[str], str]] = None,
+        event_spec: Optional[Union[list[str], str]] = None,
     ) -> None:
         """
         Register a callback for a particular event from a particularly device.

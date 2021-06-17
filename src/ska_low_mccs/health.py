@@ -20,12 +20,14 @@ __all__ = [
 
 from collections import Counter
 from functools import partial
+import logging
 from typing import Callable, Iterable, Optional, Type, Union
 
 from tango import AttrQuality
 
 from ska_tango_base.control_model import AdminMode, HealthState
-from ska_low_mccs.events import EventManager
+
+from ska_low_mccs.device_proxy import MccsDeviceProxy
 from ska_low_mccs.hardware import HardwareManager  # type: ignore[attr-defined]
 
 
@@ -168,7 +170,7 @@ class DeviceHealthRollupPolicy:
 class DeviceHealthMonitor:
     """Class that monitors the health of a single device."""
 
-    def __init__(self, fqdn, logger, initial_callback=None):
+    def __init__(
         self: DeviceHealthMonitor,
         fqdn: str,
         logger: logging.Logger,
@@ -283,7 +285,7 @@ class HealthMonitor:
     def __init__(
         self: HealthMonitor,
         fqdns: list[str],
-        logging: logging.Logger,
+        logger: logging.Logger,
         initial_callback: Optional[Callable[[str, int], None]] = None,
     ) -> None:
         """
@@ -342,7 +344,7 @@ class HealthModel:
     def __init__(
         self: HealthModel,
         hardware_manager: HardwareManager,
-        fqdns: Optional(list[str]),
+        fqdns: Optional[list[str]],
         logger: logging.Logger,
         initial_callback: Optional[Callable[[HealthState], None]] = None,
     ):
@@ -387,8 +389,7 @@ class HealthModel:
         # ensure that health gets computed once.
         self._compute_health()
 
-    def _init_health_monitor(
-        self: HealthModel, fqdns: list[str]) -> HealthMonitor:
+    def _init_health_monitor(self: HealthModel, fqdns: list[str]) -> HealthMonitor:
         """
         Initialise a new HealthMonitor.
 
@@ -558,11 +559,11 @@ class MutableHealthModel(HealthModel):
 
     def __init__(
         self: MutableHealthModel,
-        hardware_manager: Optional(HardwareManager),
-        fqdns: Optional(list[str]),
-        logging: logging.Logger,
-        initial_callback: Optional(Callable) = None,
-    ):
+        hardware_manager: Optional[HardwareManager],
+        fqdns: Optional[list[str]],
+        logger: logging.Logger,
+        initial_callback: Optional[Callable[[HealthState], None]] = None,
+    ) -> None:
         """
         Initialise a new MutableHealthModel instance.
 
@@ -577,7 +578,8 @@ class MutableHealthModel(HealthModel):
         self._health_monitor: MutableHealthMonitor  # type hint only
 
     def _init_health_monitor(
-        self: MutableHealthModel, fqdns: list[str]) -> HealthMonitor:
+        self: MutableHealthModel, fqdns: list[str]
+    ) -> HealthMonitor:
         """
         Initialise a new HealthMonitor.
 

@@ -8,11 +8,12 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import logging
 from enum import Enum
+import logging
 from typing import Iterable, Optional
 
 from ska_tango_base.control_model import HealthState
+
 from ska_low_mccs.health import MutableHealthMonitor
 
 

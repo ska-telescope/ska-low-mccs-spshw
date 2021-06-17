@@ -22,7 +22,7 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from ska_tango_base.commands import ResultCode
 
@@ -224,7 +224,9 @@ class DevicePool:
         """
         return self.invoke_command("On")
 
-    def add_change_event_callback(self, attribute_name, callback):
+    def add_change_event_callback(
+        self: DevicePool, attribute_name: str, callback: Callable
+    ) -> None:
         """
         Register a callback for change events being pushed by devices in this pool.
 

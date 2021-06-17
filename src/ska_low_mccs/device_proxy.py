@@ -208,8 +208,8 @@ class MccsDeviceProxy:
             Check that the device has completed initialisation.
 
             That is, check that the device is no longer in
-            DevState.INIT. This check is performed in an exponential
-            backoff-retry loop.
+            :py:const:`tango.DevState.INIT`. This check is performed
+            in an exponential backoff-retry loop.
 
             :param device: the device to be checked
 
@@ -222,7 +222,7 @@ class MccsDeviceProxy:
             Check that the device has completed initialisation.
 
             That is, check that the device is no longer in
-            DevState.INIT.
+            :py:const:`tango.DevState.INIT`.
 
             Checking that a device has initialised means calling its
             `state()` method, and even after the device returns a
@@ -266,13 +266,14 @@ class MccsDeviceProxy:
         :param callback: the function to be called when a change event
             arrives.
         """
-        if attribute_name not in self._change_event_subscription_ids:
-            self._change_event_callbacks[attribute_name.lower()] = [callback]
+        attribute_key = attribute_name.lower()
+        if attribute_key not in self._change_event_subscription_ids:
+            self._change_event_callbacks[attribute_key] = [callback]
             self._change_event_subscription_ids[
-                attribute_name.lower()
+                attribute_key
             ] = self._subscribe_change_event(attribute_name)
         else:
-            self._change_event_callbacks[attribute_name.lower()].append(callback)
+            self._change_event_callbacks[attribute_key].append(callback)
         self._call_callback(callback, self._read(attribute_name))
 
     @backoff.on_exception(backoff.expo, tango.DevFailed, factor=1, max_time=120)

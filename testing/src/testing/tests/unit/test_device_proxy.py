@@ -136,5 +136,4 @@ class TestMccsDeviceProxy:
                     )
                     mock_callbacks[j].reset_mock()
                 else:
-                    print(f"{i} != {j}")
                     mock_callbacks[j].assert_not_called()

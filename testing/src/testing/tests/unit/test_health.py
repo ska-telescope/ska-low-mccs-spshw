@@ -241,9 +241,7 @@ class TestDeviceHealthMonitor:
         admin_mode_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
         # push the event
-        event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
-            admin_mode_mock_event
-        )
+        event_manager._handlers[fqdn]._change_event_received(admin_mode_mock_event)
         mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
@@ -252,9 +250,7 @@ class TestDeviceHealthMonitor:
         health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
         # push the event
-        event_manager._handlers[fqdn]._handlers["healthState"].push_event(
-            health_state_mock_event
-        )
+        event_manager._handlers[fqdn]._change_event_received(health_state_mock_event)
         mock_callback.assert_called_once_with(HealthState.DEGRADED)
 
 
@@ -296,9 +292,7 @@ class TestHealthMonitor:
         mock_callback.reset_mock()
         for fqdn in fqdns:
             # push the event
-            event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
-                admin_mode_mock_event
-            )
+            event_manager._handlers[fqdn]._change_event_received(admin_mode_mock_event)
             mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
@@ -309,7 +303,7 @@ class TestHealthMonitor:
         for fqdn in fqdns:
             # push the event
             mock_callback.reset_mock()
-            event_manager._handlers[fqdn]._handlers["healthState"].push_event(
+            event_manager._handlers[fqdn]._change_event_received(
                 health_state_mock_event
             )
             mock_callback.assert_called_once_with(fqdn, HealthState.DEGRADED)
@@ -427,9 +421,7 @@ class TestMutableHealthMonitor:
         mock_callback.reset_mock()
         for fqdn in fqdns:
             # push the event
-            event_manager._handlers[fqdn]._handlers["adminMode"].push_event(
-                admin_mode_mock_event
-            )
+            event_manager._handlers[fqdn]._change_event_received(admin_mode_mock_event)
             mock_callback.assert_not_called()
 
         health_state_mock_event = mocker.Mock()
@@ -437,10 +429,8 @@ class TestMutableHealthMonitor:
         health_state_mock_event.attr_value.value = HealthState.DEGRADED
         health_state_mock_event.attr_value.quality = AttrQuality.ATTR_VALID
 
-        event_manager._handlers[new_fqdn]._handlers["adminMode"].push_event(
-            admin_mode_mock_event
-        )
-        event_manager._handlers[new_fqdn]._handlers["healthState"].push_event(
+        event_manager._handlers[new_fqdn]._change_event_received(admin_mode_mock_event)
+        event_manager._handlers[new_fqdn]._change_event_received(
             health_state_mock_event
         )
 

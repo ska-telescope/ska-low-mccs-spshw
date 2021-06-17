@@ -6,21 +6,27 @@
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
 """This module implements a base device proxy for MCCS devices."""
-
-__all__ = [
-    "MccsDeviceProxy",
-]
+from __future__ import annotations  # allow forward references in type hints
 
 import logging
 from typing import Any, Callable
+import warnings
 
 import backoff
 import tango
 
 
+__all__ = ["MccsDeviceProxy"]
+
+
+ConnectionFactory = Callable[[str], tango.DeviceProxy]
+
+
 class MccsDeviceProxy:
-    """This class implements a base device proxy for MCCS devices. At present it
-    supports:
+    """
+    This class implements a base device proxy for MCCS devices.
+
+    At present it supports:
 
     * deferred connection: we can create the proxy without immediately
       trying to connect to the proxied device.
@@ -29,9 +35,9 @@ class MccsDeviceProxy:
     * a :py:meth:``check_initialised`` method, for checking that /
       waiting until the proxied device has transitioned out of INIT
       state.
+    * Ability to subscribe to change events via the
+      :py:meth:``add_change_event_callback`` method.
     """
-
-    ConnectionFactory = Callable[[str], tango.DeviceProxy]
 
     _default_connection_factory = tango.DeviceProxy
 
@@ -88,6 +94,9 @@ class MccsDeviceProxy:
         self.__dict__["_pass_through"] = pass_through
         self.__dict__["_device"] = None
 
+        self.__dict__["_change_event_subscription_ids"] = {}
+        self.__dict__["_change_event_callbacks"] = {}
+
         if connect:
             self.connect()
 
@@ -103,8 +112,7 @@ class MccsDeviceProxy:
 
         def _on_giveup_connect(details: dict) -> None:
             """
-            Handler for when the backoff-retry loop gives up trying to make a connection
-            to the device.
+            Give up trying to make a connection to the device.
 
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
@@ -129,13 +137,14 @@ class MccsDeviceProxy:
             fqdn: str,
         ) -> tango.DeviceProxy:
             """
-            Attempt connection to a specified device, using an exponential backoff-
-            retry scheme in case of failure.
+            Attempt connection to a specified device.
+
+            Connection attribute use an exponential backoff-retry
+            scheme in case of failure.
 
             :param connection_factory: the factory to use to establish
                 the connection
-            :param fqdn: the fully qualified device name of the device for
-                which this DeviceEventManager will manage change events
+            :param fqdn: the fully qualified device name of the device
 
             :return: a proxy for the device
             """
@@ -150,8 +159,7 @@ class MccsDeviceProxy:
 
             :param connection_factory: the factory to use to establish
                 the connection
-            :param fqdn: the fully qualified device name of the device for
-                which this DeviceEventManager will manage change events
+            :param fqdn: the fully qualified device name of the device
 
             :return: a proxy for the device
             """
@@ -164,8 +172,9 @@ class MccsDeviceProxy:
 
     def check_initialised(self, max_time: float = 120.0) -> bool:
         """
-        Check that the device has completed initialisation; that is, it is no longer in
-        state INIT.
+        Check that the device has completed initialisation.
+
+        That is, check that the device is no longer in state INIT.
 
         :param max_time: the (optional) maximum time, in seconds, to
             wait for the device to complete initialisation. The default
@@ -177,8 +186,7 @@ class MccsDeviceProxy:
 
         def _on_giveup_check_initialised(details: dict) -> None:
             """
-            Handler for when the backoff-retry loop gives up waiting for the device to
-            complete initialisation.
+            Give up waiting for the device to complete initialisation.
 
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
@@ -197,8 +205,11 @@ class MccsDeviceProxy:
         )
         def _backoff_check_initialised(device: tango.DeviceProxy) -> bool:
             """
-            Check that the device has completed initialisation (that is, it is no longer
-            in DevState.INIT) in an exponential backoff- retry loop.
+            Check that the device has completed initialisation.
+
+            That is, check that the device is no longer in
+            DevState.INIT. This check is performed in an exponential
+            backoff-retry loop.
 
             :param device: the device to be checked
 
@@ -208,8 +219,10 @@ class MccsDeviceProxy:
 
         def _check_initialised(device: tango.DeviceProxy) -> bool:
             """
-            Check that the device has completed initialisation; that is, it is no longer
-            in DevState.INIT.
+            Check that the device has completed initialisation.
+
+            That is, check that the device is no longer in
+            DevState.INIT.
 
             Checking that a device has initialised means calling its
             `state()` method, and even after the device returns a
@@ -242,12 +255,124 @@ class MccsDeviceProxy:
         else:
             return _check_initialised(self._device)
 
+    def add_change_event_callback(
+        self, attribute_name: str, callback: Callable
+    ) -> None:
+        """
+        Register a callback for change events being pushed by the device.
+
+        :param attribute_name: the name of the attribute for which
+            change events are subscribed.
+        :param callback: the function to be called when a change event
+            arrives.
+        """
+        if attribute_name not in self._change_event_subscription_ids:
+            self._change_event_callbacks[attribute_name.lower()] = [callback]
+            self._change_event_subscription_ids[
+                attribute_name.lower()
+            ] = self._subscribe_change_event(attribute_name)
+        else:
+            self._change_event_callbacks[attribute_name.lower()].append(callback)
+        self._call_callback(callback, self._read(attribute_name))
+
+    @backoff.on_exception(backoff.expo, tango.DevFailed, factor=1, max_time=120)
+    def _subscribe_change_event(self: MccsDeviceProxy, attribute_name: str) -> int:
+        """
+        Subscribe to a change event.
+
+        Even though we already have a DeviceProxy to the device that we
+        want to subscribe to, it is still possible that the device is
+        not ready, in which case subscription will fail and a
+        :py:class:`tango.DevFailed` exception will be raised. Here, we
+        attempt subscription in a backoff-retry, and only raise the
+        exception one our retries are exhausted. (The alternative option
+        of subscribing with "stateless=True" could not be made to work.)
+
+        :param attribute_name: the name of the attribute for which
+            change events are subscribed
+
+        :return: the subscription id
+        """
+        return self._device.subscribe_event(
+            attribute_name, tango.EventType.CHANGE_EVENT, self._change_event_received
+        )
+
+    def _change_event_received(self, event):
+        """
+        Callback called by the tango system when a subscribed event occurs.
+
+        It in turn invokes all its own callbacks.
+
+        :param event: an object encapsulating the event data.
+        :type event: :py:class:`tango.EventData`
+        """
+        attribute_data = self._process_event(event)
+        for callback in self._change_event_callbacks[attribute_data.name.lower()]:
+            self._call_callback(callback, attribute_data)
+
+    def _call_callback(self, callback, attribute_data):
+        """
+        Call the callback with unpacked attribute data.
+
+        :param callback: function handle for the callback
+        :type callback: callable
+        :param attribute_data: the attribute data to be unpacked and
+            used to call the callback
+        :type attribute_data: :py:class:`tango.DeviceAttribute`
+        """
+        callback(attribute_data.name, attribute_data.value, attribute_data.quality)
+
+    def _process_event(self, event):
+        """
+        Process a received event.
+
+        Extract the attribute value from the event; or, if the event
+        failed to carry an attribute value, read the attribute value
+        directly.
+
+        :param event: the received event
+        :type event: :py:class:`tango.EventData`
+
+        :return: the attribute value data
+        :rtype: :py:class:`tango.DeviceAttribute`
+        """
+        if event.attr_value is None:
+            warning_message = (
+                "Received change event with empty value. Falling back to manual "
+                f"attribute read. Event.err is {event.err}. Event.errors is\n"
+                f"{event.errors}."
+            )
+            warnings.warn(UserWarning(warning_message))
+            self._logger.warn(warning_message)
+            return self._read(event.attr_name)
+        else:
+            return event.attr_value
+
+    def _read(self: MccsDeviceProxy, attribute_name: str) -> Any:
+        """
+        Manually read an attribute.
+
+        Used when we receive an event with empty attribute data.
+
+        :param attribute_name: the name of the attribute to be read
+
+        :return: the attribute value
+        """
+        return self._device.read_attribute(attribute_name)
+
+    def __del__(self):
+        """Cleanup before destruction."""
+        for subscription_id in self._change_event_subscription_ids:
+            self._device.unsubscribe_event(subscription_id)
+
     def __setattr__(self, name: str, value: Any) -> None:
         """
-        Handler for setting attributes on this object. If the name matches an attribute
-        that this object already has, we update it. But we refuse to create any new
-        attributes. Instead, if we're in pass-through mode, we pass the setattr down to
-        the underlying connection.
+        Handler for setting attributes on this object.
+
+        If the name matches an attribute that this object already has,
+        we update it. But we refuse to create any new attributes.
+        Instead, if we're in pass-through mode, we pass the setattr
+        down to the underlying connection.
 
         :param name: the name of the attribute to be set
         :param value: the new value for the attribute
@@ -263,9 +388,10 @@ class MccsDeviceProxy:
 
     def __getattr__(self, name, default_value=None):
         """
-        Handler for any requested attribute not found in the usual way. If this proxy is
-        in pass-through mode, then we try to get this attribute from the underlying
-        proxy.
+        Handler for any requested attribute not found in the usual way.
+
+        If this proxy is in pass-through mode, then we try to get this
+        attribute from the underlying proxy.
 
         :param name: name of the requested attribute
         :type name: str

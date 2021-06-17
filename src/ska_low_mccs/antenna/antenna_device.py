@@ -27,7 +27,7 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState, SimulationMode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.events import EventManager, EventSubscriptionHandler
+from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import (
     HardwareHealthEvaluator,
     PowerMode,
@@ -134,11 +134,7 @@ class AntennaApiuProxy:
         """
         self._apiu = MccsDeviceProxy(self._fqdn, self._logger)
         self._apiu.check_initialised()
-
-        self._apiu_event_handler = EventSubscriptionHandler(
-            self._apiu, "areAntennasOn", self._logger
-        )
-        self._apiu_event_handler.register_callback(self._apiu_power_changed)
+        self._apiu.add_change_event_callback("areAntennasOn", self._apiu_power_changed)
 
         self._power_mode = self._read_power_mode()
         self._power_callback(self._power_mode)

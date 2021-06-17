@@ -29,7 +29,7 @@ from ska_tango_base.control_model import HealthState, SimulationMode, AdminMode
 from ska_tango_base.commands import BaseCommand, ResponseCommand, ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.events import EventManager, EventSubscriptionHandler
+from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import ConnectionStatus, PowerMode
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.tile import TileHardwareManager
@@ -79,10 +79,9 @@ class TilePowerManager:
         self._power_mode = self._read_power_mode()
         self._callback(self._power_mode)
 
-        self.subrack_event_handler = EventSubscriptionHandler(
-            self._subrack, "areTpmsOn", self._logger
+        self._subrack.add_change_event_callback(
+            "areTpmsOn", self._subrack_power_changed
         )
-        self.subrack_event_handler.register_callback(self._subrack_power_changed)
 
     def off(self):
         """

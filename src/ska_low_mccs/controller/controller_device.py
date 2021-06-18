@@ -1,3 +1,4 @@
+# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -25,13 +26,13 @@ from ska_tango_base import DeviceStateModel, SKAMaster, SKABaseDevice
 from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 
-from ska_low_mccs import MccsDeviceProxy, subarray  # type: ignore[attr-defined]
-from ska_low_mccs.pool import DevicePool, DevicePoolSequence  # type: ignore[attr-defined]
+from ska_low_mccs import MccsDeviceProxy
+from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
-from ska_low_mccs.utils import call_with_json, tango_raise  # type: ignore[attr-defined]
-from ska_low_mccs.health import HealthModel, HealthMonitor  # type: ignore[attr-defined]
-from ska_low_mccs.resource import ResourceManager  # type: ignore[attr-defined]
-from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
+from ska_low_mccs.utils import call_with_json, tango_raise
+from ska_low_mccs.health import HealthModel, HealthMonitor
+from ska_low_mccs.resource import ResourceManager
+from ska_low_mccs.message_queue import MessageQueue
 
 __all__ = ["MccsController", "ControllerResourceManager", "main"]
 
@@ -613,10 +614,7 @@ class MccsController(SKAMaster):
         self.logger.debug(f"_check_and_send_message({command})")
         if check_is_allowed:
             command_progress = self._command_result.get("result_code")
-            if command_progress in [
-                ResultCode.STARTED,
-                ResultCode.QUEUED,
-            ]:
+            if command_progress in [ResultCode.STARTED, ResultCode.QUEUED]:
                 self.logger.error(
                     f"_check_and_send_message() FAILED: {command_progress.name}"
                 )
@@ -816,9 +814,7 @@ class MccsController(SKAMaster):
 
             message_uid = device._command_result.get("message_uid")
             if device_pool.invoke_command_with_callback(
-                command_name="Off",
-                fqdn=device.get_name(),
-                callback="Callback",
+                command_name="Off", fqdn=device.get_name(), callback="Callback"
             ):
                 return (ResultCode.OK, message_uid + "," + self.QUEUED_MESSAGE)
             else:

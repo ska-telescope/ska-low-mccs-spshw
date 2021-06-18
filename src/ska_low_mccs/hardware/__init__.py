@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -177,7 +176,7 @@ __all__ = [
     "WebHardwareClient",
 ]
 
-from .base_hardware import (
+from .base_hardware import (  # type: ignore[attr-defined]
     ConnectionStatus,
     ControlMode,
     HardwareDriver,
@@ -186,13 +185,13 @@ from .base_hardware import (
     HardwareManager,
 )
 
-from .simulable_hardware import (
+from .simulable_hardware import (  # type: ignore[attr-defined]
     HardwareSimulator,
     SimulableHardwareFactory,
     SimulableHardwareManager,
 )
 
-from .power_mode_hardware import (
+from .power_mode_hardware import (  # type: ignore[attr-defined]
     BasePowerModeHardwareDriver,
     BasePowerModeHardwareSimulator,
     BasePowerModeHardwareManager,
@@ -208,7 +207,7 @@ from .power_mode_hardware import (
     PowerMode,
 )
 
-from .hardware_client import (
+from .hardware_client import (  # type: ignore[attr-defined]
     HardwareClient,
     WebHardwareClient,
 )

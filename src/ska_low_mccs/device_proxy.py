@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -9,17 +8,20 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, Optional, Type
+from typing_extensions import TypedDict
 import warnings
 
 import backoff
 import tango
+from tango import DevFailed, DevState, AttrQuality
+
+# type for the "details" dictionary that backoff calls its callbacks with
+BackoffDetailsType = TypedDict("BackoffDetailsType", {"args": list, "elapsed": float})
+ConnectionFactory = Callable[[str], tango.DeviceProxy]
 
 
 __all__ = ["MccsDeviceProxy"]
-
-
-ConnectionFactory = Callable[[str], tango.DeviceProxy]
 
 
 class MccsDeviceProxy:
@@ -43,7 +45,7 @@ class MccsDeviceProxy:
 
     @classmethod
     def set_default_connection_factory(
-        cls, connection_factory: ConnectionFactory
+        cls: Type[MccsDeviceProxy], connection_factory: ConnectionFactory
     ) -> None:
         """
         Set the default connection factory for this class. This is super
@@ -57,11 +59,11 @@ class MccsDeviceProxy:
         cls._default_connection_factory = connection_factory
 
     def __init__(
-        self,
+        self: MccsDeviceProxy,
         fqdn: str,
         logger: logging.Logger,
         connect: bool = True,
-        connection_factory: ConnectionFactory = None,
+        connection_factory: Optional[ConnectionFactory] = None,
         pass_through: bool = True,
     ) -> None:
         """
@@ -73,7 +75,7 @@ class MccsDeviceProxy:
             device we are proxying. By default this is
             :py:class:`tango.DeviceProxy`, but occasionally this needs
             to be changed. For example, when testing against a
-            :py:class:`tango.test_context.MultiDeviceTestContext`, we
+            :py:class:`test_context.MultiDeviceTestContext`, we
             obtain connections to the devices under test via
             ``test_context.get_device(fqdn)``.
         :param connect: whether to connect immediately to the device. If
@@ -100,7 +102,7 @@ class MccsDeviceProxy:
         if connect:
             self.connect()
 
-    def connect(self, max_time: float = 120.0) -> None:
+    def connect(self: MccsDeviceProxy, max_time: float = 120.0) -> None:
         """
         Establish a connection to the device that we want to proxy.
 
@@ -110,16 +112,15 @@ class MccsDeviceProxy:
             made, and the call returns immediately.
         """
 
-        def _on_giveup_connect(details: dict) -> None:
+        def _on_giveup_connect(details: BackoffDetailsType) -> None:
             """
             Give up trying to make a connection to the device.
 
             :param details: a dictionary providing call context, such as
                 the call args and the elapsed time
             """
-            args = details.get("args")
-            fqdn = args[1]
-            elapsed = details.get("elapsed")
+            fqdn = details["args"][1]
+            elapsed = details["elapsed"]
             self._logger.warning(
                 f"Gave up trying to connect to device {fqdn} after "
                 f"{elapsed} seconds."
@@ -127,14 +128,13 @@ class MccsDeviceProxy:
 
         @backoff.on_exception(
             backoff.expo,
-            tango.DevFailed,
+            DevFailed,
             on_giveup=_on_giveup_connect,
             factor=1,
             max_time=max_time,
         )
         def _backoff_connect(
-            connection_factory: Callable[[str], tango.DeviceProxy],
-            fqdn: str,
+            connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str
         ) -> tango.DeviceProxy:
             """
             Attempt connection to a specified device.
@@ -151,8 +151,7 @@ class MccsDeviceProxy:
             return _connect(connection_factory, fqdn)
 
         def _connect(
-            connection_factory: Callable[[str], tango.DeviceProxy],
-            fqdn: str,
+            connection_factory: Callable[[str], tango.DeviceProxy], fqdn: str
         ) -> tango.DeviceProxy:
             """
             Make a single attempt to connect to a device.
@@ -170,7 +169,7 @@ class MccsDeviceProxy:
         else:
             self._device = _connect(self._connection_factory, self._fqdn)
 
-    def check_initialised(self, max_time: float = 120.0) -> bool:
+    def check_initialised(self: MccsDeviceProxy, max_time: float = 120.0) -> bool:
         """
         Check that the device has completed initialisation.
 
@@ -184,7 +183,7 @@ class MccsDeviceProxy:
         :return: whether the device is initialised yet
         """
 
-        def _on_giveup_check_initialised(details: dict) -> None:
+        def _on_giveup_check_initialised(details: BackoffDetailsType) -> None:
             """
             Give up waiting for the device to complete initialisation.
 
@@ -241,8 +240,8 @@ class MccsDeviceProxy:
             :return: whether the device has completed initialisation
             """
             try:
-                return device.state() != tango.DevState.INIT
-            except tango.DevFailed:
+                return device.state() != DevState.INIT
+            except DevFailed:
                 self._logger.debug(
                     "Caught a DevFailed exception while checking that the device has "
                     "initialised. This is most likely a 'BAD_INV_ORDER_ORBHasShutdown "
@@ -256,7 +255,9 @@ class MccsDeviceProxy:
             return _check_initialised(self._device)
 
     def add_change_event_callback(
-        self, attribute_name: str, callback: Callable
+        self: MccsDeviceProxy,
+        attribute_name: str,
+        callback: Callable[[str, Any, AttrQuality], None],
     ) -> None:
         """
         Register a callback for change events being pushed by the device.
@@ -298,32 +299,35 @@ class MccsDeviceProxy:
             attribute_name, tango.EventType.CHANGE_EVENT, self._change_event_received
         )
 
-    def _change_event_received(self, event):
+    def _change_event_received(self: MccsDeviceProxy, event: tango.EventData) -> None:
         """
         Callback called by the tango system when a subscribed event occurs.
 
         It in turn invokes all its own callbacks.
 
         :param event: an object encapsulating the event data.
-        :type event: :py:class:`tango.EventData`
         """
         attribute_data = self._process_event(event)
         for callback in self._change_event_callbacks[attribute_data.name.lower()]:
             self._call_callback(callback, attribute_data)
 
-    def _call_callback(self, callback, attribute_data):
+    def _call_callback(
+        self: MccsDeviceProxy,
+        callback: Callable[[str, Any, AttrQuality], None],
+        attribute_data: tango.DeviceAttribute,
+    ) -> None:
         """
         Call the callback with unpacked attribute data.
 
         :param callback: function handle for the callback
-        :type callback: callable
         :param attribute_data: the attribute data to be unpacked and
             used to call the callback
-        :type attribute_data: :py:class:`tango.DeviceAttribute`
         """
         callback(attribute_data.name, attribute_data.value, attribute_data.quality)
 
-    def _process_event(self, event):
+    def _process_event(
+        self: MccsDeviceProxy, event: tango.EventData
+    ) -> tango.DeviceAttribute:
         """
         Process a received event.
 
@@ -332,10 +336,8 @@ class MccsDeviceProxy:
         directly.
 
         :param event: the received event
-        :type event: :py:class:`tango.EventData`
 
         :return: the attribute value data
-        :rtype: :py:class:`tango.DeviceAttribute`
         """
         if event.attr_value is None:
             warning_message = (
@@ -361,12 +363,12 @@ class MccsDeviceProxy:
         """
         return self._device.read_attribute(attribute_name)
 
-    def __del__(self):
+    def __del__(self: MccsDeviceProxy) -> None:
         """Cleanup before destruction."""
         for subscription_id in self._change_event_subscription_ids:
             self._device.unsubscribe_event(subscription_id)
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self: MccsDeviceProxy, name: str, value: Any) -> None:
         """
         Handler for setting attributes on this object.
 
@@ -387,7 +389,7 @@ class MccsDeviceProxy:
                 raise ConnectionError("MccsDeviceProxy has not connected yet.")
             setattr(self._device, name, value)
 
-    def __getattr__(self, name, default_value=None):
+    def __getattr__(self: MccsDeviceProxy, name: str, default_value: Any = None) -> Any:
         """
         Handler for any requested attribute not found in the usual way.
 
@@ -395,16 +397,13 @@ class MccsDeviceProxy:
         attribute from the underlying proxy.
 
         :param name: name of the requested attribute
-        :type name: str
         :param default_value: value to return if the attribute is not
             found
-        :type default_value: obj
 
         :raises AttributeError: if neither this class nor the underlying
             proxy (if in pass-through mode) has the attribute.
 
         :return: the requested attribute
-        :rtype: obj
         """
         if self._pass_through and self._device is not None:
             return getattr(self._device, name, default_value)

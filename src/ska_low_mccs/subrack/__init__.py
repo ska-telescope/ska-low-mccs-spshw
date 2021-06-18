@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -18,6 +17,12 @@ __all__ = [
     "subrack_board_simulator",
 ]
 
-from .subrack_device import MccsSubrack, SubrackHardwareManager
-from .subrack_simulator import SubrackBaySimulator, SubrackBoardSimulator
-from .subrack_driver import SubrackBoardDriver
+from .subrack_device import (  # type: ignore[attr-defined]
+    MccsSubrack,
+    SubrackHardwareManager,
+)
+from .subrack_simulator import (  # type: ignore[attr-defined]
+    SubrackBaySimulator,
+    SubrackBoardSimulator,
+)
+from .subrack_driver import SubrackBoardDriver  # type: ignore[attr-defined]

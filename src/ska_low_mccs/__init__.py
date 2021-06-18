@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -56,20 +55,20 @@ __all__ = [
     "resource",
 ]
 
-from .device import MccsDevice
+from .device import MccsDevice  # type: ignore[attr-defined]
 from .device_proxy import MccsDeviceProxy
-from .group_device import MccsGroupDevice
+from .group_device import MccsGroupDevice  # type: ignore[attr-defined]
 
-from .apiu import MccsAPIU
-from .cluster_manager import MccsClusterManagerDevice
-from .controller import MccsController
-from .tile import MccsTile
+from .apiu import MccsAPIU  # type: ignore[attr-defined]
+from .cluster_manager import MccsClusterManagerDevice  # type: ignore[attr-defined]
+from .controller import MccsController  # type: ignore[attr-defined]
+from .tile import MccsTile  # type: ignore[attr-defined]
 
-from .antenna import MccsAntenna
-from .station import MccsStation
-from .station_beam import MccsStationBeam
-from .subarray import MccsSubarray
-from .subarray_beam import MccsSubarrayBeam
-from .subrack import MccsSubrack
-from .tel_state import MccsTelState
-from .transient_buffer import MccsTransientBuffer
+from .antenna import MccsAntenna  # type: ignore[attr-defined]
+from .station import MccsStation  # type: ignore[attr-defined]
+from .station_beam import MccsStationBeam  # type: ignore[attr-defined]
+from .subarray import MccsSubarray  # type: ignore[attr-defined]
+from .subarray_beam import MccsSubarrayBeam  # type: ignore[attr-defined]
+from .subrack import MccsSubrack  # type: ignore[attr-defined]
+from .tel_state import MccsTelState  # type: ignore[attr-defined]
+from .transient_buffer import MccsTransientBuffer  # type: ignore[attr-defined]

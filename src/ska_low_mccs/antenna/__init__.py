@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -13,4 +12,4 @@ __all__ = [
     "demo_antenna_device",
 ]
 
-from .antenna_device import MccsAntenna
+from .antenna_device import MccsAntenna  # type: ignore[attr-defined]

@@ -209,9 +209,7 @@ def tango_harness_factory(request, logger):
         starting_state_harness = StartingStateTangoHarness(tango_harness)
 
         mocking_harness = MockingTangoHarness(
-            starting_state_harness,
-            mock_factory,
-            initial_mocks,
+            starting_state_harness, mock_factory, initial_mocks
         )
 
         return mocking_harness
@@ -333,10 +331,7 @@ class CommandHelper:
         :rtype:
             (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        dispatcher = {
-            "On": device_under_test.On,
-            "Off": device_under_test.Off,
-        }
+        dispatcher = {"On": device_under_test.On, "Off": device_under_test.Off}
         [result_code], [_, message_uid] = dispatcher[command]()
         assert result_code == ResultCode.QUEUED
         args = {

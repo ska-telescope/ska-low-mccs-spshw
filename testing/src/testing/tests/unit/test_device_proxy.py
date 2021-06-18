@@ -15,7 +15,7 @@ import logging
 import pytest
 import pytest_mock
 
-from ska_low_mccs import MccsDeviceProxy  # type: ignore[attr-defined]
+from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness  # type: ignore[attr-defined]
 

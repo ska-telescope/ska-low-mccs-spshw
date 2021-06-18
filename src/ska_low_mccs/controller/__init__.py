@@ -18,7 +18,7 @@ __all__ = [
     "demo_controller_device",
 ]
 
-from .controller_device import (
+from .controller_device import (  # type: ignore[attr-defined]
     MccsController,
     ControllerResourceManager,
 )

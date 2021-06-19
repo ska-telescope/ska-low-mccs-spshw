@@ -638,6 +638,24 @@ class MccsSubarray(SKASubarray):
         """
         return self._heart_beat
 
+    @attribute(dtype="DevString")
+    def aQueueDebug(self: MccsSubarray) -> str:
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write  # type: ignore[no-redef]
+    def aQueueDebug(self: MccsSubarray, debug_string: str) -> None:
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        """
+        self.queue_debug = debug_string
+
     @attribute(dtype="DevString", format="%i")
     def commandResult(self: MccsSubarray) -> str:
         """
@@ -682,67 +700,54 @@ class MccsSubarray(SKASubarray):
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
-    def _check_and_send_message(
-        self: MccsSubarray,
-        command: str,
-        json_args: str = "",
-        check_is_allowed: bool = False,
-        notifications: bool = False,
-    ) -> DevVarLongStringArrayType:
+    def _send_message(self: MccsSubarray, command: str, json_args: str) -> DevVarLongStringArrayType:
         """
-        Helper method to check initial status and send a message to execute the
-        specified command.
+        Helper method to send a message to execute the specified command.
 
         :param command: the command to send a message for
         :param json_args: arguments to pass with the command
-        :param check_is_allowed: check for any previous ongoing command
-        :param notifications: requestor notification required
 
         :return: A tuple containing a return code, a string
             message indicating status and message UID.
             The string message is for information purposes only, but
             the message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
-        self.logger.debug(f"_check_and_send_message({command})")
-        if check_is_allowed:
-            command_progress = self._command_result.get("result_code")
-            if command_progress in [
-                ResultCode.STARTED,
-                ResultCode.QUEUED,
-            ]:
-                self.logger.error(
-                    f"_check_and_send_message() FAILED: {command_progress.name}"
-                )
-                return (
-                    [ResultCode.FAILED],
-                    ["A subarray command is already in progress", None],
-                )
+        self.logger.info(f"Subarray {command}")
 
-        if notifications:
-            self.notify_listener(ResultCode.UNKNOWN, "", "")
-
-        self.logger.debug(f"send_message({command})")
-        (result_code, message_uid, status) = self._message_queue.send_message(
-            command=command, notifications=notifications, json_args=json_args
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        assert respond_to_fqdn
+        assert callback
+        self.logger.debug(f"Subarray {command} message call")
+        (
+            result_code,
+            message_uid,
+            status,
+        ) = self._message_queue.send_message_with_response(
+            command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
         )
-        return ([result_code], [status, message_uid])
+        return [[result_code], [status, message_uid]]
 
-    @command(dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
     @DebugIt()
-    def On(self: MccsSubarray) -> DevVarLongStringArrayType:
+    def On(self: MccsSubarray, json_args: str) -> DevVarLongStringArrayType:
         """
         Send a message to turn the subarray on.
 
         Method returns as soon as the message has been enqueued.
 
+        :param json_args: JSON encoded messaging system and command arguments
+
         :return: A tuple containing a return code, a string
             message indicating status and message UID.
             The string message is for information purposes only, but
             the message UID is for message management use.
         """
-        return self._check_and_send_message("On", check_is_allowed=True)
+        return self._send_message(command="On", json_args=json_args)
 
     class OnCommand(SKASubarray.OnCommand):
         """Class for handling the On() command."""
@@ -750,11 +755,14 @@ class MccsSubarray(SKASubarray):
         SUCCEEDED_MESSAGE = "Subarray On command completed OK"
         FAILED_MESSAGE = "Subarray On command failed"
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the (inherited)
             :py:meth:`ska_tango_base.SKABaseDevice.On` command for this
             :py:class:`.MccsSubarray` device.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

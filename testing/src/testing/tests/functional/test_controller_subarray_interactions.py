@@ -511,10 +511,15 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, val
         return
 
     json_string = json.dumps(parameters)
+    print("RCL: Just about to issue Allocate command to controller...")
     [result], [message, uid] = controller.command_inout("Allocate", json_string)
     assert result == ResultCode.QUEUED
     assert ":Allocate" in uid
     assert message
+
+    time.sleep(2)
+    print(f"RCL: {subarrays[1].aQueueDebug}")
+    print(f"RCL: {controller.aQueueDebug}")
 
     # Check that the allocate command has completed
     helper = HelperClass()

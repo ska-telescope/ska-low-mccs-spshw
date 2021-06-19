@@ -692,8 +692,6 @@ class MccsController(SKAMaster):
         :return: A tuple containing a return code, a string message indicating status and
             message UID. The string message is for information purposes only, but the
             message UID is for message management use.
-        :rtype:
-            (:py:class:`~ska_tango_base.commands.ResultCode`, [str, str])
         """
         return self._check_and_send_message("Callback", json_args=json_args)
 
@@ -1001,6 +999,18 @@ class MccsController(SKAMaster):
             # MCCS-specific Reset functionality goes here
             return (result_code, message)
 
+    def is_Allocate_allowed(self: MccsController) -> bool:
+        """
+        Whether this command is allowed to be run in current device state.
+
+        :return: True if this command is allowed to be run in
+            current device state
+        """
+        handler = self.get_command_object("Allocate")
+        if not handler.check_allowed():
+            tango_raise("Allocate() is not allowed in current state")
+        return True
+
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Allocate(self: MccsController, argin: str) -> DevVarLongStringArrayType:
         """
@@ -1033,6 +1043,7 @@ class MccsController(SKAMaster):
                 )
             )
         """
+        print("RCL: In def Allocate()...")
         if self._command_result.get("result_code") in [
             ResultCode.STARTED,
             ResultCode.QUEUED,
@@ -1065,9 +1076,7 @@ class MccsController(SKAMaster):
         FAILED_SUBARRAY_ENABLE_REQUEST_MESSAGE = (
             "Allocate command failed to enable subarray"
         )
-        SUCCEEDED_REQUEST_TO_ENABLE_SUBARRAY_MESSAGE = (
-            "Request sent to enable subarray"
-        )
+        SUCCEEDED_REQUEST_TO_ENABLE_SUBARRAY_MESSAGE = "Request sent to enable subarray"
         SUCCEEDED_MESSAGE = "Allocate command started OK"
 
         def do(
@@ -1094,6 +1103,7 @@ class MccsController(SKAMaster):
                 message indicating status. The message is for
                 information purpose only.
             """
+            print("RCL: In class AllocateCommand do()...")
             kwargs = json.loads(argin)
             self._allocate_cmd_cache: Dict[str, Any] = {}
             subarray_id = kwargs.get("subarray_id")
@@ -1187,20 +1197,22 @@ class MccsController(SKAMaster):
                 "station_ids": station_ids,
             }
 
+            print("RCL: Just about to call subarray On...")
             # Ask the subarray to enable. The reply will return to the
             # controller via a callback message.
             result_code, status = self._enable_subarray(subarray_id)
 
             if result_code != ResultCode.QUEUED:
-                failure_message = self.FAILED_SUBARRAY_ENABLE_REQUEST_MESSAGE + "," + status
+                failure_message = (
+                    self.FAILED_SUBARRAY_ENABLE_REQUEST_MESSAGE + "," + status
+                )
                 controllerdevice.notify_listener(
                     ResultCode.FAILED,
                     message_uid,
                     failure_message,
                 )
+                controllerdevice._allocate_cmd_cache.clear()
                 return (ResultCode.FAILED, failure_message)
-            else:
-                controllerdevice.logger.info(result_code + status)
 
             return (result_code, self.SUCCEEDED_MESSAGE)
 
@@ -1225,6 +1237,7 @@ class MccsController(SKAMaster):
                 message indicating status. The message is for
                 information purpose only.
             """
+            print("RCL: OK, in _enable_subarray...")
             device = self.target
             assert 1 <= subarray_id <= len(device._subarray_fqdns)
 
@@ -1237,7 +1250,8 @@ class MccsController(SKAMaster):
             }
             json_args = json.dumps(args)
             if not subarray_device.State() == DevState.ON:
-                (result_code, _, status) = subarray_device.On(json_args)
+                print("RCL: OK, Right before the call to subarray_device->On()...")
+                [result_code], [status, _] = subarray_device.command_inout("On", json_args)
                 # RCL: Do we need to cache message_uid for the callback or health monitoring?
                 if result_code != ResultCode.QUEUED:
                     return (
@@ -1247,9 +1261,9 @@ class MccsController(SKAMaster):
             else:
                 # The subarray was already on, send ourselves a message to continue
                 device._message_queue.send_message_with_response(
-                    command = "AllocateCallback",
-                    respond_to_fqdn = args.get("respond_to_fqdn"),
-                    callback = args.get("callback"),
+                    command="AllocateCallback",
+                    respond_to_fqdn=args.get("respond_to_fqdn"),
+                    callback=args.get("callback"),
                 )
 
             return (
@@ -1259,11 +1273,13 @@ class MccsController(SKAMaster):
 
     @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def AllocateCallback(self: MccsController) -> DevVarLongStringArrayType:
+    def AllocateCallback(self: MccsController, json_args: str) -> DevVarLongStringArrayType:
         """
         Send a message to continue the allocate command.
 
         Method returns as soon as the message has been enqueued.
+
+        :param json_args: Argument containing JSON encoded command message and result
 
         :return: A tuple containing a return code, a string
             message indicating status and message UID.
@@ -1271,7 +1287,7 @@ class MccsController(SKAMaster):
             the message UID is for message management use.
         """
         return self._check_and_send_message(
-            "AllocateCallback", check_is_allowed=True, notifications=True
+            "AllocateCallback", json_args=json_args
         )
 
     class AllocateCallbackCommand(ResponseCommand):
@@ -1282,7 +1298,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "Allocate command completed OK"
 
         def do(
-            self: MccsController.AllocateCommand, json_args: str
+            self: MccsController.AllocateCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
@@ -1290,7 +1306,7 @@ class MccsController(SKAMaster):
 
             Continue to allocate a set of unallocated MCCS resources to a sub-array.
 
-            :param json_args: JSON-formatted response string
+            :param argin: JSON-formatted response string
                 {
                 "message_object": message,
                 "result_code": result_code,
@@ -1308,7 +1324,7 @@ class MccsController(SKAMaster):
             subarray_fqdn = controllerdevice._allocate_cmd_cache.get("subarray_fqdn")
 
             # Check the result code from the subarray
-            kwargs = json.loads(json_args)
+            kwargs = json.loads(argin)
             result_code = kwargs.get("result_code")
 
             subarray_on_failure = result_code != ResultCode.OK
@@ -1396,16 +1412,26 @@ class MccsController(SKAMaster):
             controllerdevice._allocate_cmd_cache.clear()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    def is_Allocate_allowed(self: MccsController) -> bool:
+        def check_allowed(self: MccsController.AllocateCallbackCommand) -> bool:
+            """
+            Whether this command is allowed to be run in current device state.
+
+            :return: True if this command is allowed to be run in
+                current device state
+            """
+            controllerdevice = self.target
+            return not controllerdevice._allocate_cmd_cache
+
+    def is_AllocateCallback_allowed(self: MccsController) -> bool:
         """
         Whether this command is allowed to be run in current device state.
 
         :return: True if this command is allowed to be run in
             current device state
         """
-        handler = self.get_command_object("Allocate")
+        handler = self.get_command_object("AllocateCallback")
         if not handler.check_allowed():
-            tango_raise("Allocate() is not allowed in current state")
+            tango_raise("AllocateCallback() is not allowed in current state")
         return True
 
     def _disable_subarray(

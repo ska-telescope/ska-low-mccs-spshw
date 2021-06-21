@@ -307,7 +307,7 @@ class CommandHelper:
     """Class providing helper methods for testing."""
 
     @staticmethod
-    def device_command(device_under_test, command, mock_message_uid):
+    def device_command_with_callback(device_under_test, command, mock_message_uid):
         """
         Help method to transition the device under test into the desired state.
 

@@ -4,7 +4,7 @@ Background:
     Given we have mvplow running an instance of tmc
     And we have mvplow running an instance of mccs
 
-@XTP-1170 @needs_tangodb @skip
+@XTP-1170
 Scenario: MCCS Start up low telescope
     Given tmc is ready to issue a startup command
     And mccs is ready to receive a startup command

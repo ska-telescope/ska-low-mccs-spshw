@@ -710,6 +710,8 @@ class MccsStation(SKAObsDevice):
             """
             device = self.target
             device_pool = device.device_pool
+            my_name = device.get_name()
+            print(f"RCL: {my_name} callback")
 
             device.logger.debug("Station CallbackCommand class do()")
             # Defer callback to our pool device
@@ -719,6 +721,7 @@ class MccsStation(SKAObsDevice):
             kwargs = json.loads(argin)
             status = kwargs.get("status")
 
+            print(f"RCL: {my_name} command_complete = {command_complete}")
             if command_complete:
                 # Programming error if these aren't set
                 assert device._cmd_respond_to_fqdn
@@ -726,11 +729,10 @@ class MccsStation(SKAObsDevice):
 
                 # Post response back to requestor
                 try:
-                    response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
+                    response_device = MccsDeviceProxy(device._cmd_respond_to_fqdn, device.logger)
+                    #response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
                 except DevFailed:
-                    device._qdebug(
-                        f"Response device {device._cmd_respond_to_fqdn} not found"
-                    )
+                    assert False, f"Response device {device._cmd_respond_to_fqdn} not found"
                 else:
                     # As this response is to the original requestor, we need to reply
                     # with the message ID that was given to the requester

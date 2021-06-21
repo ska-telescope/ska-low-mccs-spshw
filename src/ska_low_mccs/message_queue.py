@@ -19,7 +19,8 @@ import threading
 from uuid import uuid4
 from queue import SimpleQueue, Empty
 
-import tango
+#import tango
+from ska_low_mccs import MccsDeviceProxy
 from tango import EnsureOmniThread, DevFailed
 
 from ska_tango_base.commands import ResultCode
@@ -140,7 +141,8 @@ class MessageQueue(threading.Thread):
             # Check we have a device to respond to before executing a command
             if message.respond_to_fqdn:
                 try:
-                    response_device = tango.DeviceProxy(message.respond_to_fqdn)
+                    #response_device = tango.DeviceProxy(message.respond_to_fqdn)
+                    response_device = MccsDeviceProxy(message.respond_to_fqdn, self._logger)
                 except DevFailed:
                     err_status = f"Response device {message.respond_to_fqdn} not found"
                     self._qdebug(err_status)
@@ -258,6 +260,7 @@ class MessageQueue(threading.Thread):
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
+        print(f"RCL: send_message() target={self._target.get_name()}, cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}")
         message_uid = f"{str(uuid4())}:{command}"
         message = self.Message(
             command=command,
@@ -306,6 +309,7 @@ class MessageQueue(threading.Thread):
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
+        print(f"RCL: send_message_with_response() target={self._target.get_name()}, cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}")
         return self.send_message(
             command=command,
             json_args=json_args,

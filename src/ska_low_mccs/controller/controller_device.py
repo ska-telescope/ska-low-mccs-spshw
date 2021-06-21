@@ -244,6 +244,7 @@ class MccsController(SKAMaster):
 
             device = self.target
             device._heart_beat = 0
+            device._allocate_cmd_cache = {}
             device._command_result = {
                 "result_code": ResultCode.UNKNOWN,
                 "message_uid": "",
@@ -1214,6 +1215,7 @@ class MccsController(SKAMaster):
                 controllerdevice._allocate_cmd_cache.clear()
                 return (ResultCode.FAILED, failure_message)
 
+            print("RCL: Just about to end allocate method (part #1)")
             return (result_code, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:
@@ -1245,33 +1247,32 @@ class MccsController(SKAMaster):
 
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
             args = {
-                "respond_to_fqdn": f"{device.get_name()}",
+                "respond_to_fqdn": device.get_name(),
                 "callback": "AllocateCallback",
             }
             json_args = json.dumps(args)
             if not subarray_device.State() == DevState.ON:
                 print("RCL: OK, Right before the call to subarray_device->On()...")
-                [result_code], [status, _] = subarray_device.command_inout("On", json_args)
-                # RCL: Do we need to cache message_uid for the callback or health monitoring?
+                [result_code], _ = subarray_device.command_inout("On", json_args)
                 if result_code != ResultCode.QUEUED:
                     return (
                         result_code,
-                        f"Failed to request subarray to enable {subarray_fqdn}: {status}",
+                        f"Failed to request subarray to enable {subarray_fqdn}",
                     )
             else:
                 # The subarray was already on, send ourselves a message to continue
-                device._message_queue.send_message_with_response(
-                    command="AllocateCallback",
-                    respond_to_fqdn=args.get("respond_to_fqdn"),
-                    callback=args.get("callback"),
-                )
+                
+                # RCL WIP: call ourselves with a good result (TEST)
+                results = {"result_code": ResultCode.OK}
+                json_results = json.dumps(results)
+                device._message_queue.send_message(command="AllocateCallback", json_args=json_results)
 
             return (
                 ResultCode.QUEUED,
                 self.SUCCEEDED_REQUEST_TO_ENABLE_SUBARRAY_MESSAGE,
             )
 
-    @command(dtype_out="DevVarLongStringArray")
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def AllocateCallback(self: MccsController, json_args: str) -> DevVarLongStringArrayType:
         """
@@ -1286,6 +1287,7 @@ class MccsController(SKAMaster):
             The string message is for information purposes only, but
             the message UID is for message management use.
         """
+        print("RCL: In def AllocateCallback")
         return self._check_and_send_message(
             "AllocateCallback", json_args=json_args
         )
@@ -1298,7 +1300,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "Allocate command completed OK"
 
         def do(
-            self: MccsController.AllocateCommand, argin: str
+            self: MccsController.AllocateCallbackCommand, argin: str
         ) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
@@ -1317,6 +1319,7 @@ class MccsController(SKAMaster):
                 message indicating status. The message is for
                 information purpose only.
             """
+            print("RCL: In class AllocateCallbackCommand")
             controllerdevice = self.target
             # Retrieve cached values for the allocate command
             subarray_id = controllerdevice._allocate_cmd_cache.get("subarray_id")
@@ -1420,7 +1423,10 @@ class MccsController(SKAMaster):
                 current device state
             """
             controllerdevice = self.target
-            return not controllerdevice._allocate_cmd_cache
+            allowed = any(controllerdevice._allocate_cmd_cache)
+            print(f"RCL: check_allowed = {allowed}")
+            print(f"RCL: controllerdevice._allocate_cmd_cache = {controllerdevice._allocate_cmd_cache}")
+            return allowed
 
     def is_AllocateCallback_allowed(self: MccsController) -> bool:
         """

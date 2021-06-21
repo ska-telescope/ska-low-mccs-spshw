@@ -77,5 +77,7 @@ class HelperClass:
             else:
                 timeout += 0.1
                 sleep(0.1)
-        assert result.get("result_code") == expected_result
+        result_code = result.get("result_code")
+        print(f"RCL: Wait_for_command_to_complete: result_code = {result_code}")
+        assert result_code == expected_result
         assert timeout <= timeout_limit

@@ -374,7 +374,7 @@ class Tile12(object):
 
         :return: write status
         """
-        self.connect(simulation=True)
+        self.connect(load_plugin=True)
         self.logger.info("Downloading bitstream to CPLD FLASH")
         if self.tpm is not None:
             return self.tpm.tpm_cpld.cpld_flash_write(bitfile)

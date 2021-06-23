@@ -95,7 +95,7 @@ MccsClusterManagerDevice : -_health_state
 HardwareHealthEvaluator <|-- ClusterHealthEvaluator
 SimulableHardwareFactory <|-- ClusterFactory
 SimulableHardwareManager <|-- ClusterManager
-MccsGroupDevice <|-- MccsClusterManagerDevice
+SKABaseDevice <|-- MccsClusterManagerDevice
 ClusterManager -- ClusterHealthEvaluator
 MccsClusterManagerDevice -- ClusterManager
 @enduml

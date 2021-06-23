@@ -116,11 +116,14 @@ class MccsGroupDevice(SKABaseDevice):
         """Initialises the command handlers for commands supported by this device."""
         super().init_command_objects()
 
-        args = (self, self.state_model, self.logger)
-
-        self.register_command_object("AddMember", self.AddMemberCommand(*args))
-        self.register_command_object("RemoveMember", self.RemoveMemberCommand(*args))
-        self.register_command_object("Run", self.RunCommand(*args))
+        for (command_name, command_object) in [
+            ("AddMember", self.AddMemberCommand),
+            ("RemoveMember", self.RemoveMemberCommand),
+            ("Run", self.RunCommand),
+        ]:
+            self.register_command_object(
+                command_name, command_object(self, logger=self.logger)
+            )
 
     class AddMemberCommand(ResponseCommand):
         """Class for handling the AddMember(argin) command."""

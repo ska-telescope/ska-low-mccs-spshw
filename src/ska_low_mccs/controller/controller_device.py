@@ -1261,11 +1261,13 @@ class MccsController(SKAMaster):
                     )
             else:
                 # The subarray was already on, send ourselves a message to continue
-                
+
                 # RCL WIP: call ourselves with a good result (TEST)
                 results = {"result_code": ResultCode.OK}
                 json_results = json.dumps(results)
-                device._message_queue.send_message(command="AllocateCallback", json_args=json_results)
+                device._message_queue.send_message(
+                    command="AllocateCallback", json_args=json_results
+                )
 
             return (
                 ResultCode.QUEUED,
@@ -1274,7 +1276,9 @@ class MccsController(SKAMaster):
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
-    def AllocateCallback(self: MccsController, json_args: str) -> DevVarLongStringArrayType:
+    def AllocateCallback(
+        self: MccsController, json_args: str
+    ) -> DevVarLongStringArrayType:
         """
         Send a message to continue the allocate command.
 
@@ -1288,9 +1292,7 @@ class MccsController(SKAMaster):
             the message UID is for message management use.
         """
         print("RCL: In def AllocateCallback")
-        return self._check_and_send_message(
-            "AllocateCallback", json_args=json_args
-        )
+        return self._check_and_send_message("AllocateCallback", json_args=json_args)
 
     class AllocateCallbackCommand(ResponseCommand):
         """Continue with the allocation of MCCS resources to a sub-array."""
@@ -1425,7 +1427,9 @@ class MccsController(SKAMaster):
             controllerdevice = self.target
             allowed = any(controllerdevice._allocate_cmd_cache)
             print(f"RCL: check_allowed = {allowed}")
-            print(f"RCL: controllerdevice._allocate_cmd_cache = {controllerdevice._allocate_cmd_cache}")
+            print(
+                f"RCL: controllerdevice._allocate_cmd_cache = {controllerdevice._allocate_cmd_cache}"
+            )
             return allowed
 
     def is_AllocateCallback_allowed(self: MccsController) -> bool:

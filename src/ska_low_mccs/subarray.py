@@ -702,7 +702,9 @@ class MccsSubarray(SKASubarray):
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
-    def _send_message(self: MccsSubarray, command: str, json_args: str) -> DevVarLongStringArrayType:
+    def _send_message(
+        self: MccsSubarray, command: str, json_args: str
+    ) -> DevVarLongStringArrayType:
         """
         Helper method to send a message to execute the specified command.
 

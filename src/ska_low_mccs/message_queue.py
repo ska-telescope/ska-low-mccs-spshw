@@ -20,7 +20,7 @@ from uuid import uuid4
 from queue import SimpleQueue, Empty
 
 from ska_low_mccs import MccsDeviceProxy
-from tango import EnsureOmniThread, DevFailed
+from tango import EnsureOmniThread
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base import SKABaseDevice
@@ -248,7 +248,10 @@ class MessageQueue(threading.Thread):
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
-        print(f"RCL: send_message() target={self._target.get_name()}, cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}")
+        print(
+            f"RCL: send_message() target={self._target.get_name()}, "
+            f"cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}"
+        )
         message_uid = f"{str(uuid4())}:{command}"
         message = self.Message(
             command=command,
@@ -297,7 +300,10 @@ class MessageQueue(threading.Thread):
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
-        print(f"RCL: send_message_with_response() target={self._target.get_name()}, cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}")
+        print(
+            f"RCL: send_message_with_response() target={self._target.get_name()}, "
+            f"cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}"
+        )
         return self.send_message(
             command=command,
             json_args=json_args,

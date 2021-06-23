@@ -66,7 +66,7 @@ class ResourceAvailabilityPolicy:
         self._allocatable_health_states = list(allocatable_health_states)
 
     def is_allocatable(
-        self: ResourceAvailabilityPolicy, health_state: HealthState
+        self: ResourceAvailabilityPolicy, health_state: Optional[HealthState]
     ) -> bool:
         """
         Check if a state allows allocation.
@@ -117,7 +117,7 @@ class Resource:
         self.fqdn = fqdn
         self._resource_state = ResourceState.AVAILABLE
         self._assigned_to = 0
-        self._health_state = HealthState.UNKNOWN
+        self._health_state: Optional[HealthState] = HealthState.UNKNOWN
         self._device_id = device_id
 
     def assigned_to(self: Resource) -> int:
@@ -173,7 +173,9 @@ class Resource:
         """
         return self._resource_availability_policy.is_allocatable(self._health_state)
 
-    def _health_changed(self: Resource, fqdn: str, event_value: int) -> None:
+    def _health_changed(
+        self: Resource, fqdn: str, event_value: Optional[HealthState]
+    ) -> None:
         """
         Update the health state of the resource.
 

@@ -47,12 +47,10 @@ __all__ = [
     "tel_state",
     "transient_buffer",
     # non-device modules
-    "hardware",
+    "component",
     "health",
-    "message_queue",
-    "pool",
+    "release",
     "utils",
-    "resource",
 ]
 
 from .device import MccsDevice  # type: ignore[attr-defined]

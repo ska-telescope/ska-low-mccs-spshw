@@ -173,6 +173,10 @@ class WebHardwareClient(HardwareClient):
                 self._conn = None
         return not (self._conn is None)
 
+    def disconnect(self):
+        """Disconnect from the client."""
+        self._conn = None
+
     def execute_command(self, command, parameters=""):
         """
         Execute a named command, with or without parameters.

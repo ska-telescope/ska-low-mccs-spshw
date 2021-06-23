@@ -1,9 +1,12 @@
 # type: ignore
 """This module contains pytest-specific test harness for MCCS unit tests."""
-import pytest
-import time
-import tango
 import json
+import time
+from typing import Callable
+import unittest
+
+import pytest
+import tango
 
 from ska_tango_base.commands import ResultCode
 
@@ -61,17 +64,30 @@ def devices_to_load(device_to_load):
 
 
 @pytest.fixture()
-def mock_callback(mocker):
+def mock_callback_factory(mocker) -> Callable[[], unittest.mock.Mock]:
     """
-    Fixture that returns a mock to use as a callback.
+    Return a factory that returns a new mock callback each time it is called.
 
-    :param mocker: fixture that wraps unittest.Mock
-    :type mocker: :py:class:`pytest_mock.mocker`
+    Use this fixture in tests that need more than one mock_callback. If
+    your tests only needs a single mock callback, it is simpler to use
+    the :py:func:`mock_callback` fixture.
+    """
+    return mocker.Mock
+
+
+@pytest.fixture()
+def mock_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock]
+) -> unittest.mock.Mock:
+    """
+    Return a mock to be used as a callback.
+
+    :param mock_callback_factory: fixture that returns a factory for
+        mock callbacks
 
     :return: a mock to pass as a callback
-    :rtype: :py:class:`unittest.mock.Mock`
     """
-    return mocker.Mock()
+    return mock_callback_factory()
 
 
 @pytest.fixture()

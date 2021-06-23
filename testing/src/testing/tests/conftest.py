@@ -4,7 +4,7 @@ This module contains pytest fixtures and other test setups common to all ska_low
 tests: unit, integration and functional (BDD).
 """
 import logging
-import typing
+from typing import Callable
 import json
 from time import sleep
 import pytest
@@ -175,7 +175,7 @@ def tango_harness_factory(request, logger):
     testbed = request.config.getoption("--testbed")
 
     def build_harness(
-        tango_config: typing.Dict[str, str],
+        tango_config: dict[str, str],
         devices_to_load,
         mock_factory,
         initial_mocks,
@@ -218,7 +218,7 @@ def tango_harness_factory(request, logger):
 
 
 @pytest.fixture()
-def tango_config() -> typing.Dict[str, str]:
+def tango_config() -> dict[str, str]:
     """
     Fixture that returns basic configuration information for a Tango test harness, such
     as whether or not to run in a separate process.
@@ -230,8 +230,8 @@ def tango_config() -> typing.Dict[str, str]:
 
 @pytest.fixture()
 def tango_harness(
-    tango_harness_factory: typing.Callable[[], TangoHarness],
-    tango_config: typing.Dict[str, str],
+    tango_harness_factory: Callable[[], TangoHarness],
+    tango_config: dict[str, str],
     devices_to_load,
     mock_factory,
     initial_mocks,

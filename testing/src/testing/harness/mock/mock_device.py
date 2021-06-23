@@ -12,7 +12,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import typing
+from typing import Any
 import unittest.mock
 
 import tango
@@ -37,7 +37,7 @@ class MockDeviceBuilder:
         self._from_factory = from_factory
         self._configuration = {}
 
-    def add_attribute(self: MockDeviceBuilder, name: str, value: typing.Any) -> None:
+    def add_attribute(self: MockDeviceBuilder, name: str, value: Any) -> None:
         """
         Tell this builder to build mocks with a given attribute.
 
@@ -48,9 +48,7 @@ class MockDeviceBuilder:
         """
         self._configuration[name] = value
 
-    def add_command(
-        self: MockDeviceBuilder, name: str, return_value: typing.Any
-    ) -> None:
+    def add_command(self: MockDeviceBuilder, name: str, return_value: Any) -> None:
         """
         Tell this builder to build mocks with a specified command that returns the
         provided value.
@@ -107,7 +105,7 @@ class MockDeviceBuilder:
         """
 
         def _mock_read_attribute(
-            name: str, *args: typing.Any, **kwargs: typing.Any
+            name: str, *args: Any, **kwargs: Any
         ) -> tango.DeviceAttribute:
             """
             Mock side-effect for read_attribute method, which reads the
@@ -146,7 +144,7 @@ class MockDeviceBuilder:
         :param mock_device: the mock being set up
         """
 
-        def _mock_command_inout(name: str, *args: str, **kwargs: str) -> typing.Any:
+        def _mock_command_inout(name: str, *args: str, **kwargs: str) -> Any:
             """
             Mock side-effect for command_inout method.
 
@@ -180,9 +178,7 @@ class MockDeviceBuilder:
 
         mock_device.command_inout_asynch.side_effect = _mock_command_inout_asynch
 
-        def _mock_command_inout_reply(
-            asynch_id: str, *args: str, **kwargs: str
-        ) -> typing.Any:
+        def _mock_command_inout_reply(asynch_id: str, *args: str, **kwargs: str) -> Any:
             """
             Mock side-effect for command_inout_reply method.
 

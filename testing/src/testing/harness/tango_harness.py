@@ -16,7 +16,7 @@ import json
 import logging
 import socket
 from types import TracebackType
-import typing
+from typing import Any, Callable, Optional, Type, Union
 import unittest.mock
 
 import tango
@@ -50,7 +50,7 @@ class MccsDeviceInfo:
         self: MccsDeviceInfo,
         path: str,
         package: str,
-        devices: typing.Dict = None,
+        devices: dict = None,
     ) -> None:
         """
         Create a new instance.
@@ -126,7 +126,7 @@ class MccsDeviceInfo:
             raise ValueError(f"Device {name} not found in source data.")
 
     @property
-    def fqdns(self: MccsDeviceInfo) -> typing.List[str]:
+    def fqdns(self: MccsDeviceInfo) -> list[str]:
         """
         Return a list of device fqdns.
 
@@ -135,7 +135,7 @@ class MccsDeviceInfo:
         return self.fqdn_map.values()
 
     @property
-    def fqdn_map(self: MccsDeviceInfo) -> typing.Dict[str, str]:
+    def fqdn_map(self: MccsDeviceInfo) -> dict[str, str]:
         """
         A dictionary that maps device names onto FQDNs.
 
@@ -144,7 +144,7 @@ class MccsDeviceInfo:
         return {name: self._devices[name]["fqdn"] for name in self._devices}
 
     @property
-    def proxy_map(self: MccsDeviceInfo) -> typing.Dict[str, MccsDeviceProxy]:
+    def proxy_map(self: MccsDeviceInfo) -> dict[str, MccsDeviceProxy]:
         """
         Return a map from FQDN to proxy type.
 
@@ -152,7 +152,7 @@ class MccsDeviceInfo:
         """
         return dict(self._proxies)
 
-    def as_mdtc_device_info(self: MccsDeviceInfo) -> typing.Dict:
+    def as_mdtc_device_info(self: MccsDeviceInfo) -> dict:
         """
         Return this device info in a format required by
         :py:class:`tango.test_context.MultiDeviceTestContext`.
@@ -201,7 +201,7 @@ class TangoHarness:
         raise NotImplementedError("TangoHarness is abstract.")
 
     @property
-    def fqdns(self: TangoHarness) -> typing.List[str]:
+    def fqdns(self: TangoHarness) -> list[str]:
         """
         The FQDNs of devices in this harness.
 
@@ -232,7 +232,7 @@ class TangoHarness:
 
     def __exit__(
         self: TangoHarness,
-        exc_type: typing.Type[BaseException],
+        exc_type: Type[BaseException],
         exception: BaseException,
         trace: TracebackType,
     ) -> bool:
@@ -272,7 +272,7 @@ class BaseTangoHarness(TangoHarness):
         super().__init__()
 
     @property
-    def connection_factory(self: BaseTangoHarness) -> typing.Type[tango.DeviceProxy]:
+    def connection_factory(self: BaseTangoHarness) -> Type[tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -284,7 +284,7 @@ class BaseTangoHarness(TangoHarness):
         return tango.DeviceProxy
 
     @property
-    def fqdns(self: BaseTangoHarness) -> typing.List[str]:
+    def fqdns(self: BaseTangoHarness) -> list[str]:
         """
         The FQDNs of devices in this harness.
 
@@ -311,9 +311,9 @@ class ClientProxyTangoHarness(BaseTangoHarness):
 
     def __init__(
         self: BaseTangoHarness,
-        device_info: typing.Optional[MccsDeviceInfo],
+        device_info: Optional[MccsDeviceInfo],
         logger: logging.Logger,
-        **kwargs: typing.Any,
+        **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
@@ -354,10 +354,10 @@ class TestContextTangoHarness(BaseTangoHarness):
 
     def __init__(
         self: TestContextTangoHarness,
-        device_info: typing.Optional[MccsDeviceInfo],
+        device_info: Optional[MccsDeviceInfo],
         logger: logging.Logger,
         process: bool = False,
-        **kwargs: typing.Any,
+        **kwargs: Any,
     ) -> None:
         """
         Initialise a new instance.
@@ -403,7 +403,7 @@ class TestContextTangoHarness(BaseTangoHarness):
     @property
     def connection_factory(
         self: TestContextTangoHarness,
-    ) -> typing.Callable[[str, ...], tango.DeviceProxy]:
+    ) -> Callable[[str, ...], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -414,9 +414,7 @@ class TestContextTangoHarness(BaseTangoHarness):
         :return: a DeviceProxy for use in establishing connections.
         """
 
-        def connect(
-            fqdn: str, *args: typing.Any, **kwargs: typing.Any
-        ) -> tango.DeviceProxy:
+        def connect(fqdn: str, *args: Any, **kwargs: Any) -> tango.DeviceProxy:
             """
             Connect to the device.
 
@@ -444,7 +442,7 @@ class TestContextTangoHarness(BaseTangoHarness):
 
     def __exit__(
         self: TestContextTangoHarness,
-        exc_type: typing.Type[BaseException],
+        exc_type: Type[BaseException],
         exception: BaseException,
         trace: TracebackType,
     ) -> bool:
@@ -491,7 +489,7 @@ class WrapperTangoHarness(TangoHarness):
 
     def __exit__(
         self: WrapperTangoHarness,
-        exc_type: typing.Type[BaseException],
+        exc_type: Type[BaseException],
         exception: BaseException,
         trace: TracebackType,
     ) -> bool:
@@ -512,7 +510,7 @@ class WrapperTangoHarness(TangoHarness):
     @property
     def connection_factory(
         self: WrapperTangoHarness,
-    ) -> typing.Callable[[str, ...], tango.DeviceProxy]:
+    ) -> Callable[[str, ...], tango.DeviceProxy]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -523,7 +521,7 @@ class WrapperTangoHarness(TangoHarness):
         return self._harness.connection_factory
 
     @property
-    def fqdns(self: WrapperTangoHarness) -> typing.List[str]:
+    def fqdns(self: WrapperTangoHarness) -> list[str]:
         """
         Return the FQDNs of devices in this harness.
 
@@ -624,8 +622,8 @@ class MockingTangoHarness(WrapperTangoHarness):
     def __init__(
         self: MockingTangoHarness,
         harness: TangoHarness,
-        mock_factory: typing.Callable[[str], unittest.mock.Mock],
-        initial_mocks: typing.Dict[str, unittest.mock.Mock],
+        mock_factory: Callable[[str], unittest.mock.Mock],
+        initial_mocks: dict[str, unittest.mock.Mock],
     ) -> None:
         """
         Initialise a new instance.
@@ -641,9 +639,7 @@ class MockingTangoHarness(WrapperTangoHarness):
     @property
     def connection_factory(
         self: MockingTangoHarness,
-    ) -> typing.Callable[
-        [str, ...], typing.Union[tango.DeviceProxy, unittest.mock.Mock]
-    ]:
+    ) -> Callable[[str, ...], Union[tango.DeviceProxy, unittest.mock.Mock]]:
         """
         The connection factory to use when establishing connections to devices.
 
@@ -657,8 +653,8 @@ class MockingTangoHarness(WrapperTangoHarness):
         """
 
         def connect(
-            fqdn: str, *args: typing.Any, **kwargs: typing.Any
-        ) -> typing.Union[tango.DeviceProxy, unittest.mock.Mock]:
+            fqdn: str, *args: Any, **kwargs: Any
+        ) -> Union[tango.DeviceProxy, unittest.mock.Mock]:
             """
             Connect to the device.
 

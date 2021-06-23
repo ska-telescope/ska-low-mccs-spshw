@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -10,5 +9,5 @@
 
 __all__ = ["MockDeviceBuilder", "MockSubarrayBuilder", "MockGroupBuilder"]
 
-from .mock_device import MockDeviceBuilder
-from .mock_subarray import MockSubarrayBuilder
+from .mock_device import MockDeviceBuilder  # type: ignore[attr-defined]
+from .mock_subarray import MockSubarrayBuilder  # type: ignore[attr-defined]

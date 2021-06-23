@@ -6,6 +6,7 @@ from typing import Callable
 import unittest
 
 import pytest
+import pytest_mock
 import tango
 
 from ska_tango_base.commands import ResultCode
@@ -64,13 +65,20 @@ def devices_to_load(device_to_load):
 
 
 @pytest.fixture()
-def mock_callback_factory(mocker) -> Callable[[], unittest.mock.Mock]:
+def mock_callback_factory(
+    mocker: pytest_mock.mocker,
+) -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns a new mock callback each time it is called.
 
     Use this fixture in tests that need more than one mock_callback. If
     your tests only needs a single mock callback, it is simpler to use
     the :py:func:`mock_callback` fixture.
+
+    :param mocker: fixture that provides a mock
+
+    :return: a factory that returns a new mock callback each time it is
+        called.
     """
     return mocker.Mock
 
@@ -82,8 +90,9 @@ def mock_callback(
     """
     Return a mock to be used as a callback.
 
-    :param mock_callback_factory: fixture that returns a factory for
-        mock callbacks
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
 
     :return: a mock to pass as a callback
     """
@@ -192,3 +201,54 @@ def mock_event_callback(mocker):
             self.reset_mock()
 
     return _MockEventCallback()
+
+
+@pytest.fixture()
+def communication_status_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for component manager communication status.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the communication status
+        of a component manager changed.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
+def component_power_mode_changed_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for component power mode change.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that the power mode of its component has changed.
+    """
+    return mock_callback_factory()
+
+
+@pytest.fixture()
+def component_fault_callback(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
+) -> unittest.mock.Mock:
+    """
+    Return a mock callback for component fault.
+
+    :param mock_callback_factory: fixture that provides a mock callback
+        factory (i.e. an object that returns mock callbacks when
+        called).
+
+    :return: a mock callback to be called when the component manager
+        detects that its component has faulted.
+    """
+    return mock_callback_factory()

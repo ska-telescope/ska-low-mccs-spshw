@@ -1,7 +1,7 @@
 # type: ignore
 """This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
 import pytest
-import typing
+from typing import Callable
 
 from testing.harness.mock.mock_device import MockDeviceBuilder
 from testing.harness.tango_harness import TangoHarness
@@ -68,8 +68,8 @@ def tango_config():
 
 @pytest.fixture(scope="module")
 def tango_harness(
-    tango_harness_factory: typing.Callable[[], TangoHarness],
-    tango_config: typing.Dict[str, str],
+    tango_harness_factory: Callable[[], TangoHarness],
+    tango_config: dict[str, str],
     devices_to_load,
     mock_factory,
     initial_mocks,

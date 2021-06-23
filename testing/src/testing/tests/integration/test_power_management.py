@@ -154,10 +154,6 @@ class TestPowerManagement:
         assert antenna_3.State() == DevState.ON
         assert antenna_4.State() == DevState.ON
 
-        # Need to patch tango.DeviceProxy for the message queue implementation
-        # as the devices are all behind MccsDeviceProxy...
-        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
-
         controller.Off()
         sleep(0.5)  # Required to allow DUT thread to run
 

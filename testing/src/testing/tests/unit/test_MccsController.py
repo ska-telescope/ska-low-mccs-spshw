@@ -492,7 +492,6 @@ class TestMccsController:
             )
             mock_event_callback.check_event_data(name="commandResult", result=None)
 
-
         def test_Allocate_Subarray_On(
             self,
             device_under_test,
@@ -538,7 +537,6 @@ class TestMccsController:
                 station_ids=[[1]],
                 channel_blocks=[2],
             )
-            mock_subarray_1.command_inout.assert_called_once()
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
@@ -561,7 +559,74 @@ class TestMccsController:
                 name="commandResult", result=ResultCode.OK
             )
 
-        def test_Allocate_1(
+        def test_Allocate_Subarray_Failures(
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
+        ):
+            """
+            Test the Allocate command - specifically the messaging system to 
+            turn the subarray on.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test,
+                in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param mock_event_callback: fixture that provides a mock
+                instance with callback support methods
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
+            """
+            controller = device_under_test  # for readability
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
+            self.setup_allocate_test(controller, mock_event_callback, command_helper, test_string)
+
+            # When asked to turn on, pretend the subarray replied correctly
+            mock_subarray_1.On.return_value = [[ResultCode.QUEUED], []]
+            mock_subarray_1.State.return_value = DevState.OFF
+
+            # Make the call to allocate
+            ((result_code,), (message, message_uid)) = call_with_json(
+                controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                subarray_id=1,
+                subarray_beam_ids=[1],
+                station_ids=[[1]],
+                channel_blocks=[2],
+            )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            sleep(0.2)
+
+            mock_subarray_1.State.return_value = DevState.ON
+            mock_subarray_1.AssignResources.return_value = [[ResultCode.OK], []]
+
+            # Make the call to the allocate callback
+            ((result_code,), (message, message_uid)) = call_with_json(
+                controller.AllocateCallback,
+                result_code = ResultCode.OK
+            )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":AllocateCallback" in message_uid
+
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
+        def test_Allocate(
             self,
             device_under_test,
             mock_event_callback,
@@ -596,7 +661,7 @@ class TestMccsController:
             self.setup_allocate_test(controller, mock_event_callback, command_helper, test_string)
 
             # When asked, pretend the subarray is already on
-            mock_subarray_1.State.return_value=DevState.ON
+            mock_subarray_1.State.return_value = DevState.ON
 
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
@@ -617,7 +682,6 @@ class TestMccsController:
             )
 
             # check that the mock subarray_1 was told to assign that resource
-            mock_subarray_1.On.assert_not_called()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
@@ -678,7 +742,7 @@ class TestMccsController:
             )
 
             # When asked, pretend the subarray is already on
-            mock_subarray_1.State.return_value=DevState.ON
+            mock_subarray_1.State.return_value = DevState.ON
 
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
@@ -851,6 +915,9 @@ class TestMccsController:
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
             self.setup_allocate_test(controller, mock_event_callback, command_helper, test_string)
 
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
+
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
@@ -868,9 +935,11 @@ class TestMccsController:
                 name="commandResult", result=ResultCode.OK
             )
 
-            mock_subarray_1.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
+
+            # When asked, pretend the subarray is already on
+            mock_subarray_2.State.return_value = DevState.ON
 
             # allocate station 2 to subarray 2
             ((result_code,), (message, message_uid)) = call_with_json(
@@ -889,7 +958,6 @@ class TestMccsController:
                 name="commandResult", result=ResultCode.OK
             )
 
-            mock_subarray_2.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 2
@@ -979,6 +1047,7 @@ class TestMccsController:
             :type test_string: str
             """
             controller = device_under_test  # for readability
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
             self.setup_allocate_test(controller, mock_event_callback, command_helper, test_string)
 
             expected_result = {
@@ -987,6 +1056,9 @@ class TestMccsController:
                 "station_ids": [[1, 2]],
                 "channel_blocks": [3],
             }
+
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
 
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(

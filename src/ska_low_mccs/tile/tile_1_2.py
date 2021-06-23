@@ -374,7 +374,7 @@ class Tile12(object):
 
         :return: write status
         """
-        self.connect(simulation=True)
+        self.connect(load_plugin=True)
         self.logger.info("Downloading bitstream to CPLD FLASH")
         if self.tpm is not None:
             return self.tpm.tpm_cpld.cpld_flash_write(bitfile)
@@ -884,7 +884,7 @@ class Tile12(object):
     # Time related methods
     ###########################################
     @connected
-    def get_fpga_time(self, device=Device.FPGA_1):
+    def get_fpga_time(self, device):
         """
         Return time from FPGA.
 
@@ -1755,18 +1755,6 @@ class Tile12(object):
             )
 
     @connected
-    def stop_integrated_beam_data(self):
-        """Stop transmission of integrated beam data."""
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].stop_integrated_beam_data()
-
-    @connected
-    def stop_integrated_channel_data(self):
-        """Stop transmission of integrated beam data."""
-        for i in range(len(self.tpm.tpm_integrator)):
-            self.tpm.tpm_integrator[i].stop_integrated_channel_data()
-
-    @connected
     def stop_integrated_data(self):
         """Stop transmission of integrated data."""
         for i in range(len(self.tpm.tpm_integrator)):
@@ -1850,7 +1838,8 @@ class Tile12(object):
         seconds=0.2,
     ):
         """
-        Transmit data from a channel continuously.
+        Transmit data from a channel continuously. It can be stopped with
+        stop_data_transmission.
 
         :param channel_id: index of channel to send
         :type channel_id: int
@@ -1871,6 +1860,14 @@ class Tile12(object):
             self.tpm.tpm_test_firmware[i].send_channelised_data_continuous(
                 channel_id, number_of_samples
             )
+
+    @connected
+    def stop_data_transmission(self):
+        """Stop all data transmission from TPM."""
+        for k, v in self._daq_threads.items():
+            if v == self._RUNNING:
+                self._daq_threads[k] = self._STOP
+        self.stop_channelised_data_continuous()
 
     @connected
     def send_channelised_data_narrowband(

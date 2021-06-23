@@ -119,7 +119,7 @@ xray_report:
          --data @./testing/results/cucumber.json
          https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
   when: always
-  only: [master]
+  only: [main]
   retry: 2
 
 # functional testing teardown on new kubernetes runners

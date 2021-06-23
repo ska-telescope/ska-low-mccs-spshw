@@ -310,24 +310,14 @@ class TileHardwareManager(SimulableHardwareManager):
         return self._factory.hardware.fpga2_temperature
 
     @property
-    def fpga1_time(self):
+    def fpgas_time(self):
         """
-        The FPGA 1 time.
+        The FPGAs time.
 
-        :return: the FPGA 1 time
-        :rtype: int
+        :return: the FPGAs time
+        :rtype: list(int)
         """
-        return self._factory.hardware.fpga1_time
-
-    @property
-    def fpga2_time(self):
-        """
-        The FPGA 2 time.
-
-        :return: the FPGA 2 time
-        :rtype: int
-        """
-        return self._factory.hardware.fpga2_time
+        return self._factory.hardware.fpgas_time
 
     @property
     def pps_delay(self):
@@ -749,7 +739,7 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         Configure and start the transmission of integrated channel data with the
         provided integration time, first channel and last channel. Data are sent
-        continuously until the StopIntegratedChannelData command is run.
+        continuously until the StopIntegratedData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -764,10 +754,6 @@ class TileHardwareManager(SimulableHardwareManager):
             last_channel=last_channel,
         )
 
-    def stop_integrated_channel_data(self):
-        """Stop integrated channel data."""
-        self._factory.hardware.stop_integrated_channel_data()
-
     def configure_integrated_beam_data(
         self,
         integration_time=None,
@@ -777,7 +763,7 @@ class TileHardwareManager(SimulableHardwareManager):
         """
         Configure and start the transmission of integrated channel data with the
         provided integration time, first channel and last channel. Data are sent
-        continuously until the StopIntegratedBeamData command is run.
+        continuously until the StopIntegratedData command is run.
 
         :param integration_time: integration time in seconds, defaults to 0.5
         :type integration_time: float, optional
@@ -791,10 +777,6 @@ class TileHardwareManager(SimulableHardwareManager):
             first_channel=first_channel,
             last_channel=last_channel,
         )
-
-    def stop_integrated_beam_data(self):
-        """Stop integrated beam data."""
-        self._factory.hardware.stop_integrated_beam_data()
 
     def stop_integrated_data(self):
         """Stop integrated data."""
@@ -857,7 +839,8 @@ class TileHardwareManager(SimulableHardwareManager):
         seconds=None,
     ):
         """
-        Transmit data from a channel continuously.
+        Transmit data from a channel continuously. It can be stopped with
+        stop_data_transmission.
 
         :param channel_id: index of channel to send
         :type channel_id: int
@@ -890,7 +873,7 @@ class TileHardwareManager(SimulableHardwareManager):
         self._factory.hardware.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     def stop_data_transmission(self):
-        """Stop data transmission."""
+        """Stop data transmission for send_channelised_data_continuous."""
         self._factory.hardware.stop_data_transmission()
 
     def start_acquisition(self, start_time=None, delay=None):
@@ -1012,26 +995,6 @@ class TileHardwareManager(SimulableHardwareManager):
     def tweak_transceivers(self):
         """Tweak the transceivers."""
         self._factory.hardware.tweak_transceivers()
-
-    @property
-    def phase_terminal_count(self):
-        """
-        Return the phase terminal count.
-
-        :return: the phase terminal count
-        :rtype: int
-        """
-        return self._factory.hardware._phase_terminal_count
-
-    @phase_terminal_count.setter
-    def phase_terminal_count(self, value):
-        """
-        Set the phase terminal count.
-
-        :param value: the phase terminal count
-        :type value: int
-        """
-        self._factory.hardware.phase_terminal_count = value
 
     def post_synchronisation(self):
         """Perform post tile configuration synchronization."""

@@ -22,6 +22,4 @@ RUN if [ "$USER" != "root" ] ; then \
     fi
 USER ${USER}
 
-# TODO: Restore -n ("nitpicky") flag once we catch up to ska_tango_base 0.11.0
-# ENTRYPOINT /home/docs/my_env/bin/sphinx-build -T -E -b html -n -W --keep-going project/${dir}/source project/${dir}/build/html
-ENTRYPOINT /home/docs/my_env/bin/sphinx-build -T -E -b html -W --keep-going project/${dir}/source project/${dir}/build/html
+ENTRYPOINT /home/docs/my_env/bin/sphinx-build -T -E -b html -n -W --keep-going project/${dir}/source project/${dir}/build/html

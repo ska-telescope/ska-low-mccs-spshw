@@ -13,10 +13,11 @@ import threading
 import time
 import json
 
-from tango import DevFailed
-
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs.message_queue import MessageQueue
+from ska_low_mccs import MccsDeviceProxy
+
+from testing.harness.mock import MockDeviceBuilder
 
 
 class TestMessageQueue:
@@ -76,18 +77,6 @@ class TestMessageQueue:
         return mock
 
     @pytest.fixture()
-    def mock_device_proxy_with_devfailed(self, mocker):
-        """
-        A fixture that monkey patches Tango's DeviceProxy and raises a DevFailed
-        exception.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :return: A monkey patched Tango device proxy which raises a DevFailed exception
-        """
-        mock = mocker.patch("tango.DeviceProxy", side_effect=DevFailed())
-        return mock
-
-    @pytest.fixture()
     def device(self, mocker):
         """
         A fixture that mocks a device.
@@ -98,15 +87,15 @@ class TestMessageQueue:
         return mocker.Mock()
 
     @pytest.fixture()
-    def mock_device_proxy(self, mocker, device):
+    def mock_mccsdeviceproxy(self, mocker, device, logger):
         """
-        A fixture that monkey patches Tango's DeviceProxy.
+        A fixture that monkey patches MccsDeviceProxy.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
         :param device: fixture that mocks a device
-        :return: A monkey patched Tango device proxy
+        :return: A monkey patched MCCS device proxy
         """
-        mock = mocker.patch("tango.DeviceProxy", return_value=device)
+        mock = mocker.patch(MccsDeviceProxy, return_value=device)
         return mock
 
     @pytest.fixture
@@ -308,8 +297,8 @@ class TestMessageQueue:
         command_return_ok,
         test_command,
         valid_fqdn,
-        mock_device_proxy,
         device,
+        mock_mccsdeviceproxy,
     ):
         """
         Test that we can send a message with response callback.
@@ -320,8 +309,8 @@ class TestMessageQueue:
         :param command_return_ok: fixture for command that return ResultCode.OK
         :param test_command: a test command to send to the message queue
         :param valid_fqdn: a valid FQDN string
-        :param mock_device_proxy: monkey patched device proxy
         :param device: fixture that mocks a device
+        :param mock_mccsdeviceproxy: A fixture that monkey patches MccsDeviceProxy
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
         device.command_inout.return_value = (ResultCode.OK, "response status")
@@ -337,7 +326,7 @@ class TestMessageQueue:
         json_string = json.dumps(message_args)
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
-        mock_device_proxy.assert_called_once_with(valid_fqdn)
+        mock_mccsdeviceproxy.assert_called_once_with(valid_fqdn)
         args = {
             "message_object": {
                 "command": test_command,
@@ -352,36 +341,3 @@ class TestMessageQueue:
         }
         json_string = json.dumps(args)
         device.command_inout.assert_called_once_with(callback, json_string)
-
-    def test_send_message_with_command_with_incorrect_response_fqdn(
-        self,
-        specialised_message_queue,
-        mocker,
-        target_mock,
-        test_command,
-        invalid_fqdn,
-        mock_device_proxy_with_devfailed,
-    ):
-        """
-        Test that we can handle a message with an incorrect response FQDN.
-
-        :param specialised_message_queue: specialised message queue fixture
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :param target_mock: fixture that mocks a target device
-        :param test_command: a test command to send to the message queue
-        :param invalid_fqdn: an invalid FQDN string
-        :param mock_device_proxy_with_devfailed: monkey patched device proxy which raises DevFailed exception
-        """
-        target_mock.get_command_object = mocker.Mock(return_value=None)
-        callback = "callback_command"
-        specialised_message_queue.send_message_with_response(
-            command=test_command,
-            respond_to_fqdn=invalid_fqdn,
-            callback=callback,
-            notifications=True,
-        )
-        time.sleep(0.1)  # Required to allow DUT thread to run
-        mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
-        assert f"Response device {invalid_fqdn} not found" in target_mock.queue_debug
-        assert specialised_message_queue.notify[0] == ResultCode.FAILED
-        assert test_command in specialised_message_queue.notify[1]

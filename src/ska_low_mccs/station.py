@@ -710,7 +710,6 @@ class MccsStation(SKAObsDevice):
             device = self.target
             device_pool = device.device_pool
             my_name = device.get_name()
-            print(f"RCL: {my_name} callback")
 
             device.logger.debug("Station CallbackCommand class do()")
             # Defer callback to our pool device
@@ -720,7 +719,6 @@ class MccsStation(SKAObsDevice):
             kwargs = json.loads(argin)
             status = kwargs.get("status")
 
-            print(f"RCL: {my_name} command_complete = {command_complete}")
             if command_complete:
                 # Programming error if these aren't set
                 assert device._cmd_respond_to_fqdn

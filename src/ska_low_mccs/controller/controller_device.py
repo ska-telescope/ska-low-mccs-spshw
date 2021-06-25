@@ -1044,7 +1044,6 @@ class MccsController(SKAMaster):
                 )
             )
         """
-        print("RCL: In def Allocate()...")
         if self._command_result.get("result_code") in [
             ResultCode.STARTED,
             ResultCode.QUEUED,
@@ -1104,7 +1103,6 @@ class MccsController(SKAMaster):
                 message indicating status. The message is for
                 information purpose only.
             """
-            print("RCL: In class AllocateCommand do()...")
             kwargs = json.loads(argin)
             self._allocate_cmd_cache: Dict[str, Any] = {}
             subarray_id = kwargs.get("subarray_id")
@@ -1198,7 +1196,6 @@ class MccsController(SKAMaster):
                 "station_ids": station_ids,
             }
 
-            print("RCL: Just about to call subarray On...")
             # Ask the subarray to enable. The reply will return to the
             # controller via a callback message.
             result_code, status = self._enable_subarray(subarray_id)
@@ -1215,7 +1212,6 @@ class MccsController(SKAMaster):
                 controllerdevice._allocate_cmd_cache.clear()
                 return (ResultCode.FAILED, failure_message)
 
-            print("RCL: Just about to end allocate method (part #1)")
             return (result_code, self.SUCCEEDED_MESSAGE)
 
         def check_allowed(self: MccsController.AllocateCommand) -> bool:
@@ -1239,7 +1235,6 @@ class MccsController(SKAMaster):
                 message indicating status. The message is for
                 information purpose only.
             """
-            print("RCL: OK, in _enable_subarray...")
             device = self.target
             assert 1 <= subarray_id <= len(device._subarray_fqdns)
 
@@ -1252,7 +1247,6 @@ class MccsController(SKAMaster):
             }
             json_args = json.dumps(args)
             if not subarray_device.State() == DevState.ON:
-                print("RCL: OK, Right before the call to subarray_device->On()...")
                 [result_code], _ = subarray_device.command_inout("On", json_args)
                 if result_code != ResultCode.QUEUED:
                     return (
@@ -1291,7 +1285,6 @@ class MccsController(SKAMaster):
             The string message is for information purposes only, but
             the message UID is for message management use.
         """
-        print("RCL: In def AllocateCallback")
         return self._check_and_send_message("AllocateCallback", json_args=json_args)
 
     class AllocateCallbackCommand(ResponseCommand):
@@ -1321,7 +1314,6 @@ class MccsController(SKAMaster):
                 message indicating status. The message is for
                 information purpose only.
             """
-            print("RCL: In class AllocateCallbackCommand")
             controllerdevice = self.target
             # Retrieve cached values for the allocate command
             subarray_id = controllerdevice._allocate_cmd_cache.get("subarray_id")
@@ -1426,10 +1418,6 @@ class MccsController(SKAMaster):
             """
             controllerdevice = self.target
             allowed = any(controllerdevice._allocate_cmd_cache)
-            print(f"RCL: check_allowed = {allowed}")
-            print(
-                f"RCL: controllerdevice._allocate_cmd_cache = {controllerdevice._allocate_cmd_cache}"
-            )
             return allowed
 
     def is_AllocateCallback_allowed(self: MccsController) -> bool:

@@ -248,10 +248,6 @@ class MessageQueue(threading.Thread):
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
-        print(
-            f"RCL: send_message() target={self._target.get_name()}, "
-            f"cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}"
-        )
         message_uid = f"{str(uuid4())}:{command}"
         message = self.Message(
             command=command,
@@ -300,10 +296,6 @@ class MessageQueue(threading.Thread):
         :return: A tuple containing a result code (QUEUED, ERROR),
             a message UID, and a message string indicating status
         """
-        print(
-            f"RCL: send_message_with_response() target={self._target.get_name()}, "
-            f"cmd={command}, callback_fqdn={respond_to_fqdn}, callback={callback}"
-        )
         return self.send_message(
             command=command,
             json_args=json_args,

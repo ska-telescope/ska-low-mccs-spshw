@@ -15,10 +15,6 @@ import json
 
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs.message_queue import MessageQueue
-from ska_low_mccs import MccsDeviceProxy
-
-from testing.harness.mock import MockDeviceBuilder
-
 
 class TestMessageQueue:
     """
@@ -77,26 +73,14 @@ class TestMessageQueue:
         return mock
 
     @pytest.fixture()
-    def device(self, mocker):
+    def response_device(self, mocker):
         """
-        A fixture that mocks a device.
+        A fixture that mocks a response device.
 
         :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
         :return: A mocked device
         """
         return mocker.Mock()
-
-    @pytest.fixture()
-    def mock_mccsdeviceproxy(self, mocker, device, logger):
-        """
-        A fixture that monkey patches MccsDeviceProxy.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :param device: fixture that mocks a device
-        :return: A monkey patched MCCS device proxy
-        """
-        mock = mocker.patch(MccsDeviceProxy, return_value=device)
-        return mock
 
     @pytest.fixture
     def message_queue(self, logger, target_mock):
@@ -289,7 +273,7 @@ class TestMessageQueue:
         # doesn't implement _notify_listener method.
         assert not message_queue.is_alive()
 
-    def test_send_message_with_command_with_response(
+    def test_send_message_with_command_and_response(
         self,
         message_queue,
         mocker,
@@ -297,8 +281,7 @@ class TestMessageQueue:
         command_return_ok,
         test_command,
         valid_fqdn,
-        device,
-        mock_mccsdeviceproxy,
+        response_device,
     ):
         """
         Test that we can send a message with response callback.
@@ -309,24 +292,26 @@ class TestMessageQueue:
         :param command_return_ok: fixture for command that return ResultCode.OK
         :param test_command: a test command to send to the message queue
         :param valid_fqdn: a valid FQDN string
-        :param device: fixture that mocks a device
-        :param mock_mccsdeviceproxy: A fixture that monkey patches MccsDeviceProxy
+        :param response_device: fixture that mocks a response device
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
-        device.command_inout.return_value = (ResultCode.OK, "response status")
+        response_device.command_inout.return_value = (ResultCode.OK, "response status")
+
+        # RCL: TODO: Prepare the system for a call to MccsDeviceProxy passing in the FQND below and returning a response_device mock
         callback = "callback_command"
         (_, message_uid, _) = message_queue.send_message_with_response(
             command=test_command,
-            respond_to_fqdn=valid_fqdn,
+            respond_to_fqdn=valid_fqdn, # RCL: TODO: This should be an FQDN that resolves to an MccsDeviceProxy that is mocked - but how?
             callback=callback,
         )
         time.sleep(0.1)  # Required to allow DUT thread to run
+        # RCL: TODO: Here I want to check that the call to MccsDeviceProxy was made passing in the FQDN above
+
         target_mock.get_command_object.assert_called_once_with(test_command)
         message_args = {"respond_to_fqdn": valid_fqdn, "callback": callback}
         json_string = json.dumps(message_args)
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
-        mock_mccsdeviceproxy.assert_called_once_with(valid_fqdn)
         args = {
             "message_object": {
                 "command": test_command,
@@ -340,4 +325,4 @@ class TestMessageQueue:
             "status": "",
         }
         json_string = json.dumps(args)
-        device.command_inout.assert_called_once_with(callback, json_string)
+        response_device.command_inout.assert_called_once_with(callback, json_string)

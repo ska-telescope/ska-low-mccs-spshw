@@ -751,7 +751,6 @@ class MccsSubarray(SKASubarray):
             The string message is for information purposes only, but
             the message UID is for message management use.
         """
-        print(f"RCL: Subarray def On...json = {json_args}")
         return self._send_message(command="On", json_args=json_args)
 
     class OnCommand(SKASubarray.OnCommand):

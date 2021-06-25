@@ -1023,7 +1023,7 @@ class MccsController(SKAMaster):
         >>> proxy.Allocate(
                 json.dumps(
                 {
-                    "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                    "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                     "subarray_id": 1,
                     "subarray_beam_ids": [1],
                     "station_ids": [[1,2]],
@@ -1079,7 +1079,7 @@ class MccsController(SKAMaster):
 
             :param argin: JSON-formatted string
                 {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 "subarray_id": int,
                 "subarray_beam_ids": list[int],
                 "station_ids": list[list[int]],
@@ -1456,7 +1456,7 @@ class MccsController(SKAMaster):
         :param argin: JSON-formatted string containing an integer
             subarray_id, a release all flag and array resources.
             {
-            "interface": "https://schema.skatelescope.org/ska-low-tmc-releaseresources/1.0",
+            "interface": "https://schema.skao.int/ska-low-tmc-releaseresources/2.0",
             "subarray_id": 1,
             "release_all": true
             }

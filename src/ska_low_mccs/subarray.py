@@ -220,7 +220,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         :param logger: the logger to be used.
         :param argin: JSON configuration specification
             {
-            "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
+            "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
             "stations":[{"station_id": 1},{"station_id": 2}],
             "subarray_beams":[{
             "subarray_beam_id":1,
@@ -813,7 +813,7 @@ class MccsSubarray(SKASubarray):
 
             :param argin: JSON configuration specification
                 {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
                 "stations":[{"station_id": 1},{"station_id": 2}],
                 "subarray_beams":[{
                 "subarray_beam_id":1,
@@ -855,7 +855,7 @@ class MccsSubarray(SKASubarray):
 
             :param argin: JSON scan specification
                 {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-scan/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-scan/2.0",
                 "scan_id":1,
                 "start_time": 0.0,
                 }

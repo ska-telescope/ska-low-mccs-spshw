@@ -19,14 +19,12 @@ before_script:
   - python3 -m pip install pipdeptree
 
 stages:
-  - linting
-  - test
+  - lint_n_test
   - build
   - integration
   - upload_results
   - teardown
   - docs
-  - testdocs
   - pages
   - publish
   - release
@@ -38,8 +36,18 @@ stages:
 # unittest output (see setup.cfg), and the coverage xml report is moved to the reports
 # directory while the html output is persisted for use by the pages job.
 # TODO: possibly a candidate for refactor / renaming later on.
+linting:
+  tags:
+    - k8srunner
+  stage: lint_n_test
+  script:
+    - tox -e checklint
+  artifacts:
+    paths:
+      - ./build
+
 test:
-  stage: test
+  stage: lint_n_test
   tags:
     - k8srunner
   script:
@@ -49,7 +57,7 @@ test:
       - ./build
 
 list_dependencies:
-  stage: test
+  stage: lint_n_test
   script:
     - pipdeptree --json >> pip_deps.json
     - pipdeptree >> pip_deps.txt
@@ -68,8 +76,6 @@ list_dependencies:
 build-image:
   stage: build
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  dependencies:
-    - test
   tags:
     - k8srunner
   script:
@@ -85,8 +91,6 @@ build-image:
 functional_test:
   stage: integration
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  dependencies:
-    - build-image # no point running when image hasn't been built (tests fail)
   tags:
     - k8srunner
   script:
@@ -100,7 +104,6 @@ functional_test:
   artifacts:
     paths:
       - ./testing/results
-    when: always
   environment:
     name: test
     kubernetes:
@@ -109,8 +112,6 @@ functional_test:
 # Wait for report and send to Jira
 xray_report:
   stage: upload_results
-  dependencies:
-    - functional_test
   tags:
     - k8srunner
   script:
@@ -118,7 +119,6 @@ xray_report:
          -H "Authorization: Basic $JIRA_AUTH"
          --data @./testing/results/cucumber.json
          https://jira.skatelescope.org/rest/raven/1.0/import/execution/cucumber'
-  when: always
   only: [main]
   retry: 2
 
@@ -126,8 +126,6 @@ xray_report:
 functional_test_tear_down:
   stage: teardown
   image: nexus.engageska-portugal.pt/ska-docker/deploy:0.4.3
-  dependencies:
-    - xray_report
   tags:
     - k8srunner
   script:
@@ -139,17 +137,7 @@ functional_test_tear_down:
     kubernetes:
       namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
   when: always
-
-linting:
-  tags:
-    - k8srunner
-  stage: linting
-  script:
-    - tox -e checklint
-  when: always
-  artifacts:
-    paths:
-      - ./build
+  allow_failure: true
 
 docs:
   stage: docs
@@ -172,13 +160,11 @@ docs:
     paths:
       - ./build
       - ./docs/build/html
-    when: always
     expire_in: 7 days
+  when: always
 
 testdocs:
-  stage: testdocs
-  dependencies:
-    - docs
+  stage: docs
   tags:
     - k8srunner
   image: readthedocs/build:latest
@@ -189,26 +175,24 @@ testdocs:
   artifacts:
     paths:
       - ./testing/docs/build/html
-    when: always
     expire_in: 7 days
+  when: always
 
 pages:
   stage: pages
   tags:
     - k8srunner
-  dependencies:
-    - test
   script:
     - ls -la
     - mkdir .public
     - cp -r ./build/htmlcov/* .public
     - mv .public public
   allow_failure: true
-  when: always
   artifacts:
     paths:
       - public
     expire_in: 30 days
+  when: always
 
 publish package to nexus:
   stage: publish
@@ -222,7 +206,6 @@ publish package to nexus:
     - python3 -m pip install twine
     - tox -e package # takes $PACKAGE_TAG as input
     - twine upload --repository-url $PYPI_REPOSITORY_URL dist/*
-  when: on_success
   only:
     refs:
       - tags
@@ -244,7 +227,6 @@ release docker image to nexus:
   script:
     - make build
     - make push
-  when: on_success
   only:
     refs:
       - tags
@@ -260,7 +242,6 @@ include:
     file: "gitlab-ci/includes/helm_publish.yml"
 
 publish-chart:
-  when: on_success
   only:
     refs:
       - tags

@@ -448,6 +448,7 @@ class TestMccsController(HelperClass):
                 "low-mccs/subarray/02": mock_subarray_factory(),
                 "low-mccs/station/001": mock_station_factory(),
                 "low-mccs/station/002": mock_station_factory(),
+                "low-mccs/subarraybeam/01": mock_subarray_factory(),
             }
 
         def setup_allocate_test(
@@ -493,6 +494,11 @@ class TestMccsController(HelperClass):
             call_with_json(
                 controller.simulateHealthStateChange,
                 fqdn="low-mccs/station/002",
+                health_state=HealthState.OK,
+            )
+            call_with_json(
+                device_under_test.simulateHealthStateChange,
+                fqdn="low-mccs/subarraybeam/01",
                 health_state=HealthState.OK,
             )
 

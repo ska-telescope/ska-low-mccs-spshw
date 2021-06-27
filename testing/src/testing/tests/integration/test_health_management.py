@@ -140,7 +140,6 @@ class TestHealthManagement(HelperClass):
         sleep()
         assert controller.healthState == HealthState.DEGRADED
 
-<<<<<<< HEAD
         # TODO: This bit of the test no longer functions as intended. The
         # idea was to put the failing tile into OFFLINE mode, and we would
         # see that it continues to report HealthState.FAILED, but the
@@ -254,8 +253,6 @@ class TestHealthManagement(HelperClass):
         }
         self.check_states_of_devices(dev_states)
 
-=======
->>>>>>> MCCS-404 check tests
         # Check that all devices are OK
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK

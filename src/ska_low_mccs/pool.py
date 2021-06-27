@@ -16,7 +16,6 @@ of subservient devices.
     that send commands in a sequence that complies with a complex
     dependency graph.
 """
-<<<<<<< HEAD
 
 from __future__ import annotations  # allow forward references in type hints
 
@@ -27,8 +26,6 @@ from typing import Any, Callable, Optional
 
 from tango.group import Group
 
-=======
->>>>>>> MCCS-404 move subarray_beamsresourcemanager
 from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
@@ -89,11 +86,7 @@ class DevicePool:
         :param command_name: the name of the command to be invoked
         :type command_name: str
         :param arg: optional argument to the command
-<<<<<<< HEAD
 
-=======
-        :type arg: object
->>>>>>> MCCS-404 move subarray_beamsresourcemanager
         :return: Whether the command succeeded or not
         :rtype: bool
         """
@@ -391,11 +384,7 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Disable", reverse=reverse)
 
-<<<<<<< HEAD
     def standby(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
-=======
-    def standby(self, reverse=False):
->>>>>>> MCCS-404 move subarray_beamsresourcemanager
         """
         Call Standby() on all the devices in this device pool.
 
@@ -408,11 +397,7 @@ class DevicePoolSequence:
         """
         return self.invoke_command("Standby", reverse=reverse)
 
-<<<<<<< HEAD
     def off(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
-=======
-    def off(self, reverse=False):
->>>>>>> MCCS-404 move subarray_beamsresourcemanager
         """
         Call Off() on all the devices in this device pool.
 
@@ -427,11 +412,7 @@ class DevicePoolSequence:
         json_string = json.dumps(args)
         return self.invoke_command(command_name="Off", arg=json_string, reverse=reverse)
 
-<<<<<<< HEAD
     def on(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
-=======
-    def on(self, reverse=False):
->>>>>>> MCCS-404 move subarray_beamsresourcemanager
         """
         Call On() on all the devices in this device pool.
 

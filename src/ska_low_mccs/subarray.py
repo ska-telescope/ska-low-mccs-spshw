@@ -159,6 +159,7 @@ class MccsSubarray(SKASubarray):
 
             device._station_beam_fqdns = list()
             device._subarray_beam_fqdns = list()
+            device.subarray_id = 0
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
@@ -576,16 +577,6 @@ class MccsSubarray(SKASubarray):
             # TODO: Are channels required in subarray during allocation or are they
             # only required in MCCSController? Remove noqa upon decision
             channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841
-            subarray_beam_resource_manager = self.target
-            if len(subarray_beam_fqdns) == len(station_fqdns):
-                subarray_beam_resource_manager.assign(
-                    subarray_beam_fqdns, station_fqdns
-                )
-            else:
-                self.logger.error(
-                    f"There is a mismatch between len({subarray_beam_fqdns}) and len({station_fqdns})"
-                )
-                return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             # TODO: Should we always return success?
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -624,8 +615,11 @@ class MccsSubarray(SKASubarray):
             kwargs = json.loads(argin)
             stations = kwargs.get("station_fqdns", [])
             subarray_beams = kwargs.get("subarray_beam_fqdns", [])
-            subarray_beam_resource_manager = self.target
-            subarray_beam_resource_manager.release(subarray_beams, stations)
+
+            for fqdn in stations:
+                device = MccsDeviceProxy(fqdn, self.logger)
+                device.subarrayId = subarray_id
+
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):

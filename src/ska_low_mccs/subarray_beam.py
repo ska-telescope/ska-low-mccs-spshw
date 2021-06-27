@@ -77,6 +77,7 @@ class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
 
         :return: the evaluated health of the hardware
         """
+        print("????????????????????????????", hardware.is_locked)
         if not hardware.is_locked:
             return HealthState.DEGRADED
         return HealthState.OK
@@ -356,13 +357,10 @@ class MccsSubarrayBeam(SKAObsDevice):
             :param device: the device for which the health model is
                 being initialised
             """
-            device._health_state = HealthState.UNKNOWN
+            device._health_state = HealthState.OK
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager,
-                None,
-                self.logger,
-                device.health_changed,
+                device.hardware_manager, None, self.logger, device.health_changed
             )
 
         def interrupt(self: MccsSubarrayBeam.InitCommand) -> bool:

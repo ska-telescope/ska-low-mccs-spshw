@@ -25,6 +25,8 @@ from tango import EnsureOmniThread
 from ska_tango_base.commands import ResultCode
 from ska_tango_base import SKABaseDevice
 
+from ska_low_mccs.device_proxy import MccsDeviceProxy
+
 
 class MessageQueue(threading.Thread):
     """

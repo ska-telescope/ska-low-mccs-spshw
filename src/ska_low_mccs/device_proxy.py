@@ -102,11 +102,7 @@ class MccsDeviceProxy:
         if connect:
             self.connect()
 
-<<<<<<< HEAD
     def connect(self: MccsDeviceProxy, max_time: float = 120.0) -> None:
-=======
-    def connect(self, max_time: float = 30.0) -> None:
->>>>>>> convert code to use Groups
         """
         Establish a connection to the device that we want to proxy.
 
@@ -173,11 +169,7 @@ class MccsDeviceProxy:
         else:
             self._device = _connect(self._connection_factory, self._fqdn)
 
-<<<<<<< HEAD
     def check_initialised(self: MccsDeviceProxy, max_time: float = 120.0) -> bool:
-=======
-    def check_initialised(self, max_time: float = 30.0) -> bool:
->>>>>>> convert code to use Groups
         """
         Check that the device has completed initialisation.
 

@@ -474,6 +474,7 @@ class ResourceManager:
 
         :raises ValueError: if any of the FQDNs are not being managed
         """
+        self._logger.error("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         self._except_on_unmanaged(fqdns)
         for fqdn in fqdns:
             try:

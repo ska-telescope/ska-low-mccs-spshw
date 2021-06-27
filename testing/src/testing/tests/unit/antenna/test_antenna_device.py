@@ -11,30 +11,32 @@
 # See LICENSE.txt for more info.
 #########################################################################
 """This module contains the tests for the MccsAntenna."""
-import threading
-
 import pytest
+import time
 
-from tango import AttrQuality, DevFailed, DevState, EventType
+import tango
+
+from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
+    AdminMode,
     ControlMode,
     LoggingLevel,
     HealthState,
     SimulationMode,
 )
-from ska_tango_base.commands import ResultCode
 
-from ska_low_mccs import MccsAntenna, MccsDeviceProxy
-from ska_low_mccs.apiu.apiu_simulator import AntennaHardwareSimulator
+from ska_low_mccs import MccsDeviceProxy
 
-from testing.harness.mock import MockDeviceBuilder
-from testing.harness.tango_harness import TangoHarness
+from testing.harness import TangoHarness
 
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load(patched_antenna_device_class):
     """
     Fixture that specifies the device to be loaded for testing.
+
+    :param patched_antenna_device_class: the antenna device class to
+        patch in, in place of MccsAntenna.
 
     :return: specification of the device to be loaded
     :rtype: dict
@@ -43,79 +45,9 @@ def device_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "antenna_000001",
+        "patch": patched_antenna_device_class,
         "proxy": MccsDeviceProxy,
     }
-
-
-@pytest.fixture()
-def hardware_driver():
-    """
-    Returns a hardware driver for antenna hardware. The antenna tango device is supposed
-    to drive the APIU tango device, which drives the APIU hardware (driver or
-    simulator), which drives the Antenna hardware (driver or simulator). But for unit
-    testing, we bypass all that and drive an antenna simulator directly.
-
-    :return: an antenna hardware driver
-    :rtype:
-        :py:class:`~ska_low_mccs.apiu.apiu_simulator.AntennaHardwareSimulator`
-    """
-    return AntennaHardwareSimulator()
-
-
-@pytest.fixture()
-def initial_mocks(mock_factory, request):
-    """
-    Fixture that registers device proxy mocks prior to patching. The default fixture is
-    overridden here to ensure that a mock subrack responds suitably to actions taken on
-    it by the AntennaApiuProxy.
-
-    :param mock_factory: a factory for
-        :py:class:`tango.DeviceProxy` mocks
-    :type mock_factory: object
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: :py:class:`pytest.FixtureRequest`
-    :return: a dictionary of mocks, keyed by FQDN
-    :rtype: dict
-    """
-    kwargs = getattr(request, "param", {})
-    state = kwargs.get("state", DevState.ON)
-    is_on = kwargs.get("is_on", False)
-    result_code = kwargs.get("result_code", ResultCode.OK)
-
-    mock_apiu_factory = MockDeviceBuilder(mock_factory)
-    mock_apiu_factory.set_state(state)
-    mock_apiu_factory.add_command("IsAntennaOn", is_on)
-    mock_apiu_factory.add_result_command("PowerDownAntenna", result_code)
-    mock_apiu_factory.add_result_command("PowerUpAntenna", result_code)
-
-    return {"low-mccs/apiu/001": mock_apiu_factory()}
-
-
-@pytest.fixture()
-def mock_factory(mocker, request):
-    """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
-    provides vanilla mocks, but this fixture can be overridden by test modules/classes
-    to provide mocks with specified behaviours.
-
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
-        `unittest.mock` package
-    :type mocker: :py:class:`pytest_mock.mocker`
-    :param request: A pytest object giving access to the requesting test
-        context.
-    :type request: :py:class:`pytest.FixtureRequest`
-
-    :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
-        instance)
-    """
-    kwargs = getattr(request, "param", {})
-    is_on = kwargs.get("is_on", False)
-
-    builder = MockDeviceBuilder()
-    builder.add_attribute("areAntennasOn", [is_on, True, False, True])
-    return builder
 
 
 class TestMccsAntenna:
@@ -132,21 +64,6 @@ class TestMccsAntenna:
         """
         return tango_harness.get_device("low-mccs/antenna/000001")
 
-    def test_queue_debug(self, device_under_test, test_string):
-        """
-        Test that the queue debug attribute works correctly.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param test_string: a simple test string fixture
-        :type test_string: str
-        """
-        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
-        device_under_test.aQueueDebug = test_string
-        assert device_under_test.aQueueDebug == test_string
-
     def test_Reset(self, device_under_test):
         """
         Test for Reset. Expected to fail as can't reset in the Off state.
@@ -156,7 +73,7 @@ class TestMccsAntenna:
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
         """
-        with pytest.raises(DevFailed):
+        with pytest.raises(tango.DevFailed):
             device_under_test.Reset()
 
     def test_antennaId(self, device_under_test):
@@ -193,7 +110,13 @@ class TestMccsAntenna:
         assert device_under_test.rms == 0.0
 
     @pytest.mark.parametrize("voltage", [19.0])
-    def test_voltage(self, tango_harness: TangoHarness, device_under_test, voltage):
+    def test_voltage(
+        self,
+        tango_harness: TangoHarness,
+        device_under_test,
+        device_admin_mode_changed_callback,
+        voltage,
+    ):
         """
         Test for voltage.
 
@@ -202,17 +125,42 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the device
         :param voltage: a voltage value to use for testing
         :type voltage: float
         """
         mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
         mock_apiu.get_antenna_voltage.return_value = voltage
 
+        device_under_test.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = device_under_test.voltage
+
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        assert device_under_test.adminMode == AdminMode.ONLINE
+
+        device_under_test.MockApiuOn()
+        time.sleep(0.1)
+
         assert device_under_test.voltage == voltage
         assert mock_apiu.get_antenna_voltage.called_once_with(1)
 
     @pytest.mark.parametrize("current", [4.5])
-    def test_current(self, tango_harness: TangoHarness, device_under_test, current):
+    def test_current(
+        self,
+        tango_harness: TangoHarness,
+        device_under_test,
+        device_admin_mode_changed_callback,
+        current,
+    ):
         """
         Test for current.
 
@@ -221,18 +169,40 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the device
         :param current: a current value to use for testing
         :type current: float
         """
         mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
         mock_apiu.get_antenna_current.return_value = current
 
+        device_under_test.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = device_under_test.current
+
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        assert device_under_test.adminMode == AdminMode.ONLINE
+
+        device_under_test.MockApiuOn()
+
         assert device_under_test.current == current
         assert mock_apiu.get_antenna_current.called_once_with(1)
 
     @pytest.mark.parametrize("temperature", [37.4])
     def test_temperature(
-        self, tango_harness: TangoHarness, device_under_test, temperature
+        self,
+        tango_harness: TangoHarness,
+        device_under_test,
+        device_admin_mode_changed_callback,
+        temperature,
     ):
         """
         Test for temperature.
@@ -242,11 +212,29 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the device
         :param temperature: a temperature value to use for testing
         :type temperature: float
         """
         mock_apiu = tango_harness.get_device("low-mccs/apiu/001")
         mock_apiu.get_antenna_temperature.return_value = temperature
+
+        device_under_test.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
+
+        with pytest.raises(tango.DevFailed, match="Not connected"):
+            _ = device_under_test.temperature
+
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        assert device_under_test.adminMode == AdminMode.ONLINE
+
+        device_under_test.MockApiuOn()
 
         assert device_under_test.temperature == temperature
         assert mock_apiu.get_antenna_temperature.called_once_with(1)
@@ -328,7 +316,8 @@ class TestMccsAntenna:
         """
         assert device_under_test.loggingLevel == LoggingLevel.WARNING
 
-    def test_healthState(self, device_under_test, mock_callback):
+    @pytest.mark.skip(reason="Occasional deadlock?")
+    def test_healthState(self, device_under_test, device_health_state_changed_callback):
         """
         Test for healthState.
 
@@ -336,20 +325,17 @@ class TestMccsAntenna:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.mock.Mock`
+        :param device_health_state_changed_callback: a callback that we
+            can use to subscribe to health state changes on the device
         """
-        assert device_under_test.healthState == HealthState.OK
-
-        _ = device_under_test.subscribe_event(
-            "healthState", EventType.CHANGE_EVENT, mock_callback
+        device_under_test.add_change_event_callback(
+            "healthState",
+            device_health_state_changed_callback,
         )
-        mock_callback.assert_called_once()
-
-        event_data = mock_callback.call_args[0][0].attr_value
-        assert event_data.name == "healthState"
-        assert event_data.value == HealthState.OK
-        assert event_data.quality == AttrQuality.ATTR_VALID
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
+        assert device_under_test.healthState == HealthState.UNKNOWN
 
     def test_controlMode(self, device_under_test):
         """
@@ -373,8 +359,8 @@ class TestMccsAntenna:
         """
         assert device_under_test.simulationMode == SimulationMode.FALSE
         with pytest.raises(
-            DevFailed,
-            match="Antennas cannot be put into simulation mode, but entire APIUs can.",
+            tango.DevFailed,
+            match="MccsAntenna cannot be put into simulation mode.",
         ):
             device_under_test.simulationMode = SimulationMode.TRUE
 
@@ -510,105 +496,54 @@ class TestMccsAntenna:
         """
         assert list(device_under_test.bandpassCoefficient) == [0.0]
 
-
-class TestInitCommand:
-    """
-    Contains the tests of :py:class:`~ska_low_mccs.antenna.antenna_device.MccsAntenna`'s
-    :py:class:`~ska_low_mccs.antenna.antenna_device.MccsAntenna.InitCommand`.
-    """
-
-    class HangableInitCommand(MccsAntenna.InitCommand):
+    def test_On(
+        self,
+        device_under_test,
+        device_admin_mode_changed_callback,
+        mock_apiu_device_proxy,
+        apiu_antenna_id,
+    ):
         """
-        A subclass of InitCommand with the following properties that support testing:
+        Test for On.
 
-        * A lock that, if acquired prior to calling the command, causes
-          the command to hang until the lock is released
-        * Call trace attributes that record which methods were called
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the tile
+            device
+        :param mock_apiu_device_proxy: a proxy to the APIU device for
+            the APIU of the antenna under test.
+        :param apiu_antenna_id: the position of the antenna in its APIU
         """
+        device_under_test.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert device_under_test.adminMode == AdminMode.OFFLINE
 
-        def __init__(self, target, state_model, logger=None):
-            """
-            Create a new HangableInitCommand instance.
+        assert device_under_test.state() == tango.DevState.DISABLE
+        with pytest.raises(
+            tango.DevFailed,
+            match="Command On not allowed when the device is in DISABLE state",
+        ):
+            _ = device_under_test.On()
 
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.base.OpStateModel`
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
-            """
-            super().__init__(target, state_model, logger)
-            self._hang_lock = threading.Lock()
-            self._initialise_hardware_management_called = False
-            self._initialise_health_monitoring_called = False
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.ONLINE)
+        assert device_under_test.adminMode == AdminMode.ONLINE
 
-        def _initialise_hardware_management(self, device):
-            """
-            Initialise the connection to the hardware being managed by this device
-            (overridden here to inject a call trace attribute).
+        device_under_test.MockApiuOn()
+        time.sleep(0.1)
 
-            :param device: the device for which a connection to the
-                hardware is being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            self._initialise_hardware_management_called = True
-            super()._initialise_hardware_management(device)
-            with self._hang_lock:
-                # hang until the hang lock is released
-                pass
+        [[result_code], [message]] = device_under_test.On()
+        assert result_code == ResultCode.OK
+        assert message == "On command completed OK"
 
-        def _initialise_health_monitoring(self, device):
-            """
-            Initialise the health model for this device (overridden here to inject a
-            call trace attribute).
-
-            :param device: the device for which the health model is
-                being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            self._initialise_health_monitoring_called = True
-            super()._initialise_health_monitoring(device)
-
-    @pytest.mark.skip(
-        reason="This is taking forever to run; need to investigate"
-        # TODO: investigate this.
-    )
-    def test_interrupt(self, mocker):
-        """
-        Test that the command's interrupt method will cause a running thread to stop
-        prematurely.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
-            module
-        :type mocker: :py:class:`pytest_mock.mocker`
-        """
-        mock_device = mocker.MagicMock()
-        mock_device.ApiuId = 1
-        mock_device.LogicalApiuAntennaId = 1
-        mock_device.TileId = 1
-        mock_device.LogicalTileAntennaId = 1
-
-        mock_state_model = mocker.Mock()
-
-        init_command = self.HangableInitCommand(mock_device, mock_state_model)
-
-        with init_command._hang_lock:
-            init_command()
-            # we got the hang lock first, so the initialisation thread
-            # will hang in health initialisation until we release it
-            init_command.interrupt()
-
-        init_command._thread.join()
-
-        # now that we've released the hang lock, the thread can exit
-        # its _initialise_hardware_management, but before it enters its
-        # _initialise_health_monitoring, it will detect that it has been
-        # interrupted, and return
-        assert init_command._initialise_hardware_management_called
-        assert not init_command._initialise_health_monitoring_called
+        mock_apiu_device_proxy.PowerUpAntenna.assert_next_call(apiu_antenna_id)
+        # At this point the APIU should turn the antenna on, then fire a change event.
+        # so let's fake that.
+        device_under_test.MockAntennaPoweredOn()
+        assert device_under_test.state() == tango.DevState.ON

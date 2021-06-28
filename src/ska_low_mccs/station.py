@@ -709,7 +709,6 @@ class MccsStation(SKAObsDevice):
             """
             device = self.target
             device_pool = device.device_pool
-            my_name = device.get_name()
 
             device.logger.debug("Station CallbackCommand class do()")
             # Defer callback to our pool device

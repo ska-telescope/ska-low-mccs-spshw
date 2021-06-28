@@ -25,6 +25,7 @@ stages:
   - upload_results
   - teardown
   - docs
+  - testdocs
   - pages
   - publish
   - release
@@ -164,7 +165,7 @@ docs:
   when: always
 
 testdocs:
-  stage: docs
+  stage: testdocs
   tags:
     - k8srunner
   image: readthedocs/build:latest

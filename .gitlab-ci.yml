@@ -192,7 +192,6 @@ pages:
     paths:
       - public
     expire_in: 30 days
-  when: always
 
 publish package to nexus:
   stage: publish

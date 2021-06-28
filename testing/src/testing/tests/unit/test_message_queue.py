@@ -16,6 +16,9 @@ import json
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs.message_queue import MessageQueue
 
+from testing.harness.mock import MockDeviceBuilder
+
+
 class TestMessageQueue:
     """
     This class contains the tests for the
@@ -273,56 +276,115 @@ class TestMessageQueue:
         # doesn't implement _notify_listener method.
         assert not message_queue.is_alive()
 
-    def test_send_message_with_command_and_response(
-        self,
-        message_queue,
-        mocker,
-        target_mock,
-        command_return_ok,
-        test_command,
-        valid_fqdn,
-        response_device,
-    ):
+    class TestSendMessageWithCommandAndResponse:
         """
-        Test that we can send a message with response callback.
-
-        :param message_queue: message queue fixture
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :param target_mock: fixture that mocks a target device
-        :param command_return_ok: fixture for command that return ResultCode.OK
-        :param test_command: a test command to send to the message queue
-        :param valid_fqdn: a valid FQDN string
-        :param response_device: fixture that mocks a response device
+        DD: I put the test under discussion in a separate subclass for
+        isolation: so that I could play with the test harness for this
+        one test, without breaking other tests. Probably the tests above
+        should be refactored so that all tests use the same basic
+        harness, and then we can get rid of this class.
         """
-        target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
-        response_device.command_inout.return_value = (ResultCode.OK, "response status")
 
-        # RCL: TODO: Prepare the system for a call to MccsDeviceProxy passing in the FQND below and returning a response_device mock
-        callback = "callback_command"
-        (_, message_uid, _) = message_queue.send_message_with_response(
-            command=test_command,
-            respond_to_fqdn=valid_fqdn, # RCL: TODO: This should be an FQDN that resolves to an MccsDeviceProxy that is mocked - but how?
-            callback=callback,
-        )
-        time.sleep(0.1)  # Required to allow DUT thread to run
-        # RCL: TODO: Here I want to check that the call to MccsDeviceProxy was made passing in the FQDN above
+        @pytest.fixture()
+        def device_to_load(self):
+            """
+            DD: The tango_harness fixture gets its specification of what
+            devices to launch from the device_to_load fixture, so we
+            need to provide that fixture. Since we're only going to be
+            using mock devices here, we can just set it to return None.
+            """
+            return None
 
-        target_mock.get_command_object.assert_called_once_with(test_command)
-        message_args = {"respond_to_fqdn": valid_fqdn, "callback": callback}
-        json_string = json.dumps(message_args)
-        command_return_ok.assert_called_once_with(json_string)
-        assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
-        args = {
-            "message_object": {
-                "command": test_command,
-                "json_args": "",
-                "message_uid": message_uid,
-                "notifications": False,
-                "respond_to_fqdn": valid_fqdn,
-                "callback": callback,
-            },
-            "result_code": 0,
-            "status": "",
-        }
-        json_string = json.dumps(args)
-        response_device.command_inout.assert_called_once_with(callback, json_string)
+        @pytest.fixture()
+        def callback(self):
+            """
+            DD: Fixturizing this because we use it in two places now,
+            and I didn't want to hardcode it into both.
+            """
+            return "CallbackCommand"
+
+        @pytest.fixture()
+        def response_device(self, callback):
+            """
+            DD: Let's build a mock device with a callback command with
+            the right name, which returns a (ResultCode, ...) tuple.
+            """
+            builder = MockDeviceBuilder()
+            builder.add_result_command(callback, result_code=ResultCode.OK)
+            return builder()
+        
+        @pytest.fixture()
+        def initial_mocks(self, valid_fqdn, response_device):
+            """
+            DD: One of the ways we can tell the Tango harness about mock
+            devices is to implement this fixture. Here we tell the Tango
+            harness that when asked for a proxy to the "valid FQDN", it
+            should return our callback device.
+            """
+            return {
+                valid_fqdn: response_device
+            }
+
+        # DD: If you want to use the tango harness, you need to ensure
+        # that the tango_harness fixture actually gets called. Most of
+        # our unit tests test a device, so they use the
+        # device_under_test fixture, which calls the tango_harness
+        # fixture. So we mostly don't need to worry about making sure it
+        # is called. But in the rarer case where we aren't testing a
+        # device but we still need our tango harness (e.g. for mock
+        # devices), we need to explicitly call it.
+        @pytest.mark.usefixtures("tango_harness")
+        def test_send_message_with_command_and_response(
+            self,
+            message_queue,
+            mocker,
+            target_mock,
+            command_return_ok,
+            test_command,
+            valid_fqdn,
+            callback, # DD: new argument
+            response_device,
+        ):
+            """
+            Test that we can send a message with response callback.
+
+            :param message_queue: message queue fixture
+            :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
+            :param target_mock: fixture that mocks a target device
+            :param command_return_ok: fixture for command that return ResultCode.OK
+            :param test_command: a test command to send to the message queue
+            :param valid_fqdn: a valid FQDN string
+            :param response_device: fixture that mocks a response device
+            """
+            target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
+            # response_device.command_inout.return_value = (ResultCode.OK, "response status")  # DD: This is set up in the fixture now.
+
+            # RCL: TODO: Prepare the system for a call to MccsDeviceProxy passing in the FQND below and returning a response_device mock
+            # callback = "callback_command"  # DD: this is fixturized now.
+            (_, message_uid, _) = message_queue.send_message_with_response(
+                command=test_command,
+                respond_to_fqdn=valid_fqdn, # RCL: TODO: This should be an FQDN that resolves to an MccsDeviceProxy that is mocked - but how?
+                callback=callback,
+            )
+            time.sleep(0.1)  # Required to allow DUT thread to run
+            # RCL: TODO: Here I want to check that the call to MccsDeviceProxy was made passing in the FQDN above
+
+            target_mock.get_command_object.assert_called_once_with(test_command)
+            message_args = {"respond_to_fqdn": valid_fqdn, "callback": callback}
+            json_string = json.dumps(message_args)
+            command_return_ok.assert_called_once_with(json_string)
+            assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
+            args = {
+                "message_object": {
+                    "command": test_command,
+                    "json_args": "",
+                    "message_uid": message_uid,
+                    "notifications": False,
+                    "respond_to_fqdn": valid_fqdn,
+                    "callback": callback,
+                },
+                "result_code": 0,
+                "status": "",
+            }
+            json_string = json.dumps(args)
+            response_device.command_inout.assert_called_once_with(callback, json_string)

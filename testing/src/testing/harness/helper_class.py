@@ -56,7 +56,7 @@ class HelperClass:
         self._command_helper.check_device_state(device_under_test, DevState.ON)
 
     def wait_for_command_to_complete(
-        self, controller, expected_result=ResultCode.OK, timeout_limit=8.0
+        self, controller, expected_result=ResultCode.OK, timeout_limit=5.0
     ):
         """
         Wait for the controller command to complete.

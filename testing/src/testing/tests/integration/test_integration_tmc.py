@@ -46,8 +46,8 @@ def devices_to_load():
             #             {"name": "tile_0004", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
+            #             {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            #             {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -87,8 +87,8 @@ class TestMccsIntegrationTmc(HelperClass):
             # "antenna_000004": tango_harness.get_device("low-mccs/antenna/000004"),
             "subarraybeam_01": tango_harness.get_device("low-mccs/subarraybeam/01"),
             "subarraybeam_02": tango_harness.get_device("low-mccs/subarraybeam/02"),
-            "subarraybeam_03": tango_harness.get_device("low-mccs/subarraybeam/03"),
-            "subarraybeam_04": tango_harness.get_device("low-mccs/subarraybeam/04"),
+            #             "subarraybeam_03": tango_harness.get_device("low-mccs/subarraybeam/03"),
+            #             "subarraybeam_04": tango_harness.get_device("low-mccs/subarraybeam/04"),
         }
         return device_dict
 

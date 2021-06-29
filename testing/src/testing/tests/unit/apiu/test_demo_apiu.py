@@ -13,10 +13,10 @@ This module contains the tests for the
 """
 import pytest
 
+from ska_tango_base.control_model import AdminMode
+
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.apiu.demo_apiu_device import DemoAPIU
-
-from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -36,7 +36,7 @@ def device_to_load():
     }
 
 
-class TestDemoAPIU(HelperClass):
+class TestDemoAPIU:
     """This class contains the tests for the DemoAPIU device class."""
 
     @pytest.fixture()
@@ -50,13 +50,14 @@ class TestDemoAPIU(HelperClass):
         """
         return tango_harness.get_device("low-mccs/apiu/001")
 
-    def test(self, device_under_test):
+    def test(self, device_under_test, empty_json_dict: str):
         """
         Test:
 
         * the `isAntenna1Powered`, `isAntenna2Powered` etc attributes.
         * the `PowerUpAntenna1`, `PowerDownAntenna2` etc commands.
 
+        :param empty_json_dict: an empty json encoded dictionary
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -75,7 +76,8 @@ class TestDemoAPIU(HelperClass):
                 for antenna_id in range(1, 5)
             ] == expected
 
-        self.start_up_device(device_under_test)
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_under_test.On()
 
         assert_powered([False, False, False, False])
 

@@ -8,12 +8,20 @@
 
 
 __all__ = [
+    "ApiuHealthModel",
+    "ApiuSimulator",
+    "ApiuSimulatorComponentManager",
+    "ApiuComponentManager",
     "MccsAPIU",
-    "APIUSimulator",
-    "apiu_device",
-    "apiu_simulator",
+    "SwitchingApiuComponentManager",
     "demo_apiu_device",
 ]
 
+from .apiu_simulator import ApiuSimulator  # type: ignore[attr-defined]
+from .apiu_component_manager import (
+    ApiuSimulatorComponentManager,
+    SwitchingApiuComponentManager,
+    ApiuComponentManager,
+)
+from .apiu_health_model import ApiuHealthModel
 from .apiu_device import MccsAPIU  # type: ignore[attr-defined]
-from .apiu_simulator import APIUSimulator  # type: ignore[attr-defined]

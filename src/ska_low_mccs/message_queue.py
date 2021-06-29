@@ -19,8 +19,8 @@ import threading
 from uuid import uuid4
 from queue import SimpleQueue, Empty
 
-import tango
-from tango import EnsureOmniThread, DevFailed
+from ska_low_mccs import MccsDeviceProxy
+from tango import EnsureOmniThread
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base import SKABaseDevice
@@ -139,17 +139,7 @@ class MessageQueue(threading.Thread):
         try:
             # Check we have a device to respond to before executing a command
             if message.respond_to_fqdn:
-                try:
-                    response_device = tango.DeviceProxy(message.respond_to_fqdn)
-                except DevFailed:
-                    err_status = f"Response device {message.respond_to_fqdn} not found"
-                    self._qdebug(err_status)
-                    self._logger.error(err_status)
-                    if message.notifications:
-                        self._notify_listener(
-                            ResultCode.FAILED, message.message_uid, err_status
-                        )
-                    return
+                response_device = MccsDeviceProxy(message.respond_to_fqdn, self._logger)
 
             self._logger.debug(f"_execute_message {message.message_uid}")
             self._qdebug(f"Exe({message.message_uid})")

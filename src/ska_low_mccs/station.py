@@ -18,7 +18,6 @@ __all__ = ["MccsStation", "main"]
 
 import json
 import threading
-import tango
 
 # PyTango imports
 from tango import DebugIt, EnsureOmniThread, SerialModel, Util, DevFailed
@@ -726,11 +725,14 @@ class MccsStation(SKAObsDevice):
 
                 # Post response back to requestor
                 try:
-                    response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
-                except DevFailed:
-                    device._qdebug(
-                        f"Response device {device._cmd_respond_to_fqdn} not found"
+                    response_device = MccsDeviceProxy(
+                        device._cmd_respond_to_fqdn, device.logger
                     )
+                    # response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
+                except DevFailed:
+                    assert (
+                        False
+                    ), f"Response device {device._cmd_respond_to_fqdn} not found"
                 else:
                     # As this response is to the original requestor, we need to reply
                     # with the message ID that was given to the requester

@@ -325,6 +325,7 @@ class MccsStation(SKAObsDevice):
         :type subarray_id: int
         """
         self._subarray_id = subarray_id
+        assert isinstance(self._tile_group, Group)
         self._tile_group.write_attribute_asynch("subarrayID", subarray_id)
         # for fqdn in self._tile_fqdns:
         # tile = MccsDeviceProxy(fqdn, self.logger)

@@ -1,5 +1,7 @@
 # type: ignore
 """This module contains pytest-specific test harness for MCCS functional (BDD) tests."""
+from __future__ import annotations
+
 import pytest
 from typing import Callable
 

@@ -32,13 +32,14 @@ from testing.harness.mock import MockDeviceBuilder, MockGroupBuilder
 
 
 @pytest.fixture()
-def device_to_load():
+def device_to_load(mocker):
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
     """
+    # mocker.patch("tango.Group", return_value=MockGroupBuilder)
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
@@ -64,6 +65,7 @@ def mock_factory(mocker, test_string):
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
+    mocker.patch("tango.Group", return_value=MockGroupBuilder)
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
@@ -83,7 +85,7 @@ class TestMccsStation:
 
         :return: the device under test
         """
-        mocker.patch("tango.Group", return_value=MockGroupBuilder)
+        # mocker.patch("tango.Group", return_value=MockGroupBuilder)
         return tango_harness.get_device("low-mccs/station/001")
 
     def test_InitDevice(self, device_under_test, command_helper, dummy_json_args):
@@ -253,15 +255,13 @@ class TestMccsStation:
         :type logger: :py:class:`logging.Logger`
         """
         mocker.patch("tango.Group", return_value=MockGroupBuilder)
-        mocker.patch("tango.Group.write_attribute_asynch", return_value=0)
+        # mocker.patch("tango.Group.write_attribute_asynch", return_value=0)
         station = device_under_test  # to make test easier to read
         mock_tile_1 = MccsDeviceProxy("low-mccs/tile/0001", logger)
         mock_tile_2 = MccsDeviceProxy("low-mccs/tile/0002", logger)
         
         # mock_tile_group = MockGroupBuilder()
         # mock_tile_group.add_command("write_attribute_asynch", 1)
-        # station._tile_group = mock_tile_group
-        # station.add_attribute("_tile_group", mock_tile_group)
 
         # These tiles are mock devices so we have to manually set their
         # initial states

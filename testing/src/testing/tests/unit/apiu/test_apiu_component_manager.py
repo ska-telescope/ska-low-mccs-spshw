@@ -55,7 +55,7 @@ class TestApiuCommon:
         return PowerMode.ON
 
     @pytest.fixture(
-        params=[  # type: ignore[return]
+        params=[
             "apiu_simulator",
             "apiu_simulator_component_manager",
             "switching_apiu_component_manager",

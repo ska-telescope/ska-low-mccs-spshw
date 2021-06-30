@@ -1,11 +1,12 @@
+astropy
 backoff
-numpy == 1.19.2
-scipy
-pytango >= 9.3.3
-jsonschema >= 3.2.0
-ska-tango-base == 0.10.1
 fire
 future
-requests
+jsonschema >= 3.2.0
+numpy == 1.19.2
 pyfabil-1.0-py3-none-any.whl
-astropy
+pytango >= 9.3.3
+requests
+scipy
+ska-tango-base == 0.11.3
+transitions

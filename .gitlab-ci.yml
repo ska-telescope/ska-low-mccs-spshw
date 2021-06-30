@@ -19,7 +19,8 @@ before_script:
   - python3 -m pip install pipdeptree
 
 stages:
-  - lint_n_test
+  - lint
+  - test
   - build
   - integration
   - upload_results
@@ -38,9 +39,9 @@ stages:
 # directory while the html output is persisted for use by the pages job.
 # TODO: possibly a candidate for refactor / renaming later on.
 linting:
+  stage: lint
   tags:
     - k8srunner
-  stage: lint_n_test
   script:
     - tox -e checklint
   artifacts:
@@ -48,7 +49,7 @@ linting:
       - ./build
 
 test:
-  stage: lint_n_test
+  stage: test
   tags:
     - k8srunner
   script:
@@ -58,7 +59,7 @@ test:
       - ./build
 
 list_dependencies:
-  stage: lint_n_test
+  stage: test
   script:
     - pipdeptree --json >> pip_deps.json
     - pipdeptree >> pip_deps.txt
@@ -137,7 +138,6 @@ functional_test_tear_down:
     name: test
     kubernetes:
       namespace: ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA
-  when: always
   allow_failure: true
 
 docs:

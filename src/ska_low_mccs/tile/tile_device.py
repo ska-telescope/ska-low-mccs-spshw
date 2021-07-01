@@ -381,10 +381,7 @@ class MccsTile(SKABaseDevice):
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                device.hardware_manager,
-                None,
-                self.logger,
-                device.health_changed,
+                device.hardware_manager, None, self.logger, device.health_changed
             )
 
         def _initialise_power_management(self, device):
@@ -493,20 +490,14 @@ class MccsTile(SKABaseDevice):
                     # deprogram FPGAs
                     pass
 
-                return (
-                    ResultCode.OK,
-                    self.SUCCEEDED_FROM_ON_MESSAGE,
-                )
+                return (ResultCode.OK, self.SUCCEEDED_FROM_ON_MESSAGE)
             if not result:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
             device.hardware_manager.set_connectible(True)
             return (ResultCode.OK, self.SUCCEEDED_FROM_OFF_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def On(self, json_args):
         """
@@ -527,10 +518,7 @@ class MccsTile(SKABaseDevice):
         #       a 3 second timeout with Tango commands. This is especially true
         #       when real hardware is connected to MCCS as programming the FPGA
         #       will take several seconds as part of the initialise step.
-        self._command_sequence = [
-            "TileOn",
-            "Initialise",
-        ]
+        self._command_sequence = ["TileOn", "Initialise"]
         if self.state_model.op_state == DevState.STANDBY:
             self._command_sequence.insert(0, "Off")
 
@@ -637,10 +625,7 @@ class MccsTile(SKABaseDevice):
             (result_code, status) = handler(json_args)
             return [[result_code], [status]]
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Off(self, json_args):
         """
@@ -888,9 +873,7 @@ class MccsTile(SKABaseDevice):
         """
         self.hardware_manager.station_id = value
 
-    @attribute(
-        dtype="DevString",
-    )
+    @attribute(dtype="DevString")
     def cspDestinationIp(self):
         """
         Return the CSP destination IP address.
@@ -910,9 +893,7 @@ class MccsTile(SKABaseDevice):
         """
         self._csp_destination_ip = value
 
-    @attribute(
-        dtype="DevString",
-    )
+    @attribute(dtype="DevString")
     def cspDestinationMac(self):
         """
         Return the CSP destination MAC address.
@@ -932,9 +913,7 @@ class MccsTile(SKABaseDevice):
         """
         self._csp_destination_mac = value
 
-    @attribute(
-        dtype="DevLong",
-    )
+    @attribute(dtype="DevLong")
     def cspDestinationPort(self):
         """
         Return the cspDestinationPort attribute.
@@ -1030,9 +1009,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.current
 
-    @attribute(
-        dtype="DevBoolean",
-    )
+    @attribute(dtype="DevBoolean")
     def isProgrammed(self):
         """
         Return a flag indicating whether of not the board is programmed.
@@ -1093,10 +1070,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.fpga2_temperature
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=2,
-    )
+    @attribute(dtype=("DevLong",), max_dim_x=2)
     def fpgasTime(self):
         """
         Return the time for FPGAs.
@@ -1106,11 +1080,7 @@ class MccsTile(SKABaseDevice):
         """
         return tuple(self.hardware_manager.fpgas_time)
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=8,
-        label="Antenna ID's",
-    )
+    @attribute(dtype=("DevLong",), max_dim_x=8, label="Antenna ID's")
     def antennaIds(self):
         """
         Return the antenna IDs.
@@ -1130,10 +1100,7 @@ class MccsTile(SKABaseDevice):
         """
         self._antenna_ids = list(antenna_ids)
 
-    @attribute(
-        dtype=("DevString",),
-        max_dim_x=256,
-    )
+    @attribute(dtype=("DevString",), max_dim_x=256)
     def fortyGbDestinationIps(self):
         """
         Return the destination IPs for all 40Gb ports on the tile.
@@ -1145,10 +1112,7 @@ class MccsTile(SKABaseDevice):
             item["DstIP"] for item in self.hardware_manager.get_40g_configuration()
         )
 
-    @attribute(
-        dtype=("DevLong",),
-        max_dim_x=256,
-    )
+    @attribute(dtype=("DevLong",), max_dim_x=256)
     def fortyGbDestinationPorts(self):
         """
         Return the destination ports for all 40Gb ports on the tile.
@@ -1160,10 +1124,7 @@ class MccsTile(SKABaseDevice):
             item["DstPort"] for item in self.hardware_manager.get_40g_configuration()
         )
 
-    @attribute(
-        dtype=("DevDouble",),
-        max_dim_x=32,
-    )
+    @attribute(dtype=("DevDouble",), max_dim_x=32)
     def adcPower(self):
         """
         Return the RMS power of every ADC signal (so a TPM processes 16 antennas, this
@@ -1174,9 +1135,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.adc_rms
 
-    @attribute(
-        dtype="DevLong",
-    )
+    @attribute(dtype="DevLong")
     def currentTileBeamformerFrame(self):
         """
         Return current frame, in units of 256 ADC frames (276,48 us) Currently this is
@@ -1237,11 +1196,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.hardware_manager.pps_delay
 
-    @attribute(
-        dtype="DevLong",
-        memorized=True,
-        hw_memorized=True,
-    )
+    @attribute(dtype="DevLong", memorized=True, hw_memorized=True)
     def simulationMode(self):
         """
         Reports the simulation mode of the device.
@@ -1383,8 +1338,7 @@ class MccsTile(SKABaseDevice):
             ("TileOn", self.TileOnCommand),
         ]:
             self.register_command_object(
-                command_name,
-                command_object(self, self.state_model, self.logger),
+                command_name, command_object(self, self.state_model, self.logger)
             )
 
     class InitialiseCommand(ResponseCommand):
@@ -1408,9 +1362,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.initialise()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Initialise(self):
         """
@@ -1506,10 +1458,7 @@ class MccsTile(SKABaseDevice):
             else:
                 return (ResultCode.FAILED, f"{bitfile} doesn't exist")
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def DownloadFirmware(self, argin):
         """
@@ -1562,10 +1511,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.cpld_flash_write(bitfile)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ProgramCPLD(self, argin):
         """
@@ -1664,10 +1610,7 @@ class MccsTile(SKABaseDevice):
 
             return hardware_manager.read_register(name, nb_read, offset, device)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongArray")
     @DebugIt()
     def ReadRegister(self, argin):
         """
@@ -1746,10 +1689,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.write_register(name, values, offset, device)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def WriteRegister(self, argin):
         """
@@ -1808,10 +1748,7 @@ class MccsTile(SKABaseDevice):
             nvalues = argin[1]
             return hardware_manager.read_address(address, nvalues)
 
-    @command(
-        dtype_in="DevVarLongArray",
-        dtype_out="DevVarULongArray",
-    )
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarULongArray")
     @DebugIt()
     def ReadAddress(self, argin):
         """
@@ -1861,10 +1798,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.write_address(argin[0], argin[1:])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarULongArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarULongArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def WriteAddress(self, argin):
         """
@@ -1954,10 +1888,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def Configure40GCore(self, argin):
         """
@@ -2021,10 +1952,7 @@ class MccsTile(SKABaseDevice):
                 return json.dumps(item)
             raise ValueError("Invalid core id or arp table id specified")
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevString",
-    )
+    @command(dtype_in="DevString", dtype_out="DevString")
     @DebugIt()
     def Get40GCoreConfiguration(self, argin):
         """
@@ -2094,10 +2022,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetLmcDownload(self, argin):
         """
@@ -2204,10 +2129,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.set_channeliser_truncation(arr)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarLongArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetChanneliserTruncation(self, argin):
         """
@@ -2300,10 +2222,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.set_beamformer_regions(regions)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarLongArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetBeamFormerRegions(self, argin):
         """
@@ -2384,10 +2303,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ConfigureStationBeamformer(self, argin):
         """
@@ -2465,10 +2381,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def LoadCalibrationCoefficients(self, argin):
         """
@@ -2644,10 +2557,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.load_beam_angle(argin)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def LoadBeamAngle(self, argin):
         """
@@ -2738,10 +2648,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.load_antenna_tapering(beam, tapering)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def LoadAntennaTapering(self, argin):
         """
@@ -2793,10 +2700,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.switch_calibration_bank(switch_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevLong",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SwitchCalibrationBank(self, argin):
         """
@@ -2880,10 +2784,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.set_pointing_delay(delay_array, beam_index)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetPointingDelay(self, argin):
         """
@@ -2929,10 +2830,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.load_pointing_delay(load_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevLong",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevLong", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def LoadPointingDelay(self, argin):
         """
@@ -2984,10 +2882,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.start_beamformer(start_time, duration)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StartBeamformer(self, argin):
         """
@@ -3036,9 +2931,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.stop_beamformer()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StopBeamformer(self):
         """
@@ -3086,16 +2979,11 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_channel_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ConfigureIntegratedChannelData(self, argin):
         """
@@ -3151,16 +3039,11 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.configure_integrated_beam_data(
-                integration_time,
-                first_channel,
-                last_channel,
+                integration_time, first_channel, last_channel
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ConfigureIntegratedBeamData(self, argin):
         """
@@ -3209,9 +3092,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.stop_integrated_data()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StopIntegratedData(self):
         """
@@ -3255,10 +3136,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.send_raw_data(sync, timestamp, seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendRawData(self, argin):
         """
@@ -3315,18 +3193,11 @@ class MccsTile(SKABaseDevice):
 
             hardware_manager = self.target
             hardware_manager.send_channelised_data(
-                number_of_samples,
-                first_channel,
-                last_channel,
-                timestamp,
-                seconds,
+                number_of_samples, first_channel, last_channel, timestamp, seconds
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendChannelisedData(self, argin):
         """
@@ -3398,10 +3269,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendChannelisedDataContinuous(self, argin):
         """
@@ -3462,10 +3330,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.send_beam_data(timestamp, seconds)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendBeamData(self, argin):
         """
@@ -3515,9 +3380,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.stop_data_transmission()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StopDataTransmission(self):
         """
@@ -3558,9 +3421,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.compute_calibration_coefficients()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ComputeCalibrationCoefficients(self):
         """
@@ -3610,10 +3471,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.start_acquisition(start_time, delay)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def StartAcquisition(self, argin):
         """
@@ -3667,10 +3525,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.set_time_delays(delays)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetTimeDelays(self, argin):
         """
@@ -3721,10 +3576,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.set_csp_rounding(rounding)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevDouble",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevDouble", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetCspRounding(self, argin):
         """
@@ -3796,10 +3648,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SetLmcIntegratedDownload(self, argin):
         """
@@ -3864,10 +3713,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SendRawDataSynchronised(self, argin):
         """
         Send synchronised raw data.
@@ -3944,10 +3790,7 @@ class MccsTile(SKABaseDevice):
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SendChannelisedDataNarrowband(self, argin):
         """
@@ -4008,9 +3851,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.tweak_transceivers()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def TweakTransceivers(self):
         """
@@ -4051,9 +3892,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.post_synchronisation()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def PostSynchronisation(self):
         """
@@ -4094,9 +3933,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.sync_fpgas()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_out="DevVarLongStringArray")
     @DebugIt()
     def SyncFpgas(self):
         """
@@ -4164,10 +4001,7 @@ class MccsTile(SKABaseDevice):
             hardware_manager.calculate_delay(current_delay, current_tc, ref_lo, ref_hi)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def CalculateDelay(self, argin):
         """
@@ -4291,10 +4125,7 @@ class MccsTile(SKABaseDevice):
             """
             return self.state_model.admin_mode == AdminMode.MAINTENANCE
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def ConfigureTestGenerator(self, argin):
         """

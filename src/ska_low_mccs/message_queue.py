@@ -215,7 +215,7 @@ class MessageQueue(threading.Thread):
         Note: Timeout present to detect thread termination events.
         """
         try:
-            message = self._message_queue.get(timeout=1.0)
+            message = self._message_queue.get(timeout=2.0)
         except Empty:
             return
         self._execute_message(message)

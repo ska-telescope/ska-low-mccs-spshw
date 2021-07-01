@@ -38,7 +38,7 @@ def devices_to_load():
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
-            #             {"name": "controller", "proxy": MccsDeviceProxy},
+            {"name": "controller", "proxy": MccsDeviceProxy},
             {"name": "subarray_01", "proxy": MccsDeviceProxy},
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
             {"name": "station_001", "proxy": MccsDeviceProxy},

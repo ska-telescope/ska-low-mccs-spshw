@@ -41,6 +41,8 @@ import ska_low_mccs.release as release
 from ska_low_mccs.resource import ResourceManager
 from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
 
+__all__ = ["MccsSubarray", "main"]
+
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
@@ -48,10 +50,7 @@ class MccsSubarrayQueue(MessageQueue):
     """A concrete implementation of a message queue specific to MccsSubarray."""
 
     def _notify_listener(
-        self: MccsSubarrayQueue,
-        result_code: ResultCode,
-        message_uid: str,
-        status: str,
+        self: MccsSubarrayQueue, result_code: ResultCode, message_uid: str, status: str
     ) -> None:
         """
         Concrete implementation that can notify specific listeners.
@@ -285,10 +284,7 @@ class MccsSubarray(SKASubarray):
             self._message_queue.join()
 
     def notify_listener(
-        self: MccsSubarrayQueue,
-        result_code: ResultCode,
-        message_uid: str,
-        status: str,
+        self: MccsSubarrayQueue, result_code: ResultCode, message_uid: str, status: str
     ) -> None:
         """
         Thin wrapper around the message queue's notify listener method.
@@ -408,6 +404,8 @@ class MccsSubarray(SKASubarray):
         self._subarray_beam_resource_manager.assigned_station_fqdns = list(
             station_fqdns or []
         )
+        return self._station_fqdns
+
 
     # -------------------------------------------
     # Base class command and gatekeeper overrides
@@ -449,10 +447,7 @@ class MccsSubarray(SKASubarray):
         )
         return [[result_code], [status, message_uid]]
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def On(self: MccsSubarray, json_args: str) -> DevVarLongStringArrayType:
         """
@@ -572,21 +567,18 @@ class MccsSubarray(SKASubarray):
             # deliberately not calling super() -- we're passing a different
             # target object
             kwargs = json.loads(argin)
-            station_fqdns = kwargs.get("stations", [])
-            subarray_beam_fqdns = kwargs.get("subarray_beams", [])
+            device = self.target
+            device._station_fqdns = kwargs.get("stations", [])
+            device._subarray_beam_fqdns = kwargs.get("subarray_beams", [])
             # TODO: Are channels required in subarray during allocation or are they
             # only required in MCCSController? Remove noqa upon decision
             channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841
-
             # TODO: Should we always return success?
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
             """Action to take on successful completion of a resourcing command."""
-            if len(self.target) == 0:
-                action = "resourcing_succeeded_no_resources"
-            else:
-                action = "resourcing_succeeded_some_resources"
+            action = "resourcing_succeeded_some_resources"
             self.state_model.perform_action(action)
 
     class ReleaseResourcesCommand(SKASubarray.ReleaseResourcesCommand):
@@ -624,10 +616,7 @@ class MccsSubarray(SKASubarray):
 
         def succeeded(self):
             """Action to take on successful completion of a resourcing command."""
-            if len(self.target):
-                action = "resourcing_succeeded_some_resources"
-            else:
-                action = "resourcing_succeeded_no_resources"
+            action = "resourcing_succeeded_no_resources"
             self.state_model.perform_action(action)
 
     class ReleaseAllResourcesCommand(SKASubarray.ReleaseAllResourcesCommand):
@@ -663,10 +652,7 @@ class MccsSubarray(SKASubarray):
 
         def succeeded(self):
             """Action to take on successful completion of a resourcing command."""
-            if len(self.target):
-                action = "resourcing_succeeded_some_resources"
-            else:
-                action = "resourcing_succeeded_no_resources"
+            action = "resourcing_succeeded_some_resources"
             self.state_model.perform_action(action)
 
     class ConfigureCommand(SKASubarray.ConfigureCommand):
@@ -691,17 +677,35 @@ class MccsSubarray(SKASubarray):
                 "channels":  [[0, 8, 1, 1], [8, 8, 2, 1], [24, 16, 2, 1]],
                 "sky_coordinates": [0.0, 180.0, 0.0, 45.0, 0.0],
                 "antenna_weights": [1.0, 1.0, 1.0],
-                "phase_centre": [0.0, 0.0]}]
+                "phase_centre": [0.0, 0.0],
+                }]
                 }
-
+     
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-            :rtype:
-                (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
-            subarray_beam_resource_manager = self.target._subarray_beam_resource_manager
-            return subarray_beam_resource_manager.configure(self.logger, argin)
+            kwargs = json.loads(argin)
+            stations = kwargs.get("stations", list())
+            for station in stations:
+                # TODO: This is here for future expansion of json strings
+                station.get("station_id")
+
+            subarray_beams = kwargs.get("subarray_beams", list())
+            for subarray_beam in subarray_beams:
+                subarray_beam_id = subarray_beam.get("subarray_beam_id")
+                if subarray_beam_id:
+                    subarray_beam_fqdn = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
+                    if subarray_beam_fqdn:
+                        # TODO: Establishment of connections should happen at initialization
+                        dp = MccsDeviceProxy(subarray_beam_fqdn, logger=self.logger)
+
+                        json_str = json.dumps(subarray_beam)
+                        dp.configure(json_str)
+
+            result_code = ResultCode.OK
+            message = "Configure command completed OK"
+            return (result_code, message)
 
         def check_allowed(self):
             """
@@ -742,15 +746,21 @@ class MccsSubarray(SKASubarray):
             device._scan_id = kwargs.get("scan_id")
             device._scan_time = kwargs.get("start_time")
 
-            subarray_beam_resource_manager = device._subarray_beam_resource_manager
-            (
-                resource_failure_code,
-                resource_message,
-            ) = subarray_beam_resource_manager.scan(self.logger, argin)
-            if not resource_failure_code:
-                return (result_code, message)
-            else:
-                return (resource_failure_code, resource_message)
+            subarray_beam_device_proxies = []
+            for subarray_beam_fqdn in device._subarray_beam_fqdns:
+                # TODO: Establishment of connections should be happening at initialization
+                device_proxy = MccsDeviceProxy(subarray_beam_fqdn, logger=device.logger)
+                subarray_beam_device_proxies.append(device_proxy)
+
+            error_message = ""
+            for subarray_beam_device_proxy in subarray_beam_device_proxies:
+                # TODO: Ideally we want to kick these off in parallel...
+                (result_code, message) = subarray_beam_device_proxy.Scan(argin)
+                if result_code in [ResultCode.FAILED, ResultCode.UNKNOWN]:
+                    error_message += message + " "
+                    return (result_code, error_message)
+
+            return (ResultCode.STARTED, "Scan started")
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """Class for handling the EndScan() command."""

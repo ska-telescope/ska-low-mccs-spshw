@@ -496,11 +496,11 @@ class TestMccsController(HelperClass):
                 fqdn="low-mccs/station/002",
                 health_state=HealthState.OK,
             )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/subarraybeam/01",
-                health_state=HealthState.OK,
-            )
+            #             call_with_json(
+            #                 device_under_test.simulateHealthStateChange,
+            #                 fqdn="low-mccs/subarraybeam/01",
+            #                 health_state=HealthState.OK,
+            #             )
 
             # Test that subscription yields an event as expected
             _ = controller.subscribe_event(

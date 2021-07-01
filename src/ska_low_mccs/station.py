@@ -214,7 +214,7 @@ class MccsStation(SKAObsDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.device_pool.connect()
+            # device.device_pool.connect()
 
         def _initialise_health_monitoring(self, device):
             """

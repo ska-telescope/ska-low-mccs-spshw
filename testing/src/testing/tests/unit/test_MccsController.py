@@ -1063,7 +1063,7 @@ class TestMccsController:
             )
 
             expected_result = {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
                 "subarray_beam_ids": [1],
                 "station_ids": [[1, 2]],
                 "channel_blocks": [3],

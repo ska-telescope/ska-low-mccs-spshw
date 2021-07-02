@@ -45,16 +45,6 @@ test_MccsController
 .. automodule:: ska_low_mccs.tests.unit.test_MccsController
    :members:
 
-test_MccsDevice
-===============
-.. automodule:: ska_low_mccs.tests.unit.test_MccsDevice
-   :members:
-
-test_MccsGroupDevice
-====================
-.. automodule:: ska_low_mccs.tests.unit.test_MccsGroupDevice
-   :members:
-
 test_MccsStation
 ================
 .. automodule:: ska_low_mccs.tests.unit.test_MccsStation

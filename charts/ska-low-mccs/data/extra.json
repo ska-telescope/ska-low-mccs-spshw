@@ -9,24 +9,6 @@
                 }
             }
         },
-        "MccsDevice": {
-            "device": {
-                "MccsDevice": {
-                    "low-mccs/device/device": {
-                        "properties": {}
-                    }
-                }
-            }
-        },
-        "MccsGroupDevice": {
-            "groupdevice": {
-                "MccsGroupDevice": {
-                    "low-mccs/groupdevice/groupdevice": {
-                        "properties": {}
-                    }
-                }
-            }
-        },
         "MccsTelState": {
             "telstate": {
                 "MccsTelState": {

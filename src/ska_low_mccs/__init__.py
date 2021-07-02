@@ -17,8 +17,6 @@ __all__ = [
     "MccsAPIU",
     "MccsClusterManagerDevice",
     "MccsController",
-    "MccsDevice",
-    "MccsGroupDevice",
     "MccsStation",
     "MccsStationBeam",
     "MccsSubarray",
@@ -29,10 +27,8 @@ __all__ = [
     "MccsTransientBuffer",
     # proxies
     "MccsDeviceProxy",
-    # abstract device modules
-    "device",
-    "group_device",
-    # concrete device subpackages
+    # device subpackages
+    "antenna",
     "apiu",
     "cluster_manager",
     "controller",
@@ -53,9 +49,7 @@ __all__ = [
     "utils",
 ]
 
-from .device import MccsDevice  # type: ignore[attr-defined]
 from .device_proxy import MccsDeviceProxy
-from .group_device import MccsGroupDevice  # type: ignore[attr-defined]
 
 from .apiu import MccsAPIU  # type: ignore[attr-defined]
 from .cluster_manager import MccsClusterManagerDevice  # type: ignore[attr-defined]

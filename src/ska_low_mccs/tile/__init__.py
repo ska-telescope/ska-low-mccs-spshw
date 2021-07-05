@@ -14,32 +14,37 @@ modules for driving and simulating TPM hardware, and a CLI.
 
 __all__ = [
     "MccsTile",
-    "TileHardwareManager",
-    "TilePowerManager",
+    "TileComponentManager",
+    "TileHealthModel",
+    "BaseTpmSimulator",
+    "DemoTile",
     "DynamicTpmSimulator",
     "StaticTpmSimulator",
+    "SwitchingTpmComponentManager",
+    "DynamicTpmSimulatorComponentManager",
+    "StaticTpmSimulatorComponentManager",
     "TpmDriver",
     "HwTile",
     "Tile12",
     "Tile16",
     "TpmTestFirmware",
     "demo_tile_device",
-    "tile_device",
-    "tile_hardware",
-    "tile_cli",
-    "tpm_simulator",
-    "tpm_driver",
-    "tile_1_2",
-    "tile_1_6",
-    "tile_wrapper",
     "plugins",
 ]
 
 from .tile_1_2 import Tile12  # type: ignore[attr-defined]
 from .tile_1_6 import Tile16  # type: ignore[attr-defined]
 from .tile_wrapper import HwTile  # type: ignore[attr-defined]
+from .base_tpm_simulator import BaseTpmSimulator  # type: ignore[attr-defined]
 from .dynamic_tpm_simulator import DynamicTpmSimulator  # type: ignore[attr-defined]
 from .static_tpm_simulator import StaticTpmSimulator  # type: ignore[attr-defined]
 from .tpm_driver import TpmDriver  # type: ignore[attr-defined]
-from .tile_hardware import TileHardwareManager  # type: ignore[attr-defined]
-from .tile_device import MccsTile, TilePowerManager  # type: ignore[attr-defined]
+from .tile_component_manager import (
+    DynamicTpmSimulatorComponentManager,
+    StaticTpmSimulatorComponentManager,
+    SwitchingTpmComponentManager,
+    TileComponentManager,
+)
+from .tile_health_model import TileHealthModel
+from .tile_device import MccsTile  # type: ignore[attr-defined]
+from .demo_tile_device import DemoTile

@@ -50,7 +50,6 @@ class Tpm16TestFirmware(TpmTestFirmware):
         :raises PluginError: Device parameter must be specified
         """
         super(TpmTestFirmware, self).__init__(board)
-        # super(TpmTestFirmware, self).all(*args, **kwargs)
 
         # Device must be specified in kwargs
         if kwargs.get("device", None) is None:
@@ -156,22 +155,18 @@ class Tpm16TestFirmware(TpmTestFirmware):
 
     def start_ddr_initialisation(self):
         """Start DDR initialisation."""
-        # In TPM 1.6 ddr_vdd is controled with en_fpga so it's already enabled to program FPGAs
-        # if self.board['board.regfile.ctrl.en_ddr_vdd'] == 0:
-        #     self.board['board.regfile.ctrl.en_ddr_vdd'] = 1
-        #     time.sleep(0.5)
         logging.debug(self._device_name + " DDR4 reset")
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1
         self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
     def initialise_ddr(self):
         """Initialise DDR."""
-        for n in range(3):
+        for _n in range(3):
             logging.debug(self._device_name + " DDR3 reset")
             self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x1
             self.board[self._device_name + ".regfile.reset.ddr_rst"] = 0x0
 
-            for m in range(5):
+            for _m in range(5):
                 if self.board.memory_map.has_register(
                     self._device_name + ".regfile.stream_status.ddr_init_done"
                 ):
@@ -228,7 +223,6 @@ class Tpm16TestFirmware(TpmTestFirmware):
             )
 
         if retries == max_retries:
-            # print("TpmTestFirmware: Could not configure JESD cores")
             raise BoardError("TpmTestFirmware: Could not configure JESD cores")
 
         # Initialise DDR

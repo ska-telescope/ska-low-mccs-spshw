@@ -1,7 +1,7 @@
 # type: ignore
 # -*- coding: utf-8 -*-
 """
-An implementation of a TPM driver.
+An implementation of a Tile component manager that drives a real TPM.
 
 The class is basically a wrapper around the HwTile class, in order to
 have a consistent interface for driver and simulator. This is an initial
@@ -9,14 +9,22 @@ version. Some methods are still simulated. A warning is issued in this
 case, or a NotImplementedError exception raised.
 """
 import copy
+import logging
+from typing import Callable
+
 import numpy as np
 
-from ska_low_mccs.hardware import ConnectionStatus, HardwareDriver
-from ska_low_mccs.tile import HwTile
 from pyfabil.base.definitions import Device
 
+from ska_low_mccs.component import (
+    CommunicationStatus,
+    MessageQueueComponentManager,
+    enqueue,
+)
+from ska_low_mccs.tile import HwTile
 
-class TpmDriver(HardwareDriver):
+
+class TpmDriver(MessageQueueComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -42,7 +50,15 @@ class TpmDriver(HardwareDriver):
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
 
-    def __init__(self, logger, ip, port, tpm_version):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        ip: str,
+        port: int,
+        tpm_version: str,
+        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_fault_callback: Callable[[bool], None],
+    ) -> None:
         """
         Initialise a new TPM driver instance.
 
@@ -57,8 +73,12 @@ class TpmDriver(HardwareDriver):
         :type port: int
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :type tpm_version: str
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_fault_callback: callback to be called when the
+            component faults (or stops faulting)
         """
-        self.logger = logger
         self._is_programmed = False
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
@@ -93,20 +113,35 @@ class TpmDriver(HardwareDriver):
             tpm_version = None
 
         self.tile = HwTile(
-            ip=self._ip, port=self._port, logger=self.logger, tpm_version=tpm_version
+            ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
         )
 
-        super().__init__(False)
+        super().__init__(
+            logger,
+            communication_status_changed_callback,
+            None,
+            component_fault_callback,
+        )
 
-    def _connect(self):
-        """
-        Connect to the hardware.
+    def start_communicating(self):
+        """Establish communication with the TPM."""
+        super().start_communicating()
+        self.enqueue(self._connect_to_tile)
 
-        :return: whether successful
-        :rtype: bool
-        """
+    def _connect_to_tile(self):
         self.tile.connect()
-        return self.tile.tpm is not None
+        if self.tile.tpm is not None:
+            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+
+    def stop_communicating(self):
+        """
+        Stop communicating with the TPM.
+
+        :todo: is there a better way to do this? Should Tile16 have a
+            disconnect() method that we can call here?
+        """
+        super().stop_communicating()
+        self.tile.tpm = None
 
     @property
     def firmware_available(self):
@@ -168,31 +203,7 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: is_programmed " + str(self._is_programmed))
         return self._is_programmed
 
-    @property
-    def connection_status(self):
-        """
-        Returns the status of the driver-hardware connection.
-
-        :return: the status of the driver-hardware connection.
-        :rtype: py:class:`ska_low_mccs.hardware.base_hardware.ConnectionStatus`
-        """
-        status = (
-            ConnectionStatus.NOT_CONNECTED
-            if self.tile.tpm is None
-            else ConnectionStatus.CONNECTED
-        )
-        self.logger.debug("TpmDriver: connection_status " + str(status))
-        return status
-
-    @connection_status.setter
-    def connection_status(self, status):
-        """
-        Sets the status of the driver-hardware connection.
-
-        :param status: new status of the driver-hardware connection.
-        """
-        self._connection_status = status
-
+    @enqueue
     def download_firmware(self, bitfile):
         """
         Download the provided firmware bitfile onto the TPM.
@@ -218,6 +229,7 @@ class TpmDriver(HardwareDriver):
         self.logger.debug("TpmDriver: program_cpld")
         raise NotImplementedError
 
+    @enqueue
     def initialise(self):
         """Download firmware, if not already downloaded, and initializes tile."""
         self.logger.debug("TpmDriver: initialise")
@@ -462,7 +474,7 @@ class TpmDriver(HardwareDriver):
         # TODO use list write method for tile
         #
         current_address = int(address & 0xFFFFFFFC)
-        for i in range(nvalues):
+        for _i in range(nvalues):
             self.logger.debug(
                 "Reading address "
                 + str(current_address)

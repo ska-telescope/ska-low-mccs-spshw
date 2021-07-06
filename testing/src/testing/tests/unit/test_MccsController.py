@@ -180,8 +180,7 @@ class TestMccsController(HelperClass):
         """
         heartbeat = device_under_test.aHeartBeat
         sleep(1)
-        # TODO
-        #  device_under_test.aHeartBeat != heartbeat
+        device_under_test.aHeartBeat != heartbeat
 
     def test_State(self, device_under_test):
         """

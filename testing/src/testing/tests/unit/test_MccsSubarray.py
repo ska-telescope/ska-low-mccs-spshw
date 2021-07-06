@@ -513,7 +513,7 @@ class TestMccsSubarrayCommandClasses:
         json_str = json.dumps(scan_args)
         (result_code, message) = scan_command(json_str)
         assert result_code == ResultCode.STARTED
-        assert message == f"Scan command STARTED"
+        assert message == "Scan command STARTED"
 
         # TODO scan is not in the resource manager
         # therefore we do not needto mock this

@@ -764,7 +764,7 @@ class MccsSubarray(SKASubarray):
             #                     error_message += message + " "
             #                     return (result_code, error_message)
 
-            return (ResultCode.STARTED, f"Scan command STARTED")
+            return (ResultCode.STARTED, "Scan command STARTED")
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """Class for handling the EndScan() command."""

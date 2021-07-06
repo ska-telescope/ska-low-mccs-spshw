@@ -52,7 +52,7 @@ class StationsResourceManager(ResourceManager):
 
     def __init__(
         self: StationsResourceManager,
-        health_monitor: HealthMonitor,
+        health_monitor: MutableHealthMonitor,
         station_fqdns: List[str],
         logger: logging.Logger,
     ) -> None:
@@ -149,17 +149,16 @@ class MccsControllerQueue(MessageQueue):
 
 class SubarrayBeamsResourceManager(ResourceManager):
     """
-    A simple manager for the pool of subarray beams that are assigned to
-    a subarray.
+    A simple manager for the pool of subarray beams that are assigned to a subarray.
 
     Inherits from ResourceManager.
     """
 
     def __init__(
         self: SubarrayBeamsResourceManager,
-        health_monitor: HealthMonitor,
+        health_monitor: MutableHealthMonitor,
         subarray_beam_fqdns: list[str],
-        stations_manager: StationsResourceManager,
+        stations_manager: ControllerResourceManager,
         logger: logging.Logger,
     ) -> None:
         """
@@ -188,8 +187,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def __len__(self: SubarrayBeamsResourceManager) -> int:
         """
-        Return the number of stations assigned to this subarray resource
-        manager.
+        Return the number of stations assigned to this subarray resource manager.
 
         :return: the number of stations assigned to this subarray resource manager
         """
@@ -263,15 +261,11 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
             subarray_beam.stationIds = []
             subarray_beam.stationFqdn = None
-        print("Actually going to release ******", subarray_beam_fqdns)
         super().release(subarray_beam_fqdns)
 
     def release_all(self: SubarrayBeamsResourceManager) -> None:
-        """
-        Release all devices from this subarray resource manager.
-        """
+        """Release all devices from this subarray resource manager."""
         subarray_beam_fqdns = self.get_all_fqdns()
-        print("*=*=*=*=", subarray_beam_fqdns)
         super().release(subarray_beam_fqdns)
         # self.release(devices, list())
         self._stations_manager.release_all()
@@ -522,7 +516,6 @@ class MccsController(SKAMaster):
             device.event_manager = EventManager(self.logger, fqdns)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
-            self.logger.error(f"list of fqdn for health {fqdns}")
             device.health_model = MutableHealthModel(
                 None, fqdns, self.logger, device.health_changed
             )
@@ -547,9 +540,6 @@ class MccsController(SKAMaster):
                 device._subarray_beam_fqdns,
                 device._stations_manager,
                 self.logger,
-            )
-            self.logger.error(
-                "here========================================================"
             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
@@ -1324,7 +1314,7 @@ class MccsController(SKAMaster):
                 subarray_beams[
                     subarray_beam_id
                 ] = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
-            subarray_beam_fqdns = sorted(subarray_beams.values())
+            # subarray_beam_fqdns = sorted(subarray_beams.values())
 
             # Generate subarray FQDN from ID
 
@@ -1662,7 +1652,7 @@ class MccsController(SKAMaster):
             information purpose only.
         """
         kwargs = json.loads(argin)
-        release_all = kwargs.get("release_all")
+        # release_all = kwargs.get("release_all")
         subarray_id = kwargs.get("subarray_id")
         if subarray_id is None or not (1 <= subarray_id <= len(self._subarray_fqdns)):
             return (
@@ -1783,7 +1773,6 @@ class MccsController(SKAMaster):
             message indicating status. The message is for
             information purpose only.
         """
-        self.logger.error("########################" + argin)
         self.notify_listener(ResultCode.UNKNOWN, "", "")
         handler = self.get_command_object("Release")
         (result_code, status) = handler(argin)

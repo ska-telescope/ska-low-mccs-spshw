@@ -606,11 +606,12 @@ class MccsSubarray(SKASubarray):
             # target object
             kwargs = json.loads(argin)
             stations = kwargs.get("station_fqdns", [])
-            subarray_beams = kwargs.get("subarray_beam_fqdns", [])
+            # subarray_beams = kwargs.get("subarray_beam_fqdns", [])
 
             for fqdn in stations:
                 device = MccsDeviceProxy(fqdn, self.logger)
-                device.subarrayId = subarray_id
+                device.subarrayId = 0
+                # device.subarrayId = subarray_id
 
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -680,7 +681,7 @@ class MccsSubarray(SKASubarray):
                 "phase_centre": [0.0, 0.0],
                 }]
                 }
-     
+
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
@@ -746,21 +747,24 @@ class MccsSubarray(SKASubarray):
             device._scan_id = kwargs.get("scan_id")
             device._scan_time = kwargs.get("start_time")
 
-            subarray_beam_device_proxies = []
-            for subarray_beam_fqdn in device._subarray_beam_fqdns:
-                # TODO: Establishment of connections should be happening at initialization
-                device_proxy = MccsDeviceProxy(subarray_beam_fqdn, logger=device.logger)
-                subarray_beam_device_proxies.append(device_proxy)
+            # This code was remove from the resource manager
+            # TODO: for unit tests how do we get device._subarray_beam_fqdns
+            #
+            #             subarray_beam_device_proxies = []
+            #             for subarray_beam_fqdn in device._subarray_beam_fqdns:
+            #                 # TODO: Establishment of connections should be happening at initialization
+            #                 device_proxy = MccsDeviceProxy(subarray_beam_fqdn, logger=device.logger)
+            #                 subarray_beam_device_proxies.append(device_proxy)
+            #
+            #             error_message = ""
+            #             for subarray_beam_device_proxy in subarray_beam_device_proxies:
+            #                 # TODO: Ideally we want to kick these off in parallel...
+            #                 (result_code, message) = subarray_beam_device_proxy.Scan(argin)
+            #                 if result_code in [ResultCode.FAILED, ResultCode.UNKNOWN]:
+            #                     error_message += message + " "
+            #                     return (result_code, error_message)
 
-            error_message = ""
-            for subarray_beam_device_proxy in subarray_beam_device_proxies:
-                # TODO: Ideally we want to kick these off in parallel...
-                (result_code, message) = subarray_beam_device_proxy.Scan(argin)
-                if result_code in [ResultCode.FAILED, ResultCode.UNKNOWN]:
-                    error_message += message + " "
-                    return (result_code, error_message)
-
-            return (ResultCode.STARTED, "Scan started")
+            return (ResultCode.STARTED, f"Scan command STARTED")
 
     class EndScanCommand(SKASubarray.EndScanCommand):
         """Class for handling the EndScan() command."""

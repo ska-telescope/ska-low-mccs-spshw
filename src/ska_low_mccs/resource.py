@@ -297,15 +297,11 @@ class ResourceManager:
         self.resource_availability_policy = ResourceAvailabilityPolicy(
             availability_policy
         )
-        self._logger.error("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        self._logger.error(devices)
         # For each resource, identified by FQDN, create an object
         for device_id, fqdn in devices.items():
             self._resources[fqdn] = Resource(
                 self.resource_availability_policy, fqdn, device_id
             )
-            self._logger.error(self._health_monitor)
-            self._logger.error(fqdn)
             self._health_monitor.register_callback(
                 self._resources[fqdn]._health_changed, fqdn
             )

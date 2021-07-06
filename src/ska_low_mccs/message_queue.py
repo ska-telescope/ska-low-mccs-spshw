@@ -19,7 +19,6 @@ import threading
 from uuid import uuid4
 from queue import SimpleQueue, Empty
 
-from ska_low_mccs import MccsDeviceProxy
 from tango import EnsureOmniThread
 
 from ska_tango_base.commands import ResultCode

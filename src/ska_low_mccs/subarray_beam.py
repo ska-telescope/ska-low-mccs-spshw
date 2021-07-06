@@ -77,7 +77,6 @@ class SubarrayBeamHealthEvaluator(HardwareHealthEvaluator):
 
         :return: the evaluated health of the hardware
         """
-        print("????????????????????????????", hardware.is_locked)
         if not hardware.is_locked:
             return HealthState.DEGRADED
         return HealthState.OK

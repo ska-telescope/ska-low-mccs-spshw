@@ -15,11 +15,13 @@ from tango import DevState
 import pytest
 
 from ska_tango_base.control_model import AdminMode, HealthState
-from ska_tango_base.commands import ResultCode
+
+# from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
-from ska_low_mccs.utils import call_with_json
+
+# from ska_low_mccs.utils import call_with_json
 
 from testing.harness import HelperClass
 
@@ -35,7 +37,7 @@ def devices_to_load():
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "charts/ska-low-mccs/data/configuration_without_antennas.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -44,12 +46,14 @@ def devices_to_load():
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
-            {"name": "tile_0001", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0002", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
+            {"name": "tile_0001", "proxy": MccsDeviceProxy},
+            {"name": "tile_0002", "proxy": MccsDeviceProxy},
+            {"name": "tile_0003", "proxy": MccsDeviceProxy},
+            {"name": "tile_0004", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
+            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -82,23 +86,23 @@ class TestHealthManagement(HelperClass):
         :type empty_json_dict: str
         """
         controller = tango_harness.get_device("low-mccs/control/control")
+        subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
+        subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
         tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
+        subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
         # workaround for https://github.com/tango-controls/cppTango/issues/816
         # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
-
         # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
         # antenna_2 = tango_harness.get_device("low-mccs/antenna/000002")
         # antenna_3 = tango_harness.get_device("low-mccs/antenna/000003")
         # antenna_4 = tango_harness.get_device("low-mccs/antenna/000004")
-
-        # subarraybeam_1 = tango_harness.get_device("low-mccs/subarraybeam/01")
-        # subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
         # TODO: For now, we need to get our devices to OFF state (the highest state of
         # device readiness for a device that isn't actual on -- and a state in which the
@@ -107,13 +111,17 @@ class TestHealthManagement(HelperClass):
         _ = controller.Startup()
         dev_states = {
             controller: DevState.ON,
+            subarray_1: DevState.OFF,
+            subarray_2: DevState.OFF,
             station_1: DevState.ON,
             station_2: DevState.ON,
-            subrack: DevState.ON,
             tile_1: DevState.ON,
             tile_2: DevState.ON,
             tile_3: DevState.ON,
             tile_4: DevState.ON,
+            #             subarraybeam_01: DevState.OFF,
+            #             subarraybeam_02: DevState.OFF,
+            subrack_01: DevState.ON,
         }
         self.check_states_of_devices(dev_states)
 

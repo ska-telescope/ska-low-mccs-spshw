@@ -537,7 +537,7 @@ class TestMccsController:
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1]],
@@ -713,7 +713,7 @@ class TestMccsController:
             # allocated to subarray 1
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
                 subarray_beam_ids=[1],
                 station_ids=[[1]],
@@ -754,7 +754,7 @@ class TestMccsController:
 
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1, 2]],
@@ -796,7 +796,7 @@ class TestMccsController:
             # it only requires resource release
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[2]],
@@ -857,7 +857,7 @@ class TestMccsController:
 
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
                 subarray_beam_ids=[1],
                 station_ids=[[1, 2]],
@@ -931,7 +931,7 @@ class TestMccsController:
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1]],
@@ -954,7 +954,7 @@ class TestMccsController:
             # allocate station 2 to subarray 2
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
                 subarray_beam_ids=[2],
                 station_ids=[[2]],
@@ -1063,7 +1063,7 @@ class TestMccsController:
             )
 
             expected_result = {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
                 "subarray_beam_ids": [1],
                 "station_ids": [[1, 2]],
                 "channel_blocks": [3],
@@ -1075,7 +1075,7 @@ class TestMccsController:
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1, 2]],

@@ -31,13 +31,6 @@ stages:
   - publish
   - release
 
-# The YAML file defines a set of jobs with constraints stating when they should be run.
-# You can specify an unlimited number of jobs which are defined as top-level elements
-# with an arbitrary name and always have to contain at least the script clause.
-# In this case we have only the test job which produces a coverage report and the
-# unittest output (see setup.cfg), and the coverage xml report is moved to the reports
-# directory while the html output is persisted for use by the pages job.
-# TODO: possibly a candidate for refactor / renaming later on.
 linting:
   stage: lint
   tags:
@@ -48,6 +41,13 @@ linting:
     paths:
       - ./build
 
+# The YAML file defines a set of jobs with constraints stating when they should be run.
+# You can specify an unlimited number of jobs which are defined as top-level elements
+# with an arbitrary name and always have to contain at least the script clause.
+# In this case we have only the test job which produces a coverage report and the
+# unittest output (see setup.cfg), and the coverage xml report is moved to the reports
+# directory while the html output is persisted for use by the pages job.
+# TODO: possibly a candidate for refactor / renaming later on.
 test:
   stage: test
   tags:

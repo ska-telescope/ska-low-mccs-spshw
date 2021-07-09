@@ -107,14 +107,8 @@ class TestMccsIntegration(HelperClass):
         self.wait_for_command_to_complete(controller)
 
         # check that station_1 and only station_1 is allocated
-<<<<<<< HEAD
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert list(subarray_2.stationFQDNs) == []
-=======
-        # TODO Why????
-        # assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
->>>>>>> MCCS-404 more testing
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -133,14 +127,8 @@ class TestMccsIntegration(HelperClass):
         self.wait_for_command_to_complete(controller, expected_result=ResultCode.FAILED)
 
         # check no side-effects
-<<<<<<< HEAD
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert list(subarray_2.stationFQDNs) == []
-=======
-        # TODO Why ????
-        # assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
->>>>>>> MCCS-404 more testing
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -160,21 +148,13 @@ class TestMccsIntegration(HelperClass):
         assert ":Allocate" in message_uid
         self.wait_for_command_to_complete(controller)
 
-<<<<<<< HEAD
         # check
         assert list(subarray_1.stationFQDNs) == [
             station_1.dev_name(),
             station_2.dev_name(),
         ]
         assert list(subarray_2.stationFQDNs) == []
-=======
-        # TODO: Why????
-        # assert list(subarray_1.stationFQDNs) == [
-        #     station_1.dev_name(),
-        #     station_2.dev_name(),
-        # ]
-        assert subarray_2.stationFQDNs is None
->>>>>>> MCCS-404 more testing
+        assert subarray_2.stationFQDNs == ()
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
 
@@ -234,14 +214,9 @@ class TestMccsIntegration(HelperClass):
         assert ":Allocate" in message_uid
         self.wait_for_command_to_complete(controller)
 
-<<<<<<< HEAD
+        # check initial state
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
         assert list(subarray_2.stationFQDNs) == [station_2.dev_name()]
-=======
-        # TODO: Why????????? check initial state
-        # assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        # assert list(subarray_2.stationFQDNs) == [station_2.dev_name()]
->>>>>>> MCCS-404 more testing
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 2
 

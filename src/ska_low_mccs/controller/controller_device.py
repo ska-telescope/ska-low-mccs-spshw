@@ -221,15 +221,12 @@ class SubarrayBeamsResourceManager(ResourceManager):
             subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
             subarray_beam.stationIds = sorted(stations[index].keys())
             subarray_beam.isBeamLocked = True
-            self._logger.error(
-                f"fqdn {subarray_beam_fqdn} is beamlocked {subarray_beam.isBeamLocked}"
-            )
-            self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
-            # self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
-            self._logger.error(
-                f"fqdn {subarray_beam_fqdn} healthstate {subarray_beam.healthState}"
-            )
 
+            # TODO Clearly subarraybeam is stupid. isBeamlocked is set to True
+            # and therefore should trigger a healthstate change to OK, but it
+            # doesn't. Its not as though its got much else to do. So I'm fixing it.
+            # self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
+            self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
         super().assign(subarray_beams, subarray_id)
 
     def release(
@@ -1294,7 +1291,6 @@ class MccsController(SKAMaster):
 
             # Generate station FQDNs from IDs
             all_stations = {}
-            stations_per_beam = []
             stations_per_beam_list = []
             for station_sub_ids in station_ids:
                 station_sublist = []
@@ -1305,7 +1301,6 @@ class MccsController(SKAMaster):
                         station_id
                     ] = f"low-mccs/station/{station_id:03}"
                     station_sublist.append(f"low-mccs/station/{station_id:03}")
-                stations_per_beam.append(station_sublist)
                 stations_per_beam_list.append(station_sublist_dict)
             station_fqdns = all_stations.values()
 
@@ -1314,9 +1309,6 @@ class MccsController(SKAMaster):
                 subarray_beams[
                     subarray_beam_id
                 ] = f"low-mccs/subarraybeam/{subarray_beam_id:02}"
-            # subarray_beam_fqdns = sorted(subarray_beams.values())
-
-            # Generate subarray FQDN from ID
 
             # Query stations resource manager
             # Are we allowed to make this allocation?
@@ -1371,7 +1363,6 @@ class MccsController(SKAMaster):
                 "message_uid": message_uid,
                 "subarray_fqdn": subarray_fqdn,
                 "stations_to_assign": stations_to_assign,
-                "stations_per_beam": stations_per_beam,
                 "stations_per_beam_list": stations_per_beam_list,
                 "subarray_beams": subarray_beams,
                 "station_ids": station_ids,
@@ -1521,9 +1512,6 @@ class MccsController(SKAMaster):
             stations_to_assign = controllerdevice._allocate_cmd_cache.get(
                 "stations_to_assign"
             )
-            stations_per_beam = controllerdevice._allocate_cmd_cache.get(
-                "stations_per_beam"
-            )
             stations_per_beam_list = controllerdevice._allocate_cmd_cache.get(
                 "stations_per_beam_list"
             )
@@ -1537,7 +1525,7 @@ class MccsController(SKAMaster):
                 subarray_beam_fqdns = list(subarray_beams.values())
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources,
-                    stations=stations_per_beam,
+                    stations=stations_to_assign,
                     subarray_beams=subarray_beam_fqdns,
                     channel_blocks=channel_blocks,
                 )
@@ -1559,6 +1547,9 @@ class MccsController(SKAMaster):
                 # Inform station manager that we made the assignments
                 controllerdevice._stations_manager.assign(
                     stations_to_assign, subarray_id
+                )
+                subarray_device.stationFQDNs = (
+                    controllerdevice._stations_manager.get_assigned_fqdns(subarray_id)
                 )
             # assume all is OK for now ie send back what we received.
             controllerdevice._assigned_resources = json.dumps(
@@ -1679,6 +1670,9 @@ class MccsController(SKAMaster):
             station.subarrayId = 0
         # Finally release them from assignment in the manager
         self._stations_manager.release(fqdns)
+        # TODO tis should be in stations resource manager
+        subarray = MccsDeviceProxy(subarray_fqdn, self.logger)
+        subarray.stationFQDNs = []
 
         result = self._disable_subarray(subarray_id, restart)
         if result[0] is not ResultCode.OK:

@@ -93,6 +93,8 @@ class TestHealthManagement(HelperClass):
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
         subrack = tango_harness.get_device("low-mccs/subrack/01")
+        subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
+        subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
         # workaround for https://github.com/tango-controls/cppTango/issues/816
         # apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
         # antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
@@ -115,12 +117,14 @@ class TestHealthManagement(HelperClass):
             tile_2: DevState.ON,
             tile_3: DevState.ON,
             tile_4: DevState.ON,
-            #             subarraybeam_01: DevState.OFF,
-            #             subarraybeam_02: DevState.OFF,
             subrack: DevState.ON,
+            subarraybeam_01: DevState.OFF,
+            subarraybeam_02: DevState.OFF,
         }
         self.check_states_of_devices(dev_states)
 
+        subarraybeam_01.isBeamLocked = True
+        subarraybeam_02.isBeamLocked = True
         # Check that all devices are OK
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK
@@ -128,8 +132,9 @@ class TestHealthManagement(HelperClass):
         assert tile_4.healthState == HealthState.OK
         assert station_1.healthState == HealthState.OK
         assert station_2.healthState == HealthState.OK
-        # TODO Why????
-        # assert controller.healthState == HealthState.OK
+        assert subarraybeam_01.healthState == HealthState.OK
+        assert subarraybeam_02.healthState == HealthState.OK
+        assert controller.healthState == HealthState.OK
 
         # Now let's make tile 1 fail. We should see that failure
         # propagate up to station and then to controller

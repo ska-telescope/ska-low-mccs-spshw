@@ -45,7 +45,9 @@ class DevicePool:
     not STARTED or QUEUED.
     """
 
-    def __init__(self, fqdns: list[str], logger: logging.Logger, connect: bool = True):
+    def __init__(
+        self: DevicePool, fqdns: list[str], logger: logging.Logger, connect: bool = True
+    ) -> None:
         """
         Initialise a new DevicePool object.
 
@@ -275,7 +277,7 @@ class DevicePoolSequence:
         pools: list[DevicePool],
         logger: logging.Logger,
         connect: bool = True,
-    ):
+    ) -> None:
         """
         Initialise a new DevicePoolSequence object.
 

@@ -496,11 +496,11 @@ class TestMccsController(HelperClass):
                 fqdn="low-mccs/station/002",
                 health_state=HealthState.OK,
             )
-            #             call_with_json(
-            #                 device_under_test.simulateHealthStateChange,
-            #                 fqdn="low-mccs/subarraybeam/01",
-            #                 health_state=HealthState.OK,
-            #             )
+            call_with_json(
+                controller.simulateHealthStateChange,
+                fqdn="low-mccs/subarraybeam/01",
+                health_state=HealthState.OK,
+            )
 
             # Test that subscription yields an event as expected
             _ = controller.subscribe_event(
@@ -541,7 +541,6 @@ class TestMccsController(HelperClass):
             self.setup_allocate_test(
                 controller, mock_event_callback, command_helper, test_string
             )
-
             # When asked to turn on, pretend the subarray replied correctly
             mock_subarray_1.On.return_value = [[ResultCode.QUEUED], []]
             mock_subarray_1.State.return_value = DevState.OFF
@@ -735,7 +734,7 @@ class TestMccsController(HelperClass):
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "stations": [["low-mccs/station/001"]],
+                        "stations": ["low-mccs/station/001"],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
                         "channel_blocks": [2],
                     }
@@ -822,13 +821,13 @@ class TestMccsController(HelperClass):
                 name="commandResult", result=ResultCode.OK
             )
 
-            # check
+            # check, only station02 is assigned as station01 is already assigned.
             mock_subarray_1.On.assert_not_called()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                        "stations": ["low-mccs/station/002"],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
                         "channel_blocks": [2],
                     }
@@ -945,7 +944,7 @@ class TestMccsController(HelperClass):
             mock_subarray_2.AssignResources.assert_called_once_with(
                 json.dumps(
                     {
-                        "stations": [["low-mccs/station/001", "low-mccs/station/002"]],
+                        "stations": ["low-mccs/station/001", "low-mccs/station/002"],
                         "subarray_beams": ["low-mccs/subarraybeam/01"],
                         "channel_blocks": [2],
                     }

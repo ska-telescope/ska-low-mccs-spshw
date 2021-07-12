@@ -2,8 +2,28 @@
 
 ## unreleased
 
-* MCCS-536 - Convert Controller.Allocate to use message queue
+## 0.8.3
+
+* MCCS-667 - modify gitlab ci pipeline
+* MCCS-654 - modify url for JSON
+* MCCS-539 - initial msgq to subarray
+* MCCS-425 - Write documentation for new features
+* MCCS-576 - Add typehints to code in non-device modules
+* MCCS-662 - Move event handling to MccsDeviceProxy and DevicePool
+* MCCS-484 - Support for hardware testing
+* MCCS-521 - Support mocking of all devices
+* MCCS-594 - Remove ERROR in test log
+* MCCS-536 - Convert Controller Allocate command to use message queue
+* MCCS-590 - PEP257 docstring linting
+* MCCS-597 - Add static type checking to toolchain
+* MCCS-589 - Add cov-report term to setup.cfg
+* MCCS-550 - make tests and make lint
+* MCCS-565 - Remove tabs from charts/ska-low-mccs/data/configuration.json
+* MCCS-588 - Update charts to fix local deployment failure
+* MCCS-583 - Add cyclomatic complexity to linting
+* MCCS-160 - Add zDisplacement. Geo posn --> Station
 * MCCS-423 - Add 40G interface programming: destination IP, status
+* MCCS-530 - Add MCCS Controller "Off" command to use message queue
 
 ## 0.8.2
 

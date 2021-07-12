@@ -28,10 +28,9 @@ class TestMessageQueue:
     @pytest.fixture()
     def device_to_load(self):
         """
-        The tango_harness fixture gets its specification of what devices to launch
-        from the device_to_load fixture, so we need to provide that fixture. Since
-        we're only going to be using mock devices here, we can just set it to return
-        None.
+        The tango_harness fixture gets its specification of what devices to launch from
+        the device_to_load fixture, so we need to provide that fixture. Since we're only
+        going to be using mock devices here, we can just set it to return None.
 
         :return: None
         """
@@ -64,9 +63,9 @@ class TestMessageQueue:
     @pytest.fixture()
     def initial_mocks(self, valid_fqdn, response_device):
         """
-        One of the ways we can tell the Tango harness about mock devices is to
-        implement this fixture. Here we tell the Tango harness that when asked for a
-        proxy to the "valid FQDN", it should return our callback device.
+        One of the ways we can tell the Tango harness about mock devices is to implement
+        this fixture. Here we tell the Tango harness that when asked for a proxy to the
+        "valid FQDN", it should return our callback device.
 
         :param valid_fqdn: a valid FQDN to use for our response device
         :type valid_fqdn: valid_fqdn fixture

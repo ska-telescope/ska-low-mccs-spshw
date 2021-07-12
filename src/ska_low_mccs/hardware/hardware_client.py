@@ -207,7 +207,6 @@ class WebHardwareClient(HardwareClient):
         try:
             result = res.json()
         except (requests.exceptions.RequestException, json.JSONDecodeError):
-            # adding status code check?
             result = {
                 "status": "ERROR",
                 "info": "HTML status: " + "timeout",
@@ -224,7 +223,7 @@ class WebHardwareClient(HardwareClient):
         :type attribute: str
 
         :return: result of the attribute command
-        :rtype: dict or str
+        :rtype: dict
         """
         if self._conn is None:
             if not self.connect():
@@ -246,7 +245,15 @@ class WebHardwareClient(HardwareClient):
                 "attribute": attribute,
                 "value": None,
             }
-        result = res.json()
+        try:
+            result = res.json()
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            result = {
+                "status": "ERROR",
+                "info": "JSON Decode Error ",
+                "attribute": attribute,
+                "value": None,
+            }
         return result
 
     def set_attribute(self, attribute, value):
@@ -259,7 +266,7 @@ class WebHardwareClient(HardwareClient):
         :type value: list or int or float
 
         :return: result of the attribute command
-        :rtype: dict or str
+        :rtype: dict
         """
         if self._conn is None:
             if not self.connect():
@@ -281,5 +288,13 @@ class WebHardwareClient(HardwareClient):
                 "attribute": attribute,
                 "value": None,
             }
-        result = res.json()
+        try:
+            result = res.json()
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            result = {
+                "status": "ERROR",
+                "info": "JSON Decode Error ",
+                "attribute": attribute,
+                "value": None,
+            }
         return result

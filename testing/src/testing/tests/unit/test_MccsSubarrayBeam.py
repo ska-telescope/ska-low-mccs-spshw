@@ -82,6 +82,10 @@ class TestMccsSubarrayBeam:
         assert device_under_test.updateRate == 0.0
         # TODO why ???
         # assert not device_under_test.isBeamLocked
+        # result if the following error
+        # E       assert not True
+        # E        +  where True = <ska_low_mccs.device_proxy.MccsDeviceProxy
+        # object at 0x7fe6d38819e8>.isBeamLocked
 
     def test_healthState(self, device_under_test, mock_callback):
         """
@@ -96,6 +100,10 @@ class TestMccsSubarrayBeam:
         """
         # TODO why ??? its obviously lying
         # assert device_under_test.healthState == HealthState.DEGRADED
+        # Results in this error
+        # E       assert <healthState.OK: 0> == <HealthState.DEGRADED: 1>
+        # E         +<healthState.OK: 0>
+        # E         -<HealthState.DEGRADED: 1>
 
         _ = device_under_test.subscribe_event(
             "healthState", EventType.CHANGE_EVENT, mock_callback

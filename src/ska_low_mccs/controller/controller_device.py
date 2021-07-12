@@ -157,7 +157,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
     def __init__(
         self: SubarrayBeamsResourceManager,
         health_monitor: MutableHealthMonitor,
-        subarray_beam_fqdns: list[str],
+        subarray_beam_fqdns: List[str],
         stations_manager: ControllerResourceManager,
         logger: logging.Logger,
     ) -> None:
@@ -197,7 +197,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         self: SubarrayBeamsResourceManager,
         subarray_id: int,
         subarray_beams: dict[int, str],
-        stations: list[dict[int, str]],
+        stations: List[dict[int, str]],
     ) -> None:
         """
         Assign devices to this subarray resource manager.
@@ -231,8 +231,8 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def release(
         self: SubarrayBeamsResourceManager,
-        subarray_beam_fqdns: list[str],
-        station_fqdns: list[str],
+        subarray_beam_fqdns: List[str],
+        station_fqdns: List[str],
     ) -> None:
         """
         Release devices from this subarray resource manager.
@@ -268,7 +268,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         self._stations_manager.release_all()
 
     @property
-    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> list[str]:
+    def subarray_beam_fqdns(self: SubarrayBeamsResourceManager) -> List[str]:
         """
         Returns the FQDNs of currently assigned subarray_beams.
 
@@ -290,19 +290,19 @@ class MccsController(SKAMaster):
             - The FQDNs of the Mccs sub-arrays
             - Type: list(str)
         MccsStations
-            - list of MCCS station  TANGO Device names
+            - List of MCCS station  TANGO Device names
             - Type: list(str)
         MccsStationBeams
-            - list of MCCS station beam TANGO Device names
+            - List of MCCS station beam TANGO Device names
             - Type: list(str)
         MccsSubarrayBeams
-            - list of MCCS subarray beam TANGO Device names
+            - List of MCCS subarray beam TANGO Device names
             - Type: list(str)
         MccsTiles
-            - list of MCCS Tile TANGO Device names.
+            - List of MCCS Tile TANGO Device names.
             - Type: list(str)
         MccsAntenna
-            - list of MCCS Antenna TANGO Device names
+            - List of MCCS Antenna TANGO Device names
             - Type: list(str)
     """
 
@@ -394,7 +394,7 @@ class MccsController(SKAMaster):
             self._message_queue = None
             self._qdebuglock = threading.Lock()
 
-        def do(self: MccsController.InitCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.InitCommand) -> Tuple[ResultCode, str]:
             """
             Initialises the attributes and properties of the `MccsController`. State is
             managed under the hood; the basic sequence is:
@@ -500,7 +500,7 @@ class MccsController(SKAMaster):
             device.device_pool.connect()
 
         def _initialise_health_monitoring(
-            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: list[str]
+            self: MccsController.InitCommand, device: SKABaseDevice, fqdns: List[str]
         ) -> None:
             """
             Initialise the health model for this device.
@@ -723,7 +723,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.StartupCommand, argin: str
-        ) -> tuple[ResultCode, str]:
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Startup` command.
@@ -833,7 +833,7 @@ class MccsController(SKAMaster):
         QUEUED_MESSAGE = "Controller On command queued"
         FAILED_MESSAGE = "Controller On command failed"
 
-        def do(self: MccsController.OnCommand, argin: str) -> tuple[ResultCode, str]:
+        def do(self: MccsController.OnCommand, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.On` command.
@@ -880,7 +880,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.CallbackCommand, argin: str
-        ) -> tuple[ResultCode, str]:
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Callback` command.
@@ -936,7 +936,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "Disable command completed OK"
         FAILED_MESSAGE = "Disable command failed"
 
-        def do(self: MccsController.DisableCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.DisableCommand) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.Off` command
@@ -975,7 +975,7 @@ class MccsController(SKAMaster):
         QUEUED_MESSAGE = "Controller Off command queued"
         FAILED_MESSAGE = "Controller Off command failed"
 
-        def do(self: MccsController.OffCommand, argin: str) -> tuple[ResultCode, str]:
+        def do(self: MccsController.OffCommand, argin: str) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for implementing the functionality of the
             :py:meth:`.MccsController.Off` command.
@@ -1013,7 +1013,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "StandbyLow command completed OK"
         FAILED_MESSAGE = "StandbyLow command failed"
 
-        def do(self: MccsController.StandbyLowCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.StandbyLowCommand) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyLow` command.
@@ -1061,7 +1061,7 @@ class MccsController(SKAMaster):
         SUCCEEDED_MESSAGE = "StandbyFull command completed OK"
         FAILED_MESSAGE = "StandbyFull command failed"
 
-        def do(self: MccsController.StandbyFullCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.StandbyFullCommand) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for implementing the functionality of the
             :py:meth:`.MccsController.StandbyFull` command.
@@ -1108,7 +1108,7 @@ class MccsController(SKAMaster):
 
         SUCCEEDED_MESSAGE = "Operate command completed OK"
 
-        def do(self: MccsController.OperateCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.OperateCommand) -> Tuple[ResultCode, str]:
             """
             Stateless hook for implementation of
             :py:meth:`.MccsController.Operate` command
@@ -1160,7 +1160,7 @@ class MccsController(SKAMaster):
     class ResetCommand(SKABaseDevice.ResetCommand):
         """Command class for the Reset() command."""
 
-        def do(self: MccsController.ResetCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.ResetCommand) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the (inherited)
             :py:meth:`ska_tango_base.SKABaseDevice.Reset` command for this
@@ -1258,7 +1258,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.AllocateCommand, argin: str
-        ) -> tuple[ResultCode, str]:
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless hook implementing the functionality of the
             :py:meth:`.MccsController.Allocate` command
@@ -1271,9 +1271,9 @@ class MccsController(SKAMaster):
                 {
                 "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 "subarray_id": int,
-                "subarray_beam_ids": list[int],
-                "station_ids": list[list[int]],
-                "channel_blocks": list[int],
+                "subarray_beam_ids": List[int],
+                "station_ids": List[List[int]],
+                "channel_blocks": List[int],
                 }
 
             :return: A tuple containing a return code and a string
@@ -1594,7 +1594,7 @@ class MccsController(SKAMaster):
 
     def _disable_subarray(
         self: MccsController, subarray_id: int, restart: bool
-    ) -> tuple[ResultCode, str]:
+    ) -> Tuple[ResultCode, str]:
         """
         Method to disable the specified subarray.
 
@@ -1631,7 +1631,7 @@ class MccsController(SKAMaster):
 
     def _release_resources(
         self: MccsController, argin: str, restart: bool = False
-    ) -> tuple[ResultCode, str]:
+    ) -> Tuple[ResultCode, str]:
         """
         Method that releases subarray resources.
 
@@ -1704,7 +1704,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.RestartCommand, argin: str
-        ) -> tuple[ResultCode, str]:
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Restart` command.
 
@@ -1778,7 +1778,7 @@ class MccsController(SKAMaster):
 
         def do(
             self: MccsController.ReleaseCommand, argin: str
-        ) -> tuple[ResultCode, str]:
+        ) -> Tuple[ResultCode, str]:
             """
             Stateless do hook for the :py:meth:`.MccsController.Release` command.
 
@@ -1836,7 +1836,7 @@ class MccsController(SKAMaster):
 
         SUCCEEDED_MESSAGE = "Maintenance command completed OK"
 
-        def do(self: MccsController.MaintenanceCommand) -> tuple[ResultCode, str]:
+        def do(self: MccsController.MaintenanceCommand) -> Tuple[ResultCode, str]:
             """
             Stateless do-hook for handling the
             :py:meth:`.MccsController.Maintenance` command.

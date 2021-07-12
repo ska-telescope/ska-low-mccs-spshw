@@ -156,11 +156,8 @@ class MccsSubarray(SKASubarray):
             device._scan_id = -1
             device._transient_buffer_manager = TransientBufferManager()
 
-<<<<<<< HEAD
             device._station_beam_fqdns = list()
-=======
             device._station_fqdns = list()
->>>>>>> MCCS-404 at least it passes
             device._subarray_beam_fqdns = list()
             device.subarray_id = 0
 
@@ -328,7 +325,7 @@ class MccsSubarray(SKASubarray):
     @attribute(dtype="DevString")
     def aQueueDebug(self: MccsSubarray) -> str:
         """
-        Return the queueDebug attribute.]
+        Return the queueDebug attribute.
 
         :return: queueDebug attribute
         """
@@ -393,14 +390,6 @@ class MccsSubarray(SKASubarray):
         :return: FQDNs of stations assigned to this subarray
         :rtype: list(str)
         """
-<<<<<<< HEAD
-        if len(self._subarray_beam_resource_manager.assigned_station_fqdns or []) == 0:
-            return list()
-        return list(self._subarray_beam_resource_manager.assigned_station_fqdns)
-=======
-        self.logger.error("==============================================")
-        self.logger.error("get station fqdn" + str(self._station_fqdns))
-        self.logger.error("==============================================")
         return sorted(self._station_fqdns)
 
     @stationFQDNs.write  # type: ignore[no-redef]
@@ -410,27 +399,10 @@ class MccsSubarray(SKASubarray):
 
         :param fqdns: the station fqdns to be set
         """
-        if fqdns is None:
+        if fqdns is None or fqdns == []:
             self._station_fqdns.clear()
         else:
             self._station_fqdns = fqdns
-        self.logger.error("==============================================")
-        self.logger.error("set station fqdn" + str(self._station_fqdns))
-        self.logger.error("==============================================")
->>>>>>> MCCS-404 at least it passes
-
-    @stationFQDNs.write
-    def stationFQDNs(self, station_fqdns):
-        """
-        Set the stationFQDNs attribute.
-
-        :param station_fqdns: the new stationFQDNs
-        :type station_fqdns: list(str)
-        """
-        self._subarray_beam_resource_manager.assigned_station_fqdns = list(
-            station_fqdns or []
-        )
-        return self._station_fqdns
 
 
     # -------------------------------------------

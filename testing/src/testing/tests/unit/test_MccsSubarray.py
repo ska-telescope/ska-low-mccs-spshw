@@ -116,9 +116,9 @@ class TestMccsSubarray:
         # properly implemented
         assert device_under_test.scanId == -1
         assert list(device_under_test.configuredCapabilities) == ["BAND1:0", "BAND2:0"]
-        assert list(device_under_test.stationFQDNs) == []
-        #         assert device_under_test.tileFQDNs is None
-        #         assert device_under_test.stationBeamFQDNs is None
+        assert device_under_test.stationFQDNs == ()
+        assert device_under_test.tileFQDNs is None
+        assert device_under_test.stationBeamFQDNs is None
         assert device_under_test.activationTime == 0
 
     def test_healthState(self, device_under_test, mock_callback):

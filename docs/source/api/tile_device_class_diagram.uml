@@ -33,7 +33,6 @@ class MccsTile {
   -_csp_destination_mac
   -_csp_destination_port
   -_health_state
-  -_subarray_id
   +hardware_manager
   +queue_debug
   +CalculateDelay()
@@ -117,7 +116,6 @@ class MccsTile {
   +ppsDelay()
   +simulationMode()
   +stationId()
-  +subarrayId()
   +testMode()
   +voltage()
 }

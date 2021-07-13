@@ -223,6 +223,10 @@ class TestMccsSubarray:
         """
         assert list(device_under_test.stationFQDNs) == []
 
+    @pytest.mark.skip(
+        reason="This needs to be reimplemented in MCCS-406"
+        # TODO MCCS-406
+    )
     class TestAssignResourcesAndConfigure:
         """
         Class containing fixtures and tests of the MccsSubarray's
@@ -302,7 +306,9 @@ class TestMccsSubarray:
 
             assert result_code == ResultCode.OK
             assert message == MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE
-            assert list(device_under_test.stationFQDNs) == list(station_fqdns[0])
+            assert sorted(list(device_under_test.stationFQDNs)) == sorted(
+                [station_fqdns[0]]
+            )
             assert mock_subarray_beam.stationIds == [1]
 
             mock_station_1.InitialSetup.assert_called_once_with()

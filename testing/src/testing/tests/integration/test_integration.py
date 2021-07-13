@@ -288,7 +288,7 @@ class TestMccsIntegration(HelperClass):
         assert tile_3.subarrayId == 0
         assert tile_4.subarrayId == 0
 
-    def test_station_tile_subarray_id(self, tango_harness: TangoHarness, mocker):
+    def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
         """
         Test that a write to attribute subarrayId on an MccsStation device also results
         in an update to attribute subarrayId on its MccsTiles.
@@ -304,7 +304,6 @@ class TestMccsIntegration(HelperClass):
         assert tile_1.subarrayId == 0
         assert tile_2.subarrayId == 0
 
-        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
         # write subarray_id
         station.subarrayId = 1
 

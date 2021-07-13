@@ -26,7 +26,6 @@ from tango.test_context import MultiDeviceTestContext, get_host_ip
 import ska_tango_base
 
 from ska_low_mccs.device_proxy import MccsDeviceProxy
-from testing.harness.mock import MockGroupBuilder
 
 
 __all__ = [
@@ -357,8 +356,8 @@ class TestContextTangoHarness(BaseTangoHarness):
         self: TestContextTangoHarness,
         device_info: typing.Optional[MccsDeviceInfo],
         logger: logging.Logger,
-        process: bool = False,        
-        **kwargs: typing.Any        
+        process: bool = False,
+        **kwargs: typing.Any,
     ) -> None:
         """
         Initialise a new instance.

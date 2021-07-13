@@ -16,7 +16,7 @@ import time
 
 import pytest
 import tango
-from tango import DevState, Group
+from tango import DevState
 
 from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
@@ -28,18 +28,17 @@ from ska_tango_base.control_model import (
 )
 from ska_low_mccs import MccsDeviceProxy, MccsStation, release
 
-from testing.harness.mock import MockDeviceBuilder, MockGroupBuilder
+from testing.harness.mock import MockDeviceBuilder
 
 
 @pytest.fixture()
-def device_to_load(mocker):
+def device_to_load():
     """
     Fixture that specifies the device to be loaded for testing.
 
     :return: specification of the device to be loaded
     :rtype: dict
     """
-    # mocker.patch("tango.Group", return_value=MockGroupBuilder)
     return {
         "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
@@ -65,7 +64,6 @@ def mock_factory(mocker, test_string):
     :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
         instance)
     """
-    mocker.patch("tango.Group", return_value=MockGroupBuilder)
     builder = MockDeviceBuilder()
     builder.add_attribute("healthState", HealthState.UNKNOWN)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
@@ -77,7 +75,7 @@ class TestMccsStation:
     """Test class for MccsStation tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness, mocker):
+    def device_under_test(self, tango_harness):
         """
         Fixture that returns the device under test.
 
@@ -85,7 +83,6 @@ class TestMccsStation:
 
         :return: the device under test
         """
-        # mocker.patch("tango.Group", return_value=MockGroupBuilder)
         return tango_harness.get_device("low-mccs/station/001")
 
     def test_InitDevice(self, device_under_test, command_helper, dummy_json_args):
@@ -243,7 +240,7 @@ class TestMccsStation:
         """
         assert device_under_test.refHeight == 0.0
 
-    def test_subarrayId(self, device_under_test, logger, mocker):
+    def test_subarrayId(self, device_under_test, logger):
         """
         Test for subarrayId attribute.
 
@@ -254,12 +251,10 @@ class TestMccsStation:
         :param logger: the logger to be used by the object under test
         :type logger: :py:class:`logging.Logger`
         """
-        mocker.patch("tango.Group", return_value=MockGroupBuilder)
-        # mocker.patch("tango.Group.write_attribute_asynch", return_value=0)
         station = device_under_test  # to make test easier to read
         mock_tile_1 = MccsDeviceProxy("low-mccs/tile/0001", logger)
         mock_tile_2 = MccsDeviceProxy("low-mccs/tile/0002", logger)
-        
+
         # mock_tile_group = MockGroupBuilder()
         # mock_tile_group.add_command("write_attribute_asynch", 1)
 

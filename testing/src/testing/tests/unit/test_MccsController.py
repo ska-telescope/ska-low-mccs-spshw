@@ -29,7 +29,6 @@ from ska_tango_base.control_model import (
 )
 from ska_low_mccs import MccsController, MccsDeviceProxy, MccsSubarray, release
 from ska_low_mccs.controller import StationsResourceManager
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import call_with_json
 

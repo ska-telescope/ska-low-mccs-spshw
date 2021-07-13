@@ -13,16 +13,11 @@ from __future__ import annotations  # allow forward references in type hints
 
 import unittest.mock
 
-from tango import Group
-from ska_low_mccs import MccsDeviceProxy
-
-from testing.harness.mock import MockDeviceBuilder
-
 
 __all__ = ["MockGroupBuilder"]
 
 
-class MockGroupBuilder():
+class MockGroupBuilder:
     """This module implements a mock builder for Tango.Group instances."""
 
     def __init__(
@@ -37,8 +32,20 @@ class MockGroupBuilder():
         super().__init__(from_factory=from_factory)
         self._devices = []
 
-    def add(self, pattern_subgroup, timeout_ms=-1):
+    def add(self, pattern_subgroup: str):
+        """
+        Add a device to this mock group device.
+
+        :param pattern_subgroup: fqdn of device(s) to add
+        """
         pass
 
-    def write_attribute_asynch(self, attr_name, value):
+    def write_attribute_asynch(self, attr_name: str, value):
+        """
+        Mock the asynchronous writing of an attribute belonging to all members of the
+        group.
+
+        :param attr_name: name of attribute to write
+        :param value: value of attribute to write
+        """
         pass

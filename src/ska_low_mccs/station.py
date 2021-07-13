@@ -301,6 +301,8 @@ class MccsStation(SKAObsDevice):
     def subarrayId(self):
         """
         Return the subarray id.
+        TODO: Probably this attribute will have to be removed just as it has been
+        removed from tile device.
 
         :return: the subarray id
         :rtype: int
@@ -311,16 +313,12 @@ class MccsStation(SKAObsDevice):
     @DebugIt()
     def subarrayId(self, subarray_id):
         """
-        Set the ID of the Subarray to which this Station is allocated
-        Note: ID propogates to each tile in this station too
+        Set the ID of the Subarray to which this Station is allocated.
 
         :param subarray_id: the new subarray id for this station
         :type subarray_id: int
         """
         self._subarray_id = subarray_id
-        for fqdn in self._tile_fqdns:
-            tile = MccsDeviceProxy(fqdn, self.logger)
-            tile.subarrayId = subarray_id
 
     @attribute(
         dtype="float",
@@ -959,7 +957,6 @@ class MccsStation(SKAObsDevice):
             device = self.target
             for tile_id, tile in enumerate(device.TileFQDNs):
                 proxy = MccsDeviceProxy(tile, self.logger)
-                proxy.subarrayId = device._subarray_id
                 proxy.stationId = device._station_id
                 proxy.logicalTileId = tile_id + 1
 

@@ -255,21 +255,3 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
-
-    def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
-        """
-        Test that a write to attribute subarrayId on an MccsStation device also results
-        in an update to attribute subarrayId on its MccsTiles.
-
-        :param tango_harness: a test harness for tango devices
-        """
-        station = tango_harness.get_device("low-mccs/station/001")
-
-        # check initial state
-        assert station.subarrayId == 0
-
-        # write subarray_id
-        station.subarrayId = 1
-
-        # check state
-        assert station.subarrayId == 1

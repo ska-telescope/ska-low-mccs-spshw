@@ -10,15 +10,18 @@
 # See LICENSE.txt for more info.
 ###############################################################################
 """This module contains integration tests of tile-subrack interactions in MCCS."""
+from __future__ import annotations
+
 import time
 
 import pytest
 from tango import DevState
 
+from ska_tango_base.control_model import AdminMode
+
 from ska_low_mccs import MccsDeviceProxy
 
-from testing.harness.tango_harness import TangoHarness
-from testing.harness import HelperClass
+from testing.harness import TangoHarness
 
 
 @pytest.fixture()
@@ -42,10 +45,15 @@ def devices_to_load():
     }
 
 
-class TestSubrackTileIntegration(HelperClass):
-    """Integration test cases for MCCS subsystem's power management."""
+class TestSubrackTileIntegration:
+    """Integration test cases for interactions between subrack and tile."""
 
-    def test_tile_on(self, tango_harness: TangoHarness, empty_json_dict: str):
+    def test_subrack_tile_integration(
+        self: TestSubrackTileIntegration,
+        tango_harness: TangoHarness,
+        subrack_device_admin_mode_changed_callback,
+        tile_device_admin_mode_changed_callback,
+    ) -> None:
         """
         Test that:
 
@@ -55,58 +63,91 @@ class TestSubrackTileIntegration(HelperClass):
           TPM
 
         :param tango_harness: a test harness for tango devices
-        :param empty_json_dict: an empty json encoded dictionary
+        :param subrack_device_admin_mode_changed_callback: a callback
+            that we can use to subscribe to admin mode changes on the
+            subrack device
+        :param tile_device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the tile
+            device
         """
-        tile = tango_harness.get_device("low-mccs/tile/0001")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        tile_device = tango_harness.get_device("low-mccs/tile/0001")
+        subrack_device = tango_harness.get_device("low-mccs/subrack/01")
 
-        assert subrack.state() == DevState.DISABLE
-        assert tile.state() == DevState.DISABLE
+        tile_device.add_change_event_callback(
+            "adminMode",
+            tile_device_admin_mode_changed_callback,
+        )
+        tile_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.OFFLINE
+        )
 
-        self.start_up_device(subrack)
+        assert subrack_device.state() == DevState.DISABLE
+        assert tile_device.state() == DevState.DISABLE
 
-        assert not subrack.isTpmOn(1)
-        # TODO: For now we need to get this device to OFF (highest state
-        # of device readiness) in order to turn the TPM on. This is a
-        # counterintuitive mess that will be fixed in SP-1501.
-        tile.Off(empty_json_dict)
-        assert tile.state() == DevState.OFF
-        assert subrack.IsTpmOn(1)
+        tile_device.adminMode = AdminMode.ONLINE
+        tile_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.ONLINE
+        )
 
-        # TODO: For now we need to get this device to DISABLE (lowest
-        # state of device readiness) in order to turn the TPM off. This
-        # is a counterintuitive mess that will be fixed in SP-1501.
-        tile.Disable()
-        assert tile.state() == DevState.DISABLE
-        assert not subrack.IsTpmOn(1)
+        # Before the tile device tries to connect with its TPM, it need to find out from
+        # its subrack whether the TPM is event turned on. So it subscribes to change
+        # events on the state of its subrack Tango device. The subrack device advises it
+        # that it is OFFLINE. Therefore tile remains in UNKNOWN state.
+        assert tile_device.state() == DevState.UNKNOWN
 
-        tile.Standby()
-        assert tile.state() == DevState.STANDBY
-        assert subrack.IsTpmOn(1)
+        subrack_device.add_change_event_callback(
+            "adminMode",
+            subrack_device_admin_mode_changed_callback,
+        )
+        subrack_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.OFFLINE
+        )
 
-    def test_tpm_on(self, tango_harness: TangoHarness):
-        """
-        Test that wnen we tell the subrack drive to turn a given TPM on, the tile device
-        recognises that its TPM has been powered, and changes state.
+        subrack_device.adminMode = AdminMode.ONLINE
+        subrack_device_admin_mode_changed_callback.assert_next_change_event(
+            AdminMode.ONLINE
+        )
 
-        :param tango_harness: a test harness for tango devices
-        """
-        tile = tango_harness.get_device("low-mccs/tile/0001")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        # The subrack device connects to its subrack and finds that the
+        # subrack is turned off, so it transitions to OFF state
+        assert subrack_device.state() == DevState.OFF
 
-        self.start_up_device(subrack)
+        time.sleep(0.1)
+        # The tile device receives a change event. Since the event indicates that the
+        # subrack hardware is OFF, the tile has established that its TPM is not powered,
+        # so it transitions to OFF state.
+        assert tile_device.state() == DevState.OFF
 
-        assert tile.state() == DevState.DISABLE
-        assert not subrack.IsTpmOn(1)
+        subrack_device.On()
+        # The subrack device tells the subrack to power on. Once the subrack has powered
+        # on, the subrack device detects that change of state, and transitions to ON
+        # state.
+        assert subrack_device.state() == DevState.ON
+        assert not subrack_device.isTpmOn(1)
 
-        subrack.PowerOnTpm(1)
+        time.sleep(0.1)
+        # The tile device is notified that its subrack is on. It now has communication
+        # with its TPM. The first thing it does is subscribe to change events on the
+        # power mode of its TPM. It is informed that the TPM is turned off, so it
+        # transitions to OFF
+        assert tile_device.state() == DevState.OFF
 
-        # Wait long enough for the event to get through the events subsystem
-        time.sleep(0.2)
-        assert tile.state() == DevState.OFF
+        tile_device.On()
+        # The tile device tells the subrack device to tell its subrack to power on its
+        # TPM. This is done. The subrack device detects that the TPM is now on.
+        time.sleep(0.1)
+        assert subrack_device.IsTpmOn(1)
 
-        subrack.PowerOffTpm(1)
+        time.sleep(0.1)
+        # It fires a change event, which is received by the tile device.
+        assert tile_device.state() == DevState.ON
 
-        # Wait long enough for the event to get through the events subsystem
-        time.sleep(0.2)
-        assert tile.state() == DevState.DISABLE
+        subrack_device.PowerOffTpm(1)
+        # A third party has told the subrack device to turn the TPM off. The subrack
+        # device tells the subrack to turn the TPM off. The subrack device detects that
+        # the TPM is off.
+        assert not subrack_device.IsTpmOn(1)
+
+        time.sleep(0.1)
+        # It fires a change event, which is received by the tile device.
+        assert tile_device.state() == DevState.OFF

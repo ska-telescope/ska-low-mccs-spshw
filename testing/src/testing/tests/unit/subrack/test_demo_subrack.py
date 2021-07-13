@@ -13,10 +13,10 @@ This module contains the tests for the
 """
 import pytest
 
+from ska_tango_base.control_model import AdminMode
+
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.subrack.demo_subrack_device import DemoSubrack
-
-from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -36,7 +36,7 @@ def device_to_load():
     }
 
 
-class TestDemoSubrack(HelperClass):
+class TestDemoSubrack:
     """This class contains the tests for the DemoSubrack device class."""
 
     @pytest.fixture()
@@ -50,7 +50,7 @@ class TestDemoSubrack(HelperClass):
         """
         return tango_harness.get_device("low-mccs/subrack/01")
 
-    def test(self, device_under_test, empty_json_dict):
+    def test(self, device_under_test):
         """
         Test:
 
@@ -61,8 +61,6 @@ class TestDemoSubrack(HelperClass):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param empty_json_dict: an empty json encoded dictionary
-        :type empty_json_dict: str
         """
 
         def assert_powered(expected):
@@ -77,7 +75,8 @@ class TestDemoSubrack(HelperClass):
                 for tpm_id in range(1, 5)
             ] == expected
 
-        self.start_up_device(device_under_test)
+        device_under_test.adminMode = AdminMode.ONLINE
+        device_under_test.On()
 
         assert_powered([False, False, False, False])
 

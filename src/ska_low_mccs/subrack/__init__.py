@@ -8,21 +8,20 @@
 
 __all__ = [
     "MccsSubrack",
-    "SubrackHardwareManager",
-    "SubrackBaySimulator",
-    "SubrackBoardSimulator",
-    "SubrackBoardDriver",
-    "demo_subrack_device",
-    "subrack_device",
-    "subrack_board_simulator",
+    "SubrackSimulator",
+    "SubrackSimulatorComponentManager",
+    "SwitchingSubrackComponentManager",
+    "SubrackComponentManager",
+    "SubrackDriver",
+    "SubrackHealthModel",
 ]
 
-from .subrack_device import (  # type: ignore[attr-defined]
-    MccsSubrack,
-    SubrackHardwareManager,
+from .subrack_simulator import SubrackSimulator  # type: ignore[attr-defined]
+from .subrack_driver import SubrackDriver  # type: ignore[attr-defined]
+from .subrack_component_manager import (
+    SubrackSimulatorComponentManager,
+    SwitchingSubrackComponentManager,
+    SubrackComponentManager,
 )
-from .subrack_simulator import (  # type: ignore[attr-defined]
-    SubrackBaySimulator,
-    SubrackBoardSimulator,
-)
-from .subrack_driver import SubrackBoardDriver  # type: ignore[attr-defined]
+from .subrack_health_model import SubrackHealthModel
+from .subrack_device import MccsSubrack  # type: ignore[attr-defined]

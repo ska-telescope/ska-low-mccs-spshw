@@ -13,13 +13,6 @@ An implementation of a subrack management board driver.
 
 Some assumptions of this class are:
 
-* For now, the subrack management board can manage its own power mode.
-  i.e. it can turn itself off and on. Really, there would be an upstream
-  cabinet management board that turns subracks off and on. But we don't
-  have a cabinet device yet, so for now we leave this in control of the
-  subrack management board. Effect of this is just virtual, the subrack
-  knows whether it is on or off, and acts accordingly, but must be
-  switched manually
 * The subrack management board supplies power to various modules, such
   as TPMs. The subrack can deny or supply power to these modules; i.e.
   turn them off and on. If a module supports a low-power standby mode,
@@ -31,15 +24,25 @@ Some assumptions of this class are:
 
 These assumptions may need to change in future.
 """
+from __future__ import annotations
 
-from ska_low_mccs.hardware import OnOffHardwareDriver, ControlMode, PowerMode
-from ska_low_mccs.hardware.hardware_client import WebHardwareClient
 import time
+from typing import Callable
 
-__all__ = ["SubrackBoardDriver"]
+from ska_tango_base.control_model import PowerMode
+
+from ska_low_mccs.component import (
+    ControlMode,
+    CommunicationStatus,
+    MccsComponentManager,
+    WebHardwareClient,
+)
 
 
-class SubrackBoardDriver(OnOffHardwareDriver):
+__all__ = ["SubrackDriver"]
+
+
+class SubrackDriver(MccsComponentManager):
     """
     A driver for a subrack management board.
 
@@ -71,45 +74,36 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         logger,
         ip,
         port,
-        is_connectible=True,
-        power_mode=PowerMode.OFF,
+        communication_status_changed_callback: Callable[[CommunicationStatus], None],
+        component_fault_callback: Callable[[bool], None],
+        component_tpm_power_changed_callback: Callable[[PowerMode], None],
         tpm_present=None,
     ):
         """
         Initialise a new instance and tries to connect to the given IP and port.
 
-        :param logger: a logger for this simulator to use
+        :param logger: a logger for this driver to use
         :type logger: an instance of :py:class:`logging.Logger`, or
             an object that implements the same interface
         :param ip: IP address for hardware tile
         :type ip: str
         :param port: IP address for hardware control
         :type port: int
-        :param is_connectible: whether we expect to be able to connect
-            to the hardware. For example, if we are simulating a subrack
-            that is currently powered off, then we wouldn't even try to
-            connect to it.
-        :type is_connectible: bool
-        :param power_mode: the initial power_mode of the simulated
-            hardware. For example, if the initial mode is ON, then
-            this simulator will simulate connecting to hardware and
-            finding it to be already powered on.
-        :type power_mode:
-            :py:class:`~ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        :param tpm_present: List of TPMs which are expected to
-            be present in the subrack. Usually from Tango databse
+        :param communication_status_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_fault_callback: callback to be called when the
+            component faults (or stops faulting)
+        :param component_tpm_power_changed_callback: callback to be
+            called when the power mode of one of the TPMs in the subrack
+            changes
+        :param tpm_present: List of TPMs which are expected to be
+            present in the subrack. Usually from Tango database.
         :type tpm_present: list(bool)
         """
         self.logger = logger
         self._ip = ip
         self._port = port
-        if is_connectible:
-            self.logger.debug("Connecting to " + ip + ":" + str(port))
-            self._client = WebHardwareClient(self._ip, self._port)
-            is_connect = self._client.connect()
-        else:
-            is_connect = False
-        self.logger.debug("Connected: " + str(is_connect))
 
         self._backplane_temperatures = self.DEFAULT_BACKPLANE_TEMPERATURE
         self._board_temperatures = self.DEFAULT_BOARD_TEMPERATURE
@@ -127,62 +121,43 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         self._tpm_count = self.DEFAULT_TPM_COUNT
         self._bay_count = self.DEFAULT_TPM_COUNT
 
-        super().__init__(
-            is_connectible=is_connectible,
+        self._client = WebHardwareClient(self._ip, self._port)
+
+        self._component_tpm_power_changed_callback = (
+            component_tpm_power_changed_callback
         )
-        self._power_mode = power_mode
 
-    def _connect(self):
-        """
-        Establish a connection to the subrack hardware.
+        super().__init__(
+            logger,
+            communication_status_changed_callback,
+            None,
+            component_fault_callback,
+        )
 
-        :return: connection status
-        :rtype: bool
-        """
-        response = self._client.connect()
-        if not response:
+    def start_communicating(self):
+        """Establish communication with the subrack."""
+        super().start_communicating()
+
+        connected = self._client.connect()
+        if connected:
+            self.update_communication_status(CommunicationStatus.ESTABLISHED)
+        else:
             self.logger.error("status:ERROR")
             self.logger.info("info: Not connected")
-        return response
 
-    def off(self):
-        """
-        Turn me off.
+    def stop_communicating(self):
+        """Stop communicating with the subrack."""
+        super().stop_communicating()
+        self._client.disconnect()
 
-        :todo: for now we assume that the subrack management board can
-            turn itself off and on. Actually, this would be done via the
-            SPS cabinet. Once we have an SPS cabinet simulator, we
-            should delete this method.
-        :return: success status
-        :rtype: bool
+    def _tpm_power_changed(self: SubrackDriver) -> None:
         """
-        self._power_mode = PowerMode.OFF
-        return True
-        # super().off()
+        Handle a change in TPM power.
 
-    def on(self):
+        This is a helper method that calls the callback if it exists.
         """
-        Turn me on.
-
-        :todo: for now we assume that the subrack management board can
-            turn itself off and on. Actually, this would be done via the
-            SPS cabinet. Once we have an SPS cabinet simulator, we
-            should delete this method.
-        :return: success status
-        :rtype: bool
-        """
-        self._power_mode = PowerMode.ON
-        return True
-        # super().on()
-
-    @property
-    def power_mode(self):
-        """
-        Return the power mode of the hardware.
-
-        :return: Power mode
-        """
-        return self._power_mode
+        if self._component_tpm_power_changed_callback is not None:
+            self._component_tpm_power_changed_callback(self.are_tpms_on())
 
     @property
     def backplane_temperatures(self):
@@ -192,7 +167,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the subrack backplane temperatures
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane temperature")
         response = self._client.get_attribute("backplane_temperatures")
         if response["status"] == "OK":
@@ -207,7 +181,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the board temperatures, in degrees celsius
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading board temperature")
         response = self._client.get_attribute("board_temperatures")
         if response["status"] == "OK":
@@ -222,7 +195,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the subrack management board current
         :rtype: float
         """
-        self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading board current")
         response = self._client.get_attribute("board_current")
         if response["status"] == "OK":
@@ -237,7 +209,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the subrack fan speeds (RPMs)
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane fan speed")
         response = self._client.get_attribute("subrack_fan_speeds")
         if response["status"] == "OK":
@@ -252,7 +223,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the fan speed, in percent
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane fan speed percent")
         response = self._client.get_attribute("subrack_fan_speeds_percent")
         if response["status"] == "OK":
@@ -260,14 +230,12 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         return self._subrack_fan_speeds_percent
 
     @property
-    def subrack_fan_mode(self):
+    def subrack_fan_mode(self) -> ControlMode:
         """
         Return the subrack fan Mode.
 
         :return: subrack fan mode AUTO or  MANUAL
-        :rtype: list(:py:class:`ska_low_mccs.hardware.base_hardware.ControlMode`)
         """
-        self.check_power_mode(PowerMode.ON)
         self.logger.debug("Reading backplane fan mode")
         response = self._client.get_attribute("subrack_fan_mode")
         if response["status"] == "OK":
@@ -283,11 +251,10 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the number of TPMs housed in this subrack
         :rtype: int
         """
-        if self.power_mode == PowerMode.ON:
-            self.logger.debug("Reading number of TPMs")
-            response = self._client.get_attribute("tpm_present")
-            if response["status"] == "OK":
-                self._tpm_count = sum(response["value"])
+        self.logger.debug("Reading number of TPMs")
+        response = self._client.get_attribute("tpm_present")
+        if response["status"] == "OK":
+            self._tpm_count = sum(response["value"])
         return self._tpm_count
 
     @property
@@ -339,7 +306,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the currents of the TPMs housed in this subrack
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_currents")
         if response["status"] == "OK":
             self._tpm_currents = response["value"]
@@ -353,7 +319,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the powers of the TPMs housed in this subrack
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_powers")
         if response["status"] == "OK":
             self._tpm_powers = response["value"]
@@ -367,7 +332,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the voltages of the TPMs housed in this subrack
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_voltages")
         if response["status"] == "OK":
             self._tpm_voltages = response["value"]
@@ -381,7 +345,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the power supply fan speed
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_fan_speeds")
         if response["status"] == "OK":
             self._power_supply_fan_speeds = response["value"]
@@ -395,7 +358,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the power supply current
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_currents")
         if response["status"] == "OK":
             self._power_supply_currents = response["value"]
@@ -409,7 +371,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the power supply power
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_powers")
         if response["status"] == "OK":
             self._power_supply_powers = response["value"]
@@ -423,7 +384,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the power supply voltages
         :rtype: list(float)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("power_supply_voltages")
         if response["status"] == "OK":
             self._power_supply_voltages = response["value"]
@@ -437,7 +397,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: list of tpm detected
         :rtype: list(bool)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_present")
         if response["status"] == "OK":
             self._tpm_present = response["value"]
@@ -451,7 +410,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: the TPM supply fault status
         :rtype: list(int)
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.get_attribute("tpm_supply_fault")
         if response["status"] == "OK":
             self._tpm_supply_fault = response["value"]
@@ -465,8 +423,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: whether each TPM is powered or not.
         :rtype: list(bool) or None
         """
-        if self.power_mode != PowerMode.ON:
-            return None
         response = self._client.get_attribute("tpm_on_off")
         if response["status"] == "OK":
             self._are_tpms_on = response["value"]
@@ -485,12 +441,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :rtype: bool or None
         """
         self._check_tpm_id(logical_tpm_id)
-        self.are_tpms_on()
-        if self.power_mode != PowerMode.ON:
-            return False
-        self.are_tpms_on()
         return self._are_tpms_on[logical_tpm_id - 1]
-        # self.logger.warning("SubrackDriver : is_tpm_on command is not implemented")
 
     def turn_off_tpm(self, logical_tpm_id):
         """
@@ -502,7 +453,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: success value
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         self._check_tpm_id(logical_tpm_id)
         response = self._client.execute_command("turn_off_tpm", logical_tpm_id)
         self.logger.debug(
@@ -517,6 +467,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
             response = self._client.execute_command("abort_command")
@@ -532,7 +483,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: success status
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         self._check_tpm_id(logical_tpm_id)
         response = self._client.execute_command("turn_on_tpm", logical_tpm_id)
         self.logger.debug(
@@ -547,6 +497,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
             response = self._client.execute_command("abort_command")
@@ -558,7 +509,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: success value
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.execute_command("turn_on_tpms")
         self.logger.debug(
             "TpmDriver:" + response["command"] + ": " + response["status"]
@@ -572,6 +522,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
             response = self._client.execute_command("abort_command")
@@ -583,7 +534,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: success value
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         response = self._client.execute_command("turn_off_tpms")
         self.logger.debug(
             "TpmDriver:" + response["command"] + ": " + response["status"]
@@ -597,6 +547,7 @@ class SubrackBoardDriver(OnOffHardwareDriver):
                 break
         if timeout > 0:
             self.logger.debug(response["command"] + ": completed")
+            self._tpm_power_changed()
         else:
             self.logger.debug(response["command"] + ": timeout")
             response = self._client.execute_command("abort_command")
@@ -613,7 +564,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: success value
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         params = str(fan_id) + "," + str(speed_percent)
         response = self._client.execute_command("set_subrack_fan_speed", params)
         self.logger.debug(
@@ -626,18 +576,16 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         )
         return True
 
-    def set_subrack_fan_mode(self, fan_id, mode):
+    def set_subrack_fan_mode(self, fan_id, mode: ControlMode):
         """
         Set Fan Operational Mode for the subrack's fan.
 
         :param fan_id: id of the selected fan accepted value: 1-4
         :type fan_id: int
         :param mode: AUTO or MANUAL
-        :type mode: :py:class:`ska_low_mccs.hardware.base_hardware.ControlMode`
         :return: success value
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         params = str(fan_id) + "," + str(mode)
         response = self._client.execute_command("set_fan_mode", params)
         self.logger.debug(
@@ -661,7 +609,6 @@ class SubrackBoardDriver(OnOffHardwareDriver):
         :return: success value
         :rtype: bool
         """
-        self.check_power_mode(PowerMode.ON)
         params = str(power_supply_fan_id) + "," + str(speed_percent)
         response = self._client.execute_command("set_power_supply_fan_speed", params)
         self.logger.debug(
@@ -673,34 +620,3 @@ class SubrackBoardDriver(OnOffHardwareDriver):
             + response["retvalue"]
         )
         return True
-
-    def check_power_mode(self, power_mode, error=None):
-        """
-        Overrides the
-        :py:meth:`~ska_low_mccs.hardware.power_mode_hardware.BasePowerModeHardwareDriver.check_power_mode`
-        helper method with a more specific error message
-
-        :param power_mode: the asserted power mode
-        :type power_mode: :py:class:`ska_low_mccs.hardware.power_mode_hardware.PowerMode`
-        :param error: the error message for the exception to be raise if
-            not connected
-        :type error: str
-
-        :raises ValueError: if the power mode is not what it is expected
-            to be
-        """
-        if self.power_mode != power_mode:
-            raise ValueError(error or f"Subrack is not {power_mode.name}.")
-
-    def check_connected(self):
-        """
-        Check connection with hardware specific method
-        Overrides the
-        :py:meth:`~ska_low_mccs.hardware.base_hardware.HardwareDriver.check_connected`
-        :return: Connection status. Always false if powered off
-        :rtype: bool
-        """
-        if self.power_mode == PowerMode.ON:
-            return self.connect()
-        else:
-            return False

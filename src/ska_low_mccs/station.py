@@ -33,7 +33,6 @@ from ska_tango_base.control_model import HealthState
 from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.pool import DevicePool, DevicePoolSequence
 import ska_low_mccs.release as release
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.message_queue import MessageQueue
 
@@ -237,12 +236,10 @@ class MccsStation(SKAObsDevice):
             if device._apiu_fqdn is not None:
                 fqdns.append(device._apiu_fqdn)
 
-            device.event_manager = EventManager(self.logger)
-
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, fqdns, device.event_manager, device.health_changed
+                None, fqdns, self.logger, device.health_changed
             )
 
         def interrupt(self):
@@ -736,11 +733,14 @@ class MccsStation(SKAObsDevice):
 
                 # Post response back to requestor
                 try:
-                    response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
-                except DevFailed:
-                    device._qdebug(
-                        f"Response device {device._cmd_respond_to_fqdn} not found"
+                    response_device = MccsDeviceProxy(
+                        device._cmd_respond_to_fqdn, device.logger
                     )
+                    # response_device = tango.DeviceProxy(device._cmd_respond_to_fqdn)
+                except DevFailed:
+                    assert (
+                        False
+                    ), f"Response device {device._cmd_respond_to_fqdn} not found"
                 else:
                     # As this response is to the original requestor, we need to reply
                     # with the message ID that was given to the requester

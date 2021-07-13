@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -16,5 +15,5 @@ __all__ = [
     "demo_apiu_device",
 ]
 
-from .apiu_device import MccsAPIU
-from .apiu_simulator import APIUSimulator
+from .apiu_device import MccsAPIU  # type: ignore[attr-defined]
+from .apiu_simulator import APIUSimulator  # type: ignore[attr-defined]

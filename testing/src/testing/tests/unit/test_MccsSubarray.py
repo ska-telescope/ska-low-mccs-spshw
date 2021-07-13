@@ -266,11 +266,9 @@ class TestMccsSubarray:
                 "low-mccs/subarraybeam/02": mock_subarraybeam_factory(),
             }
 
-        @pytest.mark.skip(
-            reason="This needs to be reimplemented in MCCS-406"
-            # TODO MCCS-406
-        )
-        def test_AllocateResources(self, device_under_test, logger):
+        def test_AllocateResources(
+            self, device_under_test, logger, dummy_json_args, command_helper
+        ):
             """
             Test for AllocateResources.
 
@@ -280,13 +278,18 @@ class TestMccsSubarray:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
+            :param dummy_json_args: dummy json encoded arguments
+            :type dummy_json_args: str
+            :param command_helper: A command helper fixture
+            :type command_helper: CommandHelper
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
             mock_station_1 = MccsDeviceProxy(station_fqdns[0], logger)
             subarray_beam_fqdn = "low-mccs/subarraybeam/01"
             mock_subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger)
 
-            device_under_test.On()
+            device_under_test.On(dummy_json_args)
+            command_helper.check_device_state(device_under_test, DevState.ON)
             assert mock_subarray_beam.healthState == HealthState.OK
 
             [[result_code], [message]] = call_with_json(
@@ -308,7 +311,8 @@ class TestMccsSubarray:
             assert mock_subarray_beam.stationIds == []
 
             # now assign station beam to both stations...
-            device_under_test.On()
+            device_under_test.On(dummy_json_args)
+            command_helper.check_device_state(device_under_test, DevState.ON)
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
                 subarray_id=1,
@@ -321,11 +325,9 @@ class TestMccsSubarray:
             assert sorted(device_under_test.stationFQDNs) == sorted(station_fqdns)
             assert mock_subarray_beam.stationIds == [1, 2]
 
-        @pytest.mark.skip(
-            reason="This needs to be reimplemented in MCCS-407"
-            # TODO MCCS-407
-        )
-        def test_ReleaseAllResources(self, device_under_test, logger):
+        def test_ReleaseAllResources(
+            self, device_under_test, logger, dummy_json_args, command_helper
+        ):
             """
             Test for ReleaseAllResources.
 
@@ -335,6 +337,10 @@ class TestMccsSubarray:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
+            :param dummy_json_args: dummy json encoded arguments
+            :type dummy_json_args: str
+            :param command_helper: A command helper fixture
+            :type command_helper: CommandHelper
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
             mock_station_1 = MccsDeviceProxy(station_fqdns[0], logger)
@@ -346,7 +352,8 @@ class TestMccsSubarray:
             mock_subarray_beam_1 = MccsDeviceProxy(subarray_beam_fqdns[0], logger)
             mock_subarray_beam_2 = MccsDeviceProxy(subarray_beam_fqdns[1], logger)
 
-            device_under_test.On()
+            device_under_test.On(dummy_json_args)
+            command_helper.check_device_state(device_under_test, DevState.ON)
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
                 stations=[station_fqdns, station_fqdns],
@@ -390,11 +397,9 @@ class TestMccsSubarray:
             assert mock_subarray_beam_1.stationIds == []
             assert mock_subarray_beam_2.stationIds == []
 
-        @pytest.mark.skip(
-            reason="This needs to be reimplemented in MCCS-269"
-            # TODO MCCS-269
-        )
-        def test_configure(self, device_under_test, logger):
+        def test_configure(
+            self, device_under_test, logger, dummy_json_args, command_helper
+        ):
             """
             Test for Configure.
 
@@ -404,13 +409,18 @@ class TestMccsSubarray:
             :type device_under_test: :py:class:`tango.DeviceProxy`
             :param logger: the logger to be used by the object under test
             :type logger: :py:class:`logging.Logger`
+            :param dummy_json_args: dummy json encoded arguments
+            :type dummy_json_args: str
+            :param command_helper: A command helper fixture
+            :type command_helper: CommandHelper
             """
             station_fqdns = ["low-mccs/station/001", "low-mccs/station/002"]
             mock_station_1 = MccsDeviceProxy(station_fqdns[0], logger)
             subarray_beam_fqdn = "low-mccs/subarraybeam/01"
             mock_subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger)
 
-            device_under_test.On()
+            device_under_test.On(dummy_json_args)
+            command_helper.check_device_state(device_under_test, DevState.ON)
             assert mock_subarray_beam.healthState == HealthState.OK
 
             [[result_code], [message]] = call_with_json(
@@ -432,7 +442,8 @@ class TestMccsSubarray:
             assert mock_subarray_beam.stationIds == []
 
             # now assign station beam to both stations...
-            device_under_test.On()
+            device_under_test.On(dummy_json_args)
+            command_helper.check_device_state(device_under_test, DevState.ON)
             [[result_code], [message]] = call_with_json(
                 device_under_test.AssignResources,
                 stations=[station_fqdns],

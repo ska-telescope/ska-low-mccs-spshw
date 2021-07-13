@@ -27,7 +27,6 @@ from ska_tango_base.control_model import HealthState
 from ska_tango_base.commands import ResponseCommand, ResultCode
 import ska_low_mccs.release as release
 
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.hardware import (
     ConnectionStatus,
     HardwareDriver,
@@ -345,14 +344,12 @@ class MccsStationBeam(SKAObsDevice):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
-
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = MutableHealthModel(
                 device.hardware_manager,
                 None,
-                device.event_manager,
+                self.logger,
                 device.health_changed,
             )
 

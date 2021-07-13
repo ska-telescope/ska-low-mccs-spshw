@@ -63,7 +63,7 @@ class ControllerWithFailableDevices(MccsController):
 
         self.health_model._health_monitor._device_health_monitors[
             fqdn
-        ]._health_state_changed(fqdn, "healthState", health, AttrQuality.ATTR_VALID)
+        ]._health_state_changed("healthState", health, AttrQuality.ATTR_VALID)
 
     @command(dtype_in="DevString")
     def simulateAdminModeChange(self, argin):
@@ -82,7 +82,7 @@ class ControllerWithFailableDevices(MccsController):
 
         self.health_model._health_monitor._device_health_monitors[
             fqdn
-        ]._admin_mode_changed(fqdn, "adminMode", admin_mode, AttrQuality.ATTR_VALID)
+        ]._admin_mode_changed("adminMode", admin_mode, AttrQuality.ATTR_VALID)
 
 
 @pytest.fixture()
@@ -263,7 +263,7 @@ class TestMccsController:
         :type test_string: str
         """
         controller = device_under_test
-        command_helper.device_command(controller, "Off", test_string)
+        command_helper.device_command_with_callback(controller, "Off", test_string)
         command_helper.check_device_state(controller, DevState.OFF)
 
         # Test that subscription yields an event as expected
@@ -275,7 +275,7 @@ class TestMccsController:
         controller._command_result = [ResultCode.UNKNOWN, "", ""]
 
         # Call the On() command on the Controller device
-        result_code, message_uid = command_helper.device_command(
+        result_code, message_uid = command_helper.device_command_with_callback(
             controller, "On", test_string
         )
         assert result_code == ResultCode.QUEUED
@@ -305,10 +305,10 @@ class TestMccsController:
         """
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
-        command_helper.device_command(controller, "Off", test_string)
+        command_helper.device_command_with_callback(controller, "Off", test_string)
         command_helper.check_device_state(controller, DevState.OFF)
 
-        command_helper.device_command(controller, "On", test_string)
+        command_helper.device_command_with_callback(controller, "On", test_string)
         command_helper.check_device_state(controller, DevState.ON)
 
         # Test that subscription yields an event as expected
@@ -318,7 +318,7 @@ class TestMccsController:
         mock_event_callback.check_event_data(name="commandResult", result=None)
 
         # Call the On() command on the Controller device
-        result_code, message_uid = command_helper.device_command(
+        result_code, message_uid = command_helper.device_command_with_callback(
             controller, "Off", test_string
         )
         assert result_code == ResultCode.QUEUED
@@ -382,7 +382,9 @@ class TestMccsController:
         :param empty_json_dict: an empty json encoded dictionary
         :type empty_json_dict: str
         """
-        command_helper.device_command(device_under_test, "Off", empty_json_dict)
+        command_helper.device_command_with_callback(
+            device_under_test, "Off", empty_json_dict
+        )
         command_helper.check_device_state(device_under_test, DevState.OFF)
 
         # assert device_under_test.Operate() == 0
@@ -443,6 +445,194 @@ class TestMccsController:
                 "low-mccs/station/002": mock_station_factory(),
             }
 
+        def setup_allocate_test(
+            self, controller, mock_event_callback, command_helper, test_string
+        ):
+            """
+            Standard setup calls for Allocate command testing.
+
+            :param controller: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the controller under test,
+                in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type controller: :py:class:`tango.DeviceProxy`
+            :param mock_event_callback: fixture that provides a mock
+                instance with callback support methods
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
+            """
+            command_helper.device_command_with_callback(controller, "Off", test_string)
+            command_helper.check_device_state(controller, DevState.OFF)
+            command_helper.device_command_with_callback(controller, "On", test_string)
+            command_helper.check_device_state(controller, DevState.ON)
+
+            call_with_json(
+                controller.simulateAdminModeChange,
+                fqdn="low-mccs/station/001",
+                admin_mode=AdminMode.ONLINE,
+            )
+            call_with_json(
+                controller.simulateHealthStateChange,
+                fqdn="low-mccs/station/001",
+                health_state=HealthState.OK,
+            )
+            call_with_json(
+                controller.simulateAdminModeChange,
+                fqdn="low-mccs/station/002",
+                admin_mode=AdminMode.ONLINE,
+            )
+            call_with_json(
+                controller.simulateHealthStateChange,
+                fqdn="low-mccs/station/002",
+                health_state=HealthState.OK,
+            )
+
+            # Test that subscription yields an event as expected
+            _ = controller.subscribe_event(
+                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
+            )
+            mock_event_callback.check_event_data(name="commandResult", result=None)
+
+        def test_Allocate_Subarray_On(
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
+        ):
+            """
+            Test the Allocate command - specifically the messaging system to
+            turn the subarray on.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test,
+                in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param mock_event_callback: fixture that provides a mock
+                instance with callback support methods
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
+            """
+            controller = device_under_test  # for readability
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
+            self.setup_allocate_test(
+                controller, mock_event_callback, command_helper, test_string
+            )
+
+            # When asked to turn on, pretend the subarray replied correctly
+            mock_subarray_1.On.return_value = [[ResultCode.QUEUED], []]
+            mock_subarray_1.State.return_value = DevState.OFF
+
+            # Make the call to allocate
+            ((result_code,), (message, message_uid)) = call_with_json(
+                controller.Allocate,
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
+                subarray_id=1,
+                subarray_beam_ids=[1],
+                station_ids=[[1]],
+                channel_blocks=[2],
+            )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            sleep(0.2)
+
+            mock_subarray_1.State.return_value = DevState.ON
+            mock_subarray_1.AssignResources.return_value = [[ResultCode.OK], []]
+
+            # Make the call to the allocate callback
+            ((result_code,), (message, message_uid)) = call_with_json(
+                controller.AllocateCallback, result_code=ResultCode.OK
+            )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":AllocateCallback" in message_uid
+
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
+        def test_Allocate_Subarray_Failures(
+            self,
+            device_under_test,
+            mock_event_callback,
+            logger,
+            command_helper,
+            test_string,
+        ):
+            """
+            Test the Allocate command - specifically the messaging system to
+            turn the subarray on.
+
+            :param device_under_test: fixture that provides a
+                :py:class:`tango.DeviceProxy` to the device under test,
+                in a
+                :py:class:`tango.test_context.DeviceTestContext`.
+            :type device_under_test: :py:class:`tango.DeviceProxy`
+            :param mock_event_callback: fixture that provides a mock
+                instance with callback support methods
+            :type mock_event_callback:
+                :py:class:`pytest_mock.mocker.Mock`
+            :param logger: the logger to be used by the object under test
+            :type logger: :py:class:`logging.Logger`
+            :param command_helper: A command helper fixture.
+            :type command_helper: CommandHelper
+            :param test_string: a simple test string fixture
+            :type test_string: str
+            """
+            controller = device_under_test  # for readability
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
+            self.setup_allocate_test(
+                controller, mock_event_callback, command_helper, test_string
+            )
+
+            # When asked to turn on, pretend the subarray replied correctly
+            mock_subarray_1.On.return_value = [[ResultCode.QUEUED], []]
+            mock_subarray_1.State.return_value = DevState.OFF
+
+            # Make the call to allocate
+            ((result_code,), (message, message_uid)) = call_with_json(
+                controller.Allocate,
+                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                subarray_id=1,
+                subarray_beam_ids=[1],
+                station_ids=[[1]],
+                channel_blocks=[2],
+            )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":Allocate" in message_uid
+            sleep(0.2)
+
+            mock_subarray_1.State.return_value = DevState.ON
+            mock_subarray_1.AssignResources.return_value = [[ResultCode.OK], []]
+
+            # Make the call to the allocate callback
+            ((result_code,), (message, message_uid)) = call_with_json(
+                controller.AllocateCallback, result_code=ResultCode.OK
+            )
+            assert result_code == ResultCode.QUEUED
+            assert message
+            assert ":AllocateCallback" in message_uid
+
+            self.wait_for_command_to_complete(controller)
+            mock_event_callback.check_queued_command_result(
+                name="commandResult", result=ResultCode.OK
+            )
+
         def test_Allocate(
             self,
             device_under_test,
@@ -475,38 +665,12 @@ class TestMccsController:
             mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
-
-            command_helper.device_command(controller, "Off", test_string)
-            command_helper.check_device_state(controller, DevState.OFF)
-            command_helper.device_command(controller, "On", test_string)
-            command_helper.check_device_state(controller, DevState.ON)
-
-            call_with_json(
-                device_under_test.simulateAdminModeChange,
-                fqdn="low-mccs/station/001",
-                admin_mode=AdminMode.ONLINE,
-            )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/station/001",
-                health_state=HealthState.OK,
-            )
-            call_with_json(
-                device_under_test.simulateAdminModeChange,
-                fqdn="low-mccs/station/002",
-                admin_mode=AdminMode.ONLINE,
-            )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/station/002",
-                health_state=HealthState.OK,
+            self.setup_allocate_test(
+                controller, mock_event_callback, command_helper, test_string
             )
 
-            # Test that subscription yields an event as expected
-            _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
-            )
-            mock_event_callback.check_event_data(name="commandResult", result=None)
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
 
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
@@ -520,13 +684,13 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
+
             self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )
 
             # check that the mock subarray_1 was told to assign that resource
-            mock_subarray_1.On.assert_called_once_with()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_called_once_with(
                 json.dumps(
@@ -550,7 +714,7 @@ class TestMccsController:
             # allocated to subarray 1
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
                 subarray_beam_ids=[1],
                 station_ids=[[1]],
@@ -586,9 +750,12 @@ class TestMccsController:
                 (ResultCode.OK, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
             )
 
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
+
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1, 2]],
@@ -623,11 +790,14 @@ class TestMccsController:
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
 
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
+
             # allocating station 2 to subarray 1 should succeed, because
             # it only requires resource release
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[2]],
@@ -683,9 +853,12 @@ class TestMccsController:
             mock_subarray_1.reset_mock()
             mock_subarray_2.reset_mock()
 
+            # When asked, pretend the subarray is already on
+            mock_subarray_2.State.return_value = DevState.ON
+
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
                 subarray_beam_ids=[1],
                 station_ids=[[1, 2]],
@@ -703,7 +876,7 @@ class TestMccsController:
             mock_subarray_1.On.assert_not_called()
             mock_subarray_1.ReleaseResources.assert_not_called()
             mock_subarray_1.AssignResources.assert_not_called()
-            mock_subarray_2.On.assert_called_once_with()
+            mock_subarray_2.On.assert_not_called()
             mock_subarray_2.ReleaseResources.assert_not_called()
             mock_subarray_2.AssignResources.assert_called_once_with(
                 json.dumps(
@@ -749,43 +922,17 @@ class TestMccsController:
             mock_subarray_2 = MccsDeviceProxy("low-mccs/subarray/02", logger)
             mock_station_1 = MccsDeviceProxy("low-mccs/station/001", logger)
             mock_station_2 = MccsDeviceProxy("low-mccs/station/002", logger)
-
-            command_helper.device_command(controller, "Off", test_string)
-            command_helper.check_device_state(controller, DevState.OFF)
-            command_helper.device_command(controller, "On", test_string)
-            command_helper.check_device_state(controller, DevState.ON)
-
-            call_with_json(
-                device_under_test.simulateAdminModeChange,
-                fqdn="low-mccs/station/001",
-                admin_mode=AdminMode.ONLINE,
-            )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/station/001",
-                health_state=HealthState.OK,
-            )
-            call_with_json(
-                device_under_test.simulateAdminModeChange,
-                fqdn="low-mccs/station/002",
-                admin_mode=AdminMode.ONLINE,
-            )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/station/002",
-                health_state=HealthState.OK,
+            self.setup_allocate_test(
+                controller, mock_event_callback, command_helper, test_string
             )
 
-            # Test that subscription yields an event as expected
-            _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
-            )
-            mock_event_callback.check_event_data(name="commandResult", result=None)
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
 
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1]],
@@ -799,14 +946,16 @@ class TestMccsController:
                 name="commandResult", result=ResultCode.OK
             )
 
-            mock_subarray_1.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
+
+            # When asked, pretend the subarray is already on
+            mock_subarray_2.State.return_value = DevState.ON
 
             # allocate station 2 to subarray 2
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=2,
                 subarray_beam_ids=[2],
                 station_ids=[[2]],
@@ -820,7 +969,6 @@ class TestMccsController:
                 name="commandResult", result=ResultCode.OK
             )
 
-            mock_subarray_2.On.assert_called_once_with()
             # check state
             assert mock_station_1.subarrayId == 1
             assert mock_station_2.subarrayId == 2
@@ -910,50 +1058,25 @@ class TestMccsController:
             :type test_string: str
             """
             controller = device_under_test  # for readability
-            # Need to turn it on before we can turn it off
-            command_helper.device_command(controller, "Off", test_string)
-            command_helper.check_device_state(controller, DevState.OFF)
-
-            command_helper.device_command(controller, "On", test_string)
-            command_helper.check_device_state(controller, DevState.ON)
-
-            call_with_json(
-                device_under_test.simulateAdminModeChange,
-                fqdn="low-mccs/station/001",
-                admin_mode=AdminMode.ONLINE,
-            )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/station/001",
-                health_state=HealthState.OK,
-            )
-            call_with_json(
-                device_under_test.simulateAdminModeChange,
-                fqdn="low-mccs/station/002",
-                admin_mode=AdminMode.ONLINE,
-            )
-            call_with_json(
-                device_under_test.simulateHealthStateChange,
-                fqdn="low-mccs/station/002",
-                health_state=HealthState.OK,
+            mock_subarray_1 = MccsDeviceProxy("low-mccs/subarray/01", logger)
+            self.setup_allocate_test(
+                controller, mock_event_callback, command_helper, test_string
             )
 
-            # Test that subscription yields an event as expected
-            _ = device_under_test.subscribe_event(
-                "commandResult", tango.EventType.CHANGE_EVENT, mock_event_callback
-            )
-            mock_event_callback.check_event_data(name="commandResult", result=None)
             expected_result = {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-assignedresources/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-assignedresources/1.0",
                 "subarray_beam_ids": [1],
                 "station_ids": [[1, 2]],
                 "channel_blocks": [3],
             }
 
+            # When asked, pretend the subarray is already on
+            mock_subarray_1.State.return_value = DevState.ON
+
             # Make the call to allocate
             ((result_code,), (message, message_uid)) = call_with_json(
                 controller.Allocate,
-                interface="https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0",
+                interface="https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 subarray_id=1,
                 subarray_beam_ids=[1],
                 station_ids=[[1, 2]],
@@ -1168,9 +1291,7 @@ class TestStationsResourceManager:
         """
         self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
 
-        # Event manager to take health events
-        self.event_manager = EventManager(logger, self.stations)
-        self.health_model = HealthModel(None, self.stations, self.event_manager)
+        self.health_model = HealthModel(None, self.stations, logger)
         # HACK pending device pool management refactor
         self.health_monitor = self.health_model._health_monitor
 

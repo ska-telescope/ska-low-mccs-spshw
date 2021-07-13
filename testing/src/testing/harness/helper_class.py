@@ -77,5 +77,6 @@ class HelperClass:
             else:
                 timeout += 0.1
                 sleep(0.1)
-        assert result.get("result_code") == expected_result
+        result_code = result.get("result_code")
+        assert result_code == expected_result
         assert timeout <= timeout_limit

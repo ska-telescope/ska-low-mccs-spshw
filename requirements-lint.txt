@@ -10,3 +10,4 @@ flake8-use-fstring
 flake8-rst-docstrings
 mypy
 pep8-naming
+types-pkg_resources

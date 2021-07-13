@@ -4,7 +4,7 @@ Background:
     Given we have mvplow running an instance of tmc
     And we have mvplow running an instance of mccs
 
-@XTP-1170 @skip
+@XTP-1170
 Scenario: MCCS Start up low telescope
     Given tmc is ready to issue a startup command
     And mccs is ready to receive a startup command
@@ -12,7 +12,7 @@ Scenario: MCCS Start up low telescope
     Then mccs controller state is on
     And all mccs station states are on
 
-@XTP-1257 @skip
+@XTP-1257 @needs_tangodb @skip
 Scenario: MCCS Allocate subarray
     Given tmc is ready to allocate a subarray
     And mccs is ready to allocate a subarray
@@ -24,7 +24,7 @@ Scenario: MCCS Allocate subarray
     And according to allocation policy health of allocated subarray is good
     And other resources are not affected
 
-@XTP-1260 @skip
+@XTP-1260 @needs_tangodb @skip
 Scenario: MCCS Configure a subarray
     Given we have a successfully allocated subarray
     When tmc configures the subarray
@@ -37,19 +37,19 @@ Scenario: MCCS Perform a scan on subarray
     When tmc starts a scan on subarray
     Then the subarray obsstate is scanning
 
-@XTP-1473 @skip
+@XTP-1473 @needs_tangodb @skip
 Scenario: MCCS Perform an abort on a scanning subarray
     Given we have a successfully scanning subarray
     When tmc issues an abort on subarray
     Then the subarray obsstate is aborted
 
-@XTP-1762 @skip
+@XTP-1762 @needs_tangodb @skip
 Scenario: MCCS Perform an abort on an idle subarray
     Given we have a successfully allocated subarray
     When tmc issues an abort on subarray
     Then the subarray obsstate is aborted
 
-@XTP-1763 @skip
+@XTP-1763 @needs_tangodb @skip
 Scenario: MCCS Perform an abort on a configured subarray
     Given we have a successfully configured subarray
     When tmc issues an abort on subarray

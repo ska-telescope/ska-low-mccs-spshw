@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -17,9 +16,17 @@ of subservient devices.
     that send commands in a sequence that complies with a complex
     dependency graph.
 """
-from ska_tango_base.commands import ResultCode
-from ska_low_mccs import MccsDeviceProxy
+
+from __future__ import annotations  # allow forward references in type hints
+
+import functools
 import json
+import logging
+from typing import Any, Callable, Optional
+
+from ska_tango_base.commands import ResultCode
+
+from ska_low_mccs.device_proxy import MccsDeviceProxy
 
 
 class DevicePool:
@@ -38,50 +45,47 @@ class DevicePool:
     not STARTED or QUEUED.
     """
 
-    def __init__(self, fqdns, logger, connect=True):
+    def __init__(
+        self: DevicePool, fqdns: list[str], logger: logging.Logger, connect: bool = True
+    ) -> None:
         """
         Initialise a new DevicePool object.
 
         :param fqdns: the FQDNs of the devices in this pool
-        :type fqdns: list(str)
         :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
         :param connect: whether to establish connections immediately.
             Defaults to True. If False, the connections may be
             established by calling the :py:meth:`.connect` method, or by
             calling one of the supported commands.
-        :type connect: bool
         """
         self._fqdns = fqdns or []
         self._logger = logger
-        self._devices = None
-        self._responses = {}
-        self._results = []
+        self._devices: list[MccsDeviceProxy] = []
+        self._responses: dict[str, bool] = {}
+        self._results: list[ResultCode] = []
 
         if connect:
             self.connect()
 
-    def connect(self):
+    def connect(self: DevicePool) -> None:
         """Connect to the devices in the pool."""
-        if self._devices is None:
+        if not self._devices:
             # TODO: it would save some time if we were connecting asynchronously.
             self._devices = [
                 MccsDeviceProxy(fqdn, self._logger) for fqdn in self._fqdns
             ]
 
     # TODO: Deprecate this call (once converted to messaging system)
-    def invoke_command(self, command_name, arg=None):
+    def invoke_command(self: DevicePool, command_name: str, arg: Any = None) -> bool:
         """
         A generic method for invoking a command on all devices in the pool.
 
         :param command_name: the name of the command to be invoked
-        :type command_name: str
         :param arg: optional argument to the command
-        :type arg: object
+
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
-        if self._devices is None:
+        if not self._devices:
             self.connect()
 
         async_ids = []
@@ -100,25 +104,24 @@ class DevicePool:
 
         return True
 
-    def invoke_command_with_callback(self, command_name, fqdn, callback):
+    def invoke_command_with_callback(
+        self: DevicePool, command_name: str, fqdn: str, callback: str
+    ) -> bool:
         """
         A generic method to send a message to the pool of devices.
 
         :param command_name: the name of the command to be invoked
-        :type command_name: str
         :param fqdn: FQDN to return message to
-        :type fqdn: str
         :param callback: Callback command to call reply to
-        :type callback: str
+
         :return: Whether the messages were sent or not
-        :rtype: bool
         """
         self._logger.debug(f"pool.py:invoke_command_with_callback({command_name})")
         if len(self._responses):
             self._logger.error(f"{len(self._responses)} pool messages in progress")
             return False
 
-        if self._devices is None:
+        if not self._devices:
             self.connect()
 
         self._results = []
@@ -148,7 +151,7 @@ class DevicePool:
 
         return True
 
-    def pool_stats(self):
+    def pool_stats(self: DevicePool) -> int:
         """
         Statistics on which pool command replies are pending.
 
@@ -156,11 +159,12 @@ class DevicePool:
         """
         return len(self._responses)
 
-    def callback(self, argin):
+    def callback(self: DevicePool, argin: str) -> tuple[bool, ResultCode]:
         """
         A generic method to send a message to the pool of devices.
 
-        :param argin: result of the command
+        :param argin: json string with the result of the command
+
         :return: Whether all of the messages were completed, return_code and message
         """
         # check that each received message is on message_object and mark off as recevied
@@ -188,41 +192,56 @@ class DevicePool:
             # We have some responses pending...
             return (False, result_code)
 
-    def disable(self):
+    def disable(self: DevicePool) -> bool:
         """
         Call Disable() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         return self.invoke_command("Disable")
 
-    def standby(self):
+    def standby(self: DevicePool) -> bool:
         """
         Call Standby() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         return self.invoke_command("Standby")
 
-    def off(self):
+    def off(self: DevicePool) -> bool:
         """
         Call Off() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         return self.invoke_command("Off")
 
-    def on(self):
+    def on(self: DevicePool) -> bool:
         """
         Call On() on all the devices in this device pool.
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         return self.invoke_command("On")
+
+    def add_change_event_callback(
+        self: DevicePool, attribute_name: str, callback: Callable
+    ) -> None:
+        """
+        Register a callback for change events being pushed by devices in this pool.
+
+        :param attribute_name: the name of the attribute for which
+            change events are subscribed.
+        :param callback: the function to be called when a change event
+            arrives.
+        """
+        if self._devices is None:
+            self.connect()
+
+        for device in self._devices:
+            device.add_change_event_callback(
+                attribute_name, functools.partial(callback, device.dev_name())
+            )
 
 
 class DevicePoolSequence:
@@ -253,19 +272,21 @@ class DevicePoolSequence:
     not STARTED or QUEUED.
     """
 
-    def __init__(self, pools, logger, connect=True):
+    def __init__(
+        self: DevicePoolSequence,
+        pools: list[DevicePool],
+        logger: logging.Logger,
+        connect: bool = True,
+    ) -> None:
         """
         Initialise a new DevicePoolSequence object.
 
         :param pools: a sequence of device pools
-        :type pools: list(:py:class:`.DevicePool`)
         :param logger: the logger to be used by this object.
-        :type logger: :py:class:`logging.Logger`
         :param connect: whether to establish connections immediately.
             Defaults to True. If False, the connections may be
             established by calling the :py:meth:`.connect` method, or by
             calling one of the supported commands.
-        :type connect: bool
         """
         self._logger = logger
         self._pools = pools
@@ -273,26 +294,27 @@ class DevicePoolSequence:
         if connect:
             self.connect()
 
-    def connect(self):
+    def connect(self: DevicePoolSequence) -> None:
         """Connect to the devices in the pools."""
         for pool in self._pools:
             pool.connect()
 
-    def invoke_command(self, command_name, arg=None, reverse=False):
+    def invoke_command(
+        self: DevicePoolSequence,
+        command_name: str,
+        arg: Any = None,
+        reverse: bool = False,
+    ) -> Optional[bool]:
         """
         A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
-        :type command_name: str
         :param arg: optional argument to the command
-        :type arg: object
         :param reverse: whether to call pools in reverse sequence. (You
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.)
-        :type reverse: bool
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         did_nothing = True
 
@@ -306,23 +328,24 @@ class DevicePoolSequence:
         else:
             return None if did_nothing else True
 
-    def invoke_command_with_callback(self, command_name, fqdn, callback, reverse=False):
+    def invoke_command_with_callback(
+        self: DevicePoolSequence,
+        command_name: str,
+        fqdn: str,
+        callback: str,
+        reverse: bool = False,
+    ) -> bool:
         """
         A generic method for sequential invoking a command on a list of device pools.
 
         :param command_name: the name of the command to be invoked
-        :type command_name: str
         :param fqdn: FQDN to return message to
-        :type fqdn: str
         :param callback: Callback command to call reply to
-        :type callback: str
         :param reverse: whether to call pools in reverse sequence. (You
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.)
-        :type reverse: bool
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         all_ok = True
 
@@ -335,7 +358,7 @@ class DevicePoolSequence:
                 all_ok = False
         return all_ok
 
-    def disable(self, reverse=False):
+    def disable(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call Disable() on all the devices in this device pool.
 
@@ -343,14 +366,12 @@ class DevicePoolSequence:
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.) Optional, defaults to
             False
-        :type reverse: bool
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         return self.invoke_command("Disable", reverse=reverse)
 
-    def standby(self, reverse=False):
+    def standby(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call Standby() on all the devices in this device pool.
 
@@ -358,14 +379,12 @@ class DevicePoolSequence:
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.) Optional, defaults to
             False
-        :type reverse: bool
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         return self.invoke_command("Standby", reverse=reverse)
 
-    def off(self, reverse=False):
+    def off(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call Off() on all the devices in this device pool.
 
@@ -373,19 +392,14 @@ class DevicePoolSequence:
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.) Optional, defaults to
             False
-        :type reverse: bool
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
-        args = {
-            "respond_to_fqdn": "",
-            "callback": "",
-        }
+        args = {"respond_to_fqdn": "", "callback": ""}
         json_string = json.dumps(args)
         return self.invoke_command(command_name="Off", arg=json_string, reverse=reverse)
 
-    def on(self, reverse=False):
+    def on(self: DevicePoolSequence, reverse: bool = False) -> Optional[bool]:
         """
         Call On() on all the devices in this device pool.
 
@@ -393,36 +407,33 @@ class DevicePoolSequence:
             might turn everything on in a certain order, but need to
             turn them off again in reverse order.) Optional, defaults to
             False
-        :type reverse: bool
 
         :return: Whether the command succeeded or not
-        :rtype: bool
         """
         args = {"respond_to_fqdn": "", "callback": ""}
         json_string = json.dumps(args)
         return self.invoke_command(command_name="On", arg=json_string, reverse=reverse)
 
-    def pool_stats(self):
+    def pool_stats(self: DevicePoolSequence) -> str:
         """
         Stats on the pool.
 
         :return: The pool stats
-        :rtype: str
         """
         status = ""
         for pool in self._pools:
             status += f"{str(pool.pool_stats())} "
         return status
 
-    def callback(self, argin):
+    def callback(self: DevicePoolSequence, argin: str) -> tuple[bool, ResultCode, str]:
         """
         We need to check all pools have received their callbacks whenever we get a
         callback message.
 
         :param argin: results from executed command
+
         :return: A tuple containing a flag indicating whether pools are complete,
             an overall return code and an information status
-        :rtype: (bool, :py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
         responses_pending_message = "Message responses pending"
         all_responses_received_message = "All message responses received"

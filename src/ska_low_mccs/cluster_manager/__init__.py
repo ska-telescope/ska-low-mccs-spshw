@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -14,4 +13,4 @@ It includes a cluster manager Tango device and a simulator.
 
 __all__ = ["MccsClusterManagerDevice", "cluster_manager_device"]
 
-from .cluster_manager_device import MccsClusterManagerDevice
+from .cluster_manager_device import MccsClusterManagerDevice  # type: ignore[attr-defined]

@@ -1,18 +1,33 @@
-# type: ignore
+# -*- coding: utf-8 -*-
+#
+# This file is part of the SKA Low MCCS project
+#
+# Distributed under the terms of the GPL license.
+# See LICENSE.txt for more info.
+
 """Module for MCCS utils."""
+
+from __future__ import annotations  # allow forward references in type hints
+
 from functools import wraps
 import inspect
 import json
 import pkg_resources
+from typing import Callable, Optional
 
 import jsonschema
 from tango import Except, ErrSeverity
 from tango.server import Device
 
+from ska_tango_base.commands import ResultCode
+
 
 def tango_raise(
-    msg, reason="API_CommandFailed", severity=ErrSeverity.ERR, _origin=None
-):
+    msg: str,
+    reason: str = "API_CommandFailed",
+    severity: ErrSeverity = ErrSeverity.ERR,
+    _origin: Optional[str] = None,
+) -> None:
     """
     Helper function to provide a concise way to throw
     :py:class:`tango.Except.throw_exception <pytango:tango.Except>`.
@@ -29,32 +44,36 @@ def tango_raise(
 
 
     :param msg: message
-    :type msg: str
     :param reason: the tango api :py:class:`tango.DevError`
         description string, defaults to "API_CommandFailed"
-    :type reason: str, optional
     :param severity: the tango error severity, defaults to `tango.ErrSeverity.ERR`
-    :type severity: :py:class:`tango.ErrSeverity`, optional
     :param _origin: the calling object name, defaults to None (autodetected)
         Note that autodetection only works for class methods not e.g.
         decorators
-    :type _origin: str, optional
 
     :raises TypeError: if used from an object that is not a tango device
         instance
     """
     if _origin is None:
-        frame = inspect.currentframe().f_back
-        calling_method = frame.f_code.co_name
-        calling_class = frame.f_locals["self"].__class__
-        if Device not in inspect.getmro(calling_class):
-            raise TypeError("Can only be used in a tango device instance")
-        class_name = calling_class.__name__
-        _origin = f"{class_name}.{calling_method}()"
+        current_frame = inspect.currentframe()
+        if current_frame is not None:
+            frame = current_frame.f_back
+            if frame is not None:
+                fcode = frame.f_code
+                flocals = frame.f_locals["self"]
+                if fcode is not None and flocals is not None:
+                    calling_method = fcode.co_name
+                    calling_class = frame.f_locals["self"].__class__
+                    if Device not in inspect.getmro(calling_class):
+                        raise TypeError("Can only be used in a tango device instance")
+                    class_name = calling_class.__name__
+                    _origin = f"{class_name}.{calling_method}()"
+                    Except.throw_exception(reason, msg, _origin, severity)
+        raise TypeError("Can't access frame, f_code or f_locals")
     Except.throw_exception(reason, msg, _origin, severity)
 
 
-def call_with_json(func, **kwargs):
+def call_with_json(func: Callable, **kwargs: dict[str, str]) -> tuple[ResultCode, str]:
     """
     Allows the calling of a command that accepts a JSON string as input, with the actual
     unserialised parameters.
@@ -77,9 +96,7 @@ def call_with_json(func, **kwargs):
         call_with_json(controller.Allocate, id=id, stations=stations, tiles=tiles)
 
     :param func: the function handle to call
-    :type func: callable
     :param kwargs: parameters to be jsonified and passed to func
-    :type kwargs: dict[str]
 
     :return: the return value of func
     """
@@ -110,7 +127,7 @@ class json_input:  # noqa: N801
     decoding for you.
     """
 
-    def __init__(self, schema_path=None):
+    def __init__(self: json_input, schema_path: Optional[str] = None):
         """
         Initialises a callable json_input object, to function as a device method
         generator.
@@ -118,7 +135,6 @@ class json_input:  # noqa: N801
         :param schema_path: an optional path to a schema against which
             the JSON should be validated. Not working at the moment, so
             leave it None.
-        :type schema_path: str
         """
         self.schema = None
 
@@ -128,47 +144,40 @@ class json_input:  # noqa: N801
             )
             self.schema = json.loads(schema_string)
 
-    def __call__(self, func):
+    def __call__(self: json_input, func: Callable) -> Callable:
         """
         The decorator method. Makes this class callable, and ensures that when called on
         a device method, a wrapped method is returned.
 
         :param func: The target of the decorator
-        :type func: callable
 
         :return: function handle of the wrapped method
-        :rtype: callable
         """
 
         @wraps(func)
-        def wrapped(obj, json_string):
+        def wrapped(obj: object, json_string: str) -> object:
             """
             The wrapped function.
 
             :param obj: the object that owns the method to be wrapped
                 i.e. the value passed into the method as "self"
-            :type obj: object
             :param json_string: The string to be JSON-decoded into
                 kwargs
-            :type json_string: str
 
             :return: whatever the function to be wrapped returns
-            :rtype: object
             """
             json_object = self._parse(json_string)
             return func(obj, **json_object)
 
         return wrapped
 
-    def _parse(self, json_string):
+    def _parse(self: json_input, json_string: str) -> dict[str, str]:
         """
         Parses and validates the JSON string input.
 
         :param json_string: a string, purportedly a JSON-encoded object
-        :type json_string: str
 
-        :return: an object parsed from the input JSON string
-        :rtype: object
+        :return: a dictionary parsed from the input JSON string
         """
         json_object = json.loads(json_string)
 

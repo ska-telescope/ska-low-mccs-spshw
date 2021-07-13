@@ -201,10 +201,6 @@ class TestMccsIntegrationTmc(HelperClass):
         }
         self.check_states(devices, dev_states)
 
-        # Need to patch tango.DeviceProxy for the message queue implementation
-        # as the devices are all behind MccsDeviceProxy...
-        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
-
         self.assert_command(
             device=devices["controller"],
             command="Off",
@@ -247,9 +243,8 @@ class TestMccsIntegrationTmc(HelperClass):
 
         devices["subarraybeam_01"].isBeamLocked = True
 
-        # Need to patch tango.DeviceProxy for the message queue implementation
-        # as the devices are all behind MccsDeviceProxy...
-        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
+        # When asked, pretend the subarray is already on
+        devices["subarray_01"].State.return_value = DevState.ON
 
         # Allocate stations to a subarray
         parameters = {
@@ -338,6 +333,9 @@ class TestMccsIntegrationTmc(HelperClass):
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
+        # When asked, pretend the subarray is already on
+        devices["subarray_01"].State.return_value = DevState.ON
+
         # Allocate stations to a subarray
         parameters = {
             "subarray_id": 1,
@@ -415,10 +413,6 @@ class TestMccsIntegrationTmc(HelperClass):
         assert list(devices["subarray_01"].stationFQDNs) == []
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
-
-        # Need to patch tango.DeviceProxy for the message queue implementation
-        # as the devices are all behind MccsDeviceProxy...
-        mocker.patch("tango.DeviceProxy", return_value=MccsDeviceProxy)
 
         # Turn off controller and stations
         self.assert_command(

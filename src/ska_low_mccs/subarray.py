@@ -25,7 +25,7 @@ __all__ = [
 import json
 import logging
 import threading
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 # PyTango imports
 from tango import DebugIt, EnsureOmniThread, Group
@@ -37,10 +37,36 @@ from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import MutableHealthModel, HealthMonitor
 import ska_low_mccs.release as release
 from ska_low_mccs.resource import ResourceManager
+from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
+
+DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+
+
+class MccsSubarrayQueue(MessageQueue):
+    """A concrete implementation of a message queue specific to MccsSubarray."""
+
+    def _notify_listener(
+        self: MccsSubarrayQueue,
+        result_code: ResultCode,
+        message_uid: str,
+        status: str,
+    ) -> None:
+        """
+        Concrete implementation that can notify specific listeners.
+
+        :param result_code: Result code of the command being executed
+        :param message_uid: The message uid that needs a push notification
+        :param status: Status message
+        """
+        device = self._target
+        device._command_result["result_code"] = result_code
+        device._command_result["message_uid"] = message_uid
+        device._command_result["status"] = status
+        json_results = json.dumps(device._command_result)
+        device.push_change_event("commandResult", json_results)
 
 
 class StationsResourceManager(ResourceManager):
@@ -235,7 +261,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         :param logger: the logger to be used.
         :param argin: JSON configuration specification
             {
-            "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
+            "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
             "stations":[{"station_id": 1},{"station_id": 2}],
             "subarray_beams":[{
             "subarray_beam_id":1,
@@ -418,6 +444,8 @@ class MccsSubarray(SKASubarray):
             self._thread = None
             self._lock = threading.Lock()
             self._interrupt = False
+            self._message_queue = None
+            self._qdebuglock = threading.Lock()
 
         def do(self):
             """
@@ -432,9 +460,15 @@ class MccsSubarray(SKASubarray):
             (result_code, message) = super().do()
 
             device = self.target
-            device._command_result = None
+            device._command_result = {
+                "result_code": ResultCode.UNKNOWN,
+                "message_uid": "",
+                "status": "",
+            }
             device.set_change_event("commandResult", True, False)
 
+            device._heart_beat = 0
+            device.queue_debug = ""
             device._scan_id = -1
             device._transient_buffer_manager = TransientBufferManager()
 
@@ -443,6 +477,12 @@ class MccsSubarray(SKASubarray):
 
             device._build_state = release.get_release_info()
             device._version_id = release.version
+
+            # Start the Message queue for this device
+            device._message_queue = MccsSubarrayQueue(
+                target=device, lock=self._qdebuglock, logger=self.logger
+            )
+            device._message_queue.start()
 
             self._thread = threading.Thread(
                 target=self._initialise_connections, args=(device,)
@@ -483,11 +523,10 @@ class MccsSubarray(SKASubarray):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.OK
             device.set_change_event("healthState", True, False)
             device.health_model = MutableHealthModel(
-                None, [], device.event_manager, device.health_changed
+                None, [], self.logger, device.health_changed
             )
 
         def _initialise_resource_management(self, device):
@@ -561,7 +600,24 @@ class MccsSubarray(SKASubarray):
         released. This method is called by the device destructor, and by
         the Init command when the Tango device server is re-initialised.
         """
-        pass
+        if self._message_queue.is_alive():
+            self._message_queue.terminate_thread()
+            self._message_queue.join()
+
+    def notify_listener(
+        self: MccsSubarrayQueue,
+        result_code: ResultCode,
+        message_uid: str,
+        status: str,
+    ) -> None:
+        """
+        Thin wrapper around the message queue's notify listener method.
+
+        :param result_code: Result code of the command being executed
+        :param message_uid: The message uid that needs a push notification
+        :param status: Status message
+        """
+        self._message_queue._notify_listener(result_code, message_uid, status)
 
     # ------------------
     # Attribute methods
@@ -580,15 +636,43 @@ class MccsSubarray(SKASubarray):
         self._health_state = health
         self.push_change_event("healthState", health)
 
-    @attribute(dtype="DevLong", format="%i")
-    def commandResult(self):
+    @attribute(dtype="DevULong")
+    def aHeartBeat(self: MccsSubarray) -> int:
         """
-        Return the commandResult attribute.
+        Return the Heartbeat attribute value.
 
-        :return: commandResult attribute
-        :rtype: :py:class:`~ska_tango_base.commands.ResultCode`
+        :return: heart beat as a percentage
         """
-        return self._command_result
+        return self._heart_beat
+
+    @attribute(dtype="DevString")
+    def aQueueDebug(self: MccsSubarray) -> str:
+        """
+        Return the queueDebug attribute.
+
+        :return: queueDebug attribute
+        """
+        return self.queue_debug
+
+    @aQueueDebug.write  # type: ignore[no-redef]
+    def aQueueDebug(self: MccsSubarray, debug_string: str) -> None:
+        """
+        Update the queue debug attribute.
+
+        :param debug_string: the new debug string for this attribute
+        """
+        self.queue_debug = debug_string
+
+    @attribute(dtype="DevString", format="%i")
+    def commandResult(self: MccsSubarray) -> str:
+        """
+        Return the _command_result attributes.
+
+        :return: JSON encoded _command_results attributes map
+        :rtype: str
+        """
+        json_results = json.dumps(self._command_result)
+        return json_results
 
     @attribute(dtype="DevLong", format="%i")
     def scanId(self):
@@ -648,17 +732,71 @@ class MccsSubarray(SKASubarray):
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
+    def _send_message(
+        self: MccsSubarray, command: str, json_args: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Helper method to send a message to execute the specified command.
+
+        :param command: the command to send a message for
+        :param json_args: arguments to pass with the command
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        """
+        self.logger.info(f"Subarray {command}")
+
+        kwargs = json.loads(json_args)
+        respond_to_fqdn = kwargs.get("respond_to_fqdn")
+        callback = kwargs.get("callback")
+        assert respond_to_fqdn
+        assert callback
+        self.logger.debug(f"Subarray {command} message call")
+        (
+            result_code,
+            message_uid,
+            status,
+        ) = self._message_queue.send_message_with_response(
+            command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
+        )
+        return [[result_code], [status, message_uid]]
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    @DebugIt()
+    def On(self: MccsSubarray, json_args: str) -> DevVarLongStringArrayType:
+        """
+        Send a message to turn the subarray on.
+
+        Method returns as soon as the message has been enqueued.
+
+        :param json_args: JSON encoded messaging system and command arguments
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        """
+        return self._send_message(command="On", json_args=json_args)
+
     class OnCommand(SKASubarray.OnCommand):
         """Class for handling the On() command."""
 
         SUCCEEDED_MESSAGE = "Subarray On command completed OK"
         FAILED_MESSAGE = "Subarray On command failed"
 
-        def do(self):
+        def do(self, argin):
             """
             Stateless hook implementing the functionality of the (inherited)
             :py:meth:`ska_tango_base.SKABaseDevice.On` command for this
             :py:class:`.MccsSubarray` device.
+
+            :param argin: Argument containing JSON encoded command message and result
+            :type argin: str
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -846,7 +984,7 @@ class MccsSubarray(SKASubarray):
 
             :param argin: JSON configuration specification
                 {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-configure/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-configure/2.0",
                 "stations":[{"station_id": 1},{"station_id": 2}],
                 "subarray_beams":[{
                 "subarray_beam_id":1,
@@ -888,7 +1026,7 @@ class MccsSubarray(SKASubarray):
 
             :param argin: JSON scan specification
                 {
-                "interface": "https://schema.skatelescope.org/ska-low-mccs-scan/1.0",
+                "interface": "https://schema.skao.int/ska-low-mccs-scan/2.0",
                 "scan_id":1,
                 "start_time": 0.0,
                 }
@@ -1014,13 +1152,11 @@ class MccsSubarray(SKASubarray):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(ResultCode.UNKNOWN, "", "")
         command = self.get_command_object("Abort")
-        (result_code, message) = command()
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
+        (result_code, status) = command()
+        self.notify_listener(result_code, "", status)
+        return ([result_code], [status])
 
     class ObsResetCommand(SKASubarray.ObsResetCommand):
         """Class for handling the ObsReset() command."""
@@ -1066,13 +1202,11 @@ class MccsSubarray(SKASubarray):
             information purpose only.
         :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
         """
-        self._command_result = ResultCode.UNKNOWN
-        self.push_change_event("commandResult", self._command_result)
+        self.notify_listener(ResultCode.UNKNOWN, "", "")
         command = self.get_command_object("ObsReset")
-        (result_code, message) = command()
-        self._command_result = result_code
-        self.push_change_event("commandResult", self._command_result)
-        return [[result_code], [message]]
+        (result_code, status) = command()
+        self.notify_listener(result_code, "", status)
+        return ([result_code], [status])
 
     class RestartCommand(SKASubarray.RestartCommand):
         """Class for handling the Restart() command."""

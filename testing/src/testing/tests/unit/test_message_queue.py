@@ -13,10 +13,10 @@ import threading
 import time
 import json
 
-from tango import DevFailed
-
 from ska_tango_base.commands import ResultCode
 from ska_low_mccs.message_queue import MessageQueue
+
+from testing.harness.mock import MockDeviceBuilder
 
 
 class TestMessageQueue:
@@ -24,6 +24,58 @@ class TestMessageQueue:
     This class contains the tests for the
     :py:class:`ska_low_mccs.message_queue.MessageQueue` class.
     """
+
+    @pytest.fixture()
+    def device_to_load(self):
+        """
+        The tango_harness fixture gets its specification of what devices to launch
+        from the device_to_load fixture, so we need to provide that fixture. Since
+        we're only going to be using mock devices here, we can just set it to return
+        None.
+
+        :return: None
+        """
+        return None
+
+    @pytest.fixture()
+    def callback(self):
+        """
+        Fixturizing callback as it's used in more than one place.
+
+        :return: Name of the callback method
+        """
+        return "CallbackCommand"
+
+    @pytest.fixture()
+    def response_device(self, callback):
+        """
+        Let's build a mock device with a callback command with the right name, which
+        returns a (ResultCode, ...) tuple.
+
+        :param callback: Simple fixture for the name of a callback method
+        :type callback: callback fixture
+
+        :return: Mocked device that behaves like a response device should
+        """
+        builder = MockDeviceBuilder()
+        builder.add_result_command(callback, result_code=ResultCode.OK)
+        return builder()
+
+    @pytest.fixture()
+    def initial_mocks(self, valid_fqdn, response_device):
+        """
+        One of the ways we can tell the Tango harness about mock devices is to
+        implement this fixture. Here we tell the Tango harness that when asked for a
+        proxy to the "valid FQDN", it should return our callback device.
+
+        :param valid_fqdn: a valid FQDN to use for our response device
+        :type valid_fqdn: valid_fqdn fixture
+        :param response_device: a fixture for our response device
+        :type response_device: response_device fixture
+
+        :return: a dictionary of mocks, keyed by FQDN
+        """
+        return {valid_fqdn: response_device}
 
     @pytest.fixture()
     def test_command(self):
@@ -42,15 +94,6 @@ class TestMessageQueue:
         :return: a valid FQDN string
         """
         return "low-mccs/control/control"
-
-    @pytest.fixture()
-    def invalid_fqdn(self):
-        """
-        A fixture returning an invalid FQDN string.
-
-        :return: an invalid FQDN string
-        """
-        return "an/invalid/fqdn"
 
     @pytest.fixture()
     def command_return_ok(self, mocker):
@@ -73,40 +116,6 @@ class TestMessageQueue:
         mock = mocker.Mock()
         mock.queue_debug = ""
         mock._heart_beat = 0
-        return mock
-
-    @pytest.fixture()
-    def mock_device_proxy_with_devfailed(self, mocker):
-        """
-        A fixture that monkey patches Tango's DeviceProxy and raises a DevFailed
-        exception.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :return: A monkey patched Tango device proxy which raises a DevFailed exception
-        """
-        mock = mocker.patch("tango.DeviceProxy", side_effect=DevFailed())
-        return mock
-
-    @pytest.fixture()
-    def device(self, mocker):
-        """
-        A fixture that mocks a device.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :return: A mocked device
-        """
-        return mocker.Mock()
-
-    @pytest.fixture()
-    def mock_device_proxy(self, mocker, device):
-        """
-        A fixture that monkey patches Tango's DeviceProxy.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :param device: fixture that mocks a device
-        :return: A monkey patched Tango device proxy
-        """
-        mock = mocker.patch("tango.DeviceProxy", return_value=device)
         return mock
 
     @pytest.fixture
@@ -300,7 +309,16 @@ class TestMessageQueue:
         # doesn't implement _notify_listener method.
         assert not message_queue.is_alive()
 
-    def test_send_message_with_command_with_response(
+    # If we want to use the tango harness, we need to ensure
+    # that the tango_harness fixture actually gets called. Most of
+    # our unit tests test a device, so they use the
+    # device_under_test fixture, which calls the tango_harness
+    # fixture. So we mostly don't need to worry about making sure it
+    # is called. But in the rarer case where we aren't testing a
+    # device but we still need our tango harness (e.g. for mock
+    # devices), we need to explicitly call it.
+    @pytest.mark.usefixtures("tango_harness")
+    def test_send_message_with_command_and_response(
         self,
         message_queue,
         mocker,
@@ -308,8 +326,8 @@ class TestMessageQueue:
         command_return_ok,
         test_command,
         valid_fqdn,
-        mock_device_proxy,
-        device,
+        callback,
+        response_device,
     ):
         """
         Test that we can send a message with response callback.
@@ -319,13 +337,12 @@ class TestMessageQueue:
         :param target_mock: fixture that mocks a target device
         :param command_return_ok: fixture for command that return ResultCode.OK
         :param test_command: a test command to send to the message queue
+        :param callback: Name of the callback method
         :param valid_fqdn: a valid FQDN string
-        :param mock_device_proxy: monkey patched device proxy
-        :param device: fixture that mocks a device
+        :param response_device: fixture that mocks a response device
         """
         target_mock.get_command_object = mocker.Mock(return_value=command_return_ok)
-        device.command_inout.return_value = (ResultCode.OK, "response status")
-        callback = "callback_command"
+
         (_, message_uid, _) = message_queue.send_message_with_response(
             command=test_command,
             respond_to_fqdn=valid_fqdn,
@@ -337,7 +354,6 @@ class TestMessageQueue:
         json_string = json.dumps(message_args)
         command_return_ok.assert_called_once_with(json_string)
         assert f"Result({message_uid},rc=OK)" in target_mock.queue_debug
-        mock_device_proxy.assert_called_once_with(valid_fqdn)
         args = {
             "message_object": {
                 "command": test_command,
@@ -351,37 +367,4 @@ class TestMessageQueue:
             "status": "",
         }
         json_string = json.dumps(args)
-        device.command_inout.assert_called_once_with(callback, json_string)
-
-    def test_send_message_with_command_with_incorrect_response_fqdn(
-        self,
-        specialised_message_queue,
-        mocker,
-        target_mock,
-        test_command,
-        invalid_fqdn,
-        mock_device_proxy_with_devfailed,
-    ):
-        """
-        Test that we can handle a message with an incorrect response FQDN.
-
-        :param specialised_message_queue: specialised message queue fixture
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock` module
-        :param target_mock: fixture that mocks a target device
-        :param test_command: a test command to send to the message queue
-        :param invalid_fqdn: an invalid FQDN string
-        :param mock_device_proxy_with_devfailed: monkey patched device proxy which raises DevFailed exception
-        """
-        target_mock.get_command_object = mocker.Mock(return_value=None)
-        callback = "callback_command"
-        specialised_message_queue.send_message_with_response(
-            command=test_command,
-            respond_to_fqdn=invalid_fqdn,
-            callback=callback,
-            notifications=True,
-        )
-        time.sleep(0.1)  # Required to allow DUT thread to run
-        mock_device_proxy_with_devfailed.assert_called_once_with(invalid_fqdn)
-        assert f"Response device {invalid_fqdn} not found" in target_mock.queue_debug
-        assert specialised_message_queue.notify[0] == ResultCode.FAILED
-        assert test_command in specialised_message_queue.notify[1]
+        response_device.command_inout.assert_called_once_with(callback, json_string)

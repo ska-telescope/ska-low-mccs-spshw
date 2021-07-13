@@ -79,7 +79,6 @@ prototype for the `Square Kilometre Array`_.
 
    api/base_hardware
    api/device_proxy
-   api/events
    api/health
    api/pool
    api/power_mode_hardware

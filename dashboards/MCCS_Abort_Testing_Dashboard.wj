@@ -265,7 +265,7 @@
       "height": 6,
       "type": "LABEL",
       "inputs": {
-        "text": "{\"interface\":\"https://schema.skatelescope.org/ska-low-mccs-assignresources/1.0\",\"subarray_id\":1,\"subarray_beam_ids\":[1],\"station_ids\":[[1,2]],\"channel_blocks\":[3]}",
+        "text": "{\"interface\":\"https://schema.skao.int/ska-low-mccs-assignresources/2.0\",\"subarray_id\":1,\"subarray_beam_ids\":[1],\"station_ids\":[[1,2]],\"channel_blocks\":[3]}",
         "textColor": "#000000",
         "backgroundColor": "#f697f7",
         "size": 1,

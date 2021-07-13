@@ -23,7 +23,6 @@ from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import HealthState
 
 from ska_low_mccs import MccsDevice
-from ska_low_mccs.events import EventManager
 from ska_low_mccs.health import HealthModel
 
 __all__ = ["MccsTransientBuffer", "main"]
@@ -70,11 +69,10 @@ class MccsTransientBuffer(MccsDevice):
             device._transient_frequency_window = (0.0,)
             device._station_ids = ("",)
 
-            device.event_manager = EventManager(self.logger)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = HealthModel(
-                None, None, device.event_manager, device.health_changed
+                None, None, self.logger, device.health_changed
             )
 
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

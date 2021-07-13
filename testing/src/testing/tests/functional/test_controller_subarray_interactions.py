@@ -378,8 +378,8 @@ def check_reset_state(controller, subarrays, stations):
     assert controller.aPoolStats == "0 0 "
     check_mccs_device_state(subarrays[1], "off")
     check_mccs_device_state(subarrays[2], "off")
-    assert subarrays[1].stationFQDNs is None
-    assert subarrays[2].stationFQDNs is None
+    assert subarrays[1].stationFQDNs is None or subarrays[1].stationFQDNs == ()
+    assert subarrays[2].stationFQDNs is None or subarrays[2].stationFQDNs == ()
     check_mccs_device_state(stations[1], "off")
     check_mccs_device_state(stations[2], "off")
     assert stations[1].subarrayId == 0

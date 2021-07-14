@@ -312,7 +312,6 @@ class MccsTile(SKABaseDevice):
             device._simulation_mode = SimulationMode.FALSE
 
             device._logical_tile_id = 0
-            device._subarray_id = 0
             device._station_id = 0
 
             device._csp_destination_ip = ""
@@ -868,26 +867,6 @@ class MccsTile(SKABaseDevice):
         :type value: int
         """
         self.hardware_manager.tile_id = value
-
-    @attribute(dtype="DevLong")
-    def subarrayId(self):
-        """
-        Return the id of the subarray to which this tile is assigned.
-
-        :return: the id of the subarray to which this tile is assigned
-        :rtype: int
-        """
-        return self._subarray_id
-
-    @subarrayId.write
-    def subarrayId(self, value):
-        """
-        Set the id of the subarray to which this tile is assigned.
-
-        :param value: the subarray id
-        :type value: int
-        """
-        self._subarray_id = value
 
     @attribute(dtype="DevLong")
     def stationId(self):
@@ -2284,19 +2263,19 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) < 4:
+            if len(argin) < 5:
                 self.logger.error("Insufficient parameters specified")
                 raise ValueError("Insufficient parameters specified")
-            if len(argin) > 192:
+            if len(argin) > (48 * 5):
                 self.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
-            if len(argin) % 4 != 0:
+            if len(argin) % 5 != 0:
                 self.logger.error("Incomplete specification of region")
                 raise ValueError("Incomplete specification of region")
             regions = []
             total_chan = 0
-            for i in range(0, len(argin), 4):
-                region = argin[i : i + 4]  # noqa: E203
+            for i in range(0, len(argin), 5):
+                region = argin[i : i + 5]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
                     self.logger.error("Start channel in region must be even")
@@ -2338,6 +2317,7 @@ class MccsTile(SKABaseDevice):
         * num_channels - (int) size of the region, must be a multiple of 8
         * beam_index - (int) beam used for this region with range 0 to 47
         * substation_id - (int) Substation
+        * subarray_id - (int) Subarray
 
         :type argin: list(int)
 
@@ -2348,7 +2328,7 @@ class MccsTile(SKABaseDevice):
 
         :example:
 
-        >>> regions = [[4, 24, 0, 0],[26, 40, 1, 0]]
+        >>> regions = [[4, 24, 0, 0, 0], [26, 40, 1, 0, 0]]
         >>> input = list(itertools.chain.from_iterable(regions))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SetBeamFormerRegions", input)
@@ -2430,7 +2410,8 @@ class MccsTile(SKABaseDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"StartChannel":1, "NumTiles":10, "IsTile":True}
+        >>> dict = {"StartChannel":1, "NumTiles":10, "IsTile":True, "isFirst":True,
+        >>>         "isLast:True}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("ConfigureStationBeamformer", jstr)
         """
@@ -2670,9 +2651,9 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadBeamAngle(self, argin):
         """
-        angle_coefficients is an array of one element per beam, specifying a rotation
-        angle, in radians, for the specified beam. The rotation is the same for all
-        antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X
+        angle_coefficients in argin is an array of one element per beam, specifying a
+        rotation angle, in radians, for the specified beam. The rotation is the same for
+        all antennas. Default is 0 (no rotation). A positive pi/4 value transfers the X
         polarization to the Y polarization. The rotation is applied after regular
         calibration.
 
@@ -2764,8 +2745,8 @@ class MccsTile(SKABaseDevice):
     @DebugIt()
     def LoadAntennaTapering(self, argin):
         """
-        tapering_coefficients is a vector contains a value for each antenna the TPM
-        processes. Default at initialisation is 1.0.
+        tapering_coefficients in argin is a vector contains a value for each antenna the
+        TPM processes. Default at initialisation is 1.0.
 
         :param argin: beam index, list of tapering coefficients for each antenna
         :type argin: list(float)

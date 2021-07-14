@@ -85,10 +85,6 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
-        assert tile_1.subarrayId == 0
-        assert tile_2.subarrayId == 0
-        assert tile_3.subarrayId == 0
-        assert tile_4.subarrayId == 0
 
         controller.Startup()
         dev_states = {
@@ -119,10 +115,6 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1
-        assert tile_3.subarrayId == 0
-        assert tile_4.subarrayId == 0
 
         # allocating station_1 to subarray 2 should fail, because it is already
         # allocated to subarray 1
@@ -143,10 +135,6 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1
-        assert tile_3.subarrayId == 0
-        assert tile_4.subarrayId == 0
 
         # allocating stations 1 and 2 to subarray 1 should succeed,
         # because the already allocated station is allocated to the same
@@ -172,10 +160,6 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1
-        assert tile_3.subarrayId == 1
-        assert tile_4.subarrayId == 1
 
     def test_controller_release_subarray(self, tango_harness: TangoHarness):
         """
@@ -235,10 +219,6 @@ class TestMccsIntegration(HelperClass):
         assert list(subarray_2.stationFQDNs) == [station_2.dev_name()]
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 2
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1
-        assert tile_3.subarrayId == 2
-        assert tile_4.subarrayId == 2
 
         # release resources of subarray_2
         ((result_code,), (_,)) = call_with_json(
@@ -251,10 +231,6 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1
-        assert tile_3.subarrayId == 0
-        assert tile_4.subarrayId == 0
 
         # releasing resources of unresourced subarray_2 should fail
         ((result_code,), (_,)) = call_with_json(
@@ -267,10 +243,6 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1
-        assert tile_3.subarrayId == 0
-        assert tile_4.subarrayId == 0
 
         # release resources of subarray_1
         ((result_code,), (_,)) = call_with_json(
@@ -283,31 +255,3 @@ class TestMccsIntegration(HelperClass):
         assert subarray_2.stationFQDNs is None
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
-        assert tile_1.subarrayId == 0
-        assert tile_2.subarrayId == 0
-        assert tile_3.subarrayId == 0
-        assert tile_4.subarrayId == 0
-
-    def test_station_tile_subarray_id(self, tango_harness: TangoHarness):
-        """
-        Test that a write to attribute subarrayId on an MccsStation device also results
-        in an update to attribute subarrayId on its MccsTiles.
-
-        :param tango_harness: a test harness for tango devices
-        """
-        station = tango_harness.get_device("low-mccs/station/001")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-
-        # check initial state
-        assert station.subarrayId == 0
-        assert tile_1.subarrayId == 0
-        assert tile_2.subarrayId == 0
-
-        # write subarray_id
-        station.subarrayId = 1
-
-        # check state
-        assert station.subarrayId == 1
-        assert tile_1.subarrayId == 1
-        assert tile_2.subarrayId == 1

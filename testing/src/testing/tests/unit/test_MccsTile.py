@@ -347,19 +347,6 @@ class TestMccsTile(HelperClass):
         device_under_test.logicalTileId = 7
         assert device_under_test.logicalTileId == 7
 
-    def test_subarrayId(self, device_under_test):
-        """
-        Test for the subarrayId attribute.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        """
-        assert device_under_test.subarrayId == 0
-        device_under_test.subarrayId = 3
-        assert device_under_test.subarrayId == 3
-
     def test_stationId(self, device_under_test):
         """
         Test for the stationId attribute.
@@ -604,7 +591,7 @@ class TestMccsTileCommands(HelperClass):
                 "SetLmcDownload",
                 json.dumps({"Mode": "1G", "PayloadLength": 4, "DstIP": "10.0.1.23"}),
             ),
-            ("SetBeamFormerRegions", (2, 8, 5, 0)),
+            ("SetBeamFormerRegions", (2, 8, 5, 0, 0)),
             (
                 "ConfigureStationBeamformer",
                 json.dumps(

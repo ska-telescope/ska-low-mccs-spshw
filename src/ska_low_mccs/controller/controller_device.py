@@ -118,9 +118,10 @@ class StationsResourceManager(ResourceManager):
         """
         Returns the device IDs of currently assigned stations.
 
-        :return: IDs of currently assigned stations
+        :return: A dictionary of Station IDs, FQDNs managed by this
+            StationsResourceManager
         """
-        return sorted(self._resources.keys())
+        return {key: resource.fqdn for key, resource in self._resources.items()}
 
 
 class MccsControllerQueue(MessageQueue):
@@ -149,7 +150,7 @@ class MccsControllerQueue(MessageQueue):
 
 class SubarrayBeamsResourceManager(ResourceManager):
     """
-    A simple manager for the pool of subarray beams that are assigned to a subarray.
+    A simple manager for the subarray beams that are assigned to a subarray.
 
     Inherits from ResourceManager.
     """
@@ -187,9 +188,9 @@ class SubarrayBeamsResourceManager(ResourceManager):
 
     def __len__(self: SubarrayBeamsResourceManager) -> int:
         """
-        Return the number of stations assigned to this subarray resource manager.
+        Return the number of stations assigned to this subarray beams resource manager.
 
-        :return: the number of stations assigned to this subarray resource manager
+        :return: the number of stations assigned to this subarray beams resource manager
         """
         return len(self.get_all_fqdns())
 
@@ -200,7 +201,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         stations: List[dict[int, str]],
     ) -> None:
         """
-        Assign devices to this subarray resource manager.
+        Assign devices to this subarray beams resource manager.
 
         :param subarray_id: subarray device id
         :param subarray_beams: dictionary of ids and FQDNs of station beams to be assigned
@@ -235,7 +236,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         station_fqdns: List[str],
     ) -> None:
         """
-        Release devices from this subarray resource manager.
+        Release devices from this subarray beams resource manager.
 
         :param subarray_beam_fqdns: list of  FQDNs of subarray_beams to be released
         :param station_fqdns: list of  FQDNs of the stations which if assigned to,
@@ -261,7 +262,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         super().release(subarray_beam_fqdns)
 
     def release_all(self: SubarrayBeamsResourceManager) -> None:
-        """Release all devices from this subarray resource manager."""
+        """Release all devices from this subarray beams resource manager."""
         subarray_beam_fqdns = self.get_all_fqdns()
         super().release(subarray_beam_fqdns)
         # self.release(devices, list())
@@ -1271,9 +1272,9 @@ class MccsController(SKAMaster):
                 {
                 "interface": "https://schema.skao.int/ska-low-mccs-assignresources/2.0",
                 "subarray_id": int,
-                "subarray_beam_ids": List[int],
-                "station_ids": List[List[int]],
-                "channel_blocks": List[int],
+                "subarray_beam_ids": list[int],
+                "station_ids": list[list[int]],
+                "channel_blocks": list[int],
                 }
 
             :return: A tuple containing a return code and a string

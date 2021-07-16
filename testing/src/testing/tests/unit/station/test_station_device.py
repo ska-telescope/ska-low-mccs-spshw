@@ -11,81 +11,50 @@
 ###############################################################################
 """This module contains the tests for MccsStation."""
 import json
-import threading
-import time
+import unittest.mock
 
 import pytest
-import tango
-from tango import DevState
 
-from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import (
-    AdminMode,
     ControlMode,
     HealthState,
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs import MccsDeviceProxy, MccsStation, release
-
-from testing.harness.mock import MockDeviceBuilder
+from ska_low_mccs import MccsDeviceProxy, release
 
 
 @pytest.fixture()
-def device_to_load():
+def device_under_test(tango_harness):
     """
-    Fixture that specifies the device to be loaded for testing.
+    Fixture that returns the device under test.
 
-    :return: specification of the device to be loaded
-    :rtype: dict
+    :param tango_harness: a test harness for Tango devices
+
+    :return: the device under test
     """
-    return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
-        "package": "ska_low_mccs",
-        "device": "station_001",
-        "proxy": MccsDeviceProxy,
-    }
-
-
-@pytest.fixture()
-def mock_factory(mocker, test_string):
-    """
-    Fixture that provides a mock factory for device proxy mocks. This default factory
-    provides vanilla mocks, but this fixture can be overridden by test modules/classes
-    to provide mocks with specified behaviours.
-
-    :param mocker: the pytest `mocker` fixture is a wrapper around the
-        `unittest.mock` package
-    :type mocker: :py:class:`pytest_mock.mocker`
-    :param test_string: a test string that we'll use as a UID
-    :type test_string: str
-
-    :return: a factory for device proxy mocks
-    :rtype: :py:class:`unittest.mock.Mock` (the class itself, not an
-        instance)
-    """
-    builder = MockDeviceBuilder()
-    builder.add_attribute("healthState", HealthState.UNKNOWN)
-    builder.add_attribute("adminMode", AdminMode.ONLINE)
-    builder.add_result_command("On", ResultCode.OK, message_uid=test_string)
-    return builder
+    return tango_harness.get_device("low-mccs/station/001")
 
 
 class TestMccsStation:
     """Test class for MccsStation tests."""
 
     @pytest.fixture()
-    def device_under_test(self, tango_harness):
+    def device_to_load(self):
         """
-        Fixture that returns the device under test.
+        Fixture that specifies the device to be loaded for testing.
 
-        :param tango_harness: a test harness for Tango devices
-
-        :return: the device under test
+        :return: specification of the device to be loaded
+        :rtype: dict
         """
-        return tango_harness.get_device("low-mccs/station/001")
+        return {
+            "path": "charts/ska-low-mccs/data/configuration.json",
+            "package": "ska_low_mccs",
+            "device": "station_001",
+            "proxy": MccsDeviceProxy,
+        }
 
-    def test_InitDevice(self, device_under_test, command_helper, dummy_json_args):
+    def test_InitDevice(self, device_under_test):
         """
         Test for Initial state. A freshly initialised station device has no assigned
         resources.
@@ -94,10 +63,6 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param command_helper: A command helper fixture.
-        :type command_helper: CommandHelper
-        :param dummy_json_args: dummy json encoded arguments
-        :type dummy_json_args: str
         """
         assert device_under_test.healthState == HealthState.UNKNOWN
         assert device_under_test.controlMode == ControlMode.REMOTE
@@ -117,30 +82,7 @@ class TestMccsStation:
         assert list(device_under_test.delayCentre) == []
         assert device_under_test.calibrationCoefficients is None
 
-        # check that initialisation leaves us in a state where turning
-        # the device on doesn't put it into ALARM state
-        device_under_test.On(dummy_json_args)
-
-        command_helper.check_device_state(device_under_test, DevState.ON)
-        time.sleep(0.2)
-        command_helper.check_device_state(device_under_test, DevState.ON)
-
-    def test_queue_debug(self, device_under_test, test_string):
-        """
-        Test that the queue debug attribute works correctly.
-
-        :param device_under_test: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param test_string: a simple test string fixture
-        :type test_string: str
-        """
-        assert device_under_test.aQueueDebug == "MessageQueueRunning\n"
-        device_under_test.aQueueDebug = test_string
-        assert device_under_test.aQueueDebug == test_string
-
-    def test_healthState(self, device_under_test, mock_callback):
+    def test_healthState(self, device_under_test, device_health_state_changed_callback):
         """
         Test for healthState.
 
@@ -148,26 +90,17 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param mock_callback: a mock to pass as a callback
-        :type mock_callback: :py:class:`unittest.mock.Mock`
+        :param device_health_state_changed_callback: a callback that we
+            can use to subscribe to health state changes on the device
         """
-        # The device has subscribed to healthState change events on
-        # its subsidiary, but hasn't heard from them (because in unit
-        # testing these devices are mocked out), so its healthState is
-        # UNKNOWN
-        assert device_under_test.healthState == HealthState.UNKNOWN
-
-        _ = device_under_test.subscribe_event(
-            "healthState", tango.EventType.CHANGE_EVENT, mock_callback
+        device_under_test.add_change_event_callback(
+            "healthState",
+            device_health_state_changed_callback,
         )
-        mock_callback.assert_called_once()
-
-        event_data = mock_callback.call_args[0][0].attr_value
-        assert event_data.name == "healthState"
-        assert event_data.value == HealthState.UNKNOWN
-        assert event_data.quality == tango.AttrQuality.ATTR_VALID
-
-        mock_callback.reset_mock()
+        device_health_state_changed_callback.assert_next_change_event(
+            HealthState.UNKNOWN
+        )
+        assert device_under_test.healthState == HealthState.UNKNOWN
 
     # overridden base class attributes
     def test_buildState(self, device_under_test):
@@ -240,7 +173,7 @@ class TestMccsStation:
         """
         assert device_under_test.refHeight == 0.0
 
-    def test_subarrayId(self, device_under_test, logger):
+    def test_subarrayId(self, device_under_test):
         """
         Test for subarrayId attribute.
 
@@ -248,28 +181,10 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
-        :param logger: the logger to be used by the object under test
-        :type logger: :py:class:`logging.Logger`
         """
-        station = device_under_test  # to make test easier to read
-        mock_tile_1 = MccsDeviceProxy("low-mccs/tile/0001", logger)
-        mock_tile_2 = MccsDeviceProxy("low-mccs/tile/0002", logger)
-
-        # These tiles are mock devices so we have to manually set their
-        # initial states
-        mock_tile_1.subarrayId = 0
-        mock_tile_2.subarrayId = 0
-
-        # check initial state
-        assert station.subarrayId == 0
-
-        # action under test
-        station.subarrayId = 1
-
-        # check
-        assert station.subarrayId == 1
-        assert mock_tile_1.subarrayId == 1
-        assert mock_tile_2.subarrayId == 1
+        assert device_under_test.subarrayId == 0
+        device_under_test.subarrayId = 1
+        assert device_under_test.subarrayId == 1
 
     def test_beamFQDNs(self, device_under_test):
         """
@@ -385,7 +300,38 @@ class TestMccsStation:
         """
         assert device_under_test.dataDirectory == ""
 
-    def test_configure(self, device_under_test):
+
+class TestPatchedStation:
+    """
+    Test class for MccsStation tests that patches the component manager.
+
+    These are thin tests that simply test that commands invoked on the
+    device are passed through to the component manager
+    """
+
+    @pytest.fixture()
+    def device_to_load(self, patched_station_class):
+        """
+        Fixture that specifies the device to be loaded for testing.
+
+        :param patched_station_class: a subclass of MccsStation that has
+            been patched for testing
+        :return: specification of the device to be loaded
+        :rtype: dict
+        """
+        return {
+            "path": "charts/ska-low-mccs/data/configuration.json",
+            "package": "ska_low_mccs",
+            "device": "station_001",
+            "proxy": MccsDeviceProxy,
+            "patch": patched_station_class,
+        }
+
+    def test_configure(
+        self,
+        device_under_test,
+        mock_component_manager: unittest.mock.Mock,
+    ):
         """
         Test for configure command.
 
@@ -393,15 +339,20 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_component_manager: the mock component manage to patch
+            into this station.
         """
         config_dict = {"station_id": 1}
         json_str = json.dumps(config_dict)
-        [[result_code], [message]] = device_under_test.configure(json_str)
-        assert result_code == ResultCode.OK
-        assert message == MccsStation.ConfigureCommand.SUCCEEDED_MESSAGE
-        assert device_under_test.isConfigured is True
 
-    def test_applyPointing(self, device_under_test):
+        [[result_code], [message]] = device_under_test.Configure(json_str)
+        mock_component_manager.configure.assert_next_call(1)
+
+    def test_applyPointing(
+        self,
+        device_under_test,
+        mock_component_manager: unittest.mock.Mock,
+    ):
         """
         Test for ApplyPointing command.
 
@@ -409,113 +360,18 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :type device_under_test: :py:class:`tango.DeviceProxy`
+        :param mock_component_manager: the mock component manage to patch
+            into this station.
         """
         beam_index = 1.0
         delay_array = [1.0e-9] * 512
         argin = [beam_index] + delay_array
+
         [[result_code], [message]] = device_under_test.ApplyPointing(argin)
-        assert result_code == ResultCode.OK
-        assert message == MccsStation.ApplyPointingCommand.SUCCEEDED_MESSAGE
 
-
-class TestInitCommand:
-    """
-    Contains the tests of :py:class:`~ska_low_mccs.station.MccsStation`'s
-    :py:class:`~ska_low_mccs.station.MccsStation.InitCommand`.
-    """
-
-    class HangableInitCommand(MccsStation.InitCommand):
-        """
-        A subclass of InitCommand with the following properties that support testing:
-
-        * A lock that, if acquired prior to calling the command, causes
-          the command to hang until the lock is released
-        * Call trace attributes that record which methods were called
-        """
-
-        def __init__(self, target, state_model, logger=None):
-            """
-            Create a new HangableInitCommand instance.
-
-            :param target: the object that this command acts upon; for
-                example, the device for which this class implements the
-                command
-            :type target: object
-            :param state_model: the state model that this command uses
-                 to check that it is allowed to run, and that it drives
-                 with actions.
-            :type state_model:
-                :py:class:`~ska_tango_base.base.OpStateModel`
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            :type logger: :py:class:`logging.Logger`
-            """
-            super().__init__(target, state_model, logger)
-            self._hang_lock = threading.Lock()
-            self._initialise_device_pool_called = False
-            self._initialise_health_monitoring_called = False
-
-        def _initialise_device_pool(self, device):
-            """
-            Initialise the device pool for this device (overridden here to inject a call
-            trace attribute).
-
-            :param device: the device for which the device pool is
-                being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            self._initialise_device_pool_called = True
-            super()._initialise_device_pool(device)
-            with self._hang_lock:
-                # hang until the hang lock is released
-                pass
-
-        def _initialise_health_monitoring(self, device):
-            """
-            Initialise the health model for this device (overridden here to inject a
-            call trace attribute).
-
-            :param device: the device for which the health model is
-                being initialised
-            :type device: :py:class:`ska_tango_base.SKABaseDevice`
-            """
-            self._initialise_health_monitoring_called = True
-            super()._initialise_health_monitoring(device)
-
-    @pytest.mark.skip(
-        reason="This is taking forever to run; need to investigate"
-        # TODO: investigate this.
-    )
-    def test_interrupt(self, mocker):
-        """
-        Test that the command's interrupt method will cause a running thread to stop
-        prematurely.
-
-        :param mocker: fixture that wraps the :py:mod:`unittest.mock`
-            module
-        :type mocker: :py:class:`pytest_mock.mocker`
-        """
-        mock_device = mocker.MagicMock()
-        mock_state_model = mocker.Mock()
-
-        init_command = self.HangableInitCommand(mock_device, mock_state_model)
-
-        with init_command._hang_lock:
-            init_command()
-
-            # We got the hang lock first, so the initialisation thread will hang in
-            # device pool manager initialisation until we release it.
-
-            assert init_command._initialise_device_pool_called
-            assert not init_command._initialise_health_monitoring_called
-
-            init_command.interrupt()
-
-        init_command._thread.join()
-
-        # Now that we've released the hang lock, the thread can exit its
-        # _initialise_device_pool method, but before it enters its
-        # _initialise_health_monitoring, it will detect that it has been
-        # interrupted, and return
-        assert init_command._initialise_device_pool_called
-        assert not init_command._initialise_health_monitoring_called
+        # we need to do this the long way because if Tango is numpy-enabled, then the
+        # component manager will be called with an array not a list.
+        (args, kwargs) = mock_component_manager.apply_pointing.get_next_call()
+        assert not kwargs
+        assert len(args) == 1
+        assert list(args[0]) == argin

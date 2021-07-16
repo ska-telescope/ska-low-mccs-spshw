@@ -17,8 +17,6 @@ import logging
 import time
 
 import warnings
-from builtins import object
-from builtins import range
 from datetime import datetime
 
 from multiprocessing import Queue, Process
@@ -65,7 +63,7 @@ class AntennaInformation(object):
         x and y units are metres
 
         :param txtfile: displacements file
-        :type txtfile: String
+        :type txtfile: str
         """
         aavs2 = np.loadtxt(
             txtfile,
@@ -98,7 +96,7 @@ class StationInformation(object):
         Proxy to the method in the associated AntennaInformation object.
 
         :param antennafile: displacements file
-        :type antennafile: String
+        :type antennafile: str
         """
         self.antennas.load_displacements(antennafile)
 
@@ -216,6 +214,7 @@ class Pointing(object):
         :param declination: Declination of source - astropy Angle / string convertable to Angle
         :param pointing_time: Time of observation (in format astropy time)
         :param delta_time: Delta timing for calculating delay rate
+
         :return: The (delay,delay rate) tuple for each antenna
         """
         # If no time is specified, get current time
@@ -301,6 +300,7 @@ class Pointing(object):
 
         :param altitude: The altitude of the target astropy angle
         :param azimuth: The azimuth of the target astropy angle
+
         :return: The delay in seconds for each antenna
         """
         # Calculate transformation
@@ -328,6 +328,7 @@ class Pointing(object):
         :param declination: Declination of source - astropy Angle / string convertable to Angle
         :param time: Time of observation (as astropy Time")
         :param location: astropy EarthLocation
+
         :return: Array containing altitude and azimuth of source as astropy angle
         """
         # Initialise SkyCoord object using the default frame (ICRS) and convert to horizontal
@@ -343,9 +344,10 @@ class Pointing(object):
         Convert a number or string to an Astropy angle.
 
         :param angle: angle
-        :type angle: Float
+        :type angle: float
+
         :return: converted angle
-        :rtype: Angle
+        :rtype: :py:class: astropy.coordinates.Angle
         """
         if type(angle) is not Angle:
             return Angle(angle)
@@ -359,6 +361,7 @@ class Pointing(object):
         :param right_ascension: The right ascension of the target as a astropy angle
         :param declination: The declination of the target as an astropy angle.
         :param pointing_time: The observation time as an astropy Time.
+
         :return: True if the target coordinates are above the horizon at the specified time, false otherwise.
         """
         alt, _ = self._ra_dec_to_alt_az(
@@ -398,13 +401,13 @@ class PointingDriver:
         Command to set the station reference position.
 
         :param lat: latitude (WGS84, decimal degrees north)
-        :type lat: Float
+        :type lat: float
         :param lon: longitude (WGS84, decimal degrees east)
-        :type lon: Float
+        :type lon: float
         :param height: Ellipsoidal height (m)
-        :type height: Float
+        :type height: float
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         self.pointing.station.set_location(lat, lon, height)
         return self
@@ -414,9 +417,9 @@ class PointingDriver:
         Load the station antenna displacements from file.
 
         :param file: displacements file
-        :type file: String
+        :type file: str
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         self.pointing.station.load_displacements(file)
         print(f"xyz array shape: {self.pointing.station.antennas.xyz.shape}")
@@ -427,11 +430,12 @@ class PointingDriver:
         Generate static delays to point to the given azimuth and elevation.
 
         :param az: Azimuth in format parseable by astropy e.g. 180d
-        :type az: String
+        :type az: str
         :param el: Elevation in format parseable by astropy e.g. 45d
-        :type el: String
+        :type el: str
+
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         self.calc = self.pointing.point_array_static
         self.point_kwargs["altitude"] = el
@@ -445,11 +449,11 @@ class PointingDriver:
         Generate delays and rates to track the given Right Ascension and Declination.
 
         :param ra: Right Ascension in format parseable by astropy e.g. 00h42m30s
-        :type ra: String
+        :type ra: str
         :param dec: Declination in format parseable by astropy e.g. +41d12m00s
-        :type dec: String
+        :type dec: str
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         self.calc = self.pointing.point_array
         self.point_kwargs["right_ascension"] = ra
@@ -463,7 +467,7 @@ class PointingDriver:
         Generate delays and rates to track the Sun.
 
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         self.calc = self.pointing.point_to_sun
         print("Point station at the Sun.")
@@ -474,11 +478,11 @@ class PointingDriver:
         Set the pointing start time.
 
         :param when: start time (isot type, interpretted by astropy.Time)
-        :type when: String
+        :type when: str
         :param scale: time scale, defaults to 'utc'
         :type scale: str, optional
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         self.point_kwargs["pointing_time"] = Time(when, format="isot", scale=scale)
         print(f"Start pointing at {self.point_kwargs['pointing_time'].value}")
@@ -489,11 +493,11 @@ class PointingDriver:
         Generate delays for count frames at interval spacing.
 
         :param count: The number of pointing frames to generate
-        :type count: Int
+        :type count: int
         :param interval: Time interval between pointings
-        :type interval: Float
+        :type interval: float
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         print(f"Generate {count} delay sets every {interval} seconds")
         tic = time.perf_counter()
@@ -524,7 +528,7 @@ class PointingDriver:
         Generate delays for a single pointing.
 
         :return: self - ready for another command
-        :rtype: pointing_driver
+        :rtype: :py:class:`PointingDriver`
         """
         return self.sequence(1, 0)
 
@@ -534,9 +538,9 @@ class PointingDriver:
         processing delays for each time and output results to results queue.
 
         :param jobs: queue of jobs
-        :type jobs: multiprocessing.queue
+        :type jobs: :py:class:`multiprocessing.Queue`
         :param results: queue for results
-        :type results: multiprocessing.queue
+        :type results: :py:class:`multiprocessing.Queue`
         """
         while not jobs.empty():
             try:
@@ -567,11 +571,11 @@ class PointingDriver:
         :param count: The number of frames to process
         :type count: int
         :param interval: The time interval between frames
-        :type interval: double
+        :type interval: float
         :param nproc: The number of processes to start
         :type nproc: int
         :return: self for next command
-        :rtype: PointingDriver
+        :rtype: :py:class:`PointingDriver`
         """
         if not isinstance(nproc, int):
             print("nproc must be an integer")
@@ -642,7 +646,7 @@ class PointingDriver:
         Write the generated pointings to a file.
 
         :param filename: Name of output file
-        :type filename: String
+        :type filename: str
         """
         print(f"Writing pointing frame(s) to {filename}")
         with open(filename, "w") as outfile:

@@ -14,7 +14,7 @@ import pytest
 import numpy as np
 from astropy.time.core import Time
 
-from ska_low_mccs import point_station
+from ska_low_mccs.station import point_station
 
 locationsfile = "testing/data/AAVS2_loc_italia_190429.txt"
 outputfile = "testing/results/pointingtest.txt"

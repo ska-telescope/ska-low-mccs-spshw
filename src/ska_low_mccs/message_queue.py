@@ -135,12 +135,7 @@ class MessageQueue(threading.Thread):
 
         :param message: The message to execute
         """
-        response_device = None
         try:
-            # Check we have a device to respond to before executing a command
-            if message.respond_to_fqdn:
-                response_device = MccsDeviceProxy(message.respond_to_fqdn, self._logger)
-
             self._logger.debug(f"_execute_message {message.message_uid}")
             self._qdebug(f"Exe({message.message_uid})")
             command = self._target.get_command_object(message.command)
@@ -151,29 +146,10 @@ class MessageQueue(threading.Thread):
                     self._notify_listener(
                         ResultCode.STARTED, message.message_uid, notify_status
                     )
-
-                # Incorporate FQDN and callback into command args dictionary
-                # Add to kwargs and deal with the case if it's not a JSON encoded string
                 try:
-                    kwargs = json.loads(message.json_args)
-                except ValueError:
-                    kwargs = {}
+                    json_string = self._create_command_args(message)
                 except TypeError:
-                    self._qdebug(f"TypeError({message.command})")
-                    self._logger.error(
-                        f"TypeError: json_args for {message.command} should be a JSON encoded string"
-                    )
                     return
-                kwargs["respond_to_fqdn"] = message.respond_to_fqdn
-                kwargs["callback"] = message.callback
-                json_string = json.dumps(kwargs)
-                payload = (
-                    f'Calling "{command}" returning to fqdn={message.respond_to_fqdn} '
-                    + f"and callback={message.callback}"
-                )
-                self._logger.debug(payload)
-                self._qdebug(payload)
-                self._qdebug(f"Message kwargs({kwargs})")
                 (result_code, status) = command(json_string)
                 payload = f"Result({message.message_uid},rc={result_code.name})"
                 self._logger.debug(payload)
@@ -186,25 +162,71 @@ class MessageQueue(threading.Thread):
             self._logger.error(status)
             return
 
-        # Determine if we need to respond to a device
-        if response_device:
-            response = {
-                "message_object": message,
-                "result_code": result_code,
-                "status": status,
-            }
-            # Custom JSON encode required due to message object embedded in our response
-            json_string = json.dumps(response, default=lambda obj: obj.__dict__)
-            self._qdebug(
-                f'Reply to {response_device}.command_inout("{message.callback}")'
-            )
-            self._qdebug(f"json_string={json_string}")
-            # Post response message
-            (rc, stat) = response_device.command_inout(message.callback, json_string)
-            self._qdebug(f"Reply message sent rc={rc},status={stat}")
+        # Determine if we need to respond to the requestor
+        if message.respond_to_fqdn:
+            self._respond_to_requestor(message, result_code, status)
         else:
             self._qdebug("No reply required")
         self._qdebug(f"EndOfMessage({message.message_uid})")
+
+    def _create_command_args(self: MessageQueue, message: Message) -> str:
+        """
+        Incorporate FQDN and callback into command args dictionary Add to kwargs and
+        deal with the case if it's not a JSON encoded string.
+
+        :param message: the original message executed
+
+        :raises TypeError: if message.json_args are not JSON encoded
+
+        :return: a JSON encoded string incorporating callback and command arguments
+        """
+        try:
+            kwargs = json.loads(message.json_args)
+        except ValueError:
+            kwargs = {}
+        except TypeError:
+            self._qdebug(f"TypeError({message.command})")
+            self._logger.error(
+                f"TypeError: json_args for {message.command} should be a JSON encoded string"
+            )
+            raise TypeError
+        kwargs["respond_to_fqdn"] = message.respond_to_fqdn
+        kwargs["callback"] = message.callback
+        json_args = json.dumps(kwargs)
+        payload = (
+            f'Calling "{message.command}" returning to fqdn={message.respond_to_fqdn} '
+            + f"and callback={message.callback}"
+        )
+        self._logger.debug(payload)
+        self._qdebug(f"{payload}\nMessage kwargs({kwargs})")
+        return json_args
+
+    def _respond_to_requestor(
+        self: MessageQueue,
+        message: Message,
+        result_code: ResultCode,
+        status: str,
+    ) -> None:
+        """
+        Respond to the requstor device.
+
+        :param message: the original message executed
+        :param result_code: the result code of the executed command
+        :param status: the status result of the executed command
+        """
+        response_device = MccsDeviceProxy(message.respond_to_fqdn, self._logger)
+        response = {
+            "message_object": message,
+            "result_code": result_code,
+            "status": status,
+        }
+        # Custom JSON encode required due to message object embedded in our response
+        json_string = json.dumps(response, default=lambda obj: obj.__dict__)
+        self._qdebug(f'Reply to {response_device}.command_inout("{message.callback}")')
+        self._qdebug(f"json_string={json_string}")
+        # Post response message
+        (rc, stat) = response_device.command_inout(message.callback, json_string)
+        self._qdebug(f"Reply message sent rc={rc},status={stat}")
 
     def _check_message_queue(self: MessageQueue) -> None:
         """

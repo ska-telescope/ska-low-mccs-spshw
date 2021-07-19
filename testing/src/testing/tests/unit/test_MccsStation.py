@@ -255,9 +255,6 @@ class TestMccsStation:
         mock_tile_1 = MccsDeviceProxy("low-mccs/tile/0001", logger)
         mock_tile_2 = MccsDeviceProxy("low-mccs/tile/0002", logger)
 
-        # mock_tile_group = MockGroupBuilder()
-        # mock_tile_group.add_command("write_attribute_asynch", 1)
-
         # These tiles are mock devices so we have to manually set their
         # initial states
         mock_tile_1.subarrayId = 0
@@ -265,8 +262,6 @@ class TestMccsStation:
 
         # check initial state
         assert station.subarrayId == 0
-        assert mock_tile_1.subarrayId == 0
-        assert mock_tile_2.subarrayId == 0
 
         # assert isinstance(station._tile_group, MockGroupBuilder)
 

@@ -35,8 +35,9 @@ from ska_low_mccs.message_queue import MessageQueue
 
 __all__ = [
     "MccsController",
+    "MccsControllerQueue",
     "StationsResourceManager",
-    "SubarrayBeamsResourcceManager",
+    "SubarrayBeamsResourceManager",
     "main",
 ]
 
@@ -64,8 +65,7 @@ class StationsResourceManager(ResourceManager):
             subarray manages
         :param logger: the logger to be used by the object under test
         """
-        #self._devices = dict()
-        self._logger = logger
+        self._devices = dict()
         stations = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
@@ -81,7 +81,7 @@ class StationsResourceManager(ResourceManager):
         """
         devices = dict()
         for key, resource in self._resources.items():
-            devices[key] = resource._fqdn
+            devices[key] = resource.fqdn
         return devices
 
     def assign(
@@ -114,14 +114,13 @@ class StationsResourceManager(ResourceManager):
         return sorted(self.get_all_fqdns())
 
     @property
-    def station_ids(self: StationsResourceManager) -> List(str):
+    def station_ids(self: StationsResourceManager) -> List(int):
         """
         Returns the device IDs of currently assigned stations.
 
-        :return: A dictionary of Station IDs, FQDNs managed by this
-            StationsResourceManager
+        :return: IDs of currently assigned stations
         """
-        return {key: resource.fqdn for key, resource in self._resources.items()}
+        return sorted(self._resources.keys())
 
 
 class MccsControllerQueue(MessageQueue):
@@ -159,7 +158,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         self: SubarrayBeamsResourceManager,
         health_monitor: MutableHealthMonitor,
         subarray_beam_fqdns: List[str],
-        stations_manager: ControllerResourceManager,
+        stations_manager: StationsResourceManager,
         logger: logging.Logger,
     ) -> None:
         """
@@ -185,14 +184,6 @@ class SubarrayBeamsResourceManager(ResourceManager):
             logger,
             [HealthState.OK],
         )
-
-    def __len__(self: SubarrayBeamsResourceManager) -> int:
-        """
-        Return the number of stations assigned to this subarray beams resource manager.
-
-        :return: the number of stations assigned to this subarray beams resource manager
-        """
-        return len(self.get_all_fqdns())
 
     def assign(
         self: SubarrayBeamsResourceManager,
@@ -531,9 +522,9 @@ class MccsController(SKAMaster):
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = StationsResourceManager(
-                health_monitor, fqdns, self.logger
-
-            device.subarray_beams_manager = SubarrayBeamsResourceManager(
+                health_monitor, device._station_fqdns, self.logger
+            )
+            device._subarray_beams_manager = SubarrayBeamsResourceManager(
                 health_monitor,
                 device._subarray_beam_fqdns,
                 device._stations_manager,

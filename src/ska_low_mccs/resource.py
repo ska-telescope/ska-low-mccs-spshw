@@ -448,6 +448,14 @@ class ResourceManager:
         # Return True (ok to proceed), with the lists
         return (True, needed, to_release)
 
+    def __len__(self: ResourceManager) -> int:
+        """
+        Return the number of stations assigned to this resource manager.
+
+        :return: the number of stations assigned to thisresource manager
+        """
+        return len(self.get_all_fqdns())
+
     def assign(self: ResourceManager, devices: dict[int, str], new_owner: int) -> None:
         """
         Take a list of device FQDNs and assign them to a new owner id.

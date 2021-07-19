@@ -223,11 +223,19 @@ class MccsSubarray(SKASubarray):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
+<<<<<<< HEAD
             resourcing_args = (
                 device,
                 device.state_model,
                 device.logger,
             )
+=======
+            #             device._station_resource_manager = StationsResourceManager(
+            #                 device.health_model._health_monitor, device._station_fqdns, self.logger
+            #             )
+
+            resourcing_args = (device, device.state_model, device.logger)
+>>>>>>> MCCS-404 prepare for 402 merge
             for (command_name, command_object) in [
                 ("AssignResources", device.AssignResourcesCommand),
                 ("ReleaseResources", device.ReleaseResourcesCommand),
@@ -566,16 +574,19 @@ class MccsSubarray(SKASubarray):
             # target object
             kwargs = json.loads(argin)
             device = self.target
-            # device._station_fqdns = kwargs.get("stations", [])
+            device._station_fqdns = kwargs.get("stations", [])
             device._subarray_beam_fqdns = kwargs.get("subarray_beams", [])
             # TODO: Are channels required in subarray during allocation or are they
             # only required in MCCSController? Remove noqa upon decision
-            channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841
+            device._channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841
             # TODO: Should we always return success?
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
         def succeeded(self):
             """Action to take on successful completion of a resourcing command."""
+            #             if len(self.target._stations_reource_manager) == 0:
+            #                 action = "resourcing_succeeded_no_resources"
+            #             else:
             action = "resourcing_succeeded_some_resources"
             self.state_model.perform_action(action)
 

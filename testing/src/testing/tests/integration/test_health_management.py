@@ -123,8 +123,6 @@ class TestHealthManagement(HelperClass):
         }
         self.check_states_of_devices(dev_states)
 
-        subarraybeam_01.isBeamLocked = True
-        subarraybeam_02.isBeamLocked = True
         # Check that all devices are OK
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK
@@ -316,8 +314,10 @@ class TestHealthManagement(HelperClass):
         assert station_1.healthState == HealthState.DEGRADED
         assert station_2.healthState == HealthState.OK
         sleep()
-        assert subarray_1.healthState == HealthState.DEGRADED
-        assert subarray_2.healthState == HealthState.OK
+        # now that resource managers are longer part of subarray the
+        # stations pass their healthstate to controller NOT subarray
+        # assert subarray_1.healthState == HealthState.DEGRADED
+        # assert subarray_2.healthState == HealthState.OK
         assert controller.healthState == HealthState.DEGRADED
 
         # It might take some time to replace the failed tile 1, and
@@ -342,8 +342,10 @@ class TestHealthManagement(HelperClass):
         assert station_1.healthState == HealthState.OK
         assert station_2.healthState == HealthState.OK
         sleep()
-        assert subarray_1.healthState == HealthState.OK
-        assert subarray_2.healthState == HealthState.OK
+        # now that resource managers are longer part of subarray the
+        # stations pass their healthstate to controller NOT subarray
+        # assert subarray_1.healthState == HealthState.OK
+        # assert subarray_2.healthState == HealthState.OK
         assert controller.healthState == HealthState.OK
 
         # Okay, we've finally fixed the tile. Let's make it work again, and

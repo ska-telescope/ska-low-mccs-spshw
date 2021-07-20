@@ -170,7 +170,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
         :param health_monitor: Provides for monitoring of health states
         :param subarray_beam_fqdns: the FQDNs of the subarray_beams that this
             subarray manages
-        :type subarray_beam_fqdns: list(str)
+        :type subarray_beam_fqdns: list[str]
         :param logger: the logger to be used by the object under test
         """
         self.assigned_station_fqdns = []

@@ -119,8 +119,9 @@ def tiles(tango_harness: TangoHarness):
     return {
         1: tango_harness.get_device("low-mccs/tile/0001"),
         2: tango_harness.get_device("low-mccs/tile/0002"),
-        3: tango_harness.get_device("low-mccs/tile/0003"),
-        4: tango_harness.get_device("low-mccs/tile/0004"),
+        # Workaround for timeouts for MCCS-402
+        # 3: tango_harness.get_device("low-mccs/tile/0003"),
+        # 4: tango_harness.get_device("low-mccs/tile/0004"),
     }
 
 

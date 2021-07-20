@@ -49,7 +49,7 @@ class StationsResourceManager(ResourceManager):
     def __init__(
         self: StationsResourceManager,
         health_monitor: HealthMonitor,
-        station_fqdns: List(str),
+        station_fqdns: List[str],
         logger: logging.Logger,
     ) -> None:
         """
@@ -67,7 +67,7 @@ class StationsResourceManager(ResourceManager):
             stations[station_id] = station_fqdn
         super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
 
-    def items(self: StationsResourceManager) -> dict(str, str):
+    def items(self: StationsResourceManager) -> dict[str, str]:
         """
         Return the stations managed by this device.
 
@@ -100,7 +100,7 @@ class StationsResourceManager(ResourceManager):
         self._remove_from_managed(self.get_all_fqdns())
 
     @property
-    def station_fqdns(self: StationsResourceManager) -> List(str):
+    def station_fqdns(self: StationsResourceManager) -> List[str]:
         """
         Returns the FQDNs of currently assigned stations.
 
@@ -291,15 +291,9 @@ class MccsController(SKAMaster):
 
             device._subarray_fqdns = list(device.MccsSubarrays)
             device._subarray_enabled = [False] * len(device.MccsSubarrays)
-            # device._subarray_group = Group("SubarrayGroup")
-            # for subarray_fqdn in device._subarray_fqdns:
-            # device._subarray_group.add(subarray_fqdn)
 
             device._subrack_fqdns = list(device.MccsSubracks)
             device._station_fqdns = list(device.MccsStations)
-            # device._station_group = Group("StationGroup")
-            # for station_fqdn in device._station_fqdns:
-            # device._station_group.add(station_fqdn)
 
             subrack_pool = DevicePool(device._subrack_fqdns, self.logger, connect=False)
             station_pool = DevicePool(device._station_fqdns, self.logger, connect=False)
@@ -393,14 +387,6 @@ class MccsController(SKAMaster):
                 is managed by this device
             """
             health_monitor = device.health_model._health_monitor
-            # device._subarray_dict = {
-            #     fqdn: MccsDeviceProxy(fqdn, self.logger)
-            #     for fqdn in device._subarray_fqdns
-            # }
-            # device._station_dict = {
-            #     fqdn: MccsDeviceProxy(fqdn, self.logger)
-            #     for fqdn in device._station_fqdns
-            # }
 
             # Instantiate a resource manager for the Stations
             device._stations_manager = StationsResourceManager(
@@ -1204,13 +1190,9 @@ class MccsController(SKAMaster):
                 )
                 return (ResultCode.FAILED, failure_message)
 
-            # subarray_device = controllerdevice._subarray_dict[subarray_fqdn]
-            # assert controllerdevice._subarray_group.contains(subarray_fqdn)
-            # subarray_device = controllerdevice._subarray_group.get_device(subarray_fqdn)
             subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
 
             # Manager gave this list of stations to release (no longer required)
-            # stations_to_release_group = Group("stations_to_release_group")
             if stations_to_release is not None:
                 (result_code, message) = call_with_json(
                     subarray_device.ReleaseResources, stations=stations_to_release
@@ -1224,13 +1206,8 @@ class MccsController(SKAMaster):
                     )
                     return (ResultCode.FAILED, failure_message)
                 for station_fqdn in stations_to_release:
-                    # stations_to_release_group.add(station_fqdn)
-
-                    # station = controllerdevice._station_group.get_device(station_fqdn)
-                    # station = controllerdevice._station_dict[station_fqdn]
                     station = MccsDeviceProxy(station_fqdn, self.logger)
                     station.subarrayId = 0
-                # stations_to_release_group.write_attribute_asynch("subarrayId", 0)
 
                 # Inform manager that we made the releases
                 controllerdevice._stations_manager.release(stations_to_release)
@@ -1434,7 +1411,6 @@ class MccsController(SKAMaster):
                         failure_message,
                     )
                 for station_fqdn in stations_to_assign:
-                    # station = controllerdevice._station_group.get_device(station_fqdn)
                     station = MccsDeviceProxy(station_fqdn, self.logger)
                     station.subarrayId = subarray_id
 

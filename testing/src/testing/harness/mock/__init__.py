@@ -12,4 +12,3 @@ __all__ = ["MockDeviceBuilder", "MockSubarrayBuilder", "MockGroupBuilder"]
 
 from .mock_device import MockDeviceBuilder
 from .mock_subarray import MockSubarrayBuilder
-from .mock_group import MockGroupBuilder

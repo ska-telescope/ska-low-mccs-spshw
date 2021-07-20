@@ -263,8 +263,6 @@ class TestMccsStation:
         # check initial state
         assert station.subarrayId == 0
 
-        # assert isinstance(station._tile_group, MockGroupBuilder)
-
         # action under test
         station.subarrayId = 1
 

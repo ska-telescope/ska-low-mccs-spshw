@@ -126,7 +126,6 @@ class MccsStation(SKAObsDevice):
             :rtype: (:py:class:`~ska_tango_base.commands.ResultCode`, str)
             """
             super().do()
-            # unittest.mock.patch("Group", return_value=List)
             device = self.target
             device.queue_debug = ""
             device._heart_beat = 0
@@ -139,9 +138,6 @@ class MccsStation(SKAObsDevice):
             device._refHeight = 0.0
             device._apiu_fqdn = device.APIUFQDN
             device._tile_fqdns = list(device.TileFQDNs)
-            # device._tile_group = tango.Group("tile_group")
-            # for tile_fqdn in device._tile_fqdns:
-            # device._tile_group.add(tile_fqdn)
             device._antenna_fqdns = list(device.AntennaFQDNs)
             device._beam_fqdns = []
             device._transient_buffer_fqdn = ""
@@ -157,8 +153,6 @@ class MccsStation(SKAObsDevice):
             device._version_id = release.version
             device._station_id = device.StationId
 
-            # device.set_change_event("subarrayId", True, True)
-            # device.set_archive_event("subarrayId", True, True)
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
             device.set_change_event("transientBufferFQDN", True, False)

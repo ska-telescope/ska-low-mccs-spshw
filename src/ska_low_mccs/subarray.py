@@ -228,7 +228,9 @@ class SubarrayBeamsResourceManager(ResourceManager):
             subarray_beam_station_ids.append(sorted(station_ids_per_beam[index]))
             self._add_to_managed({subarray_beam_id: subarray_beam_fqdn})
             subarray_beam.isBeamLocked = True
-            self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
+            # TODO copying Geoff's change from MCCS-404 to set healthState -> OK since
+            # subarraybeam is currently unable to trigger healthstate change
+            self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
 
         self._health_monitor.add_devices(stations.values())
 

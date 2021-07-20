@@ -226,11 +226,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
             subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
             subarray_beam.stationIds = sorted(station_ids_per_beam[index])
             subarray_beam_station_ids.append(sorted(station_ids_per_beam[index]))
-        self._add_to_managed(subarray_beams)
-
-        for index, subarray_beam_fqdn in enumerate(subarray_beam_fqdns):
-            # TODO: Establishment of connections should happen at initialization
-            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
+            self._add_to_managed({subarray_beam_id: subarray_beam_fqdn})
             subarray_beam.isBeamLocked = True
             self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
 

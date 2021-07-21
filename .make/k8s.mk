@@ -219,7 +219,7 @@ smoketest: ## check that the number of waiting containers is zero (10 attempts, 
 	done
 
 itango:
-	kubectl exec -it -n $(KUBE_NAMESPACE) tango-base-itango-console  -- itango3
+	kubectl exec -it -n $(KUBE_NAMESPACE) ska-tango-base-itango-console  -- itango3
 
 cli:
 	kubectl exec -it -n $(KUBE_NAMESPACE)  mccs-mccs-cli -- bash

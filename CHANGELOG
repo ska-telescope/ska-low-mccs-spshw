@@ -2,6 +2,9 @@
 
 ## unreleased
 
+* MCCS-678 - update tango-base, tango-util repositories
+* MCCS-402 - Move StationsResourceManager from Subarray to Controller
+
 ## 0.8.3
 
 * MCCS-667 - modify gitlab ci pipeline

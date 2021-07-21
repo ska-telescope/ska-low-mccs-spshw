@@ -34,45 +34,53 @@ from ska_low_mccs.health import HealthModel, HealthMonitor
 from ska_low_mccs.resource import ResourceManager
 from ska_low_mccs.message_queue import MessageQueue
 
-__all__ = ["MccsController", "ControllerResourceManager", "main"]
-
+__all__ = ["MccsController", "StationsResourceManager", "main"]
 
 DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
 
 
-class ControllerResourceManager(ResourceManager):
+class StationsResourceManager(ResourceManager):
     """
-    This class implements a resource manger for the MCCS controller device.
+    A simple manager for the pool of stations that are assigned to this controller.
 
-    Initialize with a list of FQDNs of devices to be managed. The
-    ResourceManager holds the FQDN and the (1-based) ID of the device
-    that owns each managed device.
+    Inherits from ResourceManager.
     """
 
     def __init__(
-        self: ControllerResourceManager,
+        self: StationsResourceManager,
         health_monitor: HealthMonitor,
-        manager_name: str,
         station_fqdns: List[str],
         logger: logging.Logger,
     ) -> None:
         """
-        Initialise the conroller resource manager.
+        Initialise a new StationsResourceManager.
 
         :param health_monitor: Provides for monitoring of health states
-        :param manager_name: Name for this manager (imformation only)
-        :param station_fqdns: the FQDNs of the stations that this controller
-            device manages
+        :param station_fqdns: the FQDNs of the stations that this
+            subarray manages
         :param logger: the logger to be used by the object under test
         """
+        self._devices = dict()
         stations = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
-        super().__init__(health_monitor, manager_name, stations, logger)
+        super().__init__(health_monitor, "Stations Resource Manager", stations, logger)
+
+    def items(self: StationsResourceManager) -> dict[str, str]:
+        """
+        Return the stations managed by this device.
+
+        :return: A dictionary of Station IDs, FQDNs managed by this
+            StationsResourceManager
+        """
+        devices = dict()
+        for key, resource in self._resources.items():
+            devices[key] = resource._fqdn
+        return devices
 
     def assign(
-        self: ControllerResourceManager, station_fqdns: List[str], subarray_id: int
+        self: StationsResourceManager, station_fqdns: List[str], subarray_id: int
     ) -> None:
         """
         Assign stations to a subarray device.
@@ -86,6 +94,28 @@ class ControllerResourceManager(ResourceManager):
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
         super().assign(stations, subarray_id)
+
+    def release_all(self: StationsResourceManager) -> None:
+        """Remove all stations from this resource manager."""
+        self._remove_from_managed(self.get_all_fqdns())
+
+    @property
+    def station_fqdns(self: StationsResourceManager) -> List[str]:
+        """
+        Returns the FQDNs of currently assigned stations.
+
+        :return: FQDNs of currently assigned stations
+        """
+        return sorted(self.get_all_fqdns())
+
+    @property
+    def station_ids(self: StationsResourceManager) -> List(str):
+        """
+        Returns the device IDs of currently assigned stations.
+
+        :return: IDs of currently assigned stations
+        """
+        return sorted(self._resources.keys())
 
 
 class MccsControllerQueue(MessageQueue):
@@ -359,8 +389,8 @@ class MccsController(SKAMaster):
             health_monitor = device.health_model._health_monitor
 
             # Instantiate a resource manager for the Stations
-            device._stations_manager = ControllerResourceManager(
-                health_monitor, "StationsManager", fqdns, self.logger
+            device._stations_manager = StationsResourceManager(
+                health_monitor, fqdns, self.logger
             )
             resource_args = (device, device.state_model, device.logger)
             device.register_command_object(
@@ -1380,9 +1410,9 @@ class MccsController(SKAMaster):
                         ResultCode.FAILED,
                         failure_message,
                     )
-                for fqdn in stations_to_assign:
-                    device = MccsDeviceProxy(fqdn, self.logger)
-                    device.subarrayId = subarray_id
+                for station_fqdn in stations_to_assign:
+                    station = MccsDeviceProxy(station_fqdn, self.logger)
+                    station.subarrayId = subarray_id
 
                 # Inform manager that we made the assignments
                 controllerdevice._stations_manager.assign(

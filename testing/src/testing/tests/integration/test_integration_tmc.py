@@ -239,6 +239,7 @@ class TestMccsIntegrationTmc(HelperClass):
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
+        assert list(devices["subarray_01"].stationFQDNs) == []
 
         devices["subarraybeam_01"].isBeamLocked = True
 
@@ -268,7 +269,10 @@ class TestMccsIntegrationTmc(HelperClass):
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].obsState == ObsState.IDLE
-        assert len(devices["subarray_01"].stationFQDNs) == 2
+        assert sorted(devices["subarray_01"].stationFQDNs) == [
+            "low-mccs/station/001",
+            "low-mccs/station/002",
+        ]
 
         # Release Resources
         release_config = {"subarray_id": 1, "release_all": True}
@@ -281,7 +285,8 @@ class TestMccsIntegrationTmc(HelperClass):
         }
         self.check_states(devices, dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["subarray_01"].stationFQDNs is None
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert list(devices["subarray_01"].stationFQDNs) == []
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 
@@ -404,7 +409,8 @@ class TestMccsIntegrationTmc(HelperClass):
         }
         self.check_states(devices, dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
-        assert devices["subarray_01"].stationFQDNs is None
+        assert devices["subarray_01"].State() == DevState.OFF
+        assert list(devices["subarray_01"].stationFQDNs) == []
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
 

@@ -81,8 +81,8 @@ class TestMccsIntegration(HelperClass):
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         # check initial state
-        assert subarray_1.stationFQDNs is None
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_1.stationFQDNs) == []
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
 
@@ -112,7 +112,7 @@ class TestMccsIntegration(HelperClass):
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -132,7 +132,7 @@ class TestMccsIntegration(HelperClass):
 
         # check no side-effects
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -157,7 +157,7 @@ class TestMccsIntegration(HelperClass):
             station_1.dev_name(),
             station_2.dev_name(),
         ]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
 
@@ -228,7 +228,7 @@ class TestMccsIntegration(HelperClass):
 
         # check
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -240,7 +240,7 @@ class TestMccsIntegration(HelperClass):
 
         # check no side-effect to failed release
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -251,7 +251,7 @@ class TestMccsIntegration(HelperClass):
         assert result_code == ResultCode.OK
 
         # check all released
-        assert subarray_1.stationFQDNs is None
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_1.stationFQDNs) == []
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0

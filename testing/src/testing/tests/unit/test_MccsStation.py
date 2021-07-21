@@ -252,6 +252,13 @@ class TestMccsStation:
         :type logger: :py:class:`logging.Logger`
         """
         station = device_under_test  # to make test easier to read
+        mock_tile_1 = MccsDeviceProxy("low-mccs/tile/0001", logger)
+        mock_tile_2 = MccsDeviceProxy("low-mccs/tile/0002", logger)
+
+        # These tiles are mock devices so we have to manually set their
+        # initial states
+        mock_tile_1.subarrayId = 0
+        mock_tile_2.subarrayId = 0
 
         # check initial state
         assert station.subarrayId == 0
@@ -261,6 +268,8 @@ class TestMccsStation:
 
         # check
         assert station.subarrayId == 1
+        assert mock_tile_1.subarrayId == 1
+        assert mock_tile_2.subarrayId == 1
 
     def test_beamFQDNs(self, device_under_test):
         """

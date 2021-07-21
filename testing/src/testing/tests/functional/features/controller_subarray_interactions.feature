@@ -4,7 +4,7 @@ Background:
     Given we have mvplow running an instance of tmc
     And we have mvplow running an instance of mccs
 
-@XTP-1170 @needs_tangodb @skip
+@XTP-1170
 Scenario: MCCS Start up low telescope
     Given tmc is ready to issue a startup command
     And mccs is ready to receive a startup command
@@ -31,7 +31,7 @@ Scenario: MCCS Configure a subarray
     Then the subarray obsstate is ready
     And subarray health is good
 
-@XTP-1261
+@XTP-1261 @needs_tangodb @skip
 Scenario: MCCS Perform a scan on subarray
     Given we have a successfully configured subarray
     When tmc starts a scan on subarray

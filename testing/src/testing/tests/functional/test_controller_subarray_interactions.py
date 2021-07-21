@@ -220,7 +220,7 @@ def test_start_up_low_telescope(controller, subarrays, stations, command_helper)
     """
     assert_command(device=controller, command="Off", expected_result=ResultCode.QUEUED)
     command_helper.check_device_state(controller, DevState.OFF)
-    check_reset_state(controller, subarrays, stations)
+    # check_reset_state(controller, subarrays, stations)
 
 
 @given(parsers.parse("we have mvplow running an instance of {component_name}"))

@@ -13,12 +13,12 @@ It includes a controller Tango device and a CLI.
 
 __all__ = [
     "MccsController",
-    "ControllerResourceManager",
+    "StationsResourceManager",
     "controller_device",
     "demo_controller_device",
 ]
 
 from .controller_device import (  # type: ignore[attr-defined]
     MccsController,
-    ControllerResourceManager,
+    StationsResourceManager,
 )

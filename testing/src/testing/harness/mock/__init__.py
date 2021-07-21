@@ -8,7 +8,7 @@
 """This subpackage contains modules for test mocking in the SKA Low MCCS tests."""
 
 
-__all__ = ["MockDeviceBuilder", "MockSubarrayBuilder"]
+__all__ = ["MockDeviceBuilder", "MockSubarrayBuilder", "MockGroupBuilder"]
 
 from .mock_device import MockDeviceBuilder
 from .mock_subarray import MockSubarrayBuilder

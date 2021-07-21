@@ -153,8 +153,6 @@ class MccsStation(SKAObsDevice):
             device._version_id = release.version
             device._station_id = device.StationId
 
-            device.set_change_event("subarrayId", True, True)
-            device.set_archive_event("subarrayId", True, True)
             device.set_change_event("beamFQDNs", True, True)
             device.set_archive_event("beamFQDNs", True, True)
             device.set_change_event("transientBufferFQDN", True, False)
@@ -319,6 +317,9 @@ class MccsStation(SKAObsDevice):
         :type subarray_id: int
         """
         self._subarray_id = subarray_id
+        for fqdn in self._tile_fqdns:
+            tile = MccsDeviceProxy(fqdn, self.logger)
+            tile.subarrayId = subarray_id
 
     @attribute(
         dtype="float",

@@ -1,7 +1,6 @@
 # type: ignore
 """This module contains integration tests of interactions between TMC and MCCS."""
 import json
-from time import sleep
 
 import pytest
 from tango import (
@@ -123,22 +122,6 @@ class TestMccsIntegrationTmc(HelperClass):
         except (AsynCall, CommunicationFailed, DevFailed) as err:
             assert False, f"Exception raised: {err}"
 
-    def check_states(self, devices, dev_states):
-        """
-        Helper to check that each device is in the expected state with a timeout.
-
-        :param devices: fixture that provides access to devices by their name
-        :type devices: dict<string, :py:class:`tango.DeviceProxy`>
-        :param dev_states: the devices and expected states of them
-        :type dev_states: dict
-        """
-        for device, state in dev_states.items():
-            count = 0.0
-            while devices[device].State() != state and count < 3.0:
-                count += 0.1
-                sleep(0.1)
-            assert devices[device].State() == state
-
     def test_controller_on(self, devices):
         """
         Test that an asynchronous call to controller:On() works correctly.
@@ -147,13 +130,13 @@ class TestMccsIntegrationTmc(HelperClass):
         :type devices: dict<string, :py:class:`tango.DeviceProxy`>
         """
         dev_states = {
-            "controller": DevState.DISABLE,
-            "subarray_01": DevState.OFF,
-            "subarray_02": DevState.OFF,
-            "station_001": DevState.OFF,
-            "station_002": DevState.OFF,
+            devices["controller"]: DevState.DISABLE,
+            devices["subarray_01"]: DevState.OFF,
+            devices["subarray_02"]: DevState.OFF,
+            devices["station_001"]: DevState.OFF,
+            devices["station_002"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
 
         # Call MccsController->Startup() command
         self.assert_command(
@@ -161,10 +144,10 @@ class TestMccsIntegrationTmc(HelperClass):
             command="Startup",
             expected_result=ResultCode.QUEUED,
         )
-        dev_states["controller"] = DevState.ON
-        dev_states["station_001"] = DevState.ON
-        dev_states["station_002"] = DevState.ON
-        self.check_states(devices, dev_states)
+        dev_states[devices["controller"]] = DevState.ON
+        dev_states[devices["station_001"]] = DevState.ON
+        dev_states[devices["station_002"]] = DevState.ON
+        self.check_states_of_devices(dev_states)
 
         # Startup turns everything on, so a call to On should have no side-effects
         self.assert_command(
@@ -172,7 +155,7 @@ class TestMccsIntegrationTmc(HelperClass):
             command="On",
             expected_result=ResultCode.QUEUED,
         )
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
 
     def test_controller_off(self, devices, mocker):
         """
@@ -184,22 +167,22 @@ class TestMccsIntegrationTmc(HelperClass):
         :type mocker: :py:class:`pytest_mock.mocker`
         """
         dev_states = {
-            "controller": DevState.DISABLE,
-            "station_001": DevState.OFF,
-            "station_002": DevState.OFF,
+            devices["controller"]: DevState.DISABLE,
+            devices["station_001"]: DevState.OFF,
+            devices["station_002"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         self.assert_command(
             device=devices["controller"],
             command="Startup",
             expected_result=ResultCode.QUEUED,
         )
         dev_states = {
-            "controller": DevState.ON,
-            "station_001": DevState.ON,
-            "station_002": DevState.ON,
+            devices["controller"]: DevState.ON,
+            devices["station_001"]: DevState.ON,
+            devices["station_002"]: DevState.ON,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
 
         self.assert_command(
             device=devices["controller"],
@@ -207,11 +190,11 @@ class TestMccsIntegrationTmc(HelperClass):
             expected_result=ResultCode.QUEUED,
         )
         dev_states = {
-            "controller": DevState.OFF,
-            "station_001": DevState.OFF,
-            "station_002": DevState.OFF,
+            devices["controller"]: DevState.OFF,
+            devices["station_001"]: DevState.OFF,
+            devices["station_002"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
 
     def test_setup_only(self, devices, mocker):
         """
@@ -230,12 +213,12 @@ class TestMccsIntegrationTmc(HelperClass):
             expected_result=ResultCode.QUEUED,
         )
         dev_states = {
-            "controller": DevState.ON,
-            "subarray_01": DevState.OFF,
-            "station_001": DevState.ON,
-            "station_002": DevState.ON,
+            devices["controller"]: DevState.ON,
+            devices["subarray_01"]: DevState.OFF,
+            devices["station_001"]: DevState.ON,
+            devices["station_002"]: DevState.ON,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
@@ -262,9 +245,9 @@ class TestMccsIntegrationTmc(HelperClass):
         self.wait_for_command_to_complete(devices["controller"])
 
         dev_states = {
-            "subarray_01": DevState.ON,
+            devices["subarray_01"]: DevState.ON,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].obsState == ObsState.IDLE
@@ -277,9 +260,9 @@ class TestMccsIntegrationTmc(HelperClass):
             device=devices["controller"], command="Release", argin=json_string
         )
         dev_states = {
-            "subarray_01": DevState.OFF,
+            devices["subarray_01"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["subarray_01"].stationFQDNs is None
         assert devices["station_001"].subarrayId == 0
@@ -292,11 +275,11 @@ class TestMccsIntegrationTmc(HelperClass):
             expected_result=ResultCode.QUEUED,
         )
         dev_states = {
-            "controller": DevState.OFF,
-            "station_001": DevState.OFF,
-            "station_002": DevState.OFF,
+            devices["controller"]: DevState.OFF,
+            devices["station_001"]: DevState.OFF,
+            devices["station_002"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["controller"].State() == DevState.OFF
         assert devices["station_001"].State() == DevState.OFF
         assert devices["station_002"].State() == DevState.OFF
@@ -318,12 +301,12 @@ class TestMccsIntegrationTmc(HelperClass):
             expected_result=ResultCode.QUEUED,
         )
         dev_states = {
-            "controller": DevState.ON,
-            "subarray_01": DevState.OFF,
-            "station_001": DevState.ON,
-            "station_002": DevState.ON,
+            devices["controller"]: DevState.ON,
+            devices["subarray_01"]: DevState.OFF,
+            devices["station_001"]: DevState.ON,
+            devices["station_002"]: DevState.ON,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["station_001"].subarrayId == 0
         assert devices["station_002"].subarrayId == 0
@@ -348,9 +331,9 @@ class TestMccsIntegrationTmc(HelperClass):
         self.wait_for_command_to_complete(devices["controller"])
 
         dev_states = {
-            "subarray_01": DevState.ON,
+            devices["subarray_01"]: DevState.ON,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["station_001"].subarrayId == 1
         assert devices["station_002"].subarrayId == 1
         assert devices["subarray_01"].obsState == ObsState.IDLE
@@ -400,9 +383,9 @@ class TestMccsIntegrationTmc(HelperClass):
             device=devices["controller"], command="Release", argin=json_string
         )
         dev_states = {
-            "subarray_01": DevState.OFF,
+            devices["subarray_01"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)
         assert devices["subarray_01"].obsState == ObsState.EMPTY
         assert devices["subarray_01"].stationFQDNs is None
         assert devices["station_001"].subarrayId == 0
@@ -415,8 +398,8 @@ class TestMccsIntegrationTmc(HelperClass):
             expected_result=ResultCode.QUEUED,
         )
         dev_states = {
-            "controller": DevState.OFF,
-            "station_001": DevState.OFF,
-            "station_002": DevState.OFF,
+            devices["controller"]: DevState.OFF,
+            devices["station_001"]: DevState.OFF,
+            devices["station_002"]: DevState.OFF,
         }
-        self.check_states(devices, dev_states)
+        self.check_states_of_devices(dev_states)

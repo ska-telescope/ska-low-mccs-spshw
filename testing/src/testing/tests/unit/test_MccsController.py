@@ -139,7 +139,7 @@ def device_under_test(tango_harness):
     return tango_harness.get_device("low-mccs/control/control")
 
 
-class TestMccsController:
+class TestMccsController(HelperClass):
     """Tests of the MccsController device."""
 
     def test_queue_debug(self, device_under_test, test_string):
@@ -263,6 +263,7 @@ class TestMccsController:
         """
         controller = device_under_test
         command_helper.device_command_with_callback(controller, "Off", test_string)
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.OFF)
 
         # Test that subscription yields an event as expected
@@ -279,6 +280,7 @@ class TestMccsController:
         )
         assert result_code == ResultCode.QUEUED
         assert ":On" in message_uid
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.ON)
         mock_event_callback.check_queued_command_result(
             name="commandResult", result=ResultCode.OK
@@ -305,9 +307,11 @@ class TestMccsController:
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
         command_helper.device_command_with_callback(controller, "Off", test_string)
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.OFF)
 
         command_helper.device_command_with_callback(controller, "On", test_string)
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.ON)
 
         # Test that subscription yields an event as expected
@@ -322,6 +326,7 @@ class TestMccsController:
         )
         assert result_code == ResultCode.QUEUED
         assert ":Off" in message_uid
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.OFF)
         mock_event_callback.check_queued_command_result(
             name="commandResult", result=ResultCode.OK
@@ -763,7 +768,7 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )
@@ -805,7 +810,7 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )
@@ -866,7 +871,7 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )

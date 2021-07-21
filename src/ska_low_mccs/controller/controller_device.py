@@ -1255,8 +1255,6 @@ class MccsController(SKAMaster):
                     )
             else:
                 # The subarray was already on, send ourselves a message to continue
-
-                # RCL WIP: call ourselves with a good result (TEST)
                 results = {"result_code": ResultCode.OK}
                 json_results = json.dumps(results)
                 device._message_queue.send_message(
@@ -1445,6 +1443,8 @@ class MccsController(SKAMaster):
             message indicating status. The message is for
             information purpose only.
         """
+        assert 1 <= subarray_id <= len(self._subarray_fqdns)
+
         subarray_fqdn = self._subarray_fqdns[subarray_id - 1]
         subarray_device = MccsDeviceProxy(subarray_fqdn, self.logger)
         if restart:

@@ -49,20 +49,6 @@ def devices_to_load():
 class TestMccsIntegration(HelperClass):
     """Integration test cases for the Mccs device classes."""
 
-    def check_states(self, dev_states):
-        """
-        Helper to check that each device is in the expected state with a timeout.
-
-        :param dev_states: the devices and expected states of them
-        :type dev_states: dict
-        """
-        for device, state in dev_states.items():
-            count = 0.0
-            while device.State() != state and count < 3.0:
-                count += 0.1
-                sleep(0.1)
-            assert device.State() == state
-
     def test_controller_allocate_subarray(self, tango_harness: TangoHarness):
         """
         Test that an MccsController device can allocate resources to an MccsSubarray
@@ -81,12 +67,13 @@ class TestMccsIntegration(HelperClass):
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         # check initial state
-        assert subarray_1.stationFQDNs is None
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_1.stationFQDNs) == []
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0
 
         controller.Startup()
+        sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
             station_1: DevState.ON,
@@ -96,7 +83,7 @@ class TestMccsIntegration(HelperClass):
             tile_3: DevState.ON,
             tile_4: DevState.ON,
         }
-        self.check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         # allocate station_1 to subarray_1
         ((result_code,), (message, message_uid)) = call_with_json(
@@ -108,11 +95,12 @@ class TestMccsIntegration(HelperClass):
         )
         assert result_code == ResultCode.QUEUED
         assert message
+        assert ":Allocate" in message_uid
         self.wait_for_command_to_complete(controller)
 
         # check that station_1 and only station_1 is allocated
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -132,7 +120,7 @@ class TestMccsIntegration(HelperClass):
 
         # check no side-effects
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -157,7 +145,7 @@ class TestMccsIntegration(HelperClass):
             station_1.dev_name(),
             station_2.dev_name(),
         ]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 1
 
@@ -179,6 +167,7 @@ class TestMccsIntegration(HelperClass):
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
 
         controller.Startup()
+        sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
             station_1: DevState.ON,
@@ -188,7 +177,7 @@ class TestMccsIntegration(HelperClass):
             tile_3: DevState.ON,
             tile_4: DevState.ON,
         }
-        self.check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         # allocate stations 1 to subarray 1
         ((result_code,), (message, message_uid)) = call_with_json(
@@ -228,7 +217,7 @@ class TestMccsIntegration(HelperClass):
 
         # check
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -240,7 +229,7 @@ class TestMccsIntegration(HelperClass):
 
         # check no side-effect to failed release
         assert list(subarray_1.stationFQDNs) == [station_1.dev_name()]
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 1
         assert station_2.subarrayId == 0
 
@@ -251,7 +240,7 @@ class TestMccsIntegration(HelperClass):
         assert result_code == ResultCode.OK
 
         # check all released
-        assert subarray_1.stationFQDNs is None
-        assert subarray_2.stationFQDNs is None
+        assert list(subarray_1.stationFQDNs) == []
+        assert list(subarray_2.stationFQDNs) == []
         assert station_1.subarrayId == 0
         assert station_2.subarrayId == 0

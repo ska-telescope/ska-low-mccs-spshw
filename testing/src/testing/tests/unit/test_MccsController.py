@@ -28,7 +28,7 @@ from ska_tango_base.control_model import (
     TestMode,
 )
 from ska_low_mccs import MccsController, MccsDeviceProxy, MccsSubarray, release
-from ska_low_mccs.controller import ControllerResourceManager
+from ska_low_mccs.controller import StationsResourceManager
 from ska_low_mccs.health import HealthModel
 from ska_low_mccs.utils import call_with_json
 
@@ -139,7 +139,7 @@ def device_under_test(tango_harness):
     return tango_harness.get_device("low-mccs/control/control")
 
 
-class TestMccsController:
+class TestMccsController(HelperClass):
     """Tests of the MccsController device."""
 
     def test_queue_debug(self, device_under_test, test_string):
@@ -263,6 +263,7 @@ class TestMccsController:
         """
         controller = device_under_test
         command_helper.device_command_with_callback(controller, "Off", test_string)
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.OFF)
 
         # Test that subscription yields an event as expected
@@ -279,6 +280,7 @@ class TestMccsController:
         )
         assert result_code == ResultCode.QUEUED
         assert ":On" in message_uid
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.ON)
         mock_event_callback.check_queued_command_result(
             name="commandResult", result=ResultCode.OK
@@ -305,9 +307,11 @@ class TestMccsController:
         controller = device_under_test  # for readability
         # Need to turn it on before we can turn it off
         command_helper.device_command_with_callback(controller, "Off", test_string)
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.OFF)
 
         command_helper.device_command_with_callback(controller, "On", test_string)
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.ON)
 
         # Test that subscription yields an event as expected
@@ -322,6 +326,7 @@ class TestMccsController:
         )
         assert result_code == ResultCode.QUEUED
         assert ":Off" in message_uid
+        self.wait_for_command_to_complete(controller)
         command_helper.check_device_state(controller, DevState.OFF)
         mock_event_callback.check_queued_command_result(
             name="commandResult", result=ResultCode.OK
@@ -763,7 +768,7 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )
@@ -805,7 +810,7 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )
@@ -866,7 +871,7 @@ class TestMccsController:
             assert result_code == ResultCode.QUEUED
             assert message
             assert ":Allocate" in message_uid
-            self.wait_for_command_to_complete(controller, expected_result=ResultCode.OK)
+            self.wait_for_command_to_complete(controller)
             mock_event_callback.check_queued_command_result(
                 name="commandResult", result=ResultCode.OK
             )
@@ -1261,10 +1266,10 @@ class TestMccsController:
         assert device_under_test.availableCapabilities is None
 
 
-class TestControllerResourceManager:
+class TestStationsResourceManager:
     """
     This class contains tests of the
-    :py:class:`~ska_low_mccs.controller.controller_device.ControllerResourceManager`
+    :py:class:`~ska_low_mccs.controller.controller_device.StationsResourceManager`
     class.
 
     This class is already exercised through the Tango commands of
@@ -1286,7 +1291,7 @@ class TestControllerResourceManager:
 
         :return: a resource manager with 2 subservient station devices
         :rtype:
-            :py:class:`ska_low_mccs.controller.controller_device.ControllerResourceManager`
+            :py:class:`ska_low_mccs.controller.controller_device.StationsResourceManager`
         """
         self.stations = ["low-mccs/station/001", "low-mccs/station/002"]
 
@@ -1295,18 +1300,16 @@ class TestControllerResourceManager:
         self.health_monitor = self.health_model._health_monitor
 
         # Instantiate a resource manager for the Stations
-        manager = ControllerResourceManager(
-            self.health_monitor, "Test Manager", self.stations, logger
-        )
+        manager = StationsResourceManager(self.health_monitor, self.stations, logger)
         return manager
 
     def test_assign(self, resource_manager):
         """
-        Test assignment operations of the ControllerResourceManager.
+        Test assignment operations of the StationsResourceManager.
 
         :param resource_manager: test fixture providing a manager object
         :type resource_manager:
-            :py:class:`~ska_low_mccs.controller.controller_device.ControllerResourceManager`
+            :py:class:`~ska_low_mccs.controller.controller_device.StationsResourceManager`
         """
         stations = ("low-mccs/station/001", "low-mccs/station/002")
         # Assign both stations

@@ -154,7 +154,7 @@ An interactice itango session can be run using `make itango`:
 .. code-block:: shell-session
 
    ska-low-mccs$ make itango
-   kubectl exec -it -n mccs tango-base-itango-console  -- itango3
+   kubectl exec -it -n mccs ska-tango-base-itango-console  -- itango3
    ITango 9.3.1 -- An interactive Tango client.
 
    Running on top of Python 3.7.3, IPython 7.13 and PyTango 9.3.1

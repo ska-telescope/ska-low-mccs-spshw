@@ -172,9 +172,20 @@ def subarraybeams(tango_harness: TangoHarness):
     return {
         1: tango_harness.get_device("low-mccs/subarraybeam/01"),
         2: tango_harness.get_device("low-mccs/subarraybeam/02"),
-        3: tango_harness.get_device("low-mccs/subarraybeam/03"),
-        4: tango_harness.get_device("low-mccs/subarraybeam/04"),
+        # 3: tango_harness.get_device("low-mccs/subarraybeam/03"),
+        # 4: tango_harness.get_device("low-mccs/subarraybeam/04"),
     }
+
+
+def wait_for_command_to_complete(device):
+    """
+    Wrapper function for HelperClass to wait for command completion.
+
+    :param device: A device to wait for command completion on
+    :type device: :py:class:`tango.DeviceProxy`
+    """
+    helper = HelperClass()
+    helper.wait_for_command_to_complete(device)
 
 
 def assert_command(device, command, argin=None, expected_result=ResultCode.OK):
@@ -219,6 +230,7 @@ def test_start_up_low_telescope(controller, subarrays, stations, command_helper)
     :type command_helper: CommandHelper
     """
     assert_command(device=controller, command="Off", expected_result=ResultCode.QUEUED)
+    wait_for_command_to_complete(controller)
     command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
@@ -378,8 +390,8 @@ def check_reset_state(controller, subarrays, stations):
     assert controller.aPoolStats == "0 0 "
     check_mccs_device_state(subarrays[1], "off")
     check_mccs_device_state(subarrays[2], "off")
-    assert subarrays[1].stationFQDNs is None
-    assert subarrays[2].stationFQDNs is None
+    assert subarrays[1].stationFQDNs is None or subarrays[1].stationFQDNs == ()
+    assert subarrays[2].stationFQDNs is None or subarrays[2].stationFQDNs == ()
     check_mccs_device_state(stations[1], "off")
     check_mccs_device_state(stations[2], "off")
     assert stations[1].subarrayId == 0
@@ -404,6 +416,7 @@ def test_allocate_subarray(controller, subarrays, stations, command_helper):
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
     assert_command(device=controller, command="Off", expected_result=ResultCode.QUEUED)
+    wait_for_command_to_complete(controller)
     command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
@@ -493,8 +506,7 @@ def tmc_allocates_a_subarray_with_validity_parameters(controller, subarrays, val
     assert message
 
     # Check that the allocate command has completed
-    helper = HelperClass()
-    helper.wait_for_command_to_complete(controller)
+    wait_for_command_to_complete(controller)
 
     command_result = controller.commandResult
     kwargs = json.loads(command_result)
@@ -605,6 +617,7 @@ def test_configure_a_subarray(controller, subarrays, stations, command_helper):
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
     assert_command(device=controller, command="Off", expected_result=ResultCode.QUEUED)
+    wait_for_command_to_complete(controller)
     command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
@@ -777,6 +790,7 @@ def test_perform_a_scan_on_subarray(controller, subarrays, stations, command_hel
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
     assert_command(device=controller, command="Off", expected_result=ResultCode.QUEUED)
+    wait_for_command_to_complete(controller)
     command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 
@@ -799,6 +813,7 @@ def abort_post_operations(controller, subarrays, stations, command_helper):
     json_string = json.dumps(release_config)
     assert_command(device=controller, command="Release", argin=json_string)
     assert_command(device=controller, command="Off", expected_result=ResultCode.QUEUED)
+    wait_for_command_to_complete(controller)
     command_helper.check_device_state(controller, DevState.OFF)
     check_reset_state(controller, subarrays, stations)
 

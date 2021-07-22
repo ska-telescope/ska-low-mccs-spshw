@@ -12,7 +12,6 @@ This module contains the tests for the
 :py:mod:`ska_low_mccs.tile.demo_tile_device` module.
 """
 import pytest
-from time import sleep
 
 from tango import DevState
 
@@ -23,6 +22,7 @@ from ska_low_mccs import MccsDeviceProxy
 from ska_low_mccs.tile.demo_tile_device import DemoTile
 
 from testing.harness.mock import MockDeviceBuilder
+from testing.harness import HelperClass
 
 
 @pytest.fixture()
@@ -96,22 +96,7 @@ def mock_factory(mocker, request):
     return builder
 
 
-def check_states(dev_states):
-    """
-    Helper to check that each device is in the expected state with a timeout.
-
-    :param dev_states: the devices and expected states of them
-    :type dev_states: dict
-    """
-    for device, state in dev_states.items():
-        count = 0.0
-        while device.State() != state and count < 3.0:
-            count += 0.1
-            sleep(0.1)
-        assert device.State() == state
-
-
-class TestDemoTile:
+class TestDemoTile(HelperClass):
     """This class contains the tests for the DemoTile device class."""
 
     @pytest.fixture()
@@ -156,7 +141,7 @@ class TestDemoTile:
 
         device_under_test.Off(empty_json_dict)
         dev_states = {device_under_test: DevState.OFF}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         assert device_under_test.healthState == HealthState.OK
 

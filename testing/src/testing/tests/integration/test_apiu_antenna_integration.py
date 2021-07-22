@@ -47,21 +47,6 @@ def devices_to_load():
     }
 
 
-def check_states(dev_states):
-    """
-    Helper to check that each device is in the expected state with a timeout.
-
-    :param dev_states: the devices and expected states of them
-    :type dev_states: dict
-    """
-    for device, state in dev_states.items():
-        count = 0.0
-        while device.State() != state and count < 3.0:
-            count += 0.1
-            sleep(0.1)
-        assert device.State() == state
-
-
 class TestApiuAntennaIntegration(HelperClass):
     """Integration test cases for MCCS subsystem's power management."""
 
@@ -84,9 +69,10 @@ class TestApiuAntennaIntegration(HelperClass):
             apiu: DevState.DISABLE,
             antenna: DevState.DISABLE,
         }
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         self.start_up_device(apiu)
+        sleep(1)  # Stability testing
 
         assert not apiu.isAntennaOn(1)
         # TODO: For now we need to get this device to OFF (highest state
@@ -94,7 +80,8 @@ class TestApiuAntennaIntegration(HelperClass):
         # a counterintuitive mess that will be fixed in SP-1501.
         antenna.Off(empty_json_dict)
         dev_states = {antenna: DevState.OFF}
-        check_states(dev_states)
+        sleep(1)  # Stability testing
+        self.check_states_of_devices(dev_states)
         assert apiu.IsAntennaOn(1)
 
         # TODO: For now we need to get this device to DISABLE (lowest
@@ -102,7 +89,8 @@ class TestApiuAntennaIntegration(HelperClass):
         # This is a counterintuitive mess that will be fixed in SP-1501.
         antenna.Disable()
         dev_states = {antenna: DevState.DISABLE}
-        check_states(dev_states)
+        sleep(1)  # Stability testing
+        self.check_states_of_devices(dev_states)
         assert not apiu.IsAntennaOn(1)
 
     def test_apiu_antenna_on(self, tango_harness: TangoHarness):
@@ -116,20 +104,23 @@ class TestApiuAntennaIntegration(HelperClass):
         apiu = tango_harness.get_device("low-mccs/apiu/001")
 
         self.start_up_device(apiu)
+        sleep(1)  # Stability testing
 
         dev_states = {antenna: DevState.DISABLE}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         assert not apiu.IsAntennaOn(1)
 
         apiu.PowerUpAntenna(1)
+        sleep(1)  # Stability testing
 
         # Wait long enough for the event to get through the events subsystem
         dev_states = {antenna: DevState.OFF}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         apiu.PowerDownAntenna(1)
+        sleep(1)  # Stability testing
 
         # Wait long enough for the event to get through the events subsystem
         dev_states = {antenna: DevState.DISABLE}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)

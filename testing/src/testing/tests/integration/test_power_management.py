@@ -19,29 +19,16 @@ from tango import DevState
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness
+from testing.harness import HelperClass
 
 
-class TestPowerManagement:
+class TestPowerManagement(HelperClass):
     """
     Integration test cases for MCCS subsystem's power management.
 
     These tests focus on the path from the controller down to the tiles
     and antennas.
     """
-
-    def check_states(self, dev_states):
-        """
-        Helper to check that each device is in the expected state with a timeout.
-
-        :param dev_states: the devices and expected states of them
-        :type dev_states: dict
-        """
-        for device, state in dev_states.items():
-            count = 0.0
-            while device.State() != state and count < 3.0:
-                count += 0.1
-                sleep(0.1)
-            assert device.State() == state
 
     @pytest.fixture()
     def devices_to_load(self):
@@ -109,6 +96,7 @@ class TestPowerManagement:
         # device readiness) before we can turn this ON. This is a
         # counterintuitive mess that will be fixed in SP-1501.
         controller.Startup()
+        sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
             subrack: DevState.ON,
@@ -118,7 +106,7 @@ class TestPowerManagement:
             tile_3: DevState.ON,
             tile_4: DevState.ON,
         }
-        self.check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         assert subrack.IsTpmOn(1)
         assert subrack.IsTpmOn(2)
@@ -139,33 +127,39 @@ class TestPowerManagement:
         ):
             sleep(1.5)
 
-        assert tile_1.State() == DevState.ON
-        assert tile_2.State() == DevState.ON
-        assert tile_3.State() == DevState.ON
-        assert tile_4.State() == DevState.ON
+        dev_states = {
+            tile_1: DevState.ON,
+            tile_2: DevState.ON,
+            tile_3: DevState.ON,
+            tile_4: DevState.ON,
+            apiu: DevState.ON,
+            antenna_1: DevState.ON,
+            antenna_2: DevState.ON,
+            antenna_3: DevState.ON,
+            antenna_4: DevState.ON,
+        }
+        self.check_states_of_devices(dev_states)
 
-        assert apiu.State() == DevState.ON
         assert apiu.IsAntennaOn(1)
         assert apiu.IsAntennaOn(2)
         assert apiu.IsAntennaOn(3)
         assert apiu.IsAntennaOn(4)
-        assert antenna_1.State() == DevState.ON
-        assert antenna_2.State() == DevState.ON
-        assert antenna_3.State() == DevState.ON
-        assert antenna_4.State() == DevState.ON
 
         controller.Off()
-        sleep(0.5)  # Required to allow DUT thread to run
+        sleep(0.5)  # Allow time for Off to complete
 
-        assert controller.State() == DevState.OFF
-        assert subrack.State() == DevState.OFF
-        assert station.State() == DevState.OFF
-        assert tile_1.State() == DevState.OFF
-        assert tile_2.State() == DevState.OFF
-        assert tile_3.State() == DevState.OFF
-        assert tile_4.State() == DevState.OFF
-        assert apiu.State() == DevState.OFF
-        assert antenna_1.State() == DevState.OFF
-        assert antenna_2.State() == DevState.OFF
-        assert antenna_3.State() == DevState.OFF
-        assert antenna_4.State() == DevState.OFF
+        dev_states = {
+            controller: DevState.OFF,
+            subrack: DevState.OFF,
+            station: DevState.OFF,
+            tile_1: DevState.OFF,
+            tile_2: DevState.OFF,
+            tile_3: DevState.OFF,
+            tile_4: DevState.OFF,
+            apiu: DevState.OFF,
+            antenna_1: DevState.OFF,
+            antenna_2: DevState.OFF,
+            antenna_3: DevState.OFF,
+            antenna_4: DevState.OFF,
+        }
+        self.check_states_of_devices(dev_states)

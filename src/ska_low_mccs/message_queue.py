@@ -175,7 +175,7 @@ class MessageQueue(threading.Thread):
                 self._qdebug(payload)
                 self._qdebug(f"Message kwargs({kwargs})")
                 (result_code, status) = command(json_string)
-                payload = f"Result({message.message_uid},rc={result_code.name})"
+                payload = f"Result({message.message_uid},rc={result_code})"
                 self._logger.debug(payload)
                 self._qdebug(payload)
             else:

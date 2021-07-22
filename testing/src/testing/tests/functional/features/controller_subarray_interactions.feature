@@ -31,7 +31,7 @@ Scenario: MCCS Configure a subarray
     Then the subarray obsstate is ready
     And subarray health is good
 
-@XTP-1261 @skip
+@XTP-1261 @needs_tangodb @skip
 Scenario: MCCS Perform a scan on subarray
     Given we have a successfully configured subarray
     When tmc starts a scan on subarray

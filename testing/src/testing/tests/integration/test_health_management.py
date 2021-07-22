@@ -65,21 +65,6 @@ def sleep(seconds=0.2):
     time.sleep(seconds)
 
 
-def check_states(dev_states):
-    """
-    Helper to check that each device is in the expected state with a timeout.
-
-    :param dev_states: the devices and expected states of them
-    :type dev_states: dict
-    """
-    for device, state in dev_states.items():
-        count = 0.0
-        while device.State() != state and count < 3.0:
-            count += 0.1
-            sleep(0.1)
-        assert device.State() == state
-
-
 class TestHealthManagement(HelperClass):
     """Test cases for the MCCS health management subsystem."""
 
@@ -130,7 +115,7 @@ class TestHealthManagement(HelperClass):
             tile_3: DevState.ON,
             tile_4: DevState.ON,
         }
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         # Check that all devices are OK
         assert tile_1.healthState == HealthState.OK
@@ -178,7 +163,7 @@ class TestHealthManagement(HelperClass):
 
         tile_1.Off(empty_json_dict)
         dev_states = {tile_1: DevState.OFF}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
         tile_1.Disable()
         tile_1.adminMode = AdminMode.OFFLINE
 
@@ -202,12 +187,12 @@ class TestHealthManagement(HelperClass):
         assert not subrack.isTpmOn(1)
         tile_1.Off(empty_json_dict)
         dev_states = {tile_1: DevState.OFF}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
         assert subrack.isTpmOn(1)
 
         tile_1.On(empty_json_dict)
         dev_states = {tile_1: DevState.ON}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         assert tile_1.healthState == HealthState.OK
         assert tile_2.healthState == HealthState.OK
@@ -253,6 +238,7 @@ class TestHealthManagement(HelperClass):
         subarraybeam_2 = tango_harness.get_device("low-mccs/subarraybeam/02")
 
         _ = controller.Startup()
+        sleep(0.5)  # Allow time for Startup to complete
         dev_states = {
             controller: DevState.ON,
             station_1: DevState.ON,
@@ -265,7 +251,7 @@ class TestHealthManagement(HelperClass):
             subarraybeam_1: DevState.OFF,
             subarraybeam_2: DevState.OFF,
         }
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
 
         # Check that all devices are OK
         assert tile_1.healthState == HealthState.OK
@@ -332,8 +318,9 @@ class TestHealthManagement(HelperClass):
         # health.
 
         tile_1.Off(empty_json_dict)
+        sleep(0.5)  # Allow time for Off to complete
         dev_states = {tile_1: DevState.OFF}
-        check_states(dev_states)
+        self.check_states_of_devices(dev_states)
         tile_1.Disable()
         tile_1.adminMode = AdminMode.OFFLINE
 

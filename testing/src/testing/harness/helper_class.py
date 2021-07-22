@@ -68,15 +68,40 @@ class HelperClass:
         :param timeout_limit: The maximum timeout allowed for a command to complete
         :type timeout_limit: float
         """
-        timeout = 0.0
         busy = True
+        initial_delay = 1.0
+        delta_delay = 0.3
+        sleep(initial_delay)
+        timeout = initial_delay
         while busy:
             result = json.loads(controller.commandResult)
             if result.get("result_code") == expected_result or timeout >= timeout_limit:
                 busy = False
             else:
-                timeout += 0.1
-                sleep(0.1)
+                timeout += delta_delay
+                sleep(delta_delay)
         result_code = result.get("result_code")
-        assert result_code == expected_result
+        message_uid = result.get("message_uid")
+        assert result_code == expected_result, (
+            f"{result_code} (Actual)"
+            f" != {expected_result} (Expected); message_uid = {message_uid}"
+        )
         assert timeout <= timeout_limit
+        sleep(0.1)  # Added to reduce possibility of seg faults
+
+    def check_states_of_devices(self, dev_states):
+        """
+        Helper to check that each device is in the expected state with a timeout.
+
+        :param dev_states: the devices and expected states of them
+        :type dev_states: dict
+        """
+        sleep(0.3)  # Stability testing
+        delta_delay = 0.3
+        for device, state in dev_states.items():
+            count = 0.0
+            while device.State() != state and count < 2.7:
+                count += delta_delay
+                sleep(delta_delay)
+            assert device.State() == state
+        sleep(0.1)  # Added to reduce possibility of seg faults

@@ -31,14 +31,13 @@ from tango import DebugIt, EnsureOmniThread
 from tango.server import attribute, command
 
 # Additional import
-from ska_tango_base import SKASubarray
+from ska_tango_base import DeviceStateModel, SKASubarray
 from ska_tango_base.commands import ResponseCommand, ResultCode
 from ska_tango_base.control_model import HealthState, ObsState
 
 from ska_low_mccs import MccsDeviceProxy
-from ska_low_mccs.health import MutableHealthModel, HealthMonitor
+from ska_low_mccs.health import MutableHealthModel
 import ska_low_mccs.release as release
-from ska_low_mccs.resource import ResourceManager
 from ska_low_mccs.message_queue import MessageQueue  # type: ignore[attr-defined]
 
 __all__ = ["MccsSubarray", "main"]
@@ -106,7 +105,12 @@ class MccsSubarray(SKASubarray):
     class InitCommand(SKASubarray.InitCommand):
         """Command class for device initialisation."""
 
-        def __init__(self, target, state_model, logger=None):
+        def __init__(
+            self,
+            target: object,
+            state_model: DeviceStateModel,
+            logger: Optional[logging.Logger] = None,
+        ):
             """
             Create a new InitCommand.
 
@@ -223,19 +227,11 @@ class MccsSubarray(SKASubarray):
                 being initialised
             :type device: :py:class:`ska_tango_base.SKABaseDevice`
             """
-<<<<<<< HEAD
             resourcing_args = (
                 device,
                 device.state_model,
                 device.logger,
             )
-=======
-            #             device._station_resource_manager = StationsResourceManager(
-            #                 device.health_model._health_monitor, device._station_fqdns, self.logger
-            #             )
-
-            resourcing_args = (device, device.state_model, device.logger)
->>>>>>> MCCS-404 prepare for 402 merge
             for (command_name, command_object) in [
                 ("AssignResources", device.AssignResourcesCommand),
                 ("ReleaseResources", device.ReleaseResourcesCommand),
@@ -412,7 +408,6 @@ class MccsSubarray(SKASubarray):
         else:
             self._station_fqdns = fqdns
 
-
     # -------------------------------------------
     # Base class command and gatekeeper overrides
     # -------------------------------------------
@@ -584,9 +579,6 @@ class MccsSubarray(SKASubarray):
 
         def succeeded(self):
             """Action to take on successful completion of a resourcing command."""
-            #             if len(self.target._stations_reource_manager) == 0:
-            #                 action = "resourcing_succeeded_no_resources"
-            #             else:
             action = "resourcing_succeeded_some_resources"
             self.state_model.perform_action(action)
 
@@ -620,7 +612,6 @@ class MccsSubarray(SKASubarray):
             for fqdn in stations:
                 device = MccsDeviceProxy(fqdn, self.logger)
                 device.subarrayId = 0
-                # device.subarrayId = subarray_id
 
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 

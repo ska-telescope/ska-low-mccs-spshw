@@ -65,8 +65,7 @@ class StationsResourceManager(ResourceManager):
             subarray manages
         :param logger: the logger to be used by the object under test
         """
-        self._devices = dict()
-        stations = {}
+        stations: dict[int, str] = {}
         for station_fqdn in station_fqdns:
             station_id = int(station_fqdn.split("/")[-1:][0])
             stations[station_id] = station_fqdn
@@ -210,15 +209,11 @@ class SubarrayBeamsResourceManager(ResourceManager):
             subarray_beams.items()
         ):
             # TODO: Establishment of connections should happen at initialization
-            subarray_beam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
-            subarray_beam.stationIds = sorted(stations[index].keys())
-            subarray_beam.isBeamLocked = True
+            subarraybeam = MccsDeviceProxy(subarray_beam_fqdn, logger=self._logger)
+            subarraybeam.stationIds = sorted(stations[index].keys())
+            subarraybeam.isBeamLocked = True
 
-            # TODO Clearly subarraybeam is stupid. isBeamlocked is set to True
-            # and therefore should trigger a healthstate change to OK, but it
-            # doesn't. Its not as though its got much else to do. So I'm fixing it.
-            # self.update_resource_health(subarray_beam_fqdn, subarray_beam.healthState)
-            self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
+            self.update_resource_health(subarray_beam_fqdn, subarraybeam.healthState)
         super().assign(subarray_beams, subarray_id)
 
     def release(
@@ -502,7 +497,6 @@ class MccsController(SKAMaster):
             :param fqdns: the fqdns of subservient devices for which
                 this device monitors health
             """
-            device.event_manager = EventManager(self.logger, fqdns)
             device._health_state = HealthState.UNKNOWN
             device.set_change_event("healthState", True, False)
             device.health_model = MutableHealthModel(
@@ -534,7 +528,6 @@ class MccsController(SKAMaster):
             device.register_command_object(
                 "Allocate", device.AllocateCommand(*resource_args)
             )
-
             device.register_command_object(
                 "Release", device.ReleaseCommand(*resource_args)
             )
@@ -1278,6 +1271,7 @@ class MccsController(SKAMaster):
             subarray_beam_ids = kwargs.get("subarray_beam_ids", list())
             station_ids = kwargs.get("station_ids", list())
             channel_blocks = kwargs.get("channel_blocks", list())
+
             controllerdevice = self.target
             assert 1 <= subarray_id <= len(controllerdevice._subarray_fqdns)
 
@@ -1662,9 +1656,6 @@ class MccsController(SKAMaster):
             station.subarrayId = 0
         # Finally release them from assignment in the manager
         self._stations_manager.release(fqdns)
-        # TODO tis should be in stations resource manager
-        subarray = MccsDeviceProxy(subarray_fqdn, self.logger)
-        subarray.stationFQDNs = []
 
         result = self._disable_subarray(subarray_id, restart)
         if result[0] is not ResultCode.OK:

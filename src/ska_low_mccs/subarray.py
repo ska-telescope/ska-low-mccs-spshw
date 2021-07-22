@@ -656,13 +656,26 @@ class MccsSubarray(SKASubarray):
         assert respond_to_fqdn
         assert callback
         self.logger.debug(f"Subarray {command} message call")
-        (
-            result_code,
-            message_uid,
-            status,
-        ) = self._message_queue.send_message_with_response(
-            command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
-        )
+        if len(kwargs.keys()) > 2:
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command=command,
+                respond_to_fqdn=respond_to_fqdn,
+                callback=callback,
+                json_args=json_args,
+            )
+        else:
+            (
+                result_code,
+                message_uid,
+                status,
+            ) = self._message_queue.send_message_with_response(
+                command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
+            )
+
         return [[result_code], [status, message_uid]]
 
     @command(
@@ -742,6 +755,25 @@ class MccsSubarray(SKASubarray):
             else:
                 return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def AssignResources(
+        self: MccsSubarray, json_args: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Send a message to assign resources to this subarray.
+
+        Method returns as soon as the message has been enqueued.
+
+        :param json_args: Argument containing JSON encoded command message and result
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        """
+        return self._send_message("AssignResources", json_args=json_args)
+
     class AssignResourcesCommand(SKASubarray.AssignResourcesCommand):
         """Class for handling the AssignResources(argin) command."""
 
@@ -768,6 +800,7 @@ class MccsSubarray(SKASubarray):
             """
             # deliberately not calling super() -- we're passing a different
             # target object
+
             kwargs = json.loads(argin)
             station_fqdns = kwargs.get("stations", [])
             subarray_beam_fqdns = kwargs.get("subarray_beams", [])

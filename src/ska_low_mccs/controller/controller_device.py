@@ -217,6 +217,7 @@ class MccsController(SKAMaster):
             ("Callback", self.CallbackCommand),
             ("Off", self.OffCommand),
             ("AllocateCallback", self.AllocateCallbackCommand),
+            ("AssignResourcesCallback", self.AssignResourcesCallbackCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self, self.state_model, self.logger)
@@ -1316,11 +1317,12 @@ class MccsController(SKAMaster):
         return self._check_and_send_message("AllocateCallback", json_args=json_args)
 
     class AllocateCallbackCommand(ResponseCommand):
-        """Continue with the allocation of MCCS resources to a sub-array."""
+        """Continue with the allocation of MCCS resources to a subarray."""
 
         FAILED_TO_ENABLE_SUBARRAY_MESSAGE_PREFIX = "Cannot enable subarray"
-        FAILED_TO_ALLOCATE_MESSAGE_PREFIX = "Failed to allocate resources to subarray"
-        SUCCEEDED_MESSAGE = "Allocate command completed OK"
+        SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE = (
+            "Request sent to assign subarray resources"
+        )
 
         def do(
             self: MccsController.AllocateCallbackCommand, argin: str
@@ -1329,7 +1331,7 @@ class MccsController(SKAMaster):
             Stateless hook implementing the functionality of the
             :py:meth:`.MccsController.Allocate` command
 
-            Continue to allocate a set of unallocated MCCS resources to a sub-array.
+            Continue to allocate a set of unallocated MCCS resources to a subarray.
 
             :param argin: JSON-formatted response string
                 {
@@ -1383,39 +1385,121 @@ class MccsController(SKAMaster):
                 "subarray_beam_fqdns"
             )
             channel_blocks = controllerdevice._allocate_cmd_cache.get("channel_blocks")
+
+            # Manager gave this list of stations to assign
+            if stations_to_assign is not None:
+                # call subarray AssignResources
+                args = {
+                    "respond_to_fqdn": controllerdevice.get_name(),
+                    "callback": "AssignResourcesCallback",
+                    "stations": stations_per_beam,
+                    "subarray_beams": subarray_beam_fqdns,
+                    "channel_blocks": channel_blocks,
+                }
+                json_args = json.dumps(args)
+                (result_code, _) = subarray_device.AssignResources(json_args)
+                if result_code != ResultCode.QUEUED:
+                    return (
+                        result_code,
+                        f"Failed to request subarray to assign resources {subarray_fqdn}",
+                    )
+            else:
+                # No stations to assign, send ourselves a message to continue
+                results = {"result_code": ResultCode.OK}
+                json_results = json.dumps(results)
+                controllerdevice._message_queue.send_message(
+                    command="AssignResourcesCallback", json_args=json_results
+                )
+
+            return (
+                ResultCode.QUEUED,
+                self.SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE,
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def AssignResourcesCallback(
+        self: MccsController, json_args: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Send a message to continue the allocate command.
+
+        Method returns as soon as the message has been enqueued.
+
+        :param json_args: Argument containing JSON encoded command message and result
+
+        :return: A tuple containing a return code, a string
+            message indicating status and message UID.
+            The string message is for information purposes only, but
+            the message UID is for message management use.
+        """
+        return self._check_and_send_message(
+            "AssignResourcesCallback", json_args=json_args
+        )
+
+    class AssignResourcesCallbackCommand(ResponseCommand):
+        """Continue with allocate of MCCS resources to a subarray."""
+
+        FAILED_TO_ALLOCATE_MESSAGE_PREFIX = "Failed to allocate resources to subarray"
+        SUCCEEDED_MESSAGE = "Allocate command completed OK"
+
+        def do(
+            self: MccsController.AssignResourcesCallbackCommand, argin: str
+        ) -> Tuple[ResultCode, str]:
+            """
+            Stateless hook implementing the functionality of the
+            :py:meth:`.MccsController.Allocate` command
+
+            Continue to allocate a set of unallocated MCCS resources to a subarray.
+
+            :param argin: JSON-formatted response string
+                {
+                "message_object": message,
+                "result_code": result_code,
+                "status": status,
+                }
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            controllerdevice = self.target
             subarray_beam_ids = controllerdevice._allocate_cmd_cache.get(
                 "subarray_beam_ids"
             )
             station_ids = controllerdevice._allocate_cmd_cache.get("station_ids")
+            channel_blocks = controllerdevice._allocate_cmd_cache.get("channel_blocks")
 
-            # Manager gave this list of stations to assign
-            if stations_to_assign is not None:
-                (result_code, message) = call_with_json(
-                    subarray_device.AssignResources,
-                    stations=stations_per_beam,
-                    subarray_beams=subarray_beam_fqdns,
-                    channel_blocks=channel_blocks,
+            kwargs = json.loads(argin)
+            result_code = kwargs.get("result_code")
+
+            message_uid = controllerdevice._allocate_cmd_cache.get("message_uid")
+            if result_code == ResultCode.FAILED:
+                subarray_fqdn = controllerdevice._allocate_cmd_cache.get(
+                    "subarray_fqdn"
                 )
-                if result_code == ResultCode.FAILED:
-                    failure_message = f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:{message}"
-                    controllerdevice.notify_listener(
-                        ResultCode.FAILED,
-                        message_uid,
-                        failure_message,
-                    )
-                    controllerdevice._allocate_cmd_cache.clear()
-                    return (
-                        ResultCode.FAILED,
-                        failure_message,
-                    )
+                failure_message = f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:AssignResources failed"
+                controllerdevice.notify_listener(
+                    ResultCode.FAILED,
+                    message_uid,
+                    failure_message,
+                )
+                controllerdevice._allocate_cmd_cache.clear()
+                return (
+                    ResultCode.FAILED,
+                    failure_message,
+                )
+            stations_to_assign = controllerdevice._allocate_cmd_cache.get(
+                "stations_to_assign"
+            )
+            subarray_id = controllerdevice._allocate_cmd_cache.get("subarray_id")
+            if stations_to_assign:
                 for station_fqdn in stations_to_assign:
                     station = MccsDeviceProxy(station_fqdn, self.logger)
                     station.subarrayId = subarray_id
 
                 # Inform manager that we made the assignments
-                controllerdevice._stations_manager.assign(
-                    stations_to_assign, subarray_id
-                )
+                controllerdevice._stations_manager.assign(stations_to_assign, subarray_id)
 
             # assume all is OK for now ie send back what we received.
             controllerdevice._assigned_resources = json.dumps(
@@ -1437,7 +1521,7 @@ class MccsController(SKAMaster):
             controllerdevice._allocate_cmd_cache.clear()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-        def check_allowed(self: MccsController.AllocateCallbackCommand) -> bool:
+        def check_allowed(self: MccsController.AssignResourcesCallbackCommand) -> bool:
             """
             Whether this command is allowed to be run in current device state.
 
@@ -1448,16 +1532,16 @@ class MccsController(SKAMaster):
             allowed = any(controllerdevice._allocate_cmd_cache)
             return allowed
 
-    def is_AllocateCallback_allowed(self: MccsController) -> bool:
+    def is_AssignResourcesCallback_allowed(self: MccsController) -> bool:
         """
         Whether this command is allowed to be run in current device state.
 
         :return: True if this command is allowed to be run in
             current device state
         """
-        handler = self.get_command_object("AllocateCallback")
+        handler = self.get_command_object("AssignResourcesCallback")
         if not handler.check_allowed():
-            tango_raise("AllocateCallback() is not allowed in current state")
+            tango_raise("AssignResourcesCallback() is not allowed in current state")
         return True
 
     def _disable_subarray(

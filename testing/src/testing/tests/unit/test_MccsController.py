@@ -783,7 +783,10 @@ class TestMccsController(HelperClass):
             # because the already allocated station is allocated to the same
             # subarray
             mock_subarray_1.AssignResources.side_effect = (
-                (ResultCode.QUEUED, MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE),
+                (
+                    ResultCode.QUEUED,
+                    MccsSubarray.AssignResourcesCommand.SUCCEEDED_MESSAGE,
+                ),
             )
 
             # When asked, pretend the subarray is already on

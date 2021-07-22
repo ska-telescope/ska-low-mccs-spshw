@@ -1478,7 +1478,10 @@ class MccsController(SKAMaster):
                 subarray_fqdn = controllerdevice._allocate_cmd_cache.get(
                     "subarray_fqdn"
                 )
-                failure_message = f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} {subarray_fqdn}:AssignResources failed"
+                failure_message = (
+                    f"{self.FAILED_TO_ALLOCATE_MESSAGE_PREFIX} "
+                    f"{subarray_fqdn}:AssignResources failed"
+                )
                 controllerdevice.notify_listener(
                     ResultCode.FAILED,
                     message_uid,
@@ -1499,7 +1502,9 @@ class MccsController(SKAMaster):
                     station.subarrayId = subarray_id
 
                 # Inform manager that we made the assignments
-                controllerdevice._stations_manager.assign(stations_to_assign, subarray_id)
+                controllerdevice._stations_manager.assign(
+                    stations_to_assign, subarray_id
+                )
 
             # assume all is OK for now ie send back what we received.
             controllerdevice._assigned_resources = json.dumps(

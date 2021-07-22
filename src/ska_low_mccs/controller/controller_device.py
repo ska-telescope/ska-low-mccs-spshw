@@ -1416,6 +1416,29 @@ class MccsController(SKAMaster):
                 self.SUCCEEDED_REQ_TO_ASSIGN_RESOURCES_MESSAGE,
             )
 
+        def check_allowed(self: MccsController.AllocateCallbackCommand) -> bool:
+            """
+            Whether this command is allowed to be run in current device state.
+
+            :return: True if this command is allowed to be run in
+                current device state
+            """
+            controllerdevice = self.target
+            allowed = any(controllerdevice._allocate_cmd_cache)
+            return allowed
+
+    def is_AllocateCallback_allowed(self: MccsController) -> bool:
+        """
+        Whether this command is allowed to be run in current device state.
+
+        :return: True if this command is allowed to be run in
+            current device state
+        """
+        handler = self.get_command_object("AllocateCallback")
+        if not handler.check_allowed():
+            tango_raise("AllocateCallback() is not allowed in current state")
+        return True
+
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @DebugIt()
     def AssignResourcesCallback(

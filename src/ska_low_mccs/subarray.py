@@ -651,31 +651,24 @@ class MccsSubarray(SKASubarray):
         self.logger.info(f"Subarray {command}")
 
         kwargs = json.loads(json_args)
-        respond_to_fqdn = kwargs.get("respond_to_fqdn")
-        callback = kwargs.get("callback")
+        respond_to_fqdn = kwargs.pop("respond_to_fqdn", None)
+        callback = kwargs.pop("callback", None)
         assert respond_to_fqdn
         assert callback
+        # Now the message passing args have been stripped off,
+        # prepare any command arguments
+        command_args = json.dumps(kwargs) if kwargs else ""
         self.logger.debug(f"Subarray {command} message call")
-        if len(kwargs.keys()) > 2:
-            (
-                result_code,
-                message_uid,
-                status,
-            ) = self._message_queue.send_message_with_response(
-                command=command,
-                respond_to_fqdn=respond_to_fqdn,
-                callback=callback,
-                json_args=json_args,
-            )
-        else:
-            (
-                result_code,
-                message_uid,
-                status,
-            ) = self._message_queue.send_message_with_response(
-                command=command, respond_to_fqdn=respond_to_fqdn, callback=callback
-            )
-
+        (
+            result_code,
+            message_uid,
+            status,
+        ) = self._message_queue.send_message_with_response(
+            command=command,
+            respond_to_fqdn=respond_to_fqdn,
+            callback=callback,
+            json_args=command_args,
+        )
         return [[result_code], [status, message_uid]]
 
     @command(
@@ -800,7 +793,6 @@ class MccsSubarray(SKASubarray):
             """
             # deliberately not calling super() -- we're passing a different
             # target object
-
             kwargs = json.loads(argin)
             station_fqdns = kwargs.get("stations", [])
             subarray_beam_fqdns = kwargs.get("subarray_beams", [])

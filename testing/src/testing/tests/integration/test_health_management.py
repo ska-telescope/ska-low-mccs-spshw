@@ -277,7 +277,6 @@ class TestHealthManagement(HelperClass):
         assert result_code == ResultCode.QUEUED
         assert status
         assert ":Allocate" in message_uid
-
         self.wait_for_command_to_complete(controller)
 
         [result_code], [status, message_uid] = call_with_json(

@@ -82,13 +82,13 @@ class StationsResourceManager(ResourceManager):
             cast(int, key): resource.fqdn for key, resource in self._resources.items()
         }
 
-    def assign(
+    def assign(  # type: ignore[override]
         self: StationsResourceManager, station_fqdns: list[str], subarray_id: int
     ) -> None:
         """
         Assign stations to a subarray device.
 
-        :param stations: dictionary of station device ids & FQDNs to assign
+        :param station_fqdns: list of station device FQDNs to assign
         :param subarray_id: ID of the subarray to which the stations
             should be assigned
         """
@@ -214,7 +214,7 @@ class SubarrayBeamsResourceManager(ResourceManager):
             subarraybeam.stationIds = sorted(stations[index].keys())
             subarraybeam.isBeamLocked = True
 
-            #self.update_resource_health(subarray_beam_fqdn, subarraybeam.healthState)
+            # self.update_resource_health(subarray_beam_fqdn, subarraybeam.healthState)
             self.update_resource_health(subarray_beam_fqdn, HealthState.OK)
         super().assign(subarray_beams, subarray_id)
 
@@ -1516,7 +1516,7 @@ class MccsController(SKAMaster):
                 (result_code, message) = call_with_json(
                     subarray_device.AssignResources,
                     stations=stations_to_assign,
-                    subarray_beams=list(subarray_beams.values()),
+                    subarray_beam_fqdns=list(subarray_beams.values()),
                     channel_blocks=channel_blocks,
                 )
                 if result_code == ResultCode.FAILED:
@@ -1559,7 +1559,7 @@ class MccsController(SKAMaster):
             controllerdevice._allocate_cmd_cache.clear()
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-        def check_allowed(self: MccsController.AssignResourcesCallbackCommand) -> bool:
+        def check_allowed(self: MccsController.AllocateCallbackCommand) -> bool:
             """
             Whether this command is allowed to be run in current device state.
 
@@ -1570,7 +1570,7 @@ class MccsController(SKAMaster):
             allowed = any(controllerdevice._allocate_cmd_cache)
             return allowed
 
-    def is_AssignResourcesCallback_allowed(self: MccsController) -> bool:
+    def is_AllocateCallbackCommand_allowed(self: MccsController) -> bool:
         """
         Whether this command is allowed to be run in current device state.
 

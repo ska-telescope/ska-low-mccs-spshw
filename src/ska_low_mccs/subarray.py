@@ -570,7 +570,7 @@ class MccsSubarray(SKASubarray):
             kwargs = json.loads(argin)
             device = self.target
             device._station_fqdns = kwargs.get("stations", [])
-            device._subarray_beam_fqdns = kwargs.get("subarray_beams", [])
+            device._subarray_beam_fqdns = kwargs.get("subarray_beam_fqdns", [])
             # TODO: Are channels required in subarray during allocation or are they
             # only required in MCCSController? Remove noqa upon decision
             device._channel_blocks = kwargs.get("channel_blocks", [])  # noqa: F841

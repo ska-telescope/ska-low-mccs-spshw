@@ -171,7 +171,7 @@ class MessageQueue(threading.Thread):
 
     def _create_command_args(self: MessageQueue, message: Message) -> str:
         """
-        Incorporate FQDN and callback into command args dictionary Add to kwargs and
+        Incorporate FQDN and callback into command args dictionary. Add to kwargs and
         deal with the case if it's not a JSON encoded string.
 
         :param message: the original message executed
@@ -208,7 +208,7 @@ class MessageQueue(threading.Thread):
         status: str,
     ) -> None:
         """
-        Respond to the requstor device.
+        Respond to the requestor device.
 
         :param message: the original message executed
         :param result_code: the result code of the executed command

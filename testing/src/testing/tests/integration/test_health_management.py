@@ -43,15 +43,13 @@ def devices_to_load():
             {"name": "subarray_02", "proxy": MccsDeviceProxy},
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
-            {"name": "subrack", "proxy": MccsDeviceProxy},
+            {"name": "subrack_01", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "tile_0002", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "subarraybeam_01", "proxy": MccsDeviceProxy},
             {"name": "subarraybeam_02", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_03", "proxy": MccsDeviceProxy},
-            {"name": "subarraybeam_04", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -84,15 +82,13 @@ class TestHealthManagement(HelperClass):
         :type empty_json_dict: str
         """
         controller = tango_harness.get_device("low-mccs/control/control")
-        subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
-        subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
         tile_1 = tango_harness.get_device("low-mccs/tile/0001")
         tile_2 = tango_harness.get_device("low-mccs/tile/0002")
         tile_3 = tango_harness.get_device("low-mccs/tile/0003")
         tile_4 = tango_harness.get_device("low-mccs/tile/0004")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
         subarraybeam_01 = tango_harness.get_device("low-mccs/subarraybeam/01")
         subarraybeam_02 = tango_harness.get_device("low-mccs/subarraybeam/02")
         # workaround for https://github.com/tango-controls/cppTango/issues/816
@@ -109,15 +105,13 @@ class TestHealthManagement(HelperClass):
         _ = controller.Startup()
         dev_states = {
             controller: DevState.ON,
-            subarray_1: DevState.OFF,
-            subarray_2: DevState.OFF,
             station_1: DevState.ON,
             station_2: DevState.ON,
             tile_1: DevState.ON,
             tile_2: DevState.ON,
             tile_3: DevState.ON,
             tile_4: DevState.ON,
-            subrack: DevState.ON,
+            subrack_01: DevState.ON,
             subarraybeam_01: DevState.OFF,
             subarraybeam_02: DevState.OFF,
         }
@@ -192,11 +186,11 @@ class TestHealthManagement(HelperClass):
         tile_1.SimulateConnectionFailure(False)
         tile_1.adminMode = AdminMode.ONLINE
 
-        assert not subrack.isTpmOn(1)
+        assert not subrack_01.isTpmOn(1)
         tile_1.Off(empty_json_dict)
         dev_states = {tile_1: DevState.OFF}
         self.check_states_of_devices(dev_states)
-        assert subrack.isTpmOn(1)
+        assert subrack_01.isTpmOn(1)
 
         tile_1.On(empty_json_dict)
         dev_states = {tile_1: DevState.ON}
@@ -226,7 +220,7 @@ class TestHealthManagement(HelperClass):
         :type empty_json_dict: str
         """
         controller = tango_harness.get_device("low-mccs/control/control")
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
+        subrack_01 = tango_harness.get_device("low-mccs/subrack/01")
         subarray_1 = tango_harness.get_device("low-mccs/subarray/01")
         subarray_2 = tango_harness.get_device("low-mccs/subarray/02")
         station_1 = tango_harness.get_device("low-mccs/station/001")
@@ -251,7 +245,7 @@ class TestHealthManagement(HelperClass):
             controller: DevState.ON,
             station_1: DevState.ON,
             station_2: DevState.ON,
-            subrack: DevState.ON,
+            subrack_01: DevState.ON,
             tile_1: DevState.ON,
             tile_2: DevState.ON,
             tile_3: DevState.ON,

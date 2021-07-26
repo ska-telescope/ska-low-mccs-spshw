@@ -9,29 +9,13 @@
 """This module contains unit tests for the ska_low_mccs.device_proxy module."""
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Optional
 import logging
 
-import pytest
 import pytest_mock
 
 from ska_low_mccs import MccsDeviceProxy
 
 from testing.harness.tango_harness import TangoHarness  # type: ignore[attr-defined]
-
-
-@pytest.fixture()
-def device_to_load() -> Optional[dict]:
-    """
-    Specify the device to be loaded for testing.
-
-    In this case we mock all devices, so there is no need to stand up
-    any.
-
-    :return: specification of the device to be loaded
-    :rtype: dict
-    """
-    return None
 
 
 class TestMccsDeviceProxy:

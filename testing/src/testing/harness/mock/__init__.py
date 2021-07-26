@@ -7,7 +7,15 @@
 """This subpackage contains modules for test mocking in the SKA Low MCCS tests."""
 
 
-__all__ = ["MockDeviceBuilder", "MockSubarrayBuilder", "MockGroupBuilder"]
+__all__ = [
+    "MockCallable",
+    "MockChangeEventCallback",
+    "MockDeviceBuilder",
+    "MockSubarrayBuilder",
+    "MockGroupBuilder",
+]
 
+
+from .mock_callable import MockCallable, MockChangeEventCallback
 from .mock_device import MockDeviceBuilder  # type: ignore[attr-defined]
 from .mock_subarray import MockSubarrayBuilder  # type: ignore[attr-defined]
